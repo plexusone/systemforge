@@ -27,6 +27,10 @@
 
 SystemForge is a batteries-included Go platform module providing reusable identity, session, authorization, and feature flags for multi-tenant SaaS applications. Think of it as Django/Laravel-style conveniences for Go.
 
+Within the plexusone org, SystemForge is the shared identity/session/authorization foundation the Forge platform family (ActionForge, AgentForge, DashForge) builds on — one contract instead of each app inventing its own. See [INIT-SYSTEMFORGE-001](docs/specs/initiatives/INIT-SYSTEMFORGE-001/PRD.md) for the unified authorization vocabulary, IAM console, and shell composition work this drives.
+
+> Moved from `github.com/grokify/systemforge` to `github.com/plexusone/systemforge` in v0.10.0 — the old path still resolves via GitHub's repository-transfer redirect for existing pins, but won't receive new tags. See the [v0.10.0 release notes](docs/releases/v0.10.0.md) for the full migration.
+
 ## Features
 
 ### Identity Module
