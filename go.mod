@@ -29,7 +29,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/grokify/goauth v0.24.0
 	github.com/invopop/jsonschema v0.14.0
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/ory/fosite v0.49.0
 	github.com/plexusone/omniobserve v0.12.0
