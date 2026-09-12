@@ -44,14 +44,13 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require cel.dev/cel-go v0.32.0 // indirect
-
 require (
 	ariga.io/atlas v1.3.0 // indirect
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2 // indirect
 	buf.build/gen/go/gogo/protobuf/protocolbuffers/go v1.36.12-20240617172848-e1dbca2775a7.2 // indirect
 	buf.build/gen/go/prometheus/prometheus/protocolbuffers/go v1.36.12-20260707164124-2360da55afce.2 // indirect
 	buf.build/go/protovalidate v1.4.0 // indirect
+	cel.dev/cel-go v0.32.0 // indirect
 	cel.dev/expr v0.25.3 // indirect
 	cloud.google.com/go v0.123.0 // indirect
 	cloud.google.com/go/auth v0.23.2 // indirect
