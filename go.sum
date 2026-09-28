@@ -64,8 +64,8 @@ github.com/apparentlymart/go-textseg/v17 v17.0.1 h1:bpMXRgQ5cEoRNuQke1a80/Nl6w3G
 github.com/apparentlymart/go-textseg/v17 v17.0.1/go.mod h1:fa8X4jgGeevslICIY6LcdjkSecWnXmYd9Lk34z/VxZs=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
-github.com/authzed/authzed-go v1.10.0 h1:GUPzYFnStk1PIBZOkQzqcYA3iHaOlVYVl1UnHIRofKU=
-github.com/authzed/authzed-go v1.10.0/go.mod h1:2DL7pg4iqMltwWOSw+wvbEzAK7uRt3545+bkcGYD8D8=
+github.com/authzed/authzed-go v1.11.0 h1:D2WVK5T51cXknawOIqcDDYPkmbT7rObupRvelGbn/Gs=
+github.com/authzed/authzed-go v1.11.0/go.mod h1:gZsVWPwYoHCRA917aOI022U26ftvp9q2FP1gPlAsPeQ=
 github.com/authzed/cel-go v0.32.0 h1:1IQD9qFvem2DWdy3PyMNqbVJiyNCBUHbh7SjR9JfbPY=
 github.com/authzed/cel-go v0.32.0/go.mod h1:Jp4Wbt+Tbe8kiX6xz5xfIXy56qoqS0uB2R+mYn+MQnU=
 github.com/authzed/consistent v0.3.0 h1:CxVvDpxKlNsvRO4NBiCGn2NQV4p4KaLcwyrgGjrMYYU=

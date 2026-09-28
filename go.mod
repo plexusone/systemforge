@@ -19,7 +19,7 @@ exclude github.com/KimMachineGun/automemlimit v1.0.0
 
 require (
 	entgo.io/ent v0.14.6
-	github.com/authzed/authzed-go v1.10.0
+	github.com/authzed/authzed-go v1.11.0
 	github.com/authzed/grpcutil v0.0.0-20260105210157-e237581949c2
 	github.com/authzed/spicedb v1.56.2
 	github.com/danielgtaylor/huma/v2 v2.39.1
