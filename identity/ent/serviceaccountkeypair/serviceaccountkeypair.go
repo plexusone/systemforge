@@ -41,12 +41,12 @@ const (
 	// EdgeServiceAccount holds the string denoting the service_account edge name in mutations.
 	EdgeServiceAccount = "service_account"
 	// Table holds the table name of the serviceaccountkeypair in the database.
-	Table = "cf_service_account_key_pairs"
+	Table = "sf_service_account_key_pairs"
 	// ServiceAccountTable is the table that holds the service_account relation/edge.
-	ServiceAccountTable = "cf_service_account_key_pairs"
+	ServiceAccountTable = "sf_service_account_key_pairs"
 	// ServiceAccountInverseTable is the table name for the ServiceAccount entity.
 	// It exists in this package in order to avoid circular dependency with the "serviceaccount" package.
-	ServiceAccountInverseTable = "cf_service_accounts"
+	ServiceAccountInverseTable = "sf_service_accounts"
 	// ServiceAccountColumn is the table column denoting the service_account relation/edge.
 	ServiceAccountColumn = "service_account_id"
 )

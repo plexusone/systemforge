@@ -34,19 +34,19 @@ const (
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
 	EdgeOrganization = "organization"
 	// Table holds the table name of the principalmembership in the database.
-	Table = "cf_principal_memberships"
+	Table = "sf_principal_memberships"
 	// PrincipalTable is the table that holds the principal relation/edge.
-	PrincipalTable = "cf_principal_memberships"
+	PrincipalTable = "sf_principal_memberships"
 	// PrincipalInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	PrincipalInverseTable = "cf_principals"
+	PrincipalInverseTable = "sf_principals"
 	// PrincipalColumn is the table column denoting the principal relation/edge.
 	PrincipalColumn = "principal_id"
 	// OrganizationTable is the table that holds the organization relation/edge.
-	OrganizationTable = "cf_principal_memberships"
+	OrganizationTable = "sf_principal_memberships"
 	// OrganizationInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	OrganizationInverseTable = "cf_organizations"
+	OrganizationInverseTable = "sf_organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_id"
 )

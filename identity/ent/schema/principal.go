@@ -20,7 +20,7 @@ type Principal struct {
 // Annotations of the Principal.
 func (Principal) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_principals"},
+		entsql.Annotation{Table: "sf_principals"},
 	}
 }
 

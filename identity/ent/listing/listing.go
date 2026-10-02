@@ -51,26 +51,26 @@ const (
 	// EdgeLicenses holds the string denoting the licenses edge name in mutations.
 	EdgeLicenses = "licenses"
 	// Table holds the table name of the listing in the database.
-	Table = "cf_listings"
+	Table = "sf_listings"
 	// CreatorOrgTable is the table that holds the creator_org relation/edge.
-	CreatorOrgTable = "cf_listings"
+	CreatorOrgTable = "sf_listings"
 	// CreatorOrgInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	CreatorOrgInverseTable = "cf_organizations"
+	CreatorOrgInverseTable = "sf_organizations"
 	// CreatorOrgColumn is the table column denoting the creator_org relation/edge.
 	CreatorOrgColumn = "creator_org_id"
 	// OwnerTable is the table that holds the owner relation/edge.
-	OwnerTable = "cf_listings"
+	OwnerTable = "sf_listings"
 	// OwnerInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	OwnerInverseTable = "cf_principals"
+	OwnerInverseTable = "sf_principals"
 	// OwnerColumn is the table column denoting the owner relation/edge.
 	OwnerColumn = "owner_id"
 	// LicensesTable is the table that holds the licenses relation/edge.
-	LicensesTable = "cf_licenses"
+	LicensesTable = "sf_licenses"
 	// LicensesInverseTable is the table name for the License entity.
 	// It exists in this package in order to avoid circular dependency with the "license" package.
-	LicensesInverseTable = "cf_licenses"
+	LicensesInverseTable = "sf_licenses"
 	// LicensesColumn is the table column denoting the licenses relation/edge.
 	LicensesColumn = "listing_id"
 )

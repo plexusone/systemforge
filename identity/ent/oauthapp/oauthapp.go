@@ -71,47 +71,47 @@ const (
 	// EdgeConsents holds the string denoting the consents edge name in mutations.
 	EdgeConsents = "consents"
 	// Table holds the table name of the oauthapp in the database.
-	Table = "cf_oauth_apps"
+	Table = "sf_oauth_apps"
 	// OwnerTable is the table that holds the owner relation/edge.
-	OwnerTable = "cf_oauth_apps"
+	OwnerTable = "sf_oauth_apps"
 	// OwnerInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	OwnerInverseTable = "cf_users"
+	OwnerInverseTable = "sf_users"
 	// OwnerColumn is the table column denoting the owner relation/edge.
 	OwnerColumn = "owner_id"
 	// OrganizationTable is the table that holds the organization relation/edge.
-	OrganizationTable = "cf_oauth_apps"
+	OrganizationTable = "sf_oauth_apps"
 	// OrganizationInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	OrganizationInverseTable = "cf_organizations"
+	OrganizationInverseTable = "sf_organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_id"
 	// SecretsTable is the table that holds the secrets relation/edge.
-	SecretsTable = "cf_oauth_app_secrets"
+	SecretsTable = "sf_oauth_app_secrets"
 	// SecretsInverseTable is the table name for the OAuthAppSecret entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthappsecret" package.
-	SecretsInverseTable = "cf_oauth_app_secrets"
+	SecretsInverseTable = "sf_oauth_app_secrets"
 	// SecretsColumn is the table column denoting the secrets relation/edge.
 	SecretsColumn = "app_id"
 	// TokensTable is the table that holds the tokens relation/edge.
-	TokensTable = "cf_oauth_tokens"
+	TokensTable = "sf_oauth_tokens"
 	// TokensInverseTable is the table name for the OAuthToken entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthtoken" package.
-	TokensInverseTable = "cf_oauth_tokens"
+	TokensInverseTable = "sf_oauth_tokens"
 	// TokensColumn is the table column denoting the tokens relation/edge.
 	TokensColumn = "app_id"
 	// AuthCodesTable is the table that holds the auth_codes relation/edge.
-	AuthCodesTable = "cf_oauth_auth_codes"
+	AuthCodesTable = "sf_oauth_auth_codes"
 	// AuthCodesInverseTable is the table name for the OAuthAuthCode entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthauthcode" package.
-	AuthCodesInverseTable = "cf_oauth_auth_codes"
+	AuthCodesInverseTable = "sf_oauth_auth_codes"
 	// AuthCodesColumn is the table column denoting the auth_codes relation/edge.
 	AuthCodesColumn = "app_id"
 	// ConsentsTable is the table that holds the consents relation/edge.
-	ConsentsTable = "cf_oauth_consents"
+	ConsentsTable = "sf_oauth_consents"
 	// ConsentsInverseTable is the table name for the OAuthConsent entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthconsent" package.
-	ConsentsInverseTable = "cf_oauth_consents"
+	ConsentsInverseTable = "sf_oauth_consents"
 	// ConsentsColumn is the table column denoting the consents relation/edge.
 	ConsentsColumn = "app_id"
 )

@@ -63,82 +63,82 @@ const (
 	// EdgeSubscription holds the string denoting the subscription edge name in mutations.
 	EdgeSubscription = "subscription"
 	// Table holds the table name of the organization in the database.
-	Table = "cf_organizations"
+	Table = "sf_organizations"
 	// MembershipsTable is the table that holds the memberships relation/edge.
-	MembershipsTable = "cf_memberships"
+	MembershipsTable = "sf_memberships"
 	// MembershipsInverseTable is the table name for the Membership entity.
 	// It exists in this package in order to avoid circular dependency with the "membership" package.
-	MembershipsInverseTable = "cf_memberships"
+	MembershipsInverseTable = "sf_memberships"
 	// MembershipsColumn is the table column denoting the memberships relation/edge.
 	MembershipsColumn = "organization_id"
 	// APIKeysTable is the table that holds the api_keys relation/edge.
-	APIKeysTable = "cf_api_keys"
+	APIKeysTable = "sf_api_keys"
 	// APIKeysInverseTable is the table name for the APIKey entity.
 	// It exists in this package in order to avoid circular dependency with the "apikey" package.
-	APIKeysInverseTable = "cf_api_keys"
+	APIKeysInverseTable = "sf_api_keys"
 	// APIKeysColumn is the table column denoting the api_keys relation/edge.
 	APIKeysColumn = "organization_api_keys"
 	// OauthAppsTable is the table that holds the oauth_apps relation/edge.
-	OauthAppsTable = "cf_oauth_apps"
+	OauthAppsTable = "sf_oauth_apps"
 	// OauthAppsInverseTable is the table name for the OAuthApp entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthapp" package.
-	OauthAppsInverseTable = "cf_oauth_apps"
+	OauthAppsInverseTable = "sf_oauth_apps"
 	// OauthAppsColumn is the table column denoting the oauth_apps relation/edge.
 	OauthAppsColumn = "organization_id"
 	// ServiceAccountsTable is the table that holds the service_accounts relation/edge.
-	ServiceAccountsTable = "cf_service_accounts"
+	ServiceAccountsTable = "sf_service_accounts"
 	// ServiceAccountsInverseTable is the table name for the ServiceAccount entity.
 	// It exists in this package in order to avoid circular dependency with the "serviceaccount" package.
-	ServiceAccountsInverseTable = "cf_service_accounts"
+	ServiceAccountsInverseTable = "sf_service_accounts"
 	// ServiceAccountsColumn is the table column denoting the service_accounts relation/edge.
 	ServiceAccountsColumn = "organization_id"
 	// PrincipalsTable is the table that holds the principals relation/edge.
-	PrincipalsTable = "cf_principals"
+	PrincipalsTable = "sf_principals"
 	// PrincipalsInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	PrincipalsInverseTable = "cf_principals"
+	PrincipalsInverseTable = "sf_principals"
 	// PrincipalsColumn is the table column denoting the principals relation/edge.
 	PrincipalsColumn = "organization_id"
 	// PrincipalMembershipsTable is the table that holds the principal_memberships relation/edge.
-	PrincipalMembershipsTable = "cf_principal_memberships"
+	PrincipalMembershipsTable = "sf_principal_memberships"
 	// PrincipalMembershipsInverseTable is the table name for the PrincipalMembership entity.
 	// It exists in this package in order to avoid circular dependency with the "principalmembership" package.
-	PrincipalMembershipsInverseTable = "cf_principal_memberships"
+	PrincipalMembershipsInverseTable = "sf_principal_memberships"
 	// PrincipalMembershipsColumn is the table column denoting the principal_memberships relation/edge.
 	PrincipalMembershipsColumn = "organization_id"
 	// OwnerTable is the table that holds the owner relation/edge.
-	OwnerTable = "cf_organizations"
+	OwnerTable = "sf_organizations"
 	// OwnerInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	OwnerInverseTable = "cf_principals"
+	OwnerInverseTable = "sf_principals"
 	// OwnerColumn is the table column denoting the owner relation/edge.
 	OwnerColumn = "owner_principal_id"
 	// InvitesTable is the table that holds the invites relation/edge.
-	InvitesTable = "cf_invites"
+	InvitesTable = "sf_invites"
 	// InvitesInverseTable is the table name for the Invite entity.
 	// It exists in this package in order to avoid circular dependency with the "invite" package.
-	InvitesInverseTable = "cf_invites"
+	InvitesInverseTable = "sf_invites"
 	// InvitesColumn is the table column denoting the invites relation/edge.
 	InvitesColumn = "organization_id"
 	// ListingsTable is the table that holds the listings relation/edge.
-	ListingsTable = "cf_listings"
+	ListingsTable = "sf_listings"
 	// ListingsInverseTable is the table name for the Listing entity.
 	// It exists in this package in order to avoid circular dependency with the "listing" package.
-	ListingsInverseTable = "cf_listings"
+	ListingsInverseTable = "sf_listings"
 	// ListingsColumn is the table column denoting the listings relation/edge.
 	ListingsColumn = "creator_org_id"
 	// LicensesTable is the table that holds the licenses relation/edge.
-	LicensesTable = "cf_licenses"
+	LicensesTable = "sf_licenses"
 	// LicensesInverseTable is the table name for the License entity.
 	// It exists in this package in order to avoid circular dependency with the "license" package.
-	LicensesInverseTable = "cf_licenses"
+	LicensesInverseTable = "sf_licenses"
 	// LicensesColumn is the table column denoting the licenses relation/edge.
 	LicensesColumn = "organization_id"
 	// SubscriptionTable is the table that holds the subscription relation/edge.
-	SubscriptionTable = "cf_subscriptions"
+	SubscriptionTable = "sf_subscriptions"
 	// SubscriptionInverseTable is the table name for the Subscription entity.
 	// It exists in this package in order to avoid circular dependency with the "subscription" package.
-	SubscriptionInverseTable = "cf_subscriptions"
+	SubscriptionInverseTable = "sf_subscriptions"
 	// SubscriptionColumn is the table column denoting the subscription relation/edge.
 	SubscriptionColumn = "organization_id"
 )

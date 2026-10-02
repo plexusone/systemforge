@@ -19,7 +19,7 @@ type OAuthAccount struct {
 // Annotations of the OAuthAccount.
 func (OAuthAccount) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_oauth_accounts"},
+		entsql.Annotation{Table: "sf_oauth_accounts"},
 	}
 }
 

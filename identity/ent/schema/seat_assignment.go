@@ -18,7 +18,7 @@ type SeatAssignment struct {
 // Annotations of the SeatAssignment.
 func (SeatAssignment) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_seat_assignments"},
+		entsql.Annotation{Table: "sf_seat_assignments"},
 	}
 }
 

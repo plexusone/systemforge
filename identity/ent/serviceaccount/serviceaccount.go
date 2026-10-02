@@ -42,26 +42,26 @@ const (
 	// EdgeKeyPairs holds the string denoting the key_pairs edge name in mutations.
 	EdgeKeyPairs = "key_pairs"
 	// Table holds the table name of the serviceaccount in the database.
-	Table = "cf_service_accounts"
+	Table = "sf_service_accounts"
 	// OrganizationTable is the table that holds the organization relation/edge.
-	OrganizationTable = "cf_service_accounts"
+	OrganizationTable = "sf_service_accounts"
 	// OrganizationInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	OrganizationInverseTable = "cf_organizations"
+	OrganizationInverseTable = "sf_organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_id"
 	// CreatorTable is the table that holds the creator relation/edge.
-	CreatorTable = "cf_service_accounts"
+	CreatorTable = "sf_service_accounts"
 	// CreatorInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	CreatorInverseTable = "cf_users"
+	CreatorInverseTable = "sf_users"
 	// CreatorColumn is the table column denoting the creator relation/edge.
 	CreatorColumn = "created_by"
 	// KeyPairsTable is the table that holds the key_pairs relation/edge.
-	KeyPairsTable = "cf_service_account_key_pairs"
+	KeyPairsTable = "sf_service_account_key_pairs"
 	// KeyPairsInverseTable is the table name for the ServiceAccountKeyPair entity.
 	// It exists in this package in order to avoid circular dependency with the "serviceaccountkeypair" package.
-	KeyPairsInverseTable = "cf_service_account_key_pairs"
+	KeyPairsInverseTable = "sf_service_account_key_pairs"
 	// KeyPairsColumn is the table column denoting the key_pairs relation/edge.
 	KeyPairsColumn = "service_account_id"
 )

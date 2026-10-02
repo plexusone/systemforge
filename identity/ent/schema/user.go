@@ -18,7 +18,7 @@ type User struct {
 // Annotations of the User.
 func (User) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_users"},
+		entsql.Annotation{Table: "sf_users"},
 	}
 }
 

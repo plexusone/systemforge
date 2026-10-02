@@ -47,33 +47,33 @@ const (
 	// EdgeSeatAssignments holds the string denoting the seat_assignments edge name in mutations.
 	EdgeSeatAssignments = "seat_assignments"
 	// Table holds the table name of the license in the database.
-	Table = "cf_licenses"
+	Table = "sf_licenses"
 	// ListingTable is the table that holds the listing relation/edge.
-	ListingTable = "cf_licenses"
+	ListingTable = "sf_licenses"
 	// ListingInverseTable is the table name for the Listing entity.
 	// It exists in this package in order to avoid circular dependency with the "listing" package.
-	ListingInverseTable = "cf_listings"
+	ListingInverseTable = "sf_listings"
 	// ListingColumn is the table column denoting the listing relation/edge.
 	ListingColumn = "listing_id"
 	// OrganizationTable is the table that holds the organization relation/edge.
-	OrganizationTable = "cf_licenses"
+	OrganizationTable = "sf_licenses"
 	// OrganizationInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	OrganizationInverseTable = "cf_organizations"
+	OrganizationInverseTable = "sf_organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_id"
 	// PurchaserTable is the table that holds the purchaser relation/edge.
-	PurchaserTable = "cf_licenses"
+	PurchaserTable = "sf_licenses"
 	// PurchaserInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	PurchaserInverseTable = "cf_principals"
+	PurchaserInverseTable = "sf_principals"
 	// PurchaserColumn is the table column denoting the purchaser relation/edge.
 	PurchaserColumn = "purchased_by"
 	// SeatAssignmentsTable is the table that holds the seat_assignments relation/edge.
-	SeatAssignmentsTable = "cf_seat_assignments"
+	SeatAssignmentsTable = "sf_seat_assignments"
 	// SeatAssignmentsInverseTable is the table name for the SeatAssignment entity.
 	// It exists in this package in order to avoid circular dependency with the "seatassignment" package.
-	SeatAssignmentsInverseTable = "cf_seat_assignments"
+	SeatAssignmentsInverseTable = "sf_seat_assignments"
 	// SeatAssignmentsColumn is the table column denoting the seat_assignments relation/edge.
 	SeatAssignmentsColumn = "license_id"
 )

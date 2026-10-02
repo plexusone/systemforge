@@ -42,12 +42,12 @@ const (
 	// EdgePrincipal holds the string denoting the principal edge name in mutations.
 	EdgePrincipal = "principal"
 	// Table holds the table name of the human in the database.
-	Table = "cf_humans"
+	Table = "sf_humans"
 	// PrincipalTable is the table that holds the principal relation/edge.
-	PrincipalTable = "cf_humans"
+	PrincipalTable = "sf_humans"
 	// PrincipalInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	PrincipalInverseTable = "cf_principals"
+	PrincipalInverseTable = "sf_principals"
 	// PrincipalColumn is the table column denoting the principal relation/edge.
 	PrincipalColumn = "principal_id"
 )

@@ -20,7 +20,7 @@ type OAuthApp struct {
 // Annotations of the OAuthApp.
 func (OAuthApp) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_oauth_apps"},
+		entsql.Annotation{Table: "sf_oauth_apps"},
 	}
 }
 

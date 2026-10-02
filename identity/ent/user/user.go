@@ -54,68 +54,68 @@ const (
 	// EdgeCreatedServiceAccounts holds the string denoting the created_service_accounts edge name in mutations.
 	EdgeCreatedServiceAccounts = "created_service_accounts"
 	// Table holds the table name of the user in the database.
-	Table = "cf_users"
+	Table = "sf_users"
 	// MembershipsTable is the table that holds the memberships relation/edge.
-	MembershipsTable = "cf_memberships"
+	MembershipsTable = "sf_memberships"
 	// MembershipsInverseTable is the table name for the Membership entity.
 	// It exists in this package in order to avoid circular dependency with the "membership" package.
-	MembershipsInverseTable = "cf_memberships"
+	MembershipsInverseTable = "sf_memberships"
 	// MembershipsColumn is the table column denoting the memberships relation/edge.
 	MembershipsColumn = "user_id"
 	// OauthAccountsTable is the table that holds the oauth_accounts relation/edge.
-	OauthAccountsTable = "cf_oauth_accounts"
+	OauthAccountsTable = "sf_oauth_accounts"
 	// OauthAccountsInverseTable is the table name for the OAuthAccount entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthaccount" package.
-	OauthAccountsInverseTable = "cf_oauth_accounts"
+	OauthAccountsInverseTable = "sf_oauth_accounts"
 	// OauthAccountsColumn is the table column denoting the oauth_accounts relation/edge.
 	OauthAccountsColumn = "user_id"
 	// RefreshTokensTable is the table that holds the refresh_tokens relation/edge.
-	RefreshTokensTable = "cf_refresh_tokens"
+	RefreshTokensTable = "sf_refresh_tokens"
 	// RefreshTokensInverseTable is the table name for the RefreshToken entity.
 	// It exists in this package in order to avoid circular dependency with the "refreshtoken" package.
-	RefreshTokensInverseTable = "cf_refresh_tokens"
+	RefreshTokensInverseTable = "sf_refresh_tokens"
 	// RefreshTokensColumn is the table column denoting the refresh_tokens relation/edge.
 	RefreshTokensColumn = "user_id"
 	// APIKeysTable is the table that holds the api_keys relation/edge.
-	APIKeysTable = "cf_api_keys"
+	APIKeysTable = "sf_api_keys"
 	// APIKeysInverseTable is the table name for the APIKey entity.
 	// It exists in this package in order to avoid circular dependency with the "apikey" package.
-	APIKeysInverseTable = "cf_api_keys"
+	APIKeysInverseTable = "sf_api_keys"
 	// APIKeysColumn is the table column denoting the api_keys relation/edge.
 	APIKeysColumn = "user_api_keys"
 	// OauthAppsTable is the table that holds the oauth_apps relation/edge.
-	OauthAppsTable = "cf_oauth_apps"
+	OauthAppsTable = "sf_oauth_apps"
 	// OauthAppsInverseTable is the table name for the OAuthApp entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthapp" package.
-	OauthAppsInverseTable = "cf_oauth_apps"
+	OauthAppsInverseTable = "sf_oauth_apps"
 	// OauthAppsColumn is the table column denoting the oauth_apps relation/edge.
 	OauthAppsColumn = "owner_id"
 	// OauthTokensTable is the table that holds the oauth_tokens relation/edge.
-	OauthTokensTable = "cf_oauth_tokens"
+	OauthTokensTable = "sf_oauth_tokens"
 	// OauthTokensInverseTable is the table name for the OAuthToken entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthtoken" package.
-	OauthTokensInverseTable = "cf_oauth_tokens"
+	OauthTokensInverseTable = "sf_oauth_tokens"
 	// OauthTokensColumn is the table column denoting the oauth_tokens relation/edge.
 	OauthTokensColumn = "user_id"
 	// OauthAuthCodesTable is the table that holds the oauth_auth_codes relation/edge.
-	OauthAuthCodesTable = "cf_oauth_auth_codes"
+	OauthAuthCodesTable = "sf_oauth_auth_codes"
 	// OauthAuthCodesInverseTable is the table name for the OAuthAuthCode entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthauthcode" package.
-	OauthAuthCodesInverseTable = "cf_oauth_auth_codes"
+	OauthAuthCodesInverseTable = "sf_oauth_auth_codes"
 	// OauthAuthCodesColumn is the table column denoting the oauth_auth_codes relation/edge.
 	OauthAuthCodesColumn = "user_id"
 	// OauthConsentsTable is the table that holds the oauth_consents relation/edge.
-	OauthConsentsTable = "cf_oauth_consents"
+	OauthConsentsTable = "sf_oauth_consents"
 	// OauthConsentsInverseTable is the table name for the OAuthConsent entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthconsent" package.
-	OauthConsentsInverseTable = "cf_oauth_consents"
+	OauthConsentsInverseTable = "sf_oauth_consents"
 	// OauthConsentsColumn is the table column denoting the oauth_consents relation/edge.
 	OauthConsentsColumn = "user_id"
 	// CreatedServiceAccountsTable is the table that holds the created_service_accounts relation/edge.
-	CreatedServiceAccountsTable = "cf_service_accounts"
+	CreatedServiceAccountsTable = "sf_service_accounts"
 	// CreatedServiceAccountsInverseTable is the table name for the ServiceAccount entity.
 	// It exists in this package in order to avoid circular dependency with the "serviceaccount" package.
-	CreatedServiceAccountsInverseTable = "cf_service_accounts"
+	CreatedServiceAccountsInverseTable = "sf_service_accounts"
 	// CreatedServiceAccountsColumn is the table column denoting the created_service_accounts relation/edge.
 	CreatedServiceAccountsColumn = "created_by"
 )

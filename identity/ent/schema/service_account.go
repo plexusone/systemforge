@@ -21,7 +21,7 @@ type ServiceAccount struct {
 // Annotations of the ServiceAccount.
 func (ServiceAccount) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_service_accounts"},
+		entsql.Annotation{Table: "sf_service_accounts"},
 	}
 }
 

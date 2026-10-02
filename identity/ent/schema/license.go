@@ -18,7 +18,7 @@ type License struct {
 // Annotations of the License.
 func (License) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_licenses"},
+		entsql.Annotation{Table: "sf_licenses"},
 	}
 }
 

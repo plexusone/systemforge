@@ -18,7 +18,7 @@ type Listing struct {
 // Annotations of the Listing.
 func (Listing) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_listings"},
+		entsql.Annotation{Table: "sf_listings"},
 	}
 }
 

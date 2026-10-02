@@ -30,26 +30,26 @@ const (
 	// EdgeAssigner holds the string denoting the assigner edge name in mutations.
 	EdgeAssigner = "assigner"
 	// Table holds the table name of the seatassignment in the database.
-	Table = "cf_seat_assignments"
+	Table = "sf_seat_assignments"
 	// LicenseTable is the table that holds the license relation/edge.
-	LicenseTable = "cf_seat_assignments"
+	LicenseTable = "sf_seat_assignments"
 	// LicenseInverseTable is the table name for the License entity.
 	// It exists in this package in order to avoid circular dependency with the "license" package.
-	LicenseInverseTable = "cf_licenses"
+	LicenseInverseTable = "sf_licenses"
 	// LicenseColumn is the table column denoting the license relation/edge.
 	LicenseColumn = "license_id"
 	// PrincipalTable is the table that holds the principal relation/edge.
-	PrincipalTable = "cf_seat_assignments"
+	PrincipalTable = "sf_seat_assignments"
 	// PrincipalInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	PrincipalInverseTable = "cf_principals"
+	PrincipalInverseTable = "sf_principals"
 	// PrincipalColumn is the table column denoting the principal relation/edge.
 	PrincipalColumn = "principal_id"
 	// AssignerTable is the table that holds the assigner relation/edge.
-	AssignerTable = "cf_seat_assignments"
+	AssignerTable = "sf_seat_assignments"
 	// AssignerInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	AssignerInverseTable = "cf_principals"
+	AssignerInverseTable = "sf_principals"
 	// AssignerColumn is the table column denoting the assigner relation/edge.
 	AssignerColumn = "assigned_by"
 )

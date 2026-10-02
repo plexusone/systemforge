@@ -51,19 +51,19 @@ const (
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
 	EdgeOrganization = "organization"
 	// Table holds the table name of the apikey in the database.
-	Table = "cf_api_keys"
+	Table = "sf_api_keys"
 	// OwnerTable is the table that holds the owner relation/edge.
-	OwnerTable = "cf_api_keys"
+	OwnerTable = "sf_api_keys"
 	// OwnerInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	OwnerInverseTable = "cf_users"
+	OwnerInverseTable = "sf_users"
 	// OwnerColumn is the table column denoting the owner relation/edge.
 	OwnerColumn = "user_api_keys"
 	// OrganizationTable is the table that holds the organization relation/edge.
-	OrganizationTable = "cf_api_keys"
+	OrganizationTable = "sf_api_keys"
 	// OrganizationInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	OrganizationInverseTable = "cf_organizations"
+	OrganizationInverseTable = "sf_organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_api_keys"
 )
@@ -88,7 +88,7 @@ var Columns = []string{
 	FieldMetadata,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "cf_api_keys"
+// ForeignKeys holds the SQL foreign-keys that are owned by the "sf_api_keys"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"organization_api_keys",

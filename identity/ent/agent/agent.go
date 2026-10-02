@@ -42,19 +42,19 @@ const (
 	// EdgeDelegatingPrincipal holds the string denoting the delegating_principal edge name in mutations.
 	EdgeDelegatingPrincipal = "delegating_principal"
 	// Table holds the table name of the agent in the database.
-	Table = "cf_agents"
+	Table = "sf_agents"
 	// PrincipalTable is the table that holds the principal relation/edge.
-	PrincipalTable = "cf_agents"
+	PrincipalTable = "sf_agents"
 	// PrincipalInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	PrincipalInverseTable = "cf_principals"
+	PrincipalInverseTable = "sf_principals"
 	// PrincipalColumn is the table column denoting the principal relation/edge.
 	PrincipalColumn = "principal_id"
 	// DelegatingPrincipalTable is the table that holds the delegating_principal relation/edge.
-	DelegatingPrincipalTable = "cf_agents"
+	DelegatingPrincipalTable = "sf_agents"
 	// DelegatingPrincipalInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	DelegatingPrincipalInverseTable = "cf_principals"
+	DelegatingPrincipalInverseTable = "sf_principals"
 	// DelegatingPrincipalColumn is the table column denoting the delegating_principal relation/edge.
 	DelegatingPrincipalColumn = "delegating_principal_id"
 )

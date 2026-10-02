@@ -18,7 +18,7 @@ type APIKey struct {
 // Annotations of the APIKey.
 func (APIKey) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_api_keys"},
+		entsql.Annotation{Table: "sf_api_keys"},
 	}
 }
 

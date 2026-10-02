@@ -21,7 +21,7 @@ type OAuthConsent struct {
 // Annotations of the OAuthConsent.
 func (OAuthConsent) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_oauth_consents"},
+		entsql.Annotation{Table: "sf_oauth_consents"},
 	}
 }
 

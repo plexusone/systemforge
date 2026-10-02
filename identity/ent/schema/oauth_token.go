@@ -20,7 +20,7 @@ type OAuthToken struct {
 // Annotations of the OAuthToken.
 func (OAuthToken) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_oauth_tokens"},
+		entsql.Annotation{Table: "sf_oauth_tokens"},
 	}
 }
 

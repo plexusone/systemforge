@@ -71,27 +71,27 @@ const (
 	// EdgeChildTokens holds the string denoting the child_tokens edge name in mutations.
 	EdgeChildTokens = "child_tokens"
 	// Table holds the table name of the principaltoken in the database.
-	Table = "cf_principal_tokens"
+	Table = "sf_principal_tokens"
 	// PrincipalTable is the table that holds the principal relation/edge.
-	PrincipalTable = "cf_principal_tokens"
+	PrincipalTable = "sf_principal_tokens"
 	// PrincipalInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	PrincipalInverseTable = "cf_principals"
+	PrincipalInverseTable = "sf_principals"
 	// PrincipalColumn is the table column denoting the principal relation/edge.
 	PrincipalColumn = "principal_id"
 	// IssuedByAppTable is the table that holds the issued_by_app relation/edge.
-	IssuedByAppTable = "cf_principal_tokens"
+	IssuedByAppTable = "sf_principal_tokens"
 	// IssuedByAppInverseTable is the table name for the Application entity.
 	// It exists in this package in order to avoid circular dependency with the "application" package.
-	IssuedByAppInverseTable = "cf_applications"
+	IssuedByAppInverseTable = "sf_applications"
 	// IssuedByAppColumn is the table column denoting the issued_by_app relation/edge.
 	IssuedByAppColumn = "issued_by_app_id"
 	// ParentTokenTable is the table that holds the parent_token relation/edge.
-	ParentTokenTable = "cf_principal_tokens"
+	ParentTokenTable = "sf_principal_tokens"
 	// ParentTokenColumn is the table column denoting the parent_token relation/edge.
 	ParentTokenColumn = "parent_token_id"
 	// ChildTokensTable is the table that holds the child_tokens relation/edge.
-	ChildTokensTable = "cf_principal_tokens"
+	ChildTokensTable = "sf_principal_tokens"
 	// ChildTokensColumn is the table column denoting the child_tokens relation/edge.
 	ChildTokensColumn = "parent_token_id"
 )
