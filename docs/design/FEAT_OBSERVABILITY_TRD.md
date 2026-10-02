@@ -4,7 +4,7 @@
 
 Integrate omniobserve/observops into SystemForge to provide vendor-agnostic observability (metrics, traces, logs) with support for Datadog, New Relic, Dynatrace, and OTLP backends.
 
-**Goal:** Add observability to CoreAuth (OAuth flows) and CoreAPI (rate limiting) with minimal API surface.
+**Goal:** Add observability to SystemAuth (OAuth flows) and CoreAPI (rate limiting) with minimal API surface.
 
 ---
 
@@ -25,7 +25,7 @@ Integrate omniobserve/observops into SystemForge to provide vendor-agnostic obse
          │                  │                  │
          ▼                  ▼                  ▼
 ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│   CoreAuth      │ │   CoreAPI       │ │   Your App      │
+│   SystemAuth      │ │   CoreAPI       │ │   Your App      │
 │  (OAuth spans)  │ │  (rate metrics) │ │   Handlers      │
 └─────────────────┘ └─────────────────┘ └─────────────────┘
          │                  │                  │
@@ -67,7 +67,7 @@ type Config struct {
 type Observability struct {
     provider observops.Provider
 
-    // Pre-created metrics for CoreAuth
+    // Pre-created metrics for SystemAuth
     authRequests     observops.Counter
     authLatency      observops.Histogram
     tokenIssued      observops.Counter
@@ -119,11 +119,11 @@ func (o *Observability) NewSlogHandler(opts ...SlogOption) slog.Handler
 
 ---
 
-## Phase 2: CoreAuth Observability
+## Phase 2: SystemAuth Observability
 
 ### 2.1 Server Integration
 
-**File:** `identity/coreauth/server.go` (modify)
+**File:** `identity/systemauth/server.go` (modify)
 
 Add optional observability to Server:
 
@@ -143,20 +143,20 @@ Record in existing handlers:
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
-| `coreauth.auth_requests_total` | Counter | grant_type, client_id, status | Authorization requests |
-| `coreauth.auth_latency_ms` | Histogram | grant_type, endpoint | Request latency |
-| `coreauth.tokens_issued_total` | Counter | grant_type, client_id | Tokens issued |
-| `coreauth.token_validations_total` | Counter | result (valid/invalid/expired) | Token validations |
-| `coreauth.sessions_active` | Gauge | - | Active sessions |
+| `systemauth.auth_requests_total` | Counter | grant_type, client_id, status | Authorization requests |
+| `systemauth.auth_latency_ms` | Histogram | grant_type, endpoint | Request latency |
+| `systemauth.tokens_issued_total` | Counter | grant_type, client_id | Tokens issued |
+| `systemauth.token_validations_total` | Counter | result (valid/invalid/expired) | Token validations |
+| `systemauth.sessions_active` | Gauge | - | Active sessions |
 
 ### 2.3 Tracing Integration
 
 Add spans to OAuth handlers in `handler_fosite.go`:
 
-- `coreauth.authorize` - Authorization endpoint
-- `coreauth.token` - Token endpoint
-- `coreauth.introspect` - Token introspection
-- `coreauth.revoke` - Token revocation
+- `systemauth.authorize` - Authorization endpoint
+- `systemauth.token` - Token endpoint
+- `systemauth.introspect` - Token introspection
+- `systemauth.revoke` - Token revocation
 
 ---
 
@@ -220,7 +220,7 @@ go get github.com/plexusone/omniobserve@latest
 3. `observability/slog.go` - slog handler integration
 4. `observability/metrics.go` - Pre-defined metric names
 
-### Step 3: Integrate with CoreAuth
+### Step 3: Integrate with SystemAuth
 
 1. Add `WithObservability` option to Server
 2. Add metrics recording to OAuth handlers
@@ -252,8 +252,8 @@ go get github.com/plexusone/omniobserve@latest
 | `observability/middleware.go` | New - HTTP middleware |
 | `observability/slog.go` | New - slog integration |
 | `observability/metrics.go` | New - Metric definitions |
-| `identity/coreauth/server.go` | Modify - Add WithObservability option |
-| `identity/coreauth/handler_fosite.go` | Modify - Add spans and metrics |
+| `identity/systemauth/server.go` | Modify - Add WithObservability option |
+| `identity/systemauth/handler_fosite.go` | Modify - Add spans and metrics |
 | `coreapi/store_memory.go` | Modify - Add observability |
 | `session/ratelimit/ratelimit.go` | Modify - Add metrics |
 | `session/middleware/http.go` | Modify - Add JWT metrics |
@@ -278,8 +278,8 @@ obs, err := observability.New(observability.Config{
 })
 defer obs.Shutdown(ctx)
 
-// CoreAuth with observability
-server, _ := coreauth.NewEmbedded(cfg, coreauth.WithObservability(obs))
+// SystemAuth with observability
+server, _ := systemauth.NewEmbedded(cfg, systemauth.WithObservability(obs))
 
 // HTTP middleware
 router.Use(obs.Middleware())
@@ -310,7 +310,7 @@ OBSERVABILITY_DISABLED=false
 go build ./...
 
 # Run tests
-go test ./observability/... ./identity/coreauth/... ./coreapi/...
+go test ./observability/... ./identity/systemauth/... ./coreapi/...
 
 # Test with OTLP (Jaeger)
 docker run -d --name jaeger \
@@ -338,7 +338,7 @@ Follow OpenTelemetry semantic conventions:
 
 Examples:
 
-- `systemforge.coreauth.tokens_issued_total`
-- `systemforge.coreauth.auth_latency_ms`
+- `systemforge.systemauth.tokens_issued_total`
+- `systemforge.systemauth.auth_latency_ms`
 - `systemforge.coreapi.ratelimit_requests_total`
 - `systemforge.session.jwt_validations_total`

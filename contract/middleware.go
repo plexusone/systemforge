@@ -12,16 +12,16 @@ import (
 	"github.com/google/uuid"
 )
 
-// CoreControlClaims represents the JWT claims from CoreControl.
-type CoreControlClaims struct {
+// SystemAuthClaims represents the JWT claims from SystemAuth.
+type SystemAuthClaims struct {
 	jwt.RegisteredClaims
 	FederationID string   `json:"federation_id"`
 	Permissions  []string `json:"permissions"`
 }
 
-// Middleware returns HTTP middleware for CoreControl authentication.
+// Middleware returns HTTP middleware for SystemAuth authentication.
 // In standalone mode, requests are allowed without authentication.
-// In federated mode, CoreControl JWTs are validated.
+// In federated mode, SystemAuth JWTs are validated.
 func (a *API) Middleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -72,14 +72,14 @@ func (a *API) Middleware() func(http.Handler) http.Handler {
 	}
 }
 
-// validateToken validates a CoreControl JWT.
-func (a *API) validateToken(tokenString string) (*CoreControlClaims, error) {
+// validateToken validates a SystemAuth JWT.
+func (a *API) validateToken(tokenString string) (*SystemAuthClaims, error) {
 	config := a.provider.Config()
 
 	// Parse and validate token
-	token, err := jwt.ParseWithClaims(tokenString, &CoreControlClaims{}, func(token *jwt.Token) (any, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &SystemAuthClaims{}, func(token *jwt.Token) (any, error) {
 		// Validate signing method
-		switch key := config.CoreControlPublicKey.(type) {
+		switch key := config.SystemAuthPublicKey.(type) {
 		case *rsa.PublicKey:
 			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 				return nil, errors.New("unexpected signing method")
@@ -98,13 +98,13 @@ func (a *API) validateToken(tokenString string) (*CoreControlClaims, error) {
 		return nil, err
 	}
 
-	claims, ok := token.Claims.(*CoreControlClaims)
+	claims, ok := token.Claims.(*SystemAuthClaims)
 	if !ok || !token.Valid {
 		return nil, errors.New("invalid token claims")
 	}
 
 	// Validate issuer
-	if config.CoreControlIssuer != "" && claims.Issuer != config.CoreControlIssuer {
+	if config.SystemAuthIssuer != "" && claims.Issuer != config.SystemAuthIssuer {
 		return nil, errors.New("invalid issuer")
 	}
 

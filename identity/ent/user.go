@@ -36,7 +36,7 @@ type User struct {
 	Active bool `json:"active,omitempty"`
 	// LastLoginAt holds the value of the "last_login_at" field.
 	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
-	// CoreControl global identity ID for federated users
+	// SystemAuth global identity ID for federated users
 	FederationID *uuid.UUID `json:"federation_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.

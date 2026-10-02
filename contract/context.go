@@ -11,9 +11,9 @@ import (
 type contextKey string
 
 const (
-	// contextKeyFederationID stores the federation ID from CoreControl tokens.
+	// contextKeyFederationID stores the federation ID from SystemAuth tokens.
 	contextKeyFederationID contextKey = "contract_federation_id"
-	// contextKeyPermissions stores the permissions from CoreControl tokens.
+	// contextKeyPermissions stores the permissions from SystemAuth tokens.
 	contextKeyPermissions contextKey = "contract_permissions"
 	// contextKeySubject stores the token subject.
 	contextKeySubject contextKey = "contract_subject"

@@ -55,7 +55,7 @@ func (User) Fields() []ent.Field {
 			Optional().
 			Nillable().
 			Unique().
-			Comment("CoreControl global identity ID for federated users"),
+			Comment("SystemAuth global identity ID for federated users"),
 	}
 }
 

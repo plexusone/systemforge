@@ -72,7 +72,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 
 - 📊 **Vendor-Agnostic** - Integrates with [omniobserve](https://github.com/plexusone/omniobserve)
 - 🔌 **Multiple Backends** - OTLP, Datadog, New Relic, Dynatrace
-- 📈 **Pre-Built Metrics** - CoreAuth, rate limiting, JWT/API key validation
+- 📈 **Pre-Built Metrics** - SystemAuth, rate limiting, JWT/API key validation
 - 🔍 **Distributed Tracing** - Automatic span creation for OAuth flows
 - 📝 **slog Integration** - Trace-correlated structured logging
 

@@ -64,9 +64,9 @@ nav:
     - Client Credentials: oauth/client-credentials.md
     - Service Accounts: oauth/service-accounts.md
     - Token Management: oauth/tokens.md
-  - CoreAuth:
-    - Overview: coreauth/overview.md
-    - Providers: coreauth/providers.md
+  - SystemAuth:
+    - Overview: systemauth/overview.md
+    - Providers: systemauth/providers.md
   - Authorization:
     - SpiceDB Setup: authorization/spicedb-setup.md
     - SpiceDB Schema: authorization/spicedb-schema.md

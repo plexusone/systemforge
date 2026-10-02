@@ -57,8 +57,8 @@ func (a *API) registerPolicyEndpoints() {
 		OperationID: "syncPolicies",
 		Method:      "POST",
 		Path:        base + "/policy/sync",
-		Summary:     "Sync policies from CoreControl",
-		Description: "Synchronizes policy data from CoreControl. Requires federation mode.",
+		Summary:     "Sync policies from SystemAuth",
+		Description: "Synchronizes policy data from SystemAuth. Requires federation mode.",
 		Tags:        []string{"Policy", "Federation"},
 		Security: []map[string][]string{
 			{"bearer": {"policy:sync"}},

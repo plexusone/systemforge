@@ -60,8 +60,8 @@ func (a *API) registerIdentityEndpoints() {
 		OperationID: "syncIdentities",
 		Method:      "POST",
 		Path:        base + "/identity/sync",
-		Summary:     "Sync identities from CoreControl",
-		Description: "Synchronizes principal data from CoreControl. Requires federation mode.",
+		Summary:     "Sync identities from SystemAuth",
+		Description: "Synchronizes principal data from SystemAuth. Requires federation mode.",
 		Tags:        []string{"Identity", "Federation"},
 		Security: []map[string][]string{
 			{"bearer": {"identity:sync"}},

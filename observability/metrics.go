@@ -6,26 +6,26 @@ const (
 	// MetricPrefix is the prefix for all SystemForge metrics.
 	MetricPrefix = "systemforge."
 
-	// CoreAuth metrics
+	// SystemAuth metrics
 
 	// MetricAuthRequests counts total authentication/authorization requests.
 	// Labels: grant_type, client_id, status
-	MetricAuthRequests = MetricPrefix + "coreauth.auth_requests_total"
+	MetricAuthRequests = MetricPrefix + "systemauth.auth_requests_total"
 
 	// MetricAuthLatency records authentication latency in milliseconds.
 	// Labels: grant_type, endpoint
-	MetricAuthLatency = MetricPrefix + "coreauth.auth_latency_ms"
+	MetricAuthLatency = MetricPrefix + "systemauth.auth_latency_ms"
 
 	// MetricTokensIssued counts total tokens issued.
 	// Labels: grant_type, client_id
-	MetricTokensIssued = MetricPrefix + "coreauth.tokens_issued_total"
+	MetricTokensIssued = MetricPrefix + "systemauth.tokens_issued_total"
 
 	// MetricTokenValidations counts total token validations.
 	// Labels: result (valid, invalid, expired)
-	MetricTokenValidations = MetricPrefix + "coreauth.token_validations_total"
+	MetricTokenValidations = MetricPrefix + "systemauth.token_validations_total"
 
 	// MetricSessionsActive records currently active sessions.
-	MetricSessionsActive = MetricPrefix + "coreauth.sessions_active"
+	MetricSessionsActive = MetricPrefix + "systemauth.sessions_active"
 
 	// Rate limiting metrics
 
@@ -56,19 +56,19 @@ const (
 	// SpanPrefix is the prefix for all SystemForge spans.
 	SpanPrefix = "systemforge."
 
-	// CoreAuth spans
+	// SystemAuth spans
 
 	// SpanAuthorize is the span for the authorization endpoint.
-	SpanAuthorize = SpanPrefix + "coreauth.authorize"
+	SpanAuthorize = SpanPrefix + "systemauth.authorize"
 
 	// SpanToken is the span for the token endpoint.
-	SpanToken = SpanPrefix + "coreauth.token"
+	SpanToken = SpanPrefix + "systemauth.token"
 
 	// SpanIntrospect is the span for token introspection.
-	SpanIntrospect = SpanPrefix + "coreauth.introspect"
+	SpanIntrospect = SpanPrefix + "systemauth.introspect"
 
 	// SpanRevoke is the span for token revocation.
-	SpanRevoke = SpanPrefix + "coreauth.revoke"
+	SpanRevoke = SpanPrefix + "systemauth.revoke"
 
 	// HTTP middleware spans
 

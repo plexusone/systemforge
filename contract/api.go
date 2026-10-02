@@ -51,7 +51,7 @@ func NewAPI(provider *Provider, opts ...Option) (*API, error) {
 
 	// Create Huma API with OpenAPI configuration
 	config := huma.DefaultConfig("SystemForge Contract API", provider.Config().Version)
-	config.Info.Description = "SystemForge Product Contract API for CoreControl federation integration"
+	config.Info.Description = "SystemForge Product Contract API for SystemAuth federation integration"
 
 	// Add contact info
 	config.Info.Contact = &huma.Contact{
@@ -157,7 +157,7 @@ func (a *API) registerEndpoints() {
 
 // checkPermission verifies the request has the required permission.
 // In standalone mode, all permissions are granted.
-// In federated mode, permissions come from the CoreControl JWT.
+// In federated mode, permissions come from the SystemAuth JWT.
 func (a *API) checkPermission(ctx context.Context, permission string) error {
 	// In standalone mode, allow all operations
 	if !a.provider.FederationState().IsFederated() {

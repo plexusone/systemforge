@@ -109,7 +109,7 @@ func (PrincipalMixin) Fields() []ent.Field {
 			Optional().
 			Nillable().
 			Unique().
-			Comment("CoreControl Principal ID for SSO federation"),
+			Comment("SystemAuth Principal ID for SSO federation"),
 	}
 	return append(baseFields, principalFields...)
 }

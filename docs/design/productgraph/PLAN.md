@@ -13,7 +13,7 @@ Integrate systemforge observability with ProductGraph to enable frontend-backend
 ### systemforge Observability
 
 - omniobserve integration with multiple providers (OTLP, Datadog, New Relic, Dynatrace)
-- Pre-defined metrics for CoreAuth and CoreAPI
+- Pre-defined metrics for SystemAuth and CoreAPI
 - HTTP middleware for request tracing
 - OpenTelemetry span creation
 

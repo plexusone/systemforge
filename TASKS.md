@@ -129,7 +129,7 @@ GoDoc coverage analysis identified ~600+ exported items missing documentation co
 
 These are used directly by consumers of the library.
 
-#### Configuration Types (`identity/coreauth/config.go`)
+#### Configuration Types (`identity/systemauth/config.go`)
 
 - [ ] `Config` - Main configuration struct
 - [ ] `ClientConfig` - OAuth client configuration
@@ -202,7 +202,7 @@ These are used directly by consumers of the library.
 
 ### Priority 3: Identity & Authentication
 
-#### CoreAuth Server (`identity/coreauth/`)
+#### SystemAuth Server (`identity/systemauth/`)
 
 - [ ] `NewEmbedded` - Create embedded auth server
 - [ ] `AuthenticationProvider` - Authentication provider interface
@@ -216,7 +216,7 @@ These are used directly by consumers of the library.
 - [ ] `MemoryStorage` - In-memory storage
 - [ ] `CleanupExpired` - Expired token cleanup
 
-#### Session Management (`identity/coreauth/session.go`)
+#### Session Management (`identity/systemauth/session.go`)
 
 - [ ] `SessionProvider` - Session provider interface
 - [ ] `DefaultSessionProvider` - Default session implementation
@@ -226,7 +226,7 @@ These are used directly by consumers of the library.
 - [ ] `SaveConsent` - Save user consent
 - [ ] `WithUserIDHeader` - User ID header option
 
-#### OAuth Types (`identity/coreauth/types_oauth.go`, `identity/oauth/types_oauth.go`)
+#### OAuth Types (`identity/systemauth/types_oauth.go`, `identity/oauth/types_oauth.go`)
 
 - [ ] `TokenInput` - Token request input
 - [ ] `TokenResponse` - Token response structure
@@ -408,7 +408,7 @@ The following are auto-generated and should NOT be manually documented:
 ### Example Documentation
 
 ```go
-// Config holds the main configuration for the CoreAuth server.
+// Config holds the main configuration for the SystemAuth server.
 // It includes settings for OAuth clients, token generation, and federation.
 type Config struct {
     // Clients defines the OAuth 2.0 clients that can authenticate.

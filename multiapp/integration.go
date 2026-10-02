@@ -26,7 +26,7 @@ type FullContext struct {
 	TenantID uuid.UUID
 	UserID   uuid.UUID
 
-	// Federation context (from CoreControl, optional)
+	// Federation context (from SystemAuth, optional)
 	FederationID uuid.UUID
 }
 
@@ -58,7 +58,7 @@ func (fc *FullContext) HasApp() bool {
 	return fc.App != nil
 }
 
-// IsFederated returns true if the user has a CoreControl federation ID.
+// IsFederated returns true if the user has a SystemAuth federation ID.
 func (fc *FullContext) IsFederated() bool {
 	return fc.FederationID != uuid.Nil
 }

@@ -1,5 +1,5 @@
 // Package contract implements the SystemForge Product Contract specification,
-// providing standardized endpoints for integration with CoreControl federation.
+// providing standardized endpoints for integration with SystemAuth federation.
 package contract
 
 import (
@@ -46,13 +46,13 @@ type Config struct {
 	// Capabilities lists the supported contract capabilities.
 	Capabilities []Capability
 
-	// CoreControlIssuer is the expected JWT issuer for CoreControl tokens.
+	// SystemAuthIssuer is the expected JWT issuer for SystemAuth tokens.
 	// Required for federated mode authentication.
-	CoreControlIssuer string
+	SystemAuthIssuer string
 
-	// CoreControlPublicKey is the public key for validating CoreControl JWTs.
+	// SystemAuthPublicKey is the public key for validating SystemAuth JWTs.
 	// Can be *rsa.PublicKey, *ecdsa.PublicKey, or ed25519.PublicKey.
-	CoreControlPublicKey any
+	SystemAuthPublicKey any
 }
 
 // DefaultConfig returns a Config with sensible defaults.
