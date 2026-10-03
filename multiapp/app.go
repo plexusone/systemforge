@@ -11,10 +11,10 @@ package multiapp
 
 import (
 	"context"
+	"log/slog"
 
 	"entgo.io/ent"
 	"github.com/go-chi/chi/v5"
-	"log/slog"
 )
 
 // AppBackend is the interface that all app backends must implement.
