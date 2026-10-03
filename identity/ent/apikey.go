@@ -27,7 +27,7 @@ type APIKey struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Human-readable name for the API key
 	Name string `json:"name,omitempty"`
-	// Visible prefix of the API key (e.g., cf_live_abc123)
+	// Visible prefix of the API key (e.g., sf_live_abc123)
 	Prefix string `json:"prefix,omitempty"`
 	// SHA-256 hash of the full API key
 	KeyHash string `json:"-"`

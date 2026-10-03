@@ -43,10 +43,10 @@ const (
 
 // KeyFormat defines the format of generated API keys.
 // Format: {prefix}_{environment}_{random}
-// Example: cf_live_abc123def456...
+// Example: sf_live_abc123def456...
 const (
 	// DefaultPrefix is the default key prefix.
-	DefaultPrefix = "cf"
+	DefaultPrefix = "sf"
 	// KeyRandomBytes is the number of random bytes in the key.
 	KeyRandomBytes = 32
 	// PrefixRandomBytes is the number of random bytes in the visible prefix.
@@ -223,7 +223,7 @@ type ServiceConfig struct {
 	// Store is the key storage backend.
 	Store Store
 
-	// Prefix is the key prefix (default: "cf").
+	// Prefix is the key prefix (default: "sf").
 	Prefix string
 
 	// AllowedScopes restricts which scopes can be granted.
@@ -434,7 +434,7 @@ func (s *Service) generateKey(env Environment) (fullKey, prefix, keyHash string,
 		return "", "", "", err
 	}
 
-	// Build the prefix: cf_live_abc123...
+	// Build the prefix: sf_live_abc123...
 	// Use base62 encoding to avoid underscores in the random part
 	prefixRandom := encodeBase62(prefixBytes)
 	prefix = fmt.Sprintf("%s_%s_%s", s.config.Prefix, env, prefixRandom)
@@ -493,8 +493,8 @@ func (s *Service) hashKey(key string) string {
 
 // parseKeyPrefix extracts the prefix from a full key.
 func (s *Service) parseKeyPrefix(key string) (string, error) {
-	// Key format: cf_live_abc123..._randomdata
-	// Prefix format: cf_live_abc123...
+	// Key format: sf_live_abc123..._randomdata
+	// Prefix format: sf_live_abc123...
 	parts := strings.Split(key, "_")
 	if len(parts) < 4 {
 		return "", ErrInvalidKey
