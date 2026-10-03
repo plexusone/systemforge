@@ -105,16 +105,16 @@ type ResourceTypeMeta struct {
 // ServiceProviderConfig represents the SCIM service provider configuration
 // as defined in RFC 7643 Section 5.
 type ServiceProviderConfig struct {
-	Schemas               []string              `json:"schemas"`
-	DocumentationURI      string                `json:"documentationUri,omitempty"`
-	Patch                 SupportedFeature      `json:"patch"`
-	Bulk                  BulkConfig            `json:"bulk"`
-	Filter                FilterConfig          `json:"filter"`
-	ChangePassword        SupportedFeature      `json:"changePassword"`
-	Sort                  SupportedFeature      `json:"sort"`
-	Etag                  SupportedFeature      `json:"etag"`
+	Schemas               []string               `json:"schemas"`
+	DocumentationURI      string                 `json:"documentationUri,omitempty"`
+	Patch                 SupportedFeature       `json:"patch"`
+	Bulk                  BulkConfig             `json:"bulk"`
+	Filter                FilterConfig           `json:"filter"`
+	ChangePassword        SupportedFeature       `json:"changePassword"`
+	Sort                  SupportedFeature       `json:"sort"`
+	Etag                  SupportedFeature       `json:"etag"`
 	AuthenticationSchemes []AuthenticationScheme `json:"authenticationSchemes"`
-	Meta                  *SPConfigMeta         `json:"meta,omitempty"`
+	Meta                  *SPConfigMeta          `json:"meta,omitempty"`
 }
 
 // SupportedFeature indicates whether a feature is supported.

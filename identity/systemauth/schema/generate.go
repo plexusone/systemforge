@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/invopop/jsonschema"
+	"github.com/plexusone/systemforge/identity/systemauth"
 )
 
 func main() {

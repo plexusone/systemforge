@@ -175,4 +175,3 @@ func NewRedisClient(cfg *RedisConfig) redis.UniversalClient {
 		PoolSize: poolSize,
 	})
 }
-

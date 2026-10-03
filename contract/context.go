@@ -72,10 +72,10 @@ func AudienceFromContext(ctx context.Context) string {
 
 // Permission scopes as defined in the product contract specification.
 const (
-	PermissionIdentityRead  = "identity:read"
-	PermissionIdentitySync  = "identity:sync"
-	PermissionPolicyRead    = "policy:read"
-	PermissionPolicySync    = "policy:sync"
-	PermissionAuditConfig   = "audit:config"
-	PermissionHealthRead    = "health:read"
+	PermissionIdentityRead = "identity:read"
+	PermissionIdentitySync = "identity:sync"
+	PermissionPolicyRead   = "policy:read"
+	PermissionPolicySync   = "policy:sync"
+	PermissionAuditConfig  = "audit:config"
+	PermissionHealthRead   = "health:read"
 )

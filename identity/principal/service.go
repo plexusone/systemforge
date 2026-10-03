@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
 	"github.com/plexusone/systemforge/identity/ent"
@@ -777,17 +778,17 @@ func (s *DefaultService) Reactivate(ctx context.Context, id uuid.UUID) error {
 
 func entPrincipalToModel(p *ent.Principal) *Principal {
 	result := &Principal{
-		ID:            p.ID,
-		Type:          Type(p.Type.String()),
-		Identifier:    p.Identifier,
-		DisplayName:   p.DisplayName,
+		ID:             p.ID,
+		Type:           Type(p.Type.String()),
+		Identifier:     p.Identifier,
+		DisplayName:    p.DisplayName,
 		OrganizationID: p.OrganizationID,
-		Active:        p.Active,
-		Capabilities:  mapToCapabilities(p.Capabilities),
-		AllowedScopes: p.AllowedScopes,
-		Metadata:      p.Metadata,
-		CreatedAt:     p.CreatedAt,
-		UpdatedAt:     p.UpdatedAt,
+		Active:         p.Active,
+		Capabilities:   mapToCapabilities(p.Capabilities),
+		AllowedScopes:  p.AllowedScopes,
+		Metadata:       p.Metadata,
+		CreatedAt:      p.CreatedAt,
+		UpdatedAt:      p.UpdatedAt,
 	}
 
 	// Populate type-specific extension

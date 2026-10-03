@@ -329,4 +329,3 @@ func (a *API) checkSlug(ctx context.Context, input *CheckSlugInput) (*CheckSlugO
 
 	return output, nil
 }
-

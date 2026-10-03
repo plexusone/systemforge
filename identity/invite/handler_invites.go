@@ -67,11 +67,11 @@ func inviteResultToResponse(result *InviteResult) *InviteResultResponse {
 type CreateInviteRequest struct {
 	Slug string `path:"slug"`
 	Body struct {
-		Email             string  `json:"email" required:"true" format:"email"`
-		Role              string  `json:"role" required:"true" enum:"owner,admin,member"`
-		Message           *string `json:"message,omitempty"`
-		InviterPrincipalID string `json:"inviter_principal_id" required:"true" format:"uuid"`
-		ExpiresInHours    int     `json:"expires_in_hours,omitempty" minimum:"1" maximum:"720"`
+		Email              string  `json:"email" required:"true" format:"email"`
+		Role               string  `json:"role" required:"true" enum:"owner,admin,member"`
+		Message            *string `json:"message,omitempty"`
+		InviterPrincipalID string  `json:"inviter_principal_id" required:"true" format:"uuid"`
+		ExpiresInHours     int     `json:"expires_in_hours,omitempty" minimum:"1" maximum:"720"`
 	}
 }
 

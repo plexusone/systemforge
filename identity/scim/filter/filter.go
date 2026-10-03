@@ -132,10 +132,10 @@ func (n *ValuePathNode) String() string {
 
 // AttributePath represents a parsed attribute path.
 type AttributePath struct {
-	URIPrefix     string   // Optional schema URI prefix
-	AttributeName string   // Main attribute name
-	SubAttribute  string   // Optional sub-attribute
-	ValueFilter   Node     // Optional value filter for multi-valued attributes
+	URIPrefix     string // Optional schema URI prefix
+	AttributeName string // Main attribute name
+	SubAttribute  string // Optional sub-attribute
+	ValueFilter   Node   // Optional value filter for multi-valued attributes
 }
 
 // ParseAttributePath parses an attribute path string.

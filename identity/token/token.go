@@ -12,27 +12,27 @@ import (
 
 // Token represents a token record.
 type Token struct {
-	ID                    uuid.UUID         `json:"id"`
-	PrincipalID           uuid.UUID         `json:"principal_id"`
-	PrincipalType         principal.Type    `json:"principal_type"`
-	IssuedByAppID         *uuid.UUID        `json:"issued_by_app_id,omitempty"`
-	FamilyID              uuid.UUID         `json:"family_id"`
-	ParentTokenID         *uuid.UUID        `json:"parent_token_id,omitempty"`
-	Scopes                []string          `json:"scopes"`
-	Audience              []string          `json:"audience,omitempty"`
-	Capabilities          map[string]bool   `json:"capabilities"`
-	DelegationChain       []string          `json:"delegation_chain,omitempty"`
-	DPoPJKT               string            `json:"dpop_jkt,omitempty"` // DPoP JWK thumbprint
-	SessionID             string            `json:"session_id,omitempty"`
-	AccessExpiresAt       time.Time         `json:"access_expires_at"`
-	RefreshExpiresAt      *time.Time        `json:"refresh_expires_at,omitempty"`
-	Revoked               bool              `json:"revoked"`
-	RevokedAt             *time.Time        `json:"revoked_at,omitempty"`
-	RevokedReason         string            `json:"revoked_reason,omitempty"`
-	ClientIP              string            `json:"client_ip,omitempty"`
-	UserAgent             string            `json:"user_agent,omitempty"`
-	LastUsedAt            *time.Time        `json:"last_used_at,omitempty"`
-	CreatedAt             time.Time         `json:"created_at"`
+	ID               uuid.UUID       `json:"id"`
+	PrincipalID      uuid.UUID       `json:"principal_id"`
+	PrincipalType    principal.Type  `json:"principal_type"`
+	IssuedByAppID    *uuid.UUID      `json:"issued_by_app_id,omitempty"`
+	FamilyID         uuid.UUID       `json:"family_id"`
+	ParentTokenID    *uuid.UUID      `json:"parent_token_id,omitempty"`
+	Scopes           []string        `json:"scopes"`
+	Audience         []string        `json:"audience,omitempty"`
+	Capabilities     map[string]bool `json:"capabilities"`
+	DelegationChain  []string        `json:"delegation_chain,omitempty"`
+	DPoPJKT          string          `json:"dpop_jkt,omitempty"` // DPoP JWK thumbprint
+	SessionID        string          `json:"session_id,omitempty"`
+	AccessExpiresAt  time.Time       `json:"access_expires_at"`
+	RefreshExpiresAt *time.Time      `json:"refresh_expires_at,omitempty"`
+	Revoked          bool            `json:"revoked"`
+	RevokedAt        *time.Time      `json:"revoked_at,omitempty"`
+	RevokedReason    string          `json:"revoked_reason,omitempty"`
+	ClientIP         string          `json:"client_ip,omitempty"`
+	UserAgent        string          `json:"user_agent,omitempty"`
+	LastUsedAt       *time.Time      `json:"last_used_at,omitempty"`
+	CreatedAt        time.Time       `json:"created_at"`
 }
 
 // IssuedToken contains both the token record and the raw tokens.
@@ -59,20 +59,20 @@ type Capabilities struct {
 
 // IssueInput contains fields for issuing a new token.
 type IssueInput struct {
-	PrincipalID      uuid.UUID
-	PrincipalType    principal.Type
-	IssuedByAppID    *uuid.UUID
-	Scopes           []string
-	Audience         []string
-	Capabilities     map[string]bool
-	DelegationChain  []string
-	DPoPJKT          string // DPoP JWK thumbprint for proof-of-possession
-	SessionID        string
-	AccessTTL        time.Duration
-	RefreshTTL       time.Duration // 0 means no refresh token
-	ClientIP         string
-	UserAgent        string
-	ParentTokenID    *uuid.UUID // For delegation
+	PrincipalID     uuid.UUID
+	PrincipalType   principal.Type
+	IssuedByAppID   *uuid.UUID
+	Scopes          []string
+	Audience        []string
+	Capabilities    map[string]bool
+	DelegationChain []string
+	DPoPJKT         string // DPoP JWK thumbprint for proof-of-possession
+	SessionID       string
+	AccessTTL       time.Duration
+	RefreshTTL      time.Duration // 0 means no refresh token
+	ClientIP        string
+	UserAgent       string
+	ParentTokenID   *uuid.UUID // For delegation
 }
 
 // RefreshInput contains fields for refreshing a token.

@@ -150,4 +150,3 @@ func toHumaErrorFromErr(err error) error {
 	}
 	return huma.Error500InternalServerError(err.Error())
 }
-

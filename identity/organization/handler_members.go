@@ -326,4 +326,3 @@ func (a *API) transferOwnership(ctx context.Context, input *TransferOwnershipReq
 	resp.Body.Message = "Ownership transferred successfully"
 	return resp, nil
 }
-

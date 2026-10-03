@@ -13,8 +13,8 @@ import (
 
 // EntListingService is an Ent-backed implementation of ListingService.
 type EntListingService struct {
-	client     *ent.Client
-	authzSync  AuthzSyncer
+	client    *ent.Client
+	authzSync AuthzSyncer
 }
 
 // NewEntListingService creates a new Ent-backed listing service.

@@ -27,10 +27,10 @@ type Config struct {
 
 // CheckoutService implements marketplace.CheckoutService using Stripe.
 type CheckoutService struct {
-	config     Config
-	listings   marketplace.ListingService
-	licenses   marketplace.LicenseService
-	authzSync  marketplace.AuthzSyncer
+	config    Config
+	listings  marketplace.ListingService
+	licenses  marketplace.LicenseService
+	authzSync marketplace.AuthzSyncer
 }
 
 // NewCheckoutService creates a new Stripe checkout service.

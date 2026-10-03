@@ -33,19 +33,19 @@ const FederationStatusFederated = "federated"
 
 // ContractPrincipal represents a principal in contract responses.
 type ContractPrincipal struct {
-	ID             uuid.UUID           `json:"id" doc:"Principal unique identifier" format:"uuid"`
-	Type           string              `json:"type" doc:"Principal type" enum:"human,application,agent,service" example:"human"`
-	Identifier     string              `json:"identifier" doc:"Unique identifier (email, client_id, etc.)" example:"user@example.com"`
-	DisplayName    string              `json:"display_name" doc:"Human-readable display name" example:"John Doe"`
-	Active         bool                `json:"active" doc:"Whether the principal is active" example:"true"`
-	OrganizationID *uuid.UUID          `json:"organization_id,omitempty" doc:"Organization this principal belongs to" format:"uuid"`
-	Capabilities   map[string]bool     `json:"capabilities,omitempty" doc:"Principal capabilities"`
-	CreatedAt      time.Time           `json:"created_at" doc:"Creation timestamp" format:"date-time"`
-	UpdatedAt      time.Time           `json:"updated_at" doc:"Last update timestamp" format:"date-time"`
-	Human          *ContractHuman      `json:"human,omitempty" doc:"Human-specific data (when type=human)"`
-	Application    *ContractApp        `json:"application,omitempty" doc:"Application-specific data (when type=application)"`
-	Agent          *ContractAgent      `json:"agent,omitempty" doc:"Agent-specific data (when type=agent)"`
-	Service        *ContractService    `json:"service,omitempty" doc:"Service-specific data (when type=service)"`
+	ID             uuid.UUID        `json:"id" doc:"Principal unique identifier" format:"uuid"`
+	Type           string           `json:"type" doc:"Principal type" enum:"human,application,agent,service" example:"human"`
+	Identifier     string           `json:"identifier" doc:"Unique identifier (email, client_id, etc.)" example:"user@example.com"`
+	DisplayName    string           `json:"display_name" doc:"Human-readable display name" example:"John Doe"`
+	Active         bool             `json:"active" doc:"Whether the principal is active" example:"true"`
+	OrganizationID *uuid.UUID       `json:"organization_id,omitempty" doc:"Organization this principal belongs to" format:"uuid"`
+	Capabilities   map[string]bool  `json:"capabilities,omitempty" doc:"Principal capabilities"`
+	CreatedAt      time.Time        `json:"created_at" doc:"Creation timestamp" format:"date-time"`
+	UpdatedAt      time.Time        `json:"updated_at" doc:"Last update timestamp" format:"date-time"`
+	Human          *ContractHuman   `json:"human,omitempty" doc:"Human-specific data (when type=human)"`
+	Application    *ContractApp     `json:"application,omitempty" doc:"Application-specific data (when type=application)"`
+	Agent          *ContractAgent   `json:"agent,omitempty" doc:"Agent-specific data (when type=agent)"`
+	Service        *ContractService `json:"service,omitempty" doc:"Service-specific data (when type=service)"`
 }
 
 // ContractHuman represents human-specific data in contract responses.

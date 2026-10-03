@@ -91,8 +91,8 @@ type IdentityTraits struct {
 
 // IdentityCredential represents a credential type.
 type IdentityCredential struct {
-	Type       CredentialType `json:"type"`
-	Identifiers []string      `json:"identifiers,omitempty"`
+	Type        CredentialType `json:"type"`
+	Identifiers []string       `json:"identifiers,omitempty"`
 }
 
 // CredentialType is the type of credential.
@@ -258,18 +258,18 @@ type OAuthProvider interface {
 
 // OAuthAuthorizeRequest represents an authorization request.
 type OAuthAuthorizeRequest struct {
-	ClientID            string   `json:"client_id"`
-	RedirectURI         string   `json:"redirect_uri"`
-	ResponseType        string   `json:"response_type"`
-	Scope               string   `json:"scope"`
-	State               string   `json:"state"`
-	Nonce               string   `json:"nonce,omitempty"`
-	CodeChallenge       string   `json:"code_challenge,omitempty"`
-	CodeChallengeMethod string   `json:"code_challenge_method,omitempty"`
-	Prompt              string   `json:"prompt,omitempty"`
-	MaxAge              int      `json:"max_age,omitempty"`
-	UILocales           string   `json:"ui_locales,omitempty"`
-	ACRValues           string   `json:"acr_values,omitempty"`
+	ClientID            string `json:"client_id"`
+	RedirectURI         string `json:"redirect_uri"`
+	ResponseType        string `json:"response_type"`
+	Scope               string `json:"scope"`
+	State               string `json:"state"`
+	Nonce               string `json:"nonce,omitempty"`
+	CodeChallenge       string `json:"code_challenge,omitempty"`
+	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
+	Prompt              string `json:"prompt,omitempty"`
+	MaxAge              int    `json:"max_age,omitempty"`
+	UILocales           string `json:"ui_locales,omitempty"`
+	ACRValues           string `json:"acr_values,omitempty"`
 }
 
 // OAuthAuthorizeResponse is the authorization response.
@@ -347,9 +347,9 @@ type OAuthConsentRequest struct {
 
 // OAuthConsentAccept accepts a consent request.
 type OAuthConsentAccept struct {
-	GrantScopes []string       `json:"grant_scopes"`
-	Remember    bool           `json:"remember"`
-	RememberFor int            `json:"remember_for,omitempty"`
+	GrantScopes []string        `json:"grant_scopes"`
+	Remember    bool            `json:"remember"`
+	RememberFor int             `json:"remember_for,omitempty"`
 	Session     *ConsentSession `json:"session,omitempty"`
 }
 
@@ -381,10 +381,10 @@ type OAuthLoginRequest struct {
 
 // OAuthLoginAccept accepts a login request.
 type OAuthLoginAccept struct {
-	Subject     string `json:"subject"`
-	Remember    bool   `json:"remember"`
-	RememberFor int    `json:"remember_for,omitempty"`
-	ACR         string `json:"acr,omitempty"`
+	Subject     string         `json:"subject"`
+	Remember    bool           `json:"remember"`
+	RememberFor int            `json:"remember_for,omitempty"`
+	ACR         string         `json:"acr,omitempty"`
 	Context     map[string]any `json:"context,omitempty"`
 }
 

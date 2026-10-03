@@ -275,7 +275,7 @@ func TestExtensionMapperFromMetadataWrongTypes(t *testing.T) {
 
 	// Test with non-string values
 	metadata := map[string]any{
-		"employee_number": 123,    // int instead of string
+		"employee_number": 123, // int instead of string
 		"department":      "Engineering",
 	}
 

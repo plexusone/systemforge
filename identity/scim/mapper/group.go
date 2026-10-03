@@ -72,9 +72,9 @@ func (m *GroupMapper) ToSCIMWithMembers(ctx context.Context, org *identity.Organ
 	// Add members
 	for _, member := range members {
 		memberRef := scim.MemberRef{
-			Value:   member.UserID.String(),
-			Ref:     m.config.BaseURL + "/Users/" + member.UserID.String(),
-			Type:    "User",
+			Value: member.UserID.String(),
+			Ref:   m.config.BaseURL + "/Users/" + member.UserID.String(),
+			Type:  "User",
 		}
 		if name, ok := memberNames[member.UserID]; ok {
 			memberRef.Display = name

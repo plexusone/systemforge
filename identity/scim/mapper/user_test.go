@@ -387,10 +387,10 @@ func TestParseUserID(t *testing.T) {
 
 func TestJoinStrings(t *testing.T) {
 	tests := []struct {
-		name   string
-		parts  []string
-		sep    string
-		want   string
+		name  string
+		parts []string
+		sep   string
+		want  string
 	}{
 		{
 			name:  "normal join",

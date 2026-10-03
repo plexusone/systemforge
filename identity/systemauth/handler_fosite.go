@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/plexusone/systemforge/observability"
 	"github.com/plexusone/omniobserve/observops"
+	"github.com/plexusone/systemforge/observability"
 )
 
 // fositeInterceptor intercepts OAuth requests and delegates to Fosite handlers.

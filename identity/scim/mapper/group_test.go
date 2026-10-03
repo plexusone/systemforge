@@ -396,9 +396,9 @@ func TestParseGroupID(t *testing.T) {
 
 func TestGenerateSlug(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		input string
-		want string
+		want  string
 	}{
 		{
 			name:  "simple name",
@@ -457,9 +457,9 @@ func TestExtractMembers(t *testing.T) {
 			want: []string{"user1", "user2"},
 		},
 		{
-			name: "single member map",
+			name:  "single member map",
 			value: map[string]any{"value": "user1"},
-			want: []string{"user1"},
+			want:  []string{"user1"},
 		},
 		{
 			name:  "nil value",

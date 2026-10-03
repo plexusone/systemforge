@@ -212,16 +212,16 @@ type BulkOperation struct {
 
 // BulkResponse represents a SCIM bulk response.
 type BulkResponse struct {
-	Schemas    []string              `json:"schemas"`
+	Schemas    []string                `json:"schemas"`
 	Operations []BulkResponseOperation `json:"Operations"`
 }
 
 // BulkResponseOperation represents a single operation result within a bulk response.
 type BulkResponseOperation struct {
-	Method   string     `json:"method"`
-	BulkID   string     `json:"bulkId,omitempty"`
-	Version  string     `json:"version,omitempty"`
-	Location string     `json:"location,omitempty"`
-	Status   string     `json:"status"`
-	Response any        `json:"response,omitempty"`
+	Method   string `json:"method"`
+	BulkID   string `json:"bulkId,omitempty"`
+	Version  string `json:"version,omitempty"`
+	Location string `json:"location,omitempty"`
+	Status   string `json:"status"`
+	Response any    `json:"response,omitempty"`
 }

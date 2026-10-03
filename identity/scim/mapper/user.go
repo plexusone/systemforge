@@ -229,10 +229,10 @@ func (m *UserMapper) applyPatchOp(input *identity.UpdateUserInput, op patch.Oper
 
 // tempUserPatch is a temporary struct for applying patches.
 type tempUserPatch struct {
-	UserName    string     `json:"userName"`
-	DisplayName string     `json:"displayName"`
-	Active      *bool      `json:"active"`
-	Name        *tempName  `json:"name"`
+	UserName    string    `json:"userName"`
+	DisplayName string    `json:"displayName"`
+	Active      *bool     `json:"active"`
+	Name        *tempName `json:"name"`
 }
 
 type tempName struct {

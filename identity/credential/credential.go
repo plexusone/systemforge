@@ -29,22 +29,22 @@ const (
 
 // Credential represents a credential record.
 type Credential struct {
-	ID           uuid.UUID      `json:"id"`
-	PrincipalID  uuid.UUID      `json:"principal_id"`
-	Type         Type           `json:"type"`
-	Identifier   string         `json:"identifier,omitempty"` // e.g., key prefix for API keys
-	Name         string         `json:"name,omitempty"`
-	Scopes       []string       `json:"scopes,omitempty"`
-	Active       bool           `json:"active"`
-	ExpiresAt    *time.Time     `json:"expires_at,omitempty"`
-	Revoked      bool           `json:"revoked"`
-	RevokedAt    *time.Time     `json:"revoked_at,omitempty"`
-	RevokedReason string        `json:"revoked_reason,omitempty"`
-	LastUsedAt   *time.Time     `json:"last_used_at,omitempty"`
-	LastUsedIP   string         `json:"last_used_ip,omitempty"`
-	Metadata     map[string]any `json:"metadata,omitempty"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
+	ID            uuid.UUID      `json:"id"`
+	PrincipalID   uuid.UUID      `json:"principal_id"`
+	Type          Type           `json:"type"`
+	Identifier    string         `json:"identifier,omitempty"` // e.g., key prefix for API keys
+	Name          string         `json:"name,omitempty"`
+	Scopes        []string       `json:"scopes,omitempty"`
+	Active        bool           `json:"active"`
+	ExpiresAt     *time.Time     `json:"expires_at,omitempty"`
+	Revoked       bool           `json:"revoked"`
+	RevokedAt     *time.Time     `json:"revoked_at,omitempty"`
+	RevokedReason string         `json:"revoked_reason,omitempty"`
+	LastUsedAt    *time.Time     `json:"last_used_at,omitempty"`
+	LastUsedIP    string         `json:"last_used_ip,omitempty"`
+	Metadata      map[string]any `json:"metadata,omitempty"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
 }
 
 // GeneratedAPIKey contains a newly generated API key.
@@ -65,7 +65,7 @@ type GeneratedClientSecret struct {
 // KeypairCredential contains keypair-specific data.
 type KeypairCredential struct {
 	Credential   *Credential `json:"credential"`
-	KeyID        string      `json:"key_id"`       // Used in JWT kid header
+	KeyID        string      `json:"key_id"`        // Used in JWT kid header
 	KeyAlgorithm string      `json:"key_algorithm"` // RS256, ES256, etc.
 	PublicKeyPEM string      `json:"public_key_pem"`
 }

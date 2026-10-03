@@ -568,10 +568,10 @@ type ListSeatsInput struct {
 // ListSeatsOutput is the response for listing seat assignments.
 type ListSeatsOutput struct {
 	Body struct {
-		Seats         []*SeatAssignmentResponse `json:"seats"`
-		TotalSeats    *int                      `json:"total_seats,omitempty"`
-		UsedSeats     int                       `json:"used_seats"`
-		AvailableSeats int                      `json:"available_seats"`
+		Seats          []*SeatAssignmentResponse `json:"seats"`
+		TotalSeats     *int                      `json:"total_seats,omitempty"`
+		UsedSeats      int                       `json:"used_seats"`
+		AvailableSeats int                       `json:"available_seats"`
 	}
 }
 
@@ -770,12 +770,12 @@ func (a *API) listSeats(ctx context.Context, input *ListSeatsInput) (*ListSeatsO
 // CreateCheckoutInput is the request for creating a checkout session.
 type CreateCheckoutInput struct {
 	Body struct {
-		ListingID      string  `json:"listing_id" required:"true" format:"uuid"`
-		OrganizationID string  `json:"organization_id" required:"true" format:"uuid"`
-		PurchaserID    string  `json:"purchaser_id" required:"true" format:"uuid"`
-		Seats          *int    `json:"seats,omitempty" minimum:"1"`
-		SuccessURL     string  `json:"success_url" required:"true" format:"uri"`
-		CancelURL      string  `json:"cancel_url" required:"true" format:"uri"`
+		ListingID      string `json:"listing_id" required:"true" format:"uuid"`
+		OrganizationID string `json:"organization_id" required:"true" format:"uuid"`
+		PurchaserID    string `json:"purchaser_id" required:"true" format:"uuid"`
+		Seats          *int   `json:"seats,omitempty" minimum:"1"`
+		SuccessURL     string `json:"success_url" required:"true" format:"uri"`
+		CancelURL      string `json:"cancel_url" required:"true" format:"uri"`
 	}
 }
 

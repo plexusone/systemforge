@@ -12,11 +12,11 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/plexusone/systemforge/observability"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/compose"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
+	"github.com/plexusone/systemforge/observability"
 )
 
 // Server is the SystemAuth OAuth 2.0 / OpenID Connect server.

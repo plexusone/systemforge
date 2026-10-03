@@ -291,12 +291,12 @@ func (m *PrincipalUserMapper) applyPatchOp(input *principal.UpdateHumanInput, op
 
 // tempPrincipalUserPatch is a temporary struct for applying patches.
 type tempPrincipalUserPatch struct {
-	UserName    string              `json:"userName"`
-	DisplayName string              `json:"displayName"`
-	Active      *bool               `json:"active"`
-	Name        *tempPrincipalName  `json:"name"`
-	Locale      string              `json:"locale"`
-	Timezone    string              `json:"timezone"`
+	UserName    string             `json:"userName"`
+	DisplayName string             `json:"displayName"`
+	Active      *bool              `json:"active"`
+	Name        *tempPrincipalName `json:"name"`
+	Locale      string             `json:"locale"`
+	Timezone    string             `json:"timezone"`
 }
 
 type tempPrincipalName struct {

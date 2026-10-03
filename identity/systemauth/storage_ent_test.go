@@ -352,12 +352,12 @@ func TestArgon2idDecoding(t *testing.T) {
 	// Test invalid formats
 	invalidFormats := []string{
 		"not-a-hash",
-		"$argon2i$v=19$m=65536,t=3,p=4$salt$hash",       // wrong algorithm
-		"$argon2id$v=18$m=65536,t=3,p=4$salt$hash",      // wrong version
-		"$argon2id$v=19$m=65536,t=3,p=4",                // missing parts
-		"$argon2id$v=19$m=65536,t=3,p=4$!!!$hash",       // invalid base64
-		"$argon2id$v=19$m=65536,t=3,p=4$salt$!!!",       // invalid base64
-		"$argon2id$v=19$invalid$salt$hash",              // invalid params
+		"$argon2i$v=19$m=65536,t=3,p=4$salt$hash",  // wrong algorithm
+		"$argon2id$v=18$m=65536,t=3,p=4$salt$hash", // wrong version
+		"$argon2id$v=19$m=65536,t=3,p=4",           // missing parts
+		"$argon2id$v=19$m=65536,t=3,p=4$!!!$hash",  // invalid base64
+		"$argon2id$v=19$m=65536,t=3,p=4$salt$!!!",  // invalid base64
+		"$argon2id$v=19$invalid$salt$hash",         // invalid params
 	}
 
 	for _, invalid := range invalidFormats {

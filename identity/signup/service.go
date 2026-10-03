@@ -28,10 +28,10 @@ type Service interface {
 
 // DefaultService implements the Service interface.
 type DefaultService struct {
-	client         *ent.Client
-	principalSvc   principal.Service
-	orgSvc         organization.Service
-	inviteSvc      invite.Service
+	client       *ent.Client
+	principalSvc principal.Service
+	orgSvc       organization.Service
+	inviteSvc    invite.Service
 }
 
 // NewService creates a new signup service.

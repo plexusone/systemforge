@@ -19,11 +19,11 @@ type IdentitySyncHandler interface {
 
 // FederationHealthResponse is returned by the health endpoint.
 type FederationHealthResponse struct {
-	Status      string            `json:"status"`
-	AppID       string            `json:"app_id"`
-	Version     string            `json:"version"`
-	Capabilities []string         `json:"capabilities"`
-	Details     map[string]string `json:"details,omitempty"`
+	Status       string            `json:"status"`
+	AppID        string            `json:"app_id"`
+	Version      string            `json:"version"`
+	Capabilities []string          `json:"capabilities"`
+	Details      map[string]string `json:"details,omitempty"`
 }
 
 // FederationEndpoints provides SystemForge federation contract endpoints.
@@ -257,18 +257,18 @@ func (h *DefaultIdentitySyncHandler) SyncIdentity(ctx context.Context, req *Iden
 
 // User represents a local user identity.
 type User struct {
-	ID           uuid.UUID  `json:"id"`
-	Email        string     `json:"email"`
-	EmailVerified bool      `json:"email_verified,omitempty"`
-	Name         string     `json:"name"`
-	GivenName    string     `json:"given_name,omitempty"`
-	FamilyName   string     `json:"family_name,omitempty"`
-	Picture      string     `json:"picture,omitempty"`
-	Locale       string     `json:"locale,omitempty"`
-	Active       bool       `json:"active"`
-	Federated    bool       `json:"federated"`
-	FederationID *uuid.UUID `json:"federation_id,omitempty"`
-	Metadata     map[string]any `json:"metadata,omitempty"`
-	CreatedAt    time.Time  `json:"created_at,omitzero"`
-	UpdatedAt    time.Time  `json:"updated_at,omitzero"`
+	ID            uuid.UUID      `json:"id"`
+	Email         string         `json:"email"`
+	EmailVerified bool           `json:"email_verified,omitempty"`
+	Name          string         `json:"name"`
+	GivenName     string         `json:"given_name,omitempty"`
+	FamilyName    string         `json:"family_name,omitempty"`
+	Picture       string         `json:"picture,omitempty"`
+	Locale        string         `json:"locale,omitempty"`
+	Active        bool           `json:"active"`
+	Federated     bool           `json:"federated"`
+	FederationID  *uuid.UUID     `json:"federation_id,omitempty"`
+	Metadata      map[string]any `json:"metadata,omitempty"`
+	CreatedAt     time.Time      `json:"created_at,omitzero"`
+	UpdatedAt     time.Time      `json:"updated_at,omitzero"`
 }

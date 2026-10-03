@@ -107,10 +107,10 @@ func (s *StaticResolver) Resolve(ctx context.Context, key string, r *http.Reques
 
 // TieredResolver returns different limits based on tier.
 type TieredResolver struct {
-	Tiers       map[string]Limit
-	Default     Limit
-	TierFunc    func(ctx context.Context, key string, r *http.Request) string
-	mu          sync.RWMutex
+	Tiers    map[string]Limit
+	Default  Limit
+	TierFunc func(ctx context.Context, key string, r *http.Request) string
+	mu       sync.RWMutex
 }
 
 // Resolve implements LimitResolver.

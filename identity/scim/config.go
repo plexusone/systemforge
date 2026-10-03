@@ -60,17 +60,17 @@ type AuthenticationScheme struct {
 // DefaultConfig returns a Config with sensible defaults.
 func DefaultConfig() *Config {
 	return &Config{
-		BaseURL:           "/scim/v2",
-		MaxResults:        1000,
-		DefaultPageSize:   100,
-		SupportFiltering:  true,
-		SupportSorting:    true,
-		SupportPatch:      true,
-		SupportBulk:       true,
-		BulkMaxOperations: 1000,
-		BulkMaxPayloadSize: 1048576, // 1 MB
+		BaseURL:               "/scim/v2",
+		MaxResults:            1000,
+		DefaultPageSize:       100,
+		SupportFiltering:      true,
+		SupportSorting:        true,
+		SupportPatch:          true,
+		SupportBulk:           true,
+		BulkMaxOperations:     1000,
+		BulkMaxPayloadSize:    1048576, // 1 MB
 		SupportChangePassword: true,
-		SupportETag:       true,
+		SupportETag:           true,
 		AuthenticationSchemes: []AuthenticationScheme{
 			{
 				Type:        "oauthbearertoken",
