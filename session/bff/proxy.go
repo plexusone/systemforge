@@ -72,9 +72,9 @@ func DefaultProxyConfig() ProxyConfig {
 
 // Proxy proxies requests to an API backend with session-based authentication.
 type Proxy struct {
-	config      ProxyConfig
-	targetURL   *url.URL
-	client      *http.Client
+	config       ProxyConfig
+	targetURL    *url.URL
+	client       *http.Client
 	reverseProxy *httputil.ReverseProxy
 }
 

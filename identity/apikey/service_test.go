@@ -11,8 +11,8 @@ import (
 
 // mockStore implements Store for testing.
 type mockStore struct {
-	keys     map[string]*APIKey  // prefix -> key
-	hashes   map[string]string   // prefix -> hash
+	keys     map[string]*APIKey // prefix -> key
+	hashes   map[string]string  // prefix -> hash
 	byID     map[uuid.UUID]*APIKey
 	byOwner  map[uuid.UUID][]*APIKey
 	byOrg    map[uuid.UUID][]*APIKey
