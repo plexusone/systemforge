@@ -5,12 +5,12 @@
 
 ## Overview
 
-The SystemForge Product Contract defines the standardized interfaces that SystemForge applications must implement to participate in federated deployments via CoreControl.
+The SystemForge Product Contract defines the standardized interfaces that SystemForge applications must implement to participate in federated deployments via SystemAuth.
 
 Applications implementing this contract can:
 
 - Operate in standalone mode (default)
-- Join a CoreControl federation
+- Join a SystemAuth federation
 - Leave a federation cleanly
 - Transfer between federations
 
@@ -32,7 +32,7 @@ If federation becomes unavailable, applications should continue operating using 
 
 ### Metadata Endpoint
 
-**Purpose**: Expose application capabilities and configuration to CoreControl.
+**Purpose**: Expose application capabilities and configuration to SystemAuth.
 
 ```
 GET /systemforge/meta
@@ -322,7 +322,7 @@ GET /systemforge/audit/stream/config
 Response:
 {
     "enabled": true,
-    "endpoint": "https://corecontrol.example.com/audit/ingest",
+    "endpoint": "https://systemauth.example.com/audit/ingest",
     "batch_size": 100,
     "flush_interval_ms": 5000,
     "auth_method": "bearer",
@@ -338,7 +338,7 @@ PUT /systemforge/audit/stream/config
 Request:
 {
     "enabled": true,
-    "endpoint": "https://corecontrol.example.com/audit/ingest",
+    "endpoint": "https://systemauth.example.com/audit/ingest",
     "auth_token": "bearer-token",
     "batch_size": 100,
     "flush_interval_ms": 5000
@@ -414,18 +414,18 @@ Response:
 
 ### Service-to-Service Authentication
 
-CoreControl authenticates to applications using signed JWTs:
+SystemAuth authenticates to applications using signed JWTs:
 
 ```go
-type CoreControlServiceToken struct {
+type SystemAuthServiceToken struct {
     // Standard JWT claims
-    Issuer    string `json:"iss"` // "corecontrol.example.com"
+    Issuer    string `json:"iss"` // "systemauth.example.com"
     Subject   string `json:"sub"` // "federation:{federation_id}"
     Audience  string `json:"aud"` // "{app_id}"
     IssuedAt  int64  `json:"iat"`
     ExpiresAt int64  `json:"exp"`
 
-    // CoreControl claims
+    // SystemAuth claims
     FederationID string   `json:"federation_id"`
     Permissions  []string `json:"permissions"`
 }
@@ -433,8 +433,8 @@ type CoreControlServiceToken struct {
 
 Applications MUST validate:
 
-1. Token signature against CoreControl's public key
-2. Issuer matches expected CoreControl instance
+1. Token signature against SystemAuth's public key
+2. Issuer matches expected SystemAuth instance
 3. Audience matches application's app_id
 4. Token is not expired
 5. Required permissions are present
@@ -519,16 +519,16 @@ When not federated:
 
 When joining a federation:
 
-1. CoreControl calls `/systemforge/meta` to validate compatibility
-2. CoreControl calls identity sync endpoints to map users
-3. CoreControl configures audit streaming
+1. SystemAuth calls `/systemforge/meta` to validate compatibility
+2. SystemAuth calls identity sync endpoints to map users
+3. SystemAuth configures audit streaming
 4. Application updates federation status in metadata
 
 ### Federation Detachment
 
 When leaving a federation:
 
-1. CoreControl notifies application of pending detachment
+1. SystemAuth notifies application of pending detachment
 2. Application exports identity mappings
 3. Audit streaming is disabled
 4. Application reverts to standalone mode
@@ -571,7 +571,7 @@ Contract versions follow semantic versioning:
 - **Patch**: Bug fixes, clarifications
 
 Applications declare supported contract version in metadata.
-CoreControl validates compatibility before attachment.
+SystemAuth validates compatibility before attachment.
 
 ## Security Considerations
 

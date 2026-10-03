@@ -1,6 +1,6 @@
 // Package oauthclient provides OAuth client helpers for SystemForge applications.
 // This package contains utilities for fetching user info from OAuth providers
-// (Google, GitHub, CoreControl) as part of the OAuth authorization code flow.
+// (Google, GitHub, SystemAuth) as part of the OAuth authorization code flow.
 package oauthclient
 
 import (
@@ -94,29 +94,29 @@ func GitHubConfig(cfg ProviderConfig) *oauth2.Config {
 	}
 }
 
-// CoreControlConfig holds CoreControl OAuth configuration.
-type CoreControlConfig struct {
+// SystemAuthConfig holds SystemAuth OAuth configuration.
+type SystemAuthConfig struct {
 	ProviderConfig
-	BaseURL string // CoreControl server base URL
+	BaseURL string // SystemAuth server base URL
 }
 
-// AuthorizationURL returns the CoreControl authorization endpoint.
-func (c CoreControlConfig) AuthorizationURL() string {
+// AuthorizationURL returns the SystemAuth authorization endpoint.
+func (c SystemAuthConfig) AuthorizationURL() string {
 	return c.BaseURL + "/oauth/authorize"
 }
 
-// TokenURL returns the CoreControl token endpoint.
-func (c CoreControlConfig) TokenURL() string {
+// TokenURL returns the SystemAuth token endpoint.
+func (c SystemAuthConfig) TokenURL() string {
 	return c.BaseURL + "/oauth/token"
 }
 
-// UserInfoURL returns the CoreControl userinfo endpoint.
-func (c CoreControlConfig) UserInfoURL() string {
+// UserInfoURL returns the SystemAuth userinfo endpoint.
+func (c SystemAuthConfig) UserInfoURL() string {
 	return c.BaseURL + "/oauth/userinfo"
 }
 
-// OAuth2Config creates an OAuth2 config for CoreControl.
-func (c CoreControlConfig) OAuth2Config() *oauth2.Config {
+// OAuth2Config creates an OAuth2 config for SystemAuth.
+func (c SystemAuthConfig) OAuth2Config() *oauth2.Config {
 	scopes := c.Scopes
 	if len(scopes) == 0 {
 		scopes = []string{"openid", "profile", "email"}
@@ -294,8 +294,8 @@ func fetchGitHubPrimaryEmail(ctx context.Context, client *http.Client) (string, 
 	return "", fmt.Errorf("no email found")
 }
 
-// FetchCoreControlUser fetches user info from CoreControl using an access token.
-func FetchCoreControlUser(ctx context.Context, cfg CoreControlConfig, accessToken string) (*User, error) {
+// FetchSystemAuthUser fetches user info from SystemAuth using an access token.
+func FetchSystemAuthUser(ctx context.Context, cfg SystemAuthConfig, accessToken string) (*User, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", cfg.UserInfoURL(), nil)
 	if err != nil {
 		return nil, err
@@ -336,7 +336,7 @@ func FetchCoreControlUser(ctx context.Context, cfg CoreControlConfig, accessToke
 
 	return &User{
 		ProviderID:  userInfo.Sub,
-		Provider:    "corecontrol",
+		Provider:    "systemauth",
 		Email:       userInfo.Email,
 		Name:        name,
 		Username:    userInfo.PreferredUsername,

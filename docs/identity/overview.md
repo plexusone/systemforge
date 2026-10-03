@@ -99,7 +99,7 @@ user.Update().
 
 ### OAuth Integration
 
-Users can authenticate via external OAuth providers (GitHub, Google, CoreControl). The [OAuth Client](oauthclient.md) package handles the OAuth flow:
+Users can authenticate via external OAuth providers (GitHub, Google, SystemAuth). The [OAuth Client](oauthclient.md) package handles the OAuth flow:
 
 ```go
 import cfoauth "github.com/plexusone/systemforge/identity/oauthclient"
@@ -125,4 +125,4 @@ oauthAccount, err := client.OAuthAccount.Create().
 - [Organizations](organizations.md) - Organization setup
 - [Memberships](memberships.md) - Role-based membership
 - [API Keys](api-keys.md) - Server-to-server authentication
-- [OAuth Client](oauthclient.md) - Accept OAuth logins from GitHub, Google, CoreControl
+- [OAuth Client](oauthclient.md) - Accept OAuth logins from GitHub, Google, SystemAuth

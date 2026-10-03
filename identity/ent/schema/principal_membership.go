@@ -19,7 +19,7 @@ type PrincipalMembership struct {
 // Annotations of the PrincipalMembership.
 func (PrincipalMembership) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_principal_memberships"},
+		entsql.Annotation{Table: "sf_principal_memberships"},
 	}
 }
 

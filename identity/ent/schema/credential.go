@@ -21,7 +21,7 @@ type Credential struct {
 // Annotations of the Credential.
 func (Credential) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_credentials"},
+		entsql.Annotation{Table: "sf_credentials"},
 	}
 }
 

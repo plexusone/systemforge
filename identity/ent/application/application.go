@@ -51,19 +51,19 @@ const (
 	// EdgeIssuedTokens holds the string denoting the issued_tokens edge name in mutations.
 	EdgeIssuedTokens = "issued_tokens"
 	// Table holds the table name of the application in the database.
-	Table = "cf_applications"
+	Table = "sf_applications"
 	// PrincipalTable is the table that holds the principal relation/edge.
-	PrincipalTable = "cf_applications"
+	PrincipalTable = "sf_applications"
 	// PrincipalInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	PrincipalInverseTable = "cf_principals"
+	PrincipalInverseTable = "sf_principals"
 	// PrincipalColumn is the table column denoting the principal relation/edge.
 	PrincipalColumn = "principal_id"
 	// IssuedTokensTable is the table that holds the issued_tokens relation/edge.
-	IssuedTokensTable = "cf_principal_tokens"
+	IssuedTokensTable = "sf_principal_tokens"
 	// IssuedTokensInverseTable is the table name for the PrincipalToken entity.
 	// It exists in this package in order to avoid circular dependency with the "principaltoken" package.
-	IssuedTokensInverseTable = "cf_principal_tokens"
+	IssuedTokensInverseTable = "sf_principal_tokens"
 	// IssuedTokensColumn is the table column denoting the issued_tokens relation/edge.
 	IssuedTokensColumn = "issued_by_app_id"
 )

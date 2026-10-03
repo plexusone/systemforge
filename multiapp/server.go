@@ -64,7 +64,7 @@ type registeredApp struct {
 }
 
 // NewServer creates a new multi-app server.
-// The server does not require any external dependencies like CoreControl.
+// The server does not require any external dependencies like SystemAuth.
 func NewServer(cfg Config) (*Server, error) {
 	if cfg.DatabaseURL == "" {
 		return nil, errors.New("multiapp: DatabaseURL is required")

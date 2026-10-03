@@ -52,19 +52,19 @@ const (
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// Table holds the table name of the oauthauthcode in the database.
-	Table = "cf_oauth_auth_codes"
+	Table = "sf_oauth_auth_codes"
 	// AppTable is the table that holds the app relation/edge.
-	AppTable = "cf_oauth_auth_codes"
+	AppTable = "sf_oauth_auth_codes"
 	// AppInverseTable is the table name for the OAuthApp entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthapp" package.
-	AppInverseTable = "cf_oauth_apps"
+	AppInverseTable = "sf_oauth_apps"
 	// AppColumn is the table column denoting the app relation/edge.
 	AppColumn = "app_id"
 	// UserTable is the table that holds the user relation/edge.
-	UserTable = "cf_oauth_auth_codes"
+	UserTable = "sf_oauth_auth_codes"
 	// UserInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	UserInverseTable = "cf_users"
+	UserInverseTable = "sf_users"
 	// UserColumn is the table column denoting the user relation/edge.
 	UserColumn = "user_id"
 )

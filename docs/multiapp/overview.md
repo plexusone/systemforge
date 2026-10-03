@@ -389,14 +389,14 @@ Each app manages its own:
 - Business data and logic
 - API routes and middleware
 
-No external dependencies required. CoreControl integration is optional for SSO.
+No external dependencies required. SystemAuth integration is optional for SSO.
 
-## Optional: CoreControl Integration
+## Optional: SystemAuth Integration
 
-Apps can optionally integrate with CoreControl for:
+Apps can optionally integrate with SystemAuth for:
 
 - Single Sign-On (SSO) across apps
 - Centralized user management
 - Cross-app analytics
 
-This is enabled by setting a `federation_id` on users when they authenticate via CoreControl.
+This is enabled by setting a `federation_id` on users when they authenticate via SystemAuth.

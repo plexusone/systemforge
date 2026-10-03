@@ -19,7 +19,7 @@ import (
 
 const (
 	// APIKeyPrefix is the prefix for generated API keys.
-	APIKeyPrefix = "cf_"
+	APIKeyPrefix = "sf_"
 	// APIKeyBytes is the number of random bytes for API key generation.
 	APIKeyBytes = 32
 )
@@ -132,7 +132,7 @@ func (s *DefaultService) CreateAPIKey(ctx context.Context, input CreateAPIKeyInp
 
 	// Create the plain key
 	plainKey := APIKeyPrefix + base64.RawURLEncoding.EncodeToString(randomBytes)
-	prefix := plainKey[:12] // "cf_" + 8 chars
+	prefix := plainKey[:12] // "sf_" + 8 chars
 
 	// Hash the key for storage
 	hash := sha256.Sum256([]byte(plainKey))

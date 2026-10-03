@@ -1,962 +1,1003 @@
 {
- "irVersion": "1.0",
- "project": "systemforge",
- "repository": "https://github.com/plexusone/systemforge",
- "versioning": "semver",
- "commitConvention": "conventional",
- "maintainers": [
-  "grokify"
- ],
- "releases": [
-  {
-   "version": "v0.10.0",
-   "date": "2026-09-06",
-   "highlights": [
+  "irVersion": "1.0",
+  "project": "systemforge",
+  "repository": "https://github.com/plexusone/systemforge",
+  "versioning": "semver",
+  "commitConvention": "conventional",
+  "maintainers": [
+    "grokify"
+  ],
+  "releases": [
     {
-     "description": "Module path moved from `github.com/grokify/systemforge` to `github.com/plexusone/systemforge`; the GitHub repository was transferred to the plexusone org"
+      "version": "v0.11.0",
+      "date": "2026-10-02",
+      "highlights": [
+        {
+          "description": "coreauth -> systemauth: the identity/auth server package, binary, bootstrap user, JWKS key id, env var, and observability metric namespace all rename; the parallel CoreControl naming is retired in favor of the same name"
+        },
+        {
+          "description": "cf_ table prefix -> sf_: all 26 identity tables, via the Ent schema annotations"
+        },
+        {
+          "description": "API-key visible prefix cf_ -> sf_: newly issued keys read sf_live_.../sf_test_..."
+        },
+        {
+          "description": "Unified cross-app principal-link field: PrincipalMixin's sf_principal_id replaces the divergent core_control_principal_id / core_auth_principal_id spelling"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "identity/coreauth -> identity/systemauth import path; cmd/coreauth -> cmd/systemauth binary; CoreControlConfig and related types renamed to SystemAuthConfig etc.",
+          "commit": "d97bdde"
+        },
+        {
+          "description": "All cf_* tables renamed to sf_*; migrations/0001_rename_cf_to_sf.sql provided for an existing dev database with data to keep",
+          "commit": "5f78037"
+        },
+        {
+          "description": "identity/apikey.DefaultPrefix and identity/credential.APIKeyPrefix move from cf_ to sf_; dev-issued cf_-prefixed keys must be reissued",
+          "commit": "385fe99"
+        },
+        {
+          "description": "PrincipalMixin's SSO-federation link field renamed to sf_principal_id; consumers on core_control_principal_id or core_auth_principal_id must rename and regenerate Ent",
+          "commit": "5734a60"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "README Database Tables and Migration Strategy sections updated to sf_*"
+        }
+      ]
     },
     {
-     "description": "Cross-app authorization vocabulary contract (`AppVocabulary`) and registry so Forge platform apps share one role/permission/scope convention"
+      "version": "v0.10.0",
+      "date": "2026-09-06",
+      "highlights": [
+        {
+          "description": "Module path moved from `github.com/grokify/systemforge` to `github.com/plexusone/systemforge`; the GitHub repository was transferred to the plexusone org"
+        },
+        {
+          "description": "Cross-app authorization vocabulary contract (`AppVocabulary`) and registry so Forge platform apps share one role/permission/scope convention"
+        },
+        {
+          "description": "Shared SpiceDB base schema (`principal`/`organization`/`platform`) with a composition helper for app-contributed fragments"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "Module path changed to `github.com/plexusone/systemforge`. Update imports from `github.com/grokify/systemforge/...` to `github.com/plexusone/systemforge/...` (the API is unchanged); the old path still resolves via GitHub's repository-transfer redirect but will not receive new tags",
+          "commit": "852744b"
+        }
+      ],
+      "added": [
+        {
+          "description": "`authz.AppVocabulary` contract and `VocabularyRegistry` validating app-name format, `{app}:{resource}:{verb}` scope naming, role-hierarchy coverage, and `{app}_`-prefixed SpiceDB definitions",
+          "commit": "7886093"
+        },
+        {
+          "description": "`BaseSpiceDBSchema` and `VocabularyRegistry.ComposeSpiceDBSchema`, assembling the platform base plus every registered app fragment and rejecting duplicate definitions",
+          "commit": "d61bc4f"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "Close a line-anchored regex bypass in SpiceDB schema-definition detection: a fragment packing two `definition`s onto one physical line hid the second from both the `{app}_`-prefix check and the duplicate-shadowing check, while the raw fragment was still concatenated verbatim into the composed schema — letting an app silently redefine a reserved or foreign definition",
+          "commit": "3f43040"
+        },
+        {
+          "description": "Exclude `github.com/KimMachineGun/automemlimit` v1.0.0, which removed `memlimit.SetGoMemLimitWithOpts` and broke the build via `jzelinskie/cobrautil/v2/cobraproclimits`",
+          "commit": "a64fce1"
+        },
+        {
+          "description": "Reference the shared `plexusone/.github` CI workflows at `@main` (with `check-latest: true` added upstream) instead of a stale pinned tag, so `go.mod`'s required Go patch version resolves correctly",
+          "commit": "1e27a9a"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Publish the `INIT-SYSTEMFORGE-001` (unified Forge authorization/IAM/shell) and `INIT-SYSTEMFORGE-002` (grokify-to-plexusone migration) initiative specs",
+          "commit": "fd97642"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump `github.com/authzed/spicedb` from 1.56.0 to 1.56.1",
+          "commit": "84b83e4"
+        },
+        {
+          "description": "Bump `google.golang.org/grpc` from 1.83.1 to 1.83.2",
+          "commit": "1c54f67"
+        },
+        {
+          "description": "Additional transitive dependency updates via `go get -u ./...`",
+          "commit": "c86ca67"
+        }
+      ]
     },
     {
-     "description": "Shared SpiceDB base schema (`principal`/`organization`/`platform`) with a composition helper for app-contributed fragments"
+      "version": "v0.9.0",
+      "date": "2026-08-23",
+      "highlights": [
+        {
+          "description": "DPoP (RFC 9449) extracted to the standalone `github.com/grokify/goauth/dpop` package; consumers must update their import path"
+        },
+        {
+          "description": "GuardSQL authorization adapter (`authzguardsql`) consolidated into SystemForge"
+        },
+        {
+          "description": "OpenAPI 3.1 spec with an interactive Scalar API reference in the docs site"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "The `session/dpop` package has been removed; DPoP now lives at `github.com/grokify/goauth/dpop`. Update imports from `github.com/grokify/systemforge/session/dpop` to `github.com/grokify/goauth/dpop` (the API is unchanged). The session/bff layer that binds DPoP to sessions remains in SystemForge",
+          "commit": "1892c0d"
+        }
+      ],
+      "added": [
+        {
+          "description": "`authzguardsql` adapter mapping GuardSQL schemas/policies to SystemForge authorization (`PolicyBuilder`, `ResourceBuilder`, `DefaultResourceBuilder`); depends on `github.com/grokify/guardsql`",
+          "commit": "cc789a7"
+        },
+        {
+          "description": "OpenAPI 3.1 specification and a Scalar interactive API reference",
+          "commit": "b271108"
+        }
+      ],
+      "changed": [
+        {
+          "description": "bff reverse proxy migrated from the deprecated `httputil.ReverseProxy.Director` to `Rewrite` (Go 1.26 SA1019), propagating the session via the outbound request context",
+          "commit": "1892c0d"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Add a query policy engines guide and integrate it across the docs",
+          "commit": "434862c"
+        },
+        {
+          "description": "Integrate the interactive API docs into site navigation",
+          "commit": "293eb0b"
+        },
+        {
+          "description": "Document the authzguardsql adapter and the guardsql rename",
+          "commit": "ac300af"
+        },
+        {
+          "description": "Update README shields",
+          "commit": "9b8c673"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump `github.com/authzed/spicedb` from 1.54.0 to 1.56.0",
+          "commit": "7624e7f"
+        },
+        {
+          "description": "Bump `google.golang.org/grpc` from 1.81.1 to 1.83.0",
+          "commit": "8b6beab"
+        },
+        {
+          "description": "Bump `github.com/redis/go-redis/v9` from 9.20.1 to 9.22.0",
+          "commit": "2511c16"
+        },
+        {
+          "description": "Bump `github.com/danielgtaylor/huma/v2` from 2.38.0 to 2.39.1",
+          "commit": "5c7efaa"
+        },
+        {
+          "description": "Bump `golang.org/x/crypto` from 0.53.0 to 0.55.0",
+          "commit": "ad7951e"
+        },
+        {
+          "description": "Bump `github.com/mattn/go-sqlite3` from 1.14.46 to 1.14.50",
+          "commit": "35e8528"
+        },
+        {
+          "description": "Bump `github.com/plexusone/omniobserve` from 0.11.0 to 0.12.0",
+          "commit": "af41e73"
+        },
+        {
+          "description": "Additional dependency and toolchain updates",
+          "commit": "2065044"
+        }
+      ]
+    },
+    {
+      "version": "v0.8.0",
+      "date": "2026-06-21",
+      "highlights": [
+        {
+          "description": "Organization ownership transfer with transaction-safe implementation"
+        },
+        {
+          "description": "OmniStorage session backend with Redis support and size limits"
+        },
+        {
+          "description": "SpiceDB API compatibility fix for v1.54.0+"
+        }
+      ],
+      "added": [
+        {
+          "description": "Organization ownership transfer functionality with TransferOwnership method",
+          "commit": "7be89d8"
+        },
+        {
+          "description": "POST /organizations/{slug}/transfer-ownership API endpoint",
+          "commit": "7be89d8"
+        },
+        {
+          "description": "TransferOwnershipInput type for transfer configuration",
+          "commit": "7be89d8"
+        },
+        {
+          "description": "OmniStorage session store backend with memory and Redis support",
+          "commit": "3493416"
+        },
+        {
+          "description": "Session size limits and per-user session limits with auto-eviction",
+          "commit": "3493416"
+        },
+        {
+          "description": "Site isolation for multi-tenant session management",
+          "commit": "3493416"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "SpiceDB client API compatibility with v1.54.0+ using grpc.NewClient",
+          "commit": "4aa41ae"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Session management overview with architecture diagram",
+          "commit": "b3d0cd6"
+        },
+        {
+          "description": "BFF sessions documentation with store interface and backends",
+          "commit": "b3d0cd6"
+        },
+        {
+          "description": "Ownership transfer documentation in memberships guide",
+          "commit": "f7218a1"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump go from 1.26.2 to 1.26.4",
+          "commit": "0333e6b"
+        },
+        {
+          "description": "Bump github.com/authzed/authzed-go from 1.9.0 to 1.10.0",
+          "commit": "0333e6b"
+        },
+        {
+          "description": "Bump github.com/authzed/spicedb from 1.52.0 to 1.54.0",
+          "commit": "0333e6b"
+        },
+        {
+          "description": "Bump github.com/danielgtaylor/huma/v2 from 2.37.3 to 2.38.0",
+          "commit": "0333e6b"
+        },
+        {
+          "description": "Bump github.com/go-chi/chi/v5 from 5.2.5 to 5.3.0",
+          "commit": "0333e6b"
+        },
+        {
+          "description": "Bump github.com/jackc/pgx/v5 from 5.9.2 to 5.10.0",
+          "commit": "0333e6b"
+        },
+        {
+          "description": "Bump github.com/mattn/go-sqlite3 from 1.14.44 to 1.14.46",
+          "commit": "0333e6b"
+        },
+        {
+          "description": "Bump github.com/plexusone/omniobserve from 0.9.0 to 0.11.0",
+          "commit": "b2a4c49"
+        },
+        {
+          "description": "Add github.com/plexusone/omnistorage-core v0.5.0",
+          "commit": "b2a4c49"
+        },
+        {
+          "description": "Bump github.com/redis/go-redis/v9 from 9.19.0 to 9.20.1",
+          "commit": "b2a4c49"
+        },
+        {
+          "description": "Bump golang.org/x/crypto from 0.50.0 to 0.53.0",
+          "commit": "b2a4c49"
+        },
+        {
+          "description": "Bump google.golang.org/grpc from 1.81.0 to 1.81.1",
+          "commit": "b2a4c49"
+        }
+      ]
+    },
+    {
+      "version": "v0.7.0",
+      "date": "2026-05-10",
+      "highlights": [
+        {
+          "description": "BREAKING: Renamed project from CoreForge to SystemForge"
+        },
+        {
+          "description": "ProductGraph integration for event correlation and tracking"
+        },
+        {
+          "description": "Session invalidation with memory and Redis stores"
+        },
+        {
+          "description": "Account lockout protection for identity module"
+        }
+      ],
+      "changed": [
+        {
+          "description": "BREAKING: Renamed project from CoreForge to SystemForge - update all imports from coreforge to systemforge",
+          "commit": "dc9b68f"
+        }
+      ],
+      "added": [
+        {
+          "description": "ProductGraph client for event correlation and tracking",
+          "commit": "cf8aa54"
+        },
+        {
+          "description": "ProductGraph integration with observability module",
+          "commit": "df5c013"
+        },
+        {
+          "description": "Session invalidation with MemoryStore and RedisStore implementations",
+          "commit": "b4077b1"
+        },
+        {
+          "description": "Account lockout protection in identity module",
+          "commit": "500fd61"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "Session IsExpired flaky test on Windows due to time resolution",
+          "commit": "e332cfa"
+        },
+        {
+          "description": "golangci-lint errcheck, gosec G115, staticcheck SA1019 issues",
+          "commit": "16cfbe1"
+        },
+        {
+          "description": "gosec G710 open redirect and G124 insecure cookie lint issues",
+          "commit": "d8de86f"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Observability overview documentation",
+          "commit": "98b3669"
+        },
+        {
+          "description": "ProductGraph task tracking documentation",
+          "commit": "9ce6db1"
+        },
+        {
+          "description": "ProductGraph integration design documents",
+          "commit": "062b663"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump github.com/plexusone/omniobserve from 0.8.0 to 0.9.0",
+          "commit": "2fd164e"
+        },
+        {
+          "description": "Bump google.golang.org/grpc from 1.80.0 to 1.81.0",
+          "commit": "2e809c5"
+        },
+        {
+          "description": "Bump github.com/mattn/go-sqlite3 from 1.14.42 to 1.14.44",
+          "commit": "4e17458"
+        },
+        {
+          "description": "Bump github.com/authzed/spicedb from 1.51.1 to 1.52.0",
+          "commit": "17b7839"
+        },
+        {
+          "description": "Bump github.com/redis/go-redis/v9 from 9.18.0 to 9.19.0",
+          "commit": "b85b324"
+        },
+        {
+          "description": "Bump github.com/jackc/pgx/v5 from 5.9.1 to 5.9.2",
+          "commit": "15bbb86"
+        },
+        {
+          "description": "Bump github.com/invopop/jsonschema from 0.13.0 to 0.14.0",
+          "commit": "7bd75e2"
+        }
+      ]
+    },
+    {
+      "version": "v0.6.0",
+      "date": "2026-04-12",
+      "highlights": [
+        {
+          "description": "Multi-app platform infrastructure for running multiple SaaS apps on shared backend"
+        },
+        {
+          "description": "Schema-per-app PostgreSQL isolation with X-App-ID header routing"
+        },
+        {
+          "description": "SystemForge identity and session integration for multiapp deployments"
+        }
+      ],
+      "added": [
+        {
+          "description": "Multi-app server with `MultiAppMode` and `SingleAppMode` deployment options",
+          "commit": "fa15800"
+        },
+        {
+          "description": "AppBackend interface for composable app registration with lifecycle hooks",
+          "commit": "fa15800"
+        },
+        {
+          "description": "Schema-per-app database isolation using PostgreSQL schemas (`app_` prefix)",
+          "commit": "fa15800"
+        },
+        {
+          "description": "X-App-ID header routing for multi-tenant request dispatch",
+          "commit": "fa15800"
+        },
+        {
+          "description": "Redis and in-memory cache implementations with app-scoped prefixes",
+          "commit": "fa15800"
+        },
+        {
+          "description": "SystemForge identity integration with JWT claims extraction and validation",
+          "commit": "82df768"
+        },
+        {
+          "description": "Session management helpers for multi-tenant deployments",
+          "commit": "82df768"
+        },
+        {
+          "description": "Ent client factory for schema-isolated database connections",
+          "commit": "82df768"
+        },
+        {
+          "description": "HTTP middleware for authentication and tenant context propagation",
+          "commit": "82df768"
+        },
+        {
+          "description": "Example app backend implementation demonstrating AppBackend interface",
+          "commit": "aac27fc"
+        }
+      ],
+      "security": [
+        {
+          "description": "Generic 404 responses for missing/invalid X-App-ID to prevent enumeration attacks",
+          "commit": "f6a70ba"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Multiapp architecture documentation with deployment patterns",
+          "commit": "1d705e1"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump github.com/mattn/go-sqlite3 from 1.14.40 to 1.14.42",
+          "commit": "a895c55"
+        },
+        {
+          "description": "Bump golang.org/x/crypto from 0.49.0 to 0.50.0",
+          "commit": "2e1080a"
+        }
+      ]
+    },
+    {
+      "version": "v0.5.0",
+      "date": "2026-04-05",
+      "highlights": [
+        {
+          "description": "Audience-aware JWT tokens for BFF vs API client separation"
+        },
+        {
+          "description": "Ent-backed stores for API keys and BFF sessions with AES-256-GCM encryption"
+        },
+        {
+          "description": "Reusable Ent schema mixins for API keys and BFF sessions"
+        }
+      ],
+      "added": [
+        {
+          "description": "Audience-aware JWT tokens with `GenerateBFFTokenPair` and `GenerateAPIToken` methods",
+          "commit": "92fa0c5"
+        },
+        {
+          "description": "AES-256-GCM token encryption for BFF sessions with `Encryptor` type",
+          "commit": "b978729"
+        },
+        {
+          "description": "Ent-backed BFF session store with automatic expired session cleanup",
+          "commit": "b978729"
+        },
+        {
+          "description": "Ent-backed API key store with `EntClientInterface` for app integration",
+          "commit": "0f352f8"
+        },
+        {
+          "description": "APIKey Ent mixin with fields for key management (prefix, hash, scopes, environment)",
+          "commit": "896f5a1"
+        },
+        {
+          "description": "BFFSession Ent mixin with encrypted token fields and session metadata",
+          "commit": "896f5a1"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "JWT audience separation guide for BFF vs API tokens",
+          "commit": "5b4869a"
+        },
+        {
+          "description": "Ent-backed session store integration guide",
+          "commit": "5b4869a"
+        },
+        {
+          "description": "API key Ent store implementation documentation",
+          "commit": "5b4869a"
+        },
+        {
+          "description": "OAuth client package documentation",
+          "commit": "5b4869a"
+        },
+        {
+          "description": "Design documents for JWT audience and Ent stores features",
+          "commit": "e00bbcc"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump github.com/authzed/spicedb from 1.50.0 to 1.51.0",
+          "commit": "5e5f55c"
+        },
+        {
+          "description": "Bump entgo.io/ent from 0.14.5 to 0.14.6",
+          "commit": "d2354a0"
+        },
+        {
+          "description": "Bump github.com/danielgtaylor/huma/v2 from 2.37.2 to 2.37.3",
+          "commit": "c005e12"
+        },
+        {
+          "description": "Bump github.com/mattn/go-sqlite3 from 1.14.37 to 1.14.38",
+          "commit": "9cc6298"
+        },
+        {
+          "description": "Bump google.golang.org/grpc from 1.79.3 to 1.80.0",
+          "commit": "994d1c7"
+        }
+      ]
+    },
+    {
+      "version": "v0.4.0",
+      "date": "2026-03-23",
+      "highlights": [
+        {
+          "description": "Backend for Frontend (BFF) package with session management, rate limiting, and API proxy"
+        },
+        {
+          "description": "Public profile fields for users and organizations enabling directory listings"
+        },
+        {
+          "description": "Huma framework integration for OpenAPI schema generation in BFF endpoints"
+        }
+      ],
+      "added": [
+        {
+          "description": "BFF HTTP handler with session creation, API proxy, and CSRF protection",
+          "commit": "aa49751"
+        },
+        {
+          "description": "Token bucket rate limiter with per-endpoint overrides and standard headers",
+          "commit": "717bd88"
+        },
+        {
+          "description": "Client IP extraction with Cloudflare and proxy header support",
+          "commit": "e55385e"
+        },
+        {
+          "description": "Huma API integration for BFF with OpenAPI schema generation",
+          "commit": "c06a603"
+        },
+        {
+          "description": "Public profile fields for HumanMixin (slug, headline, bio, social links)",
+          "commit": "d7bfcd1"
+        },
+        {
+          "description": "Public listing fields for OrganizationBase (tagline, description, website)",
+          "commit": "464b163"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "BFF pattern documentation with architecture and integration examples",
+          "commit": "e680ea0"
+        }
+      ],
+      "infrastructure": [
+        {
+          "description": "Updated shared CI workflows to Go 1.26.x only",
+          "commit": "f215759"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump github.com/authzed/spicedb from 1.49.2 to 1.50.0",
+          "commit": "5d8eb51"
+        },
+        {
+          "description": "Bump google.golang.org/grpc from 1.79.2 to 1.79.3",
+          "commit": "b1aadf1"
+        },
+        {
+          "description": "Bump github.com/mattn/go-sqlite3 from 1.14.34 to 1.14.37",
+          "commit": "77ebd8c"
+        }
+      ]
+    },
+    {
+      "version": "v0.3.0",
+      "date": "2026-03-14",
+      "highlights": [
+        {
+          "description": "Vendor-agnostic observability integration with OmniObserve (Datadog, New Relic, Dynatrace, OTLP)"
+        },
+        {
+          "description": "SaaS marketplace infrastructure with Stripe billing and seat-based licensing"
+        },
+        {
+          "description": "Redis-backed rate limiting with sliding window and token bucket algorithms"
+        },
+        {
+          "description": "OAuth client management and provider abstraction for CoreAuth"
+        }
+      ],
+      "added": [
+        {
+          "description": "Observability package with OmniObserve integration for metrics, traces, and logs",
+          "commit": "ea139a6"
+        },
+        {
+          "description": "Marketplace package with Stripe subscription and seat-based licensing",
+          "commit": "c0ba5bd"
+        },
+        {
+          "description": "OAuth client management service in `identity/oauthclient`",
+          "commit": "2da5d87"
+        },
+        {
+          "description": "CoreAPI rate limiting package with policy-based controls",
+          "commit": "3771a54"
+        },
+        {
+          "description": "Redis-backed rate limiter with sliding window algorithm",
+          "commit": "0269db8"
+        },
+        {
+          "description": "Marketplace Ent entities: License, Listing, Subscription, SeatAssignment",
+          "commit": "db60b3c"
+        },
+        {
+          "description": "CoreAuth provider abstraction layer for pluggable authentication",
+          "commit": "bf5a90a"
+        },
+        {
+          "description": "JWT claims enhancement with audience and issuer validation",
+          "commit": "087d8dd"
+        },
+        {
+          "description": "Session middleware improvements with context utilities",
+          "commit": "cb60d99"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Authorization PRD and TRD design documents",
+          "commit": "95d1352"
+        },
+        {
+          "description": "Marketplace PRD design document",
+          "commit": "95d1352"
+        },
+        {
+          "description": "CoreAPI and CoreAuth documentation",
+          "commit": "95d1352"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Upgraded OmniObserve to v0.8.0 with unified entry point",
+          "commit": "9a7280b"
+        },
+        {
+          "description": "Added Stripe Go SDK v82 for payment processing",
+          "commit": "9a7280b"
+        },
+        {
+          "description": "Added Redis client for rate limiting",
+          "commit": "9a7280b"
+        }
+      ]
+    },
+    {
+      "version": "v0.2.0",
+      "date": "2026-03-08",
+      "highlights": [
+        {
+          "description": "SpiceDB authorization provider for Zanzibar-style relationship-based access control (ReBAC)"
+        },
+        {
+          "description": "Principal-based identity model supporting humans, agents, applications, and service principals"
+        },
+        {
+          "description": "SCIM 2.0 user provisioning with SystemForge-compliant patch operations"
+        },
+        {
+          "description": "Identity-authorization sync automatically maintains SpiceDB relationships on identity changes"
+        }
+      ],
+      "added": [
+        {
+          "description": "SpiceDB authorization provider with embedded and remote modes",
+          "commit": "a7d4f61"
+        },
+        {
+          "description": "Principal identity model with type-specific extensions (Human, Agent, Application, ServicePrincipal)",
+          "commit": "0deab0a"
+        },
+        {
+          "description": "GitHub-style organization system with owner, admin, member roles",
+          "commit": "b3471b6"
+        },
+        {
+          "description": "SCIM 2.0 user provisioning endpoints with filter, patch, and bulk operations",
+          "commit": "1f78ff0"
+        },
+        {
+          "description": "Coreauth authentication server with Fosite-based OAuth 2.0",
+          "commit": "d46d626"
+        },
+        {
+          "description": "Credential and token management service for principals",
+          "commit": "a3b02b2"
+        },
+        {
+          "description": "Standardized API contract module with consistent error handling",
+          "commit": "55be5d3"
+        },
+        {
+          "description": "Coreauth CLI for server and key management operations",
+          "commit": "803d5b1"
+        },
+        {
+          "description": "User schema extended with profile fields (locale, timezone, avatar)",
+          "commit": "a303ca5"
+        },
+        {
+          "description": "RelationshipSyncer interface for identity-authorization integration",
+          "commit": "963b3d3"
+        },
+        {
+          "description": "No-op syncer for deployments without SpiceDB",
+          "commit": "963b3d3"
+        },
+        {
+          "description": "SpiceDB integration tests with embedded server",
+          "commit": "be09d6c"
+        }
+      ],
+      "changed": [
+        {
+          "description": "OAuth 2.0 implementation refactored for principal-based identity",
+          "commit": "ffff607"
+        }
+      ],
+      "removed": [
+        {
+          "description": "Casbin authorization provider (replaced by SpiceDB)",
+          "commit": "dde3392"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "SpiceDB setup guide for embedded and remote modes",
+          "commit": "a7d4f61"
+        },
+        {
+          "description": "SpiceDB schema reference with permission inheritance model",
+          "commit": "a7d4f61"
+        },
+        {
+          "description": "Authorization integration patterns and middleware examples",
+          "commit": "963b3d3"
+        },
+        {
+          "description": "Updated module documentation for v0.2.0",
+          "commit": "8436f16"
+        }
+      ]
+    },
+    {
+      "version": "v0.1.0",
+      "date": "2026-02-28",
+      "highlights": [
+        {
+          "description": "Batteries-included Go platform module for multi-tenant SaaS applications"
+        },
+        {
+          "description": "Complete identity management with users, organizations, and memberships"
+        },
+        {
+          "description": "Full OAuth 2.0 server implementation using Fosite with PKCE, client credentials, and JWT bearer grants"
+        },
+        {
+          "description": "Session management with JWT, DPoP (RFC 9449) proof-of-possession, and BFF pattern"
+        }
+      ],
+      "added": [
+        {
+          "description": "User accounts with email and Argon2id password hashing",
+          "commit": "3907780"
+        },
+        {
+          "description": "Organizations for multi-tenant applications with name, slug, plan, and settings",
+          "commit": "3907780"
+        },
+        {
+          "description": "Memberships with flexible role-based user-organization relationships",
+          "commit": "3907780"
+        },
+        {
+          "description": "OAuth account linking for GitHub and Google providers",
+          "commit": "3907780"
+        },
+        {
+          "description": "API key service for machine-to-machine authentication with scopes",
+          "commit": "d13b7a5"
+        },
+        {
+          "description": "OAuth 2.0 server using Fosite with Authorization Code + PKCE grant",
+          "commit": "297ecc7"
+        },
+        {
+          "description": "Client Credentials grant for service-to-service authentication",
+          "commit": "297ecc7"
+        },
+        {
+          "description": "Refresh Token grant with rotation and theft detection",
+          "commit": "297ecc7"
+        },
+        {
+          "description": "JWT Bearer grant (RFC 7523) for service account authentication",
+          "commit": "297ecc7"
+        },
+        {
+          "description": "Service accounts with RSA/EC key pairs for non-human identities",
+          "commit": "297ecc7"
+        },
+        {
+          "description": "Token introspection (RFC 7662) and revocation (RFC 7009) endpoints",
+          "commit": "297ecc7"
+        },
+        {
+          "description": "JWT service supporting HS256, RS256, and ES256 algorithms",
+          "commit": "4397d6a"
+        },
+        {
+          "description": "DPoP (RFC 9449) proof-of-possession token binding implementation",
+          "commit": "b086e49"
+        },
+        {
+          "description": "Backend for Frontend (BFF) pattern with server-side sessions",
+          "commit": "205886b"
+        },
+        {
+          "description": "GitHub and Google OAuth social login handlers",
+          "commit": "4ea5e42"
+        },
+        {
+          "description": "JWT Bearer and API key authentication middleware",
+          "commit": "2b84467"
+        },
+        {
+          "description": "Role-based access control (RBAC) with organization-scoped permissions",
+          "commit": "edf630e"
+        },
+        {
+          "description": "Casbin provider for advanced policy rules",
+          "commit": "edf630e"
+        },
+        {
+          "description": "Simple provider for lightweight permission checking",
+          "commit": "edf630e"
+        },
+        {
+          "description": "HTTP middleware for route protection (Chi and stdlib)",
+          "commit": "edf630e"
+        },
+        {
+          "description": "Feature flag engine with boolean, percentage, and user list flags",
+          "commit": "edb959d"
+        },
+        {
+          "description": "Organization-scoped feature flag evaluation",
+          "commit": "edb959d"
+        },
+        {
+          "description": "In-memory feature flag store for development and testing",
+          "commit": "edb959d"
+        },
+        {
+          "description": "PostgreSQL RLS policy generation and session variable helpers",
+          "commit": "7240382"
+        },
+        {
+          "description": "Tenant isolation for multi-tenant data separation",
+          "commit": "7240382"
+        },
+        {
+          "description": "Ent ORM integration with transaction helpers for tenant context",
+          "commit": "7240382"
+        }
+      ],
+      "infrastructure": [
+        {
+          "description": "GitHub Actions CI workflow for build and test",
+          "commit": "0f8c44c"
+        },
+        {
+          "description": "GitHub Actions lint workflow with golangci-lint",
+          "commit": "0f8c44c"
+        },
+        {
+          "description": "Dependabot configuration for Go modules and GitHub Actions",
+          "commit": "0f8c44c"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Comprehensive MkDocs documentation site with Material theme",
+          "commit": "87a8489"
+        },
+        {
+          "description": "Getting started guides: installation, quickstart, configuration",
+          "commit": "87a8489"
+        },
+        {
+          "description": "Identity module documentation: users, organizations, memberships, API keys",
+          "commit": "87a8489"
+        },
+        {
+          "description": "OAuth 2.0 documentation: apps, authorization code, client credentials, service accounts, tokens",
+          "commit": "87a8489"
+        },
+        {
+          "description": "Integration guides: existing apps and migration",
+          "commit": "87a8489"
+        },
+        {
+          "description": "API reference and Ent schema documentation",
+          "commit": "87a8489"
+        },
+        {
+          "description": "PRD and TRD design documents for authentication and OAuth",
+          "commit": "28dffa6"
+        },
+        {
+          "description": "README with badges, quick start examples, and module structure",
+          "commit": "a91b98e"
+        }
+      ]
     }
-   ],
-   "breaking": [
-    {
-     "description": "Module path changed to `github.com/plexusone/systemforge`. Update imports from `github.com/grokify/systemforge/...` to `github.com/plexusone/systemforge/...` (the API is unchanged); the old path still resolves via GitHub's repository-transfer redirect but will not receive new tags",
-     "commit": "852744b"
-    }
-   ],
-   "added": [
-    {
-     "description": "`authz.AppVocabulary` contract and `VocabularyRegistry` validating app-name format, `{app}:{resource}:{verb}` scope naming, role-hierarchy coverage, and `{app}_`-prefixed SpiceDB definitions",
-     "commit": "7886093"
-    },
-    {
-     "description": "`BaseSpiceDBSchema` and `VocabularyRegistry.ComposeSpiceDBSchema`, assembling the platform base plus every registered app fragment and rejecting duplicate definitions",
-     "commit": "d61bc4f"
-    }
-   ],
-   "fixed": [
-    {
-     "description": "Close a line-anchored regex bypass in SpiceDB schema-definition detection: a fragment packing two `definition`s onto one physical line hid the second from both the `{app}_`-prefix check and the duplicate-shadowing check, while the raw fragment was still concatenated verbatim into the composed schema — letting an app silently redefine a reserved or foreign definition",
-     "commit": "3f43040"
-    },
-    {
-     "description": "Exclude `github.com/KimMachineGun/automemlimit` v1.0.0, which removed `memlimit.SetGoMemLimitWithOpts` and broke the build via `jzelinskie/cobrautil/v2/cobraproclimits`",
-     "commit": "a64fce1"
-    },
-    {
-     "description": "Reference the shared `plexusone/.github` CI workflows at `@main` (with `check-latest: true` added upstream) instead of a stale pinned tag, so `go.mod`'s required Go patch version resolves correctly",
-     "commit": "1e27a9a"
-    }
-   ],
-   "documentation": [
-    {
-     "description": "Publish the `INIT-SYSTEMFORGE-001` (unified Forge authorization/IAM/shell) and `INIT-SYSTEMFORGE-002` (grokify-to-plexusone migration) initiative specs",
-     "commit": "fd97642"
-    }
-   ],
-   "dependencies": [
-    {
-     "description": "Bump `github.com/authzed/spicedb` from 1.56.0 to 1.56.1",
-     "commit": "84b83e4"
-    },
-    {
-     "description": "Bump `google.golang.org/grpc` from 1.83.1 to 1.83.2",
-     "commit": "1c54f67"
-    },
-    {
-     "description": "Additional transitive dependency updates via `go get -u ./...`",
-     "commit": "c86ca67"
-    }
-   ]
-  },
-  {
-   "version": "v0.9.0",
-   "date": "2026-08-23",
-   "highlights": [
-    {
-     "description": "DPoP (RFC 9449) extracted to the standalone `github.com/grokify/goauth/dpop` package; consumers must update their import path"
-    },
-    {
-     "description": "GuardSQL authorization adapter (`authzguardsql`) consolidated into SystemForge"
-    },
-    {
-     "description": "OpenAPI 3.1 spec with an interactive Scalar API reference in the docs site"
-    }
-   ],
-   "breaking": [
-    {
-     "description": "The `session/dpop` package has been removed; DPoP now lives at `github.com/grokify/goauth/dpop`. Update imports from `github.com/grokify/systemforge/session/dpop` to `github.com/grokify/goauth/dpop` (the API is unchanged). The session/bff layer that binds DPoP to sessions remains in SystemForge",
-     "commit": "1892c0d"
-    }
-   ],
-   "added": [
-    {
-     "description": "`authzguardsql` adapter mapping GuardSQL schemas/policies to SystemForge authorization (`PolicyBuilder`, `ResourceBuilder`, `DefaultResourceBuilder`); depends on `github.com/grokify/guardsql`",
-     "commit": "cc789a7"
-    },
-    {
-     "description": "OpenAPI 3.1 specification and a Scalar interactive API reference",
-     "commit": "b271108"
-    }
-   ],
-   "changed": [
-    {
-     "description": "bff reverse proxy migrated from the deprecated `httputil.ReverseProxy.Director` to `Rewrite` (Go 1.26 SA1019), propagating the session via the outbound request context",
-     "commit": "1892c0d"
-    }
-   ],
-   "documentation": [
-    {
-     "description": "Add a query policy engines guide and integrate it across the docs",
-     "commit": "434862c"
-    },
-    {
-     "description": "Integrate the interactive API docs into site navigation",
-     "commit": "293eb0b"
-    },
-    {
-     "description": "Document the authzguardsql adapter and the guardsql rename",
-     "commit": "ac300af"
-    },
-    {
-     "description": "Update README shields",
-     "commit": "9b8c673"
-    }
-   ],
-   "dependencies": [
-    {
-     "description": "Bump `github.com/authzed/spicedb` from 1.54.0 to 1.56.0",
-     "commit": "7624e7f"
-    },
-    {
-     "description": "Bump `google.golang.org/grpc` from 1.81.1 to 1.83.0",
-     "commit": "8b6beab"
-    },
-    {
-     "description": "Bump `github.com/redis/go-redis/v9` from 9.20.1 to 9.22.0",
-     "commit": "2511c16"
-    },
-    {
-     "description": "Bump `github.com/danielgtaylor/huma/v2` from 2.38.0 to 2.39.1",
-     "commit": "5c7efaa"
-    },
-    {
-     "description": "Bump `golang.org/x/crypto` from 0.53.0 to 0.55.0",
-     "commit": "ad7951e"
-    },
-    {
-     "description": "Bump `github.com/mattn/go-sqlite3` from 1.14.46 to 1.14.50",
-     "commit": "35e8528"
-    },
-    {
-     "description": "Bump `github.com/plexusone/omniobserve` from 0.11.0 to 0.12.0",
-     "commit": "af41e73"
-    },
-    {
-     "description": "Additional dependency and toolchain updates",
-     "commit": "2065044"
-    }
-   ]
-  },
-  {
-   "version": "v0.8.0",
-   "date": "2026-06-21",
-   "highlights": [
-    {
-     "description": "Organization ownership transfer with transaction-safe implementation"
-    },
-    {
-     "description": "OmniStorage session backend with Redis support and size limits"
-    },
-    {
-     "description": "SpiceDB API compatibility fix for v1.54.0+"
-    }
-   ],
-   "added": [
-    {
-     "description": "Organization ownership transfer functionality with TransferOwnership method",
-     "commit": "7be89d8"
-    },
-    {
-     "description": "POST /organizations/{slug}/transfer-ownership API endpoint",
-     "commit": "7be89d8"
-    },
-    {
-     "description": "TransferOwnershipInput type for transfer configuration",
-     "commit": "7be89d8"
-    },
-    {
-     "description": "OmniStorage session store backend with memory and Redis support",
-     "commit": "3493416"
-    },
-    {
-     "description": "Session size limits and per-user session limits with auto-eviction",
-     "commit": "3493416"
-    },
-    {
-     "description": "Site isolation for multi-tenant session management",
-     "commit": "3493416"
-    }
-   ],
-   "fixed": [
-    {
-     "description": "SpiceDB client API compatibility with v1.54.0+ using grpc.NewClient",
-     "commit": "4aa41ae"
-    }
-   ],
-   "documentation": [
-    {
-     "description": "Session management overview with architecture diagram",
-     "commit": "b3d0cd6"
-    },
-    {
-     "description": "BFF sessions documentation with store interface and backends",
-     "commit": "b3d0cd6"
-    },
-    {
-     "description": "Ownership transfer documentation in memberships guide",
-     "commit": "f7218a1"
-    }
-   ],
-   "dependencies": [
-    {
-     "description": "Bump go from 1.26.2 to 1.26.4",
-     "commit": "0333e6b"
-    },
-    {
-     "description": "Bump github.com/authzed/authzed-go from 1.9.0 to 1.10.0",
-     "commit": "0333e6b"
-    },
-    {
-     "description": "Bump github.com/authzed/spicedb from 1.52.0 to 1.54.0",
-     "commit": "0333e6b"
-    },
-    {
-     "description": "Bump github.com/danielgtaylor/huma/v2 from 2.37.3 to 2.38.0",
-     "commit": "0333e6b"
-    },
-    {
-     "description": "Bump github.com/go-chi/chi/v5 from 5.2.5 to 5.3.0",
-     "commit": "0333e6b"
-    },
-    {
-     "description": "Bump github.com/jackc/pgx/v5 from 5.9.2 to 5.10.0",
-     "commit": "0333e6b"
-    },
-    {
-     "description": "Bump github.com/mattn/go-sqlite3 from 1.14.44 to 1.14.46",
-     "commit": "0333e6b"
-    },
-    {
-     "description": "Bump github.com/plexusone/omniobserve from 0.9.0 to 0.11.0",
-     "commit": "b2a4c49"
-    },
-    {
-     "description": "Add github.com/plexusone/omnistorage-core v0.5.0",
-     "commit": "b2a4c49"
-    },
-    {
-     "description": "Bump github.com/redis/go-redis/v9 from 9.19.0 to 9.20.1",
-     "commit": "b2a4c49"
-    },
-    {
-     "description": "Bump golang.org/x/crypto from 0.50.0 to 0.53.0",
-     "commit": "b2a4c49"
-    },
-    {
-     "description": "Bump google.golang.org/grpc from 1.81.0 to 1.81.1",
-     "commit": "b2a4c49"
-    }
-   ]
-  },
-  {
-   "version": "v0.7.0",
-   "date": "2026-05-10",
-   "highlights": [
-    {
-     "description": "BREAKING: Renamed project from CoreForge to SystemForge"
-    },
-    {
-     "description": "ProductGraph integration for event correlation and tracking"
-    },
-    {
-     "description": "Session invalidation with memory and Redis stores"
-    },
-    {
-     "description": "Account lockout protection for identity module"
-    }
-   ],
-   "changed": [
-    {
-     "description": "BREAKING: Renamed project from CoreForge to SystemForge - update all imports from coreforge to systemforge",
-     "commit": "dc9b68f"
-    }
-   ],
-   "added": [
-    {
-     "description": "ProductGraph client for event correlation and tracking",
-     "commit": "cf8aa54"
-    },
-    {
-     "description": "ProductGraph integration with observability module",
-     "commit": "df5c013"
-    },
-    {
-     "description": "Session invalidation with MemoryStore and RedisStore implementations",
-     "commit": "b4077b1"
-    },
-    {
-     "description": "Account lockout protection in identity module",
-     "commit": "500fd61"
-    }
-   ],
-   "fixed": [
-    {
-     "description": "Session IsExpired flaky test on Windows due to time resolution",
-     "commit": "e332cfa"
-    },
-    {
-     "description": "golangci-lint errcheck, gosec G115, staticcheck SA1019 issues",
-     "commit": "16cfbe1"
-    },
-    {
-     "description": "gosec G710 open redirect and G124 insecure cookie lint issues",
-     "commit": "d8de86f"
-    }
-   ],
-   "documentation": [
-    {
-     "description": "Observability overview documentation",
-     "commit": "98b3669"
-    },
-    {
-     "description": "ProductGraph task tracking documentation",
-     "commit": "9ce6db1"
-    },
-    {
-     "description": "ProductGraph integration design documents",
-     "commit": "062b663"
-    }
-   ],
-   "dependencies": [
-    {
-     "description": "Bump github.com/plexusone/omniobserve from 0.8.0 to 0.9.0",
-     "commit": "2fd164e"
-    },
-    {
-     "description": "Bump google.golang.org/grpc from 1.80.0 to 1.81.0",
-     "commit": "2e809c5"
-    },
-    {
-     "description": "Bump github.com/mattn/go-sqlite3 from 1.14.42 to 1.14.44",
-     "commit": "4e17458"
-    },
-    {
-     "description": "Bump github.com/authzed/spicedb from 1.51.1 to 1.52.0",
-     "commit": "17b7839"
-    },
-    {
-     "description": "Bump github.com/redis/go-redis/v9 from 9.18.0 to 9.19.0",
-     "commit": "b85b324"
-    },
-    {
-     "description": "Bump github.com/jackc/pgx/v5 from 5.9.1 to 5.9.2",
-     "commit": "15bbb86"
-    },
-    {
-     "description": "Bump github.com/invopop/jsonschema from 0.13.0 to 0.14.0",
-     "commit": "7bd75e2"
-    }
-   ]
-  },
-  {
-   "version": "v0.6.0",
-   "date": "2026-04-12",
-   "highlights": [
-    {
-     "description": "Multi-app platform infrastructure for running multiple SaaS apps on shared backend"
-    },
-    {
-     "description": "Schema-per-app PostgreSQL isolation with X-App-ID header routing"
-    },
-    {
-     "description": "SystemForge identity and session integration for multiapp deployments"
-    }
-   ],
-   "added": [
-    {
-     "description": "Multi-app server with `MultiAppMode` and `SingleAppMode` deployment options",
-     "commit": "fa15800"
-    },
-    {
-     "description": "AppBackend interface for composable app registration with lifecycle hooks",
-     "commit": "fa15800"
-    },
-    {
-     "description": "Schema-per-app database isolation using PostgreSQL schemas (`app_` prefix)",
-     "commit": "fa15800"
-    },
-    {
-     "description": "X-App-ID header routing for multi-tenant request dispatch",
-     "commit": "fa15800"
-    },
-    {
-     "description": "Redis and in-memory cache implementations with app-scoped prefixes",
-     "commit": "fa15800"
-    },
-    {
-     "description": "SystemForge identity integration with JWT claims extraction and validation",
-     "commit": "82df768"
-    },
-    {
-     "description": "Session management helpers for multi-tenant deployments",
-     "commit": "82df768"
-    },
-    {
-     "description": "Ent client factory for schema-isolated database connections",
-     "commit": "82df768"
-    },
-    {
-     "description": "HTTP middleware for authentication and tenant context propagation",
-     "commit": "82df768"
-    },
-    {
-     "description": "Example app backend implementation demonstrating AppBackend interface",
-     "commit": "aac27fc"
-    }
-   ],
-   "security": [
-    {
-     "description": "Generic 404 responses for missing/invalid X-App-ID to prevent enumeration attacks",
-     "commit": "f6a70ba"
-    }
-   ],
-   "documentation": [
-    {
-     "description": "Multiapp architecture documentation with deployment patterns",
-     "commit": "1d705e1"
-    }
-   ],
-   "dependencies": [
-    {
-     "description": "Bump github.com/mattn/go-sqlite3 from 1.14.40 to 1.14.42",
-     "commit": "a895c55"
-    },
-    {
-     "description": "Bump golang.org/x/crypto from 0.49.0 to 0.50.0",
-     "commit": "2e1080a"
-    }
-   ]
-  },
-  {
-   "version": "v0.5.0",
-   "date": "2026-04-05",
-   "highlights": [
-    {
-     "description": "Audience-aware JWT tokens for BFF vs API client separation"
-    },
-    {
-     "description": "Ent-backed stores for API keys and BFF sessions with AES-256-GCM encryption"
-    },
-    {
-     "description": "Reusable Ent schema mixins for API keys and BFF sessions"
-    }
-   ],
-   "added": [
-    {
-     "description": "Audience-aware JWT tokens with `GenerateBFFTokenPair` and `GenerateAPIToken` methods",
-     "commit": "92fa0c5"
-    },
-    {
-     "description": "AES-256-GCM token encryption for BFF sessions with `Encryptor` type",
-     "commit": "b978729"
-    },
-    {
-     "description": "Ent-backed BFF session store with automatic expired session cleanup",
-     "commit": "b978729"
-    },
-    {
-     "description": "Ent-backed API key store with `EntClientInterface` for app integration",
-     "commit": "0f352f8"
-    },
-    {
-     "description": "APIKey Ent mixin with fields for key management (prefix, hash, scopes, environment)",
-     "commit": "896f5a1"
-    },
-    {
-     "description": "BFFSession Ent mixin with encrypted token fields and session metadata",
-     "commit": "896f5a1"
-    }
-   ],
-   "documentation": [
-    {
-     "description": "JWT audience separation guide for BFF vs API tokens",
-     "commit": "5b4869a"
-    },
-    {
-     "description": "Ent-backed session store integration guide",
-     "commit": "5b4869a"
-    },
-    {
-     "description": "API key Ent store implementation documentation",
-     "commit": "5b4869a"
-    },
-    {
-     "description": "OAuth client package documentation",
-     "commit": "5b4869a"
-    },
-    {
-     "description": "Design documents for JWT audience and Ent stores features",
-     "commit": "e00bbcc"
-    }
-   ],
-   "dependencies": [
-    {
-     "description": "Bump github.com/authzed/spicedb from 1.50.0 to 1.51.0",
-     "commit": "5e5f55c"
-    },
-    {
-     "description": "Bump entgo.io/ent from 0.14.5 to 0.14.6",
-     "commit": "d2354a0"
-    },
-    {
-     "description": "Bump github.com/danielgtaylor/huma/v2 from 2.37.2 to 2.37.3",
-     "commit": "c005e12"
-    },
-    {
-     "description": "Bump github.com/mattn/go-sqlite3 from 1.14.37 to 1.14.38",
-     "commit": "9cc6298"
-    },
-    {
-     "description": "Bump google.golang.org/grpc from 1.79.3 to 1.80.0",
-     "commit": "994d1c7"
-    }
-   ]
-  },
-  {
-   "version": "v0.4.0",
-   "date": "2026-03-23",
-   "highlights": [
-    {
-     "description": "Backend for Frontend (BFF) package with session management, rate limiting, and API proxy"
-    },
-    {
-     "description": "Public profile fields for users and organizations enabling directory listings"
-    },
-    {
-     "description": "Huma framework integration for OpenAPI schema generation in BFF endpoints"
-    }
-   ],
-   "added": [
-    {
-     "description": "BFF HTTP handler with session creation, API proxy, and CSRF protection",
-     "commit": "aa49751"
-    },
-    {
-     "description": "Token bucket rate limiter with per-endpoint overrides and standard headers",
-     "commit": "717bd88"
-    },
-    {
-     "description": "Client IP extraction with Cloudflare and proxy header support",
-     "commit": "e55385e"
-    },
-    {
-     "description": "Huma API integration for BFF with OpenAPI schema generation",
-     "commit": "c06a603"
-    },
-    {
-     "description": "Public profile fields for HumanMixin (slug, headline, bio, social links)",
-     "commit": "d7bfcd1"
-    },
-    {
-     "description": "Public listing fields for OrganizationBase (tagline, description, website)",
-     "commit": "464b163"
-    }
-   ],
-   "documentation": [
-    {
-     "description": "BFF pattern documentation with architecture and integration examples",
-     "commit": "e680ea0"
-    }
-   ],
-   "infrastructure": [
-    {
-     "description": "Updated shared CI workflows to Go 1.26.x only",
-     "commit": "f215759"
-    }
-   ],
-   "dependencies": [
-    {
-     "description": "Bump github.com/authzed/spicedb from 1.49.2 to 1.50.0",
-     "commit": "5d8eb51"
-    },
-    {
-     "description": "Bump google.golang.org/grpc from 1.79.2 to 1.79.3",
-     "commit": "b1aadf1"
-    },
-    {
-     "description": "Bump github.com/mattn/go-sqlite3 from 1.14.34 to 1.14.37",
-     "commit": "77ebd8c"
-    }
-   ]
-  },
-  {
-   "version": "v0.3.0",
-   "date": "2026-03-14",
-   "highlights": [
-    {
-     "description": "Vendor-agnostic observability integration with OmniObserve (Datadog, New Relic, Dynatrace, OTLP)"
-    },
-    {
-     "description": "SaaS marketplace infrastructure with Stripe billing and seat-based licensing"
-    },
-    {
-     "description": "Redis-backed rate limiting with sliding window and token bucket algorithms"
-    },
-    {
-     "description": "OAuth client management and provider abstraction for CoreAuth"
-    }
-   ],
-   "added": [
-    {
-     "description": "Observability package with OmniObserve integration for metrics, traces, and logs",
-     "commit": "ea139a6"
-    },
-    {
-     "description": "Marketplace package with Stripe subscription and seat-based licensing",
-     "commit": "c0ba5bd"
-    },
-    {
-     "description": "OAuth client management service in `identity/oauthclient`",
-     "commit": "2da5d87"
-    },
-    {
-     "description": "CoreAPI rate limiting package with policy-based controls",
-     "commit": "3771a54"
-    },
-    {
-     "description": "Redis-backed rate limiter with sliding window algorithm",
-     "commit": "0269db8"
-    },
-    {
-     "description": "Marketplace Ent entities: License, Listing, Subscription, SeatAssignment",
-     "commit": "db60b3c"
-    },
-    {
-     "description": "CoreAuth provider abstraction layer for pluggable authentication",
-     "commit": "bf5a90a"
-    },
-    {
-     "description": "JWT claims enhancement with audience and issuer validation",
-     "commit": "087d8dd"
-    },
-    {
-     "description": "Session middleware improvements with context utilities",
-     "commit": "cb60d99"
-    }
-   ],
-   "documentation": [
-    {
-     "description": "Authorization PRD and TRD design documents",
-     "commit": "95d1352"
-    },
-    {
-     "description": "Marketplace PRD design document",
-     "commit": "95d1352"
-    },
-    {
-     "description": "CoreAPI and CoreAuth documentation",
-     "commit": "95d1352"
-    }
-   ],
-   "dependencies": [
-    {
-     "description": "Upgraded OmniObserve to v0.8.0 with unified entry point",
-     "commit": "9a7280b"
-    },
-    {
-     "description": "Added Stripe Go SDK v82 for payment processing",
-     "commit": "9a7280b"
-    },
-    {
-     "description": "Added Redis client for rate limiting",
-     "commit": "9a7280b"
-    }
-   ]
-  },
-  {
-   "version": "v0.2.0",
-   "date": "2026-03-08",
-   "highlights": [
-    {
-     "description": "SpiceDB authorization provider for Zanzibar-style relationship-based access control (ReBAC)"
-    },
-    {
-     "description": "Principal-based identity model supporting humans, agents, applications, and service principals"
-    },
-    {
-     "description": "SCIM 2.0 user provisioning with SystemForge-compliant patch operations"
-    },
-    {
-     "description": "Identity-authorization sync automatically maintains SpiceDB relationships on identity changes"
-    }
-   ],
-   "added": [
-    {
-     "description": "SpiceDB authorization provider with embedded and remote modes",
-     "commit": "a7d4f61"
-    },
-    {
-     "description": "Principal identity model with type-specific extensions (Human, Agent, Application, ServicePrincipal)",
-     "commit": "0deab0a"
-    },
-    {
-     "description": "GitHub-style organization system with owner, admin, member roles",
-     "commit": "b3471b6"
-    },
-    {
-     "description": "SCIM 2.0 user provisioning endpoints with filter, patch, and bulk operations",
-     "commit": "1f78ff0"
-    },
-    {
-     "description": "Coreauth authentication server with Fosite-based OAuth 2.0",
-     "commit": "d46d626"
-    },
-    {
-     "description": "Credential and token management service for principals",
-     "commit": "a3b02b2"
-    },
-    {
-     "description": "Standardized API contract module with consistent error handling",
-     "commit": "55be5d3"
-    },
-    {
-     "description": "Coreauth CLI for server and key management operations",
-     "commit": "803d5b1"
-    },
-    {
-     "description": "User schema extended with profile fields (locale, timezone, avatar)",
-     "commit": "a303ca5"
-    },
-    {
-     "description": "RelationshipSyncer interface for identity-authorization integration",
-     "commit": "963b3d3"
-    },
-    {
-     "description": "No-op syncer for deployments without SpiceDB",
-     "commit": "963b3d3"
-    },
-    {
-     "description": "SpiceDB integration tests with embedded server",
-     "commit": "be09d6c"
-    }
-   ],
-   "changed": [
-    {
-     "description": "OAuth 2.0 implementation refactored for principal-based identity",
-     "commit": "ffff607"
-    }
-   ],
-   "removed": [
-    {
-     "description": "Casbin authorization provider (replaced by SpiceDB)",
-     "commit": "dde3392"
-    }
-   ],
-   "documentation": [
-    {
-     "description": "SpiceDB setup guide for embedded and remote modes",
-     "commit": "a7d4f61"
-    },
-    {
-     "description": "SpiceDB schema reference with permission inheritance model",
-     "commit": "a7d4f61"
-    },
-    {
-     "description": "Authorization integration patterns and middleware examples",
-     "commit": "963b3d3"
-    },
-    {
-     "description": "Updated module documentation for v0.2.0",
-     "commit": "8436f16"
-    }
-   ]
-  },
-  {
-   "version": "v0.1.0",
-   "date": "2026-02-28",
-   "highlights": [
-    {
-     "description": "Batteries-included Go platform module for multi-tenant SaaS applications"
-    },
-    {
-     "description": "Complete identity management with users, organizations, and memberships"
-    },
-    {
-     "description": "Full OAuth 2.0 server implementation using Fosite with PKCE, client credentials, and JWT bearer grants"
-    },
-    {
-     "description": "Session management with JWT, DPoP (RFC 9449) proof-of-possession, and BFF pattern"
-    }
-   ],
-   "added": [
-    {
-     "description": "User accounts with email and Argon2id password hashing",
-     "commit": "3907780"
-    },
-    {
-     "description": "Organizations for multi-tenant applications with name, slug, plan, and settings",
-     "commit": "3907780"
-    },
-    {
-     "description": "Memberships with flexible role-based user-organization relationships",
-     "commit": "3907780"
-    },
-    {
-     "description": "OAuth account linking for GitHub and Google providers",
-     "commit": "3907780"
-    },
-    {
-     "description": "API key service for machine-to-machine authentication with scopes",
-     "commit": "d13b7a5"
-    },
-    {
-     "description": "OAuth 2.0 server using Fosite with Authorization Code + PKCE grant",
-     "commit": "297ecc7"
-    },
-    {
-     "description": "Client Credentials grant for service-to-service authentication",
-     "commit": "297ecc7"
-    },
-    {
-     "description": "Refresh Token grant with rotation and theft detection",
-     "commit": "297ecc7"
-    },
-    {
-     "description": "JWT Bearer grant (RFC 7523) for service account authentication",
-     "commit": "297ecc7"
-    },
-    {
-     "description": "Service accounts with RSA/EC key pairs for non-human identities",
-     "commit": "297ecc7"
-    },
-    {
-     "description": "Token introspection (RFC 7662) and revocation (RFC 7009) endpoints",
-     "commit": "297ecc7"
-    },
-    {
-     "description": "JWT service supporting HS256, RS256, and ES256 algorithms",
-     "commit": "4397d6a"
-    },
-    {
-     "description": "DPoP (RFC 9449) proof-of-possession token binding implementation",
-     "commit": "b086e49"
-    },
-    {
-     "description": "Backend for Frontend (BFF) pattern with server-side sessions",
-     "commit": "205886b"
-    },
-    {
-     "description": "GitHub and Google OAuth social login handlers",
-     "commit": "4ea5e42"
-    },
-    {
-     "description": "JWT Bearer and API key authentication middleware",
-     "commit": "2b84467"
-    },
-    {
-     "description": "Role-based access control (RBAC) with organization-scoped permissions",
-     "commit": "edf630e"
-    },
-    {
-     "description": "Casbin provider for advanced policy rules",
-     "commit": "edf630e"
-    },
-    {
-     "description": "Simple provider for lightweight permission checking",
-     "commit": "edf630e"
-    },
-    {
-     "description": "HTTP middleware for route protection (Chi and stdlib)",
-     "commit": "edf630e"
-    },
-    {
-     "description": "Feature flag engine with boolean, percentage, and user list flags",
-     "commit": "edb959d"
-    },
-    {
-     "description": "Organization-scoped feature flag evaluation",
-     "commit": "edb959d"
-    },
-    {
-     "description": "In-memory feature flag store for development and testing",
-     "commit": "edb959d"
-    },
-    {
-     "description": "PostgreSQL RLS policy generation and session variable helpers",
-     "commit": "7240382"
-    },
-    {
-     "description": "Tenant isolation for multi-tenant data separation",
-     "commit": "7240382"
-    },
-    {
-     "description": "Ent ORM integration with transaction helpers for tenant context",
-     "commit": "7240382"
-    }
-   ],
-   "infrastructure": [
-    {
-     "description": "GitHub Actions CI workflow for build and test",
-     "commit": "0f8c44c"
-    },
-    {
-     "description": "GitHub Actions lint workflow with golangci-lint",
-     "commit": "0f8c44c"
-    },
-    {
-     "description": "Dependabot configuration for Go modules and GitHub Actions",
-     "commit": "0f8c44c"
-    }
-   ],
-   "documentation": [
-    {
-     "description": "Comprehensive MkDocs documentation site with Material theme",
-     "commit": "87a8489"
-    },
-    {
-     "description": "Getting started guides: installation, quickstart, configuration",
-     "commit": "87a8489"
-    },
-    {
-     "description": "Identity module documentation: users, organizations, memberships, API keys",
-     "commit": "87a8489"
-    },
-    {
-     "description": "OAuth 2.0 documentation: apps, authorization code, client credentials, service accounts, tokens",
-     "commit": "87a8489"
-    },
-    {
-     "description": "Integration guides: existing apps and migration",
-     "commit": "87a8489"
-    },
-    {
-     "description": "API reference and Ent schema documentation",
-     "commit": "87a8489"
-    },
-    {
-     "description": "PRD and TRD design documents for authentication and OAuth",
-     "commit": "28dffa6"
-    },
-    {
-     "description": "README with badges, quick start examples, and module structure",
-     "commit": "a91b98e"
-    }
-   ]
-  }
- ]
+  ]
 }

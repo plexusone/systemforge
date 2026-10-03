@@ -40,7 +40,7 @@ func (APIKey) Fields() []ent.Field {
 		field.String("prefix").
 			NotEmpty().
 			MaxLen(20).
-			Comment("Visible prefix for identification (e.g., cf_live_xxxx)"),
+			Comment("Visible prefix for identification (e.g., sf_live_xxxx)"),
 
 		field.String("key_hash").
 			NotEmpty().

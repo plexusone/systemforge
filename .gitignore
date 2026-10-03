@@ -35,4 +35,4 @@ IDEATION_CHAT*.md
 # !identity/ent/schema/
 
 # CLI binaries
-/coreauth
+/systemauth

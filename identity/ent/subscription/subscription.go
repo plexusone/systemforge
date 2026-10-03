@@ -39,12 +39,12 @@ const (
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
 	EdgeOrganization = "organization"
 	// Table holds the table name of the subscription in the database.
-	Table = "cf_subscriptions"
+	Table = "sf_subscriptions"
 	// OrganizationTable is the table that holds the organization relation/edge.
-	OrganizationTable = "cf_subscriptions"
+	OrganizationTable = "sf_subscriptions"
 	// OrganizationInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	OrganizationInverseTable = "cf_organizations"
+	OrganizationInverseTable = "sf_organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_id"
 )

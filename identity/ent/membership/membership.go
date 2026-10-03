@@ -32,19 +32,19 @@ const (
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
 	EdgeOrganization = "organization"
 	// Table holds the table name of the membership in the database.
-	Table = "cf_memberships"
+	Table = "sf_memberships"
 	// UserTable is the table that holds the user relation/edge.
-	UserTable = "cf_memberships"
+	UserTable = "sf_memberships"
 	// UserInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	UserInverseTable = "cf_users"
+	UserInverseTable = "sf_users"
 	// UserColumn is the table column denoting the user relation/edge.
 	UserColumn = "user_id"
 	// OrganizationTable is the table that holds the organization relation/edge.
-	OrganizationTable = "cf_memberships"
+	OrganizationTable = "sf_memberships"
 	// OrganizationInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	OrganizationInverseTable = "cf_organizations"
+	OrganizationInverseTable = "sf_organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_id"
 )

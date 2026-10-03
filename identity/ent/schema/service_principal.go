@@ -19,7 +19,7 @@ type ServicePrincipal struct {
 // Annotations of the ServicePrincipal.
 func (ServicePrincipal) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_service_principals"},
+		entsql.Annotation{Table: "sf_service_principals"},
 	}
 }
 

@@ -1,6 +1,6 @@
 # OAuth Client
 
-The `identity/oauthclient` package provides utilities for accepting OAuth logins from external providers (GitHub, Google, CoreControl) in your application.
+The `identity/oauthclient` package provides utilities for accepting OAuth logins from external providers (GitHub, Google, SystemAuth) in your application.
 
 ## Overview
 
@@ -10,7 +10,7 @@ This package handles the client-side of OAuth flows where your app is the **rely
 
 - **GitHub** - OAuth 2.0 with user/email scopes
 - **Google** - OpenID Connect with profile scopes
-- **CoreControl** - SystemForge's identity provider
+- **SystemAuth** - SystemForge's identity provider
 
 ## Quick Start
 
@@ -83,7 +83,7 @@ All providers return a normalized `User` struct:
 ```go
 type User struct {
     ProviderID   string         // Unique ID from the provider
-    Provider     string         // "github", "google", "corecontrol"
+    Provider     string         // "github", "google", "systemauth"
     Email        string         // User's email address
     Name         string         // Display name
     AvatarURL    string         // Profile picture URL
@@ -215,16 +215,16 @@ func (h *AuthHandler) GitHubCallback(w http.ResponseWriter, r *http.Request) {
 - Default scopes: `openid`, `email`, `profile`
 - `ProviderID` is the Google `sub` claim
 
-### CoreControl
+### SystemAuth
 
-CoreControl is SystemForge's identity provider for SSO across SystemForge apps:
+SystemAuth is SystemForge's identity provider for SSO across SystemForge apps:
 
 ```go
-ccConfig := cfoauth.CoreControlConfig{
+ccConfig := cfoauth.SystemAuthConfig{
     ProviderConfig: cfoauth.ProviderConfig{
-        ClientID:     os.Getenv("CORECONTROL_CLIENT_ID"),
-        ClientSecret: os.Getenv("CORECONTROL_CLIENT_SECRET"),
-        RedirectURL:  "http://localhost:8080/auth/oauth/corecontrol/callback",
+        ClientID:     os.Getenv("SYSTEMAUTH_CLIENT_ID"),
+        ClientSecret: os.Getenv("SYSTEMAUTH_CLIENT_SECRET"),
+        RedirectURL:  "http://localhost:8080/auth/oauth/systemauth/callback",
         Scopes:       []string{"openid", "profile", "email"},
     },
     BaseURL: "https://auth.example.com",

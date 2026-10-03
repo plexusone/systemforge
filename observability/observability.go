@@ -75,7 +75,7 @@ type Observability struct {
 	// ProductGraph client for event tracking
 	productgraph *productgraph.Client
 
-	// Pre-created metrics for CoreAuth
+	// Pre-created metrics for SystemAuth
 	authRequests     observops.Counter
 	authLatency      observops.Histogram
 	tokensIssued     observops.Counter
@@ -166,7 +166,7 @@ func (o *Observability) initMetrics() error {
 	var err error
 	meter := o.provider.Meter()
 
-	// CoreAuth metrics
+	// SystemAuth metrics
 	o.authRequests, err = meter.Counter(MetricAuthRequests,
 		observops.WithDescription("Total authentication/authorization requests"),
 		observops.WithUnit("{request}"),

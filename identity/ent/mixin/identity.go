@@ -105,11 +105,11 @@ func (PrincipalMixin) Fields() []ent.Field {
 		field.JSON("metadata", map[string]any{}).
 			Optional().
 			Comment("App-specific metadata"),
-		field.UUID("core_control_principal_id", uuid.UUID{}).
+		field.UUID("sf_principal_id", uuid.UUID{}).
 			Optional().
 			Nillable().
 			Unique().
-			Comment("CoreControl Principal ID for SSO federation"),
+			Comment("SystemAuth Principal ID for SSO federation"),
 	}
 	return append(baseFields, principalFields...)
 }
@@ -119,7 +119,7 @@ func (PrincipalMixin) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("type", "identifier").Unique(),
 		index.Fields("organization_id"),
-		index.Fields("core_control_principal_id"),
+		index.Fields("sf_principal_id"),
 		index.Fields("active"),
 	}
 }

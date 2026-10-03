@@ -34,12 +34,12 @@ const (
 	// EdgeApp holds the string denoting the app edge name in mutations.
 	EdgeApp = "app"
 	// Table holds the table name of the oauthappsecret in the database.
-	Table = "cf_oauth_app_secrets"
+	Table = "sf_oauth_app_secrets"
 	// AppTable is the table that holds the app relation/edge.
-	AppTable = "cf_oauth_app_secrets"
+	AppTable = "sf_oauth_app_secrets"
 	// AppInverseTable is the table name for the OAuthApp entity.
 	// It exists in this package in order to avoid circular dependency with the "oauthapp" package.
-	AppInverseTable = "cf_oauth_apps"
+	AppInverseTable = "sf_oauth_apps"
 	// AppColumn is the table column denoting the app relation/edge.
 	AppColumn = "app_id"
 )

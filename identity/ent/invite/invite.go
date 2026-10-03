@@ -49,19 +49,19 @@ const (
 	// EdgeInviter holds the string denoting the inviter edge name in mutations.
 	EdgeInviter = "inviter"
 	// Table holds the table name of the invite in the database.
-	Table = "cf_invites"
+	Table = "sf_invites"
 	// OrganizationTable is the table that holds the organization relation/edge.
-	OrganizationTable = "cf_invites"
+	OrganizationTable = "sf_invites"
 	// OrganizationInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	OrganizationInverseTable = "cf_organizations"
+	OrganizationInverseTable = "sf_organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_id"
 	// InviterTable is the table that holds the inviter relation/edge.
-	InviterTable = "cf_invites"
+	InviterTable = "sf_invites"
 	// InviterInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	InviterInverseTable = "cf_principals"
+	InviterInverseTable = "sf_principals"
 	// InviterColumn is the table column denoting the inviter relation/edge.
 	InviterColumn = "inviter_principal_id"
 )

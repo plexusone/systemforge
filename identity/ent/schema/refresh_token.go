@@ -19,7 +19,7 @@ type RefreshToken struct {
 // Annotations of the RefreshToken.
 func (RefreshToken) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_refresh_tokens"},
+		entsql.Annotation{Table: "sf_refresh_tokens"},
 	}
 }
 

@@ -214,7 +214,7 @@ type FederationHealthOutput struct {
 	}
 }
 
-// SyncPrincipal represents a principal to sync from CoreControl.
+// SyncPrincipal represents a principal to sync from SystemAuth.
 type SyncPrincipal struct {
 	GlobalID    uuid.UUID      `json:"global_id" doc:"Global principal identifier" required:"true" format:"uuid"`
 	Identifier  string         `json:"identifier" doc:"Principal identifier" required:"true" example:"user@example.com"`
@@ -246,7 +246,7 @@ type IdentitySyncOutput struct {
 	}
 }
 
-// SyncPolicy represents a policy to sync from CoreControl.
+// SyncPolicy represents a policy to sync from SystemAuth.
 type SyncPolicy struct {
 	ID       uuid.UUID `json:"id" doc:"Policy identifier" required:"true" format:"uuid"`
 	Name     string    `json:"name" doc:"Policy name" required:"true" example:"Global Admin Policy"`
@@ -282,7 +282,7 @@ type PolicySyncOutput struct {
 // AuditStreamConfig holds audit streaming configuration.
 type AuditStreamConfig struct {
 	Enabled         bool   `json:"enabled" doc:"Whether streaming is enabled" example:"true"`
-	Endpoint        string `json:"endpoint,omitempty" doc:"Streaming endpoint URL" format:"uri" example:"https://corecontrol.example.com/audit/ingest"`
+	Endpoint        string `json:"endpoint,omitempty" doc:"Streaming endpoint URL" format:"uri" example:"https://systemauth.example.com/audit/ingest"`
 	BatchSize       int    `json:"batch_size,omitempty" doc:"Events per batch" minimum:"1" maximum:"1000" example:"100"`
 	FlushIntervalMs int    `json:"flush_interval_ms,omitempty" doc:"Flush interval in milliseconds" minimum:"100" example:"5000"`
 	AuthMethod      string `json:"auth_method,omitempty" doc:"Authentication method" enum:"bearer" example:"bearer"`

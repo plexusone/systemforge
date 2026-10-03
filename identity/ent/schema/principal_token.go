@@ -21,7 +21,7 @@ type PrincipalToken struct {
 // Annotations of the PrincipalToken.
 func (PrincipalToken) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_principal_tokens"},
+		entsql.Annotation{Table: "sf_principal_tokens"},
 	}
 }
 

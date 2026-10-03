@@ -18,7 +18,7 @@ type APIKey struct {
 // Annotations of the APIKey.
 func (APIKey) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_api_keys"},
+		entsql.Annotation{Table: "sf_api_keys"},
 	}
 }
 
@@ -37,12 +37,12 @@ func (APIKey) Fields() []ent.Field {
 			NotEmpty().
 			Comment("Human-readable name for the API key"),
 
-		// Prefix is the visible portion of the key (e.g., "cf_live_abc123").
+		// Prefix is the visible portion of the key (e.g., "sf_live_abc123").
 		// This is safe to display and helps identify keys.
 		field.String("prefix").
 			NotEmpty().
 			Unique().
-			Comment("Visible prefix of the API key (e.g., cf_live_abc123)"),
+			Comment("Visible prefix of the API key (e.g., sf_live_abc123)"),
 
 		// KeyHash is the SHA-256 hash of the full API key.
 		// The actual key is only shown once at creation time.

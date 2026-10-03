@@ -64,9 +64,9 @@ nav:
     - Client Credentials: oauth/client-credentials.md
     - Service Accounts: oauth/service-accounts.md
     - Token Management: oauth/tokens.md
-  - CoreAuth:
-    - Overview: coreauth/overview.md
-    - Providers: coreauth/providers.md
+  - SystemAuth:
+    - Overview: systemauth/overview.md
+    - Providers: systemauth/providers.md
   - Authorization:
     - SpiceDB Setup: authorization/spicedb-setup.md
     - SpiceDB Schema: authorization/spicedb-schema.md
@@ -107,6 +107,7 @@ nav:
       - Plan: design/productgraph/PLAN.md
       - Tasks: design/productgraph/TASKS.md
   - Releases:
+    - v0.11.0: releases/v0.11.0.md
     - v0.10.0: releases/v0.10.0.md
     - v0.9.0: releases/v0.9.0.md
     - v0.8.0: releases/v0.8.0.md

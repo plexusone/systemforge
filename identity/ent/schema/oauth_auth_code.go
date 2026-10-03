@@ -20,7 +20,7 @@ type OAuthAuthCode struct {
 // Annotations of the OAuthAuthCode.
 func (OAuthAuthCode) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_oauth_auth_codes"},
+		entsql.Annotation{Table: "sf_oauth_auth_codes"},
 	}
 }
 

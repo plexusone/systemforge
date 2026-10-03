@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	// CfAPIKeysColumns holds the columns for the "cf_api_keys" table.
-	CfAPIKeysColumns = []*schema.Column{
+	// SfAPIKeysColumns holds the columns for the "sf_api_keys" table.
+	SfAPIKeysColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -30,22 +30,22 @@ var (
 		{Name: "organization_api_keys", Type: field.TypeUUID, Nullable: true},
 		{Name: "user_api_keys", Type: field.TypeUUID},
 	}
-	// CfAPIKeysTable holds the schema information for the "cf_api_keys" table.
-	CfAPIKeysTable = &schema.Table{
-		Name:       "cf_api_keys",
-		Columns:    CfAPIKeysColumns,
-		PrimaryKey: []*schema.Column{CfAPIKeysColumns[0]},
+	// SfAPIKeysTable holds the schema information for the "sf_api_keys" table.
+	SfAPIKeysTable = &schema.Table{
+		Name:       "sf_api_keys",
+		Columns:    SfAPIKeysColumns,
+		PrimaryKey: []*schema.Column{SfAPIKeysColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_api_keys_cf_organizations_api_keys",
-				Columns:    []*schema.Column{CfAPIKeysColumns[16]},
-				RefColumns: []*schema.Column{CfOrganizationsColumns[0]},
+				Symbol:     "sf_api_keys_sf_organizations_api_keys",
+				Columns:    []*schema.Column{SfAPIKeysColumns[16]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "cf_api_keys_cf_users_api_keys",
-				Columns:    []*schema.Column{CfAPIKeysColumns[17]},
-				RefColumns: []*schema.Column{CfUsersColumns[0]},
+				Symbol:     "sf_api_keys_sf_users_api_keys",
+				Columns:    []*schema.Column{SfAPIKeysColumns[17]},
+				RefColumns: []*schema.Column{SfUsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -53,32 +53,32 @@ var (
 			{
 				Name:    "apikey_prefix",
 				Unique:  true,
-				Columns: []*schema.Column{CfAPIKeysColumns[4]},
+				Columns: []*schema.Column{SfAPIKeysColumns[4]},
 			},
 			{
 				Name:    "apikey_user_api_keys",
 				Unique:  false,
-				Columns: []*schema.Column{CfAPIKeysColumns[17]},
+				Columns: []*schema.Column{SfAPIKeysColumns[17]},
 			},
 			{
 				Name:    "apikey_organization_api_keys",
 				Unique:  false,
-				Columns: []*schema.Column{CfAPIKeysColumns[16]},
+				Columns: []*schema.Column{SfAPIKeysColumns[16]},
 			},
 			{
 				Name:    "apikey_revoked_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{CfAPIKeysColumns[11], CfAPIKeysColumns[8]},
+				Columns: []*schema.Column{SfAPIKeysColumns[11], SfAPIKeysColumns[8]},
 			},
 			{
 				Name:    "apikey_environment",
 				Unique:  false,
-				Columns: []*schema.Column{CfAPIKeysColumns[14]},
+				Columns: []*schema.Column{SfAPIKeysColumns[14]},
 			},
 		},
 	}
-	// CfAgentsColumns holds the columns for the "cf_agents" table.
-	CfAgentsColumns = []*schema.Column{
+	// SfAgentsColumns holds the columns for the "sf_agents" table.
+	SfAgentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -92,22 +92,22 @@ var (
 		{Name: "delegating_principal_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "principal_id", Type: field.TypeUUID, Unique: true},
 	}
-	// CfAgentsTable holds the schema information for the "cf_agents" table.
-	CfAgentsTable = &schema.Table{
-		Name:       "cf_agents",
-		Columns:    CfAgentsColumns,
-		PrimaryKey: []*schema.Column{CfAgentsColumns[0]},
+	// SfAgentsTable holds the schema information for the "sf_agents" table.
+	SfAgentsTable = &schema.Table{
+		Name:       "sf_agents",
+		Columns:    SfAgentsColumns,
+		PrimaryKey: []*schema.Column{SfAgentsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_agents_cf_principals_delegating_principal",
-				Columns:    []*schema.Column{CfAgentsColumns[10]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_agents_sf_principals_delegating_principal",
+				Columns:    []*schema.Column{SfAgentsColumns[10]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "cf_agents_cf_principals_agent",
-				Columns:    []*schema.Column{CfAgentsColumns[11]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_agents_sf_principals_agent",
+				Columns:    []*schema.Column{SfAgentsColumns[11]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -115,32 +115,32 @@ var (
 			{
 				Name:    "agent_principal_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfAgentsColumns[11]},
+				Columns: []*schema.Column{SfAgentsColumns[11]},
 			},
 			{
 				Name:    "agent_model_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfAgentsColumns[3]},
+				Columns: []*schema.Column{SfAgentsColumns[3]},
 			},
 			{
 				Name:    "agent_delegating_principal_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfAgentsColumns[10]},
+				Columns: []*schema.Column{SfAgentsColumns[10]},
 			},
 			{
 				Name:    "agent_session_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfAgentsColumns[8]},
+				Columns: []*schema.Column{SfAgentsColumns[8]},
 			},
 			{
 				Name:    "agent_requires_confirmation",
 				Unique:  false,
-				Columns: []*schema.Column{CfAgentsColumns[9]},
+				Columns: []*schema.Column{SfAgentsColumns[9]},
 			},
 		},
 	}
-	// CfApplicationsColumns holds the columns for the "cf_applications" table.
-	CfApplicationsColumns = []*schema.Column{
+	// SfApplicationsColumns holds the columns for the "sf_applications" table.
+	SfApplicationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -158,16 +158,16 @@ var (
 		{Name: "public", Type: field.TypeBool, Default: false},
 		{Name: "principal_id", Type: field.TypeUUID, Unique: true},
 	}
-	// CfApplicationsTable holds the schema information for the "cf_applications" table.
-	CfApplicationsTable = &schema.Table{
-		Name:       "cf_applications",
-		Columns:    CfApplicationsColumns,
-		PrimaryKey: []*schema.Column{CfApplicationsColumns[0]},
+	// SfApplicationsTable holds the schema information for the "sf_applications" table.
+	SfApplicationsTable = &schema.Table{
+		Name:       "sf_applications",
+		Columns:    SfApplicationsColumns,
+		PrimaryKey: []*schema.Column{SfApplicationsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_applications_cf_principals_application",
-				Columns:    []*schema.Column{CfApplicationsColumns[15]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_applications_sf_principals_application",
+				Columns:    []*schema.Column{SfApplicationsColumns[15]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -175,27 +175,27 @@ var (
 			{
 				Name:    "application_principal_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfApplicationsColumns[15]},
+				Columns: []*schema.Column{SfApplicationsColumns[15]},
 			},
 			{
 				Name:    "application_client_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfApplicationsColumns[3]},
+				Columns: []*schema.Column{SfApplicationsColumns[3]},
 			},
 			{
 				Name:    "application_app_type",
 				Unique:  false,
-				Columns: []*schema.Column{CfApplicationsColumns[6]},
+				Columns: []*schema.Column{SfApplicationsColumns[6]},
 			},
 			{
 				Name:    "application_first_party",
 				Unique:  false,
-				Columns: []*schema.Column{CfApplicationsColumns[13]},
+				Columns: []*schema.Column{SfApplicationsColumns[13]},
 			},
 		},
 	}
-	// CfCredentialsColumns holds the columns for the "cf_credentials" table.
-	CfCredentialsColumns = []*schema.Column{
+	// SfCredentialsColumns holds the columns for the "sf_credentials" table.
+	SfCredentialsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"password", "api_key", "keypair", "webauthn", "totp", "client_secret"}},
 		{Name: "identifier", Type: field.TypeString, Nullable: true},
@@ -221,16 +221,16 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "principal_id", Type: field.TypeUUID},
 	}
-	// CfCredentialsTable holds the schema information for the "cf_credentials" table.
-	CfCredentialsTable = &schema.Table{
-		Name:       "cf_credentials",
-		Columns:    CfCredentialsColumns,
-		PrimaryKey: []*schema.Column{CfCredentialsColumns[0]},
+	// SfCredentialsTable holds the schema information for the "sf_credentials" table.
+	SfCredentialsTable = &schema.Table{
+		Name:       "sf_credentials",
+		Columns:    SfCredentialsColumns,
+		PrimaryKey: []*schema.Column{SfCredentialsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_credentials_cf_principals_credentials",
-				Columns:    []*schema.Column{CfCredentialsColumns[23]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_credentials_sf_principals_credentials",
+				Columns:    []*schema.Column{SfCredentialsColumns[23]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -238,47 +238,47 @@ var (
 			{
 				Name:    "credential_principal_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfCredentialsColumns[23]},
+				Columns: []*schema.Column{SfCredentialsColumns[23]},
 			},
 			{
 				Name:    "credential_principal_id_type",
 				Unique:  false,
-				Columns: []*schema.Column{CfCredentialsColumns[23], CfCredentialsColumns[1]},
+				Columns: []*schema.Column{SfCredentialsColumns[23], SfCredentialsColumns[1]},
 			},
 			{
 				Name:    "credential_type",
 				Unique:  false,
-				Columns: []*schema.Column{CfCredentialsColumns[1]},
+				Columns: []*schema.Column{SfCredentialsColumns[1]},
 			},
 			{
 				Name:    "credential_identifier",
 				Unique:  false,
-				Columns: []*schema.Column{CfCredentialsColumns[2]},
+				Columns: []*schema.Column{SfCredentialsColumns[2]},
 			},
 			{
 				Name:    "credential_active",
 				Unique:  false,
-				Columns: []*schema.Column{CfCredentialsColumns[12]},
+				Columns: []*schema.Column{SfCredentialsColumns[12]},
 			},
 			{
 				Name:    "credential_revoked",
 				Unique:  false,
-				Columns: []*schema.Column{CfCredentialsColumns[14]},
+				Columns: []*schema.Column{SfCredentialsColumns[14]},
 			},
 			{
 				Name:    "credential_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{CfCredentialsColumns[13]},
+				Columns: []*schema.Column{SfCredentialsColumns[13]},
 			},
 			{
 				Name:    "credential_type_identifier",
 				Unique:  true,
-				Columns: []*schema.Column{CfCredentialsColumns[1], CfCredentialsColumns[2]},
+				Columns: []*schema.Column{SfCredentialsColumns[1], SfCredentialsColumns[2]},
 			},
 		},
 	}
-	// CfHumansColumns holds the columns for the "cf_humans" table.
-	CfHumansColumns = []*schema.Column{
+	// SfHumansColumns holds the columns for the "sf_humans" table.
+	SfHumansColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -293,16 +293,16 @@ var (
 		{Name: "email_verified_at", Type: field.TypeTime, Nullable: true},
 		{Name: "principal_id", Type: field.TypeUUID, Unique: true},
 	}
-	// CfHumansTable holds the schema information for the "cf_humans" table.
-	CfHumansTable = &schema.Table{
-		Name:       "cf_humans",
-		Columns:    CfHumansColumns,
-		PrimaryKey: []*schema.Column{CfHumansColumns[0]},
+	// SfHumansTable holds the schema information for the "sf_humans" table.
+	SfHumansTable = &schema.Table{
+		Name:       "sf_humans",
+		Columns:    SfHumansColumns,
+		PrimaryKey: []*schema.Column{SfHumansColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_humans_cf_principals_human",
-				Columns:    []*schema.Column{CfHumansColumns[12]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_humans_sf_principals_human",
+				Columns:    []*schema.Column{SfHumansColumns[12]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -310,22 +310,22 @@ var (
 			{
 				Name:    "human_principal_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfHumansColumns[12]},
+				Columns: []*schema.Column{SfHumansColumns[12]},
 			},
 			{
 				Name:    "human_email",
 				Unique:  true,
-				Columns: []*schema.Column{CfHumansColumns[3]},
+				Columns: []*schema.Column{SfHumansColumns[3]},
 			},
 			{
 				Name:    "human_is_platform_admin",
 				Unique:  false,
-				Columns: []*schema.Column{CfHumansColumns[9]},
+				Columns: []*schema.Column{SfHumansColumns[9]},
 			},
 		},
 	}
-	// CfInvitesColumns holds the columns for the "cf_invites" table.
-	CfInvitesColumns = []*schema.Column{
+	// SfInvitesColumns holds the columns for the "sf_invites" table.
+	SfInvitesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -342,22 +342,22 @@ var (
 		{Name: "organization_id", Type: field.TypeUUID},
 		{Name: "inviter_principal_id", Type: field.TypeUUID},
 	}
-	// CfInvitesTable holds the schema information for the "cf_invites" table.
-	CfInvitesTable = &schema.Table{
-		Name:       "cf_invites",
-		Columns:    CfInvitesColumns,
-		PrimaryKey: []*schema.Column{CfInvitesColumns[0]},
+	// SfInvitesTable holds the schema information for the "sf_invites" table.
+	SfInvitesTable = &schema.Table{
+		Name:       "sf_invites",
+		Columns:    SfInvitesColumns,
+		PrimaryKey: []*schema.Column{SfInvitesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_invites_cf_organizations_invites",
-				Columns:    []*schema.Column{CfInvitesColumns[13]},
-				RefColumns: []*schema.Column{CfOrganizationsColumns[0]},
+				Symbol:     "sf_invites_sf_organizations_invites",
+				Columns:    []*schema.Column{SfInvitesColumns[13]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_invites_cf_principals_sent_invites",
-				Columns:    []*schema.Column{CfInvitesColumns[14]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_invites_sf_principals_sent_invites",
+				Columns:    []*schema.Column{SfInvitesColumns[14]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -365,42 +365,42 @@ var (
 			{
 				Name:    "invite_token",
 				Unique:  true,
-				Columns: []*schema.Column{CfInvitesColumns[5]},
+				Columns: []*schema.Column{SfInvitesColumns[5]},
 			},
 			{
 				Name:    "invite_email",
 				Unique:  false,
-				Columns: []*schema.Column{CfInvitesColumns[3]},
+				Columns: []*schema.Column{SfInvitesColumns[3]},
 			},
 			{
 				Name:    "invite_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfInvitesColumns[13]},
+				Columns: []*schema.Column{SfInvitesColumns[13]},
 			},
 			{
 				Name:    "invite_organization_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{CfInvitesColumns[13], CfInvitesColumns[6]},
+				Columns: []*schema.Column{SfInvitesColumns[13], SfInvitesColumns[6]},
 			},
 			{
 				Name:    "invite_organization_id_email_status",
 				Unique:  false,
-				Columns: []*schema.Column{CfInvitesColumns[13], CfInvitesColumns[3], CfInvitesColumns[6]},
+				Columns: []*schema.Column{SfInvitesColumns[13], SfInvitesColumns[3], SfInvitesColumns[6]},
 			},
 			{
 				Name:    "invite_inviter_principal_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfInvitesColumns[14]},
+				Columns: []*schema.Column{SfInvitesColumns[14]},
 			},
 			{
 				Name:    "invite_status_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{CfInvitesColumns[6], CfInvitesColumns[8]},
+				Columns: []*schema.Column{SfInvitesColumns[6], SfInvitesColumns[8]},
 			},
 		},
 	}
-	// CfLicensesColumns holds the columns for the "cf_licenses" table.
-	CfLicensesColumns = []*schema.Column{
+	// SfLicensesColumns holds the columns for the "sf_licenses" table.
+	SfLicensesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "license_type", Type: field.TypeEnum, Enums: []string{"seat_based", "team", "unlimited"}, Default: "unlimited"},
 		{Name: "seats", Type: field.TypeInt, Nullable: true},
@@ -414,28 +414,28 @@ var (
 		{Name: "organization_id", Type: field.TypeUUID},
 		{Name: "purchased_by", Type: field.TypeUUID},
 	}
-	// CfLicensesTable holds the schema information for the "cf_licenses" table.
-	CfLicensesTable = &schema.Table{
-		Name:       "cf_licenses",
-		Columns:    CfLicensesColumns,
-		PrimaryKey: []*schema.Column{CfLicensesColumns[0]},
+	// SfLicensesTable holds the schema information for the "sf_licenses" table.
+	SfLicensesTable = &schema.Table{
+		Name:       "sf_licenses",
+		Columns:    SfLicensesColumns,
+		PrimaryKey: []*schema.Column{SfLicensesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_licenses_cf_listings_licenses",
-				Columns:    []*schema.Column{CfLicensesColumns[9]},
-				RefColumns: []*schema.Column{CfListingsColumns[0]},
+				Symbol:     "sf_licenses_sf_listings_licenses",
+				Columns:    []*schema.Column{SfLicensesColumns[9]},
+				RefColumns: []*schema.Column{SfListingsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_licenses_cf_organizations_licenses",
-				Columns:    []*schema.Column{CfLicensesColumns[10]},
-				RefColumns: []*schema.Column{CfOrganizationsColumns[0]},
+				Symbol:     "sf_licenses_sf_organizations_licenses",
+				Columns:    []*schema.Column{SfLicensesColumns[10]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_licenses_cf_principals_purchased_licenses",
-				Columns:    []*schema.Column{CfLicensesColumns[11]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_licenses_sf_principals_purchased_licenses",
+				Columns:    []*schema.Column{SfLicensesColumns[11]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -443,42 +443,42 @@ var (
 			{
 				Name:    "license_listing_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfLicensesColumns[9]},
+				Columns: []*schema.Column{SfLicensesColumns[9]},
 			},
 			{
 				Name:    "license_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfLicensesColumns[10]},
+				Columns: []*schema.Column{SfLicensesColumns[10]},
 			},
 			{
 				Name:    "license_purchased_by",
 				Unique:  false,
-				Columns: []*schema.Column{CfLicensesColumns[11]},
+				Columns: []*schema.Column{SfLicensesColumns[11]},
 			},
 			{
 				Name:    "license_license_type",
 				Unique:  false,
-				Columns: []*schema.Column{CfLicensesColumns[1]},
+				Columns: []*schema.Column{SfLicensesColumns[1]},
 			},
 			{
 				Name:    "license_valid_from_valid_until",
 				Unique:  false,
-				Columns: []*schema.Column{CfLicensesColumns[4], CfLicensesColumns[5]},
+				Columns: []*schema.Column{SfLicensesColumns[4], SfLicensesColumns[5]},
 			},
 			{
 				Name:    "license_stripe_subscription_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfLicensesColumns[6]},
+				Columns: []*schema.Column{SfLicensesColumns[6]},
 			},
 			{
 				Name:    "license_listing_id_organization_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfLicensesColumns[9], CfLicensesColumns[10]},
+				Columns: []*schema.Column{SfLicensesColumns[9], SfLicensesColumns[10]},
 			},
 		},
 	}
-	// CfListingsColumns holds the columns for the "cf_listings" table.
-	CfListingsColumns = []*schema.Column{
+	// SfListingsColumns holds the columns for the "sf_listings" table.
+	SfListingsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "product_type", Type: field.TypeString},
 		{Name: "product_id", Type: field.TypeUUID, Nullable: true},
@@ -495,22 +495,22 @@ var (
 		{Name: "creator_org_id", Type: field.TypeUUID},
 		{Name: "owner_id", Type: field.TypeUUID},
 	}
-	// CfListingsTable holds the schema information for the "cf_listings" table.
-	CfListingsTable = &schema.Table{
-		Name:       "cf_listings",
-		Columns:    CfListingsColumns,
-		PrimaryKey: []*schema.Column{CfListingsColumns[0]},
+	// SfListingsTable holds the schema information for the "sf_listings" table.
+	SfListingsTable = &schema.Table{
+		Name:       "sf_listings",
+		Columns:    SfListingsColumns,
+		PrimaryKey: []*schema.Column{SfListingsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_listings_cf_organizations_listings",
-				Columns:    []*schema.Column{CfListingsColumns[13]},
-				RefColumns: []*schema.Column{CfOrganizationsColumns[0]},
+				Symbol:     "sf_listings_sf_organizations_listings",
+				Columns:    []*schema.Column{SfListingsColumns[13]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_listings_cf_principals_owned_listings",
-				Columns:    []*schema.Column{CfListingsColumns[14]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_listings_sf_principals_owned_listings",
+				Columns:    []*schema.Column{SfListingsColumns[14]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -518,42 +518,42 @@ var (
 			{
 				Name:    "listing_creator_org_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfListingsColumns[13]},
+				Columns: []*schema.Column{SfListingsColumns[13]},
 			},
 			{
 				Name:    "listing_owner_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfListingsColumns[14]},
+				Columns: []*schema.Column{SfListingsColumns[14]},
 			},
 			{
 				Name:    "listing_status",
 				Unique:  false,
-				Columns: []*schema.Column{CfListingsColumns[8]},
+				Columns: []*schema.Column{SfListingsColumns[8]},
 			},
 			{
 				Name:    "listing_pricing_model",
 				Unique:  false,
-				Columns: []*schema.Column{CfListingsColumns[5]},
+				Columns: []*schema.Column{SfListingsColumns[5]},
 			},
 			{
 				Name:    "listing_product_type",
 				Unique:  false,
-				Columns: []*schema.Column{CfListingsColumns[1]},
+				Columns: []*schema.Column{SfListingsColumns[1]},
 			},
 			{
 				Name:    "listing_product_type_product_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfListingsColumns[1], CfListingsColumns[2]},
+				Columns: []*schema.Column{SfListingsColumns[1], SfListingsColumns[2]},
 			},
 			{
 				Name:    "listing_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{CfListingsColumns[8], CfListingsColumns[10]},
+				Columns: []*schema.Column{SfListingsColumns[8], SfListingsColumns[10]},
 			},
 		},
 	}
-	// CfMembershipsColumns holds the columns for the "cf_memberships" table.
-	CfMembershipsColumns = []*schema.Column{
+	// SfMembershipsColumns holds the columns for the "sf_memberships" table.
+	SfMembershipsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -562,22 +562,22 @@ var (
 		{Name: "organization_id", Type: field.TypeUUID},
 		{Name: "user_id", Type: field.TypeUUID},
 	}
-	// CfMembershipsTable holds the schema information for the "cf_memberships" table.
-	CfMembershipsTable = &schema.Table{
-		Name:       "cf_memberships",
-		Columns:    CfMembershipsColumns,
-		PrimaryKey: []*schema.Column{CfMembershipsColumns[0]},
+	// SfMembershipsTable holds the schema information for the "sf_memberships" table.
+	SfMembershipsTable = &schema.Table{
+		Name:       "sf_memberships",
+		Columns:    SfMembershipsColumns,
+		PrimaryKey: []*schema.Column{SfMembershipsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_memberships_cf_organizations_memberships",
-				Columns:    []*schema.Column{CfMembershipsColumns[5]},
-				RefColumns: []*schema.Column{CfOrganizationsColumns[0]},
+				Symbol:     "sf_memberships_sf_organizations_memberships",
+				Columns:    []*schema.Column{SfMembershipsColumns[5]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_memberships_cf_users_memberships",
-				Columns:    []*schema.Column{CfMembershipsColumns[6]},
-				RefColumns: []*schema.Column{CfUsersColumns[0]},
+				Symbol:     "sf_memberships_sf_users_memberships",
+				Columns:    []*schema.Column{SfMembershipsColumns[6]},
+				RefColumns: []*schema.Column{SfUsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -585,27 +585,27 @@ var (
 			{
 				Name:    "membership_user_id_organization_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfMembershipsColumns[6], CfMembershipsColumns[5]},
+				Columns: []*schema.Column{SfMembershipsColumns[6], SfMembershipsColumns[5]},
 			},
 			{
 				Name:    "membership_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfMembershipsColumns[6]},
+				Columns: []*schema.Column{SfMembershipsColumns[6]},
 			},
 			{
 				Name:    "membership_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfMembershipsColumns[5]},
+				Columns: []*schema.Column{SfMembershipsColumns[5]},
 			},
 			{
 				Name:    "membership_role",
 				Unique:  false,
-				Columns: []*schema.Column{CfMembershipsColumns[3]},
+				Columns: []*schema.Column{SfMembershipsColumns[3]},
 			},
 		},
 	}
-	// CfOauthAccountsColumns holds the columns for the "cf_oauth_accounts" table.
-	CfOauthAccountsColumns = []*schema.Column{
+	// SfOauthAccountsColumns holds the columns for the "sf_oauth_accounts" table.
+	SfOauthAccountsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -616,16 +616,16 @@ var (
 		{Name: "token_expires_at", Type: field.TypeTime, Nullable: true},
 		{Name: "user_id", Type: field.TypeUUID},
 	}
-	// CfOauthAccountsTable holds the schema information for the "cf_oauth_accounts" table.
-	CfOauthAccountsTable = &schema.Table{
-		Name:       "cf_oauth_accounts",
-		Columns:    CfOauthAccountsColumns,
-		PrimaryKey: []*schema.Column{CfOauthAccountsColumns[0]},
+	// SfOauthAccountsTable holds the schema information for the "sf_oauth_accounts" table.
+	SfOauthAccountsTable = &schema.Table{
+		Name:       "sf_oauth_accounts",
+		Columns:    SfOauthAccountsColumns,
+		PrimaryKey: []*schema.Column{SfOauthAccountsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_oauth_accounts_cf_users_oauth_accounts",
-				Columns:    []*schema.Column{CfOauthAccountsColumns[8]},
-				RefColumns: []*schema.Column{CfUsersColumns[0]},
+				Symbol:     "sf_oauth_accounts_sf_users_oauth_accounts",
+				Columns:    []*schema.Column{SfOauthAccountsColumns[8]},
+				RefColumns: []*schema.Column{SfUsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -633,22 +633,22 @@ var (
 			{
 				Name:    "oauthaccount_provider_provider_user_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfOauthAccountsColumns[3], CfOauthAccountsColumns[4]},
+				Columns: []*schema.Column{SfOauthAccountsColumns[3], SfOauthAccountsColumns[4]},
 			},
 			{
 				Name:    "oauthaccount_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAccountsColumns[8]},
+				Columns: []*schema.Column{SfOauthAccountsColumns[8]},
 			},
 			{
 				Name:    "oauthaccount_provider",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAccountsColumns[3]},
+				Columns: []*schema.Column{SfOauthAccountsColumns[3]},
 			},
 		},
 	}
-	// CfOauthAppsColumns holds the columns for the "cf_oauth_apps" table.
-	CfOauthAppsColumns = []*schema.Column{
+	// SfOauthAppsColumns holds the columns for the "sf_oauth_apps" table.
+	SfOauthAppsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "client_id", Type: field.TypeString, Unique: true},
 		{Name: "name", Type: field.TypeString, Size: 255},
@@ -672,22 +672,22 @@ var (
 		{Name: "organization_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "owner_id", Type: field.TypeUUID},
 	}
-	// CfOauthAppsTable holds the schema information for the "cf_oauth_apps" table.
-	CfOauthAppsTable = &schema.Table{
-		Name:       "cf_oauth_apps",
-		Columns:    CfOauthAppsColumns,
-		PrimaryKey: []*schema.Column{CfOauthAppsColumns[0]},
+	// SfOauthAppsTable holds the schema information for the "sf_oauth_apps" table.
+	SfOauthAppsTable = &schema.Table{
+		Name:       "sf_oauth_apps",
+		Columns:    SfOauthAppsColumns,
+		PrimaryKey: []*schema.Column{SfOauthAppsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_oauth_apps_cf_organizations_oauth_apps",
-				Columns:    []*schema.Column{CfOauthAppsColumns[20]},
-				RefColumns: []*schema.Column{CfOrganizationsColumns[0]},
+				Symbol:     "sf_oauth_apps_sf_organizations_oauth_apps",
+				Columns:    []*schema.Column{SfOauthAppsColumns[20]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "cf_oauth_apps_cf_users_oauth_apps",
-				Columns:    []*schema.Column{CfOauthAppsColumns[21]},
-				RefColumns: []*schema.Column{CfUsersColumns[0]},
+				Symbol:     "sf_oauth_apps_sf_users_oauth_apps",
+				Columns:    []*schema.Column{SfOauthAppsColumns[21]},
+				RefColumns: []*schema.Column{SfUsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -695,27 +695,27 @@ var (
 			{
 				Name:    "oauthapp_client_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfOauthAppsColumns[1]},
+				Columns: []*schema.Column{SfOauthAppsColumns[1]},
 			},
 			{
 				Name:    "oauthapp_owner_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAppsColumns[21]},
+				Columns: []*schema.Column{SfOauthAppsColumns[21]},
 			},
 			{
 				Name:    "oauthapp_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAppsColumns[20]},
+				Columns: []*schema.Column{SfOauthAppsColumns[20]},
 			},
 			{
 				Name:    "oauthapp_active",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAppsColumns[15]},
+				Columns: []*schema.Column{SfOauthAppsColumns[15]},
 			},
 		},
 	}
-	// CfOauthAppSecretsColumns holds the columns for the "cf_oauth_app_secrets" table.
-	CfOauthAppSecretsColumns = []*schema.Column{
+	// SfOauthAppSecretsColumns holds the columns for the "sf_oauth_app_secrets" table.
+	SfOauthAppSecretsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "secret_hash", Type: field.TypeString},
 		{Name: "secret_prefix", Type: field.TypeString, Size: 12},
@@ -726,16 +726,16 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "app_id", Type: field.TypeUUID},
 	}
-	// CfOauthAppSecretsTable holds the schema information for the "cf_oauth_app_secrets" table.
-	CfOauthAppSecretsTable = &schema.Table{
-		Name:       "cf_oauth_app_secrets",
-		Columns:    CfOauthAppSecretsColumns,
-		PrimaryKey: []*schema.Column{CfOauthAppSecretsColumns[0]},
+	// SfOauthAppSecretsTable holds the schema information for the "sf_oauth_app_secrets" table.
+	SfOauthAppSecretsTable = &schema.Table{
+		Name:       "sf_oauth_app_secrets",
+		Columns:    SfOauthAppSecretsColumns,
+		PrimaryKey: []*schema.Column{SfOauthAppSecretsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_oauth_app_secrets_cf_oauth_apps_secrets",
-				Columns:    []*schema.Column{CfOauthAppSecretsColumns[8]},
-				RefColumns: []*schema.Column{CfOauthAppsColumns[0]},
+				Symbol:     "sf_oauth_app_secrets_sf_oauth_apps_secrets",
+				Columns:    []*schema.Column{SfOauthAppSecretsColumns[8]},
+				RefColumns: []*schema.Column{SfOauthAppsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -743,17 +743,17 @@ var (
 			{
 				Name:    "oauthappsecret_app_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAppSecretsColumns[8]},
+				Columns: []*schema.Column{SfOauthAppSecretsColumns[8]},
 			},
 			{
 				Name:    "oauthappsecret_app_id_revoked",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAppSecretsColumns[8], CfOauthAppSecretsColumns[5]},
+				Columns: []*schema.Column{SfOauthAppSecretsColumns[8], SfOauthAppSecretsColumns[5]},
 			},
 		},
 	}
-	// CfOauthAuthCodesColumns holds the columns for the "cf_oauth_auth_codes" table.
-	CfOauthAuthCodesColumns = []*schema.Column{
+	// SfOauthAuthCodesColumns holds the columns for the "sf_oauth_auth_codes" table.
+	SfOauthAuthCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "code_signature", Type: field.TypeString, Unique: true},
 		{Name: "code_challenge", Type: field.TypeString, Nullable: true},
@@ -772,22 +772,22 @@ var (
 		{Name: "app_id", Type: field.TypeUUID},
 		{Name: "user_id", Type: field.TypeUUID},
 	}
-	// CfOauthAuthCodesTable holds the schema information for the "cf_oauth_auth_codes" table.
-	CfOauthAuthCodesTable = &schema.Table{
-		Name:       "cf_oauth_auth_codes",
-		Columns:    CfOauthAuthCodesColumns,
-		PrimaryKey: []*schema.Column{CfOauthAuthCodesColumns[0]},
+	// SfOauthAuthCodesTable holds the schema information for the "sf_oauth_auth_codes" table.
+	SfOauthAuthCodesTable = &schema.Table{
+		Name:       "sf_oauth_auth_codes",
+		Columns:    SfOauthAuthCodesColumns,
+		PrimaryKey: []*schema.Column{SfOauthAuthCodesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_oauth_auth_codes_cf_oauth_apps_auth_codes",
-				Columns:    []*schema.Column{CfOauthAuthCodesColumns[15]},
-				RefColumns: []*schema.Column{CfOauthAppsColumns[0]},
+				Symbol:     "sf_oauth_auth_codes_sf_oauth_apps_auth_codes",
+				Columns:    []*schema.Column{SfOauthAuthCodesColumns[15]},
+				RefColumns: []*schema.Column{SfOauthAppsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_oauth_auth_codes_cf_users_oauth_auth_codes",
-				Columns:    []*schema.Column{CfOauthAuthCodesColumns[16]},
-				RefColumns: []*schema.Column{CfUsersColumns[0]},
+				Symbol:     "sf_oauth_auth_codes_sf_users_oauth_auth_codes",
+				Columns:    []*schema.Column{SfOauthAuthCodesColumns[16]},
+				RefColumns: []*schema.Column{SfUsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -795,32 +795,32 @@ var (
 			{
 				Name:    "oauthauthcode_code_signature",
 				Unique:  true,
-				Columns: []*schema.Column{CfOauthAuthCodesColumns[1]},
+				Columns: []*schema.Column{SfOauthAuthCodesColumns[1]},
 			},
 			{
 				Name:    "oauthauthcode_app_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAuthCodesColumns[15]},
+				Columns: []*schema.Column{SfOauthAuthCodesColumns[15]},
 			},
 			{
 				Name:    "oauthauthcode_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAuthCodesColumns[16]},
+				Columns: []*schema.Column{SfOauthAuthCodesColumns[16]},
 			},
 			{
 				Name:    "oauthauthcode_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAuthCodesColumns[9]},
+				Columns: []*schema.Column{SfOauthAuthCodesColumns[9]},
 			},
 			{
 				Name:    "oauthauthcode_used",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthAuthCodesColumns[10]},
+				Columns: []*schema.Column{SfOauthAuthCodesColumns[10]},
 			},
 		},
 	}
-	// CfOauthConsentsColumns holds the columns for the "cf_oauth_consents" table.
-	CfOauthConsentsColumns = []*schema.Column{
+	// SfOauthConsentsColumns holds the columns for the "sf_oauth_consents" table.
+	SfOauthConsentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "scopes", Type: field.TypeJSON},
 		{Name: "granted", Type: field.TypeBool, Default: true},
@@ -834,22 +834,22 @@ var (
 		{Name: "app_id", Type: field.TypeUUID},
 		{Name: "user_id", Type: field.TypeUUID},
 	}
-	// CfOauthConsentsTable holds the schema information for the "cf_oauth_consents" table.
-	CfOauthConsentsTable = &schema.Table{
-		Name:       "cf_oauth_consents",
-		Columns:    CfOauthConsentsColumns,
-		PrimaryKey: []*schema.Column{CfOauthConsentsColumns[0]},
+	// SfOauthConsentsTable holds the schema information for the "sf_oauth_consents" table.
+	SfOauthConsentsTable = &schema.Table{
+		Name:       "sf_oauth_consents",
+		Columns:    SfOauthConsentsColumns,
+		PrimaryKey: []*schema.Column{SfOauthConsentsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_oauth_consents_cf_oauth_apps_consents",
-				Columns:    []*schema.Column{CfOauthConsentsColumns[10]},
-				RefColumns: []*schema.Column{CfOauthAppsColumns[0]},
+				Symbol:     "sf_oauth_consents_sf_oauth_apps_consents",
+				Columns:    []*schema.Column{SfOauthConsentsColumns[10]},
+				RefColumns: []*schema.Column{SfOauthAppsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_oauth_consents_cf_users_oauth_consents",
-				Columns:    []*schema.Column{CfOauthConsentsColumns[11]},
-				RefColumns: []*schema.Column{CfUsersColumns[0]},
+				Symbol:     "sf_oauth_consents_sf_users_oauth_consents",
+				Columns:    []*schema.Column{SfOauthConsentsColumns[11]},
+				RefColumns: []*schema.Column{SfUsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -857,32 +857,32 @@ var (
 			{
 				Name:    "oauthconsent_user_id_app_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfOauthConsentsColumns[11], CfOauthConsentsColumns[10]},
+				Columns: []*schema.Column{SfOauthConsentsColumns[11], SfOauthConsentsColumns[10]},
 			},
 			{
 				Name:    "oauthconsent_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthConsentsColumns[11]},
+				Columns: []*schema.Column{SfOauthConsentsColumns[11]},
 			},
 			{
 				Name:    "oauthconsent_app_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthConsentsColumns[10]},
+				Columns: []*schema.Column{SfOauthConsentsColumns[10]},
 			},
 			{
 				Name:    "oauthconsent_granted",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthConsentsColumns[2]},
+				Columns: []*schema.Column{SfOauthConsentsColumns[2]},
 			},
 			{
 				Name:    "oauthconsent_revoked",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthConsentsColumns[5]},
+				Columns: []*schema.Column{SfOauthConsentsColumns[5]},
 			},
 		},
 	}
-	// CfOauthTokensColumns holds the columns for the "cf_oauth_tokens" table.
-	CfOauthTokensColumns = []*schema.Column{
+	// SfOauthTokensColumns holds the columns for the "sf_oauth_tokens" table.
+	SfOauthTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "service_account_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "access_token_signature", Type: field.TypeString, Unique: true},
@@ -904,22 +904,22 @@ var (
 		{Name: "app_id", Type: field.TypeUUID},
 		{Name: "user_id", Type: field.TypeUUID, Nullable: true},
 	}
-	// CfOauthTokensTable holds the schema information for the "cf_oauth_tokens" table.
-	CfOauthTokensTable = &schema.Table{
-		Name:       "cf_oauth_tokens",
-		Columns:    CfOauthTokensColumns,
-		PrimaryKey: []*schema.Column{CfOauthTokensColumns[0]},
+	// SfOauthTokensTable holds the schema information for the "sf_oauth_tokens" table.
+	SfOauthTokensTable = &schema.Table{
+		Name:       "sf_oauth_tokens",
+		Columns:    SfOauthTokensColumns,
+		PrimaryKey: []*schema.Column{SfOauthTokensColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_oauth_tokens_cf_oauth_apps_tokens",
-				Columns:    []*schema.Column{CfOauthTokensColumns[18]},
-				RefColumns: []*schema.Column{CfOauthAppsColumns[0]},
+				Symbol:     "sf_oauth_tokens_sf_oauth_apps_tokens",
+				Columns:    []*schema.Column{SfOauthTokensColumns[18]},
+				RefColumns: []*schema.Column{SfOauthAppsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_oauth_tokens_cf_users_oauth_tokens",
-				Columns:    []*schema.Column{CfOauthTokensColumns[19]},
-				RefColumns: []*schema.Column{CfUsersColumns[0]},
+				Symbol:     "sf_oauth_tokens_sf_users_oauth_tokens",
+				Columns:    []*schema.Column{SfOauthTokensColumns[19]},
+				RefColumns: []*schema.Column{SfUsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -927,42 +927,42 @@ var (
 			{
 				Name:    "oauthtoken_access_token_signature",
 				Unique:  true,
-				Columns: []*schema.Column{CfOauthTokensColumns[2]},
+				Columns: []*schema.Column{SfOauthTokensColumns[2]},
 			},
 			{
 				Name:    "oauthtoken_refresh_token_signature",
 				Unique:  true,
-				Columns: []*schema.Column{CfOauthTokensColumns[3]},
+				Columns: []*schema.Column{SfOauthTokensColumns[3]},
 			},
 			{
 				Name:    "oauthtoken_app_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthTokensColumns[18]},
+				Columns: []*schema.Column{SfOauthTokensColumns[18]},
 			},
 			{
 				Name:    "oauthtoken_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthTokensColumns[19]},
+				Columns: []*schema.Column{SfOauthTokensColumns[19]},
 			},
 			{
 				Name:    "oauthtoken_family_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthTokensColumns[4]},
+				Columns: []*schema.Column{SfOauthTokensColumns[4]},
 			},
 			{
 				Name:    "oauthtoken_revoked",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthTokensColumns[11]},
+				Columns: []*schema.Column{SfOauthTokensColumns[11]},
 			},
 			{
 				Name:    "oauthtoken_access_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{CfOauthTokensColumns[9]},
+				Columns: []*schema.Column{SfOauthTokensColumns[9]},
 			},
 		},
 	}
-	// CfOrganizationsColumns holds the columns for the "cf_organizations" table.
-	CfOrganizationsColumns = []*schema.Column{
+	// SfOrganizationsColumns holds the columns for the "sf_organizations" table.
+	SfOrganizationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -977,16 +977,16 @@ var (
 		{Name: "active", Type: field.TypeBool, Default: true},
 		{Name: "owner_principal_id", Type: field.TypeUUID, Nullable: true},
 	}
-	// CfOrganizationsTable holds the schema information for the "cf_organizations" table.
-	CfOrganizationsTable = &schema.Table{
-		Name:       "cf_organizations",
-		Columns:    CfOrganizationsColumns,
-		PrimaryKey: []*schema.Column{CfOrganizationsColumns[0]},
+	// SfOrganizationsTable holds the schema information for the "sf_organizations" table.
+	SfOrganizationsTable = &schema.Table{
+		Name:       "sf_organizations",
+		Columns:    SfOrganizationsColumns,
+		PrimaryKey: []*schema.Column{SfOrganizationsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_organizations_cf_principals_owned_organizations",
-				Columns:    []*schema.Column{CfOrganizationsColumns[12]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_organizations_sf_principals_owned_organizations",
+				Columns:    []*schema.Column{SfOrganizationsColumns[12]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -994,32 +994,32 @@ var (
 			{
 				Name:    "organization_slug",
 				Unique:  true,
-				Columns: []*schema.Column{CfOrganizationsColumns[4]},
+				Columns: []*schema.Column{SfOrganizationsColumns[4]},
 			},
 			{
 				Name:    "organization_active",
 				Unique:  false,
-				Columns: []*schema.Column{CfOrganizationsColumns[11]},
+				Columns: []*schema.Column{SfOrganizationsColumns[11]},
 			},
 			{
 				Name:    "organization_org_type",
 				Unique:  false,
-				Columns: []*schema.Column{CfOrganizationsColumns[5]},
+				Columns: []*schema.Column{SfOrganizationsColumns[5]},
 			},
 			{
 				Name:    "organization_owner_principal_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfOrganizationsColumns[12]},
+				Columns: []*schema.Column{SfOrganizationsColumns[12]},
 			},
 			{
 				Name:    "organization_org_type_active",
 				Unique:  false,
-				Columns: []*schema.Column{CfOrganizationsColumns[5], CfOrganizationsColumns[11]},
+				Columns: []*schema.Column{SfOrganizationsColumns[5], SfOrganizationsColumns[11]},
 			},
 		},
 	}
-	// CfPrincipalsColumns holds the columns for the "cf_principals" table.
-	CfPrincipalsColumns = []*schema.Column{
+	// SfPrincipalsColumns holds the columns for the "sf_principals" table.
+	SfPrincipalsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -1032,16 +1032,16 @@ var (
 		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "organization_id", Type: field.TypeUUID, Nullable: true},
 	}
-	// CfPrincipalsTable holds the schema information for the "cf_principals" table.
-	CfPrincipalsTable = &schema.Table{
-		Name:       "cf_principals",
-		Columns:    CfPrincipalsColumns,
-		PrimaryKey: []*schema.Column{CfPrincipalsColumns[0]},
+	// SfPrincipalsTable holds the schema information for the "sf_principals" table.
+	SfPrincipalsTable = &schema.Table{
+		Name:       "sf_principals",
+		Columns:    SfPrincipalsColumns,
+		PrimaryKey: []*schema.Column{SfPrincipalsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_principals_cf_organizations_principals",
-				Columns:    []*schema.Column{CfPrincipalsColumns[10]},
-				RefColumns: []*schema.Column{CfOrganizationsColumns[0]},
+				Symbol:     "sf_principals_sf_organizations_principals",
+				Columns:    []*schema.Column{SfPrincipalsColumns[10]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -1049,37 +1049,37 @@ var (
 			{
 				Name:    "principal_identifier",
 				Unique:  true,
-				Columns: []*schema.Column{CfPrincipalsColumns[4]},
+				Columns: []*schema.Column{SfPrincipalsColumns[4]},
 			},
 			{
 				Name:    "principal_type",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalsColumns[3]},
+				Columns: []*schema.Column{SfPrincipalsColumns[3]},
 			},
 			{
 				Name:    "principal_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalsColumns[10]},
+				Columns: []*schema.Column{SfPrincipalsColumns[10]},
 			},
 			{
 				Name:    "principal_active",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalsColumns[6]},
+				Columns: []*schema.Column{SfPrincipalsColumns[6]},
 			},
 			{
 				Name:    "principal_type_active",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalsColumns[3], CfPrincipalsColumns[6]},
+				Columns: []*schema.Column{SfPrincipalsColumns[3], SfPrincipalsColumns[6]},
 			},
 			{
 				Name:    "principal_organization_id_type",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalsColumns[10], CfPrincipalsColumns[3]},
+				Columns: []*schema.Column{SfPrincipalsColumns[10], SfPrincipalsColumns[3]},
 			},
 		},
 	}
-	// CfPrincipalMembershipsColumns holds the columns for the "cf_principal_memberships" table.
-	CfPrincipalMembershipsColumns = []*schema.Column{
+	// SfPrincipalMembershipsColumns holds the columns for the "sf_principal_memberships" table.
+	SfPrincipalMembershipsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -1089,22 +1089,22 @@ var (
 		{Name: "organization_id", Type: field.TypeUUID},
 		{Name: "principal_id", Type: field.TypeUUID},
 	}
-	// CfPrincipalMembershipsTable holds the schema information for the "cf_principal_memberships" table.
-	CfPrincipalMembershipsTable = &schema.Table{
-		Name:       "cf_principal_memberships",
-		Columns:    CfPrincipalMembershipsColumns,
-		PrimaryKey: []*schema.Column{CfPrincipalMembershipsColumns[0]},
+	// SfPrincipalMembershipsTable holds the schema information for the "sf_principal_memberships" table.
+	SfPrincipalMembershipsTable = &schema.Table{
+		Name:       "sf_principal_memberships",
+		Columns:    SfPrincipalMembershipsColumns,
+		PrimaryKey: []*schema.Column{SfPrincipalMembershipsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_principal_memberships_cf_organizations_principal_memberships",
-				Columns:    []*schema.Column{CfPrincipalMembershipsColumns[6]},
-				RefColumns: []*schema.Column{CfOrganizationsColumns[0]},
+				Symbol:     "sf_principal_memberships_sf_organizations_principal_memberships",
+				Columns:    []*schema.Column{SfPrincipalMembershipsColumns[6]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_principal_memberships_cf_principals_principal_memberships",
-				Columns:    []*schema.Column{CfPrincipalMembershipsColumns[7]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_principal_memberships_sf_principals_principal_memberships",
+				Columns:    []*schema.Column{SfPrincipalMembershipsColumns[7]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -1112,32 +1112,32 @@ var (
 			{
 				Name:    "principalmembership_principal_id_organization_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfPrincipalMembershipsColumns[7], CfPrincipalMembershipsColumns[6]},
+				Columns: []*schema.Column{SfPrincipalMembershipsColumns[7], SfPrincipalMembershipsColumns[6]},
 			},
 			{
 				Name:    "principalmembership_principal_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalMembershipsColumns[7]},
+				Columns: []*schema.Column{SfPrincipalMembershipsColumns[7]},
 			},
 			{
 				Name:    "principalmembership_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalMembershipsColumns[6]},
+				Columns: []*schema.Column{SfPrincipalMembershipsColumns[6]},
 			},
 			{
 				Name:    "principalmembership_role",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalMembershipsColumns[3]},
+				Columns: []*schema.Column{SfPrincipalMembershipsColumns[3]},
 			},
 			{
 				Name:    "principalmembership_active",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalMembershipsColumns[5]},
+				Columns: []*schema.Column{SfPrincipalMembershipsColumns[5]},
 			},
 		},
 	}
-	// CfPrincipalTokensColumns holds the columns for the "cf_principal_tokens" table.
-	CfPrincipalTokensColumns = []*schema.Column{
+	// SfPrincipalTokensColumns holds the columns for the "sf_principal_tokens" table.
+	SfPrincipalTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "principal_type", Type: field.TypeEnum, Enums: []string{"human", "application", "agent", "service"}},
 		{Name: "access_token_signature", Type: field.TypeString, Unique: true},
@@ -1163,28 +1163,28 @@ var (
 		{Name: "principal_id", Type: field.TypeUUID},
 		{Name: "parent_token_id", Type: field.TypeUUID, Nullable: true},
 	}
-	// CfPrincipalTokensTable holds the schema information for the "cf_principal_tokens" table.
-	CfPrincipalTokensTable = &schema.Table{
-		Name:       "cf_principal_tokens",
-		Columns:    CfPrincipalTokensColumns,
-		PrimaryKey: []*schema.Column{CfPrincipalTokensColumns[0]},
+	// SfPrincipalTokensTable holds the schema information for the "sf_principal_tokens" table.
+	SfPrincipalTokensTable = &schema.Table{
+		Name:       "sf_principal_tokens",
+		Columns:    SfPrincipalTokensColumns,
+		PrimaryKey: []*schema.Column{SfPrincipalTokensColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_principal_tokens_cf_applications_issued_tokens",
-				Columns:    []*schema.Column{CfPrincipalTokensColumns[21]},
-				RefColumns: []*schema.Column{CfApplicationsColumns[0]},
+				Symbol:     "sf_principal_tokens_sf_applications_issued_tokens",
+				Columns:    []*schema.Column{SfPrincipalTokensColumns[21]},
+				RefColumns: []*schema.Column{SfApplicationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "cf_principal_tokens_cf_principals_principal_tokens",
-				Columns:    []*schema.Column{CfPrincipalTokensColumns[22]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_principal_tokens_sf_principals_principal_tokens",
+				Columns:    []*schema.Column{SfPrincipalTokensColumns[22]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_principal_tokens_cf_principal_tokens_child_tokens",
-				Columns:    []*schema.Column{CfPrincipalTokensColumns[23]},
-				RefColumns: []*schema.Column{CfPrincipalTokensColumns[0]},
+				Symbol:     "sf_principal_tokens_sf_principal_tokens_child_tokens",
+				Columns:    []*schema.Column{SfPrincipalTokensColumns[23]},
+				RefColumns: []*schema.Column{SfPrincipalTokensColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -1192,57 +1192,57 @@ var (
 			{
 				Name:    "principaltoken_access_token_signature",
 				Unique:  true,
-				Columns: []*schema.Column{CfPrincipalTokensColumns[2]},
+				Columns: []*schema.Column{SfPrincipalTokensColumns[2]},
 			},
 			{
 				Name:    "principaltoken_refresh_token_signature",
 				Unique:  true,
-				Columns: []*schema.Column{CfPrincipalTokensColumns[3]},
+				Columns: []*schema.Column{SfPrincipalTokensColumns[3]},
 			},
 			{
 				Name:    "principaltoken_principal_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalTokensColumns[22]},
+				Columns: []*schema.Column{SfPrincipalTokensColumns[22]},
 			},
 			{
 				Name:    "principaltoken_principal_type",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalTokensColumns[1]},
+				Columns: []*schema.Column{SfPrincipalTokensColumns[1]},
 			},
 			{
 				Name:    "principaltoken_issued_by_app_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalTokensColumns[21]},
+				Columns: []*schema.Column{SfPrincipalTokensColumns[21]},
 			},
 			{
 				Name:    "principaltoken_family_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalTokensColumns[4]},
+				Columns: []*schema.Column{SfPrincipalTokensColumns[4]},
 			},
 			{
 				Name:    "principaltoken_parent_token_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalTokensColumns[23]},
+				Columns: []*schema.Column{SfPrincipalTokensColumns[23]},
 			},
 			{
 				Name:    "principaltoken_revoked",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalTokensColumns[14]},
+				Columns: []*schema.Column{SfPrincipalTokensColumns[14]},
 			},
 			{
 				Name:    "principaltoken_access_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalTokensColumns[12]},
+				Columns: []*schema.Column{SfPrincipalTokensColumns[12]},
 			},
 			{
 				Name:    "principaltoken_session_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfPrincipalTokensColumns[10]},
+				Columns: []*schema.Column{SfPrincipalTokensColumns[10]},
 			},
 		},
 	}
-	// CfRefreshTokensColumns holds the columns for the "cf_refresh_tokens" table.
-	CfRefreshTokensColumns = []*schema.Column{
+	// SfRefreshTokensColumns holds the columns for the "sf_refresh_tokens" table.
+	SfRefreshTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -1254,16 +1254,16 @@ var (
 		{Name: "ip_address", Type: field.TypeString, Nullable: true},
 		{Name: "user_id", Type: field.TypeUUID},
 	}
-	// CfRefreshTokensTable holds the schema information for the "cf_refresh_tokens" table.
-	CfRefreshTokensTable = &schema.Table{
-		Name:       "cf_refresh_tokens",
-		Columns:    CfRefreshTokensColumns,
-		PrimaryKey: []*schema.Column{CfRefreshTokensColumns[0]},
+	// SfRefreshTokensTable holds the schema information for the "sf_refresh_tokens" table.
+	SfRefreshTokensTable = &schema.Table{
+		Name:       "sf_refresh_tokens",
+		Columns:    SfRefreshTokensColumns,
+		PrimaryKey: []*schema.Column{SfRefreshTokensColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_refresh_tokens_cf_users_refresh_tokens",
-				Columns:    []*schema.Column{CfRefreshTokensColumns[9]},
-				RefColumns: []*schema.Column{CfUsersColumns[0]},
+				Symbol:     "sf_refresh_tokens_sf_users_refresh_tokens",
+				Columns:    []*schema.Column{SfRefreshTokensColumns[9]},
+				RefColumns: []*schema.Column{SfUsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -1271,60 +1271,60 @@ var (
 			{
 				Name:    "refreshtoken_token",
 				Unique:  true,
-				Columns: []*schema.Column{CfRefreshTokensColumns[3]},
+				Columns: []*schema.Column{SfRefreshTokensColumns[3]},
 			},
 			{
 				Name:    "refreshtoken_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfRefreshTokensColumns[9]},
+				Columns: []*schema.Column{SfRefreshTokensColumns[9]},
 			},
 			{
 				Name:    "refreshtoken_family",
 				Unique:  false,
-				Columns: []*schema.Column{CfRefreshTokensColumns[4]},
+				Columns: []*schema.Column{SfRefreshTokensColumns[4]},
 			},
 			{
 				Name:    "refreshtoken_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{CfRefreshTokensColumns[5]},
+				Columns: []*schema.Column{SfRefreshTokensColumns[5]},
 			},
 			{
 				Name:    "refreshtoken_revoked",
 				Unique:  false,
-				Columns: []*schema.Column{CfRefreshTokensColumns[6]},
+				Columns: []*schema.Column{SfRefreshTokensColumns[6]},
 			},
 		},
 	}
-	// CfSeatAssignmentsColumns holds the columns for the "cf_seat_assignments" table.
-	CfSeatAssignmentsColumns = []*schema.Column{
+	// SfSeatAssignmentsColumns holds the columns for the "sf_seat_assignments" table.
+	SfSeatAssignmentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "assigned_at", Type: field.TypeTime},
 		{Name: "license_id", Type: field.TypeUUID},
 		{Name: "principal_id", Type: field.TypeUUID},
 		{Name: "assigned_by", Type: field.TypeUUID},
 	}
-	// CfSeatAssignmentsTable holds the schema information for the "cf_seat_assignments" table.
-	CfSeatAssignmentsTable = &schema.Table{
-		Name:       "cf_seat_assignments",
-		Columns:    CfSeatAssignmentsColumns,
-		PrimaryKey: []*schema.Column{CfSeatAssignmentsColumns[0]},
+	// SfSeatAssignmentsTable holds the schema information for the "sf_seat_assignments" table.
+	SfSeatAssignmentsTable = &schema.Table{
+		Name:       "sf_seat_assignments",
+		Columns:    SfSeatAssignmentsColumns,
+		PrimaryKey: []*schema.Column{SfSeatAssignmentsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_seat_assignments_cf_licenses_seat_assignments",
-				Columns:    []*schema.Column{CfSeatAssignmentsColumns[2]},
-				RefColumns: []*schema.Column{CfLicensesColumns[0]},
+				Symbol:     "sf_seat_assignments_sf_licenses_seat_assignments",
+				Columns:    []*schema.Column{SfSeatAssignmentsColumns[2]},
+				RefColumns: []*schema.Column{SfLicensesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_seat_assignments_cf_principals_seat_assignments",
-				Columns:    []*schema.Column{CfSeatAssignmentsColumns[3]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_seat_assignments_sf_principals_seat_assignments",
+				Columns:    []*schema.Column{SfSeatAssignmentsColumns[3]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_seat_assignments_cf_principals_assigned_seats",
-				Columns:    []*schema.Column{CfSeatAssignmentsColumns[4]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_seat_assignments_sf_principals_assigned_seats",
+				Columns:    []*schema.Column{SfSeatAssignmentsColumns[4]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -1332,27 +1332,27 @@ var (
 			{
 				Name:    "seatassignment_license_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfSeatAssignmentsColumns[2]},
+				Columns: []*schema.Column{SfSeatAssignmentsColumns[2]},
 			},
 			{
 				Name:    "seatassignment_principal_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfSeatAssignmentsColumns[3]},
+				Columns: []*schema.Column{SfSeatAssignmentsColumns[3]},
 			},
 			{
 				Name:    "seatassignment_assigned_by",
 				Unique:  false,
-				Columns: []*schema.Column{CfSeatAssignmentsColumns[4]},
+				Columns: []*schema.Column{SfSeatAssignmentsColumns[4]},
 			},
 			{
 				Name:    "seatassignment_license_id_principal_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfSeatAssignmentsColumns[2], CfSeatAssignmentsColumns[3]},
+				Columns: []*schema.Column{SfSeatAssignmentsColumns[2], SfSeatAssignmentsColumns[3]},
 			},
 		},
 	}
-	// CfServiceAccountsColumns holds the columns for the "cf_service_accounts" table.
-	CfServiceAccountsColumns = []*schema.Column{
+	// SfServiceAccountsColumns holds the columns for the "sf_service_accounts" table.
+	SfServiceAccountsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Size: 255},
 		{Name: "description", Type: field.TypeString, Nullable: true, Size: 1000},
@@ -1365,22 +1365,22 @@ var (
 		{Name: "organization_id", Type: field.TypeUUID},
 		{Name: "created_by", Type: field.TypeUUID},
 	}
-	// CfServiceAccountsTable holds the schema information for the "cf_service_accounts" table.
-	CfServiceAccountsTable = &schema.Table{
-		Name:       "cf_service_accounts",
-		Columns:    CfServiceAccountsColumns,
-		PrimaryKey: []*schema.Column{CfServiceAccountsColumns[0]},
+	// SfServiceAccountsTable holds the schema information for the "sf_service_accounts" table.
+	SfServiceAccountsTable = &schema.Table{
+		Name:       "sf_service_accounts",
+		Columns:    SfServiceAccountsColumns,
+		PrimaryKey: []*schema.Column{SfServiceAccountsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_service_accounts_cf_organizations_service_accounts",
-				Columns:    []*schema.Column{CfServiceAccountsColumns[9]},
-				RefColumns: []*schema.Column{CfOrganizationsColumns[0]},
+				Symbol:     "sf_service_accounts_sf_organizations_service_accounts",
+				Columns:    []*schema.Column{SfServiceAccountsColumns[9]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_service_accounts_cf_users_created_service_accounts",
-				Columns:    []*schema.Column{CfServiceAccountsColumns[10]},
-				RefColumns: []*schema.Column{CfUsersColumns[0]},
+				Symbol:     "sf_service_accounts_sf_users_created_service_accounts",
+				Columns:    []*schema.Column{SfServiceAccountsColumns[10]},
+				RefColumns: []*schema.Column{SfUsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -1388,22 +1388,22 @@ var (
 			{
 				Name:    "serviceaccount_email",
 				Unique:  true,
-				Columns: []*schema.Column{CfServiceAccountsColumns[3]},
+				Columns: []*schema.Column{SfServiceAccountsColumns[3]},
 			},
 			{
 				Name:    "serviceaccount_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfServiceAccountsColumns[9]},
+				Columns: []*schema.Column{SfServiceAccountsColumns[9]},
 			},
 			{
 				Name:    "serviceaccount_active",
 				Unique:  false,
-				Columns: []*schema.Column{CfServiceAccountsColumns[5]},
+				Columns: []*schema.Column{SfServiceAccountsColumns[5]},
 			},
 		},
 	}
-	// CfServiceAccountKeyPairsColumns holds the columns for the "cf_service_account_key_pairs" table.
-	CfServiceAccountKeyPairsColumns = []*schema.Column{
+	// SfServiceAccountKeyPairsColumns holds the columns for the "sf_service_account_key_pairs" table.
+	SfServiceAccountKeyPairsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "key_id", Type: field.TypeString},
 		{Name: "key_type", Type: field.TypeEnum, Enums: []string{"rsa", "ec"}, Default: "rsa"},
@@ -1417,16 +1417,16 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "service_account_id", Type: field.TypeUUID},
 	}
-	// CfServiceAccountKeyPairsTable holds the schema information for the "cf_service_account_key_pairs" table.
-	CfServiceAccountKeyPairsTable = &schema.Table{
-		Name:       "cf_service_account_key_pairs",
-		Columns:    CfServiceAccountKeyPairsColumns,
-		PrimaryKey: []*schema.Column{CfServiceAccountKeyPairsColumns[0]},
+	// SfServiceAccountKeyPairsTable holds the schema information for the "sf_service_account_key_pairs" table.
+	SfServiceAccountKeyPairsTable = &schema.Table{
+		Name:       "sf_service_account_key_pairs",
+		Columns:    SfServiceAccountKeyPairsColumns,
+		PrimaryKey: []*schema.Column{SfServiceAccountKeyPairsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_service_account_key_pairs_cf_service_accounts_key_pairs",
-				Columns:    []*schema.Column{CfServiceAccountKeyPairsColumns[11]},
-				RefColumns: []*schema.Column{CfServiceAccountsColumns[0]},
+				Symbol:     "sf_service_account_key_pairs_sf_service_accounts_key_pairs",
+				Columns:    []*schema.Column{SfServiceAccountKeyPairsColumns[11]},
+				RefColumns: []*schema.Column{SfServiceAccountsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -1434,27 +1434,27 @@ var (
 			{
 				Name:    "serviceaccountkeypair_service_account_id_key_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfServiceAccountKeyPairsColumns[11], CfServiceAccountKeyPairsColumns[1]},
+				Columns: []*schema.Column{SfServiceAccountKeyPairsColumns[11], SfServiceAccountKeyPairsColumns[1]},
 			},
 			{
 				Name:    "serviceaccountkeypair_service_account_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfServiceAccountKeyPairsColumns[11]},
+				Columns: []*schema.Column{SfServiceAccountKeyPairsColumns[11]},
 			},
 			{
 				Name:    "serviceaccountkeypair_active",
 				Unique:  false,
-				Columns: []*schema.Column{CfServiceAccountKeyPairsColumns[6]},
+				Columns: []*schema.Column{SfServiceAccountKeyPairsColumns[6]},
 			},
 			{
 				Name:    "serviceaccountkeypair_revoked",
 				Unique:  false,
-				Columns: []*schema.Column{CfServiceAccountKeyPairsColumns[8]},
+				Columns: []*schema.Column{SfServiceAccountKeyPairsColumns[8]},
 			},
 		},
 	}
-	// CfServicePrincipalsColumns holds the columns for the "cf_service_principals" table.
-	CfServicePrincipalsColumns = []*schema.Column{
+	// SfServicePrincipalsColumns holds the columns for the "sf_service_principals" table.
+	SfServicePrincipalsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -1465,22 +1465,22 @@ var (
 		{Name: "principal_id", Type: field.TypeUUID, Unique: true},
 		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
 	}
-	// CfServicePrincipalsTable holds the schema information for the "cf_service_principals" table.
-	CfServicePrincipalsTable = &schema.Table{
-		Name:       "cf_service_principals",
-		Columns:    CfServicePrincipalsColumns,
-		PrimaryKey: []*schema.Column{CfServicePrincipalsColumns[0]},
+	// SfServicePrincipalsTable holds the schema information for the "sf_service_principals" table.
+	SfServicePrincipalsTable = &schema.Table{
+		Name:       "sf_service_principals",
+		Columns:    SfServicePrincipalsColumns,
+		PrimaryKey: []*schema.Column{SfServicePrincipalsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_service_principals_cf_principals_service_principal",
-				Columns:    []*schema.Column{CfServicePrincipalsColumns[7]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_service_principals_sf_principals_service_principal",
+				Columns:    []*schema.Column{SfServicePrincipalsColumns[7]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "cf_service_principals_cf_principals_creator",
-				Columns:    []*schema.Column{CfServicePrincipalsColumns[8]},
-				RefColumns: []*schema.Column{CfPrincipalsColumns[0]},
+				Symbol:     "sf_service_principals_sf_principals_creator",
+				Columns:    []*schema.Column{SfServicePrincipalsColumns[8]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -1488,22 +1488,22 @@ var (
 			{
 				Name:    "serviceprincipal_principal_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfServicePrincipalsColumns[7]},
+				Columns: []*schema.Column{SfServicePrincipalsColumns[7]},
 			},
 			{
 				Name:    "serviceprincipal_service_type",
 				Unique:  false,
-				Columns: []*schema.Column{CfServicePrincipalsColumns[3]},
+				Columns: []*schema.Column{SfServicePrincipalsColumns[3]},
 			},
 			{
 				Name:    "serviceprincipal_created_by",
 				Unique:  false,
-				Columns: []*schema.Column{CfServicePrincipalsColumns[8]},
+				Columns: []*schema.Column{SfServicePrincipalsColumns[8]},
 			},
 		},
 	}
-	// CfSubscriptionsColumns holds the columns for the "cf_subscriptions" table.
-	CfSubscriptionsColumns = []*schema.Column{
+	// SfSubscriptionsColumns holds the columns for the "sf_subscriptions" table.
+	SfSubscriptionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "plan_tier", Type: field.TypeString, Default: "free"},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "trialing", "past_due", "canceled", "unpaid"}, Default: "active"},
@@ -1516,16 +1516,16 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "organization_id", Type: field.TypeUUID, Unique: true},
 	}
-	// CfSubscriptionsTable holds the schema information for the "cf_subscriptions" table.
-	CfSubscriptionsTable = &schema.Table{
-		Name:       "cf_subscriptions",
-		Columns:    CfSubscriptionsColumns,
-		PrimaryKey: []*schema.Column{CfSubscriptionsColumns[0]},
+	// SfSubscriptionsTable holds the schema information for the "sf_subscriptions" table.
+	SfSubscriptionsTable = &schema.Table{
+		Name:       "sf_subscriptions",
+		Columns:    SfSubscriptionsColumns,
+		PrimaryKey: []*schema.Column{SfSubscriptionsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "cf_subscriptions_cf_organizations_subscription",
-				Columns:    []*schema.Column{CfSubscriptionsColumns[10]},
-				RefColumns: []*schema.Column{CfOrganizationsColumns[0]},
+				Symbol:     "sf_subscriptions_sf_organizations_subscription",
+				Columns:    []*schema.Column{SfSubscriptionsColumns[10]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -1533,42 +1533,42 @@ var (
 			{
 				Name:    "subscription_organization_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfSubscriptionsColumns[10]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[10]},
 			},
 			{
 				Name:    "subscription_status",
 				Unique:  false,
-				Columns: []*schema.Column{CfSubscriptionsColumns[2]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[2]},
 			},
 			{
 				Name:    "subscription_plan_tier",
 				Unique:  false,
-				Columns: []*schema.Column{CfSubscriptionsColumns[1]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[1]},
 			},
 			{
 				Name:    "subscription_stripe_subscription_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfSubscriptionsColumns[5]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[5]},
 			},
 			{
 				Name:    "subscription_stripe_customer_id",
 				Unique:  false,
-				Columns: []*schema.Column{CfSubscriptionsColumns[6]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[6]},
 			},
 			{
 				Name:    "subscription_current_period_end",
 				Unique:  false,
-				Columns: []*schema.Column{CfSubscriptionsColumns[4]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[4]},
 			},
 			{
 				Name:    "subscription_status_current_period_end",
 				Unique:  false,
-				Columns: []*schema.Column{CfSubscriptionsColumns[2], CfSubscriptionsColumns[4]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[2], SfSubscriptionsColumns[4]},
 			},
 		},
 	}
-	// CfUsersColumns holds the columns for the "cf_users" table.
-	CfUsersColumns = []*schema.Column{
+	// SfUsersColumns holds the columns for the "sf_users" table.
+	SfUsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -1581,180 +1581,180 @@ var (
 		{Name: "last_login_at", Type: field.TypeTime, Nullable: true},
 		{Name: "federation_id", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
-	// CfUsersTable holds the schema information for the "cf_users" table.
-	CfUsersTable = &schema.Table{
-		Name:       "cf_users",
-		Columns:    CfUsersColumns,
-		PrimaryKey: []*schema.Column{CfUsersColumns[0]},
+	// SfUsersTable holds the schema information for the "sf_users" table.
+	SfUsersTable = &schema.Table{
+		Name:       "sf_users",
+		Columns:    SfUsersColumns,
+		PrimaryKey: []*schema.Column{SfUsersColumns[0]},
 		Indexes: []*schema.Index{
 			{
 				Name:    "user_email",
 				Unique:  true,
-				Columns: []*schema.Column{CfUsersColumns[3]},
+				Columns: []*schema.Column{SfUsersColumns[3]},
 			},
 			{
 				Name:    "user_active",
 				Unique:  false,
-				Columns: []*schema.Column{CfUsersColumns[8]},
+				Columns: []*schema.Column{SfUsersColumns[8]},
 			},
 			{
 				Name:    "user_federation_id",
 				Unique:  true,
-				Columns: []*schema.Column{CfUsersColumns[10]},
+				Columns: []*schema.Column{SfUsersColumns[10]},
 			},
 		},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
-		CfAPIKeysTable,
-		CfAgentsTable,
-		CfApplicationsTable,
-		CfCredentialsTable,
-		CfHumansTable,
-		CfInvitesTable,
-		CfLicensesTable,
-		CfListingsTable,
-		CfMembershipsTable,
-		CfOauthAccountsTable,
-		CfOauthAppsTable,
-		CfOauthAppSecretsTable,
-		CfOauthAuthCodesTable,
-		CfOauthConsentsTable,
-		CfOauthTokensTable,
-		CfOrganizationsTable,
-		CfPrincipalsTable,
-		CfPrincipalMembershipsTable,
-		CfPrincipalTokensTable,
-		CfRefreshTokensTable,
-		CfSeatAssignmentsTable,
-		CfServiceAccountsTable,
-		CfServiceAccountKeyPairsTable,
-		CfServicePrincipalsTable,
-		CfSubscriptionsTable,
-		CfUsersTable,
+		SfAPIKeysTable,
+		SfAgentsTable,
+		SfApplicationsTable,
+		SfCredentialsTable,
+		SfHumansTable,
+		SfInvitesTable,
+		SfLicensesTable,
+		SfListingsTable,
+		SfMembershipsTable,
+		SfOauthAccountsTable,
+		SfOauthAppsTable,
+		SfOauthAppSecretsTable,
+		SfOauthAuthCodesTable,
+		SfOauthConsentsTable,
+		SfOauthTokensTable,
+		SfOrganizationsTable,
+		SfPrincipalsTable,
+		SfPrincipalMembershipsTable,
+		SfPrincipalTokensTable,
+		SfRefreshTokensTable,
+		SfSeatAssignmentsTable,
+		SfServiceAccountsTable,
+		SfServiceAccountKeyPairsTable,
+		SfServicePrincipalsTable,
+		SfSubscriptionsTable,
+		SfUsersTable,
 	}
 )
 
 func init() {
-	CfAPIKeysTable.ForeignKeys[0].RefTable = CfOrganizationsTable
-	CfAPIKeysTable.ForeignKeys[1].RefTable = CfUsersTable
-	CfAPIKeysTable.Annotation = &entsql.Annotation{
-		Table: "cf_api_keys",
+	SfAPIKeysTable.ForeignKeys[0].RefTable = SfOrganizationsTable
+	SfAPIKeysTable.ForeignKeys[1].RefTable = SfUsersTable
+	SfAPIKeysTable.Annotation = &entsql.Annotation{
+		Table: "sf_api_keys",
 	}
-	CfAgentsTable.ForeignKeys[0].RefTable = CfPrincipalsTable
-	CfAgentsTable.ForeignKeys[1].RefTable = CfPrincipalsTable
-	CfAgentsTable.Annotation = &entsql.Annotation{
-		Table: "cf_agents",
+	SfAgentsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfAgentsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
+	SfAgentsTable.Annotation = &entsql.Annotation{
+		Table: "sf_agents",
 	}
-	CfApplicationsTable.ForeignKeys[0].RefTable = CfPrincipalsTable
-	CfApplicationsTable.Annotation = &entsql.Annotation{
-		Table: "cf_applications",
+	SfApplicationsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfApplicationsTable.Annotation = &entsql.Annotation{
+		Table: "sf_applications",
 	}
-	CfCredentialsTable.ForeignKeys[0].RefTable = CfPrincipalsTable
-	CfCredentialsTable.Annotation = &entsql.Annotation{
-		Table: "cf_credentials",
+	SfCredentialsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfCredentialsTable.Annotation = &entsql.Annotation{
+		Table: "sf_credentials",
 	}
-	CfHumansTable.ForeignKeys[0].RefTable = CfPrincipalsTable
-	CfHumansTable.Annotation = &entsql.Annotation{
-		Table: "cf_humans",
+	SfHumansTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfHumansTable.Annotation = &entsql.Annotation{
+		Table: "sf_humans",
 	}
-	CfInvitesTable.ForeignKeys[0].RefTable = CfOrganizationsTable
-	CfInvitesTable.ForeignKeys[1].RefTable = CfPrincipalsTable
-	CfInvitesTable.Annotation = &entsql.Annotation{
-		Table: "cf_invites",
+	SfInvitesTable.ForeignKeys[0].RefTable = SfOrganizationsTable
+	SfInvitesTable.ForeignKeys[1].RefTable = SfPrincipalsTable
+	SfInvitesTable.Annotation = &entsql.Annotation{
+		Table: "sf_invites",
 	}
-	CfLicensesTable.ForeignKeys[0].RefTable = CfListingsTable
-	CfLicensesTable.ForeignKeys[1].RefTable = CfOrganizationsTable
-	CfLicensesTable.ForeignKeys[2].RefTable = CfPrincipalsTable
-	CfLicensesTable.Annotation = &entsql.Annotation{
-		Table: "cf_licenses",
+	SfLicensesTable.ForeignKeys[0].RefTable = SfListingsTable
+	SfLicensesTable.ForeignKeys[1].RefTable = SfOrganizationsTable
+	SfLicensesTable.ForeignKeys[2].RefTable = SfPrincipalsTable
+	SfLicensesTable.Annotation = &entsql.Annotation{
+		Table: "sf_licenses",
 	}
-	CfListingsTable.ForeignKeys[0].RefTable = CfOrganizationsTable
-	CfListingsTable.ForeignKeys[1].RefTable = CfPrincipalsTable
-	CfListingsTable.Annotation = &entsql.Annotation{
-		Table: "cf_listings",
+	SfListingsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
+	SfListingsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
+	SfListingsTable.Annotation = &entsql.Annotation{
+		Table: "sf_listings",
 	}
-	CfMembershipsTable.ForeignKeys[0].RefTable = CfOrganizationsTable
-	CfMembershipsTable.ForeignKeys[1].RefTable = CfUsersTable
-	CfMembershipsTable.Annotation = &entsql.Annotation{
-		Table: "cf_memberships",
+	SfMembershipsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
+	SfMembershipsTable.ForeignKeys[1].RefTable = SfUsersTable
+	SfMembershipsTable.Annotation = &entsql.Annotation{
+		Table: "sf_memberships",
 	}
-	CfOauthAccountsTable.ForeignKeys[0].RefTable = CfUsersTable
-	CfOauthAccountsTable.Annotation = &entsql.Annotation{
-		Table: "cf_oauth_accounts",
+	SfOauthAccountsTable.ForeignKeys[0].RefTable = SfUsersTable
+	SfOauthAccountsTable.Annotation = &entsql.Annotation{
+		Table: "sf_oauth_accounts",
 	}
-	CfOauthAppsTable.ForeignKeys[0].RefTable = CfOrganizationsTable
-	CfOauthAppsTable.ForeignKeys[1].RefTable = CfUsersTable
-	CfOauthAppsTable.Annotation = &entsql.Annotation{
-		Table: "cf_oauth_apps",
+	SfOauthAppsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
+	SfOauthAppsTable.ForeignKeys[1].RefTable = SfUsersTable
+	SfOauthAppsTable.Annotation = &entsql.Annotation{
+		Table: "sf_oauth_apps",
 	}
-	CfOauthAppSecretsTable.ForeignKeys[0].RefTable = CfOauthAppsTable
-	CfOauthAppSecretsTable.Annotation = &entsql.Annotation{
-		Table: "cf_oauth_app_secrets",
+	SfOauthAppSecretsTable.ForeignKeys[0].RefTable = SfOauthAppsTable
+	SfOauthAppSecretsTable.Annotation = &entsql.Annotation{
+		Table: "sf_oauth_app_secrets",
 	}
-	CfOauthAuthCodesTable.ForeignKeys[0].RefTable = CfOauthAppsTable
-	CfOauthAuthCodesTable.ForeignKeys[1].RefTable = CfUsersTable
-	CfOauthAuthCodesTable.Annotation = &entsql.Annotation{
-		Table: "cf_oauth_auth_codes",
+	SfOauthAuthCodesTable.ForeignKeys[0].RefTable = SfOauthAppsTable
+	SfOauthAuthCodesTable.ForeignKeys[1].RefTable = SfUsersTable
+	SfOauthAuthCodesTable.Annotation = &entsql.Annotation{
+		Table: "sf_oauth_auth_codes",
 	}
-	CfOauthConsentsTable.ForeignKeys[0].RefTable = CfOauthAppsTable
-	CfOauthConsentsTable.ForeignKeys[1].RefTable = CfUsersTable
-	CfOauthConsentsTable.Annotation = &entsql.Annotation{
-		Table: "cf_oauth_consents",
+	SfOauthConsentsTable.ForeignKeys[0].RefTable = SfOauthAppsTable
+	SfOauthConsentsTable.ForeignKeys[1].RefTable = SfUsersTable
+	SfOauthConsentsTable.Annotation = &entsql.Annotation{
+		Table: "sf_oauth_consents",
 	}
-	CfOauthTokensTable.ForeignKeys[0].RefTable = CfOauthAppsTable
-	CfOauthTokensTable.ForeignKeys[1].RefTable = CfUsersTable
-	CfOauthTokensTable.Annotation = &entsql.Annotation{
-		Table: "cf_oauth_tokens",
+	SfOauthTokensTable.ForeignKeys[0].RefTable = SfOauthAppsTable
+	SfOauthTokensTable.ForeignKeys[1].RefTable = SfUsersTable
+	SfOauthTokensTable.Annotation = &entsql.Annotation{
+		Table: "sf_oauth_tokens",
 	}
-	CfOrganizationsTable.ForeignKeys[0].RefTable = CfPrincipalsTable
-	CfOrganizationsTable.Annotation = &entsql.Annotation{
-		Table: "cf_organizations",
+	SfOrganizationsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfOrganizationsTable.Annotation = &entsql.Annotation{
+		Table: "sf_organizations",
 	}
-	CfPrincipalsTable.ForeignKeys[0].RefTable = CfOrganizationsTable
-	CfPrincipalsTable.Annotation = &entsql.Annotation{
-		Table: "cf_principals",
+	SfPrincipalsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
+	SfPrincipalsTable.Annotation = &entsql.Annotation{
+		Table: "sf_principals",
 	}
-	CfPrincipalMembershipsTable.ForeignKeys[0].RefTable = CfOrganizationsTable
-	CfPrincipalMembershipsTable.ForeignKeys[1].RefTable = CfPrincipalsTable
-	CfPrincipalMembershipsTable.Annotation = &entsql.Annotation{
-		Table: "cf_principal_memberships",
+	SfPrincipalMembershipsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
+	SfPrincipalMembershipsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
+	SfPrincipalMembershipsTable.Annotation = &entsql.Annotation{
+		Table: "sf_principal_memberships",
 	}
-	CfPrincipalTokensTable.ForeignKeys[0].RefTable = CfApplicationsTable
-	CfPrincipalTokensTable.ForeignKeys[1].RefTable = CfPrincipalsTable
-	CfPrincipalTokensTable.ForeignKeys[2].RefTable = CfPrincipalTokensTable
-	CfPrincipalTokensTable.Annotation = &entsql.Annotation{
-		Table: "cf_principal_tokens",
+	SfPrincipalTokensTable.ForeignKeys[0].RefTable = SfApplicationsTable
+	SfPrincipalTokensTable.ForeignKeys[1].RefTable = SfPrincipalsTable
+	SfPrincipalTokensTable.ForeignKeys[2].RefTable = SfPrincipalTokensTable
+	SfPrincipalTokensTable.Annotation = &entsql.Annotation{
+		Table: "sf_principal_tokens",
 	}
-	CfRefreshTokensTable.ForeignKeys[0].RefTable = CfUsersTable
-	CfRefreshTokensTable.Annotation = &entsql.Annotation{
-		Table: "cf_refresh_tokens",
+	SfRefreshTokensTable.ForeignKeys[0].RefTable = SfUsersTable
+	SfRefreshTokensTable.Annotation = &entsql.Annotation{
+		Table: "sf_refresh_tokens",
 	}
-	CfSeatAssignmentsTable.ForeignKeys[0].RefTable = CfLicensesTable
-	CfSeatAssignmentsTable.ForeignKeys[1].RefTable = CfPrincipalsTable
-	CfSeatAssignmentsTable.ForeignKeys[2].RefTable = CfPrincipalsTable
-	CfSeatAssignmentsTable.Annotation = &entsql.Annotation{
-		Table: "cf_seat_assignments",
+	SfSeatAssignmentsTable.ForeignKeys[0].RefTable = SfLicensesTable
+	SfSeatAssignmentsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
+	SfSeatAssignmentsTable.ForeignKeys[2].RefTable = SfPrincipalsTable
+	SfSeatAssignmentsTable.Annotation = &entsql.Annotation{
+		Table: "sf_seat_assignments",
 	}
-	CfServiceAccountsTable.ForeignKeys[0].RefTable = CfOrganizationsTable
-	CfServiceAccountsTable.ForeignKeys[1].RefTable = CfUsersTable
-	CfServiceAccountsTable.Annotation = &entsql.Annotation{
-		Table: "cf_service_accounts",
+	SfServiceAccountsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
+	SfServiceAccountsTable.ForeignKeys[1].RefTable = SfUsersTable
+	SfServiceAccountsTable.Annotation = &entsql.Annotation{
+		Table: "sf_service_accounts",
 	}
-	CfServiceAccountKeyPairsTable.ForeignKeys[0].RefTable = CfServiceAccountsTable
-	CfServiceAccountKeyPairsTable.Annotation = &entsql.Annotation{
-		Table: "cf_service_account_key_pairs",
+	SfServiceAccountKeyPairsTable.ForeignKeys[0].RefTable = SfServiceAccountsTable
+	SfServiceAccountKeyPairsTable.Annotation = &entsql.Annotation{
+		Table: "sf_service_account_key_pairs",
 	}
-	CfServicePrincipalsTable.ForeignKeys[0].RefTable = CfPrincipalsTable
-	CfServicePrincipalsTable.ForeignKeys[1].RefTable = CfPrincipalsTable
-	CfServicePrincipalsTable.Annotation = &entsql.Annotation{
-		Table: "cf_service_principals",
+	SfServicePrincipalsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfServicePrincipalsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
+	SfServicePrincipalsTable.Annotation = &entsql.Annotation{
+		Table: "sf_service_principals",
 	}
-	CfSubscriptionsTable.ForeignKeys[0].RefTable = CfOrganizationsTable
-	CfSubscriptionsTable.Annotation = &entsql.Annotation{
-		Table: "cf_subscriptions",
+	SfSubscriptionsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
+	SfSubscriptionsTable.Annotation = &entsql.Annotation{
+		Table: "sf_subscriptions",
 	}
-	CfUsersTable.Annotation = &entsql.Annotation{
-		Table: "cf_users",
+	SfUsersTable.Annotation = &entsql.Annotation{
+		Table: "sf_users",
 	}
 }

@@ -34,12 +34,12 @@ const (
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// Table holds the table name of the oauthaccount in the database.
-	Table = "cf_oauth_accounts"
+	Table = "sf_oauth_accounts"
 	// UserTable is the table that holds the user relation/edge.
-	UserTable = "cf_oauth_accounts"
+	UserTable = "sf_oauth_accounts"
 	// UserInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	UserInverseTable = "cf_users"
+	UserInverseTable = "sf_users"
 	// UserColumn is the table column denoting the user relation/edge.
 	UserColumn = "user_id"
 )

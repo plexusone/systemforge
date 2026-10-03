@@ -21,7 +21,7 @@ type ServiceAccountKeyPair struct {
 // Annotations of the ServiceAccountKeyPair.
 func (ServiceAccountKeyPair) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_service_account_key_pairs"},
+		entsql.Annotation{Table: "sf_service_account_key_pairs"},
 	}
 }
 

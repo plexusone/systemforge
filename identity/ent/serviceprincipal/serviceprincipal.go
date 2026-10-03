@@ -36,19 +36,19 @@ const (
 	// EdgeCreator holds the string denoting the creator edge name in mutations.
 	EdgeCreator = "creator"
 	// Table holds the table name of the serviceprincipal in the database.
-	Table = "cf_service_principals"
+	Table = "sf_service_principals"
 	// PrincipalTable is the table that holds the principal relation/edge.
-	PrincipalTable = "cf_service_principals"
+	PrincipalTable = "sf_service_principals"
 	// PrincipalInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	PrincipalInverseTable = "cf_principals"
+	PrincipalInverseTable = "sf_principals"
 	// PrincipalColumn is the table column denoting the principal relation/edge.
 	PrincipalColumn = "principal_id"
 	// CreatorTable is the table that holds the creator relation/edge.
-	CreatorTable = "cf_service_principals"
+	CreatorTable = "sf_service_principals"
 	// CreatorInverseTable is the table name for the Principal entity.
 	// It exists in this package in order to avoid circular dependency with the "principal" package.
-	CreatorInverseTable = "cf_principals"
+	CreatorInverseTable = "sf_principals"
 	// CreatorColumn is the table column denoting the creator relation/edge.
 	CreatorColumn = "created_by"
 )

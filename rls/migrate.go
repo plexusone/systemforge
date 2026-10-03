@@ -41,9 +41,9 @@ func DefaultMigrationConfig() *MigrationConfig {
 // SystemForgeTables returns the list of SystemForge tables that need RLS.
 // These are the tables with tenant-scoped data.
 var SystemForgeTables = []string{
-	"cf_memberships",
-	// cf_users and cf_organizations are typically not tenant-scoped
-	// cf_oauth_accounts and cf_refresh_tokens are user-scoped, not tenant-scoped
+	"sf_memberships",
+	// sf_users and sf_organizations are typically not tenant-scoped
+	// sf_oauth_accounts and sf_refresh_tokens are user-scoped, not tenant-scoped
 }
 
 // Migrator handles RLS migration for SystemForge tables.

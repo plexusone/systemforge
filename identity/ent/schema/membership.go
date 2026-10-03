@@ -19,7 +19,7 @@ type Membership struct {
 // Annotations of the Membership.
 func (Membership) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_memberships"},
+		entsql.Annotation{Table: "sf_memberships"},
 	}
 }
 

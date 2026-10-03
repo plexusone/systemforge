@@ -10,7 +10,7 @@ SystemForge represents the open-source foundation of a larger platform strategy:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    CoreControl (Commercial)                  │
+│                    SystemAuth (Commercial)                  │
 │           Federation / Governance / Multi-Product            │
 ├─────────────────────────────────────────────────────────────┤
 │                    SystemForge (Open Source)                   │
@@ -31,7 +31,7 @@ SystemForge represents the open-source foundation of a larger platform strategy:
 - Fully self-hostable
 - No external dependencies required
 
-### CoreControl (Commercial - Separate Repository)
+### SystemAuth (Commercial - Separate Repository)
 
 - Federation layer for multiple SystemForge apps
 - Global identity overlay
@@ -51,7 +51,7 @@ Every SystemForge application must be fully functional in standalone mode:
 - ✅ Local audit logging
 - ✅ Local tenant management
 
-Federation via CoreControl is additive, never required.
+Federation via SystemAuth is additive, never required.
 
 ### 2. Contract-Based Integration
 
@@ -62,7 +62,7 @@ SystemForge defines standard interfaces that enable federation:
 - Audit contract
 - Metadata contract
 
-Applications implementing these contracts can optionally integrate with CoreControl.
+Applications implementing these contracts can optionally integrate with SystemAuth.
 
 ### 3. Portable Applications
 
@@ -85,12 +85,12 @@ This supports real-world scenarios like:
 
 SystemForge implements a four-tier authority model designed for multi-product ecosystems:
 
-### Tier 1: Federation (CoreControl Only)
+### Tier 1: Federation (SystemAuth Only)
 
 - Platform-wide governance
 - Cross-app identity
 - Global policies
-- Managed via CoreControl
+- Managed via SystemAuth
 
 ### Tier 2: MSP (Managed Service Provider)
 
@@ -154,7 +154,7 @@ Every SystemForge application supports two operational modes:
 
 ```
 ┌─────────────────────────────────────────────┐
-│               CoreControl                    │
+│               SystemAuth                    │
 │  ┌────────────┬────────────┬──────────────┐ │
 │  │  Identity  │   Policy   │    Audit     │ │
 │  │   Overlay  │  Governance│  Aggregation │ │
@@ -191,7 +191,7 @@ Every SystemForge application supports two operational modes:
 - Implement federation-ready endpoints
 - Design authority model
 
-### Phase 3: Federation (CoreControl)
+### Phase 3: Federation (SystemAuth)
 
 - Enable optional federation mode
 - Shared identity overlay
@@ -205,7 +205,7 @@ Every SystemForge application supports two operational modes:
 
 ## Comparison with Existing Solutions
 
-| Aspect | Salesforce | AWS | SystemForge + CoreControl |
+| Aspect | Salesforce | AWS | SystemForge + SystemAuth |
 |--------|-----------|-----|------------------------|
 | Identity | Proprietary | IAM | Open standard |
 | Multi-product | Vertically integrated | Service-based | Federated |
@@ -221,7 +221,7 @@ Every SystemForge application supports two operational modes:
 - Agencies building client applications
 - Enterprise teams building internal tools
 
-### Platform Operators (CoreControl)
+### Platform Operators (SystemAuth)
 
 - Organizations running multiple SaaS products
 - MSPs managing customer portfolios
@@ -245,5 +245,5 @@ Every SystemForge application supports two operational modes:
 
 - [Product Contract Specification](./product-contract.md)
 - [Authority Model](./authority-model.md)
-- [CoreControl PRD](https://github.com/grokify/corecontrol/PRD.md)
-- [CoreControl TRD](https://github.com/grokify/corecontrol/TRD.md)
+- [SystemAuth PRD](https://github.com/grokify/systemauth/PRD.md)
+- [SystemAuth TRD](https://github.com/grokify/systemauth/TRD.md)

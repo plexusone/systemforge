@@ -1,0 +1,78 @@
+# SystemAuth Configuration Example
+# This file demonstrates all available configuration options.
+
+# The OAuth/OIDC issuer URL (required)
+issuer: https://auth.example.com
+
+# Database configuration (optional - uses in-memory if not specified)
+database:
+  driver: postgres
+  dsn: ${DATABASE_URL}  # Supports environment variable expansion
+
+# Signing key configuration
+keys:
+  algorithm: RS256  # RS256 or ES256
+  rotation_days: 90  # 0 = no auto-rotation
+
+# Token lifetime configuration
+tokens:
+  access_token_lifetime: 15m
+  refresh_token_lifetime: 168h  # 7 days
+  id_token_lifetime: 1h
+  auth_code_lifetime: 10m
+
+# Static OAuth client configurations
+clients:
+  # Public client (SPA/mobile app)
+  - id: web-app
+    type: public
+    name: Web Application
+    description: Single-page application
+    redirect_uris:
+      - https://app.example.com/callback
+      - http://localhost:3000/callback  # Development
+    grant_types:
+      - authorization_code
+      - refresh_token
+    scopes:
+      - openid
+      - profile
+      - email
+
+  # Confidential client (server-side)
+  - id: api-service
+    type: confidential
+    name: API Service
+    secret: ${API_SERVICE_SECRET}  # Environment variable
+    grant_types:
+      - client_credentials
+    scopes:
+      - api:read
+      - api:write
+
+  # Confidential client with custom token lifetimes
+  - id: long-lived-client
+    type: confidential
+    name: Long-lived Service
+    secret: ${LONG_LIVED_SECRET}
+    grant_types:
+      - client_credentials
+    scopes:
+      - service:admin
+    access_token_lifetime: 1h
+    refresh_token_lifetime: 720h  # 30 days
+
+# SystemAuth federation configuration (optional)
+federation:
+  enabled: false
+  systemauth_url: https://control.example.com
+  app_id: my-app
+  client_id: ${SYSTEMAUTH_CLIENT_ID}
+  client_secret: ${SYSTEMAUTH_CLIENT_SECRET}
+
+# Feature flags
+features:
+  require_pkce: true
+  allow_dynamic_registration: false
+  enable_device_flow: false
+  enable_jwt_access_tokens: false

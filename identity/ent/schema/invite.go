@@ -21,7 +21,7 @@ type Invite struct {
 // Annotations of the Invite.
 func (Invite) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_invites"},
+		entsql.Annotation{Table: "sf_invites"},
 	}
 }
 

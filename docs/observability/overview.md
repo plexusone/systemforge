@@ -43,11 +43,11 @@ defer obs.Shutdown(context.Background())
 
 ### 3. Integrate with SystemForge Components
 
-#### CoreAuth (OAuth Server)
+#### SystemAuth (OAuth Server)
 
 ```go
-server, err := coreauth.NewEmbedded(cfg,
-    coreauth.WithObservability(obs),
+server, err := systemauth.NewEmbedded(cfg,
+    systemauth.WithObservability(obs),
 )
 ```
 
@@ -114,15 +114,15 @@ obs, err := observability.New(observability.ConfigFromEnv())
 
 ## Metrics
 
-### CoreAuth Metrics
+### SystemAuth Metrics
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
-| `systemforge.coreauth.auth_requests_total` | Counter | grant_type, client_id, status | Authentication requests |
-| `systemforge.coreauth.auth_latency_ms` | Histogram | grant_type, endpoint | Request latency |
-| `systemforge.coreauth.tokens_issued_total` | Counter | grant_type, client_id | Tokens issued |
-| `systemforge.coreauth.token_validations_total` | Counter | result | Token validations |
-| `systemforge.coreauth.sessions_active` | Gauge | | Active sessions |
+| `systemforge.systemauth.auth_requests_total` | Counter | grant_type, client_id, status | Authentication requests |
+| `systemforge.systemauth.auth_latency_ms` | Histogram | grant_type, endpoint | Request latency |
+| `systemforge.systemauth.tokens_issued_total` | Counter | grant_type, client_id | Tokens issued |
+| `systemforge.systemauth.token_validations_total` | Counter | result | Token validations |
+| `systemforge.systemauth.sessions_active` | Gauge | | Active sessions |
 
 ### Rate Limiting Metrics
 
@@ -145,10 +145,10 @@ obs, err := observability.New(observability.ConfigFromEnv())
 
 | Span | Description |
 |------|-------------|
-| `systemforge.coreauth.authorize` | OAuth authorization endpoint |
-| `systemforge.coreauth.token` | OAuth token endpoint |
-| `systemforge.coreauth.introspect` | Token introspection |
-| `systemforge.coreauth.revoke` | Token revocation |
+| `systemforge.systemauth.authorize` | OAuth authorization endpoint |
+| `systemforge.systemauth.token` | OAuth token endpoint |
+| `systemforge.systemauth.introspect` | Token introspection |
+| `systemforge.systemauth.revoke` | Token revocation |
 | `systemforge.http.request` | HTTP request |
 | `systemforge.session.jwt_validation` | JWT validation |
 | `systemforge.session.apikey_validation` | API key validation |

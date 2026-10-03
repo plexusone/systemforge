@@ -18,7 +18,7 @@ type Organization struct {
 // Annotations of the Organization.
 func (Organization) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_organizations"},
+		entsql.Annotation{Table: "sf_organizations"},
 	}
 }
 

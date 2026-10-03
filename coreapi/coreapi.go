@@ -1,8 +1,8 @@
 // Package coreapi provides API management capabilities including rate limiting,
 // API key management, and usage tracking.
 //
-// CoreAPI is designed to work alongside CoreAuth for comprehensive API management:
-//   - CoreAuth: Authentication & Authorization (who can access what)
+// CoreAPI is designed to work alongside SystemAuth for comprehensive API management:
+//   - SystemAuth: Authentication & Authorization (who can access what)
 //   - CoreAPI: API Management (how much, how fast, usage tracking)
 //
 // # Rate Limiting

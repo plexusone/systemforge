@@ -18,7 +18,7 @@ type Subscription struct {
 // Annotations of the Subscription.
 func (Subscription) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_subscriptions"},
+		entsql.Annotation{Table: "sf_subscriptions"},
 	}
 }
 

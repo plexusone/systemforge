@@ -19,7 +19,7 @@ type Human struct {
 // Annotations of the Human.
 func (Human) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_humans"},
+		entsql.Annotation{Table: "sf_humans"},
 	}
 }
 

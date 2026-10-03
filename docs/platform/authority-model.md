@@ -30,7 +30,7 @@ All authority delegations and actions are auditable. The complete chain of autho
 ```
 ┌─────────────────────────────────────────────────────────┐
 │              Tier 1: Federation Admin                   │
-│         (Platform-wide governance - CoreControl)        │
+│         (Platform-wide governance - SystemAuth)        │
 ├─────────────────────────────────────────────────────────┤
 │              Tier 2: MSP (Optional)                     │
 │         (Multi-customer operations)                     │
@@ -47,7 +47,7 @@ All authority delegations and actions are auditable. The complete chain of autho
 
 **Scope**: Platform-wide governance across all federated applications
 
-**Available In**: Federated mode only (via CoreControl)
+**Available In**: Federated mode only (via SystemAuth)
 
 #### Capabilities
 
@@ -340,7 +340,7 @@ type EvaluationResult struct {
     "target_tier": "app",
     "flow": [
         "1. Federation admin initiates attach",
-        "2. CoreControl validates app contract compliance",
+        "2. SystemAuth validates app contract compliance",
         "3. Identity sync begins (federation → app)",
         "4. Policy sync configured",
         "5. Audit streaming enabled",
@@ -387,13 +387,13 @@ type EvaluationResult struct {
 
 ## Standalone Mode
 
-In standalone mode (no CoreControl federation):
+In standalone mode (no SystemAuth federation):
 
 ### Available Tiers
 
 | Tier | Available | Notes |
 |------|-----------|-------|
-| Federation | No | Requires CoreControl |
+| Federation | No | Requires SystemAuth |
 | MSP | Yes | Local MSP configuration |
 | App | Yes | Full control |
 | Tenant | Yes | Standard operation |
@@ -469,7 +469,7 @@ All authority-related actions must emit audit events:
 3. Support delegation chain in JWT claims
 4. Emit audit events for all authority changes
 
-### For CoreControl Integration
+### For SystemAuth Integration
 
 1. Expose `/systemforge/policy/evaluate` endpoint
 2. Accept and apply synced policies
@@ -480,6 +480,6 @@ All authority-related actions must emit audit events:
 
 - [Platform Vision](./vision.md)
 - [Product Contract](./product-contract.md)
-- [CoreControl PRD](https://github.com/grokify/corecontrol/PRD.md)
+- [SystemAuth PRD](https://github.com/grokify/systemauth/PRD.md)
 - OAuth 2.0 (RFC 6749)
 - RBAC (NIST INCITS 359)

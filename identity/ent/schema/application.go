@@ -19,7 +19,7 @@ type Application struct {
 // Annotations of the Application.
 func (Application) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_applications"},
+		entsql.Annotation{Table: "sf_applications"},
 	}
 }
 

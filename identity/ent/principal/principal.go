@@ -65,103 +65,103 @@ const (
 	// EdgeAssignedSeats holds the string denoting the assigned_seats edge name in mutations.
 	EdgeAssignedSeats = "assigned_seats"
 	// Table holds the table name of the principal in the database.
-	Table = "cf_principals"
+	Table = "sf_principals"
 	// OrganizationTable is the table that holds the organization relation/edge.
-	OrganizationTable = "cf_principals"
+	OrganizationTable = "sf_principals"
 	// OrganizationInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	OrganizationInverseTable = "cf_organizations"
+	OrganizationInverseTable = "sf_organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_id"
 	// HumanTable is the table that holds the human relation/edge.
-	HumanTable = "cf_humans"
+	HumanTable = "sf_humans"
 	// HumanInverseTable is the table name for the Human entity.
 	// It exists in this package in order to avoid circular dependency with the "human" package.
-	HumanInverseTable = "cf_humans"
+	HumanInverseTable = "sf_humans"
 	// HumanColumn is the table column denoting the human relation/edge.
 	HumanColumn = "principal_id"
 	// ApplicationTable is the table that holds the application relation/edge.
-	ApplicationTable = "cf_applications"
+	ApplicationTable = "sf_applications"
 	// ApplicationInverseTable is the table name for the Application entity.
 	// It exists in this package in order to avoid circular dependency with the "application" package.
-	ApplicationInverseTable = "cf_applications"
+	ApplicationInverseTable = "sf_applications"
 	// ApplicationColumn is the table column denoting the application relation/edge.
 	ApplicationColumn = "principal_id"
 	// AgentTable is the table that holds the agent relation/edge.
-	AgentTable = "cf_agents"
+	AgentTable = "sf_agents"
 	// AgentInverseTable is the table name for the Agent entity.
 	// It exists in this package in order to avoid circular dependency with the "agent" package.
-	AgentInverseTable = "cf_agents"
+	AgentInverseTable = "sf_agents"
 	// AgentColumn is the table column denoting the agent relation/edge.
 	AgentColumn = "principal_id"
 	// ServicePrincipalTable is the table that holds the service_principal relation/edge.
-	ServicePrincipalTable = "cf_service_principals"
+	ServicePrincipalTable = "sf_service_principals"
 	// ServicePrincipalInverseTable is the table name for the ServicePrincipal entity.
 	// It exists in this package in order to avoid circular dependency with the "serviceprincipal" package.
-	ServicePrincipalInverseTable = "cf_service_principals"
+	ServicePrincipalInverseTable = "sf_service_principals"
 	// ServicePrincipalColumn is the table column denoting the service_principal relation/edge.
 	ServicePrincipalColumn = "principal_id"
 	// CredentialsTable is the table that holds the credentials relation/edge.
-	CredentialsTable = "cf_credentials"
+	CredentialsTable = "sf_credentials"
 	// CredentialsInverseTable is the table name for the Credential entity.
 	// It exists in this package in order to avoid circular dependency with the "credential" package.
-	CredentialsInverseTable = "cf_credentials"
+	CredentialsInverseTable = "sf_credentials"
 	// CredentialsColumn is the table column denoting the credentials relation/edge.
 	CredentialsColumn = "principal_id"
 	// PrincipalTokensTable is the table that holds the principal_tokens relation/edge.
-	PrincipalTokensTable = "cf_principal_tokens"
+	PrincipalTokensTable = "sf_principal_tokens"
 	// PrincipalTokensInverseTable is the table name for the PrincipalToken entity.
 	// It exists in this package in order to avoid circular dependency with the "principaltoken" package.
-	PrincipalTokensInverseTable = "cf_principal_tokens"
+	PrincipalTokensInverseTable = "sf_principal_tokens"
 	// PrincipalTokensColumn is the table column denoting the principal_tokens relation/edge.
 	PrincipalTokensColumn = "principal_id"
 	// PrincipalMembershipsTable is the table that holds the principal_memberships relation/edge.
-	PrincipalMembershipsTable = "cf_principal_memberships"
+	PrincipalMembershipsTable = "sf_principal_memberships"
 	// PrincipalMembershipsInverseTable is the table name for the PrincipalMembership entity.
 	// It exists in this package in order to avoid circular dependency with the "principalmembership" package.
-	PrincipalMembershipsInverseTable = "cf_principal_memberships"
+	PrincipalMembershipsInverseTable = "sf_principal_memberships"
 	// PrincipalMembershipsColumn is the table column denoting the principal_memberships relation/edge.
 	PrincipalMembershipsColumn = "principal_id"
 	// OwnedOrganizationsTable is the table that holds the owned_organizations relation/edge.
-	OwnedOrganizationsTable = "cf_organizations"
+	OwnedOrganizationsTable = "sf_organizations"
 	// OwnedOrganizationsInverseTable is the table name for the Organization entity.
 	// It exists in this package in order to avoid circular dependency with the "organization" package.
-	OwnedOrganizationsInverseTable = "cf_organizations"
+	OwnedOrganizationsInverseTable = "sf_organizations"
 	// OwnedOrganizationsColumn is the table column denoting the owned_organizations relation/edge.
 	OwnedOrganizationsColumn = "owner_principal_id"
 	// SentInvitesTable is the table that holds the sent_invites relation/edge.
-	SentInvitesTable = "cf_invites"
+	SentInvitesTable = "sf_invites"
 	// SentInvitesInverseTable is the table name for the Invite entity.
 	// It exists in this package in order to avoid circular dependency with the "invite" package.
-	SentInvitesInverseTable = "cf_invites"
+	SentInvitesInverseTable = "sf_invites"
 	// SentInvitesColumn is the table column denoting the sent_invites relation/edge.
 	SentInvitesColumn = "inviter_principal_id"
 	// OwnedListingsTable is the table that holds the owned_listings relation/edge.
-	OwnedListingsTable = "cf_listings"
+	OwnedListingsTable = "sf_listings"
 	// OwnedListingsInverseTable is the table name for the Listing entity.
 	// It exists in this package in order to avoid circular dependency with the "listing" package.
-	OwnedListingsInverseTable = "cf_listings"
+	OwnedListingsInverseTable = "sf_listings"
 	// OwnedListingsColumn is the table column denoting the owned_listings relation/edge.
 	OwnedListingsColumn = "owner_id"
 	// PurchasedLicensesTable is the table that holds the purchased_licenses relation/edge.
-	PurchasedLicensesTable = "cf_licenses"
+	PurchasedLicensesTable = "sf_licenses"
 	// PurchasedLicensesInverseTable is the table name for the License entity.
 	// It exists in this package in order to avoid circular dependency with the "license" package.
-	PurchasedLicensesInverseTable = "cf_licenses"
+	PurchasedLicensesInverseTable = "sf_licenses"
 	// PurchasedLicensesColumn is the table column denoting the purchased_licenses relation/edge.
 	PurchasedLicensesColumn = "purchased_by"
 	// SeatAssignmentsTable is the table that holds the seat_assignments relation/edge.
-	SeatAssignmentsTable = "cf_seat_assignments"
+	SeatAssignmentsTable = "sf_seat_assignments"
 	// SeatAssignmentsInverseTable is the table name for the SeatAssignment entity.
 	// It exists in this package in order to avoid circular dependency with the "seatassignment" package.
-	SeatAssignmentsInverseTable = "cf_seat_assignments"
+	SeatAssignmentsInverseTable = "sf_seat_assignments"
 	// SeatAssignmentsColumn is the table column denoting the seat_assignments relation/edge.
 	SeatAssignmentsColumn = "principal_id"
 	// AssignedSeatsTable is the table that holds the assigned_seats relation/edge.
-	AssignedSeatsTable = "cf_seat_assignments"
+	AssignedSeatsTable = "sf_seat_assignments"
 	// AssignedSeatsInverseTable is the table name for the SeatAssignment entity.
 	// It exists in this package in order to avoid circular dependency with the "seatassignment" package.
-	AssignedSeatsInverseTable = "cf_seat_assignments"
+	AssignedSeatsInverseTable = "sf_seat_assignments"
 	// AssignedSeatsColumn is the table column denoting the assigned_seats relation/edge.
 	AssignedSeatsColumn = "assigned_by"
 )

@@ -21,7 +21,7 @@ type OAuthAppSecret struct {
 // Annotations of the OAuthAppSecret.
 func (OAuthAppSecret) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_oauth_app_secrets"},
+		entsql.Annotation{Table: "sf_oauth_app_secrets"},
 	}
 }
 

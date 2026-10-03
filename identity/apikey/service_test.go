@@ -143,8 +143,8 @@ func TestService_Create(t *testing.T) {
 	}
 
 	// Verify key format
-	if !strings.HasPrefix(result.Key, "cf_live_") {
-		t.Errorf("Key should start with cf_live_, got %s", result.Key[:20])
+	if !strings.HasPrefix(result.Key, "sf_live_") {
+		t.Errorf("Key should start with sf_live_, got %s", result.Key[:20])
 	}
 }
 
@@ -164,8 +164,8 @@ func TestService_Create_TestEnvironment(t *testing.T) {
 		t.Fatalf("Create() error: %v", err)
 	}
 
-	if !strings.HasPrefix(result.Key, "cf_test_") {
-		t.Errorf("Key should start with cf_test_, got prefix %s", result.Key[:20])
+	if !strings.HasPrefix(result.Key, "sf_test_") {
+		t.Errorf("Key should start with sf_test_, got prefix %s", result.Key[:20])
 	}
 
 	if result.APIKey.Environment != EnvTest {

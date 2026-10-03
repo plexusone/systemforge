@@ -79,7 +79,7 @@ Each app is fully self-contained with its own:
 - Business data
 - API routes
 
-No external dependencies (like CoreControl) are required. CoreControl integration is optional for SSO and centralized management.
+No external dependencies (like SystemAuth) are required. SystemAuth integration is optional for SSO and centralized management.
 
 ## Integration Pattern
 
@@ -297,12 +297,12 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-## Optional: CoreControl Integration
+## Optional: SystemAuth Integration
 
-Apps can optionally integrate with CoreControl for:
+Apps can optionally integrate with SystemAuth for:
 
 - Single Sign-On (SSO) across apps
 - Centralized user management
 - Cross-app analytics
 
-This is enabled by setting a `federation_id` on users when they authenticate via CoreControl. See the [CoreControl Integration Guide](../docs/corecontrol-integration.md) for details.
+This is enabled by setting a `federation_id` on users when they authenticate via SystemAuth. See the [SystemAuth Integration Guide](../docs/systemauth-integration.md) for details.

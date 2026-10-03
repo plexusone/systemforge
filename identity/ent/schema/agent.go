@@ -19,7 +19,7 @@ type Agent struct {
 // Annotations of the Agent.
 func (Agent) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entsql.Annotation{Table: "cf_agents"},
+		entsql.Annotation{Table: "sf_agents"},
 	}
 }
 

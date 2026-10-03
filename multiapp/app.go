@@ -6,7 +6,7 @@
 //   - Multi-app mode: Multiple apps share a server, routed by X-App-ID header
 //   - Single-app mode: One app runs on dedicated infrastructure
 //
-// CoreControl integration is optional - apps work without any external dependencies.
+// SystemAuth integration is optional - apps work without any external dependencies.
 package multiapp
 
 import (
@@ -22,7 +22,7 @@ import (
 // standalone deployment on dedicated infrastructure.
 //
 // Each app is self-contained with its own users, organizations, and data.
-// No external dependencies (like CoreControl) are required.
+// No external dependencies (like SystemAuth) are required.
 type AppBackend interface {
 	// Slug returns the unique app identifier (e.g., "app1").
 	// This is used for routing, database schema naming, and configuration.
