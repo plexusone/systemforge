@@ -31,6 +31,8 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 
 > Moved from `github.com/grokify/systemforge` to `github.com/plexusone/systemforge` in v0.10.0 — the old path still resolves via GitHub's repository-transfer redirect for existing pins, but won't receive new tags. See the [v0.10.0 release notes](docs/releases/v0.10.0.md) for the full migration.
 
+> **v0.11.0 renamed `coreauth` → `systemauth`, `cf_` tables/API-keys → `sf_`, and unified the principal-link field to `sf_principal_id`** — a hard cutover with no dual-name compatibility. See the [v0.11.0 release notes](docs/releases/v0.11.0.md) for the full migration.
+
 ## Features
 
 ### Identity Module
@@ -328,7 +330,7 @@ github.com/plexusone/systemforge/
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Table prefix | `cf_` | Avoids conflicts, enables side-by-side migration |
+| Table prefix | `sf_` | Avoids conflicts, enables side-by-side migration |
 | Role storage | String field | Apps define own vocabularies (owner/admin/member) |
 | OAuth pattern | Fosite library | Production-ready, RFC-compliant OAuth 2.0 |
 | Refresh tokens | Database-backed | Enables revocation, theft detection |
@@ -337,29 +339,29 @@ github.com/plexusone/systemforge/
 
 ## Database Tables
 
-SystemForge creates the following tables (all prefixed with `cf_`):
+SystemForge creates the following tables (all prefixed with `sf_`):
 
 | Table | Description |
 |-------|-------------|
-| `cf_users` | User accounts |
-| `cf_organizations` | Multi-tenant organizations |
-| `cf_memberships` | User-organization relationships |
-| `cf_oauth_accounts` | External OAuth provider links |
-| `cf_refresh_tokens` | JWT refresh token tracking |
-| `cf_api_keys` | Developer API keys |
-| `cf_oauth_apps` | OAuth client applications |
-| `cf_oauth_app_secrets` | Client secrets (hashed) |
-| `cf_oauth_tokens` | Issued OAuth tokens |
-| `cf_oauth_auth_codes` | Authorization codes |
-| `cf_oauth_consents` | User consent records |
-| `cf_service_accounts` | Non-human identities |
-| `cf_service_account_key_pairs` | RSA/EC key pairs |
+| `sf_users` | User accounts |
+| `sf_organizations` | Multi-tenant organizations |
+| `sf_memberships` | User-organization relationships |
+| `sf_oauth_accounts` | External OAuth provider links |
+| `sf_refresh_tokens` | JWT refresh token tracking |
+| `sf_api_keys` | Developer API keys |
+| `sf_oauth_apps` | OAuth client applications |
+| `sf_oauth_app_secrets` | Client secrets (hashed) |
+| `sf_oauth_tokens` | Issued OAuth tokens |
+| `sf_oauth_auth_codes` | Authorization codes |
+| `sf_oauth_consents` | User consent records |
+| `sf_service_accounts` | Non-human identities |
+| `sf_service_account_key_pairs` | RSA/EC key pairs |
 
 ## Migration Strategy
 
 For existing apps, SystemForge supports side-by-side migration:
 
-1. **Side-by-Side**: Create `cf_*` tables alongside existing tables
+1. **Side-by-Side**: Create `sf_*` tables alongside existing tables
 2. **Dual-Write**: Write to both old and new tables
 3. **Cutover**: Switch reads to SystemForge tables
 4. **Cleanup**: Remove old tables
