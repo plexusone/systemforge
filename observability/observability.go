@@ -11,8 +11,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/plexusone/systemforge/productgraph"
 	"github.com/plexusone/omniobserve/observops"
+
+	"github.com/plexusone/systemforge/productgraph"
 )
 
 // Config holds observability configuration.

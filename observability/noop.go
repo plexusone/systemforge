@@ -10,13 +10,15 @@ import (
 // noopProvider is a no-op implementation of observops.Provider.
 type noopProvider struct{}
 
-func (n *noopProvider) Name() string                                            { return "noop" }
-func (n *noopProvider) Meter() observops.Meter                                  { return &noopMeter{} }
-func (n *noopProvider) Tracer() observops.Tracer                                { return &noopTracer{} }
-func (n *noopProvider) Logger() observops.Logger                                { return &noopLogger{} }
-func (n *noopProvider) SlogHandler(_ ...observops.SlogOption) slog.Handler      { return observops.NoopSlogHandler() }
-func (n *noopProvider) Shutdown(_ context.Context) error                        { return nil }
-func (n *noopProvider) ForceFlush(_ context.Context) error                      { return nil }
+func (n *noopProvider) Name() string             { return "noop" }
+func (n *noopProvider) Meter() observops.Meter   { return &noopMeter{} }
+func (n *noopProvider) Tracer() observops.Tracer { return &noopTracer{} }
+func (n *noopProvider) Logger() observops.Logger { return &noopLogger{} }
+func (n *noopProvider) SlogHandler(_ ...observops.SlogOption) slog.Handler {
+	return observops.NoopSlogHandler()
+}
+func (n *noopProvider) Shutdown(_ context.Context) error   { return nil }
+func (n *noopProvider) ForceFlush(_ context.Context) error { return nil }
 
 // noopMeter is a no-op implementation of observops.Meter.
 type noopMeter struct{}
@@ -71,9 +73,9 @@ func (n *noopTracer) SpanFromContext(_ context.Context) observops.Span {
 // noopSpan is a no-op implementation of observops.Span.
 type noopSpan struct{}
 
-func (n *noopSpan) End(_ ...observops.SpanEndOption)        {}
-func (n *noopSpan) SetAttributes(_ ...observops.KeyValue)   {}
-func (n *noopSpan) SetStatus(_ observops.StatusCode, _ string) {}
+func (n *noopSpan) End(_ ...observops.SpanEndOption)                {}
+func (n *noopSpan) SetAttributes(_ ...observops.KeyValue)           {}
+func (n *noopSpan) SetStatus(_ observops.StatusCode, _ string)      {}
 func (n *noopSpan) RecordError(_ error, _ ...observops.EventOption) {}
 func (n *noopSpan) AddEvent(_ string, _ ...observops.EventOption)   {}
 func (n *noopSpan) SpanContext() observops.SpanContext              { return observops.SpanContext{} }

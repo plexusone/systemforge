@@ -85,17 +85,17 @@ func DefaultCapabilitiesForType(t Type) Capabilities {
 
 // Principal represents the core identity abstraction.
 type Principal struct {
-	ID             uuid.UUID         `json:"id"`
-	Type           Type              `json:"type"`
-	Identifier     string            `json:"identifier"` // Unique identifier (email, client_id, service@org)
-	DisplayName    string            `json:"display_name"`
-	OrganizationID *uuid.UUID        `json:"organization_id,omitempty"`
-	Active         bool              `json:"active"`
-	Capabilities   Capabilities      `json:"capabilities"`
-	AllowedScopes  []string          `json:"allowed_scopes"`
-	Metadata       map[string]any    `json:"metadata,omitempty"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
+	ID             uuid.UUID      `json:"id"`
+	Type           Type           `json:"type"`
+	Identifier     string         `json:"identifier"` // Unique identifier (email, client_id, service@org)
+	DisplayName    string         `json:"display_name"`
+	OrganizationID *uuid.UUID     `json:"organization_id,omitempty"`
+	Active         bool           `json:"active"`
+	Capabilities   Capabilities   `json:"capabilities"`
+	AllowedScopes  []string       `json:"allowed_scopes"`
+	Metadata       map[string]any `json:"metadata,omitempty"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
 
 	// Type-specific extensions (only one will be populated based on Type)
 	Human       *Human       `json:"human,omitempty"`
@@ -119,18 +119,18 @@ type Human struct {
 
 // Application represents OAuth application-specific principal data.
 type Application struct {
-	ClientID              string   `json:"client_id"`
-	AppType               AppType  `json:"app_type"`
-	RedirectURIs          []string `json:"redirect_uris"`
-	AllowedGrants         []string `json:"allowed_grants"`
-	AllowedResponseTypes  []string `json:"allowed_response_types,omitempty"`
-	AccessTokenTTLSeconds int      `json:"access_token_ttl_seconds"`
-	RefreshTokenTTLSeconds int     `json:"refresh_token_ttl_seconds"`
-	RefreshTokenRotation  bool     `json:"refresh_token_rotation"`
-	FirstParty            bool     `json:"first_party"`
-	Public                bool     `json:"public"`
-	LogoURL               *string  `json:"logo_url,omitempty"`
-	Description           *string  `json:"description,omitempty"`
+	ClientID               string   `json:"client_id"`
+	AppType                AppType  `json:"app_type"`
+	RedirectURIs           []string `json:"redirect_uris"`
+	AllowedGrants          []string `json:"allowed_grants"`
+	AllowedResponseTypes   []string `json:"allowed_response_types,omitempty"`
+	AccessTokenTTLSeconds  int      `json:"access_token_ttl_seconds"`
+	RefreshTokenTTLSeconds int      `json:"refresh_token_ttl_seconds"`
+	RefreshTokenRotation   bool     `json:"refresh_token_rotation"`
+	FirstParty             bool     `json:"first_party"`
+	Public                 bool     `json:"public"`
+	LogoURL                *string  `json:"logo_url,omitempty"`
+	Description            *string  `json:"description,omitempty"`
 }
 
 // AppType represents the type of OAuth application.
@@ -149,14 +149,14 @@ const (
 
 // Agent represents AI agent-specific principal data.
 type Agent struct {
-	ModelID                string     `json:"model_id"`
-	Version                string     `json:"version,omitempty"`
-	DelegatingPrincipalID  *uuid.UUID `json:"delegating_principal_id,omitempty"`
-	CapabilityConstraints  []string   `json:"capability_constraints,omitempty"`
-	ResourceConstraints    []string   `json:"resource_constraints,omitempty"`
-	MaxTokenLifetimeSeconds int       `json:"max_token_lifetime_seconds,omitempty"`
-	SessionID              *string    `json:"session_id,omitempty"`
-	RequiresConfirmation   bool       `json:"requires_confirmation"`
+	ModelID                 string     `json:"model_id"`
+	Version                 string     `json:"version,omitempty"`
+	DelegatingPrincipalID   *uuid.UUID `json:"delegating_principal_id,omitempty"`
+	CapabilityConstraints   []string   `json:"capability_constraints,omitempty"`
+	ResourceConstraints     []string   `json:"resource_constraints,omitempty"`
+	MaxTokenLifetimeSeconds int        `json:"max_token_lifetime_seconds,omitempty"`
+	SessionID               *string    `json:"session_id,omitempty"`
+	RequiresConfirmation    bool       `json:"requires_confirmation"`
 }
 
 // ServiceData represents backend service-specific principal data.
@@ -185,38 +185,38 @@ type CreateHumanInput struct {
 
 // CreateApplicationInput contains fields for creating an application principal.
 type CreateApplicationInput struct {
-	ClientID              string
-	DisplayName           string
-	Description           *string
-	LogoURL               *string
-	AppType               AppType
-	RedirectURIs          []string
-	AllowedGrants         []string
-	AllowedResponseTypes  []string
-	AccessTokenTTLSeconds int
+	ClientID               string
+	DisplayName            string
+	Description            *string
+	LogoURL                *string
+	AppType                AppType
+	RedirectURIs           []string
+	AllowedGrants          []string
+	AllowedResponseTypes   []string
+	AccessTokenTTLSeconds  int
 	RefreshTokenTTLSeconds int
-	RefreshTokenRotation  bool
-	FirstParty            bool
-	Public                bool
-	OrganizationID        *uuid.UUID
-	AllowedScopes         []string
-	Metadata              map[string]any
+	RefreshTokenRotation   bool
+	FirstParty             bool
+	Public                 bool
+	OrganizationID         *uuid.UUID
+	AllowedScopes          []string
+	Metadata               map[string]any
 }
 
 // CreateAgentInput contains fields for creating an agent principal.
 type CreateAgentInput struct {
-	Identifier             string
-	DisplayName            string
-	ModelID                string
-	Version                string
-	DelegatingPrincipalID  *uuid.UUID
-	CapabilityConstraints  []string
-	ResourceConstraints    []string
+	Identifier              string
+	DisplayName             string
+	ModelID                 string
+	Version                 string
+	DelegatingPrincipalID   *uuid.UUID
+	CapabilityConstraints   []string
+	ResourceConstraints     []string
 	MaxTokenLifetimeSeconds int
-	RequiresConfirmation   bool
-	OrganizationID         *uuid.UUID
-	AllowedScopes          []string
-	Metadata               map[string]any
+	RequiresConfirmation    bool
+	OrganizationID          *uuid.UUID
+	AllowedScopes           []string
+	Metadata                map[string]any
 }
 
 // CreateServiceInput contains fields for creating a service principal.
@@ -255,25 +255,25 @@ type UpdateHumanInput struct {
 // UpdateApplicationInput contains fields for updating an application principal.
 type UpdateApplicationInput struct {
 	UpdateInput
-	Description           *string
-	LogoURL               *string
-	RedirectURIs          []string
-	AllowedGrants         []string
-	AllowedResponseTypes  []string
-	AccessTokenTTLSeconds *int
+	Description            *string
+	LogoURL                *string
+	RedirectURIs           []string
+	AllowedGrants          []string
+	AllowedResponseTypes   []string
+	AccessTokenTTLSeconds  *int
 	RefreshTokenTTLSeconds *int
-	RefreshTokenRotation  *bool
-	FirstParty            *bool
+	RefreshTokenRotation   *bool
+	FirstParty             *bool
 }
 
 // UpdateAgentInput contains fields for updating an agent principal.
 type UpdateAgentInput struct {
 	UpdateInput
-	Version                *string
-	CapabilityConstraints  []string
-	ResourceConstraints    []string
+	Version                 *string
+	CapabilityConstraints   []string
+	ResourceConstraints     []string
 	MaxTokenLifetimeSeconds *int
-	RequiresConfirmation   *bool
+	RequiresConfirmation    *bool
 }
 
 // UpdateServiceInput contains fields for updating a service principal.
