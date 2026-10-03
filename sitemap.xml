@@ -2,330 +2,346 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://plexusone.github.io/systemforge/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/authz-conventions/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/architecture/systemforge-application-architecture/</loc>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/authorization/integration/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/authorization/query-policy-engines/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/authorization/spicedb-schema/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/authorization/spicedb-setup/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/bff/audience/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/bff/ent-store/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/bff/overview/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/coreapi/overview/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/coreapi/policies/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/coreapi/ratelimit/</loc>
-         <lastmod>2026-09-06</lastmod>
-    </url>
-    <url>
-         <loc>https://plexusone.github.io/systemforge/coreauth/overview/</loc>
-         <lastmod>2026-09-06</lastmod>
-    </url>
-    <url>
-         <loc>https://plexusone.github.io/systemforge/coreauth/providers/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_AUTHN_PRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_AUTHN_TASKS/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_AUTHN_TRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_AUTHZ_PRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_AUTHZ_TASKS/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_AUTHZ_TRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_CASBIN_REMOVAL_TASKS/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_MARKETPLACE_PRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_OAUTH_PRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_OAUTH_TRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_OBSERVABILITY_TRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/FEAT_SCIM2_TASKS/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/feat_audience_jwt/DESIGN/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/feat_audience_jwt/PLAN/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/feat_audience_jwt/PRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/feat_audience_jwt/TASKS/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/feat_ent_stores/DESIGN/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/feat_ent_stores/PLAN/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/feat_ent_stores/PRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/feat_ent_stores/TASKS/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/productgraph/PLAN/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/productgraph/PRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/productgraph/TASKS/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/design/productgraph/TRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/getting-started/configuration/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/getting-started/installation/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/getting-started/quickstart/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/identity/api-keys/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/identity/memberships/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/identity/oauthclient/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/identity/organizations/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/identity/overview/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/identity/security/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/identity/users/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/integration/existing-apps/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/integration/migration/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/marketplace/overview/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/multiapp/overview/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/oauth/apps/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/oauth/authorization-code/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/oauth/client-credentials/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/oauth/overview/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/oauth/service-accounts/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/oauth/tokens/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/observability/overview/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/platform/authority-model/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/platform/product-contract/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/platform/vision/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/reference/api/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/reference/schemas/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.1.0/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.10.0/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/releases/v0.11.0/</loc>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.2.0/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.3.0/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.4.0/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.5.0/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.6.0/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.7.0/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.8.0/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.9.0/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/session/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/session/bff-sessions/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/session/invalidation/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/specs/adrs/ADR-001-core-era-naming-cleanup-systemauth/</loc>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-001/PLAN/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-001/PRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-001/ROADMAP/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-001/TRD/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-002/ROADMAP/</loc>
-         <lastmod>2026-09-06</lastmod>
+         <lastmod>2026-10-03</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-004/ROADMAP/</loc>
+         <lastmod>2026-10-03</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/systemauth/overview/</loc>
+         <lastmod>2026-10-03</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/systemauth/providers/</loc>
+         <lastmod>2026-10-03</lastmod>
     </url>
 </urlset>
