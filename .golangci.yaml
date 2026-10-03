@@ -13,3 +13,7 @@ linters:
     - unconvert
     - unparam
     - whitespace
+formatters:
+  enable:
+    - gofmt
+    - goimports
