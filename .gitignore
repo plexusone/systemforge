@@ -29,6 +29,9 @@ Thumbs.db
 # Ideation transcripts (private — kept locally, never committed)
 IDEATION_CHAT*.md
 
+# Session handoff / context docs (private — kept locally, never committed)
+CONTEXT_*.md
+
 # Ent generated (uncomment if you want to track generated code)
 # identity/ent/*.go
 # !identity/ent/generate.go
