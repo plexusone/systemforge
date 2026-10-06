@@ -92,6 +92,16 @@ func (c *Config) expandEnvVars() {
 		c.Federation.ClientSecret = os.ExpandEnv(c.Federation.ClientSecret)
 	}
 
+	// Expand in social login provider credentials
+	if c.SocialLogin != nil {
+		for _, p := range []*SocialProviderConfig{c.SocialLogin.GitHub, c.SocialLogin.Google} {
+			if p != nil {
+				p.ClientID = os.ExpandEnv(p.ClientID)
+				p.ClientSecret = os.ExpandEnv(p.ClientSecret)
+			}
+		}
+	}
+
 	// Expand in database DSN
 	if c.Database != nil {
 		c.Database.DSN = os.ExpandEnv(c.Database.DSN)

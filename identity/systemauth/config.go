@@ -2,6 +2,7 @@ package systemauth
 
 import (
 	"crypto/rsa"
+	"fmt"
 	"time"
 
 	"github.com/invopop/jsonschema"
@@ -32,6 +33,62 @@ type Config struct {
 
 	// Features enables/disables optional features.
 	Features FeatureConfig `json:"features,omitempty" yaml:"features,omitempty" jsonschema:"description=Feature flags"`
+
+	// SocialLogin enables "log in with GitHub/Google" on this server.
+	// If nil, no social login routes are mounted.
+	SocialLogin *SocialLoginConfig `json:"social_login,omitempty" yaml:"social_login,omitempty" jsonschema:"description=Upstream GitHub/Google social login configuration"`
+}
+
+// SocialLoginConfig configures upstream social login (GitHub, Google).
+// Upstream client credentials live only in the SystemAuth deployment.
+type SocialLoginConfig struct {
+	// GitHub configures login with GitHub. Nil disables it.
+	GitHub *SocialProviderConfig `json:"github,omitempty" yaml:"github,omitempty" jsonschema:"description=GitHub OAuth app credentials"`
+
+	// Google configures login with Google. Nil disables it.
+	Google *SocialProviderConfig `json:"google,omitempty" yaml:"google,omitempty" jsonschema:"description=Google OAuth client credentials"`
+
+	// AllowedRedirectOrigins lists absolute origins (scheme://host[:port])
+	// that a post-login return_to URL may point at, in addition to the
+	// issuer's own origin. Relative same-origin paths are always allowed.
+	AllowedRedirectOrigins []string `json:"allowed_redirect_origins,omitempty" yaml:"allowed_redirect_origins,omitempty" jsonschema:"description=Absolute origins allowed as post-login redirect targets"`
+
+	// DefaultRedirect is where users land after login when no return_to is
+	// given. Default: "/".
+	DefaultRedirect string `json:"default_redirect,omitempty" yaml:"default_redirect,omitempty" jsonschema:"default=/,description=Post-login redirect when none is requested"`
+
+	// SessionLifetime is the absolute lifetime of the login session cookie.
+	// Default: 12h.
+	SessionLifetime Duration `json:"session_lifetime,omitempty" yaml:"session_lifetime,omitempty" jsonschema:"default=12h,description=Absolute login session lifetime"`
+
+	// SkipConsent auto-grants consent for authorization requests from users
+	// signed in through social login. Use only when every registered client
+	// is first-party.
+	SkipConsent bool `json:"skip_consent,omitempty" yaml:"skip_consent,omitempty" jsonschema:"default=false,description=Auto-grant consent for first-party clients"`
+
+	// InsecureCookies drops the __Host- prefix and the Secure flag so the
+	// login works over plain HTTP. Local development only.
+	InsecureCookies bool `json:"insecure_cookies,omitempty" yaml:"insecure_cookies,omitempty" jsonschema:"default=false,description=Development only: allow login cookies over plain HTTP"`
+}
+
+// SocialProviderConfig holds upstream OAuth client credentials.
+//
+//nolint:gosec // G117: Field names are OAuth 2.0 spec-compliant, not actual secrets
+type SocialProviderConfig struct {
+	// ClientID is the upstream OAuth client ID.
+	// Supports environment variable expansion: ${GITHUB_CLIENT_ID}
+	ClientID string `json:"client_id" yaml:"client_id" jsonschema:"required,description=Upstream OAuth client ID (supports env var expansion)"`
+
+	// ClientSecret is the upstream OAuth client secret.
+	// Supports environment variable expansion: ${GITHUB_CLIENT_SECRET}
+	ClientSecret string `json:"client_secret" yaml:"client_secret" jsonschema:"required,description=Upstream OAuth client secret (supports env var expansion)"`
+
+	// RedirectURL overrides the callback URL registered with the provider.
+	// Default: {issuer}/login/{provider}/callback
+	RedirectURL string `json:"redirect_url,omitempty" yaml:"redirect_url,omitempty" jsonschema:"format=uri,description=Callback URL registered with the provider"`
+
+	// Scopes overrides the default scopes.
+	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty" jsonschema:"description=Upstream OAuth scopes"`
 }
 
 // DatabaseConfig configures persistent storage.
@@ -245,6 +302,25 @@ func (c *Config) Validate() error {
 	if c.Issuer == "" {
 		return ErrMissingIssuer
 	}
+	if c.SocialLogin != nil {
+		if err := c.SocialLogin.validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *SocialLoginConfig) validate() error {
+	for name, p := range map[string]*SocialProviderConfig{"github": c.GitHub, "google": c.Google} {
+		if p != nil && (p.ClientID == "" || p.ClientSecret == "") {
+			return fmt.Errorf("%w: %s requires client_id and client_secret", ErrInvalidSocialLoginConfig, name)
+		}
+	}
+	for _, o := range c.AllowedRedirectOrigins {
+		if _, err := parseOrigin(o); err != nil {
+			return fmt.Errorf("%w: allowed_redirect_origins: %v", ErrInvalidSocialLoginConfig, err)
+		}
+	}
 	return nil
 }
 
@@ -267,5 +343,14 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.Tokens.AuthCodeLifetime == 0 {
 		c.Tokens.AuthCodeLifetime = defaults.Tokens.AuthCodeLifetime
+	}
+
+	if c.SocialLogin != nil {
+		if c.SocialLogin.DefaultRedirect == "" {
+			c.SocialLogin.DefaultRedirect = "/"
+		}
+		if c.SocialLogin.SessionLifetime == 0 {
+			c.SocialLogin.SessionLifetime = Duration(12 * time.Hour)
+		}
 	}
 }

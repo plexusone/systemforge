@@ -257,6 +257,109 @@
       "additionalProperties": false,
       "type": "object",
       "description": "Feature flags"
+    },
+    "social_login": {
+      "properties": {
+        "github": {
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "description": "Upstream OAuth client ID (supports env var expansion)"
+            },
+            "client_secret": {
+              "type": "string",
+              "description": "Upstream OAuth client secret (supports env var expansion)"
+            },
+            "redirect_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Callback URL registered with the provider"
+            },
+            "scopes": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "description": "Upstream OAuth scopes"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "client_id",
+            "client_secret"
+          ],
+          "description": "GitHub OAuth app credentials"
+        },
+        "google": {
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "description": "Upstream OAuth client ID (supports env var expansion)"
+            },
+            "client_secret": {
+              "type": "string",
+              "description": "Upstream OAuth client secret (supports env var expansion)"
+            },
+            "redirect_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Callback URL registered with the provider"
+            },
+            "scopes": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "description": "Upstream OAuth scopes"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "client_id",
+            "client_secret"
+          ],
+          "description": "Google OAuth client credentials"
+        },
+        "allowed_redirect_origins": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Absolute origins allowed as post-login redirect targets"
+        },
+        "default_redirect": {
+          "type": "string",
+          "description": "Post-login redirect when none is requested",
+          "default": "/"
+        },
+        "session_lifetime": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "Absolute login session lifetime",
+          "default": "12h",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
+        "skip_consent": {
+          "type": "boolean",
+          "description": "Auto-grant consent for first-party clients",
+          "default": false
+        },
+        "insecure_cookies": {
+          "type": "boolean",
+          "description": "Development only: allow login cookies over plain HTTP",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Upstream GitHub/Google social login configuration"
     }
   },
   "additionalProperties": false,
