@@ -30,6 +30,8 @@ type Server struct {
 	router          chi.Router
 	logger          *slog.Logger
 	observability   *observability.Observability
+	socialOpts      socialOptions
+	social          *socialLogin
 }
 
 // Option configures a Server.
@@ -116,6 +118,16 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		if err := s.storage.CreateClient(context.Background(), client); err != nil {
 			return nil, err
 		}
+	}
+
+	// Set up GitHub/Google social login if configured
+	if cfg.SocialLogin != nil {
+		social, err := newSocialLogin(s)
+		if err != nil {
+			return nil, err
+		}
+		s.social = social
+		s.sessionProvider = newSocialSessionProvider(s.sessionProvider, social)
 	}
 
 	// Set up HTTP router
@@ -232,6 +244,11 @@ func (s *Server) registerEndpoints() {
 
 	// Register discovery endpoints (these are handled by Huma)
 	s.registerDiscoveryEndpoints()
+
+	// Register GitHub/Google login routes
+	if s.social != nil {
+		s.social.registerRoutes(s.router)
+	}
 }
 
 // Router returns the Chi router for mounting.
