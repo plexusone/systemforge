@@ -36,6 +36,11 @@ func (s *Server) fositeInterceptor(next http.Handler) http.Handler {
 				s.revocationEndpoint(w, r)
 				return
 			}
+		case UserInfoPath:
+			if r.Method == http.MethodGet || r.Method == http.MethodPost {
+				s.userinfoEndpoint(w, r)
+				return
+			}
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -97,6 +102,8 @@ func (s *Server) registerOpenAPIOperations() {
 		Tags:          []string{"OAuth"},
 		DefaultStatus: http.StatusOK,
 	}, s.revokeOpenAPI)
+
+	s.registerUserInfoOperation()
 }
 
 // OpenAPI handler stubs - these are never called due to middleware interception,

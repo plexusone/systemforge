@@ -68,6 +68,7 @@ func (s *Server) openIDConfigHandler(_ context.Context, _ *OpenIDConfigInput) (*
 		Issuer:                issuer,
 		AuthorizationEndpoint: issuer + "/oauth/authorize",
 		TokenEndpoint:         issuer + "/oauth/token",
+		UserinfoEndpoint:      issuer + UserInfoPath,
 		JwksURI:               issuer + "/.well-known/jwks.json",
 		IntrospectionEndpoint: issuer + "/oauth/introspect",
 		RevocationEndpoint:    issuer + "/oauth/revoke",
@@ -108,7 +109,9 @@ func (s *Server) openIDConfigHandler(_ context.Context, _ *OpenIDConfigInput) (*
 			"exp",
 			"iat",
 			"name",
+			"picture",
 			"email",
+			"email_verified",
 		},
 		CodeChallengeMethodsSupported: []string{
 			"S256",
