@@ -57,6 +57,16 @@ type Storage interface {
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 }
 
+// SubjectTokenRevoker is implemented by storage that can revoke every
+// access and refresh token issued to a subject (principal). SystemAuth uses
+// it on logout to end the principal's delegated access along with the login
+// session. MemoryStorage and EntStorage implement it.
+type SubjectTokenRevoker interface {
+	// RevokeSubjectTokens marks all of subject's access and refresh tokens
+	// revoked. Revoking a subject without tokens is not an error.
+	RevokeSubjectTokens(ctx context.Context, subject string) error
+}
+
 // StoredRequest holds the data needed to reconstruct a fosite.Requester.
 type StoredRequest struct {
 	ID            string

@@ -205,7 +205,7 @@ func NewAuthorizationSession(ar fosite.AuthorizeRequester) *AuthorizationSession
 }
 
 // OIDCSession creates an OpenID Connect session for Fosite.
-func (s *Server) OIDCSession(subject string, claims map[string]interface{}) *openid.DefaultSession {
+func (s *Server) OIDCSession(subject string, claims map[string]interface{}) *Session {
 	now := time.Now()
 
 	// Build ID token claims
@@ -220,9 +220,9 @@ func (s *Server) OIDCSession(subject string, claims map[string]interface{}) *ope
 	// Add audience (the client ID will be added by Fosite)
 	idClaims.Audience = []string{}
 
-	return &openid.DefaultSession{
+	return &Session{DefaultSession: &openid.DefaultSession{
 		Claims:  idClaims,
 		Headers: &jwt.Headers{},
 		Subject: subject,
-	}
+	}}
 }

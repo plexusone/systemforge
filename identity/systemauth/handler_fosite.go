@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/ory/fosite"
 	"github.com/plexusone/omniobserve/observops"
 	"github.com/plexusone/systemforge/observability"
 )
@@ -245,6 +246,14 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	clientID := ar.GetClient().GetID()
 
+	// Bound refresh-token rotation by the family's absolute lifetime.
+	if err := s.applyTokenFamilyLifetime(ctx, ar); err != nil {
+		logger.Info("token request rejected", "grant_type", grantType, "client_id", clientID, "error", err)
+		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, ar, err)
+		return
+	}
+
 	// Grant the requested scopes
 	for _, scope := range ar.GetRequestedScopes() {
 		ar.GrantScope(scope)
@@ -277,6 +286,39 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// Write the response
 	s.oauth2.WriteAccessResponse(ctx, w, ar, response)
+}
+
+// applyTokenFamilyLifetime enforces the absolute lifetime of a refresh-token
+// family. Fosite rotates refresh tokens on every use (and detects reuse of a
+// rotated token); this caps each new refresh token at the family deadline
+// and rejects, and revokes, a family that has outlived it.
+func (s *Server) applyTokenFamilyLifetime(ctx context.Context, ar fosite.AccessRequester) error {
+	sess, ok := ar.GetSession().(*Session)
+	if !ok || sess.DefaultSession == nil {
+		return nil
+	}
+	now := time.Now().UTC()
+	if sess.FamilyIssuedAt.IsZero() {
+		sess.FamilyIssuedAt = now
+	}
+	maxLifetime := s.config.Tokens.RefreshTokenAbsoluteLifetime.Duration()
+	if maxLifetime <= 0 {
+		return nil
+	}
+	deadline := sess.FamilyIssuedAt.Add(maxLifetime)
+	if ar.GetGrantTypes().ExactOne("refresh_token") && !now.Before(deadline) {
+		if err := s.storage.RevokeRefreshToken(ctx, ar.GetID()); err != nil {
+			return fosite.ErrServerError.WithWrap(err)
+		}
+		if err := s.storage.RevokeAccessToken(ctx, ar.GetID()); err != nil {
+			return fosite.ErrServerError.WithWrap(err)
+		}
+		return fosite.ErrInvalidGrant.WithHint("The refresh token family exceeded its absolute lifetime; sign in again.")
+	}
+	if exp := sess.GetExpiresAt(fosite.RefreshToken); exp.IsZero() || exp.After(deadline) {
+		sess.SetExpiresAt(fosite.RefreshToken, deadline)
+	}
+	return nil
 }
 
 // introspectionEndpoint handles POST /oauth/introspect.

@@ -126,6 +126,12 @@ type TokenConfig struct {
 	// Default: 7 days
 	RefreshTokenLifetime Duration `json:"refresh_token_lifetime,omitempty" yaml:"refresh_token_lifetime,omitempty" jsonschema:"default=168h,description=Refresh token lifetime (e.g. 168h, 720h)"`
 
+	// RefreshTokenAbsoluteLifetime bounds a refresh-token family: rotation
+	// issues a new refresh token on every use, but never past this long
+	// after the original grant. After it the user must sign in again.
+	// Default: 30 days. Must be at least RefreshTokenLifetime.
+	RefreshTokenAbsoluteLifetime Duration `json:"refresh_token_absolute_lifetime,omitempty" yaml:"refresh_token_absolute_lifetime,omitempty" jsonschema:"default=720h,description=Absolute lifetime of a refresh-token family across rotations (e.g. 720h)"`
+
 	// IDTokenLifetime is how long ID tokens are valid.
 	// Default: 1 hour
 	IDTokenLifetime Duration `json:"id_token_lifetime,omitempty" yaml:"id_token_lifetime,omitempty" jsonschema:"default=1h,description=ID token lifetime (e.g. 1h)"`
@@ -283,10 +289,11 @@ func DefaultConfig(issuer string) *Config {
 			RotationDays: 0, // No auto-rotation in embedded mode
 		},
 		Tokens: TokenConfig{
-			AccessTokenLifetime:  Duration(15 * time.Minute),
-			RefreshTokenLifetime: Duration(7 * 24 * time.Hour),
-			IDTokenLifetime:      Duration(1 * time.Hour),
-			AuthCodeLifetime:     Duration(10 * time.Minute),
+			AccessTokenLifetime:          Duration(15 * time.Minute),
+			RefreshTokenLifetime:         Duration(7 * 24 * time.Hour),
+			RefreshTokenAbsoluteLifetime: Duration(30 * 24 * time.Hour),
+			IDTokenLifetime:              Duration(1 * time.Hour),
+			AuthCodeLifetime:             Duration(10 * time.Minute),
 		},
 		Features: FeatureConfig{
 			RequirePKCE:              true,
@@ -301,6 +308,9 @@ func DefaultConfig(issuer string) *Config {
 func (c *Config) Validate() error {
 	if c.Issuer == "" {
 		return ErrMissingIssuer
+	}
+	if abs := c.Tokens.RefreshTokenAbsoluteLifetime; abs != 0 && abs < c.Tokens.RefreshTokenLifetime {
+		return fmt.Errorf("%w: tokens.refresh_token_absolute_lifetime must be at least refresh_token_lifetime", ErrInvalidConfig)
 	}
 	if c.SocialLogin != nil {
 		if err := c.SocialLogin.validate(); err != nil {
@@ -337,6 +347,12 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.Tokens.RefreshTokenLifetime == 0 {
 		c.Tokens.RefreshTokenLifetime = defaults.Tokens.RefreshTokenLifetime
+	}
+	if c.Tokens.RefreshTokenAbsoluteLifetime == 0 {
+		c.Tokens.RefreshTokenAbsoluteLifetime = defaults.Tokens.RefreshTokenAbsoluteLifetime
+		if c.Tokens.RefreshTokenAbsoluteLifetime < c.Tokens.RefreshTokenLifetime {
+			c.Tokens.RefreshTokenAbsoluteLifetime = c.Tokens.RefreshTokenLifetime
+		}
 	}
 	if c.Tokens.IDTokenLifetime == 0 {
 		c.Tokens.IDTokenLifetime = defaults.Tokens.IDTokenLifetime

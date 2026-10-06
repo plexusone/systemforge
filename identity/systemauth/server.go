@@ -286,9 +286,10 @@ func (s *Server) Storage() Storage {
 	return s.storage
 }
 
-// Session creates a new OAuth session for a user.
-func (s *Server) Session(subject string) *openid.DefaultSession {
-	return &openid.DefaultSession{
+// Session creates a new, empty OAuth session for subject. Storage
+// implementations hydrate it when loading codes and tokens.
+func (s *Server) Session(subject string) *Session {
+	return &Session{DefaultSession: &openid.DefaultSession{
 		Claims: &jwt.IDTokenClaims{
 			Issuer:    s.config.Issuer,
 			Subject:   subject,
@@ -296,7 +297,8 @@ func (s *Server) Session(subject string) *openid.DefaultSession {
 			ExpiresAt: time.Now().Add(s.config.Tokens.AccessTokenLifetime.Duration()),
 		},
 		Headers: &jwt.Headers{},
-	}
+		Subject: subject,
+	}}
 }
 
 // RegisterClient registers a new OAuth client.

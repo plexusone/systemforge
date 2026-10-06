@@ -15,6 +15,9 @@ var (
 
 	// ErrInvalidSocialLoginConfig is returned when social login is misconfigured.
 	ErrInvalidSocialLoginConfig = errors.New("systemauth: invalid social login configuration")
+
+	// ErrInvalidConfig is returned when a configuration value is invalid.
+	ErrInvalidConfig = errors.New("systemauth: invalid configuration")
 )
 
 // Client errors.

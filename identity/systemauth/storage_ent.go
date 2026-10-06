@@ -361,23 +361,28 @@ func (s *EntStorage) CreateAuthorizeCodeSession(ctx context.Context, code string
 		return fosite.ErrServerError.WithWrap(err)
 	}
 
-	userID, _ := uuid.Parse(session.GetSubject())
-
-	// Serialize the request for later reconstruction
+	// Serialize the request (including the session) for later reconstruction
 	requestData, err := s.serializeRequest(request)
 	if err != nil {
 		return fosite.ErrServerError.WithWrap(err)
 	}
 
+	subject := sessionSubject(session)
 	builder := s.db.OAuthAuthCode.Create().
 		SetCodeSignature(signature).
 		SetAppID(app.ID).
-		SetUserID(userID).
+		SetSubject(subject).
 		SetRedirectURI(request.GetRequestForm().Get("redirect_uri")).
 		SetScopes(scopesToStrings(request.GetGrantedScopes())).
 		SetState(request.GetRequestForm().Get("state")).
 		SetRequestData(requestData).
-		SetExpiresAt(time.Now().Add(10 * time.Minute))
+		SetExpiresAt(codeExpiry(session))
+
+	userID, err := s.legacyUserID(ctx, subject)
+	if err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	}
+	builder.SetNillableUserID(userID)
 
 	// Store PKCE challenge if present
 	if challenge := request.GetRequestForm().Get("code_challenge"); challenge != "" {
@@ -398,7 +403,21 @@ func (s *EntStorage) CreateAuthorizeCodeSession(ctx context.Context, code string
 	return nil
 }
 
-// GetAuthorizeCodeSession retrieves an authorization code session.
+// codeExpiry returns the authorization code expiry recorded in session, or
+// ten minutes from now when the session carries none.
+func codeExpiry(session fosite.Session) time.Time {
+	if session != nil {
+		if exp := session.GetExpiresAt(fosite.AuthorizeCode); !exp.IsZero() {
+			return exp
+		}
+	}
+	return time.Now().Add(10 * time.Minute)
+}
+
+// GetAuthorizeCodeSession retrieves an authorization code session. A code
+// that was already exchanged returns the request together with
+// fosite.ErrInvalidatedAuthorizeCode so Fosite can revoke the tokens issued
+// from it (authorization code replay).
 func (s *EntStorage) GetAuthorizeCodeSession(ctx context.Context, code string, session fosite.Session) (fosite.Requester, error) {
 	signature := hashToken(code)
 
@@ -413,25 +432,20 @@ func (s *EntStorage) GetAuthorizeCodeSession(ctx context.Context, code string, s
 		return nil, fosite.ErrServerError.WithWrap(err)
 	}
 
+	req := fosite.NewRequest()
+	req.Client = s.entAppToClient(authCode.Edges.App)
+	req.GrantedScope = authCode.Scopes
+	req.RequestedAt = authCode.CreatedAt
+	if err := s.restoreRequest(authCode.RequestData, req, session); err != nil {
+		return nil, fosite.ErrServerError.WithWrap(err)
+	}
+
 	if authCode.Used {
-		return nil, fosite.ErrInvalidatedAuthorizeCode
+		return req, fosite.ErrInvalidatedAuthorizeCode
 	}
 
 	if time.Now().After(authCode.ExpiresAt) {
 		return nil, fosite.ErrTokenExpired
-	}
-
-	// Reconstruct the request
-	client := s.entAppToClient(authCode.Edges.App)
-	req := fosite.NewRequest()
-	req.SetSession(session)
-	req.Client = client
-	req.GrantedScope = authCode.Scopes
-	req.RequestedAt = authCode.CreatedAt
-
-	// Restore form data if available
-	if authCode.RequestData != "" {
-		_ = s.deserializeRequestForm(authCode.RequestData, req)
 	}
 
 	return req, nil
@@ -457,43 +471,87 @@ func (s *EntStorage) InvalidateAuthorizeCodeSession(ctx context.Context, code st
 
 // CreateAccessTokenSession stores an access token session.
 func (s *EntStorage) CreateAccessTokenSession(ctx context.Context, signature string, request fosite.Requester) error {
-	client := request.GetClient()
+	builder, err := s.tokenBuilder(ctx, request)
+	if err != nil {
+		return err
+	}
+	builder.SetAccessTokenSignature(hashToken(signature))
+
+	if _, err := builder.Save(ctx); err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	}
+	return nil
+}
+
+// tokenBuilder prepares a token row for request: app, subject, scopes,
+// expiries, token family and the serialized request with its session.
+func (s *EntStorage) tokenBuilder(ctx context.Context, request fosite.Requester) (*ent.OAuthTokenCreate, error) {
 	session := request.GetSession()
 
-	// Get the app by client ID
 	app, err := s.db.OAuthApp.Query().
-		Where(oauthapp.ClientIDEQ(client.GetID())).
+		Where(oauthapp.ClientIDEQ(request.GetClient().GetID())).
 		First(ctx)
 	if err != nil {
-		return fosite.ErrServerError.WithWrap(err)
+		return nil, fosite.ErrServerError.WithWrap(err)
 	}
 
-	// Serialize request for introspection
 	requestData, err := s.serializeRequest(request)
 	if err != nil {
-		return fosite.ErrServerError.WithWrap(err)
+		return nil, fosite.ErrServerError.WithWrap(err)
 	}
 
+	subject := sessionSubject(session)
 	builder := s.db.OAuthToken.Create().
-		SetAccessTokenSignature(hashToken(signature)).
 		SetAppID(app.ID).
+		SetSubject(subject).
 		SetScopes(scopesToStrings(request.GetGrantedScopes())).
+		SetAudience(scopesToStrings(request.GetGrantedAudience())).
 		SetAccessExpiresAt(session.GetExpiresAt(fosite.AccessToken)).
 		SetRequestData(requestData)
 
-	// Set user ID if present (not client_credentials)
-	if subject := session.GetSubject(); subject != "" {
-		if userID, err := uuid.Parse(subject); err == nil {
-			builder.SetUserID(userID)
-		}
-	}
-
-	_, err = builder.Save(ctx)
+	userID, err := s.legacyUserID(ctx, subject)
 	if err != nil {
-		return fosite.ErrServerError.WithWrap(err)
+		return nil, fosite.ErrServerError.WithWrap(err)
 	}
+	builder.SetNillableUserID(userID)
 
-	return nil
+	// The Fosite request ID identifies the token family across rotations.
+	if familyID, err := uuid.Parse(request.GetID()); err == nil {
+		builder.SetFamilyID(familyID)
+	}
+	return builder, nil
+}
+
+// legacyUserID returns subject as a User ID when a legacy User row with that
+// ID exists, so the optional user edge is populated for User-based
+// deployments. Principal-based subjects return nil.
+func (s *EntStorage) legacyUserID(ctx context.Context, subject string) (*uuid.UUID, error) {
+	id, err := uuid.Parse(subject)
+	if err != nil {
+		return nil, nil
+	}
+	exists, err := s.db.User.Query().Where(userEnt.IDEQ(id)).Exist(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("checking user: %w", err)
+	}
+	if !exists {
+		return nil, nil
+	}
+	return &id, nil
+}
+
+// tokenRequest rebuilds the Fosite request stored with a token row.
+func (s *EntStorage) tokenRequest(token *ent.OAuthToken, session fosite.Session) (*fosite.Request, error) {
+	req := fosite.NewRequest()
+	req.Client = s.entAppToClient(token.Edges.App)
+	req.GrantedScope = token.Scopes
+	req.GrantedAudience = token.Audience
+	req.RequestedAt = token.CreatedAt
+	req.ID = token.FamilyID.String()
+	if err := s.restoreRequest(token.RequestData, req, session); err != nil {
+		return nil, err
+	}
+	return req, nil
 }
 
 // GetAccessTokenSession retrieves an access token session.
@@ -517,21 +575,30 @@ func (s *EntStorage) GetAccessTokenSession(ctx context.Context, signature string
 		return nil, fosite.ErrTokenExpired
 	}
 
-	client := s.entAppToClient(token.Edges.App)
-	req := fosite.NewRequest()
-	req.SetSession(session)
-	req.Client = client
-	req.GrantedScope = token.Scopes
-
+	req, err := s.tokenRequest(token, session)
+	if err != nil {
+		return nil, fosite.ErrServerError.WithWrap(err)
+	}
 	return req, nil
 }
 
-// DeleteAccessTokenSession removes an access token session.
+// DeleteAccessTokenSession removes an access token session. A row that
+// also carries a refresh token is marked revoked instead, so the refresh
+// token's reuse can still be detected.
 func (s *EntStorage) DeleteAccessTokenSession(ctx context.Context, signature string) error {
-	_, err := s.db.OAuthToken.Delete().
-		Where(oauthtoken.AccessTokenSignatureEQ(hashToken(signature))).
-		Exec(ctx)
-	if err != nil && !ent.IsNotFound(err) {
+	sig := hashToken(signature)
+	if _, err := s.db.OAuthToken.Delete().
+		Where(oauthtoken.AccessTokenSignatureEQ(sig), oauthtoken.RefreshTokenSignatureIsNil()).
+		Exec(ctx); err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	}
+	_, err := s.db.OAuthToken.Update().
+		Where(oauthtoken.AccessTokenSignatureEQ(sig)).
+		SetRevoked(true).
+		SetRevokedAt(time.Now()).
+		SetRevokedReason("deleted").
+		Save(ctx)
+	if err != nil {
 		return fosite.ErrServerError.WithWrap(err)
 	}
 	return nil
@@ -539,57 +606,53 @@ func (s *EntStorage) DeleteAccessTokenSession(ctx context.Context, signature str
 
 // --- Refresh Token Storage ---
 
-// CreateRefreshTokenSession stores a refresh token session.
+// CreateRefreshTokenSession stores a refresh token session. Fosite creates
+// the paired access token first; the refresh token is attached to that row
+// so revoking either revokes both.
 func (s *EntStorage) CreateRefreshTokenSession(ctx context.Context, signature string, accessSignature string, request fosite.Requester) error {
-	client := request.GetClient()
-	session := request.GetSession()
+	refreshSig := hashToken(signature)
+	refreshExp := request.GetSession().GetExpiresAt(fosite.RefreshToken)
 
-	// Get the app by client ID
-	app, err := s.db.OAuthApp.Query().
-		Where(oauthapp.ClientIDEQ(client.GetID())).
-		First(ctx)
-	if err != nil {
-		return fosite.ErrServerError.WithWrap(err)
-	}
-
-	// Serialize request
-	requestData, err := s.serializeRequest(request)
-	if err != nil {
-		return fosite.ErrServerError.WithWrap(err)
-	}
-
-	builder := s.db.OAuthToken.Create().
-		SetAccessTokenSignature(hashToken(accessSignature)).
-		SetRefreshTokenSignature(hashToken(signature)).
-		SetAppID(app.ID).
-		SetScopes(scopesToStrings(request.GetGrantedScopes())).
-		SetAccessExpiresAt(session.GetExpiresAt(fosite.AccessToken)).
-		SetRefreshExpiresAt(session.GetExpiresAt(fosite.RefreshToken)).
-		SetRequestData(requestData)
-
-	if subject := session.GetSubject(); subject != "" {
-		if userID, err := uuid.Parse(subject); err == nil {
-			builder.SetUserID(userID)
+	if accessSignature != "" {
+		update := s.db.OAuthToken.Update().
+			Where(oauthtoken.AccessTokenSignatureEQ(hashToken(accessSignature))).
+			SetRefreshTokenSignature(refreshSig)
+		if !refreshExp.IsZero() {
+			update.SetRefreshExpiresAt(refreshExp)
+		}
+		n, err := update.Save(ctx)
+		if err != nil {
+			return fosite.ErrServerError.WithWrap(err)
+		}
+		if n > 0 {
+			return nil
 		}
 	}
 
-	// Set request ID for token family tracking
-	req, ok := request.(*fosite.Request)
-	if ok && req.ID != "" {
-		if familyID, err := uuid.Parse(req.ID); err == nil {
-			builder.SetFamilyID(familyID)
-		}
-	}
-
-	_, err = builder.Save(ctx)
+	builder, err := s.tokenBuilder(ctx, request)
 	if err != nil {
+		return err
+	}
+	accessKey := accessSignature
+	if accessKey == "" {
+		// The access token signature column is required and unique.
+		accessKey = "refresh-only:" + signature
+	}
+	builder.SetAccessTokenSignature(hashToken(accessKey)).
+		SetRefreshTokenSignature(refreshSig)
+	if !refreshExp.IsZero() {
+		builder.SetRefreshExpiresAt(refreshExp)
+	}
+	if _, err := builder.Save(ctx); err != nil {
 		return fosite.ErrServerError.WithWrap(err)
 	}
-
 	return nil
 }
 
-// GetRefreshTokenSession retrieves a refresh token session.
+// GetRefreshTokenSession retrieves a refresh token session. A revoked
+// (rotated) refresh token returns the request together with
+// fosite.ErrInactiveToken so Fosite detects reuse and revokes the whole
+// token family.
 func (s *EntStorage) GetRefreshTokenSession(ctx context.Context, signature string, session fosite.Session) (fosite.Requester, error) {
 	token, err := s.db.OAuthToken.Query().
 		Where(oauthtoken.RefreshTokenSignatureEQ(hashToken(signature))).
@@ -602,20 +665,18 @@ func (s *EntStorage) GetRefreshTokenSession(ctx context.Context, signature strin
 		return nil, fosite.ErrServerError.WithWrap(err)
 	}
 
+	req, err := s.tokenRequest(token, session)
+	if err != nil {
+		return nil, fosite.ErrServerError.WithWrap(err)
+	}
+
 	if token.Revoked {
-		return nil, fosite.ErrInactiveToken
+		return req, fosite.ErrInactiveToken
 	}
 
 	if token.RefreshExpiresAt != nil && time.Now().After(*token.RefreshExpiresAt) {
 		return nil, fosite.ErrTokenExpired
 	}
-
-	client := s.entAppToClient(token.Edges.App)
-	req := fosite.NewRequest()
-	req.SetSession(session)
-	req.Client = client
-	req.GrantedScope = token.Scopes
-	req.ID = token.FamilyID.String()
 
 	return req, nil
 }
@@ -628,67 +689,127 @@ func (s *EntStorage) DeleteRefreshTokenSession(ctx context.Context, signature st
 		SetRevokedAt(time.Now()).
 		SetRevokedReason("deleted").
 		Save(ctx)
-	if err != nil && !ent.IsNotFound(err) {
+	if err != nil {
 		return fosite.ErrServerError.WithWrap(err)
 	}
 	return nil
 }
 
-// RevokeRefreshToken revokes a refresh token by request ID (family).
+// RevokeRefreshToken revokes every token of the family identified by the
+// Fosite request ID.
 func (s *EntStorage) RevokeRefreshToken(ctx context.Context, requestID string) error {
+	return s.revokeFamily(ctx, requestID, "revoked")
+}
+
+// RevokeAccessToken revokes every token of the family identified by the
+// Fosite request ID. Access and refresh tokens share rows, so this is the
+// same operation as RevokeRefreshToken.
+func (s *EntStorage) RevokeAccessToken(ctx context.Context, requestID string) error {
+	return s.revokeFamily(ctx, requestID, "revoked")
+}
+
+// RotateRefreshToken retires the current tokens of the family before Fosite
+// stores their replacements. Retired rows stay (revoked) so that reuse of
+// an old refresh token is detected.
+func (s *EntStorage) RotateRefreshToken(ctx context.Context, requestID string, refreshTokenSignature string) error {
+	return s.revokeFamily(ctx, requestID, "rotated")
+}
+
+func (s *EntStorage) revokeFamily(ctx context.Context, requestID, reason string) error {
 	familyID, err := uuid.Parse(requestID)
 	if err != nil {
-		return nil // Not a valid family ID, skip
+		// Fosite request IDs are UUIDs; anything else has no stored family.
+		return nil
 	}
-
 	_, err = s.db.OAuthToken.Update().
-		Where(oauthtoken.FamilyIDEQ(familyID)).
+		Where(oauthtoken.FamilyIDEQ(familyID), oauthtoken.RevokedEQ(false)).
 		SetRevoked(true).
 		SetRevokedAt(time.Now()).
-		SetRevokedReason("refresh_rotation").
+		SetRevokedReason(reason).
 		Save(ctx)
-	if err != nil && !ent.IsNotFound(err) {
+	if err != nil {
 		return fosite.ErrServerError.WithWrap(err)
 	}
 	return nil
 }
 
-// RevokeAccessToken revokes an access token by request ID.
-func (s *EntStorage) RevokeAccessToken(ctx context.Context, requestID string) error {
-	return s.RevokeRefreshToken(ctx, requestID)
-}
-
-// RotateRefreshToken handles refresh token rotation.
-func (s *EntStorage) RotateRefreshToken(ctx context.Context, requestID string, refreshTokenSignature string) error {
-	// Mark the old refresh token as rotated
+// RevokeSubjectTokens implements SubjectTokenRevoker.
+func (s *EntStorage) RevokeSubjectTokens(ctx context.Context, subject string) error {
+	if subject == "" {
+		return nil
+	}
 	_, err := s.db.OAuthToken.Update().
-		Where(oauthtoken.RefreshTokenSignatureEQ(hashToken(refreshTokenSignature))).
+		Where(oauthtoken.SubjectEQ(subject), oauthtoken.RevokedEQ(false)).
 		SetRevoked(true).
 		SetRevokedAt(time.Now()).
-		SetRevokedReason("rotated").
+		SetRevokedReason("logout").
 		Save(ctx)
-	if err != nil && !ent.IsNotFound(err) {
-		return fosite.ErrServerError.WithWrap(err)
+	if err != nil {
+		return fmt.Errorf("revoking tokens for subject: %w", err)
 	}
 	return nil
 }
 
 // --- PKCE Storage ---
 
-// CreatePKCERequestSession creates a PKCE session (stored with auth code).
+// CreatePKCERequestSession records the PKCE challenge on the authorization
+// code row (Fosite stores the code first and strips the challenge from the
+// request it hands to CreateAuthorizeCodeSession).
 func (s *EntStorage) CreatePKCERequestSession(ctx context.Context, signature string, requester fosite.Requester) error {
-	// PKCE data is stored with the authorization code
+	form := requester.GetRequestForm()
+	challenge := form.Get("code_challenge")
+	if challenge == "" {
+		return nil
+	}
+	method := form.Get("code_challenge_method")
+	if method == "" {
+		method = "plain"
+	}
+	n, err := s.db.OAuthAuthCode.Update().
+		Where(oauthauthcode.CodeSignatureEQ(hashToken(signature))).
+		SetCodeChallenge(challenge).
+		SetCodeChallengeMethod(method).
+		Save(ctx)
+	if err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	}
+	if n == 0 {
+		return fosite.ErrServerError.WithHint("PKCE session has no matching authorization code.")
+	}
 	return nil
 }
 
-// GetPKCERequestSession gets the PKCE session for a code.
+// GetPKCERequestSession gets the PKCE session for a code: the stored
+// authorization request with the code challenge restored to its form.
 func (s *EntStorage) GetPKCERequestSession(ctx context.Context, signature string, session fosite.Session) (fosite.Requester, error) {
-	return s.GetAuthorizeCodeSession(ctx, signature, session)
+	authCode, err := s.db.OAuthAuthCode.Query().
+		Where(oauthauthcode.CodeSignatureEQ(hashToken(signature))).
+		WithApp().
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fosite.ErrNotFound
+		}
+		return nil, fosite.ErrServerError.WithWrap(err)
+	}
+	req := fosite.NewRequest()
+	req.Client = s.entAppToClient(authCode.Edges.App)
+	if err := s.restoreRequest(authCode.RequestData, req, session); err != nil {
+		return nil, fosite.ErrServerError.WithWrap(err)
+	}
+	if authCode.CodeChallenge != "" {
+		req.Form.Set("code_challenge", authCode.CodeChallenge)
+		req.Form.Set("code_challenge_method", authCode.CodeChallengeMethod)
+	}
+	return req, nil
 }
 
-// DeletePKCERequestSession deletes a PKCE session.
+// DeletePKCERequestSession is a no-op: the PKCE data lives on the
+// authorization code row, which the authorization code handler invalidates
+// once the exchange completes. Invalidating it here would make the code
+// look replayed to the authorization code handler.
 func (s *EntStorage) DeletePKCERequestSession(ctx context.Context, signature string) error {
-	return s.InvalidateAuthorizeCodeSession(ctx, signature)
+	return nil
 }
 
 // --- Client Assertion JWT Tracking ---
@@ -761,13 +882,36 @@ func (s *EntStorage) entAppToClient(app *ent.OAuthApp) *Client {
 	return client
 }
 
-// serializeRequest serializes a Fosite request for storage.
+// storedRequestData is the serialized form of a Fosite request.
+type storedRequestData struct {
+	ID                string              `json:"id,omitempty"`
+	RequestedAt       time.Time           `json:"requested_at"`
+	GrantedScopes     []string            `json:"granted_scopes"`
+	RequestedScope    []string            `json:"requested_scope"`
+	RequestedAudience []string            `json:"requested_audience,omitempty"`
+	GrantedAudience   []string            `json:"granted_audience,omitempty"`
+	Form              map[string][]string `json:"form"`
+	Session           json.RawMessage     `json:"session,omitempty"`
+}
+
+// serializeRequest serializes a Fosite request, including its session, for
+// storage.
 func (s *EntStorage) serializeRequest(request fosite.Requester) (string, error) {
-	data := map[string]any{
-		"requested_at":    request.GetRequestedAt(),
-		"granted_scopes":  scopesToStrings(request.GetGrantedScopes()),
-		"requested_scope": scopesToStrings(request.GetRequestedScopes()),
-		"form":            request.GetRequestForm(),
+	data := storedRequestData{
+		ID:                request.GetID(),
+		RequestedAt:       request.GetRequestedAt(),
+		GrantedScopes:     scopesToStrings(request.GetGrantedScopes()),
+		RequestedScope:    scopesToStrings(request.GetRequestedScopes()),
+		RequestedAudience: scopesToStrings(request.GetRequestedAudience()),
+		GrantedAudience:   scopesToStrings(request.GetGrantedAudience()),
+		Form:              request.GetRequestForm(),
+	}
+	if sess := request.GetSession(); sess != nil {
+		raw, err := json.Marshal(sess)
+		if err != nil {
+			return "", fmt.Errorf("serializing session: %w", err)
+		}
+		data.Session = raw
 	}
 
 	bytes, err := json.Marshal(data)
@@ -777,26 +921,43 @@ func (s *EntStorage) serializeRequest(request fosite.Requester) (string, error) 
 	return string(bytes), nil
 }
 
-// deserializeRequestForm restores form data to a request.
-func (s *EntStorage) deserializeRequestForm(data string, req *fosite.Request) error {
-	var stored map[string]any
-	if err := json.Unmarshal([]byte(data), &stored); err != nil {
-		return err
+// restoreRequest restores the serialized request data into req and
+// hydrates session (when non-nil) with the stored session.
+func (s *EntStorage) restoreRequest(data string, req *fosite.Request, session fosite.Session) error {
+	if session != nil {
+		req.SetSession(session)
 	}
-
-	// Restore form values
-	if form, ok := stored["form"].(map[string]any); ok {
-		for k, v := range form {
-			if vals, ok := v.([]any); ok {
-				for _, val := range vals {
-					if strVal, ok := val.(string); ok {
-						req.Form.Add(k, strVal)
-					}
-				}
-			}
+	if data == "" {
+		return nil
+	}
+	var stored storedRequestData
+	if err := json.Unmarshal([]byte(data), &stored); err != nil {
+		return fmt.Errorf("decoding stored request: %w", err)
+	}
+	if stored.ID != "" {
+		req.ID = stored.ID
+	}
+	if !stored.RequestedAt.IsZero() {
+		req.RequestedAt = stored.RequestedAt
+	}
+	req.RequestedScope = stored.RequestedScope
+	if len(stored.GrantedScopes) > 0 {
+		req.GrantedScope = stored.GrantedScopes
+	}
+	req.RequestedAudience = stored.RequestedAudience
+	if len(stored.GrantedAudience) > 0 {
+		req.GrantedAudience = stored.GrantedAudience
+	}
+	for k, vals := range stored.Form {
+		for _, v := range vals {
+			req.Form.Add(k, v)
 		}
 	}
-
+	if session != nil && len(stored.Session) > 0 && string(stored.Session) != "null" {
+		if err := json.Unmarshal(stored.Session, session); err != nil {
+			return fmt.Errorf("decoding stored session: %w", err)
+		}
+	}
 	return nil
 }
 

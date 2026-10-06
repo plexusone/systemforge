@@ -288,7 +288,9 @@ func (s *MemoryStorage) GetRefreshTokenSession(ctx context.Context, signature st
 	}
 
 	if stored.revoked {
-		return nil, fosite.ErrInactiveToken
+		// Return the request with ErrInactiveToken so Fosite can detect
+		// refresh-token reuse and revoke the whole token family.
+		return stored.request, fosite.ErrInactiveToken
 	}
 
 	if !stored.expiresAt.IsZero() && time.Now().After(stored.expiresAt) {
@@ -334,15 +336,39 @@ func (s *MemoryStorage) RevokeAccessToken(ctx context.Context, requestID string)
 	return nil
 }
 
-// RotateRefreshToken rotates a refresh token.
+// RotateRefreshToken retires the refresh and access tokens of a token
+// family before Fosite issues their replacements. Retired refresh tokens
+// stay stored (inactive) so that a later reuse is detected.
 func (s *MemoryStorage) RotateRefreshToken(ctx context.Context, requestID string, refreshTokenSignature string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Revoke old tokens with the same request ID
 	for _, token := range s.refreshTokens {
 		if token.requestID == requestID {
 			token.revoked = true
+		}
+	}
+	for _, token := range s.accessTokens {
+		if token.requestID == requestID {
+			token.revoked = true
+		}
+	}
+	return nil
+}
+
+// RevokeSubjectTokens implements SubjectTokenRevoker.
+func (s *MemoryStorage) RevokeSubjectTokens(ctx context.Context, subject string) error {
+	if subject == "" {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, m := range []map[string]*storedToken{s.accessTokens, s.refreshTokens} {
+		for _, token := range m {
+			if sessionSubject(token.request.GetSession()) == subject {
+				token.revoked = true
+			}
 		}
 	}
 	return nil
@@ -529,4 +555,7 @@ func (s *MemoryStorage) DeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 // Ensure MemoryStorage implements Storage.
-var _ Storage = (*MemoryStorage)(nil)
+var (
+	_ Storage             = (*MemoryStorage)(nil)
+	_ SubjectTokenRevoker = (*MemoryStorage)(nil)
+)
