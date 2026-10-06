@@ -53,19 +53,22 @@ func WithPrincipalDirectory(dir PrincipalDirectory) Option {
 }
 
 // WithLoginSessionStore sets the store for __Host-sf_login sessions.
-// Defaults to an in-memory (single-instance) store.
+// Defaults to an EntLoginSessionStore when the server uses EntStorage,
+// otherwise an in-memory (single-instance) store.
 func WithLoginSessionStore(store LoginSessionStore) Option {
 	return func(s *Server) { s.socialOpts.sessions = store }
 }
 
 // WithLoginStateStore sets the store for in-flight upstream OAuth state.
-// Defaults to an in-memory (single-instance) store.
+// Defaults to an EntLoginStateStore when the server uses EntStorage,
+// otherwise an in-memory (single-instance) store.
 func WithLoginStateStore(store oauthclient.StateStore) Option {
 	return func(s *Server) { s.socialOpts.states = store }
 }
 
 // WithConsentStore sets the store for user consent decisions made on the
-// /consent page. Defaults to an in-memory (single-instance) store.
+// /consent page. Defaults to an EntConsentStore when the server uses
+// EntStorage, otherwise an in-memory (single-instance) store.
 func WithConsentStore(store ConsentStore) Option {
 	return func(s *Server) { s.socialOpts.consents = store }
 }
@@ -161,6 +164,21 @@ func newSocialLogin(s *Server) (*socialLogin, error) {
 	if revoker, ok := s.storage.(SubjectTokenRevoker); ok {
 		sl.revoker = revoker
 	}
+	// With Ent storage, login sessions, upstream login state and consents
+	// default to the shared database so restarts keep users signed in and
+	// replicas share state. Otherwise they default to single-instance
+	// in-memory stores.
+	if es, ok := s.storage.(*EntStorage); ok {
+		if sl.consents == nil {
+			sl.consents = NewEntConsentStore(es.db)
+		}
+		if sl.states == nil {
+			sl.states = NewEntLoginStateStore(es.db)
+		}
+		if sl.sessions == nil {
+			sl.sessions = NewEntLoginSessionStore(es.db)
+		}
+	}
 	if sl.consents == nil {
 		sl.consents = NewMemoryConsentStore()
 	}
@@ -168,6 +186,7 @@ func newSocialLogin(s *Server) (*socialLogin, error) {
 		sl.states = oauthclient.NewMemoryStateStore()
 	}
 	if sl.sessions == nil {
+		s.logger.Warn("social login using in-memory login sessions; users are signed out on restart and sessions are not shared between instances")
 		sl.sessions = NewMemoryLoginSessionStore()
 	}
 	if sl.directory == nil {
