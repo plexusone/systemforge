@@ -232,6 +232,9 @@ func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
 
 	app, err := builder.Save(ctx)
 	if err != nil {
+		if ent.IsConstraintError(err) {
+			return fmt.Errorf("%w: %s", ErrClientExists, client.ID)
+		}
 		return fmt.Errorf("failed to create client: %w", err)
 	}
 

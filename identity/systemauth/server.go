@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -125,13 +126,19 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		return nil, err
 	}
 
-	// Register static clients from config
+	// Register static clients from config. With persistent storage they
+	// already exist after a restart (or on a sibling replica), so existing
+	// clients are updated from the config instead.
 	for _, clientCfg := range cfg.Clients {
 		client, err := NewClientFromConfig(clientCfg)
 		if err != nil {
 			return nil, err
 		}
-		if err := s.storage.CreateClient(context.Background(), client); err != nil {
+		err = s.storage.CreateClient(context.Background(), client)
+		if errors.Is(err, ErrClientExists) {
+			err = s.storage.UpdateClient(context.Background(), client)
+		}
+		if err != nil {
 			return nil, err
 		}
 	}
