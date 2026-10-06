@@ -18,6 +18,9 @@ type Application func(*sql.Selector)
 // Credential is the predicate function for credential builders.
 type Credential func(*sql.Selector)
 
+// ExternalIdentity is the predicate function for externalidentity builders.
+type ExternalIdentity func(*sql.Selector)
+
 // Human is the predicate function for human builders.
 type Human func(*sql.Selector)
 

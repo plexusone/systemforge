@@ -20,6 +20,8 @@ type Tx struct {
 	Application *ApplicationClient
 	// Credential is the client for interacting with the Credential builders.
 	Credential *CredentialClient
+	// ExternalIdentity is the client for interacting with the ExternalIdentity builders.
+	ExternalIdentity *ExternalIdentityClient
 	// Human is the client for interacting with the Human builders.
 	Human *HumanClient
 	// Invite is the client for interacting with the Invite builders.
@@ -199,6 +201,7 @@ func (tx *Tx) init() {
 	tx.Agent = NewAgentClient(tx.config)
 	tx.Application = NewApplicationClient(tx.config)
 	tx.Credential = NewCredentialClient(tx.config)
+	tx.ExternalIdentity = NewExternalIdentityClient(tx.config)
 	tx.Human = NewHumanClient(tx.config)
 	tx.Invite = NewInviteClient(tx.config)
 	tx.License = NewLicenseClient(tx.config)

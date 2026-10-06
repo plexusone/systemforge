@@ -16,6 +16,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/credential"
+	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
@@ -236,6 +237,21 @@ func (_u *PrincipalUpdate) AddCredentials(v ...*Credential) *PrincipalUpdate {
 	return _u.AddCredentialIDs(ids...)
 }
 
+// AddExternalIdentityIDs adds the "external_identities" edge to the ExternalIdentity entity by IDs.
+func (_u *PrincipalUpdate) AddExternalIdentityIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.AddExternalIdentityIDs(ids...)
+	return _u
+}
+
+// AddExternalIdentities adds the "external_identities" edges to the ExternalIdentity entity.
+func (_u *PrincipalUpdate) AddExternalIdentities(v ...*ExternalIdentity) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalIdentityIDs(ids...)
+}
+
 // AddPrincipalTokenIDs adds the "principal_tokens" edge to the PrincipalToken entity by IDs.
 func (_u *PrincipalUpdate) AddPrincipalTokenIDs(ids ...uuid.UUID) *PrincipalUpdate {
 	_u.mutation.AddPrincipalTokenIDs(ids...)
@@ -410,6 +426,27 @@ func (_u *PrincipalUpdate) RemoveCredentials(v ...*Credential) *PrincipalUpdate 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCredentialIDs(ids...)
+}
+
+// ClearExternalIdentities clears all "external_identities" edges to the ExternalIdentity entity.
+func (_u *PrincipalUpdate) ClearExternalIdentities() *PrincipalUpdate {
+	_u.mutation.ClearExternalIdentities()
+	return _u
+}
+
+// RemoveExternalIdentityIDs removes the "external_identities" edge to ExternalIdentity entities by IDs.
+func (_u *PrincipalUpdate) RemoveExternalIdentityIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.RemoveExternalIdentityIDs(ids...)
+	return _u
+}
+
+// RemoveExternalIdentities removes "external_identities" edges to ExternalIdentity entities.
+func (_u *PrincipalUpdate) RemoveExternalIdentities(v ...*ExternalIdentity) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalIdentityIDs(ids...)
 }
 
 // ClearPrincipalTokens clears all "principal_tokens" edges to the PrincipalToken entity.
@@ -855,6 +892,51 @@ func (_u *PrincipalUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credential.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ExternalIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ExternalIdentitiesTable,
+			Columns: []string{principal.ExternalIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalidentity.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalIdentitiesIDs(); len(nodes) > 0 && !_u.mutation.ExternalIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ExternalIdentitiesTable,
+			Columns: []string{principal.ExternalIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalIdentitiesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ExternalIdentitiesTable,
+			Columns: []string{principal.ExternalIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalidentity.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1436,6 +1518,21 @@ func (_u *PrincipalUpdateOne) AddCredentials(v ...*Credential) *PrincipalUpdateO
 	return _u.AddCredentialIDs(ids...)
 }
 
+// AddExternalIdentityIDs adds the "external_identities" edge to the ExternalIdentity entity by IDs.
+func (_u *PrincipalUpdateOne) AddExternalIdentityIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.AddExternalIdentityIDs(ids...)
+	return _u
+}
+
+// AddExternalIdentities adds the "external_identities" edges to the ExternalIdentity entity.
+func (_u *PrincipalUpdateOne) AddExternalIdentities(v ...*ExternalIdentity) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalIdentityIDs(ids...)
+}
+
 // AddPrincipalTokenIDs adds the "principal_tokens" edge to the PrincipalToken entity by IDs.
 func (_u *PrincipalUpdateOne) AddPrincipalTokenIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
 	_u.mutation.AddPrincipalTokenIDs(ids...)
@@ -1610,6 +1707,27 @@ func (_u *PrincipalUpdateOne) RemoveCredentials(v ...*Credential) *PrincipalUpda
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCredentialIDs(ids...)
+}
+
+// ClearExternalIdentities clears all "external_identities" edges to the ExternalIdentity entity.
+func (_u *PrincipalUpdateOne) ClearExternalIdentities() *PrincipalUpdateOne {
+	_u.mutation.ClearExternalIdentities()
+	return _u
+}
+
+// RemoveExternalIdentityIDs removes the "external_identities" edge to ExternalIdentity entities by IDs.
+func (_u *PrincipalUpdateOne) RemoveExternalIdentityIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.RemoveExternalIdentityIDs(ids...)
+	return _u
+}
+
+// RemoveExternalIdentities removes "external_identities" edges to ExternalIdentity entities.
+func (_u *PrincipalUpdateOne) RemoveExternalIdentities(v ...*ExternalIdentity) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalIdentityIDs(ids...)
 }
 
 // ClearPrincipalTokens clears all "principal_tokens" edges to the PrincipalToken entity.
@@ -2085,6 +2203,51 @@ func (_u *PrincipalUpdateOne) sqlSave(ctx context.Context) (_node *Principal, er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credential.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ExternalIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ExternalIdentitiesTable,
+			Columns: []string{principal.ExternalIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalidentity.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalIdentitiesIDs(); len(nodes) > 0 && !_u.mutation.ExternalIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ExternalIdentitiesTable,
+			Columns: []string{principal.ExternalIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalIdentitiesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ExternalIdentitiesTable,
+			Columns: []string{principal.ExternalIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalidentity.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

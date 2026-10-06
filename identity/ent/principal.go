@@ -64,6 +64,8 @@ type PrincipalEdges struct {
 	ServicePrincipal *ServicePrincipal `json:"service_principal,omitempty"`
 	// Credentials for authentication
 	Credentials []*Credential `json:"credentials,omitempty"`
+	// Linked upstream login identities
+	ExternalIdentities []*ExternalIdentity `json:"external_identities,omitempty"`
 	// Tokens issued to this principal
 	PrincipalTokens []*PrincipalToken `json:"principal_tokens,omitempty"`
 	// Organization memberships
@@ -82,7 +84,7 @@ type PrincipalEdges struct {
 	AssignedSeats []*SeatAssignment `json:"assigned_seats,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [14]bool
+	loadedTypes [15]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -149,10 +151,19 @@ func (e PrincipalEdges) CredentialsOrErr() ([]*Credential, error) {
 	return nil, &NotLoadedError{edge: "credentials"}
 }
 
+// ExternalIdentitiesOrErr returns the ExternalIdentities value or an error if the edge
+// was not loaded in eager-loading.
+func (e PrincipalEdges) ExternalIdentitiesOrErr() ([]*ExternalIdentity, error) {
+	if e.loadedTypes[6] {
+		return e.ExternalIdentities, nil
+	}
+	return nil, &NotLoadedError{edge: "external_identities"}
+}
+
 // PrincipalTokensOrErr returns the PrincipalTokens value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) PrincipalTokensOrErr() ([]*PrincipalToken, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[7] {
 		return e.PrincipalTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "principal_tokens"}
@@ -161,7 +172,7 @@ func (e PrincipalEdges) PrincipalTokensOrErr() ([]*PrincipalToken, error) {
 // PrincipalMembershipsOrErr returns the PrincipalMemberships value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) PrincipalMembershipsOrErr() ([]*PrincipalMembership, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[8] {
 		return e.PrincipalMemberships, nil
 	}
 	return nil, &NotLoadedError{edge: "principal_memberships"}
@@ -170,7 +181,7 @@ func (e PrincipalEdges) PrincipalMembershipsOrErr() ([]*PrincipalMembership, err
 // OwnedOrganizationsOrErr returns the OwnedOrganizations value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) OwnedOrganizationsOrErr() ([]*Organization, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[9] {
 		return e.OwnedOrganizations, nil
 	}
 	return nil, &NotLoadedError{edge: "owned_organizations"}
@@ -179,7 +190,7 @@ func (e PrincipalEdges) OwnedOrganizationsOrErr() ([]*Organization, error) {
 // SentInvitesOrErr returns the SentInvites value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) SentInvitesOrErr() ([]*Invite, error) {
-	if e.loadedTypes[9] {
+	if e.loadedTypes[10] {
 		return e.SentInvites, nil
 	}
 	return nil, &NotLoadedError{edge: "sent_invites"}
@@ -188,7 +199,7 @@ func (e PrincipalEdges) SentInvitesOrErr() ([]*Invite, error) {
 // OwnedListingsOrErr returns the OwnedListings value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) OwnedListingsOrErr() ([]*Listing, error) {
-	if e.loadedTypes[10] {
+	if e.loadedTypes[11] {
 		return e.OwnedListings, nil
 	}
 	return nil, &NotLoadedError{edge: "owned_listings"}
@@ -197,7 +208,7 @@ func (e PrincipalEdges) OwnedListingsOrErr() ([]*Listing, error) {
 // PurchasedLicensesOrErr returns the PurchasedLicenses value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) PurchasedLicensesOrErr() ([]*License, error) {
-	if e.loadedTypes[11] {
+	if e.loadedTypes[12] {
 		return e.PurchasedLicenses, nil
 	}
 	return nil, &NotLoadedError{edge: "purchased_licenses"}
@@ -206,7 +217,7 @@ func (e PrincipalEdges) PurchasedLicensesOrErr() ([]*License, error) {
 // SeatAssignmentsOrErr returns the SeatAssignments value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) SeatAssignmentsOrErr() ([]*SeatAssignment, error) {
-	if e.loadedTypes[12] {
+	if e.loadedTypes[13] {
 		return e.SeatAssignments, nil
 	}
 	return nil, &NotLoadedError{edge: "seat_assignments"}
@@ -215,7 +226,7 @@ func (e PrincipalEdges) SeatAssignmentsOrErr() ([]*SeatAssignment, error) {
 // AssignedSeatsOrErr returns the AssignedSeats value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) AssignedSeatsOrErr() ([]*SeatAssignment, error) {
-	if e.loadedTypes[13] {
+	if e.loadedTypes[14] {
 		return e.AssignedSeats, nil
 	}
 	return nil, &NotLoadedError{edge: "assigned_seats"}
@@ -367,6 +378,11 @@ func (_m *Principal) QueryServicePrincipal() *ServicePrincipalQuery {
 // QueryCredentials queries the "credentials" edge of the Principal entity.
 func (_m *Principal) QueryCredentials() *CredentialQuery {
 	return NewPrincipalClient(_m.config).QueryCredentials(_m)
+}
+
+// QueryExternalIdentities queries the "external_identities" edge of the Principal entity.
+func (_m *Principal) QueryExternalIdentities() *ExternalIdentityQuery {
+	return NewPrincipalClient(_m.config).QueryExternalIdentities(_m)
 }
 
 // QueryPrincipalTokens queries the "principal_tokens" edge of the Principal entity.

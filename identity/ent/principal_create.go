@@ -16,6 +16,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/credential"
+	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
@@ -236,6 +237,21 @@ func (_c *PrincipalCreate) AddCredentials(v ...*Credential) *PrincipalCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddCredentialIDs(ids...)
+}
+
+// AddExternalIdentityIDs adds the "external_identities" edge to the ExternalIdentity entity by IDs.
+func (_c *PrincipalCreate) AddExternalIdentityIDs(ids ...uuid.UUID) *PrincipalCreate {
+	_c.mutation.AddExternalIdentityIDs(ids...)
+	return _c
+}
+
+// AddExternalIdentities adds the "external_identities" edges to the ExternalIdentity entity.
+func (_c *PrincipalCreate) AddExternalIdentities(v ...*ExternalIdentity) *PrincipalCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExternalIdentityIDs(ids...)
 }
 
 // AddPrincipalTokenIDs adds the "principal_tokens" edge to the PrincipalToken entity by IDs.
@@ -622,6 +638,22 @@ func (_c *PrincipalCreate) createSpec() (*Principal, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credential.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ExternalIdentitiesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ExternalIdentitiesTable,
+			Columns: []string{principal.ExternalIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externalidentity.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -48,6 +48,8 @@ const (
 	EdgeServicePrincipal = "service_principal"
 	// EdgeCredentials holds the string denoting the credentials edge name in mutations.
 	EdgeCredentials = "credentials"
+	// EdgeExternalIdentities holds the string denoting the external_identities edge name in mutations.
+	EdgeExternalIdentities = "external_identities"
 	// EdgePrincipalTokens holds the string denoting the principal_tokens edge name in mutations.
 	EdgePrincipalTokens = "principal_tokens"
 	// EdgePrincipalMemberships holds the string denoting the principal_memberships edge name in mutations.
@@ -108,6 +110,13 @@ const (
 	CredentialsInverseTable = "sf_credentials"
 	// CredentialsColumn is the table column denoting the credentials relation/edge.
 	CredentialsColumn = "principal_id"
+	// ExternalIdentitiesTable is the table that holds the external_identities relation/edge.
+	ExternalIdentitiesTable = "sf_external_identities"
+	// ExternalIdentitiesInverseTable is the table name for the ExternalIdentity entity.
+	// It exists in this package in order to avoid circular dependency with the "externalidentity" package.
+	ExternalIdentitiesInverseTable = "sf_external_identities"
+	// ExternalIdentitiesColumn is the table column denoting the external_identities relation/edge.
+	ExternalIdentitiesColumn = "principal_id"
 	// PrincipalTokensTable is the table that holds the principal_tokens relation/edge.
 	PrincipalTokensTable = "sf_principal_tokens"
 	// PrincipalTokensInverseTable is the table name for the PrincipalToken entity.
@@ -329,6 +338,20 @@ func ByCredentials(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByExternalIdentitiesCount orders the results by external_identities count.
+func ByExternalIdentitiesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newExternalIdentitiesStep(), opts...)
+	}
+}
+
+// ByExternalIdentities orders the results by external_identities terms.
+func ByExternalIdentities(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newExternalIdentitiesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByPrincipalTokensCount orders the results by principal_tokens count.
 func ByPrincipalTokensCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -480,6 +503,13 @@ func newCredentialsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CredentialsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CredentialsTable, CredentialsColumn),
+	)
+}
+func newExternalIdentitiesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ExternalIdentitiesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdentitiesTable, ExternalIdentitiesColumn),
 	)
 }
 func newPrincipalTokensStep() *sqlgraph.Step {

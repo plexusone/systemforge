@@ -20,6 +20,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/credential"
+	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
@@ -57,6 +58,8 @@ type Client struct {
 	Application *ApplicationClient
 	// Credential is the client for interacting with the Credential builders.
 	Credential *CredentialClient
+	// ExternalIdentity is the client for interacting with the ExternalIdentity builders.
+	ExternalIdentity *ExternalIdentityClient
 	// Human is the client for interacting with the Human builders.
 	Human *HumanClient
 	// Invite is the client for interacting with the Invite builders.
@@ -116,6 +119,7 @@ func (c *Client) init() {
 	c.Agent = NewAgentClient(c.config)
 	c.Application = NewApplicationClient(c.config)
 	c.Credential = NewCredentialClient(c.config)
+	c.ExternalIdentity = NewExternalIdentityClient(c.config)
 	c.Human = NewHumanClient(c.config)
 	c.Invite = NewInviteClient(c.config)
 	c.License = NewLicenseClient(c.config)
@@ -234,6 +238,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Agent:                 NewAgentClient(cfg),
 		Application:           NewApplicationClient(cfg),
 		Credential:            NewCredentialClient(cfg),
+		ExternalIdentity:      NewExternalIdentityClient(cfg),
 		Human:                 NewHumanClient(cfg),
 		Invite:                NewInviteClient(cfg),
 		License:               NewLicenseClient(cfg),
@@ -279,6 +284,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Agent:                 NewAgentClient(cfg),
 		Application:           NewApplicationClient(cfg),
 		Credential:            NewCredentialClient(cfg),
+		ExternalIdentity:      NewExternalIdentityClient(cfg),
 		Human:                 NewHumanClient(cfg),
 		Invite:                NewInviteClient(cfg),
 		License:               NewLicenseClient(cfg),
@@ -330,12 +336,12 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.APIKey, c.Agent, c.Application, c.Credential, c.Human, c.Invite, c.License,
-		c.Listing, c.Membership, c.OAuthAccount, c.OAuthApp, c.OAuthAppSecret,
-		c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
-		c.PrincipalMembership, c.PrincipalToken, c.RefreshToken, c.SeatAssignment,
-		c.ServiceAccount, c.ServiceAccountKeyPair, c.ServicePrincipal, c.Subscription,
-		c.User,
+		c.APIKey, c.Agent, c.Application, c.Credential, c.ExternalIdentity, c.Human,
+		c.Invite, c.License, c.Listing, c.Membership, c.OAuthAccount, c.OAuthApp,
+		c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
+		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
+		c.RefreshToken, c.SeatAssignment, c.ServiceAccount, c.ServiceAccountKeyPair,
+		c.ServicePrincipal, c.Subscription, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -345,12 +351,12 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.APIKey, c.Agent, c.Application, c.Credential, c.Human, c.Invite, c.License,
-		c.Listing, c.Membership, c.OAuthAccount, c.OAuthApp, c.OAuthAppSecret,
-		c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
-		c.PrincipalMembership, c.PrincipalToken, c.RefreshToken, c.SeatAssignment,
-		c.ServiceAccount, c.ServiceAccountKeyPair, c.ServicePrincipal, c.Subscription,
-		c.User,
+		c.APIKey, c.Agent, c.Application, c.Credential, c.ExternalIdentity, c.Human,
+		c.Invite, c.License, c.Listing, c.Membership, c.OAuthAccount, c.OAuthApp,
+		c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
+		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
+		c.RefreshToken, c.SeatAssignment, c.ServiceAccount, c.ServiceAccountKeyPair,
+		c.ServicePrincipal, c.Subscription, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -367,6 +373,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Application.mutate(ctx, m)
 	case *CredentialMutation:
 		return c.Credential.mutate(ctx, m)
+	case *ExternalIdentityMutation:
+		return c.ExternalIdentity.mutate(ctx, m)
 	case *HumanMutation:
 		return c.Human.mutate(ctx, m)
 	case *InviteMutation:
@@ -1057,6 +1065,155 @@ func (c *CredentialClient) mutate(ctx context.Context, m *CredentialMutation) (V
 		return (&CredentialDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Credential mutation op: %q", m.Op())
+	}
+}
+
+// ExternalIdentityClient is a client for the ExternalIdentity schema.
+type ExternalIdentityClient struct {
+	config
+}
+
+// NewExternalIdentityClient returns a client for the ExternalIdentity from the given config.
+func NewExternalIdentityClient(c config) *ExternalIdentityClient {
+	return &ExternalIdentityClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `externalidentity.Hooks(f(g(h())))`.
+func (c *ExternalIdentityClient) Use(hooks ...Hook) {
+	c.hooks.ExternalIdentity = append(c.hooks.ExternalIdentity, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `externalidentity.Intercept(f(g(h())))`.
+func (c *ExternalIdentityClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ExternalIdentity = append(c.inters.ExternalIdentity, interceptors...)
+}
+
+// Create returns a builder for creating a ExternalIdentity entity.
+func (c *ExternalIdentityClient) Create() *ExternalIdentityCreate {
+	mutation := newExternalIdentityMutation(c.config, OpCreate)
+	return &ExternalIdentityCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ExternalIdentity entities.
+func (c *ExternalIdentityClient) CreateBulk(builders ...*ExternalIdentityCreate) *ExternalIdentityCreateBulk {
+	return &ExternalIdentityCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ExternalIdentityClient) MapCreateBulk(slice any, setFunc func(*ExternalIdentityCreate, int)) *ExternalIdentityCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ExternalIdentityCreateBulk{err: fmt.Errorf("calling to ExternalIdentityClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ExternalIdentityCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ExternalIdentityCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ExternalIdentity.
+func (c *ExternalIdentityClient) Update() *ExternalIdentityUpdate {
+	mutation := newExternalIdentityMutation(c.config, OpUpdate)
+	return &ExternalIdentityUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ExternalIdentityClient) UpdateOne(_m *ExternalIdentity) *ExternalIdentityUpdateOne {
+	mutation := newExternalIdentityMutation(c.config, OpUpdateOne, withExternalIdentity(_m))
+	return &ExternalIdentityUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ExternalIdentityClient) UpdateOneID(id uuid.UUID) *ExternalIdentityUpdateOne {
+	mutation := newExternalIdentityMutation(c.config, OpUpdateOne, withExternalIdentityID(id))
+	return &ExternalIdentityUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ExternalIdentity.
+func (c *ExternalIdentityClient) Delete() *ExternalIdentityDelete {
+	mutation := newExternalIdentityMutation(c.config, OpDelete)
+	return &ExternalIdentityDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ExternalIdentityClient) DeleteOne(_m *ExternalIdentity) *ExternalIdentityDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ExternalIdentityClient) DeleteOneID(id uuid.UUID) *ExternalIdentityDeleteOne {
+	builder := c.Delete().Where(externalidentity.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ExternalIdentityDeleteOne{builder}
+}
+
+// Query returns a query builder for ExternalIdentity.
+func (c *ExternalIdentityClient) Query() *ExternalIdentityQuery {
+	return &ExternalIdentityQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeExternalIdentity},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ExternalIdentity entity by its id.
+func (c *ExternalIdentityClient) Get(ctx context.Context, id uuid.UUID) (*ExternalIdentity, error) {
+	return c.Query().Where(externalidentity.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ExternalIdentityClient) GetX(ctx context.Context, id uuid.UUID) *ExternalIdentity {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPrincipal queries the principal edge of a ExternalIdentity.
+func (c *ExternalIdentityClient) QueryPrincipal(_m *ExternalIdentity) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(externalidentity.Table, externalidentity.FieldID, id),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, externalidentity.PrincipalTable, externalidentity.PrincipalColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ExternalIdentityClient) Hooks() []Hook {
+	return c.hooks.ExternalIdentity
+}
+
+// Interceptors returns the client interceptors.
+func (c *ExternalIdentityClient) Interceptors() []Interceptor {
+	return c.inters.ExternalIdentity
+}
+
+func (c *ExternalIdentityClient) mutate(ctx context.Context, m *ExternalIdentityMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ExternalIdentityCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ExternalIdentityUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ExternalIdentityUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ExternalIdentityDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ExternalIdentity mutation op: %q", m.Op())
 	}
 }
 
@@ -3452,6 +3609,22 @@ func (c *PrincipalClient) QueryCredentials(_m *Principal) *CredentialQuery {
 	return query
 }
 
+// QueryExternalIdentities queries the external_identities edge of a Principal.
+func (c *PrincipalClient) QueryExternalIdentities(_m *Principal) *ExternalIdentityQuery {
+	query := (&ExternalIdentityClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, id),
+			sqlgraph.To(externalidentity.Table, externalidentity.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.ExternalIdentitiesTable, principal.ExternalIdentitiesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryPrincipalTokens queries the principal_tokens edge of a Principal.
 func (c *PrincipalClient) QueryPrincipalTokens(_m *Principal) *PrincipalTokenQuery {
 	query := (&PrincipalTokenClient{config: c.config}).Query()
@@ -5221,17 +5394,19 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		APIKey, Agent, Application, Credential, Human, Invite, License, Listing,
-		Membership, OAuthAccount, OAuthApp, OAuthAppSecret, OAuthAuthCode,
-		OAuthConsent, OAuthToken, Organization, Principal, PrincipalMembership,
-		PrincipalToken, RefreshToken, SeatAssignment, ServiceAccount,
-		ServiceAccountKeyPair, ServicePrincipal, Subscription, User []ent.Hook
+		APIKey, Agent, Application, Credential, ExternalIdentity, Human, Invite,
+		License, Listing, Membership, OAuthAccount, OAuthApp, OAuthAppSecret,
+		OAuthAuthCode, OAuthConsent, OAuthToken, Organization, Principal,
+		PrincipalMembership, PrincipalToken, RefreshToken, SeatAssignment,
+		ServiceAccount, ServiceAccountKeyPair, ServicePrincipal, Subscription,
+		User []ent.Hook
 	}
 	inters struct {
-		APIKey, Agent, Application, Credential, Human, Invite, License, Listing,
-		Membership, OAuthAccount, OAuthApp, OAuthAppSecret, OAuthAuthCode,
-		OAuthConsent, OAuthToken, Organization, Principal, PrincipalMembership,
-		PrincipalToken, RefreshToken, SeatAssignment, ServiceAccount,
-		ServiceAccountKeyPair, ServicePrincipal, Subscription, User []ent.Interceptor
+		APIKey, Agent, Application, Credential, ExternalIdentity, Human, Invite,
+		License, Listing, Membership, OAuthAccount, OAuthApp, OAuthAppSecret,
+		OAuthAuthCode, OAuthConsent, OAuthToken, Organization, Principal,
+		PrincipalMembership, PrincipalToken, RefreshToken, SeatAssignment,
+		ServiceAccount, ServiceAccountKeyPair, ServicePrincipal, Subscription,
+		User []ent.Interceptor
 	}
 )

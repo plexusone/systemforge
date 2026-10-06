@@ -16,6 +16,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/credential"
+	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
@@ -102,6 +103,7 @@ func checkColumn(t, c string) error {
 			agent.Table:                 agent.ValidColumn,
 			application.Table:           application.ValidColumn,
 			credential.Table:            credential.ValidColumn,
+			externalidentity.Table:      externalidentity.ValidColumn,
 			human.Table:                 human.ValidColumn,
 			invite.Table:                invite.ValidColumn,
 			license.Table:               license.ValidColumn,

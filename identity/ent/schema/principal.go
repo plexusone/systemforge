@@ -111,6 +111,10 @@ func (Principal) Edges() []ent.Edge {
 		edge.To("credentials", Credential.Type).
 			Comment("Credentials for authentication"),
 
+		// Upstream login identities (GitHub, Google, ...) linked to this principal
+		edge.To("external_identities", ExternalIdentity.Type).
+			Comment("Linked upstream login identities"),
+
 		// Tokens issued to this principal
 		edge.To("principal_tokens", PrincipalToken.Type).
 			Comment("Tokens issued to this principal"),

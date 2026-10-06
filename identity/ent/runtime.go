@@ -10,6 +10,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/credential"
+	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
@@ -204,6 +205,37 @@ func init() {
 	credentialDescID := credentialFields[0].Descriptor()
 	// credential.DefaultID holds the default value on creation for the id field.
 	credential.DefaultID = credentialDescID.Default.(func() uuid.UUID)
+	externalidentityMixin := schema.ExternalIdentity{}.Mixin()
+	externalidentityMixinFields0 := externalidentityMixin[0].Fields()
+	_ = externalidentityMixinFields0
+	externalidentityFields := schema.ExternalIdentity{}.Fields()
+	_ = externalidentityFields
+	// externalidentityDescCreatedAt is the schema descriptor for created_at field.
+	externalidentityDescCreatedAt := externalidentityMixinFields0[1].Descriptor()
+	// externalidentity.DefaultCreatedAt holds the default value on creation for the created_at field.
+	externalidentity.DefaultCreatedAt = externalidentityDescCreatedAt.Default.(func() time.Time)
+	// externalidentityDescUpdatedAt is the schema descriptor for updated_at field.
+	externalidentityDescUpdatedAt := externalidentityMixinFields0[2].Descriptor()
+	// externalidentity.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	externalidentity.DefaultUpdatedAt = externalidentityDescUpdatedAt.Default.(func() time.Time)
+	// externalidentity.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	externalidentity.UpdateDefaultUpdatedAt = externalidentityDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// externalidentityDescProvider is the schema descriptor for provider field.
+	externalidentityDescProvider := externalidentityFields[1].Descriptor()
+	// externalidentity.ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
+	externalidentity.ProviderValidator = externalidentityDescProvider.Validators[0].(func(string) error)
+	// externalidentityDescSubject is the schema descriptor for subject field.
+	externalidentityDescSubject := externalidentityFields[2].Descriptor()
+	// externalidentity.SubjectValidator is a validator for the "subject" field. It is called by the builders before save.
+	externalidentity.SubjectValidator = externalidentityDescSubject.Validators[0].(func(string) error)
+	// externalidentityDescEmailVerified is the schema descriptor for email_verified field.
+	externalidentityDescEmailVerified := externalidentityFields[4].Descriptor()
+	// externalidentity.DefaultEmailVerified holds the default value on creation for the email_verified field.
+	externalidentity.DefaultEmailVerified = externalidentityDescEmailVerified.Default.(bool)
+	// externalidentityDescID is the schema descriptor for id field.
+	externalidentityDescID := externalidentityMixinFields0[0].Descriptor()
+	// externalidentity.DefaultID holds the default value on creation for the id field.
+	externalidentity.DefaultID = externalidentityDescID.Default.(func() uuid.UUID)
 	humanMixin := schema.Human{}.Mixin()
 	humanMixinFields0 := humanMixin[0].Fields()
 	_ = humanMixinFields0

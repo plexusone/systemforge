@@ -207,6 +207,30 @@ func (f CredentialMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Muta
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.CredentialMutation", m)
 }
 
+// The ExternalIdentityQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type ExternalIdentityQueryRuleFunc func(context.Context, *ent.ExternalIdentityQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f ExternalIdentityQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ExternalIdentityQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ExternalIdentityQuery", q)
+}
+
+// The ExternalIdentityMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type ExternalIdentityMutationRuleFunc func(context.Context, *ent.ExternalIdentityMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f ExternalIdentityMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.ExternalIdentityMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ExternalIdentityMutation", m)
+}
+
 // The HumanQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type HumanQueryRuleFunc func(context.Context, *ent.HumanQuery) error
@@ -778,6 +802,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.CredentialQuery:
 		return q.Filter(), nil
+	case *ent.ExternalIdentityQuery:
+		return q.Filter(), nil
 	case *ent.HumanQuery:
 		return q.Filter(), nil
 	case *ent.InviteQuery:
@@ -836,6 +862,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.ApplicationMutation:
 		return m.Filter(), nil
 	case *ent.CredentialMutation:
+		return m.Filter(), nil
+	case *ent.ExternalIdentityMutation:
 		return m.Filter(), nil
 	case *ent.HumanMutation:
 		return m.Filter(), nil

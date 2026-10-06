@@ -16,6 +16,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/credential"
+	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
@@ -42,6 +43,7 @@ type PrincipalQuery struct {
 	withAgent                *AgentQuery
 	withServicePrincipal     *ServicePrincipalQuery
 	withCredentials          *CredentialQuery
+	withExternalIdentities   *ExternalIdentityQuery
 	withPrincipalTokens      *PrincipalTokenQuery
 	withPrincipalMemberships *PrincipalMembershipQuery
 	withOwnedOrganizations   *OrganizationQuery
@@ -211,6 +213,28 @@ func (_q *PrincipalQuery) QueryCredentials() *CredentialQuery {
 			sqlgraph.From(principal.Table, principal.FieldID, selector),
 			sqlgraph.To(credential.Table, credential.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, principal.CredentialsTable, principal.CredentialsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryExternalIdentities chains the current query on the "external_identities" edge.
+func (_q *PrincipalQuery) QueryExternalIdentities() *ExternalIdentityQuery {
+	query := (&ExternalIdentityClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, selector),
+			sqlgraph.To(externalidentity.Table, externalidentity.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.ExternalIdentitiesTable, principal.ExternalIdentitiesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -592,6 +616,7 @@ func (_q *PrincipalQuery) Clone() *PrincipalQuery {
 		withAgent:                _q.withAgent.Clone(),
 		withServicePrincipal:     _q.withServicePrincipal.Clone(),
 		withCredentials:          _q.withCredentials.Clone(),
+		withExternalIdentities:   _q.withExternalIdentities.Clone(),
 		withPrincipalTokens:      _q.withPrincipalTokens.Clone(),
 		withPrincipalMemberships: _q.withPrincipalMemberships.Clone(),
 		withOwnedOrganizations:   _q.withOwnedOrganizations.Clone(),
@@ -669,6 +694,17 @@ func (_q *PrincipalQuery) WithCredentials(opts ...func(*CredentialQuery)) *Princ
 		opt(query)
 	}
 	_q.withCredentials = query
+	return _q
+}
+
+// WithExternalIdentities tells the query-builder to eager-load the nodes that are connected to
+// the "external_identities" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PrincipalQuery) WithExternalIdentities(opts ...func(*ExternalIdentityQuery)) *PrincipalQuery {
+	query := (&ExternalIdentityClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withExternalIdentities = query
 	return _q
 }
 
@@ -838,13 +874,14 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 	var (
 		nodes       = []*Principal{}
 		_spec       = _q.querySpec()
-		loadedTypes = [14]bool{
+		loadedTypes = [15]bool{
 			_q.withOrganization != nil,
 			_q.withHuman != nil,
 			_q.withApplication != nil,
 			_q.withAgent != nil,
 			_q.withServicePrincipal != nil,
 			_q.withCredentials != nil,
+			_q.withExternalIdentities != nil,
 			_q.withPrincipalTokens != nil,
 			_q.withPrincipalMemberships != nil,
 			_q.withOwnedOrganizations != nil,
@@ -907,6 +944,15 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 		if err := _q.loadCredentials(ctx, query, nodes,
 			func(n *Principal) { n.Edges.Credentials = []*Credential{} },
 			func(n *Principal, e *Credential) { n.Edges.Credentials = append(n.Edges.Credentials, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withExternalIdentities; query != nil {
+		if err := _q.loadExternalIdentities(ctx, query, nodes,
+			func(n *Principal) { n.Edges.ExternalIdentities = []*ExternalIdentity{} },
+			func(n *Principal, e *ExternalIdentity) {
+				n.Edges.ExternalIdentities = append(n.Edges.ExternalIdentities, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -1128,6 +1174,36 @@ func (_q *PrincipalQuery) loadCredentials(ctx context.Context, query *Credential
 	}
 	query.Where(predicate.Credential(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(principal.CredentialsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.PrincipalID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "principal_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PrincipalQuery) loadExternalIdentities(ctx context.Context, query *ExternalIdentityQuery, nodes []*Principal, init func(*Principal), assign func(*Principal, *ExternalIdentity)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Principal)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(externalidentity.FieldPrincipalID)
+	}
+	query.Where(predicate.ExternalIdentity(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(principal.ExternalIdentitiesColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

@@ -277,6 +277,44 @@ var (
 			},
 		},
 	}
+	// SfExternalIdentitiesColumns holds the columns for the "sf_external_identities" table.
+	SfExternalIdentitiesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "provider", Type: field.TypeString},
+		{Name: "subject", Type: field.TypeString},
+		{Name: "email", Type: field.TypeString, Nullable: true},
+		{Name: "email_verified", Type: field.TypeBool, Default: false},
+		{Name: "last_login_at", Type: field.TypeTime, Nullable: true},
+		{Name: "principal_id", Type: field.TypeUUID},
+	}
+	// SfExternalIdentitiesTable holds the schema information for the "sf_external_identities" table.
+	SfExternalIdentitiesTable = &schema.Table{
+		Name:       "sf_external_identities",
+		Columns:    SfExternalIdentitiesColumns,
+		PrimaryKey: []*schema.Column{SfExternalIdentitiesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "sf_external_identities_sf_principals_external_identities",
+				Columns:    []*schema.Column{SfExternalIdentitiesColumns[8]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "externalidentity_provider_subject",
+				Unique:  true,
+				Columns: []*schema.Column{SfExternalIdentitiesColumns[3], SfExternalIdentitiesColumns[4]},
+			},
+			{
+				Name:    "externalidentity_principal_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfExternalIdentitiesColumns[8]},
+			},
+		},
+	}
 	// SfHumansColumns holds the columns for the "sf_humans" table.
 	SfHumansColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1610,6 +1648,7 @@ var (
 		SfAgentsTable,
 		SfApplicationsTable,
 		SfCredentialsTable,
+		SfExternalIdentitiesTable,
 		SfHumansTable,
 		SfInvitesTable,
 		SfLicensesTable,
@@ -1653,6 +1692,10 @@ func init() {
 	SfCredentialsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfCredentialsTable.Annotation = &entsql.Annotation{
 		Table: "sf_credentials",
+	}
+	SfExternalIdentitiesTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfExternalIdentitiesTable.Annotation = &entsql.Annotation{
+		Table: "sf_external_identities",
 	}
 	SfHumansTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfHumansTable.Annotation = &entsql.Annotation{

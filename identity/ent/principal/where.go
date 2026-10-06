@@ -504,6 +504,29 @@ func HasCredentialsWith(preds ...predicate.Credential) predicate.Principal {
 	})
 }
 
+// HasExternalIdentities applies the HasEdge predicate on the "external_identities" edge.
+func HasExternalIdentities() predicate.Principal {
+	return predicate.Principal(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdentitiesTable, ExternalIdentitiesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasExternalIdentitiesWith applies the HasEdge predicate on the "external_identities" edge with a given conditions (other predicates).
+func HasExternalIdentitiesWith(preds ...predicate.ExternalIdentity) predicate.Principal {
+	return predicate.Principal(func(s *sql.Selector) {
+		step := newExternalIdentitiesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasPrincipalTokens applies the HasEdge predicate on the "principal_tokens" edge.
 func HasPrincipalTokens() predicate.Principal {
 	return predicate.Principal(func(s *sql.Selector) {
