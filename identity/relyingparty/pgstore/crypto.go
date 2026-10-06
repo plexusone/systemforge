@@ -112,12 +112,16 @@ func (kr *keyring) seal(table, rowKey string, plaintext []byte) (string, []byte,
 		return "", plaintext, nil
 	}
 	aead := kr.aeads[kr.primaryID]
-	out := make([]byte, 1+aead.NonceSize(), 1+aead.NonceSize()+len(plaintext)+aead.Overhead())
-	out[0] = sealVersion
-	if _, err := rand.Read(out[1:]); err != nil {
+	// The nonce gets its own buffer filled only by crypto/rand. Slicing it
+	// out of the output buffer, whose first byte is the hardcoded version,
+	// trips gosec G407 (hardcoded nonce) even though the nonce is random.
+	nonce := make([]byte, aead.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
 		return "", nil, fmt.Errorf("pgstore: generating nonce: %w", err)
 	}
-	nonce := out[1:]
+	out := make([]byte, 0, 1+len(nonce)+len(plaintext)+aead.Overhead())
+	out = append(out, sealVersion)
+	out = append(out, nonce...)
 	return kr.primaryID, aead.Seal(out, nonce, plaintext, aad(table, rowKey, kr.primaryID)), nil
 }
 
