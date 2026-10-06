@@ -478,7 +478,10 @@ func (_q *OAuthAuthCodeQuery) loadUser(ctx context.Context, query *UserQuery, no
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*OAuthAuthCode)
 	for i := range nodes {
-		fk := nodes[i].UserID
+		if nodes[i].UserID == nil {
+			continue
+		}
+		fk := *nodes[i].UserID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}

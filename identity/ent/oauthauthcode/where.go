@@ -71,6 +71,11 @@ func UserID(v uuid.UUID) predicate.OAuthAuthCode {
 	return predicate.OAuthAuthCode(sql.FieldEQ(FieldUserID, v))
 }
 
+// Subject applies equality check predicate on the "subject" field. It's identical to SubjectEQ.
+func Subject(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldEQ(FieldSubject, v))
+}
+
 // CodeChallenge applies equality check predicate on the "code_challenge" field. It's identical to CodeChallengeEQ.
 func CodeChallenge(v string) predicate.OAuthAuthCode {
 	return predicate.OAuthAuthCode(sql.FieldEQ(FieldCodeChallenge, v))
@@ -234,6 +239,91 @@ func UserIDIn(vs ...uuid.UUID) predicate.OAuthAuthCode {
 // UserIDNotIn applies the NotIn predicate on the "user_id" field.
 func UserIDNotIn(vs ...uuid.UUID) predicate.OAuthAuthCode {
 	return predicate.OAuthAuthCode(sql.FieldNotIn(FieldUserID, vs...))
+}
+
+// UserIDIsNil applies the IsNil predicate on the "user_id" field.
+func UserIDIsNil() predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldIsNull(FieldUserID))
+}
+
+// UserIDNotNil applies the NotNil predicate on the "user_id" field.
+func UserIDNotNil() predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldNotNull(FieldUserID))
+}
+
+// SubjectEQ applies the EQ predicate on the "subject" field.
+func SubjectEQ(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldEQ(FieldSubject, v))
+}
+
+// SubjectNEQ applies the NEQ predicate on the "subject" field.
+func SubjectNEQ(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldNEQ(FieldSubject, v))
+}
+
+// SubjectIn applies the In predicate on the "subject" field.
+func SubjectIn(vs ...string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldIn(FieldSubject, vs...))
+}
+
+// SubjectNotIn applies the NotIn predicate on the "subject" field.
+func SubjectNotIn(vs ...string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldNotIn(FieldSubject, vs...))
+}
+
+// SubjectGT applies the GT predicate on the "subject" field.
+func SubjectGT(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldGT(FieldSubject, v))
+}
+
+// SubjectGTE applies the GTE predicate on the "subject" field.
+func SubjectGTE(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldGTE(FieldSubject, v))
+}
+
+// SubjectLT applies the LT predicate on the "subject" field.
+func SubjectLT(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldLT(FieldSubject, v))
+}
+
+// SubjectLTE applies the LTE predicate on the "subject" field.
+func SubjectLTE(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldLTE(FieldSubject, v))
+}
+
+// SubjectContains applies the Contains predicate on the "subject" field.
+func SubjectContains(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldContains(FieldSubject, v))
+}
+
+// SubjectHasPrefix applies the HasPrefix predicate on the "subject" field.
+func SubjectHasPrefix(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldHasPrefix(FieldSubject, v))
+}
+
+// SubjectHasSuffix applies the HasSuffix predicate on the "subject" field.
+func SubjectHasSuffix(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldHasSuffix(FieldSubject, v))
+}
+
+// SubjectIsNil applies the IsNil predicate on the "subject" field.
+func SubjectIsNil() predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldIsNull(FieldSubject))
+}
+
+// SubjectNotNil applies the NotNil predicate on the "subject" field.
+func SubjectNotNil() predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldNotNull(FieldSubject))
+}
+
+// SubjectEqualFold applies the EqualFold predicate on the "subject" field.
+func SubjectEqualFold(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldEqualFold(FieldSubject, v))
+}
+
+// SubjectContainsFold applies the ContainsFold predicate on the "subject" field.
+func SubjectContainsFold(v string) predicate.OAuthAuthCode {
+	return predicate.OAuthAuthCode(sql.FieldContainsFold(FieldSubject, v))
 }
 
 // CodeChallengeEQ applies the EQ predicate on the "code_challenge" field.

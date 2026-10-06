@@ -46,6 +46,20 @@ func (_c *OAuthTokenCreate) SetNillableUserID(v *uuid.UUID) *OAuthTokenCreate {
 	return _c
 }
 
+// SetSubject sets the "subject" field.
+func (_c *OAuthTokenCreate) SetSubject(v string) *OAuthTokenCreate {
+	_c.mutation.SetSubject(v)
+	return _c
+}
+
+// SetNillableSubject sets the "subject" field if the given value is not nil.
+func (_c *OAuthTokenCreate) SetNillableSubject(v *string) *OAuthTokenCreate {
+	if v != nil {
+		_c.SetSubject(*v)
+	}
+	return _c
+}
+
 // SetServiceAccountID sets the "service_account_id" field.
 func (_c *OAuthTokenCreate) SetServiceAccountID(v uuid.UUID) *OAuthTokenCreate {
 	_c.mutation.SetServiceAccountID(v)
@@ -402,6 +416,10 @@ func (_c *OAuthTokenCreate) createSpec() (*OAuthToken, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
+	if value, ok := _c.mutation.Subject(); ok {
+		_spec.SetField(oauthtoken.FieldSubject, field.TypeString, value)
+		_node.Subject = value
+	}
 	if value, ok := _c.mutation.ServiceAccountID(); ok {
 		_spec.SetField(oauthtoken.FieldServiceAccountID, field.TypeUUID, value)
 		_node.ServiceAccountID = &value
@@ -583,6 +601,24 @@ func (u *OAuthTokenUpsert) UpdateUserID() *OAuthTokenUpsert {
 // ClearUserID clears the value of the "user_id" field.
 func (u *OAuthTokenUpsert) ClearUserID() *OAuthTokenUpsert {
 	u.SetNull(oauthtoken.FieldUserID)
+	return u
+}
+
+// SetSubject sets the "subject" field.
+func (u *OAuthTokenUpsert) SetSubject(v string) *OAuthTokenUpsert {
+	u.Set(oauthtoken.FieldSubject, v)
+	return u
+}
+
+// UpdateSubject sets the "subject" field to the value that was provided on create.
+func (u *OAuthTokenUpsert) UpdateSubject() *OAuthTokenUpsert {
+	u.SetExcluded(oauthtoken.FieldSubject)
+	return u
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (u *OAuthTokenUpsert) ClearSubject() *OAuthTokenUpsert {
+	u.SetNull(oauthtoken.FieldSubject)
 	return u
 }
 
@@ -921,6 +957,27 @@ func (u *OAuthTokenUpsertOne) UpdateUserID() *OAuthTokenUpsertOne {
 func (u *OAuthTokenUpsertOne) ClearUserID() *OAuthTokenUpsertOne {
 	return u.Update(func(s *OAuthTokenUpsert) {
 		s.ClearUserID()
+	})
+}
+
+// SetSubject sets the "subject" field.
+func (u *OAuthTokenUpsertOne) SetSubject(v string) *OAuthTokenUpsertOne {
+	return u.Update(func(s *OAuthTokenUpsert) {
+		s.SetSubject(v)
+	})
+}
+
+// UpdateSubject sets the "subject" field to the value that was provided on create.
+func (u *OAuthTokenUpsertOne) UpdateSubject() *OAuthTokenUpsertOne {
+	return u.Update(func(s *OAuthTokenUpsert) {
+		s.UpdateSubject()
+	})
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (u *OAuthTokenUpsertOne) ClearSubject() *OAuthTokenUpsertOne {
+	return u.Update(func(s *OAuthTokenUpsert) {
+		s.ClearSubject()
 	})
 }
 
@@ -1468,6 +1525,27 @@ func (u *OAuthTokenUpsertBulk) UpdateUserID() *OAuthTokenUpsertBulk {
 func (u *OAuthTokenUpsertBulk) ClearUserID() *OAuthTokenUpsertBulk {
 	return u.Update(func(s *OAuthTokenUpsert) {
 		s.ClearUserID()
+	})
+}
+
+// SetSubject sets the "subject" field.
+func (u *OAuthTokenUpsertBulk) SetSubject(v string) *OAuthTokenUpsertBulk {
+	return u.Update(func(s *OAuthTokenUpsert) {
+		s.SetSubject(v)
+	})
+}
+
+// UpdateSubject sets the "subject" field to the value that was provided on create.
+func (u *OAuthTokenUpsertBulk) UpdateSubject() *OAuthTokenUpsertBulk {
+	return u.Update(func(s *OAuthTokenUpsert) {
+		s.UpdateSubject()
+	})
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (u *OAuthTokenUpsertBulk) ClearSubject() *OAuthTokenUpsertBulk {
+	return u.Update(func(s *OAuthTokenUpsert) {
+		s.ClearSubject()
 	})
 }
 

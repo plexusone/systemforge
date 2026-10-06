@@ -41,6 +41,10 @@ func (OAuthToken) Fields() []ent.Field {
 			Nillable().
 			Comment("User this token represents (nil for client_credentials)"),
 
+		field.String("subject").
+			Optional().
+			Comment("Authenticated subject (principal ID); empty for client_credentials"),
+
 		field.UUID("service_account_id", uuid.UUID{}).
 			Optional().
 			Nillable().
@@ -140,6 +144,7 @@ func (OAuthToken) Indexes() []ent.Index {
 		index.Fields("refresh_token_signature").Unique(),
 		index.Fields("app_id"),
 		index.Fields("user_id"),
+		index.Fields("subject"),
 		index.Fields("family_id"),
 		index.Fields("revoked"),
 		index.Fields("access_expires_at"),

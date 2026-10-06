@@ -66,6 +66,26 @@ func (_u *OAuthTokenUpdate) ClearUserID() *OAuthTokenUpdate {
 	return _u
 }
 
+// SetSubject sets the "subject" field.
+func (_u *OAuthTokenUpdate) SetSubject(v string) *OAuthTokenUpdate {
+	_u.mutation.SetSubject(v)
+	return _u
+}
+
+// SetNillableSubject sets the "subject" field if the given value is not nil.
+func (_u *OAuthTokenUpdate) SetNillableSubject(v *string) *OAuthTokenUpdate {
+	if v != nil {
+		_u.SetSubject(*v)
+	}
+	return _u
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (_u *OAuthTokenUpdate) ClearSubject() *OAuthTokenUpdate {
+	_u.mutation.ClearSubject()
+	return _u
+}
+
 // SetServiceAccountID sets the "service_account_id" field.
 func (_u *OAuthTokenUpdate) SetServiceAccountID(v uuid.UUID) *OAuthTokenUpdate {
 	_u.mutation.SetServiceAccountID(v)
@@ -420,6 +440,12 @@ func (_u *OAuthTokenUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 			}
 		}
 	}
+	if value, ok := _u.mutation.Subject(); ok {
+		_spec.SetField(oauthtoken.FieldSubject, field.TypeString, value)
+	}
+	if _u.mutation.SubjectCleared() {
+		_spec.ClearField(oauthtoken.FieldSubject, field.TypeString)
+	}
 	if value, ok := _u.mutation.ServiceAccountID(); ok {
 		_spec.SetField(oauthtoken.FieldServiceAccountID, field.TypeUUID, value)
 	}
@@ -617,6 +643,26 @@ func (_u *OAuthTokenUpdateOne) SetNillableUserID(v *uuid.UUID) *OAuthTokenUpdate
 // ClearUserID clears the value of the "user_id" field.
 func (_u *OAuthTokenUpdateOne) ClearUserID() *OAuthTokenUpdateOne {
 	_u.mutation.ClearUserID()
+	return _u
+}
+
+// SetSubject sets the "subject" field.
+func (_u *OAuthTokenUpdateOne) SetSubject(v string) *OAuthTokenUpdateOne {
+	_u.mutation.SetSubject(v)
+	return _u
+}
+
+// SetNillableSubject sets the "subject" field if the given value is not nil.
+func (_u *OAuthTokenUpdateOne) SetNillableSubject(v *string) *OAuthTokenUpdateOne {
+	if v != nil {
+		_u.SetSubject(*v)
+	}
+	return _u
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (_u *OAuthTokenUpdateOne) ClearSubject() *OAuthTokenUpdateOne {
+	_u.mutation.ClearSubject()
 	return _u
 }
 
@@ -1003,6 +1049,12 @@ func (_u *OAuthTokenUpdateOne) sqlSave(ctx context.Context) (_node *OAuthToken, 
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := _u.mutation.Subject(); ok {
+		_spec.SetField(oauthtoken.FieldSubject, field.TypeString, value)
+	}
+	if _u.mutation.SubjectCleared() {
+		_spec.ClearField(oauthtoken.FieldSubject, field.TypeString)
 	}
 	if value, ok := _u.mutation.ServiceAccountID(); ok {
 		_spec.SetField(oauthtoken.FieldServiceAccountID, field.TypeUUID, value)

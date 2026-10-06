@@ -794,6 +794,7 @@ var (
 	SfOauthAuthCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "code_signature", Type: field.TypeString, Unique: true},
+		{Name: "subject", Type: field.TypeString, Nullable: true},
 		{Name: "code_challenge", Type: field.TypeString, Nullable: true},
 		{Name: "code_challenge_method", Type: field.TypeString, Nullable: true, Default: "S256"},
 		{Name: "redirect_uri", Type: field.TypeString},
@@ -808,7 +809,7 @@ var (
 		{Name: "user_agent", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "app_id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID},
+		{Name: "user_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// SfOauthAuthCodesTable holds the schema information for the "sf_oauth_auth_codes" table.
 	SfOauthAuthCodesTable = &schema.Table{
@@ -818,15 +819,15 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_oauth_auth_codes_sf_oauth_apps_auth_codes",
-				Columns:    []*schema.Column{SfOauthAuthCodesColumns[15]},
+				Columns:    []*schema.Column{SfOauthAuthCodesColumns[16]},
 				RefColumns: []*schema.Column{SfOauthAppsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "sf_oauth_auth_codes_sf_users_oauth_auth_codes",
-				Columns:    []*schema.Column{SfOauthAuthCodesColumns[16]},
+				Columns:    []*schema.Column{SfOauthAuthCodesColumns[17]},
 				RefColumns: []*schema.Column{SfUsersColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
@@ -838,22 +839,27 @@ var (
 			{
 				Name:    "oauthauthcode_app_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAuthCodesColumns[15]},
+				Columns: []*schema.Column{SfOauthAuthCodesColumns[16]},
 			},
 			{
 				Name:    "oauthauthcode_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAuthCodesColumns[16]},
+				Columns: []*schema.Column{SfOauthAuthCodesColumns[17]},
+			},
+			{
+				Name:    "oauthauthcode_subject",
+				Unique:  false,
+				Columns: []*schema.Column{SfOauthAuthCodesColumns[2]},
 			},
 			{
 				Name:    "oauthauthcode_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAuthCodesColumns[9]},
+				Columns: []*schema.Column{SfOauthAuthCodesColumns[10]},
 			},
 			{
 				Name:    "oauthauthcode_used",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAuthCodesColumns[10]},
+				Columns: []*schema.Column{SfOauthAuthCodesColumns[11]},
 			},
 		},
 	}
@@ -922,6 +928,7 @@ var (
 	// SfOauthTokensColumns holds the columns for the "sf_oauth_tokens" table.
 	SfOauthTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "subject", Type: field.TypeString, Nullable: true},
 		{Name: "service_account_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "access_token_signature", Type: field.TypeString, Unique: true},
 		{Name: "refresh_token_signature", Type: field.TypeString, Unique: true, Nullable: true},
@@ -950,13 +957,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_oauth_tokens_sf_oauth_apps_tokens",
-				Columns:    []*schema.Column{SfOauthTokensColumns[18]},
+				Columns:    []*schema.Column{SfOauthTokensColumns[19]},
 				RefColumns: []*schema.Column{SfOauthAppsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "sf_oauth_tokens_sf_users_oauth_tokens",
-				Columns:    []*schema.Column{SfOauthTokensColumns[19]},
+				Columns:    []*schema.Column{SfOauthTokensColumns[20]},
 				RefColumns: []*schema.Column{SfUsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -965,37 +972,42 @@ var (
 			{
 				Name:    "oauthtoken_access_token_signature",
 				Unique:  true,
-				Columns: []*schema.Column{SfOauthTokensColumns[2]},
+				Columns: []*schema.Column{SfOauthTokensColumns[3]},
 			},
 			{
 				Name:    "oauthtoken_refresh_token_signature",
 				Unique:  true,
-				Columns: []*schema.Column{SfOauthTokensColumns[3]},
+				Columns: []*schema.Column{SfOauthTokensColumns[4]},
 			},
 			{
 				Name:    "oauthtoken_app_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthTokensColumns[18]},
+				Columns: []*schema.Column{SfOauthTokensColumns[19]},
 			},
 			{
 				Name:    "oauthtoken_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthTokensColumns[19]},
+				Columns: []*schema.Column{SfOauthTokensColumns[20]},
+			},
+			{
+				Name:    "oauthtoken_subject",
+				Unique:  false,
+				Columns: []*schema.Column{SfOauthTokensColumns[1]},
 			},
 			{
 				Name:    "oauthtoken_family_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthTokensColumns[4]},
+				Columns: []*schema.Column{SfOauthTokensColumns[5]},
 			},
 			{
 				Name:    "oauthtoken_revoked",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthTokensColumns[11]},
+				Columns: []*schema.Column{SfOauthTokensColumns[12]},
 			},
 			{
 				Name:    "oauthtoken_access_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthTokensColumns[9]},
+				Columns: []*schema.Column{SfOauthTokensColumns[10]},
 			},
 		},
 	}

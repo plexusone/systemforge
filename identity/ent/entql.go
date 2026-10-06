@@ -390,6 +390,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			oauthauthcode.FieldCodeSignature:       {Type: field.TypeString, Column: oauthauthcode.FieldCodeSignature},
 			oauthauthcode.FieldAppID:               {Type: field.TypeUUID, Column: oauthauthcode.FieldAppID},
 			oauthauthcode.FieldUserID:              {Type: field.TypeUUID, Column: oauthauthcode.FieldUserID},
+			oauthauthcode.FieldSubject:             {Type: field.TypeString, Column: oauthauthcode.FieldSubject},
 			oauthauthcode.FieldCodeChallenge:       {Type: field.TypeString, Column: oauthauthcode.FieldCodeChallenge},
 			oauthauthcode.FieldCodeChallengeMethod: {Type: field.TypeString, Column: oauthauthcode.FieldCodeChallengeMethod},
 			oauthauthcode.FieldRedirectURI:         {Type: field.TypeString, Column: oauthauthcode.FieldRedirectURI},
@@ -442,6 +443,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 		Fields: map[string]*sqlgraph.FieldSpec{
 			oauthtoken.FieldAppID:                 {Type: field.TypeUUID, Column: oauthtoken.FieldAppID},
 			oauthtoken.FieldUserID:                {Type: field.TypeUUID, Column: oauthtoken.FieldUserID},
+			oauthtoken.FieldSubject:               {Type: field.TypeString, Column: oauthtoken.FieldSubject},
 			oauthtoken.FieldServiceAccountID:      {Type: field.TypeUUID, Column: oauthtoken.FieldServiceAccountID},
 			oauthtoken.FieldAccessTokenSignature:  {Type: field.TypeString, Column: oauthtoken.FieldAccessTokenSignature},
 			oauthtoken.FieldRefreshTokenSignature: {Type: field.TypeString, Column: oauthtoken.FieldRefreshTokenSignature},
@@ -3556,6 +3558,11 @@ func (f *OAuthAuthCodeFilter) WhereUserID(p entql.ValueP) {
 	f.Where(p.Field(oauthauthcode.FieldUserID))
 }
 
+// WhereSubject applies the entql string predicate on the subject field.
+func (f *OAuthAuthCodeFilter) WhereSubject(p entql.StringP) {
+	f.Where(p.Field(oauthauthcode.FieldSubject))
+}
+
 // WhereCodeChallenge applies the entql string predicate on the code_challenge field.
 func (f *OAuthAuthCodeFilter) WhereCodeChallenge(p entql.StringP) {
 	f.Where(p.Field(oauthauthcode.FieldCodeChallenge))
@@ -3820,6 +3827,11 @@ func (f *OAuthTokenFilter) WhereAppID(p entql.ValueP) {
 // WhereUserID applies the entql [16]byte predicate on the user_id field.
 func (f *OAuthTokenFilter) WhereUserID(p entql.ValueP) {
 	f.Where(p.Field(oauthtoken.FieldUserID))
+}
+
+// WhereSubject applies the entql string predicate on the subject field.
+func (f *OAuthTokenFilter) WhereSubject(p entql.StringP) {
+	f.Where(p.Field(oauthtoken.FieldSubject))
 }
 
 // WhereServiceAccountID applies the entql [16]byte predicate on the service_account_id field.

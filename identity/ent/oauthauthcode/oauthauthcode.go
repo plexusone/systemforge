@@ -21,6 +21,8 @@ const (
 	FieldAppID = "app_id"
 	// FieldUserID holds the string denoting the user_id field in the database.
 	FieldUserID = "user_id"
+	// FieldSubject holds the string denoting the subject field in the database.
+	FieldSubject = "subject"
 	// FieldCodeChallenge holds the string denoting the code_challenge field in the database.
 	FieldCodeChallenge = "code_challenge"
 	// FieldCodeChallengeMethod holds the string denoting the code_challenge_method field in the database.
@@ -75,6 +77,7 @@ var Columns = []string{
 	FieldCodeSignature,
 	FieldAppID,
 	FieldUserID,
+	FieldSubject,
 	FieldCodeChallenge,
 	FieldCodeChallengeMethod,
 	FieldRedirectURI,
@@ -134,6 +137,11 @@ func ByAppID(opts ...sql.OrderTermOption) OrderOption {
 // ByUserID orders the results by the user_id field.
 func ByUserID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUserID, opts...).ToFunc()
+}
+
+// BySubject orders the results by the subject field.
+func BySubject(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubject, opts...).ToFunc()
 }
 
 // ByCodeChallenge orders the results by the code_challenge field.

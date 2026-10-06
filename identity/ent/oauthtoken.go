@@ -25,6 +25,8 @@ type OAuthToken struct {
 	AppID uuid.UUID `json:"app_id,omitempty"`
 	// User this token represents (nil for client_credentials)
 	UserID *uuid.UUID `json:"user_id,omitempty"`
+	// Authenticated subject (principal ID); empty for client_credentials
+	Subject string `json:"subject,omitempty"`
 	// Service account (for JWT bearer grant)
 	ServiceAccountID *uuid.UUID `json:"service_account_id,omitempty"`
 	// SHA256 signature of access token
@@ -109,7 +111,7 @@ func (*OAuthToken) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case oauthtoken.FieldRevoked:
 			values[i] = new(sql.NullBool)
-		case oauthtoken.FieldAccessTokenSignature, oauthtoken.FieldRefreshTokenSignature, oauthtoken.FieldSessionID, oauthtoken.FieldRequestData, oauthtoken.FieldRevokedReason, oauthtoken.FieldClientIP, oauthtoken.FieldUserAgent:
+		case oauthtoken.FieldSubject, oauthtoken.FieldAccessTokenSignature, oauthtoken.FieldRefreshTokenSignature, oauthtoken.FieldSessionID, oauthtoken.FieldRequestData, oauthtoken.FieldRevokedReason, oauthtoken.FieldClientIP, oauthtoken.FieldUserAgent:
 			values[i] = new(sql.NullString)
 		case oauthtoken.FieldAccessExpiresAt, oauthtoken.FieldRefreshExpiresAt, oauthtoken.FieldRevokedAt, oauthtoken.FieldLastUsedAt, oauthtoken.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -148,6 +150,12 @@ func (_m *OAuthToken) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.UserID = new(uuid.UUID)
 				*_m.UserID = *value.S.(*uuid.UUID)
+			}
+		case oauthtoken.FieldSubject:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field subject", values[i])
+			} else if value.Valid {
+				_m.Subject = value.String
 			}
 		case oauthtoken.FieldServiceAccountID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -313,6 +321,9 @@ func (_m *OAuthToken) String() string {
 		builder.WriteString("user_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("subject=")
+	builder.WriteString(_m.Subject)
 	builder.WriteString(", ")
 	if v := _m.ServiceAccountID; v != nil {
 		builder.WriteString("service_account_id=")

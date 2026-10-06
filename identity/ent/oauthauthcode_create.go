@@ -44,6 +44,28 @@ func (_c *OAuthAuthCodeCreate) SetUserID(v uuid.UUID) *OAuthAuthCodeCreate {
 	return _c
 }
 
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_c *OAuthAuthCodeCreate) SetNillableUserID(v *uuid.UUID) *OAuthAuthCodeCreate {
+	if v != nil {
+		_c.SetUserID(*v)
+	}
+	return _c
+}
+
+// SetSubject sets the "subject" field.
+func (_c *OAuthAuthCodeCreate) SetSubject(v string) *OAuthAuthCodeCreate {
+	_c.mutation.SetSubject(v)
+	return _c
+}
+
+// SetNillableSubject sets the "subject" field if the given value is not nil.
+func (_c *OAuthAuthCodeCreate) SetNillableSubject(v *string) *OAuthAuthCodeCreate {
+	if v != nil {
+		_c.SetSubject(*v)
+	}
+	return _c
+}
+
 // SetCodeChallenge sets the "code_challenge" field.
 func (_c *OAuthAuthCodeCreate) SetCodeChallenge(v string) *OAuthAuthCodeCreate {
 	_c.mutation.SetCodeChallenge(v)
@@ -291,9 +313,6 @@ func (_c *OAuthAuthCodeCreate) check() error {
 	if _, ok := _c.mutation.AppID(); !ok {
 		return &ValidationError{Name: "app_id", err: errors.New(`ent: missing required field "OAuthAuthCode.app_id"`)}
 	}
-	if _, ok := _c.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "OAuthAuthCode.user_id"`)}
-	}
 	if _, ok := _c.mutation.RedirectURI(); !ok {
 		return &ValidationError{Name: "redirect_uri", err: errors.New(`ent: missing required field "OAuthAuthCode.redirect_uri"`)}
 	}
@@ -311,9 +330,6 @@ func (_c *OAuthAuthCodeCreate) check() error {
 	}
 	if len(_c.mutation.AppIDs()) == 0 {
 		return &ValidationError{Name: "app", err: errors.New(`ent: missing required edge "OAuthAuthCode.app"`)}
-	}
-	if len(_c.mutation.UserIDs()) == 0 {
-		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "OAuthAuthCode.user"`)}
 	}
 	return nil
 }
@@ -354,6 +370,10 @@ func (_c *OAuthAuthCodeCreate) createSpec() (*OAuthAuthCode, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.CodeSignature(); ok {
 		_spec.SetField(oauthauthcode.FieldCodeSignature, field.TypeString, value)
 		_node.CodeSignature = value
+	}
+	if value, ok := _c.mutation.Subject(); ok {
+		_spec.SetField(oauthauthcode.FieldSubject, field.TypeString, value)
+		_node.Subject = value
 	}
 	if value, ok := _c.mutation.CodeChallenge(); ok {
 		_spec.SetField(oauthauthcode.FieldCodeChallenge, field.TypeString, value)
@@ -438,7 +458,7 @@ func (_c *OAuthAuthCodeCreate) createSpec() (*OAuthAuthCode, *sqlgraph.CreateSpe
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.UserID = nodes[0]
+		_node.UserID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -526,6 +546,30 @@ func (u *OAuthAuthCodeUpsert) SetUserID(v uuid.UUID) *OAuthAuthCodeUpsert {
 // UpdateUserID sets the "user_id" field to the value that was provided on create.
 func (u *OAuthAuthCodeUpsert) UpdateUserID() *OAuthAuthCodeUpsert {
 	u.SetExcluded(oauthauthcode.FieldUserID)
+	return u
+}
+
+// ClearUserID clears the value of the "user_id" field.
+func (u *OAuthAuthCodeUpsert) ClearUserID() *OAuthAuthCodeUpsert {
+	u.SetNull(oauthauthcode.FieldUserID)
+	return u
+}
+
+// SetSubject sets the "subject" field.
+func (u *OAuthAuthCodeUpsert) SetSubject(v string) *OAuthAuthCodeUpsert {
+	u.Set(oauthauthcode.FieldSubject, v)
+	return u
+}
+
+// UpdateSubject sets the "subject" field to the value that was provided on create.
+func (u *OAuthAuthCodeUpsert) UpdateSubject() *OAuthAuthCodeUpsert {
+	u.SetExcluded(oauthauthcode.FieldSubject)
+	return u
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (u *OAuthAuthCodeUpsert) ClearSubject() *OAuthAuthCodeUpsert {
+	u.SetNull(oauthauthcode.FieldSubject)
 	return u
 }
 
@@ -811,6 +855,34 @@ func (u *OAuthAuthCodeUpsertOne) SetUserID(v uuid.UUID) *OAuthAuthCodeUpsertOne 
 func (u *OAuthAuthCodeUpsertOne) UpdateUserID() *OAuthAuthCodeUpsertOne {
 	return u.Update(func(s *OAuthAuthCodeUpsert) {
 		s.UpdateUserID()
+	})
+}
+
+// ClearUserID clears the value of the "user_id" field.
+func (u *OAuthAuthCodeUpsertOne) ClearUserID() *OAuthAuthCodeUpsertOne {
+	return u.Update(func(s *OAuthAuthCodeUpsert) {
+		s.ClearUserID()
+	})
+}
+
+// SetSubject sets the "subject" field.
+func (u *OAuthAuthCodeUpsertOne) SetSubject(v string) *OAuthAuthCodeUpsertOne {
+	return u.Update(func(s *OAuthAuthCodeUpsert) {
+		s.SetSubject(v)
+	})
+}
+
+// UpdateSubject sets the "subject" field to the value that was provided on create.
+func (u *OAuthAuthCodeUpsertOne) UpdateSubject() *OAuthAuthCodeUpsertOne {
+	return u.Update(func(s *OAuthAuthCodeUpsert) {
+		s.UpdateSubject()
+	})
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (u *OAuthAuthCodeUpsertOne) ClearSubject() *OAuthAuthCodeUpsertOne {
+	return u.Update(func(s *OAuthAuthCodeUpsert) {
+		s.ClearSubject()
 	})
 }
 
@@ -1295,6 +1367,34 @@ func (u *OAuthAuthCodeUpsertBulk) SetUserID(v uuid.UUID) *OAuthAuthCodeUpsertBul
 func (u *OAuthAuthCodeUpsertBulk) UpdateUserID() *OAuthAuthCodeUpsertBulk {
 	return u.Update(func(s *OAuthAuthCodeUpsert) {
 		s.UpdateUserID()
+	})
+}
+
+// ClearUserID clears the value of the "user_id" field.
+func (u *OAuthAuthCodeUpsertBulk) ClearUserID() *OAuthAuthCodeUpsertBulk {
+	return u.Update(func(s *OAuthAuthCodeUpsert) {
+		s.ClearUserID()
+	})
+}
+
+// SetSubject sets the "subject" field.
+func (u *OAuthAuthCodeUpsertBulk) SetSubject(v string) *OAuthAuthCodeUpsertBulk {
+	return u.Update(func(s *OAuthAuthCodeUpsert) {
+		s.SetSubject(v)
+	})
+}
+
+// UpdateSubject sets the "subject" field to the value that was provided on create.
+func (u *OAuthAuthCodeUpsertBulk) UpdateSubject() *OAuthAuthCodeUpsertBulk {
+	return u.Update(func(s *OAuthAuthCodeUpsert) {
+		s.UpdateSubject()
+	})
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (u *OAuthAuthCodeUpsertBulk) ClearSubject() *OAuthAuthCodeUpsertBulk {
+	return u.Update(func(s *OAuthAuthCodeUpsert) {
+		s.ClearSubject()
 	})
 }
 

@@ -74,6 +74,32 @@ func (_u *OAuthAuthCodeUpdate) SetNillableUserID(v *uuid.UUID) *OAuthAuthCodeUpd
 	return _u
 }
 
+// ClearUserID clears the value of the "user_id" field.
+func (_u *OAuthAuthCodeUpdate) ClearUserID() *OAuthAuthCodeUpdate {
+	_u.mutation.ClearUserID()
+	return _u
+}
+
+// SetSubject sets the "subject" field.
+func (_u *OAuthAuthCodeUpdate) SetSubject(v string) *OAuthAuthCodeUpdate {
+	_u.mutation.SetSubject(v)
+	return _u
+}
+
+// SetNillableSubject sets the "subject" field if the given value is not nil.
+func (_u *OAuthAuthCodeUpdate) SetNillableSubject(v *string) *OAuthAuthCodeUpdate {
+	if v != nil {
+		_u.SetSubject(*v)
+	}
+	return _u
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (_u *OAuthAuthCodeUpdate) ClearSubject() *OAuthAuthCodeUpdate {
+	_u.mutation.ClearSubject()
+	return _u
+}
+
 // SetCodeChallenge sets the "code_challenge" field.
 func (_u *OAuthAuthCodeUpdate) SetCodeChallenge(v string) *OAuthAuthCodeUpdate {
 	_u.mutation.SetCodeChallenge(v)
@@ -347,9 +373,6 @@ func (_u *OAuthAuthCodeUpdate) check() error {
 	if _u.mutation.AppCleared() && len(_u.mutation.AppIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "OAuthAuthCode.app"`)
 	}
-	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "OAuthAuthCode.user"`)
-	}
 	return nil
 }
 
@@ -367,6 +390,12 @@ func (_u *OAuthAuthCodeUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if value, ok := _u.mutation.CodeSignature(); ok {
 		_spec.SetField(oauthauthcode.FieldCodeSignature, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Subject(); ok {
+		_spec.SetField(oauthauthcode.FieldSubject, field.TypeString, value)
+	}
+	if _u.mutation.SubjectCleared() {
+		_spec.ClearField(oauthauthcode.FieldSubject, field.TypeString)
 	}
 	if value, ok := _u.mutation.CodeChallenge(); ok {
 		_spec.SetField(oauthauthcode.FieldCodeChallenge, field.TypeString, value)
@@ -550,6 +579,32 @@ func (_u *OAuthAuthCodeUpdateOne) SetNillableUserID(v *uuid.UUID) *OAuthAuthCode
 	if v != nil {
 		_u.SetUserID(*v)
 	}
+	return _u
+}
+
+// ClearUserID clears the value of the "user_id" field.
+func (_u *OAuthAuthCodeUpdateOne) ClearUserID() *OAuthAuthCodeUpdateOne {
+	_u.mutation.ClearUserID()
+	return _u
+}
+
+// SetSubject sets the "subject" field.
+func (_u *OAuthAuthCodeUpdateOne) SetSubject(v string) *OAuthAuthCodeUpdateOne {
+	_u.mutation.SetSubject(v)
+	return _u
+}
+
+// SetNillableSubject sets the "subject" field if the given value is not nil.
+func (_u *OAuthAuthCodeUpdateOne) SetNillableSubject(v *string) *OAuthAuthCodeUpdateOne {
+	if v != nil {
+		_u.SetSubject(*v)
+	}
+	return _u
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (_u *OAuthAuthCodeUpdateOne) ClearSubject() *OAuthAuthCodeUpdateOne {
+	_u.mutation.ClearSubject()
 	return _u
 }
 
@@ -839,9 +894,6 @@ func (_u *OAuthAuthCodeUpdateOne) check() error {
 	if _u.mutation.AppCleared() && len(_u.mutation.AppIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "OAuthAuthCode.app"`)
 	}
-	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "OAuthAuthCode.user"`)
-	}
 	return nil
 }
 
@@ -876,6 +928,12 @@ func (_u *OAuthAuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *OAuthAuth
 	}
 	if value, ok := _u.mutation.CodeSignature(); ok {
 		_spec.SetField(oauthauthcode.FieldCodeSignature, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Subject(); ok {
+		_spec.SetField(oauthauthcode.FieldSubject, field.TypeString, value)
+	}
+	if _u.mutation.SubjectCleared() {
+		_spec.ClearField(oauthauthcode.FieldSubject, field.TypeString)
 	}
 	if value, ok := _u.mutation.CodeChallenge(); ok {
 		_spec.SetField(oauthauthcode.FieldCodeChallenge, field.TypeString, value)

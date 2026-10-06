@@ -25,8 +25,10 @@ type OAuthAuthCode struct {
 	CodeSignature string `json:"code_signature,omitempty"`
 	// OAuth app this code was issued to
 	AppID uuid.UUID `json:"app_id,omitempty"`
-	// User who authorized
-	UserID uuid.UUID `json:"user_id,omitempty"`
+	// Legacy User who authorized (nil when the subject is not a User row)
+	UserID *uuid.UUID `json:"user_id,omitempty"`
+	// Authenticated subject (principal ID) the code was issued for
+	Subject string `json:"subject,omitempty"`
 	// PKCE code challenge
 	CodeChallenge string `json:"code_challenge,omitempty"`
 	// PKCE challenge method (S256)
@@ -97,15 +99,17 @@ func (*OAuthAuthCode) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case oauthauthcode.FieldUserID:
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case oauthauthcode.FieldScopes:
 			values[i] = new([]byte)
 		case oauthauthcode.FieldUsed:
 			values[i] = new(sql.NullBool)
-		case oauthauthcode.FieldCodeSignature, oauthauthcode.FieldCodeChallenge, oauthauthcode.FieldCodeChallengeMethod, oauthauthcode.FieldRedirectURI, oauthauthcode.FieldState, oauthauthcode.FieldNonce, oauthauthcode.FieldRequestData, oauthauthcode.FieldClientIP, oauthauthcode.FieldUserAgent:
+		case oauthauthcode.FieldCodeSignature, oauthauthcode.FieldSubject, oauthauthcode.FieldCodeChallenge, oauthauthcode.FieldCodeChallengeMethod, oauthauthcode.FieldRedirectURI, oauthauthcode.FieldState, oauthauthcode.FieldNonce, oauthauthcode.FieldRequestData, oauthauthcode.FieldClientIP, oauthauthcode.FieldUserAgent:
 			values[i] = new(sql.NullString)
 		case oauthauthcode.FieldExpiresAt, oauthauthcode.FieldUsedAt, oauthauthcode.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case oauthauthcode.FieldID, oauthauthcode.FieldAppID, oauthauthcode.FieldUserID:
+		case oauthauthcode.FieldID, oauthauthcode.FieldAppID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -141,10 +145,17 @@ func (_m *OAuthAuthCode) assignValues(columns []string, values []any) error {
 				_m.AppID = *value
 			}
 		case oauthauthcode.FieldUserID:
-			if value, ok := values[i].(*uuid.UUID); !ok {
+			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field user_id", values[i])
-			} else if value != nil {
-				_m.UserID = *value
+			} else if value.Valid {
+				_m.UserID = new(uuid.UUID)
+				*_m.UserID = *value.S.(*uuid.UUID)
+			}
+		case oauthauthcode.FieldSubject:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field subject", values[i])
+			} else if value.Valid {
+				_m.Subject = value.String
 			}
 		case oauthauthcode.FieldCodeChallenge:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -279,8 +290,13 @@ func (_m *OAuthAuthCode) String() string {
 	builder.WriteString("app_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AppID))
 	builder.WriteString(", ")
-	builder.WriteString("user_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.UserID))
+	if v := _m.UserID; v != nil {
+		builder.WriteString("user_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("subject=")
+	builder.WriteString(_m.Subject)
 	builder.WriteString(", ")
 	builder.WriteString("code_challenge=")
 	builder.WriteString(_m.CodeChallenge)

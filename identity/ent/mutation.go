@@ -16102,6 +16102,7 @@ type OAuthAuthCodeMutation struct {
 	typ                   string
 	id                    *uuid.UUID
 	code_signature        *string
+	subject               *string
 	code_challenge        *string
 	code_challenge_method *string
 	redirect_uri          *string
@@ -16319,7 +16320,7 @@ func (m *OAuthAuthCodeMutation) UserID() (r uuid.UUID, exists bool) {
 // OldUserID returns the old "user_id" field's value of the OAuthAuthCode entity.
 // If the OAuthAuthCode object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OAuthAuthCodeMutation) OldUserID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *OAuthAuthCodeMutation) OldUserID(ctx context.Context) (v *uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
 	}
@@ -16333,9 +16334,71 @@ func (m *OAuthAuthCodeMutation) OldUserID(ctx context.Context) (v uuid.UUID, err
 	return oldValue.UserID, nil
 }
 
+// ClearUserID clears the value of the "user_id" field.
+func (m *OAuthAuthCodeMutation) ClearUserID() {
+	m.user = nil
+	m.clearedFields[oauthauthcode.FieldUserID] = struct{}{}
+}
+
+// UserIDCleared returns if the "user_id" field was cleared in this mutation.
+func (m *OAuthAuthCodeMutation) UserIDCleared() bool {
+	_, ok := m.clearedFields[oauthauthcode.FieldUserID]
+	return ok
+}
+
 // ResetUserID resets all changes to the "user_id" field.
 func (m *OAuthAuthCodeMutation) ResetUserID() {
 	m.user = nil
+	delete(m.clearedFields, oauthauthcode.FieldUserID)
+}
+
+// SetSubject sets the "subject" field.
+func (m *OAuthAuthCodeMutation) SetSubject(s string) {
+	m.subject = &s
+}
+
+// Subject returns the value of the "subject" field in the mutation.
+func (m *OAuthAuthCodeMutation) Subject() (r string, exists bool) {
+	v := m.subject
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubject returns the old "subject" field's value of the OAuthAuthCode entity.
+// If the OAuthAuthCode object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OAuthAuthCodeMutation) OldSubject(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubject is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubject requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubject: %w", err)
+	}
+	return oldValue.Subject, nil
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (m *OAuthAuthCodeMutation) ClearSubject() {
+	m.subject = nil
+	m.clearedFields[oauthauthcode.FieldSubject] = struct{}{}
+}
+
+// SubjectCleared returns if the "subject" field was cleared in this mutation.
+func (m *OAuthAuthCodeMutation) SubjectCleared() bool {
+	_, ok := m.clearedFields[oauthauthcode.FieldSubject]
+	return ok
+}
+
+// ResetSubject resets all changes to the "subject" field.
+func (m *OAuthAuthCodeMutation) ResetSubject() {
+	m.subject = nil
+	delete(m.clearedFields, oauthauthcode.FieldSubject)
 }
 
 // SetCodeChallenge sets the "code_challenge" field.
@@ -16960,7 +17023,7 @@ func (m *OAuthAuthCodeMutation) ClearUser() {
 
 // UserCleared reports if the "user" edge to the User entity was cleared.
 func (m *OAuthAuthCodeMutation) UserCleared() bool {
-	return m.cleareduser
+	return m.UserIDCleared() || m.cleareduser
 }
 
 // UserIDs returns the "user" edge IDs in the mutation.
@@ -17013,7 +17076,7 @@ func (m *OAuthAuthCodeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuthAuthCodeMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 17)
 	if m.code_signature != nil {
 		fields = append(fields, oauthauthcode.FieldCodeSignature)
 	}
@@ -17022,6 +17085,9 @@ func (m *OAuthAuthCodeMutation) Fields() []string {
 	}
 	if m.user != nil {
 		fields = append(fields, oauthauthcode.FieldUserID)
+	}
+	if m.subject != nil {
+		fields = append(fields, oauthauthcode.FieldSubject)
 	}
 	if m.code_challenge != nil {
 		fields = append(fields, oauthauthcode.FieldCodeChallenge)
@@ -17076,6 +17142,8 @@ func (m *OAuthAuthCodeMutation) Field(name string) (ent.Value, bool) {
 		return m.AppID()
 	case oauthauthcode.FieldUserID:
 		return m.UserID()
+	case oauthauthcode.FieldSubject:
+		return m.Subject()
 	case oauthauthcode.FieldCodeChallenge:
 		return m.CodeChallenge()
 	case oauthauthcode.FieldCodeChallengeMethod:
@@ -17117,6 +17185,8 @@ func (m *OAuthAuthCodeMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldAppID(ctx)
 	case oauthauthcode.FieldUserID:
 		return m.OldUserID(ctx)
+	case oauthauthcode.FieldSubject:
+		return m.OldSubject(ctx)
 	case oauthauthcode.FieldCodeChallenge:
 		return m.OldCodeChallenge(ctx)
 	case oauthauthcode.FieldCodeChallengeMethod:
@@ -17172,6 +17242,13 @@ func (m *OAuthAuthCodeMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUserID(v)
+		return nil
+	case oauthauthcode.FieldSubject:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubject(v)
 		return nil
 	case oauthauthcode.FieldCodeChallenge:
 		v, ok := value.(string)
@@ -17294,6 +17371,12 @@ func (m *OAuthAuthCodeMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *OAuthAuthCodeMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(oauthauthcode.FieldUserID) {
+		fields = append(fields, oauthauthcode.FieldUserID)
+	}
+	if m.FieldCleared(oauthauthcode.FieldSubject) {
+		fields = append(fields, oauthauthcode.FieldSubject)
+	}
 	if m.FieldCleared(oauthauthcode.FieldCodeChallenge) {
 		fields = append(fields, oauthauthcode.FieldCodeChallenge)
 	}
@@ -17332,6 +17415,12 @@ func (m *OAuthAuthCodeMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *OAuthAuthCodeMutation) ClearField(name string) error {
 	switch name {
+	case oauthauthcode.FieldUserID:
+		m.ClearUserID()
+		return nil
+	case oauthauthcode.FieldSubject:
+		m.ClearSubject()
+		return nil
 	case oauthauthcode.FieldCodeChallenge:
 		m.ClearCodeChallenge()
 		return nil
@@ -17372,6 +17461,9 @@ func (m *OAuthAuthCodeMutation) ResetField(name string) error {
 		return nil
 	case oauthauthcode.FieldUserID:
 		m.ResetUserID()
+		return nil
+	case oauthauthcode.FieldSubject:
+		m.ResetSubject()
 		return nil
 	case oauthauthcode.FieldCodeChallenge:
 		m.ResetCodeChallenge()
@@ -18562,6 +18654,7 @@ type OAuthTokenMutation struct {
 	op                      Op
 	typ                     string
 	id                      *uuid.UUID
+	subject                 *string
 	service_account_id      *uuid.UUID
 	access_token_signature  *string
 	refresh_token_signature *string
@@ -18778,6 +18871,55 @@ func (m *OAuthTokenMutation) UserIDCleared() bool {
 func (m *OAuthTokenMutation) ResetUserID() {
 	m.user = nil
 	delete(m.clearedFields, oauthtoken.FieldUserID)
+}
+
+// SetSubject sets the "subject" field.
+func (m *OAuthTokenMutation) SetSubject(s string) {
+	m.subject = &s
+}
+
+// Subject returns the value of the "subject" field in the mutation.
+func (m *OAuthTokenMutation) Subject() (r string, exists bool) {
+	v := m.subject
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubject returns the old "subject" field's value of the OAuthToken entity.
+// If the OAuthToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OAuthTokenMutation) OldSubject(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubject is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubject requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubject: %w", err)
+	}
+	return oldValue.Subject, nil
+}
+
+// ClearSubject clears the value of the "subject" field.
+func (m *OAuthTokenMutation) ClearSubject() {
+	m.subject = nil
+	m.clearedFields[oauthtoken.FieldSubject] = struct{}{}
+}
+
+// SubjectCleared returns if the "subject" field was cleared in this mutation.
+func (m *OAuthTokenMutation) SubjectCleared() bool {
+	_, ok := m.clearedFields[oauthtoken.FieldSubject]
+	return ok
+}
+
+// ResetSubject resets all changes to the "subject" field.
+func (m *OAuthTokenMutation) ResetSubject() {
+	m.subject = nil
+	delete(m.clearedFields, oauthtoken.FieldSubject)
 }
 
 // SetServiceAccountID sets the "service_account_id" field.
@@ -19640,12 +19782,15 @@ func (m *OAuthTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuthTokenMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.app != nil {
 		fields = append(fields, oauthtoken.FieldAppID)
 	}
 	if m.user != nil {
 		fields = append(fields, oauthtoken.FieldUserID)
+	}
+	if m.subject != nil {
+		fields = append(fields, oauthtoken.FieldSubject)
 	}
 	if m.service_account_id != nil {
 		fields = append(fields, oauthtoken.FieldServiceAccountID)
@@ -19710,6 +19855,8 @@ func (m *OAuthTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.AppID()
 	case oauthtoken.FieldUserID:
 		return m.UserID()
+	case oauthtoken.FieldSubject:
+		return m.Subject()
 	case oauthtoken.FieldServiceAccountID:
 		return m.ServiceAccountID()
 	case oauthtoken.FieldAccessTokenSignature:
@@ -19757,6 +19904,8 @@ func (m *OAuthTokenMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldAppID(ctx)
 	case oauthtoken.FieldUserID:
 		return m.OldUserID(ctx)
+	case oauthtoken.FieldSubject:
+		return m.OldSubject(ctx)
 	case oauthtoken.FieldServiceAccountID:
 		return m.OldServiceAccountID(ctx)
 	case oauthtoken.FieldAccessTokenSignature:
@@ -19813,6 +19962,13 @@ func (m *OAuthTokenMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUserID(v)
+		return nil
+	case oauthtoken.FieldSubject:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubject(v)
 		return nil
 	case oauthtoken.FieldServiceAccountID:
 		v, ok := value.(uuid.UUID)
@@ -19966,6 +20122,9 @@ func (m *OAuthTokenMutation) ClearedFields() []string {
 	if m.FieldCleared(oauthtoken.FieldUserID) {
 		fields = append(fields, oauthtoken.FieldUserID)
 	}
+	if m.FieldCleared(oauthtoken.FieldSubject) {
+		fields = append(fields, oauthtoken.FieldSubject)
+	}
 	if m.FieldCleared(oauthtoken.FieldServiceAccountID) {
 		fields = append(fields, oauthtoken.FieldServiceAccountID)
 	}
@@ -20013,6 +20172,9 @@ func (m *OAuthTokenMutation) ClearField(name string) error {
 	case oauthtoken.FieldUserID:
 		m.ClearUserID()
 		return nil
+	case oauthtoken.FieldSubject:
+		m.ClearSubject()
+		return nil
 	case oauthtoken.FieldServiceAccountID:
 		m.ClearServiceAccountID()
 		return nil
@@ -20056,6 +20218,9 @@ func (m *OAuthTokenMutation) ResetField(name string) error {
 		return nil
 	case oauthtoken.FieldUserID:
 		m.ResetUserID()
+		return nil
+	case oauthtoken.FieldSubject:
+		m.ResetSubject()
 		return nil
 	case oauthtoken.FieldServiceAccountID:
 		m.ResetServiceAccountID()

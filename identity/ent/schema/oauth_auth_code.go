@@ -41,7 +41,13 @@ func (OAuthAuthCode) Fields() []ent.Field {
 			Comment("OAuth app this code was issued to"),
 
 		field.UUID("user_id", uuid.UUID{}).
-			Comment("User who authorized"),
+			Optional().
+			Nillable().
+			Comment("Legacy User who authorized (nil when the subject is not a User row)"),
+
+		field.String("subject").
+			Optional().
+			Comment("Authenticated subject (principal ID) the code was issued for"),
 
 		// PKCE
 		field.String("code_challenge").
@@ -111,7 +117,6 @@ func (OAuthAuthCode) Edges() []ent.Edge {
 		edge.From("user", User.Type).
 			Ref("oauth_auth_codes").
 			Field("user_id").
-			Required().
 			Unique(),
 	}
 }
@@ -122,6 +127,7 @@ func (OAuthAuthCode) Indexes() []ent.Index {
 		index.Fields("code_signature").Unique(),
 		index.Fields("app_id"),
 		index.Fields("user_id"),
+		index.Fields("subject"),
 		index.Fields("expires_at"),
 		index.Fields("used"),
 	}

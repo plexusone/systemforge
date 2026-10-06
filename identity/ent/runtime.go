@@ -547,19 +547,19 @@ func init() {
 	oauthauthcodeFields := schema.OAuthAuthCode{}.Fields()
 	_ = oauthauthcodeFields
 	// oauthauthcodeDescCodeChallengeMethod is the schema descriptor for code_challenge_method field.
-	oauthauthcodeDescCodeChallengeMethod := oauthauthcodeFields[5].Descriptor()
+	oauthauthcodeDescCodeChallengeMethod := oauthauthcodeFields[6].Descriptor()
 	// oauthauthcode.DefaultCodeChallengeMethod holds the default value on creation for the code_challenge_method field.
 	oauthauthcode.DefaultCodeChallengeMethod = oauthauthcodeDescCodeChallengeMethod.Default.(string)
 	// oauthauthcodeDescScopes is the schema descriptor for scopes field.
-	oauthauthcodeDescScopes := oauthauthcodeFields[7].Descriptor()
+	oauthauthcodeDescScopes := oauthauthcodeFields[8].Descriptor()
 	// oauthauthcode.DefaultScopes holds the default value on creation for the scopes field.
 	oauthauthcode.DefaultScopes = oauthauthcodeDescScopes.Default.([]string)
 	// oauthauthcodeDescUsed is the schema descriptor for used field.
-	oauthauthcodeDescUsed := oauthauthcodeFields[12].Descriptor()
+	oauthauthcodeDescUsed := oauthauthcodeFields[13].Descriptor()
 	// oauthauthcode.DefaultUsed holds the default value on creation for the used field.
 	oauthauthcode.DefaultUsed = oauthauthcodeDescUsed.Default.(bool)
 	// oauthauthcodeDescCreatedAt is the schema descriptor for created_at field.
-	oauthauthcodeDescCreatedAt := oauthauthcodeFields[16].Descriptor()
+	oauthauthcodeDescCreatedAt := oauthauthcodeFields[17].Descriptor()
 	// oauthauthcode.DefaultCreatedAt holds the default value on creation for the created_at field.
 	oauthauthcode.DefaultCreatedAt = oauthauthcodeDescCreatedAt.Default.(func() time.Time)
 	// oauthauthcodeDescID is the schema descriptor for id field.
@@ -601,23 +601,23 @@ func init() {
 	oauthtokenFields := schema.OAuthToken{}.Fields()
 	_ = oauthtokenFields
 	// oauthtokenDescFamilyID is the schema descriptor for family_id field.
-	oauthtokenDescFamilyID := oauthtokenFields[6].Descriptor()
+	oauthtokenDescFamilyID := oauthtokenFields[7].Descriptor()
 	// oauthtoken.DefaultFamilyID holds the default value on creation for the family_id field.
 	oauthtoken.DefaultFamilyID = oauthtokenDescFamilyID.Default.(func() uuid.UUID)
 	// oauthtokenDescScopes is the schema descriptor for scopes field.
-	oauthtokenDescScopes := oauthtokenFields[7].Descriptor()
+	oauthtokenDescScopes := oauthtokenFields[8].Descriptor()
 	// oauthtoken.DefaultScopes holds the default value on creation for the scopes field.
 	oauthtoken.DefaultScopes = oauthtokenDescScopes.Default.([]string)
 	// oauthtokenDescAudience is the schema descriptor for audience field.
-	oauthtokenDescAudience := oauthtokenFields[8].Descriptor()
+	oauthtokenDescAudience := oauthtokenFields[9].Descriptor()
 	// oauthtoken.DefaultAudience holds the default value on creation for the audience field.
 	oauthtoken.DefaultAudience = oauthtokenDescAudience.Default.([]string)
 	// oauthtokenDescRevoked is the schema descriptor for revoked field.
-	oauthtokenDescRevoked := oauthtokenFields[13].Descriptor()
+	oauthtokenDescRevoked := oauthtokenFields[14].Descriptor()
 	// oauthtoken.DefaultRevoked holds the default value on creation for the revoked field.
 	oauthtoken.DefaultRevoked = oauthtokenDescRevoked.Default.(bool)
 	// oauthtokenDescCreatedAt is the schema descriptor for created_at field.
-	oauthtokenDescCreatedAt := oauthtokenFields[19].Descriptor()
+	oauthtokenDescCreatedAt := oauthtokenFields[20].Descriptor()
 	// oauthtoken.DefaultCreatedAt holds the default value on creation for the created_at field.
 	oauthtoken.DefaultCreatedAt = oauthtokenDescCreatedAt.Default.(func() time.Time)
 	// oauthtokenDescID is the schema descriptor for id field.

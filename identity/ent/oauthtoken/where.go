@@ -66,6 +66,11 @@ func UserID(v uuid.UUID) predicate.OAuthToken {
 	return predicate.OAuthToken(sql.FieldEQ(FieldUserID, v))
 }
 
+// Subject applies equality check predicate on the "subject" field. It's identical to SubjectEQ.
+func Subject(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldEQ(FieldSubject, v))
+}
+
 // ServiceAccountID applies equality check predicate on the "service_account_id" field. It's identical to ServiceAccountIDEQ.
 func ServiceAccountID(v uuid.UUID) predicate.OAuthToken {
 	return predicate.OAuthToken(sql.FieldEQ(FieldServiceAccountID, v))
@@ -189,6 +194,81 @@ func UserIDIsNil() predicate.OAuthToken {
 // UserIDNotNil applies the NotNil predicate on the "user_id" field.
 func UserIDNotNil() predicate.OAuthToken {
 	return predicate.OAuthToken(sql.FieldNotNull(FieldUserID))
+}
+
+// SubjectEQ applies the EQ predicate on the "subject" field.
+func SubjectEQ(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldEQ(FieldSubject, v))
+}
+
+// SubjectNEQ applies the NEQ predicate on the "subject" field.
+func SubjectNEQ(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldNEQ(FieldSubject, v))
+}
+
+// SubjectIn applies the In predicate on the "subject" field.
+func SubjectIn(vs ...string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldIn(FieldSubject, vs...))
+}
+
+// SubjectNotIn applies the NotIn predicate on the "subject" field.
+func SubjectNotIn(vs ...string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldNotIn(FieldSubject, vs...))
+}
+
+// SubjectGT applies the GT predicate on the "subject" field.
+func SubjectGT(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldGT(FieldSubject, v))
+}
+
+// SubjectGTE applies the GTE predicate on the "subject" field.
+func SubjectGTE(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldGTE(FieldSubject, v))
+}
+
+// SubjectLT applies the LT predicate on the "subject" field.
+func SubjectLT(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldLT(FieldSubject, v))
+}
+
+// SubjectLTE applies the LTE predicate on the "subject" field.
+func SubjectLTE(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldLTE(FieldSubject, v))
+}
+
+// SubjectContains applies the Contains predicate on the "subject" field.
+func SubjectContains(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldContains(FieldSubject, v))
+}
+
+// SubjectHasPrefix applies the HasPrefix predicate on the "subject" field.
+func SubjectHasPrefix(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldHasPrefix(FieldSubject, v))
+}
+
+// SubjectHasSuffix applies the HasSuffix predicate on the "subject" field.
+func SubjectHasSuffix(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldHasSuffix(FieldSubject, v))
+}
+
+// SubjectIsNil applies the IsNil predicate on the "subject" field.
+func SubjectIsNil() predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldIsNull(FieldSubject))
+}
+
+// SubjectNotNil applies the NotNil predicate on the "subject" field.
+func SubjectNotNil() predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldNotNull(FieldSubject))
+}
+
+// SubjectEqualFold applies the EqualFold predicate on the "subject" field.
+func SubjectEqualFold(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldEqualFold(FieldSubject, v))
+}
+
+// SubjectContainsFold applies the ContainsFold predicate on the "subject" field.
+func SubjectContainsFold(v string) predicate.OAuthToken {
+	return predicate.OAuthToken(sql.FieldContainsFold(FieldSubject, v))
 }
 
 // ServiceAccountIDEQ applies the EQ predicate on the "service_account_id" field.
