@@ -80,28 +80,27 @@ if err := pgstore.EnsureSchema(ctx, db); err != nil {
     return err
 }
 
-key, err := pgstore.DecodeKey(os.Getenv("SESSION_ENCRYPTION_KEY"))
+// Reads MYAPP_SESSION_KEY, MYAPP_SESSION_KEY_ID, and (during rotation)
+// MYAPP_SESSION_KEY_PREVIOUS / MYAPP_SESSION_KEY_PREVIOUS_ID.
+stores, err := pgstore.NewStores(db, pgstore.KeysFromEnv("MYAPP_"))
 if err != nil {
-    return err
-}
-keyOpt := pgstore.WithEncryptionKey("k1", key)
-
-sessions, err := pgstore.NewSessionStore(db, keyOpt)
-if err != nil {
-    return err
-}
-states, err := pgstore.NewLoginStateStore(db, keyOpt)
-if err != nil {
-    return err
+    return err // pgstore.ErrNoSessionKey when no key is configured
 }
 
 bff, err := relyingparty.NewBFF(relyingparty.BFFConfig{
     Client:      client,
     Principals:  principals,
-    Sessions:    sessions,
-    LoginStates: states,
+    Sessions:    stores.Sessions,
+    LoginStates: stores.LoginStates,
 })
 ```
+
+`NewStores` validates the key configuration (`pgstore.Keys`) and builds both
+stores; `Keys.Options()` returns the equivalent options for callers that
+construct the stores individually with `NewSessionStore` /
+`NewLoginStateStore`. Run `EnsureSchema` from the application's setup or
+migration step — usually as a more privileged role than the serving
+connection.
 
 ### Schema
 
@@ -135,17 +134,15 @@ Cookie tokens and OAuth state values are stored only as SHA-256 hashes.
 ### Key rotation
 
 1. Deploy every instance with the new key as the encryption key and the old
-   key as a decryption key:
-
-    ```go
-    pgstore.WithEncryptionKey("k2", newKey),
-    pgstore.WithDecryptionKey("k1", oldKey),
-    ```
-
+   key as a decryption key — with `KeysFromEnv`, set the new key and ID in
+   `<PREFIX>SESSION_KEY` / `<PREFIX>SESSION_KEY_ID` and move the old ones to
+   `<PREFIX>SESSION_KEY_PREVIOUS` / `<PREFIX>SESSION_KEY_PREVIOUS_ID`
+   (equivalently `WithEncryptionKey("k2", newKey)` plus
+   `WithDecryptionKey("k1", oldKey)`).
 2. New sessions are sealed with `k2`; existing ones are re-sealed with `k2`
    whenever they are updated (for example on token refresh).
 3. After the session lifetime (default 12 hours) has passed, every `k1` row
-   has expired or been re-sealed; remove the `WithDecryptionKey` option.
+   has expired or been re-sealed; remove the previous key.
 
 Keep the key ID stable for a given key: it is stored in every row.
 
