@@ -47,9 +47,9 @@ support (implemented by `MemoryStorage` and `EntStorage`).
 With `skip_consent: false`, `/oauth/authorize` sends a signed-in user to
 `/consent` the first time a client asks for a set of scopes. The page is
 deliberately minimal (client name, scope descriptions, Allow/Deny). Decisions
-are kept in a `ConsentStore`; the default is in-memory, so users are asked
-again after a restart — supply a shared store with `WithConsentStore` when that
-matters. The consent form is protected by a CSRF token derived from the login
+are kept in a `ConsentStore`; with `EntStorage` the default is the database
+(`sf_consent_grants`), otherwise in-memory (users are asked again after a
+restart). See [Production Stores](production-stores.md). The consent form is protected by a CSRF token derived from the login
 session, a same-origin check, and `frame-ancestors 'none'`. Deployments whose
 clients are all first-party should set `skip_consent: true` instead.
 
@@ -153,9 +153,11 @@ of being linked.
 
 ## Current limitations
 
-- The default state, session and consent stores are in-memory: run a single
-  instance or supply shared stores via `WithLoginStateStore` /
-  `WithLoginSessionStore` / `WithConsentStore`.
+- Without `EntStorage`, the state, session and consent stores default to
+  in-memory: run a single instance or supply shared stores via
+  `WithLoginStateStore` / `WithLoginSessionStore` / `WithConsentStore`. With
+  `EntStorage` they default to the database
+  ([Production Stores](production-stores.md)).
 - Logout ends the SystemAuth session and revokes tokens, but relying parties
   are not notified (no front- or back-channel logout yet).
 - New principals are not added to any organization automatically.

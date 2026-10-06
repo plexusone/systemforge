@@ -359,6 +359,9 @@ SystemForge creates the following tables (all prefixed with `sf_`):
 | `sf_oauth_tokens` | Issued OAuth tokens |
 | `sf_oauth_auth_codes` | Authorization codes |
 | `sf_oauth_consents` | User consent records |
+| `sf_login_sessions` | SystemAuth login sessions (token hashes only) |
+| `sf_login_states` | In-flight upstream social logins (single-use) |
+| `sf_consent_grants` | Consent-page grants per principal, client and scope |
 | `sf_service_accounts` | Non-human identities |
 | `sf_service_account_key_pairs` | RSA/EC key pairs |
 

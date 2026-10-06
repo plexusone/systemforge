@@ -62,7 +62,7 @@ principals := myapp.NewPrincipalStore(db) // implements relyingparty.PrincipalSt
 bff, err := relyingparty.NewBFF(relyingparty.BFFConfig{
     Client:     client,
     Principals: principals,
-    Sessions:   mySharedSessionStore, // default: in-memory (single instance)
+    Sessions:   sessions, // e.g. pgstore.NewSessionStore; default: in-memory (single instance)
 })
 if err != nil {
     return err
@@ -235,6 +235,7 @@ Failures return `401` with `WWW-Authenticate: Bearer realm="api"` (plus
 - JWT access tokens are verified statelessly: a revoked token stays usable
   until it expires (default 15 minutes). Opaque SystemAuth access tokens are
   not accepted by `BearerMiddleware` (no introspection client yet).
-- The default session and login-state stores are in-memory; supply shared
-  implementations for multiple replicas.
+- The default session and login-state stores are in-memory; use
+  `relyingparty/pgstore` (encrypted at rest) or another shared implementation
+  in production. See [Production Stores](production-stores.md).
 - No front- or back-channel logout notifications from SystemAuth.

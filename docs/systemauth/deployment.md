@@ -17,6 +17,13 @@ Unless started with `--dev`, the server refuses to start without:
 and it rejects `social_login.insecure_cookies`. `--dev` relaxes all of these
 (ephemeral key, in-memory storage, `http://localhost` issuer).
 
+With a database configured, social login sessions, in-flight upstream logins
+and consent grants are stored in it (`sf_login_sessions`, `sf_login_states`,
+`sf_consent_grants`), so restarts keep users signed in and several instances
+can run behind a load balancer on one PostgreSQL database. Statically
+configured clients are updated from the configuration on each start. See
+[Production Stores](production-stores.md).
+
 ## Flags and environment
 
 Running `systemauth` without a subcommand serves. Go-style single-dash flags
