@@ -132,6 +132,8 @@ func (f *fakeSystemAuth) idToken(nonce string) string {
 		"iss": f.srv.URL, "sub": f.subject, "aud": []string{testClientID},
 		"exp": now.Add(time.Hour).Unix(), "iat": now.Unix(), "auth_time": now.Unix(),
 		"nonce": nonce, "email": f.email, "email_verified": f.verified, "name": f.name,
+		"sid":  "sa-session-1",
+		"orgs": []map[string]any{{"id": "org-9", "slug": "nine", "role": "admin"}},
 	}
 	if f.idMutator != nil {
 		f.idMutator(claims)

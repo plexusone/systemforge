@@ -149,6 +149,37 @@ An unverified email never links to or creates a principal; an email held by an
 unverified (or differently linked) local principal is a conflict (`409
 ACCOUNT_CONFLICT`).
 
+## Memberships
+
+Organization memberships (in `/bff/session`, `/bff/api/v1/users/me` and
+`AuthenticatedPrincipal.Memberships`) come from a `MembershipSource`, which
+receives the principal, its SystemAuth subject, and the verified SystemAuth
+claims of the request (the ID token + UserInfo claims stored with the BFF
+session, or the JWT access token's claims). SystemAuth is intended to be the
+source of truth for memberships and roles; a claims-reading source keeps
+relying parties from holding divergent copies:
+
+```go
+bff, err := relyingparty.NewBFF(relyingparty.BFFConfig{
+    Client:      client,
+    Principals:  principals,
+    Memberships: relyingparty.MembershipSourceFunc(func(ctx context.Context, q relyingparty.MembershipQuery) ([]relyingparty.Membership, error) {
+        return membershipsFromClaims(q.Claims) // e.g. a SystemAuth-issued claim
+    }),
+})
+```
+
+When `Memberships` is unset, a `PrincipalStore` that also implements
+`MembershipLister` (an app-local table, as `MemoryPrincipalStore` does) is
+used; otherwise no memberships are reported.
+
+## Sessions and back-channel logout
+
+Each session records the SystemAuth `sub` and, when the ID token carries one,
+the SystemAuth session ID (`sid`). `SessionStore.DeleteBySubject` and
+`DeleteBySID` remove all matching sessions, which is what a back-channel
+logout receiver needs.
+
 ## Implementing `PrincipalStore`
 
 The package is storage-agnostic. An application with its own Ent schema
