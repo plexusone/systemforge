@@ -41,6 +41,11 @@ type BFFConfig struct {
 	// (required).
 	Principals PrincipalStore
 
+	// Memberships supplies organization memberships (with the session's
+	// SystemAuth claims). Default: Principals' own table when it implements
+	// MembershipLister, else none.
+	Memberships MembershipSource
+
 	// Sessions stores browser sessions. Default: in-memory (single
 	// instance).
 	Sessions SessionStore
@@ -104,6 +109,7 @@ func NewBFF(cfg BFFConfig) (*BFF, error) {
 	if cfg.Sessions == nil {
 		cfg.Sessions = NewMemorySessionStore()
 	}
+	cfg.Memberships = defaultMembershipSource(cfg.Memberships, cfg.Principals)
 	if cfg.LoginStates == nil {
 		cfg.LoginStates = NewMemoryLoginStateStore()
 	}
@@ -260,7 +266,7 @@ func (b *BFF) CurrentSession(r *http.Request) (*Session, *Principal, []Membershi
 	if !p.Active {
 		return nil, nil, nil, ErrSessionNotFound
 	}
-	memberships, err := b.cfg.Principals.Memberships(ctx, p.ID)
+	memberships, err := b.cfg.Memberships.Memberships(ctx, MembershipQuery{Principal: p, Subject: sess.Subject, Claims: sess.Claims})
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -523,7 +529,7 @@ func (b *BFF) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := b.establishSession(ctx, w, r, p, identity.Subject, tok, rawID); err != nil {
+	if err := b.establishSession(ctx, w, r, p, idt, sessionClaims(idt, info), tok, rawID); err != nil {
 		b.internalError(w, r, "creating session", err)
 		return
 	}
@@ -534,7 +540,7 @@ func (b *BFF) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 // establishSession issues a fresh session token (never reusing one the
 // browser presented, to prevent session fixation) and sets the cookie.
-func (b *BFF) establishSession(ctx context.Context, w http.ResponseWriter, r *http.Request, p *Principal, subject string, tok *oauth2.Token, idToken string) error {
+func (b *BFF) establishSession(ctx context.Context, w http.ResponseWriter, r *http.Request, p *Principal, idt *IDTokenClaims, claims map[string]any, tok *oauth2.Token, idToken string) error {
 	if old := cookieValue(r, b.cookies.sessionName); old != "" {
 		if err := b.cfg.Sessions.Delete(ctx, old); err != nil {
 			return fmt.Errorf("deleting previous session: %w", err)
@@ -547,7 +553,9 @@ func (b *BFF) establishSession(ctx context.Context, w http.ResponseWriter, r *ht
 	now := b.now()
 	if err := b.cfg.Sessions.Create(ctx, token, Session{
 		PrincipalID:          p.ID,
-		Subject:              subject,
+		Subject:              idt.Subject,
+		SID:                  idt.SID,
+		Claims:               claims,
 		AccessToken:          tok.AccessToken,
 		RefreshToken:         tok.RefreshToken,
 		IDToken:              idToken,

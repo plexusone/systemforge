@@ -92,10 +92,11 @@ type PrincipalStore interface {
 	// GetPrincipal returns a principal by app-local ID, or
 	// ErrPrincipalNotFound.
 	GetPrincipal(ctx context.Context, id string) (*Principal, error)
-
-	// Memberships lists the principal's organization memberships.
-	Memberships(ctx context.Context, principalID string) ([]Membership, error)
 }
+
+// Organization memberships are not part of PrincipalStore: they come from
+// a MembershipSource (see memberships.go). A store that also implements
+// MembershipLister is used as the default source.
 
 // ResolvePrincipal finds or creates the app-local principal for a verified
 // SystemAuth identity, using the same account-linking rules as SystemAuth:
@@ -347,7 +348,7 @@ func (s *MemoryPrincipalStore) GetPrincipal(_ context.Context, id string) (*Prin
 	return s.copyOf(id)
 }
 
-// Memberships implements PrincipalStore.
+// Memberships implements MembershipLister.
 func (s *MemoryPrincipalStore) Memberships(_ context.Context, principalID string) ([]Membership, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -359,4 +360,7 @@ func (s *MemoryPrincipalStore) Memberships(_ context.Context, principalID string
 	return out, nil
 }
 
-var _ PrincipalStore = (*MemoryPrincipalStore)(nil)
+var (
+	_ PrincipalStore   = (*MemoryPrincipalStore)(nil)
+	_ MembershipLister = (*MemoryPrincipalStore)(nil)
+)

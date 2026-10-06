@@ -223,6 +223,20 @@ type IDTokenClaims struct {
 	EmailVerified   bool   `json:"email_verified,omitempty"`
 	Name            string `json:"name,omitempty"`
 	Picture         string `json:"picture,omitempty"`
+	SID             string `json:"sid,omitempty"`
+
+	// Raw holds every claim of the verified token.
+	Raw map[string]any `json:"-"`
+}
+
+// rawClaims decodes the payload of a token whose signature was already
+// verified.
+func rawClaims(raw string) (map[string]any, error) {
+	mc := gojwt.MapClaims{}
+	if _, _, err := gojwt.NewParser().ParseUnverified(raw, mc); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
+	}
+	return mc, nil
 }
 
 // VerifyIDToken verifies an ID token per OIDC Core §3.1.3.7: RS256
@@ -246,6 +260,11 @@ func (c *Client) VerifyIDToken(ctx context.Context, raw, nonce string) (*IDToken
 	if nonce == "" || subtle.ConstantTimeCompare([]byte(claims.Nonce), []byte(nonce)) != 1 {
 		return nil, fmt.Errorf("%w: nonce mismatch", ErrInvalidToken)
 	}
+	rc, err := rawClaims(raw)
+	if err != nil {
+		return nil, err
+	}
+	claims.Raw = rc
 	return claims, nil
 }
 
@@ -256,6 +275,9 @@ type AccessTokenClaims struct {
 
 	ClientID string   `json:"client_id,omitempty"`
 	Scopes   []string `json:"scp,omitempty"`
+
+	// Raw holds every claim of the verified token.
+	Raw map[string]any `json:"-"`
 }
 
 // HasScope reports whether the token was granted scope.
@@ -278,6 +300,11 @@ func (c *Client) VerifyAccessToken(ctx context.Context, raw string) (*AccessToke
 	if aud := c.cfg.AccessTokenAudience; aud != "" && !slices.Contains(claims.Audience, aud) {
 		return nil, fmt.Errorf("%w: audience %v does not include %q", ErrInvalidToken, claims.Audience, aud)
 	}
+	rc, err := rawClaims(raw)
+	if err != nil {
+		return nil, err
+	}
+	claims.Raw = rc
 	return claims, nil
 }
 
@@ -288,6 +315,9 @@ type UserInfo struct {
 	EmailVerified bool   `json:"email_verified,omitempty"`
 	Name          string `json:"name,omitempty"`
 	Picture       string `json:"picture,omitempty"`
+
+	// Raw holds every returned claim.
+	Raw map[string]any `json:"-"`
 }
 
 // UserInfo fetches the current claims for accessToken.
@@ -313,8 +343,15 @@ func (c *Client) UserInfo(ctx context.Context, accessToken string) (info *UserIn
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("relyingparty: userinfo: status %d (%s)", resp.StatusCode, resp.Header.Get("WWW-Authenticate"))
 	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxDocumentSize))
+	if err != nil {
+		return nil, fmt.Errorf("relyingparty: userinfo: reading: %w", err)
+	}
 	info = &UserInfo{}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, maxDocumentSize)).Decode(info); err != nil {
+	if err := json.Unmarshal(body, info); err != nil {
+		return nil, fmt.Errorf("relyingparty: userinfo: decoding: %w", err)
+	}
+	if err := json.Unmarshal(body, &info.Raw); err != nil {
 		return nil, fmt.Errorf("relyingparty: userinfo: decoding: %w", err)
 	}
 	return info, nil
@@ -348,4 +385,19 @@ func IdentityFromClaims(idt *IDTokenClaims, info *UserInfo) (VerifiedIdentity, e
 		id.Picture = info.Picture
 	}
 	return id, nil
+}
+
+// sessionClaims merges verified ID token claims with UserInfo claims (the
+// latter win) for storage with a session.
+func sessionClaims(idt *IDTokenClaims, info *UserInfo) map[string]any {
+	out := make(map[string]any, len(idt.Raw))
+	for k, v := range idt.Raw {
+		out[k] = v
+	}
+	if info != nil {
+		for k, v := range info.Raw {
+			out[k] = v
+		}
+	}
+	return out
 }

@@ -17,6 +17,14 @@ type Session struct {
 	PrincipalID string
 	// Subject is the SystemAuth principal ID (sf_principal_id).
 	Subject string
+	// SID is the SystemAuth session ID ("sid" claim of the ID token), when
+	// SystemAuth issues one. Back-channel logout deletes sessions by SID or
+	// Subject.
+	SID string
+	// Claims are the verified ID token claims, overlaid with the UserInfo
+	// claims, captured at sign-in.
+	// A MembershipSource can read SystemAuth-issued memberships from them.
+	Claims map[string]any
 	// AccessToken, RefreshToken and IDToken are the SystemAuth tokens.
 	AccessToken  string
 	RefreshToken string
@@ -43,6 +51,12 @@ type SessionStore interface {
 	Update(ctx context.Context, token string, session Session) error
 	// Delete removes the session. Deleting an unknown token is not an error.
 	Delete(ctx context.Context, token string) error
+	// DeleteBySubject removes every session of a SystemAuth subject and
+	// returns how many were removed (for back-channel logout).
+	DeleteBySubject(ctx context.Context, subject string) (int, error)
+	// DeleteBySID removes every session established under a SystemAuth
+	// session ID and returns how many were removed.
+	DeleteBySID(ctx context.Context, sid string) (int, error)
 }
 
 // MemorySessionStore is an in-memory SessionStore for a single instance.
@@ -110,6 +124,29 @@ func (s *MemorySessionStore) Delete(_ context.Context, token string) error {
 	defer s.mu.Unlock()
 	delete(s.sessions, hashToken(token))
 	return nil
+}
+
+// DeleteBySubject implements SessionStore.
+func (s *MemorySessionStore) DeleteBySubject(_ context.Context, subject string) (int, error) {
+	return s.deleteWhere(func(sess Session) bool { return subject != "" && sess.Subject == subject }), nil
+}
+
+// DeleteBySID implements SessionStore.
+func (s *MemorySessionStore) DeleteBySID(_ context.Context, sid string) (int, error) {
+	return s.deleteWhere(func(sess Session) bool { return sid != "" && sess.SID == sid }), nil
+}
+
+func (s *MemorySessionStore) deleteWhere(match func(Session) bool) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for k, v := range s.sessions {
+		if match(v) {
+			delete(s.sessions, k)
+			n++
+		}
+	}
+	return n
 }
 
 var _ SessionStore = (*MemorySessionStore)(nil)

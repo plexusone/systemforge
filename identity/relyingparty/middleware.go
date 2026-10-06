@@ -91,6 +91,10 @@ type BearerConfig struct {
 	// principals (required).
 	Principals PrincipalStore
 
+	// Memberships supplies organization memberships. Default: Principals'
+	// own table when it implements MembershipLister, else none.
+	Memberships MembershipSource
+
 	// Sessions, when set, also accepts a BFF cookie session for requests
 	// without credentials, so one middleware protects an API used by both
 	// the browser and programmatic clients.
@@ -123,6 +127,7 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	cfg.Memberships = defaultMembershipSource(cfg.Memberships, cfg.Principals)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			p, err := cfg.authenticate(r)
@@ -217,7 +222,7 @@ func (cfg BearerConfig) authenticateJWT(ctx context.Context, token string) (*Aut
 	if !p.Active {
 		return nil, errUnauthenticated("invalid_token", "principal is inactive")
 	}
-	memberships, err := cfg.Principals.Memberships(ctx, p.ID)
+	memberships, err := cfg.Memberships.Memberships(ctx, MembershipQuery{Principal: p, Subject: claims.Subject, Claims: claims.Raw})
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +259,7 @@ func (cfg BearerConfig) authenticateAPIKey(ctx context.Context, key string) (*Au
 	if !p.Active {
 		return nil, errUnauthenticated("invalid_token", "principal is inactive")
 	}
-	memberships, err := cfg.Principals.Memberships(ctx, p.ID)
+	memberships, err := cfg.Memberships.Memberships(ctx, MembershipQuery{Principal: p, Subject: p.SFPrincipalID})
 	if err != nil {
 		return nil, err
 	}
