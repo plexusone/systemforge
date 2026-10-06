@@ -8,6 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/ory/fosite"
+	"github.com/ory/fosite/token/jwt"
 	"github.com/plexusone/omniobserve/observops"
 	"github.com/plexusone/systemforge/observability"
 )
@@ -187,6 +188,8 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// Create session for the user with claims
 	session := s.OIDCSession(userID, claims)
+	session.Claims.AuthTime = s.authTime(r)
+	session.Claims.RequestedAt = ar.GetRequestedAt()
 
 	// Grant the requested scopes (user has consented)
 	for _, scope := range requestedScopes {
@@ -265,6 +268,7 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	for _, scope := range ar.GetRequestedScopes() {
 		ar.GrantScope(scope)
 	}
+	s.prepareAccessClaims(ar)
 
 	// Create the token response
 	response, err := s.oauth2.NewAccessResponse(ctx, ar)
@@ -326,6 +330,45 @@ func (s *Server) applyTokenFamilyLifetime(ctx context.Context, ar fosite.AccessR
 		sess.SetExpiresAt(fosite.RefreshToken, deadline)
 	}
 	return nil
+}
+
+// authTime returns when the end-user authenticated: the start of the
+// SystemAuth login session when social login is on, otherwise now (the
+// SessionProvider authenticated the request just now).
+func (s *Server) authTime(r *http.Request) time.Time {
+	if s.social != nil {
+		if sess, err := s.social.currentSession(r); err == nil {
+			return sess.CreatedAt.UTC().Truncate(time.Second)
+		}
+	}
+	return time.Now().UTC().Truncate(time.Second)
+}
+
+// prepareAccessClaims sets the per-issuance claims of JWT access tokens:
+// a subject (the client itself for client_credentials), client_id, and a
+// fresh issued-at time.
+func (s *Server) prepareAccessClaims(ar fosite.AccessRequester) {
+	sess, ok := ar.GetSession().(*Session)
+	if !ok || sess.DefaultSession == nil {
+		return
+	}
+	clientID := ar.GetClient().GetID()
+	claims := sess.AccessClaims
+	if claims == nil {
+		claims = &jwt.JWTClaims{}
+		sess.AccessClaims = claims
+	}
+	claims.Subject = sessionSubject(sess)
+	if claims.Subject == "" {
+		claims.Subject = clientID
+	}
+	claims.IssuedAt = time.Time{}
+	claims.NotBefore = time.Time{}
+	claims.JTI = ""
+	claims.Add("client_id", clientID)
+	if sess.AccessHeader == nil {
+		sess.AccessHeader = s.jwtHeaders()
+	}
 }
 
 // introspectionEndpoint handles POST /oauth/introspect.

@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/compose"
+	"github.com/ory/fosite/handler/oauth2"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
 	"github.com/plexusone/systemforge/observability"
@@ -26,6 +27,7 @@ type Server struct {
 	sessionProvider SessionProvider
 	oauth2          fosite.OAuth2Provider
 	key             *rsa.PrivateKey
+	keyID           string
 	huma            huma.API
 	router          chi.Router
 	logger          *slog.Logger
@@ -103,6 +105,7 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		}
 	}
 	s.key = key
+	s.keyID = defaultKeyID
 
 	// Set up Fosite
 	if err := s.setupFosite(); err != nil {
@@ -145,6 +148,8 @@ func (s *Server) setupFosite() error {
 	}
 
 	fositeConfig := &fosite.Config{
+		AccessTokenIssuer:              s.config.Issuer,
+		IDTokenIssuer:                  s.config.Issuer,
 		AccessTokenLifespan:            s.config.Tokens.AccessTokenLifetime.Duration(),
 		RefreshTokenLifespan:           s.config.Tokens.RefreshTokenLifetime.Duration(),
 		AuthorizeCodeLifespan:          s.config.Tokens.AuthCodeLifetime.Duration(),
@@ -166,13 +171,22 @@ func (s *Server) setupFosite() error {
 		GetPrivateKey: keyGetter,
 	}
 
+	// Access tokens are opaque (HMAC) by default, or RS256 JWTs verifiable
+	// against the JWKS when features.enable_jwt_access_tokens is set. Either
+	// way they are also stored, so revocation and introspection work.
+	var coreStrategy oauth2.CoreStrategy = compose.NewOAuth2HMACStrategy(fositeConfig)
+	if s.config.Features.EnableJWTAccessTokens {
+		coreStrategy = compose.NewOAuth2JWTStrategy(keyGetter, coreStrategy, fositeConfig)
+	}
+
 	// Build OAuth2 provider with all needed components
 	s.oauth2 = compose.Compose(
 		fositeConfig,
 		s.storage,
 		&compose.CommonStrategy{
-			CoreStrategy: compose.NewOAuth2HMACStrategy(fositeConfig),
-			Signer:       jwtSigner,
+			CoreStrategy:               coreStrategy,
+			OpenIDConnectTokenStrategy: compose.NewOpenIDConnectStrategy(keyGetter, fositeConfig),
+			Signer:                     jwtSigner,
 		},
 		compose.OAuth2AuthorizeExplicitFactory,
 		compose.OAuth2ClientCredentialsGrantFactory,
@@ -180,6 +194,9 @@ func (s *Server) setupFosite() error {
 		compose.OAuth2TokenIntrospectionFactory,
 		compose.OAuth2TokenRevocationFactory,
 		compose.OAuth2PKCEFactory,
+		// OpenID Connect: ID tokens for the code flow and on refresh.
+		compose.OpenIDConnectExplicitFactory,
+		compose.OpenIDConnectRefreshFactory,
 	)
 
 	return nil
@@ -289,16 +306,33 @@ func (s *Server) Storage() Storage {
 // Session creates a new, empty OAuth session for subject. Storage
 // implementations hydrate it when loading codes and tokens.
 func (s *Server) Session(subject string) *Session {
-	return &Session{DefaultSession: &openid.DefaultSession{
-		Claims: &jwt.IDTokenClaims{
-			Issuer:    s.config.Issuer,
-			Subject:   subject,
-			IssuedAt:  time.Now(),
-			ExpiresAt: time.Now().Add(s.config.Tokens.AccessTokenLifetime.Duration()),
+	return &Session{
+		DefaultSession: &openid.DefaultSession{
+			Claims: &jwt.IDTokenClaims{
+				Issuer:    s.config.Issuer,
+				Subject:   subject,
+				IssuedAt:  time.Now(),
+				ExpiresAt: time.Now().Add(s.config.Tokens.AccessTokenLifetime.Duration()),
+			},
+			Headers: s.jwtHeaders(),
+			Subject: subject,
 		},
-		Headers: &jwt.Headers{},
-		Subject: subject,
-	}}
+		AccessHeader: s.jwtHeaders(),
+	}
+}
+
+// defaultKeyID is the JWKS key ID used when none is configured.
+const defaultKeyID = "systemauth-1"
+
+// KeyID returns the key ID ("kid") of the signing key, published in the
+// JWKS and set in the header of every JWT the server signs.
+func (s *Server) KeyID() string {
+	return s.keyID
+}
+
+// jwtHeaders returns JOSE headers carrying the signing key ID.
+func (s *Server) jwtHeaders() *jwt.Headers {
+	return &jwt.Headers{Extra: map[string]interface{}{"kid": s.keyID}}
 }
 
 // RegisterClient registers a new OAuth client.

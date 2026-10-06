@@ -233,9 +233,12 @@ func (s *Server) OIDCSession(subject string, claims map[string]interface{}) *Ses
 	// Add audience (the client ID will be added by Fosite)
 	idClaims.Audience = []string{}
 
-	return &Session{DefaultSession: &openid.DefaultSession{
-		Claims:  idClaims,
-		Headers: &jwt.Headers{},
-		Subject: subject,
-	}}
+	return &Session{
+		DefaultSession: &openid.DefaultSession{
+			Claims:  idClaims,
+			Headers: s.jwtHeaders(),
+			Subject: subject,
+		},
+		AccessHeader: s.jwtHeaders(),
+	}
 }

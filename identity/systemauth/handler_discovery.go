@@ -74,7 +74,6 @@ func (s *Server) openIDConfigHandler(_ context.Context, _ *OpenIDConfigInput) (*
 		RevocationEndpoint:    issuer + "/oauth/revoke",
 		ResponseTypesSupported: []string{
 			"code",
-			"token",
 		},
 		ResponseModesSupported: []string{
 			"query",
@@ -133,7 +132,7 @@ func (s *Server) jwksHandler(_ context.Context, _ *JWKSInput) (*JWKSOutput, erro
 	// Create JWK from the RSA public key
 	jwk := jose.JSONWebKey{
 		Key:       &s.key.PublicKey,
-		KeyID:     "systemauth-1", // In production, use a proper key ID
+		KeyID:     s.keyID,
 		Algorithm: string(jose.RS256),
 		Use:       "sig",
 	}

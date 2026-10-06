@@ -37,6 +37,12 @@ type Storage interface {
 	GetPKCERequestSession(ctx context.Context, signature string, session fosite.Session) (fosite.Requester, error)
 	DeletePKCERequestSession(ctx context.Context, signature string) error
 
+	// OpenID Connect sessions for the authorization code flow
+	// (openid.OpenIDConnectRequestStorage), keyed by the raw code.
+	CreateOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) error
+	GetOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) (fosite.Requester, error)
+	DeleteOpenIDConnectSession(ctx context.Context, authorizeCode string) error
+
 	// Client assertion JWT tracking
 	ClientAssertionJWTValid(ctx context.Context, jti string) error
 	SetClientAssertionJWT(ctx context.Context, jti string, exp time.Time) error

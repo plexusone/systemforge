@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
+	"github.com/ory/fosite/handler/openid"
 	"golang.org/x/crypto/argon2"
 
 	"github.com/plexusone/systemforge/identity/ent"
@@ -809,6 +810,74 @@ func (s *EntStorage) GetPKCERequestSession(ctx context.Context, signature string
 // once the exchange completes. Invalidating it here would make the code
 // look replayed to the authorization code handler.
 func (s *EntStorage) DeletePKCERequestSession(ctx context.Context, signature string) error {
+	return nil
+}
+
+// --- OpenID Connect Sessions ---
+
+// oidcCodeKey keys the OIDC session row for a raw authorization code. It is
+// stored in the authorization code table under a distinct prefix.
+func oidcCodeKey(authorizeCode string) string {
+	return "oidc:" + hashToken(authorizeCode)
+}
+
+// CreateOpenIDConnectSession stores the OIDC session for an authorization code.
+func (s *EntStorage) CreateOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) error {
+	app, err := s.db.OAuthApp.Query().
+		Where(oauthapp.ClientIDEQ(requester.GetClient().GetID())).
+		First(ctx)
+	if err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	}
+	requestData, err := s.serializeRequest(requester)
+	if err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	}
+	_, err = s.db.OAuthAuthCode.Create().
+		SetCodeSignature(oidcCodeKey(authorizeCode)).
+		SetAppID(app.ID).
+		SetSubject(sessionSubject(requester.GetSession())).
+		SetRedirectURI(requester.GetRequestForm().Get("redirect_uri")).
+		SetScopes(scopesToStrings(requester.GetGrantedScopes())).
+		SetRequestData(requestData).
+		SetExpiresAt(codeExpiry(requester.GetSession())).
+		Save(ctx)
+	if err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	}
+	return nil
+}
+
+// GetOpenIDConnectSession returns the OIDC session for an authorization code.
+func (s *EntStorage) GetOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) (fosite.Requester, error) {
+	row, err := s.db.OAuthAuthCode.Query().
+		Where(oauthauthcode.CodeSignatureEQ(oidcCodeKey(authorizeCode))).
+		WithApp().
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, openid.ErrNoSessionFound
+		}
+		return nil, fosite.ErrServerError.WithWrap(err)
+	}
+	req := fosite.NewRequest()
+	req.Client = s.entAppToClient(row.Edges.App)
+	req.GrantedScope = row.Scopes
+	req.RequestedAt = row.CreatedAt
+	if err := s.restoreRequest(row.RequestData, req, &Session{}); err != nil {
+		return nil, fosite.ErrServerError.WithWrap(err)
+	}
+	return req, nil
+}
+
+// DeleteOpenIDConnectSession removes the OIDC session for an authorization code.
+func (s *EntStorage) DeleteOpenIDConnectSession(ctx context.Context, authorizeCode string) error {
+	_, err := s.db.OAuthAuthCode.Delete().
+		Where(oauthauthcode.CodeSignatureEQ(oidcCodeKey(authorizeCode))).
+		Exec(ctx)
+	if err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	}
 	return nil
 }
 

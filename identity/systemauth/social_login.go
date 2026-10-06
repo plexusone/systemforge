@@ -485,8 +485,20 @@ func (p *socialSessionProvider) GetAuthenticatedUser(r *http.Request) string {
 	return ""
 }
 
-// RedirectToLogin implements SessionProvider.
+// IDPHintParam is an optional /oauth/authorize parameter naming the
+// upstream provider (github, google) to sign in with, skipping the chooser.
+const IDPHintParam = "idp_hint"
+
+// RedirectToLogin implements SessionProvider. An idp_hint naming a
+// configured provider sends the user straight to that provider.
 func (p *socialSessionProvider) RedirectToLogin(returnURL string) string {
+	if u, err := url.Parse(returnURL); err == nil {
+		if hint := u.Query().Get(IDPHintParam); hint != "" {
+			if _, ok := p.social.connectors[hint]; ok {
+				return startURL(hint, returnURL)
+			}
+		}
+	}
 	return LoginPath + "?return_to=" + url.QueryEscape(returnURL)
 }
 

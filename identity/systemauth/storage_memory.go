@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
+	"github.com/ory/fosite/handler/openid"
 )
 
 // MemoryStorage implements the Storage interface using in-memory maps.
@@ -30,6 +31,9 @@ type MemoryStorage struct {
 
 	// PKCE storage (shares with auth codes)
 	pkceSessions map[string]*storedAuthCode
+
+	// OpenID Connect sessions keyed by authorization code
+	oidcSessions map[string]fosite.Requester
 
 	// User storage for federation
 	users map[uuid.UUID]*User
@@ -58,6 +62,7 @@ func NewMemoryStorage() *MemoryStorage {
 		accessTokens:  make(map[string]*storedToken),
 		refreshTokens: make(map[string]*storedToken),
 		pkceSessions:  make(map[string]*storedAuthCode),
+		oidcSessions:  make(map[string]fosite.Requester),
 		users:         make(map[uuid.UUID]*User),
 	}
 }
@@ -415,6 +420,35 @@ func (s *MemoryStorage) DeletePKCERequestSession(ctx context.Context, signature 
 
 	sig := hashSignature(signature)
 	delete(s.pkceSessions, sig)
+	return nil
+}
+
+// --- OpenID Connect Sessions ---
+
+// CreateOpenIDConnectSession stores the OIDC session for an authorization code.
+func (s *MemoryStorage) CreateOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.oidcSessions[hashSignature(authorizeCode)] = requester
+	return nil
+}
+
+// GetOpenIDConnectSession returns the OIDC session for an authorization code.
+func (s *MemoryStorage) GetOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) (fosite.Requester, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	req, ok := s.oidcSessions[hashSignature(authorizeCode)]
+	if !ok {
+		return nil, openid.ErrNoSessionFound
+	}
+	return req, nil
+}
+
+// DeleteOpenIDConnectSession removes the OIDC session for an authorization code.
+func (s *MemoryStorage) DeleteOpenIDConnectSession(ctx context.Context, authorizeCode string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.oidcSessions, hashSignature(authorizeCode))
 	return nil
 }
 
