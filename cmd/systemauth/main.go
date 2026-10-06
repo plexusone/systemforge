@@ -58,7 +58,12 @@ The server will listen on the configured address and serve the following endpoin
   - GET  /oauth/authorize                   Authorization endpoint
   - POST /oauth/token                       Token endpoint
   - POST /oauth/introspect                  Token introspection
-  - POST /oauth/revoke                      Token revocation`,
+  - POST /oauth/revoke                      Token revocation
+
+When social_login is configured, GitHub/Google login is also served:
+  - GET  /login                             Provider chooser (return_to=...)
+  - GET  /login/{provider}                  Start upstream login
+  - GET  /login/{provider}/callback         Upstream callback; sets __Host-sf_login`,
 	RunE: runServe,
 }
 

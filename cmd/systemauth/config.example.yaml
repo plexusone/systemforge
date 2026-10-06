@@ -56,6 +56,26 @@ clients:
       - api:read
       - api:write
 
+# Social login (optional)
+# Lets users sign in to SystemAuth with GitHub and/or Google. Upstream OAuth
+# credentials live only here; relying-party apps federate to SystemAuth.
+# Register the callback URL {issuer}/login/{provider}/callback with each provider.
+# social_login:
+#   github:
+#     client_id: ${GITHUB_CLIENT_ID}
+#     client_secret: ${GITHUB_CLIENT_SECRET}
+#   google:
+#     client_id: ${GOOGLE_CLIENT_ID}
+#     client_secret: ${GOOGLE_CLIENT_SECRET}
+#   # Absolute origins allowed as post-login return_to targets (the issuer's
+#   # own origin and relative paths are always allowed).
+#   allowed_redirect_origins:
+#     - https://myapp.example.com
+#   default_redirect: /
+#   session_lifetime: 12h
+#   skip_consent: false      # true only if every client is first-party
+#   insecure_cookies: false  # true only for local development over plain HTTP
+
 # Database configuration (optional - uses in-memory storage if not specified)
 # Uncomment and configure for persistent storage.
 
