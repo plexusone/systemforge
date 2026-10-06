@@ -12,6 +12,9 @@ var (
 
 	// ErrStorageInitFailed is returned when storage initialization fails.
 	ErrStorageInitFailed = errors.New("systemauth: failed to initialize storage")
+
+	// ErrInvalidSocialLoginConfig is returned when social login is misconfigured.
+	ErrInvalidSocialLoginConfig = errors.New("systemauth: invalid social login configuration")
 )
 
 // Client errors.
@@ -75,4 +78,28 @@ var (
 
 	// ErrUserExists is returned when trying to create a user that already exists.
 	ErrUserExists = errors.New("systemauth: user already exists")
+)
+
+// Social login errors.
+var (
+	// ErrPrincipalNotFound is returned when no principal matches a lookup.
+	ErrPrincipalNotFound = errors.New("systemauth: principal not found")
+
+	// ErrPrincipalInactive is returned when the resolved principal is deactivated.
+	ErrPrincipalInactive = errors.New("systemauth: principal is inactive")
+
+	// ErrEmailNotVerified is returned when an upstream login carries no
+	// verified email and cannot be matched by its provider identity.
+	ErrEmailNotVerified = errors.New("systemauth: upstream email is not verified")
+
+	// ErrEmailConflict is returned when the upstream email belongs to an
+	// account that cannot be safely linked automatically.
+	ErrEmailConflict = errors.New("systemauth: email already belongs to an account that cannot be linked")
+
+	// ErrRedirectNotAllowed is returned when a post-login redirect target is
+	// not on the allowlist.
+	ErrRedirectNotAllowed = errors.New("systemauth: redirect target not allowed")
+
+	// ErrLoginSessionNotFound is returned when a login session is unknown or expired.
+	ErrLoginSessionNotFound = errors.New("systemauth: login session not found")
 )
