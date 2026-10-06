@@ -6,6 +6,9 @@ The `identity/oauthclient` package provides utilities for accepting OAuth logins
 
 This package handles the client-side of OAuth flows where your app is the **relying party** accepting logins from external identity providers. This is different from the `oauth` package which implements an OAuth **server**.
 
+It is the single sanctioned place in SystemForge that talks to github.com and
+google.com. The former `session/oauth` package was folded into it and removed.
+
 ## Supported Providers
 
 - **GitHub** - OAuth 2.0 with user/email scopes
@@ -76,6 +79,27 @@ func handleGitHubCallback(ctx context.Context, code string) (*cfoauth.User, erro
 }
 ```
 
+## Connector
+
+`Connector` bundles the OAuth2 config, the profile API location, and an
+optional HTTP client. Endpoint fields are overridable (tests, GitHub
+Enterprise):
+
+```go
+gh := cfoauth.NewGitHubConnector(cfoauth.ProviderConfig{
+    ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+    ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+    RedirectURL:  "https://auth.example.com/login/github/callback",
+})
+
+verifier := oauth2.GenerateVerifier()
+authURL := gh.AuthCodeURL(state, oauth2.S256ChallengeOption(verifier))
+
+// in the callback
+token, err := gh.Exchange(ctx, code, oauth2.VerifierOption(verifier))
+user, err := gh.FetchUser(ctx, token)
+```
+
 ## User Struct
 
 All providers return a normalized `User` struct:
@@ -85,6 +109,7 @@ type User struct {
     ProviderID   string         // Unique ID from the provider
     Provider     string         // "github", "google", "systemauth"
     Email        string         // User's email address
+    EmailVerified bool          // Provider asserts the user controls Email
     Name         string         // Display name
     AvatarURL    string         // Profile picture URL
     Username     string         // Username (GitHub) or empty
@@ -126,6 +151,19 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 
     // State is valid, continue with code exchange...
 }
+```
+
+### Server-side state store
+
+`StateStore` keeps per-flow data (provider, validated post-login redirect,
+PKCE verifier) server-side. `Take` is single-use. `MemoryStateStore` is
+concurrency-safe but single-instance only; supply a shared implementation
+when running multiple replicas.
+
+```go
+store := cfoauth.NewMemoryStateStore()
+_ = store.Put(ctx, state, cfoauth.StateData{Provider: cfoauth.ProviderGitHub, PKCEVerifier: verifier}, 10*time.Minute)
+data, err := store.Take(ctx, state) // cfoauth.ErrInvalidState if unknown/expired/reused
 ```
 
 ## Complete Example
@@ -208,12 +246,16 @@ func (h *AuthHandler) GitHubCallback(w http.ResponseWriter, r *http.Request) {
 - Default scopes: `user:email`
 - Use `read:user` for profile access without write permissions
 - Email may be private; the package fetches from `/user/emails` if needed
+- `EmailVerified` is set from `/user/emails`; a public profile email whose
+  verification cannot be confirmed (e.g. missing `user:email` scope) is
+  reported as unverified
 
 ### Google
 
 - Uses OpenID Connect
 - Default scopes: `openid`, `email`, `profile`
 - `ProviderID` is the Google `sub` claim
+- `EmailVerified` is the userinfo `email_verified` claim
 
 ### SystemAuth
 
@@ -324,7 +366,7 @@ func (s *UserService) FindOrCreateFromOAuth(ctx context.Context, oauthUser *cfoa
 1. **Always validate state** - Use `StateManager` or your own CSRF protection
 2. **Use HTTPS in production** - `NewStateManager()` defaults to `Secure: true`; only use `NewStateManagerInsecure()` for local HTTP development
 3. **Store tokens securely** - Encrypt OAuth tokens at rest
-4. **Validate email ownership** - Consider email verification for sensitive apps
+4. **Validate email ownership** - Key accounts by `Provider` + `ProviderID`; only use `Email` to link to an existing account when `EmailVerified` is true
 5. **Check token expiry** - Refresh tokens before they expire
 
 ## Next Steps

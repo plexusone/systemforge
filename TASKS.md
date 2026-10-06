@@ -321,10 +321,10 @@ These are used directly by consumers of the library.
 - [ ] `EndpointKey` - Endpoint-based key function
 - [ ] `CompositeKey` - Composite key function
 
-#### OAuth Handlers (`session/oauth/`)
+#### OAuth Client (`identity/oauthclient/`)
 
-- [ ] `MemoryStateStore` - In-memory OAuth state store
-- [ ] `UserInfo` - OAuth user info type
+- [x] `MemoryStateStore` - In-memory OAuth state store
+- [x] `Connector` - GitHub/Google login connector (exchange + profile fetch)
 
 ### Priority 6: Other Components
 
