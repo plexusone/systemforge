@@ -13,10 +13,14 @@ tokens:
   id_token_lifetime: 1h          # How long ID tokens are valid
   auth_code_lifetime: 10m        # How long authorization codes are valid
 
-# Key configuration (optional)
+# Key configuration
+# Production requires a signing key (or --signing-key-file / SYSTEMAUTH_SIGNING_KEY);
+# without one an ephemeral key is generated and --dev is required.
 keys:
-  algorithm: RS256               # JWT signing algorithm (RS256 or ES256)
-  rotation_days: 0               # Key rotation interval (0 = never)
+  algorithm: RS256               # JWT signing algorithm (RS256)
+  # key_id: prod-1               # JWKS kid (default: RFC 7638 thumbprint of the key)
+  # private_key_file: ${SYSTEMAUTH_SIGNING_KEY_FILE}   # PEM RSA key, >= 2048 bits
+  # private_key_pem: ${SYSTEMAUTH_SIGNING_KEY}         # or the PEM content itself
 
 # Feature flags (optional)
 features:

@@ -287,7 +287,7 @@ github.com/plexusone/systemforge/
 │   ├── oauth/             # OAuth 2.0 server (Fosite)
 │   ├── oauthclient/       # GitHub/Google/SystemAuth OAuth client primitives
 │   ├── relyingparty/      # OIDC relying party for apps federating to SystemAuth (/bff, bearer)
-│   ├── systemauth/        # SystemAuth OAuth 2.0 / OIDC server (social login, userinfo)
+│   ├── systemauth/        # SystemAuth OAuth 2.0 / OIDC server (social login, userinfo; cmd/systemauth binary)
 │   ├── password.go        # Argon2id hashing
 │   └── service.go         # Identity service interfaces
 │
