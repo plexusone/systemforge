@@ -59,7 +59,6 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 - 🔒 **DPoP (RFC 9449)** - Proof-of-possession token binding
 - 🖥️ **BFF Pattern** - Backend for Frontend with server-side sessions
 - 💾 **OmniStorage Backend** - Production session storage with Redis, size limits, and observability
-- 🌐 **OAuth Handlers** - GitHub and Google social login
 - 🛡️ **Middleware** - JWT Bearer and API key authentication
 
 ### Authorization Module
@@ -283,13 +282,13 @@ github.com/plexusone/systemforge/
 │   ├── ent/schema/        # Ent schemas with cf_ prefix
 │   ├── apikey/            # API key service
 │   ├── oauth/             # OAuth 2.0 server (Fosite)
+│   ├── oauthclient/       # GitHub/Google/SystemAuth OAuth client primitives
 │   ├── password.go        # Argon2id hashing
 │   └── service.go         # Identity service interfaces
 │
 ├── session/               # Session management
 │   ├── jwt/               # JWT service with DPoP claims
 │   ├── bff/               # Backend for Frontend pattern (DPoP via goauth/dpop)
-│   ├── oauth/             # Social login handlers
 │   ├── middleware/        # Auth middleware
 │   └── ratelimit/         # Rate limiting with observability
 │
