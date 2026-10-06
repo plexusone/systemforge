@@ -78,6 +78,18 @@
             "720h"
           ]
         },
+        "refresh_token_absolute_lifetime": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "Absolute lifetime of a refresh-token family across rotations (e.g. 720h)",
+          "default": "720h",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
         "id_token_lifetime": {
           "type": "string",
           "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",

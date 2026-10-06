@@ -63,7 +63,9 @@ The server will listen on the configured address and serve the following endpoin
 When social_login is configured, GitHub/Google login is also served:
   - GET  /login                             Provider chooser (return_to=...)
   - GET  /login/{provider}                  Start upstream login
-  - GET  /login/{provider}/callback         Upstream callback; sets __Host-sf_login`,
+  - GET  /login/{provider}/callback         Upstream callback; sets __Host-sf_login
+  - GET  /logout, POST /logout              Sign out; revokes the principal's tokens
+  - GET  /consent, POST /consent            Consent page (when skip_consent is false)`,
 	RunE: runServe,
 }
 

@@ -8,7 +8,8 @@ issuer: https://auth.example.com
 # Token lifetimes (optional - defaults shown)
 tokens:
   access_token_lifetime: 15m     # How long access tokens are valid
-  refresh_token_lifetime: 168h   # How long refresh tokens are valid (7 days)
+  refresh_token_lifetime: 168h   # How long each refresh token is valid (7 days)
+  refresh_token_absolute_lifetime: 720h  # Max lifetime of a rotating refresh-token family (30 days)
   id_token_lifetime: 1h          # How long ID tokens are valid
   auth_code_lifetime: 10m        # How long authorization codes are valid
 
@@ -73,7 +74,7 @@ clients:
 #     - https://myapp.example.com
 #   default_redirect: /
 #   session_lifetime: 12h
-#   skip_consent: false      # true only if every client is first-party
+#   skip_consent: false      # true only if every client is first-party; otherwise /consent is shown
 #   insecure_cookies: false  # true only for local development over plain HTTP
 
 # Database configuration (optional - uses in-memory storage if not specified)
