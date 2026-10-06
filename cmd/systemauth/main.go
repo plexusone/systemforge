@@ -59,6 +59,7 @@ The server will listen on the configured address and serve the following endpoin
   - POST /oauth/token                       Token endpoint
   - POST /oauth/introspect                  Token introspection
   - POST /oauth/revoke                      Token revocation
+  - GET  /oauth/userinfo                    OpenID Connect UserInfo
 
 When social_login is configured, GitHub/Google login is also served:
   - GET  /login                             Provider chooser (return_to=...)

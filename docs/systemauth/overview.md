@@ -64,6 +64,52 @@ providers := systemauth.NewProvidersFromStorage(storage)
 // OAuth is nil (no server)
 ```
 
+## HTTP Endpoints
+
+A `systemauth.Server` (embedded or the standalone `cmd/systemauth` binary)
+serves:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/.well-known/openid-configuration` | GET | OIDC discovery |
+| `/.well-known/jwks.json` | GET | JSON Web Key Set |
+| `/oauth/authorize` | GET/POST | Authorization endpoint |
+| `/oauth/token` | POST | Token endpoint (refresh tokens rotate; see [Social Login](social-login.md#refresh-tokens)) |
+| `/oauth/introspect` | POST | Token introspection (RFC 7662) |
+| `/oauth/revoke` | POST | Token revocation (RFC 7009) |
+| `/oauth/userinfo` | GET/POST | OpenID Connect UserInfo |
+
+With `social_login` configured, `/login*`, `/logout` and `/consent` are added
+(see [Social Login](social-login.md)).
+
+### UserInfo
+
+`/oauth/userinfo` implements OIDC Core §5.3. Send the access token as
+`Authorization: Bearer <token>` (or `access_token` in a form-encoded `POST`
+body; query parameters are not accepted). The token must have been granted the
+`openid` scope.
+
+```json
+{
+  "sub": "5f1c0a9e-...",
+  "email": "octo@example.com",
+  "email_verified": true,
+  "name": "Octo Cat",
+  "picture": "https://avatars.example.com/u/4242"
+}
+```
+
+`sub` is the SystemAuth principal ID. Standard claims are released per granted
+scope — `email` → `email`, `email_verified`; `profile` → `name`, `picture`, … —
+and are read live from the principal (via the `SessionProvider`), so they
+reflect the current profile rather than the one at sign-in.
+
+| Condition | Response |
+|-----------|----------|
+| No token | `401`, `WWW-Authenticate: Bearer realm="systemauth"` |
+| Unknown, expired or revoked token | `401`, `WWW-Authenticate: Bearer ..., error="invalid_token"` |
+| Token without `openid` scope | `403`, `WWW-Authenticate: Bearer ..., error="insufficient_scope", scope="openid"` |
+
 ## Embedded vs Ory
 
 | Aspect | Embedded | Ory Services |
