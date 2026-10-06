@@ -26,7 +26,11 @@ endpoints:
 
 `/oauth/authorize` sends unauthenticated users to `/login?return_to=<authorize URL>`,
 so after login the authorization request resumes and the relying party receives
-an authorization code. No token ever appears in a redirect URL.
+an authorization code. No token ever appears in a redirect URL. An
+`idp_hint=github|google` authorization parameter skips the chooser.
+
+Applications consume this through the `identity/relyingparty` package; see
+[Relying Parties](relying-party.md).
 
 ### Logout
 

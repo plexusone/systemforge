@@ -68,6 +68,7 @@ nav:
     - Overview: systemauth/overview.md
     - Providers: systemauth/providers.md
     - Social Login: systemauth/social-login.md
+    - Relying Parties: systemauth/relying-party.md
   - Authorization:
     - SpiceDB Setup: authorization/spicedb-setup.md
     - SpiceDB Schema: authorization/spicedb-schema.md

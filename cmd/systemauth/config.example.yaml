@@ -23,7 +23,7 @@ features:
   require_pkce: true                    # Require PKCE for authorization code flows
   allow_dynamic_registration: false     # Enable RFC 7591 dynamic client registration
   enable_device_flow: false             # Enable device authorization grant (RFC 8628)
-  enable_jwt_access_tokens: false       # Issue JWT access tokens instead of opaque tokens
+  enable_jwt_access_tokens: false       # Issue RS256 JWT access tokens (verifiable via JWKS) instead of opaque tokens
 
 # Static client configurations
 # Define OAuth clients that can authenticate with this server.

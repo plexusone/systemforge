@@ -42,14 +42,16 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 - 🔗 **Memberships** - User-org relationships with flexible roles
 - 👑 **Ownership Transfer** - Transaction-safe organization ownership transfers
 - 🔐 **OAuth Accounts** - External OAuth provider links (GitHub, Google)
-- 🌐 **Social Login** - GitHub/Google login served centrally by SystemAuth (`__Host-sf_login` session, provider-subject account linking)
+- 🌐 **Social Login** - GitHub/Google login served centrally by SystemAuth (`__Host-sf_login` session, provider-subject account linking, logout, consent)
+- 🤝 **Relying Parties** - `identity/relyingparty`: apps federate to SystemAuth via OIDC (ID-token/JWKS verification, `sub` → `sf_principal_id` linking), mount the `/bff/*` cookie-session surface, and accept SystemAuth JWTs or API keys from programmatic clients
 - 🔑 **API Keys** - Machine-to-machine authentication with scopes
 
 ### OAuth 2.0 Server (Fosite)
 
 - 📜 **Authorization Code + PKCE** - Secure browser-based auth
 - 🤖 **Client Credentials** - Service-to-service auth
-- 🔄 **Refresh Token** - With rotation and theft detection
+- 🔄 **Refresh Token** - Rotation with reuse detection (family revocation) and absolute lifetime
+- 🪪 **OpenID Connect** - RS256 ID tokens, UserInfo, JWKS with key ID, optional JWT access tokens
 - 📝 **JWT Bearer (RFC 7523)** - Service account authentication
 - ⚙️ **Service Accounts** - Non-human identities with RSA/EC key pairs
 - 🔍 **Token Introspection & Revocation** - RFC 7662/7009
@@ -284,6 +286,8 @@ github.com/plexusone/systemforge/
 │   ├── apikey/            # API key service
 │   ├── oauth/             # OAuth 2.0 server (Fosite)
 │   ├── oauthclient/       # GitHub/Google/SystemAuth OAuth client primitives
+│   ├── relyingparty/      # OIDC relying party for apps federating to SystemAuth (/bff, bearer)
+│   ├── systemauth/        # SystemAuth OAuth 2.0 / OIDC server (social login, userinfo)
 │   ├── password.go        # Argon2id hashing
 │   └── service.go         # Identity service interfaces
 │
