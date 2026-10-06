@@ -2,6 +2,7 @@ package systemauth
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 )
@@ -13,6 +14,7 @@ import (
 // (open redirect) passes.
 type redirectPolicy struct {
 	defaultTarget string
+	issuerOrigin  string
 	origins       map[string]bool
 }
 
@@ -22,6 +24,7 @@ func newRedirectPolicy(issuer string, cfg *SocialLoginConfig) (*redirectPolicy, 
 	if err != nil {
 		return nil, fmt.Errorf("issuer: %w", err)
 	}
+	p.issuerOrigin = issuerOrigin
 	p.origins[issuerOrigin] = true
 	for _, o := range cfg.AllowedRedirectOrigins {
 		origin, err := parseOrigin(o)
@@ -92,4 +95,32 @@ func parseOrigin(raw string) (string, error) {
 		return "", fmt.Errorf("invalid origin %q: must be an absolute http(s) URL", raw)
 	}
 	return scheme + "://" + strings.ToLower(u.Host), nil
+}
+
+// requestOrigin returns the normalized origin a browser attached to r (the
+// Origin header, else the Referer), or "" when there is none.
+func requestOrigin(r *http.Request) string {
+	for _, h := range []string{r.Header.Get("Origin"), r.Header.Get("Referer")} {
+		if h == "" || h == "null" {
+			continue
+		}
+		origin, err := parseOrigin(h)
+		if err != nil {
+			return ""
+		}
+		return origin
+	}
+	return ""
+}
+
+// fromIssuer reports whether r was sent by a page on the issuer's origin.
+func (p *redirectPolicy) fromIssuer(r *http.Request) bool {
+	return requestOrigin(r) == p.issuerOrigin
+}
+
+// fromTrustedOrigin reports whether r was sent by a page on the issuer's
+// origin or an allowed relying-party origin.
+func (p *redirectPolicy) fromTrustedOrigin(r *http.Request) bool {
+	origin := requestOrigin(r)
+	return origin != "" && p.origins[origin]
 }

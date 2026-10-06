@@ -159,6 +159,10 @@ func (c loginCookies) setSession(w http.ResponseWriter, token string, lifetime t
 	http.SetCookie(w, c.cookie(c.sessionName, token, int(lifetime.Seconds())))
 }
 
+func (c loginCookies) clearSession(w http.ResponseWriter) {
+	http.SetCookie(w, c.cookie(c.sessionName, "", -1))
+}
+
 func (c loginCookies) setState(w http.ResponseWriter, state string, lifetime time.Duration) {
 	http.SetCookie(w, c.cookie(c.stateName, state, int(lifetime.Seconds())))
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/ory/fosite"
 	"golang.org/x/oauth2"
 
 	"github.com/plexusone/systemforge/identity/oauthclient"
@@ -40,6 +41,7 @@ type socialOptions struct {
 	directory  PrincipalDirectory
 	sessions   LoginSessionStore
 	states     oauthclient.StateStore
+	consents   ConsentStore
 	connectors []*oauthclient.Connector
 }
 
@@ -62,6 +64,12 @@ func WithLoginStateStore(store oauthclient.StateStore) Option {
 	return func(s *Server) { s.socialOpts.states = store }
 }
 
+// WithConsentStore sets the store for user consent decisions made on the
+// /consent page. Defaults to an in-memory (single-instance) store.
+func WithConsentStore(store ConsentStore) Option {
+	return func(s *Server) { s.socialOpts.consents = store }
+}
+
 // WithSocialConnector adds or replaces the upstream connector for
 // c.Provider. Use it to point a provider at alternate endpoints (tests,
 // GitHub Enterprise); credentials normally come from Config.SocialLogin.
@@ -77,9 +85,20 @@ type socialLogin struct {
 	states     oauthclient.StateStore
 	sessions   LoginSessionStore
 	directory  PrincipalDirectory
+	consents   ConsentStore
 	redirects  *redirectPolicy
 	cookies    loginCookies
 	now        func() time.Time
+
+	// clients looks up OAuth clients for the consent page.
+	clients interface {
+		GetClientByID(ctx context.Context, id string) (*Client, error)
+	}
+	// oauth2 answers denied authorization requests.
+	oauth2 fosite.OAuth2Provider
+	// revoker revokes a principal's tokens on logout; nil when the storage
+	// does not support it.
+	revoker SubjectTokenRevoker
 }
 
 func newSocialLogin(s *Server) (*socialLogin, error) {
@@ -132,9 +151,18 @@ func newSocialLogin(s *Server) (*socialLogin, error) {
 		states:     s.socialOpts.states,
 		sessions:   s.socialOpts.sessions,
 		directory:  s.socialOpts.directory,
+		consents:   s.socialOpts.consents,
 		redirects:  redirects,
 		cookies:    newLoginCookies(cfg.InsecureCookies),
 		now:        time.Now,
+		clients:    s.storage,
+		oauth2:     s.oauth2,
+	}
+	if revoker, ok := s.storage.(SubjectTokenRevoker); ok {
+		sl.revoker = revoker
+	}
+	if sl.consents == nil {
+		sl.consents = NewMemoryConsentStore()
 	}
 	if sl.states == nil {
 		sl.states = oauthclient.NewMemoryStateStore()
@@ -157,6 +185,10 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 	r.Get(LoginPath, sl.handleChooser)
 	r.Get(loginStartPattern, sl.handleStart)
 	r.Get(loginCallbackPattern, sl.handleCallback)
+	r.Get(LogoutPath, sl.handleLogoutPage)
+	r.Post(LogoutPath, sl.handleLogout)
+	r.Get(ConsentPath, sl.handleConsentPage)
+	r.Post(ConsentPath, sl.handleConsent)
 }
 
 func noStore(w http.ResponseWriter) {
@@ -473,24 +505,35 @@ func (p *socialSessionProvider) socialPrincipal(ctx context.Context, userID stri
 	return lp, true
 }
 
-// HasConsent implements SessionProvider.
+// HasConsent implements SessionProvider. Social-login principals are
+// auto-consented when skip_consent is set, and otherwise checked against
+// the consent store filled by the /consent page.
 func (p *socialSessionProvider) HasConsent(ctx context.Context, userID, clientID string, scopes []string) bool {
-	if p.social.cfg.SkipConsent {
-		if _, ok := p.socialPrincipal(ctx, userID); ok {
-			return true
-		}
+	if _, ok := p.socialPrincipal(ctx, userID); !ok {
+		return p.inner.HasConsent(ctx, userID, clientID, scopes)
 	}
-	return p.inner.HasConsent(ctx, userID, clientID, scopes)
+	if p.social.cfg.SkipConsent {
+		return true
+	}
+	ok, err := p.social.consents.HasConsent(ctx, userID, clientID, scopes)
+	if err != nil {
+		LoggerFromContext(ctx).Error("checking consent", "error", err)
+		return false
+	}
+	return ok
 }
 
 // RedirectToConsent implements SessionProvider.
 func (p *socialSessionProvider) RedirectToConsent(returnURL string) string {
-	return p.inner.RedirectToConsent(returnURL)
+	return ConsentPath + "?return_to=" + url.QueryEscape(returnURL)
 }
 
 // SaveConsent implements SessionProvider.
 func (p *socialSessionProvider) SaveConsent(ctx context.Context, userID, clientID string, scopes []string) error {
-	return p.inner.SaveConsent(ctx, userID, clientID, scopes)
+	if _, ok := p.socialPrincipal(ctx, userID); !ok {
+		return p.inner.SaveConsent(ctx, userID, clientID, scopes)
+	}
+	return p.social.consents.SaveConsent(ctx, userID, clientID, scopes)
 }
 
 // GetUserClaims implements SessionProvider.
