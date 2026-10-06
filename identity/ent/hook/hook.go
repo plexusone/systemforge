@@ -45,6 +45,18 @@ func (f ApplicationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ApplicationMutation", m)
 }
 
+// The ConsentGrantFunc type is an adapter to allow the use of ordinary
+// function as ConsentGrant mutator.
+type ConsentGrantFunc func(context.Context, *ent.ConsentGrantMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ConsentGrantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ConsentGrantMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ConsentGrantMutation", m)
+}
+
 // The CredentialFunc type is an adapter to allow the use of ordinary
 // function as Credential mutator.
 type CredentialFunc func(context.Context, *ent.CredentialMutation) (ent.Value, error)
@@ -115,6 +127,30 @@ func (f ListingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ListingMutation", m)
+}
+
+// The LoginSessionFunc type is an adapter to allow the use of ordinary
+// function as LoginSession mutator.
+type LoginSessionFunc func(context.Context, *ent.LoginSessionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LoginSessionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LoginSessionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LoginSessionMutation", m)
+}
+
+// The LoginStateFunc type is an adapter to allow the use of ordinary
+// function as LoginState mutator.
+type LoginStateFunc func(context.Context, *ent.LoginStateMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LoginStateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LoginStateMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LoginStateMutation", m)
 }
 
 // The MembershipFunc type is an adapter to allow the use of ordinary

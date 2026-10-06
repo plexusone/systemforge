@@ -19,12 +19,15 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/application"
+	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/loginsession"
+	"github.com/plexusone/systemforge/identity/ent/loginstate"
 	"github.com/plexusone/systemforge/identity/ent/membership"
 	"github.com/plexusone/systemforge/identity/ent/oauthaccount"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
@@ -56,6 +59,8 @@ type Client struct {
 	Agent *AgentClient
 	// Application is the client for interacting with the Application builders.
 	Application *ApplicationClient
+	// ConsentGrant is the client for interacting with the ConsentGrant builders.
+	ConsentGrant *ConsentGrantClient
 	// Credential is the client for interacting with the Credential builders.
 	Credential *CredentialClient
 	// ExternalIdentity is the client for interacting with the ExternalIdentity builders.
@@ -68,6 +73,10 @@ type Client struct {
 	License *LicenseClient
 	// Listing is the client for interacting with the Listing builders.
 	Listing *ListingClient
+	// LoginSession is the client for interacting with the LoginSession builders.
+	LoginSession *LoginSessionClient
+	// LoginState is the client for interacting with the LoginState builders.
+	LoginState *LoginStateClient
 	// Membership is the client for interacting with the Membership builders.
 	Membership *MembershipClient
 	// OAuthAccount is the client for interacting with the OAuthAccount builders.
@@ -118,12 +127,15 @@ func (c *Client) init() {
 	c.APIKey = NewAPIKeyClient(c.config)
 	c.Agent = NewAgentClient(c.config)
 	c.Application = NewApplicationClient(c.config)
+	c.ConsentGrant = NewConsentGrantClient(c.config)
 	c.Credential = NewCredentialClient(c.config)
 	c.ExternalIdentity = NewExternalIdentityClient(c.config)
 	c.Human = NewHumanClient(c.config)
 	c.Invite = NewInviteClient(c.config)
 	c.License = NewLicenseClient(c.config)
 	c.Listing = NewListingClient(c.config)
+	c.LoginSession = NewLoginSessionClient(c.config)
+	c.LoginState = NewLoginStateClient(c.config)
 	c.Membership = NewMembershipClient(c.config)
 	c.OAuthAccount = NewOAuthAccountClient(c.config)
 	c.OAuthApp = NewOAuthAppClient(c.config)
@@ -237,12 +249,15 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		APIKey:                NewAPIKeyClient(cfg),
 		Agent:                 NewAgentClient(cfg),
 		Application:           NewApplicationClient(cfg),
+		ConsentGrant:          NewConsentGrantClient(cfg),
 		Credential:            NewCredentialClient(cfg),
 		ExternalIdentity:      NewExternalIdentityClient(cfg),
 		Human:                 NewHumanClient(cfg),
 		Invite:                NewInviteClient(cfg),
 		License:               NewLicenseClient(cfg),
 		Listing:               NewListingClient(cfg),
+		LoginSession:          NewLoginSessionClient(cfg),
+		LoginState:            NewLoginStateClient(cfg),
 		Membership:            NewMembershipClient(cfg),
 		OAuthAccount:          NewOAuthAccountClient(cfg),
 		OAuthApp:              NewOAuthAppClient(cfg),
@@ -283,12 +298,15 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		APIKey:                NewAPIKeyClient(cfg),
 		Agent:                 NewAgentClient(cfg),
 		Application:           NewApplicationClient(cfg),
+		ConsentGrant:          NewConsentGrantClient(cfg),
 		Credential:            NewCredentialClient(cfg),
 		ExternalIdentity:      NewExternalIdentityClient(cfg),
 		Human:                 NewHumanClient(cfg),
 		Invite:                NewInviteClient(cfg),
 		License:               NewLicenseClient(cfg),
 		Listing:               NewListingClient(cfg),
+		LoginSession:          NewLoginSessionClient(cfg),
+		LoginState:            NewLoginStateClient(cfg),
 		Membership:            NewMembershipClient(cfg),
 		OAuthAccount:          NewOAuthAccountClient(cfg),
 		OAuthApp:              NewOAuthAppClient(cfg),
@@ -336,12 +354,13 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.APIKey, c.Agent, c.Application, c.Credential, c.ExternalIdentity, c.Human,
-		c.Invite, c.License, c.Listing, c.Membership, c.OAuthAccount, c.OAuthApp,
-		c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
-		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
-		c.RefreshToken, c.SeatAssignment, c.ServiceAccount, c.ServiceAccountKeyPair,
-		c.ServicePrincipal, c.Subscription, c.User,
+		c.APIKey, c.Agent, c.Application, c.ConsentGrant, c.Credential,
+		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
+		c.LoginState, c.Membership, c.OAuthAccount, c.OAuthApp, c.OAuthAppSecret,
+		c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
+		c.PrincipalMembership, c.PrincipalToken, c.RefreshToken, c.SeatAssignment,
+		c.ServiceAccount, c.ServiceAccountKeyPair, c.ServicePrincipal, c.Subscription,
+		c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -351,12 +370,13 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.APIKey, c.Agent, c.Application, c.Credential, c.ExternalIdentity, c.Human,
-		c.Invite, c.License, c.Listing, c.Membership, c.OAuthAccount, c.OAuthApp,
-		c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
-		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
-		c.RefreshToken, c.SeatAssignment, c.ServiceAccount, c.ServiceAccountKeyPair,
-		c.ServicePrincipal, c.Subscription, c.User,
+		c.APIKey, c.Agent, c.Application, c.ConsentGrant, c.Credential,
+		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
+		c.LoginState, c.Membership, c.OAuthAccount, c.OAuthApp, c.OAuthAppSecret,
+		c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
+		c.PrincipalMembership, c.PrincipalToken, c.RefreshToken, c.SeatAssignment,
+		c.ServiceAccount, c.ServiceAccountKeyPair, c.ServicePrincipal, c.Subscription,
+		c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -371,6 +391,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Agent.mutate(ctx, m)
 	case *ApplicationMutation:
 		return c.Application.mutate(ctx, m)
+	case *ConsentGrantMutation:
+		return c.ConsentGrant.mutate(ctx, m)
 	case *CredentialMutation:
 		return c.Credential.mutate(ctx, m)
 	case *ExternalIdentityMutation:
@@ -383,6 +405,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.License.mutate(ctx, m)
 	case *ListingMutation:
 		return c.Listing.mutate(ctx, m)
+	case *LoginSessionMutation:
+		return c.LoginSession.mutate(ctx, m)
+	case *LoginStateMutation:
+		return c.LoginState.mutate(ctx, m)
 	case *MembershipMutation:
 		return c.Membership.mutate(ctx, m)
 	case *OAuthAccountMutation:
@@ -916,6 +942,139 @@ func (c *ApplicationClient) mutate(ctx context.Context, m *ApplicationMutation) 
 		return (&ApplicationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Application mutation op: %q", m.Op())
+	}
+}
+
+// ConsentGrantClient is a client for the ConsentGrant schema.
+type ConsentGrantClient struct {
+	config
+}
+
+// NewConsentGrantClient returns a client for the ConsentGrant from the given config.
+func NewConsentGrantClient(c config) *ConsentGrantClient {
+	return &ConsentGrantClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `consentgrant.Hooks(f(g(h())))`.
+func (c *ConsentGrantClient) Use(hooks ...Hook) {
+	c.hooks.ConsentGrant = append(c.hooks.ConsentGrant, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `consentgrant.Intercept(f(g(h())))`.
+func (c *ConsentGrantClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ConsentGrant = append(c.inters.ConsentGrant, interceptors...)
+}
+
+// Create returns a builder for creating a ConsentGrant entity.
+func (c *ConsentGrantClient) Create() *ConsentGrantCreate {
+	mutation := newConsentGrantMutation(c.config, OpCreate)
+	return &ConsentGrantCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ConsentGrant entities.
+func (c *ConsentGrantClient) CreateBulk(builders ...*ConsentGrantCreate) *ConsentGrantCreateBulk {
+	return &ConsentGrantCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ConsentGrantClient) MapCreateBulk(slice any, setFunc func(*ConsentGrantCreate, int)) *ConsentGrantCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ConsentGrantCreateBulk{err: fmt.Errorf("calling to ConsentGrantClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ConsentGrantCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ConsentGrantCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ConsentGrant.
+func (c *ConsentGrantClient) Update() *ConsentGrantUpdate {
+	mutation := newConsentGrantMutation(c.config, OpUpdate)
+	return &ConsentGrantUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ConsentGrantClient) UpdateOne(_m *ConsentGrant) *ConsentGrantUpdateOne {
+	mutation := newConsentGrantMutation(c.config, OpUpdateOne, withConsentGrant(_m))
+	return &ConsentGrantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ConsentGrantClient) UpdateOneID(id uuid.UUID) *ConsentGrantUpdateOne {
+	mutation := newConsentGrantMutation(c.config, OpUpdateOne, withConsentGrantID(id))
+	return &ConsentGrantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ConsentGrant.
+func (c *ConsentGrantClient) Delete() *ConsentGrantDelete {
+	mutation := newConsentGrantMutation(c.config, OpDelete)
+	return &ConsentGrantDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ConsentGrantClient) DeleteOne(_m *ConsentGrant) *ConsentGrantDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ConsentGrantClient) DeleteOneID(id uuid.UUID) *ConsentGrantDeleteOne {
+	builder := c.Delete().Where(consentgrant.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ConsentGrantDeleteOne{builder}
+}
+
+// Query returns a query builder for ConsentGrant.
+func (c *ConsentGrantClient) Query() *ConsentGrantQuery {
+	return &ConsentGrantQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeConsentGrant},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ConsentGrant entity by its id.
+func (c *ConsentGrantClient) Get(ctx context.Context, id uuid.UUID) (*ConsentGrant, error) {
+	return c.Query().Where(consentgrant.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ConsentGrantClient) GetX(ctx context.Context, id uuid.UUID) *ConsentGrant {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ConsentGrantClient) Hooks() []Hook {
+	return c.hooks.ConsentGrant
+}
+
+// Interceptors returns the client interceptors.
+func (c *ConsentGrantClient) Interceptors() []Interceptor {
+	return c.inters.ConsentGrant
+}
+
+func (c *ConsentGrantClient) mutate(ctx context.Context, m *ConsentGrantMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ConsentGrantCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ConsentGrantUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ConsentGrantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ConsentGrantDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ConsentGrant mutation op: %q", m.Op())
 	}
 }
 
@@ -1906,6 +2065,272 @@ func (c *ListingClient) mutate(ctx context.Context, m *ListingMutation) (Value, 
 		return (&ListingDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Listing mutation op: %q", m.Op())
+	}
+}
+
+// LoginSessionClient is a client for the LoginSession schema.
+type LoginSessionClient struct {
+	config
+}
+
+// NewLoginSessionClient returns a client for the LoginSession from the given config.
+func NewLoginSessionClient(c config) *LoginSessionClient {
+	return &LoginSessionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `loginsession.Hooks(f(g(h())))`.
+func (c *LoginSessionClient) Use(hooks ...Hook) {
+	c.hooks.LoginSession = append(c.hooks.LoginSession, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `loginsession.Intercept(f(g(h())))`.
+func (c *LoginSessionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LoginSession = append(c.inters.LoginSession, interceptors...)
+}
+
+// Create returns a builder for creating a LoginSession entity.
+func (c *LoginSessionClient) Create() *LoginSessionCreate {
+	mutation := newLoginSessionMutation(c.config, OpCreate)
+	return &LoginSessionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LoginSession entities.
+func (c *LoginSessionClient) CreateBulk(builders ...*LoginSessionCreate) *LoginSessionCreateBulk {
+	return &LoginSessionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LoginSessionClient) MapCreateBulk(slice any, setFunc func(*LoginSessionCreate, int)) *LoginSessionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LoginSessionCreateBulk{err: fmt.Errorf("calling to LoginSessionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LoginSessionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LoginSessionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LoginSession.
+func (c *LoginSessionClient) Update() *LoginSessionUpdate {
+	mutation := newLoginSessionMutation(c.config, OpUpdate)
+	return &LoginSessionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LoginSessionClient) UpdateOne(_m *LoginSession) *LoginSessionUpdateOne {
+	mutation := newLoginSessionMutation(c.config, OpUpdateOne, withLoginSession(_m))
+	return &LoginSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LoginSessionClient) UpdateOneID(id uuid.UUID) *LoginSessionUpdateOne {
+	mutation := newLoginSessionMutation(c.config, OpUpdateOne, withLoginSessionID(id))
+	return &LoginSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LoginSession.
+func (c *LoginSessionClient) Delete() *LoginSessionDelete {
+	mutation := newLoginSessionMutation(c.config, OpDelete)
+	return &LoginSessionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LoginSessionClient) DeleteOne(_m *LoginSession) *LoginSessionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LoginSessionClient) DeleteOneID(id uuid.UUID) *LoginSessionDeleteOne {
+	builder := c.Delete().Where(loginsession.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LoginSessionDeleteOne{builder}
+}
+
+// Query returns a query builder for LoginSession.
+func (c *LoginSessionClient) Query() *LoginSessionQuery {
+	return &LoginSessionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLoginSession},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LoginSession entity by its id.
+func (c *LoginSessionClient) Get(ctx context.Context, id uuid.UUID) (*LoginSession, error) {
+	return c.Query().Where(loginsession.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LoginSessionClient) GetX(ctx context.Context, id uuid.UUID) *LoginSession {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *LoginSessionClient) Hooks() []Hook {
+	return c.hooks.LoginSession
+}
+
+// Interceptors returns the client interceptors.
+func (c *LoginSessionClient) Interceptors() []Interceptor {
+	return c.inters.LoginSession
+}
+
+func (c *LoginSessionClient) mutate(ctx context.Context, m *LoginSessionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LoginSessionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LoginSessionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LoginSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LoginSessionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LoginSession mutation op: %q", m.Op())
+	}
+}
+
+// LoginStateClient is a client for the LoginState schema.
+type LoginStateClient struct {
+	config
+}
+
+// NewLoginStateClient returns a client for the LoginState from the given config.
+func NewLoginStateClient(c config) *LoginStateClient {
+	return &LoginStateClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `loginstate.Hooks(f(g(h())))`.
+func (c *LoginStateClient) Use(hooks ...Hook) {
+	c.hooks.LoginState = append(c.hooks.LoginState, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `loginstate.Intercept(f(g(h())))`.
+func (c *LoginStateClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LoginState = append(c.inters.LoginState, interceptors...)
+}
+
+// Create returns a builder for creating a LoginState entity.
+func (c *LoginStateClient) Create() *LoginStateCreate {
+	mutation := newLoginStateMutation(c.config, OpCreate)
+	return &LoginStateCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LoginState entities.
+func (c *LoginStateClient) CreateBulk(builders ...*LoginStateCreate) *LoginStateCreateBulk {
+	return &LoginStateCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LoginStateClient) MapCreateBulk(slice any, setFunc func(*LoginStateCreate, int)) *LoginStateCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LoginStateCreateBulk{err: fmt.Errorf("calling to LoginStateClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LoginStateCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LoginStateCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LoginState.
+func (c *LoginStateClient) Update() *LoginStateUpdate {
+	mutation := newLoginStateMutation(c.config, OpUpdate)
+	return &LoginStateUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LoginStateClient) UpdateOne(_m *LoginState) *LoginStateUpdateOne {
+	mutation := newLoginStateMutation(c.config, OpUpdateOne, withLoginState(_m))
+	return &LoginStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LoginStateClient) UpdateOneID(id uuid.UUID) *LoginStateUpdateOne {
+	mutation := newLoginStateMutation(c.config, OpUpdateOne, withLoginStateID(id))
+	return &LoginStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LoginState.
+func (c *LoginStateClient) Delete() *LoginStateDelete {
+	mutation := newLoginStateMutation(c.config, OpDelete)
+	return &LoginStateDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LoginStateClient) DeleteOne(_m *LoginState) *LoginStateDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LoginStateClient) DeleteOneID(id uuid.UUID) *LoginStateDeleteOne {
+	builder := c.Delete().Where(loginstate.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LoginStateDeleteOne{builder}
+}
+
+// Query returns a query builder for LoginState.
+func (c *LoginStateClient) Query() *LoginStateQuery {
+	return &LoginStateQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLoginState},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LoginState entity by its id.
+func (c *LoginStateClient) Get(ctx context.Context, id uuid.UUID) (*LoginState, error) {
+	return c.Query().Where(loginstate.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LoginStateClient) GetX(ctx context.Context, id uuid.UUID) *LoginState {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *LoginStateClient) Hooks() []Hook {
+	return c.hooks.LoginState
+}
+
+// Interceptors returns the client interceptors.
+func (c *LoginStateClient) Interceptors() []Interceptor {
+	return c.inters.LoginState
+}
+
+func (c *LoginStateClient) mutate(ctx context.Context, m *LoginStateMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LoginStateCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LoginStateUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LoginStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LoginStateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LoginState mutation op: %q", m.Op())
 	}
 }
 
@@ -5394,19 +5819,19 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		APIKey, Agent, Application, Credential, ExternalIdentity, Human, Invite,
-		License, Listing, Membership, OAuthAccount, OAuthApp, OAuthAppSecret,
-		OAuthAuthCode, OAuthConsent, OAuthToken, Organization, Principal,
-		PrincipalMembership, PrincipalToken, RefreshToken, SeatAssignment,
-		ServiceAccount, ServiceAccountKeyPair, ServicePrincipal, Subscription,
-		User []ent.Hook
+		APIKey, Agent, Application, ConsentGrant, Credential, ExternalIdentity, Human,
+		Invite, License, Listing, LoginSession, LoginState, Membership, OAuthAccount,
+		OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken,
+		Organization, Principal, PrincipalMembership, PrincipalToken, RefreshToken,
+		SeatAssignment, ServiceAccount, ServiceAccountKeyPair, ServicePrincipal,
+		Subscription, User []ent.Hook
 	}
 	inters struct {
-		APIKey, Agent, Application, Credential, ExternalIdentity, Human, Invite,
-		License, Listing, Membership, OAuthAccount, OAuthApp, OAuthAppSecret,
-		OAuthAuthCode, OAuthConsent, OAuthToken, Organization, Principal,
-		PrincipalMembership, PrincipalToken, RefreshToken, SeatAssignment,
-		ServiceAccount, ServiceAccountKeyPair, ServicePrincipal, Subscription,
-		User []ent.Interceptor
+		APIKey, Agent, Application, ConsentGrant, Credential, ExternalIdentity, Human,
+		Invite, License, Listing, LoginSession, LoginState, Membership, OAuthAccount,
+		OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken,
+		Organization, Principal, PrincipalMembership, PrincipalToken, RefreshToken,
+		SeatAssignment, ServiceAccount, ServiceAccountKeyPair, ServicePrincipal,
+		Subscription, User []ent.Interceptor
 	}
 )

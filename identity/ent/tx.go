@@ -18,6 +18,8 @@ type Tx struct {
 	Agent *AgentClient
 	// Application is the client for interacting with the Application builders.
 	Application *ApplicationClient
+	// ConsentGrant is the client for interacting with the ConsentGrant builders.
+	ConsentGrant *ConsentGrantClient
 	// Credential is the client for interacting with the Credential builders.
 	Credential *CredentialClient
 	// ExternalIdentity is the client for interacting with the ExternalIdentity builders.
@@ -30,6 +32,10 @@ type Tx struct {
 	License *LicenseClient
 	// Listing is the client for interacting with the Listing builders.
 	Listing *ListingClient
+	// LoginSession is the client for interacting with the LoginSession builders.
+	LoginSession *LoginSessionClient
+	// LoginState is the client for interacting with the LoginState builders.
+	LoginState *LoginStateClient
 	// Membership is the client for interacting with the Membership builders.
 	Membership *MembershipClient
 	// OAuthAccount is the client for interacting with the OAuthAccount builders.
@@ -200,12 +206,15 @@ func (tx *Tx) init() {
 	tx.APIKey = NewAPIKeyClient(tx.config)
 	tx.Agent = NewAgentClient(tx.config)
 	tx.Application = NewApplicationClient(tx.config)
+	tx.ConsentGrant = NewConsentGrantClient(tx.config)
 	tx.Credential = NewCredentialClient(tx.config)
 	tx.ExternalIdentity = NewExternalIdentityClient(tx.config)
 	tx.Human = NewHumanClient(tx.config)
 	tx.Invite = NewInviteClient(tx.config)
 	tx.License = NewLicenseClient(tx.config)
 	tx.Listing = NewListingClient(tx.config)
+	tx.LoginSession = NewLoginSessionClient(tx.config)
+	tx.LoginState = NewLoginStateClient(tx.config)
 	tx.Membership = NewMembershipClient(tx.config)
 	tx.OAuthAccount = NewOAuthAccountClient(tx.config)
 	tx.OAuthApp = NewOAuthAppClient(tx.config)

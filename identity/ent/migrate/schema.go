@@ -194,6 +194,32 @@ var (
 			},
 		},
 	}
+	// SfConsentGrantsColumns holds the columns for the "sf_consent_grants" table.
+	SfConsentGrantsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "principal_id", Type: field.TypeString},
+		{Name: "client_id", Type: field.TypeString},
+		{Name: "scope", Type: field.TypeString},
+		{Name: "granted_at", Type: field.TypeTime},
+	}
+	// SfConsentGrantsTable holds the schema information for the "sf_consent_grants" table.
+	SfConsentGrantsTable = &schema.Table{
+		Name:       "sf_consent_grants",
+		Columns:    SfConsentGrantsColumns,
+		PrimaryKey: []*schema.Column{SfConsentGrantsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "consentgrant_principal_id_client_id_scope",
+				Unique:  true,
+				Columns: []*schema.Column{SfConsentGrantsColumns[1], SfConsentGrantsColumns[2], SfConsentGrantsColumns[3]},
+			},
+			{
+				Name:    "consentgrant_client_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfConsentGrantsColumns[2]},
+			},
+		},
+	}
 	// SfCredentialsColumns holds the columns for the "sf_credentials" table.
 	SfCredentialsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -587,6 +613,56 @@ var (
 				Name:    "listing_status_created_at",
 				Unique:  false,
 				Columns: []*schema.Column{SfListingsColumns[8], SfListingsColumns[10]},
+			},
+		},
+	}
+	// SfLoginSessionsColumns holds the columns for the "sf_login_sessions" table.
+	SfLoginSessionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "token_hash", Type: field.TypeString, Unique: true},
+		{Name: "principal_id", Type: field.TypeUUID},
+		{Name: "provider", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "expires_at", Type: field.TypeTime},
+	}
+	// SfLoginSessionsTable holds the schema information for the "sf_login_sessions" table.
+	SfLoginSessionsTable = &schema.Table{
+		Name:       "sf_login_sessions",
+		Columns:    SfLoginSessionsColumns,
+		PrimaryKey: []*schema.Column{SfLoginSessionsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "loginsession_principal_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfLoginSessionsColumns[2]},
+			},
+			{
+				Name:    "loginsession_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfLoginSessionsColumns[5]},
+			},
+		},
+	}
+	// SfLoginStatesColumns holds the columns for the "sf_login_states" table.
+	SfLoginStatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "state_hash", Type: field.TypeString, Unique: true},
+		{Name: "provider", Type: field.TypeString},
+		{Name: "redirect_url", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "nonce", Type: field.TypeString, Nullable: true},
+		{Name: "pkce_verifier", Type: field.TypeString, Nullable: true},
+		{Name: "expires_at", Type: field.TypeTime},
+	}
+	// SfLoginStatesTable holds the schema information for the "sf_login_states" table.
+	SfLoginStatesTable = &schema.Table{
+		Name:       "sf_login_states",
+		Columns:    SfLoginStatesColumns,
+		PrimaryKey: []*schema.Column{SfLoginStatesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "loginstate_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfLoginStatesColumns[6]},
 			},
 		},
 	}
@@ -1659,12 +1735,15 @@ var (
 		SfAPIKeysTable,
 		SfAgentsTable,
 		SfApplicationsTable,
+		SfConsentGrantsTable,
 		SfCredentialsTable,
 		SfExternalIdentitiesTable,
 		SfHumansTable,
 		SfInvitesTable,
 		SfLicensesTable,
 		SfListingsTable,
+		SfLoginSessionsTable,
+		SfLoginStatesTable,
 		SfMembershipsTable,
 		SfOauthAccountsTable,
 		SfOauthAppsTable,
@@ -1701,6 +1780,9 @@ func init() {
 	SfApplicationsTable.Annotation = &entsql.Annotation{
 		Table: "sf_applications",
 	}
+	SfConsentGrantsTable.Annotation = &entsql.Annotation{
+		Table: "sf_consent_grants",
+	}
 	SfCredentialsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfCredentialsTable.Annotation = &entsql.Annotation{
 		Table: "sf_credentials",
@@ -1728,6 +1810,12 @@ func init() {
 	SfListingsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfListingsTable.Annotation = &entsql.Annotation{
 		Table: "sf_listings",
+	}
+	SfLoginSessionsTable.Annotation = &entsql.Annotation{
+		Table: "sf_login_sessions",
+	}
+	SfLoginStatesTable.Annotation = &entsql.Annotation{
+		Table: "sf_login_states",
 	}
 	SfMembershipsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
 	SfMembershipsTable.ForeignKeys[1].RefTable = SfUsersTable

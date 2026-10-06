@@ -15,6 +15,9 @@ type Agent func(*sql.Selector)
 // Application is the predicate function for application builders.
 type Application func(*sql.Selector)
 
+// ConsentGrant is the predicate function for consentgrant builders.
+type ConsentGrant func(*sql.Selector)
+
 // Credential is the predicate function for credential builders.
 type Credential func(*sql.Selector)
 
@@ -32,6 +35,12 @@ type License func(*sql.Selector)
 
 // Listing is the predicate function for listing builders.
 type Listing func(*sql.Selector)
+
+// LoginSession is the predicate function for loginsession builders.
+type LoginSession func(*sql.Selector)
+
+// LoginState is the predicate function for loginstate builders.
+type LoginState func(*sql.Selector)
 
 // Membership is the predicate function for membership builders.
 type Membership func(*sql.Selector)

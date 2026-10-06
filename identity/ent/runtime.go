@@ -9,12 +9,15 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/application"
+	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/loginsession"
+	"github.com/plexusone/systemforge/identity/ent/loginstate"
 	"github.com/plexusone/systemforge/identity/ent/membership"
 	"github.com/plexusone/systemforge/identity/ent/oauthaccount"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
@@ -173,6 +176,16 @@ func init() {
 	applicationDescID := applicationMixinFields0[0].Descriptor()
 	// application.DefaultID holds the default value on creation for the id field.
 	application.DefaultID = applicationDescID.Default.(func() uuid.UUID)
+	consentgrantFields := schema.ConsentGrant{}.Fields()
+	_ = consentgrantFields
+	// consentgrantDescGrantedAt is the schema descriptor for granted_at field.
+	consentgrantDescGrantedAt := consentgrantFields[4].Descriptor()
+	// consentgrant.DefaultGrantedAt holds the default value on creation for the granted_at field.
+	consentgrant.DefaultGrantedAt = consentgrantDescGrantedAt.Default.(func() time.Time)
+	// consentgrantDescID is the schema descriptor for id field.
+	consentgrantDescID := consentgrantFields[0].Descriptor()
+	// consentgrant.DefaultID holds the default value on creation for the id field.
+	consentgrant.DefaultID = consentgrantDescID.Default.(func() uuid.UUID)
 	credentialFields := schema.Credential{}.Fields()
 	_ = credentialFields
 	// credentialDescWebauthnSignCount is the schema descriptor for webauthn_sign_count field.
@@ -390,6 +403,18 @@ func init() {
 	listingDescID := listingMixinFields0[0].Descriptor()
 	// listing.DefaultID holds the default value on creation for the id field.
 	listing.DefaultID = listingDescID.Default.(func() uuid.UUID)
+	loginsessionFields := schema.LoginSession{}.Fields()
+	_ = loginsessionFields
+	// loginsessionDescID is the schema descriptor for id field.
+	loginsessionDescID := loginsessionFields[0].Descriptor()
+	// loginsession.DefaultID holds the default value on creation for the id field.
+	loginsession.DefaultID = loginsessionDescID.Default.(func() uuid.UUID)
+	loginstateFields := schema.LoginState{}.Fields()
+	_ = loginstateFields
+	// loginstateDescID is the schema descriptor for id field.
+	loginstateDescID := loginstateFields[0].Descriptor()
+	// loginstate.DefaultID holds the default value on creation for the id field.
+	loginstate.DefaultID = loginstateDescID.Default.(func() uuid.UUID)
 	membershipMixin := schema.Membership{}.Mixin()
 	membershipMixinFields0 := membershipMixin[0].Fields()
 	_ = membershipMixinFields0

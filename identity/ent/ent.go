@@ -15,12 +15,15 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/application"
+	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/loginsession"
+	"github.com/plexusone/systemforge/identity/ent/loginstate"
 	"github.com/plexusone/systemforge/identity/ent/membership"
 	"github.com/plexusone/systemforge/identity/ent/oauthaccount"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
@@ -102,12 +105,15 @@ func checkColumn(t, c string) error {
 			apikey.Table:                apikey.ValidColumn,
 			agent.Table:                 agent.ValidColumn,
 			application.Table:           application.ValidColumn,
+			consentgrant.Table:          consentgrant.ValidColumn,
 			credential.Table:            credential.ValidColumn,
 			externalidentity.Table:      externalidentity.ValidColumn,
 			human.Table:                 human.ValidColumn,
 			invite.Table:                invite.ValidColumn,
 			license.Table:               license.ValidColumn,
 			listing.Table:               listing.ValidColumn,
+			loginsession.Table:          loginsession.ValidColumn,
+			loginstate.Table:            loginstate.ValidColumn,
 			membership.Table:            membership.ValidColumn,
 			oauthaccount.Table:          oauthaccount.ValidColumn,
 			oauthapp.Table:              oauthapp.ValidColumn,

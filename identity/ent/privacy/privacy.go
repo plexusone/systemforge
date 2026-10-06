@@ -183,6 +183,30 @@ func (f ApplicationMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mut
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ApplicationMutation", m)
 }
 
+// The ConsentGrantQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type ConsentGrantQueryRuleFunc func(context.Context, *ent.ConsentGrantQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f ConsentGrantQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ConsentGrantQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ConsentGrantQuery", q)
+}
+
+// The ConsentGrantMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type ConsentGrantMutationRuleFunc func(context.Context, *ent.ConsentGrantMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f ConsentGrantMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.ConsentGrantMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ConsentGrantMutation", m)
+}
+
 // The CredentialQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type CredentialQueryRuleFunc func(context.Context, *ent.CredentialQuery) error
@@ -325,6 +349,54 @@ func (f ListingMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutatio
 		return f(ctx, m)
 	}
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ListingMutation", m)
+}
+
+// The LoginSessionQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type LoginSessionQueryRuleFunc func(context.Context, *ent.LoginSessionQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f LoginSessionQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.LoginSessionQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.LoginSessionQuery", q)
+}
+
+// The LoginSessionMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type LoginSessionMutationRuleFunc func(context.Context, *ent.LoginSessionMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f LoginSessionMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.LoginSessionMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.LoginSessionMutation", m)
+}
+
+// The LoginStateQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type LoginStateQueryRuleFunc func(context.Context, *ent.LoginStateQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f LoginStateQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.LoginStateQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.LoginStateQuery", q)
+}
+
+// The LoginStateMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type LoginStateMutationRuleFunc func(context.Context, *ent.LoginStateMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f LoginStateMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.LoginStateMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.LoginStateMutation", m)
 }
 
 // The MembershipQueryRuleFunc type is an adapter to allow the use of ordinary
@@ -800,6 +872,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.ApplicationQuery:
 		return q.Filter(), nil
+	case *ent.ConsentGrantQuery:
+		return q.Filter(), nil
 	case *ent.CredentialQuery:
 		return q.Filter(), nil
 	case *ent.ExternalIdentityQuery:
@@ -811,6 +885,10 @@ func queryFilter(q ent.Query) (Filter, error) {
 	case *ent.LicenseQuery:
 		return q.Filter(), nil
 	case *ent.ListingQuery:
+		return q.Filter(), nil
+	case *ent.LoginSessionQuery:
+		return q.Filter(), nil
+	case *ent.LoginStateQuery:
 		return q.Filter(), nil
 	case *ent.MembershipQuery:
 		return q.Filter(), nil
@@ -861,6 +939,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 		return m.Filter(), nil
 	case *ent.ApplicationMutation:
 		return m.Filter(), nil
+	case *ent.ConsentGrantMutation:
+		return m.Filter(), nil
 	case *ent.CredentialMutation:
 		return m.Filter(), nil
 	case *ent.ExternalIdentityMutation:
@@ -872,6 +952,10 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.LicenseMutation:
 		return m.Filter(), nil
 	case *ent.ListingMutation:
+		return m.Filter(), nil
+	case *ent.LoginSessionMutation:
+		return m.Filter(), nil
+	case *ent.LoginStateMutation:
 		return m.Filter(), nil
 	case *ent.MembershipMutation:
 		return m.Filter(), nil
