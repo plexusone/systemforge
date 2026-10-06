@@ -365,6 +365,14 @@ SystemForge creates the following tables (all prefixed with `sf_`):
 | `sf_service_accounts` | Non-human identities |
 | `sf_service_account_key_pairs` | RSA/EC key pairs |
 
+Applications federating to SystemAuth create two more tables in their own
+database with `identity/relyingparty/pgstore.EnsureSchema`:
+
+| Table | Description |
+|-------|-------------|
+| `sf_rp_sessions` | Relying-party browser sessions (token hashes; SystemAuth tokens encrypted at rest) |
+| `sf_rp_login_states` | In-flight logins to SystemAuth (single-use; nonce and PKCE verifier encrypted) |
+
 ## Migration Strategy
 
 For existing apps, SystemForge supports side-by-side migration:

@@ -7,7 +7,9 @@ SystemForge provides reusable identity, session, RBAC, and OAuth 2.0 functionali
 ## Features
 
 - **Identity Management**: Users, organizations, memberships with role-based access
-- **OAuth 2.0 Server**: Full RFC-compliant implementation using Fosite
+- **OAuth 2.0 / OIDC Server (SystemAuth)**: Fosite-based authorization server issuing ID tokens, optional JWT access tokens, and UserInfo
+- **Social Login**: GitHub/Google login served centrally by SystemAuth, with refresh-token rotation, logout, and consent
+- **Relying Parties**: `identity/relyingparty` lets applications federate to SystemAuth (OIDC client, `/bff/*` cookie sessions, bearer middleware), with durable encrypted PostgreSQL session stores
 - **API Key Authentication**: Secure server-to-server access
 - **Service Accounts**: JWT Bearer authentication for automation
 - **Multi-Tenant Ready**: Organization-scoped resources with RLS support
