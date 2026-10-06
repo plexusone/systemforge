@@ -197,6 +197,13 @@ func newApp(ctx context.Context, opts *options, logger *slog.Logger) (*app, erro
 			systemauth.WithReadinessCheck("database", db.db.PingContext),
 		)
 		a.storageName = cfg.Database.Driver
+		if cfg.SocialLogin != nil {
+			// systemauth defaults the login session, login state and consent
+			// stores to the Ent database (sf_login_sessions,
+			// sf_login_states, sf_consent_grants), so restarts keep users
+			// signed in and replicas share state.
+			logger.Info("social login state stored in the database", "driver", cfg.Database.Driver)
+		}
 	} else {
 		logger.Warn("using in-memory storage (data will not persist)")
 	}
