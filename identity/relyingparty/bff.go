@@ -47,11 +47,11 @@ type BFFConfig struct {
 	Memberships MembershipSource
 
 	// Sessions stores browser sessions. Default: in-memory (single
-	// instance).
+	// instance); use pgstore.NewSessionStore in production.
 	Sessions SessionStore
 
 	// LoginStates stores in-flight logins. Default: in-memory (single
-	// instance).
+	// instance); use pgstore.NewLoginStateStore in production.
 	LoginStates LoginStateStore
 
 	// BasePath is where the handler is mounted. Default: "/bff".
