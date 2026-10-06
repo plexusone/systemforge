@@ -1101,6 +1101,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#http-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Endpoints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="HTTP Endpoints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#userinfo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserInfo
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#embedded-vs-ory" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1157,6 +1185,118 @@
     
   
     Providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../social-login/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../relying-party/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Relying Parties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production-stores/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Stores
   
 
     
@@ -2691,6 +2831,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/v0.12.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.12.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/v0.11.0/" class="md-nav__link">
         
   
@@ -3232,6 +3400,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#http-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Endpoints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="HTTP Endpoints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#userinfo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserInfo
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#embedded-vs-ory" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3361,6 +3557,96 @@
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1">// Identity and Authentication available</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1">// OAuth is nil (no server)</span>
 </code></pre></div>
+<h2 id="http-endpoints">HTTP Endpoints<a class="headerlink" href="#http-endpoints" title="Permanent link">&para;</a></h2>
+<p>A <code>systemauth.Server</code> (embedded or the standalone <code>cmd/systemauth</code> binary)
+serves:</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/.well-known/openid-configuration</code></td>
+<td>GET</td>
+<td>OIDC discovery</td>
+</tr>
+<tr>
+<td><code>/.well-known/jwks.json</code></td>
+<td>GET</td>
+<td>JSON Web Key Set</td>
+</tr>
+<tr>
+<td><code>/oauth/authorize</code></td>
+<td>GET/POST</td>
+<td>Authorization endpoint</td>
+</tr>
+<tr>
+<td><code>/oauth/token</code></td>
+<td>POST</td>
+<td>Token endpoint (refresh tokens rotate; see <a href="../social-login/#refresh-tokens">Social Login</a>)</td>
+</tr>
+<tr>
+<td><code>/oauth/introspect</code></td>
+<td>POST</td>
+<td>Token introspection (RFC 7662)</td>
+</tr>
+<tr>
+<td><code>/oauth/revoke</code></td>
+<td>POST</td>
+<td>Token revocation (RFC 7009)</td>
+</tr>
+<tr>
+<td><code>/oauth/userinfo</code></td>
+<td>GET/POST</td>
+<td>OpenID Connect UserInfo</td>
+</tr>
+</tbody>
+</table>
+<p>With <code>social_login</code> configured, <code>/login*</code>, <code>/logout</code> and <code>/consent</code> are added
+(see <a href="../social-login/">Social Login</a>).</p>
+<h3 id="userinfo">UserInfo<a class="headerlink" href="#userinfo" title="Permanent link">&para;</a></h3>
+<p><code>/oauth/userinfo</code> implements OIDC Core §5.3. Send the access token as
+<code>Authorization: Bearer &lt;token&gt;</code> (or <code>access_token</code> in a form-encoded <code>POST</code>
+body; query parameters are not accepted). The token must have been granted the
+<code>openid</code> scope.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;sub&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;5f1c0a9e-...&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;octo@example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;email_verified&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Octo Cat&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">&quot;picture&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://avatars.example.com/u/4242&quot;</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>sub</code> is the SystemAuth principal ID. Standard claims are released per granted
+scope — <code>email</code> → <code>email</code>, <code>email_verified</code>; <code>profile</code> → <code>name</code>, <code>picture</code>, … —
+and are read live from the principal (via the <code>SessionProvider</code>), so they
+reflect the current profile rather than the one at sign-in.</p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No token</td>
+<td><code>401</code>, <code>WWW-Authenticate: Bearer realm="systemauth"</code></td>
+</tr>
+<tr>
+<td>Unknown, expired or revoked token</td>
+<td><code>401</code>, <code>WWW-Authenticate: Bearer ..., error="invalid_token"</code></td>
+</tr>
+<tr>
+<td>Token without <code>openid</code> scope</td>
+<td><code>403</code>, <code>WWW-Authenticate: Bearer ..., error="insufficient_scope", scope="openid"</code></td>
+</tr>
+</tbody>
+</table>
 <h2 id="embedded-vs-ory">Embedded vs Ory<a class="headerlink" href="#embedded-vs-ory" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3400,18 +3686,18 @@
 </table>
 <h2 id="migration-path">Migration Path<a class="headerlink" href="#migration-path" title="Permanent link">&para;</a></h2>
 <p>Start embedded, migrate to Ory when needed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// Today: Embedded</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nx">providers</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewProviders</span><span class="p">(</span><span class="nx">server</span><span class="p">)</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1">// Future: Ory adapters (same interface)</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nx">providers</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">Providers</span><span class="p">{</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nx">Identity</span><span class="p">:</span><span class="w">       </span><span class="nx">ory</span><span class="p">.</span><span class="nx">NewKratosIdentityProvider</span><span class="p">(</span><span class="nx">kratosClient</span><span class="p">),</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nx">Authentication</span><span class="p">:</span><span class="w"> </span><span class="nx">ory</span><span class="p">.</span><span class="nx">NewKratosAuthProvider</span><span class="p">(</span><span class="nx">kratosClient</span><span class="p">),</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nx">OAuth</span><span class="p">:</span><span class="w">          </span><span class="nx">ory</span><span class="p">.</span><span class="nx">NewHydraOAuthProvider</span><span class="p">(</span><span class="nx">hydraClient</span><span class="p">),</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nx">OAuthClients</span><span class="p">:</span><span class="w">   </span><span class="nx">ory</span><span class="p">.</span><span class="nx">NewHydraClientStore</span><span class="p">(</span><span class="nx">hydraAdminClient</span><span class="p">),</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="p">}</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1">// Application code using providers.* doesn&#39;t change!</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Today: Embedded</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">providers</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewProviders</span><span class="p">(</span><span class="nx">server</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1">// Future: Ory adapters (same interface)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nx">providers</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">Providers</span><span class="p">{</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">Identity</span><span class="p">:</span><span class="w">       </span><span class="nx">ory</span><span class="p">.</span><span class="nx">NewKratosIdentityProvider</span><span class="p">(</span><span class="nx">kratosClient</span><span class="p">),</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nx">Authentication</span><span class="p">:</span><span class="w"> </span><span class="nx">ory</span><span class="p">.</span><span class="nx">NewKratosAuthProvider</span><span class="p">(</span><span class="nx">kratosClient</span><span class="p">),</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nx">OAuth</span><span class="p">:</span><span class="w">          </span><span class="nx">ory</span><span class="p">.</span><span class="nx">NewHydraOAuthProvider</span><span class="p">(</span><span class="nx">hydraClient</span><span class="p">),</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nx">OAuthClients</span><span class="p">:</span><span class="w">   </span><span class="nx">ory</span><span class="p">.</span><span class="nx">NewHydraClientStore</span><span class="p">(</span><span class="nx">hydraAdminClient</span><span class="p">),</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">}</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="c1">// Application code using providers.* doesn&#39;t change!</span>
 </code></pre></div>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>

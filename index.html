@@ -1151,6 +1151,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="systemauth/social-login/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="systemauth/relying-party/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Relying Parties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="systemauth/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="systemauth/production-stores/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Stores
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2672,6 +2784,34 @@
   
   
     <li class="md-nav__item">
+      <a href="releases/v0.12.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.12.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="releases/v0.11.0/" class="md-nav__link">
         
   
@@ -3254,7 +3394,9 @@
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Identity Management</strong>: Users, organizations, memberships with role-based access</li>
-<li><strong>OAuth 2.0 Server</strong>: Full RFC-compliant implementation using Fosite</li>
+<li><strong>OAuth 2.0 / OIDC Server (SystemAuth)</strong>: Fosite-based authorization server issuing ID tokens, optional JWT access tokens, and UserInfo</li>
+<li><strong>Social Login</strong>: GitHub/Google login served centrally by SystemAuth, with refresh-token rotation, logout, and consent</li>
+<li><strong>Relying Parties</strong>: <code>identity/relyingparty</code> lets applications federate to SystemAuth (OIDC client, <code>/bff/*</code> cookie sessions, bearer middleware), with durable encrypted PostgreSQL session stores</li>
 <li><strong>API Key Authentication</strong>: Secure server-to-server access</li>
 <li><strong>Service Accounts</strong>: JWT Bearer authentication for automation</li>
 <li><strong>Multi-Tenant Ready</strong>: Organization-scoped resources with RLS support</li>
