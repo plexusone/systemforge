@@ -42,6 +42,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 - 🔗 **Memberships** - User-org relationships with flexible roles
 - 👑 **Ownership Transfer** - Transaction-safe organization ownership transfers
 - 🔐 **OAuth Accounts** - External OAuth provider links (GitHub, Google)
+- 🌐 **Social Login** - GitHub/Google login served centrally by SystemAuth (`__Host-sf_login` session, provider-subject account linking)
 - 🔑 **API Keys** - Machine-to-machine authentication with scopes
 
 ### OAuth 2.0 Server (Fosite)
@@ -346,6 +347,7 @@ SystemForge creates the following tables (all prefixed with `sf_`):
 | `sf_organizations` | Multi-tenant organizations |
 | `sf_memberships` | User-organization relationships |
 | `sf_oauth_accounts` | External OAuth provider links |
+| `sf_external_identities` | Upstream login identities (GitHub/Google) linked to principals |
 | `sf_refresh_tokens` | JWT refresh token tracking |
 | `sf_api_keys` | Developer API keys |
 | `sf_oauth_apps` | OAuth client applications |

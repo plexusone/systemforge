@@ -8,6 +8,10 @@ This package handles the client-side of OAuth flows where your app is the **rely
 
 It is the single sanctioned place in SystemForge that talks to github.com and
 google.com. The former `session/oauth` package was folded into it and removed.
+SystemAuth's built-in GitHub/Google login (see
+[SystemAuth Social Login](../systemauth/social-login.md)) is built on this
+package; prefer federating to SystemAuth over wiring social login into each
+application.
 
 ## Supported Providers
 
