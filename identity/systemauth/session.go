@@ -3,6 +3,8 @@ package systemauth
 import (
 	"context"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ory/fosite"
@@ -106,9 +108,20 @@ func (p *DefaultSessionProvider) GetAuthenticatedUser(r *http.Request) string {
 	return r.Header.Get(p.userIDHeader)
 }
 
-// RedirectToLogin returns the login URL with return URL parameter.
+// RedirectToLogin returns the login URL with the return URL as a
+// query-escaped redirect parameter.
 func (p *DefaultSessionProvider) RedirectToLogin(returnURL string) string {
-	return p.loginURL + "?redirect=" + returnURL
+	return appendQueryParam(p.loginURL, "redirect", returnURL)
+}
+
+// appendQueryParam appends key=value (query-escaped) to base, which may
+// already carry a query string.
+func appendQueryParam(base, key, value string) string {
+	sep := "?"
+	if strings.Contains(base, "?") {
+		sep = "&"
+	}
+	return base + sep + url.QueryEscape(key) + "=" + url.QueryEscape(value)
 }
 
 // HasConsent always returns the value of skipConsent.
@@ -119,7 +132,7 @@ func (p *DefaultSessionProvider) HasConsent(_ context.Context, _, _ string, _ []
 
 // RedirectToConsent returns the consent URL with return URL parameter.
 func (p *DefaultSessionProvider) RedirectToConsent(returnURL string) string {
-	return p.consentURL + "?redirect=" + returnURL
+	return appendQueryParam(p.consentURL, "redirect", returnURL)
 }
 
 // SaveConsent is a no-op in the default provider.
