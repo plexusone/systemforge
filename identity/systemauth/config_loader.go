@@ -102,10 +102,26 @@ func (c *Config) expandEnvVars() {
 		}
 	}
 
+	// Expand in signing key settings
+	c.Keys.KeyID = os.ExpandEnv(c.Keys.KeyID)
+	c.Keys.PrivateKeyFile = os.ExpandEnv(c.Keys.PrivateKeyFile)
+	c.Keys.PrivateKeyPEM = expandWholeEnv(c.Keys.PrivateKeyPEM)
+
 	// Expand in database DSN
 	if c.Database != nil {
 		c.Database.DSN = os.ExpandEnv(c.Database.DSN)
 	}
+}
+
+// expandWholeEnv expands a value that is entirely one ${VAR} reference
+// without re-scanning the substituted content (PEM data may contain "$").
+// Anything else goes through os.ExpandEnv.
+func expandWholeEnv(v string) string {
+	t := strings.TrimSpace(v)
+	if strings.HasPrefix(t, "${") && strings.HasSuffix(t, "}") && !strings.ContainsAny(t[2:len(t)-1], "${} ") {
+		return os.Getenv(t[2 : len(t)-1])
+	}
+	return os.ExpandEnv(v)
 }
 
 // SaveConfig saves configuration to a file.

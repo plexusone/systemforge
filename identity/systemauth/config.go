@@ -109,8 +109,23 @@ type KeyConfig struct {
 	// RotationDays is how often to rotate keys (0 = never)
 	RotationDays int `json:"rotation_days,omitempty" yaml:"rotation_days,omitempty" jsonschema:"minimum=0,description=Key rotation interval in days (0 = never)"`
 
-	// PrivateKey is an optional pre-configured RSA private key.
-	// If nil, a key will be generated automatically.
+	// KeyID is the "kid" published in the JWKS and set on every JWT.
+	// Default: the RFC 7638 thumbprint of the key.
+	KeyID string `json:"key_id,omitempty" yaml:"key_id,omitempty" jsonschema:"description=JWKS key ID (default: RFC 7638 thumbprint of the key)"`
+
+	// PrivateKeyFile is the path of a PEM-encoded RSA private key (PKCS#1
+	// or PKCS#8, at least 2048 bits). Supports environment variable
+	// expansion: ${SYSTEMAUTH_SIGNING_KEY_FILE}
+	PrivateKeyFile string `json:"private_key_file,omitempty" yaml:"private_key_file,omitempty" jsonschema:"description=Path of the PEM RSA signing key (supports env var expansion)"`
+
+	// PrivateKeyPEM is a PEM-encoded RSA private key, normally injected from
+	// a secret: ${SYSTEMAUTH_SIGNING_KEY}. Mutually exclusive with
+	// PrivateKeyFile.
+	PrivateKeyPEM string `json:"private_key_pem,omitempty" yaml:"private_key_pem,omitempty" jsonschema:"description=PEM RSA signing key, usually ${SYSTEMAUTH_SIGNING_KEY} (supports env var expansion)"`
+
+	// PrivateKey is an optional pre-configured RSA private key. When nil,
+	// PrivateKeyPEM or PrivateKeyFile is loaded; when none is set an
+	// ephemeral key is generated (development only).
 	// This field is not serialized - for programmatic use only.
 	PrivateKey *rsa.PrivateKey `json:"-" yaml:"-" jsonschema:"-"`
 }

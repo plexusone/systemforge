@@ -46,6 +46,18 @@
           "type": "integer",
           "minimum": 0,
           "description": "Key rotation interval in days (0 = never)"
+        },
+        "key_id": {
+          "type": "string",
+          "description": "JWKS key ID (default: RFC 7638 thumbprint of the key)"
+        },
+        "private_key_file": {
+          "type": "string",
+          "description": "Path of the PEM RSA signing key (supports env var expansion)"
+        },
+        "private_key_pem": {
+          "type": "string",
+          "description": "PEM RSA signing key"
         }
       },
       "additionalProperties": false,

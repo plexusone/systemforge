@@ -34,6 +34,7 @@ type Server struct {
 	observability   *observability.Observability
 	socialOpts      socialOptions
 	social          *socialLogin
+	readiness       []readinessCheck
 }
 
 // Option configures a Server.
@@ -95,7 +96,11 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		opt(s)
 	}
 
-	// Generate RSA key if not provided
+	// Load the configured signing key, or generate an ephemeral one
+	// (development: tokens do not survive a restart).
+	if err := cfg.Keys.LoadSigningKey(); err != nil {
+		return nil, err
+	}
 	key := cfg.Keys.PrivateKey
 	if key == nil {
 		var err error
@@ -103,9 +108,17 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		if err != nil {
 			return nil, ErrKeyGenerationFailed
 		}
+		s.logger.Warn("no signing key configured; generated an ephemeral key (tokens will not verify after a restart)")
 	}
 	s.key = key
-	s.keyID = defaultKeyID
+	s.keyID = cfg.Keys.KeyID
+	if s.keyID == "" {
+		kid, err := KeyThumbprint(key)
+		if err != nil {
+			return nil, err
+		}
+		s.keyID = kid
+	}
 
 	// Set up Fosite
 	if err := s.setupFosite(); err != nil {
@@ -262,6 +275,10 @@ func (s *Server) registerEndpoints() {
 	// Register discovery endpoints (these are handled by Huma)
 	s.registerDiscoveryEndpoints()
 
+	// Liveness and readiness
+	s.router.Get(HealthzPath, s.handleHealthz)
+	s.router.Get(ReadyzPath, s.handleReadyz)
+
 	// Register GitHub/Google login routes
 	if s.social != nil {
 		s.social.registerRoutes(s.router)
@@ -321,11 +338,9 @@ func (s *Server) Session(subject string) *Session {
 	}
 }
 
-// defaultKeyID is the JWKS key ID used when none is configured.
-const defaultKeyID = "systemauth-1"
-
 // KeyID returns the key ID ("kid") of the signing key, published in the
-// JWKS and set in the header of every JWT the server signs.
+// JWKS and set in the header of every JWT the server signs. It is
+// keys.key_id when configured, otherwise the key's RFC 7638 thumbprint.
 func (s *Server) KeyID() string {
 	return s.keyID
 }
