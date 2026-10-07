@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"database/sql"
 	"encoding/json"
 	"encoding/pem"
 	"io"
@@ -20,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/plexusone/systemforge/identity/systemauth"
+	"github.com/plexusone/systemforge/identity/systemauthsvc"
 )
 
 func discardLogger() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
@@ -92,8 +92,9 @@ func TestProductionRequirements(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dev mode: %v", err)
 	}
-	if a.cfg.Issuer != "http://localhost:8081" || a.storageName != "in-memory" {
-		t.Errorf("dev defaults: %q %q", a.cfg.Issuer, a.storageName)
+	closeApp(t, a)
+	if a.Issuer() != "http://localhost:8081" || a.StorageName() != "in-memory" {
+		t.Errorf("dev defaults: %q %q", a.Issuer(), a.StorageName())
 	}
 }
 
@@ -112,14 +113,14 @@ func TestProductionServerWithKeyFromEnv(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newApp: %v", err)
 	}
-	t.Cleanup(func() { a.close(discardLogger()) })
-	if a.server.KeyID() != "prod-1" || a.storageName != "sqlite" {
-		t.Errorf("key id %q storage %q", a.server.KeyID(), a.storageName)
+	closeApp(t, a)
+	if a.KeyID() != "prod-1" || a.StorageName() != "sqlite" {
+		t.Errorf("key id %q storage %q", a.KeyID(), a.StorageName())
 	}
 
 	get := func(path string) (int, map[string]any) {
 		w := httptest.NewRecorder()
-		a.server.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+		a.Handler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
 		var body map[string]any
 		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 			t.Fatalf("%s: %v %s", path, err, w.Body.String())
@@ -137,12 +138,22 @@ func TestProductionServerWithKeyFromEnv(t *testing.T) {
 	}
 
 	// A lost database makes the server unready.
-	if err := a.db.db.Close(); err != nil {
+	if err := a.EntClient().Close(); err != nil {
 		t.Fatal(err)
 	}
 	if code, body := get("/readyz"); code != http.StatusServiceUnavailable || body["status"] != "unavailable" {
 		t.Errorf("readyz after db loss: %d %v", code, body)
 	}
+}
+
+// closeApp closes the service when the test ends.
+func closeApp(t *testing.T, a *systemauthsvc.Service) {
+	t.Helper()
+	t.Cleanup(func() {
+		if err := a.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
 }
 
 func toJSON(t *testing.T, v any) string {
@@ -189,24 +200,5 @@ func TestSigningKeyFileAndRotationKeyID(t *testing.T) {
 	}
 	if _, err := systemauth.NewEmbedded(*cfg, systemauth.WithLogger(discardLogger())); err == nil {
 		t.Error("invalid key file accepted")
-	}
-}
-
-func TestOpenDatabaseDrivers(t *testing.T) {
-	if !slices.Contains(sql.Drivers(), "pgx") || !slices.Contains(sql.Drivers(), "sqlite3") {
-		t.Fatalf("drivers not registered: %v", sql.Drivers())
-	}
-	// Opening is lazy: a postgres DSN yields a client without connecting.
-	//nolint:gosec // G101: dummy DSN for a closed local port
-	db, err := openDatabase(&systemauth.DatabaseConfig{Driver: "postgres", DSN: "postgres://u:p@127.0.0.1:1/x?sslmode=disable"})
-	if err != nil {
-		t.Fatalf("postgres: %v", err)
-	}
-	if err := db.db.PingContext(t.Context()); err == nil {
-		t.Error("ping to closed port succeeded")
-	}
-	db.close(discardLogger())
-	if _, err := openDatabase(&systemauth.DatabaseConfig{Driver: "mysql", DSN: "x"}); err == nil {
-		t.Error("mysql accepted")
 	}
 }

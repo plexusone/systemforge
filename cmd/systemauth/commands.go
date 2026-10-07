@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +13,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/plexusone/systemforge/identity/systemauthsvc"
 )
 
 // options holds the command-line configuration. Every flag can also be set
@@ -207,7 +208,7 @@ func runValidate(cmd *cobra.Command, opts *options) error {
 	if err := cfg.Keys.LoadSigningKey(); err != nil {
 		return err
 	}
-	if err := checkProduction(cfg, opts.dev); err != nil {
+	if err := checkProduction(cfg, opts); err != nil {
 		return err
 	}
 	cmd.Printf("Configuration is valid\n  Issuer:   %s\n  Clients:  %d\n", cfg.Issuer, len(cfg.Clients))
@@ -220,7 +221,7 @@ func runValidate(cmd *cobra.Command, opts *options) error {
 }
 
 func runServe(ctx context.Context, opts *options) error {
-	logger, err := newLogger(opts.logLevel, opts.logFormat)
+	logger, err := systemauthsvc.NewLogger(os.Stdout, opts.logLevel, opts.logFormat)
 	if err != nil {
 		return err
 	}
@@ -232,11 +233,15 @@ func runServe(ctx context.Context, opts *options) error {
 	if err != nil {
 		return err
 	}
-	defer app.close(logger)
+	defer func() {
+		if err := app.Close(); err != nil {
+			logger.Error("closing database", "error", err)
+		}
+	}()
 
 	httpServer := &http.Server{
 		Addr:              opts.addr,
-		Handler:           app.server,
+		Handler:           app.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -247,10 +252,10 @@ func runServe(ctx context.Context, opts *options) error {
 	go func() {
 		logger.Info("starting SystemAuth server",
 			"addr", opts.addr,
-			"issuer", app.cfg.Issuer,
-			"key_id", app.server.KeyID(),
-			"clients", len(app.cfg.Clients),
-			"storage", app.storageName,
+			"issuer", app.Issuer(),
+			"key_id", app.KeyID(),
+			"clients", len(app.Config().Clients),
+			"storage", app.StorageName(),
 			"dev", opts.dev,
 			"version", version,
 		)
@@ -278,7 +283,7 @@ func runServe(ctx context.Context, opts *options) error {
 }
 
 func runMigrate(ctx context.Context, opts *options) error {
-	logger, err := newLogger(opts.logLevel, opts.logFormat)
+	logger, err := systemauthsvc.NewLogger(os.Stdout, opts.logLevel, opts.logFormat)
 	if err != nil {
 		return err
 	}
@@ -289,44 +294,12 @@ func runMigrate(ctx context.Context, opts *options) error {
 	if err != nil {
 		return err
 	}
-	if cfg.Database == nil {
-		return errors.New("database configuration required for migrations")
+	if cfg.Database != nil {
+		logger.Info("running database migrations", "driver", cfg.Database.Driver)
 	}
-	logger.Info("connecting to database", "driver", cfg.Database.Driver)
-	db, err := openDatabase(cfg.Database)
-	if err != nil {
+	if err := systemauthsvc.Migrate(ctx, cfg); err != nil {
 		return err
-	}
-	defer db.close(logger)
-	logger.Info("running database migrations")
-	if err := db.client.Schema.Create(ctx); err != nil {
-		return fmt.Errorf("running migrations: %w", err)
 	}
 	logger.Info("migrations completed successfully")
 	return nil
-}
-
-func newLogger(level, format string) (*slog.Logger, error) {
-	var lvl slog.Level
-	switch level {
-	case "debug":
-		lvl = slog.LevelDebug
-	case "info", "":
-		lvl = slog.LevelInfo
-	case "warn":
-		lvl = slog.LevelWarn
-	case "error":
-		lvl = slog.LevelError
-	default:
-		return nil, fmt.Errorf("invalid log level %q", level)
-	}
-	opts := &slog.HandlerOptions{Level: lvl}
-	switch format {
-	case "json":
-		return slog.New(slog.NewJSONHandler(os.Stdout, opts)), nil
-	case "text", "":
-		return slog.New(slog.NewTextHandler(os.Stdout, opts)), nil
-	default:
-		return nil, fmt.Errorf("invalid log format %q", format)
-	}
 }

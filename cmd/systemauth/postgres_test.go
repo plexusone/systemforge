@@ -43,7 +43,9 @@ social_login:
 		if err != nil {
 			t.Fatalf("start %d: %v", i+1, err)
 		}
-		a.close(discardLogger())
+		if err := a.Close(); err != nil {
+			t.Fatalf("close %d: %v", i+1, err)
+		}
 	}
 
 	db, err := sql.Open("pgx", dsn)
