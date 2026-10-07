@@ -3,6 +3,8 @@ package systemauth
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -71,4 +73,17 @@ func (s *Server) handleReadyz(w http.ResponseWriter, r *http.Request) {
 		resp.Checks[c.name] = "ok"
 	}
 	writeHealth(w, r, status, resp)
+}
+
+// Ready runs every readiness check registered with WithReadinessCheck and
+// returns the joined failures, or nil when the server is ready. It is the
+// programmatic form of GET /readyz.
+func (s *Server) Ready(ctx context.Context) error {
+	var errs []error
+	for _, c := range s.readiness {
+		if err := c.check(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", c.name, err))
+		}
+	}
+	return errors.Join(errs...)
 }

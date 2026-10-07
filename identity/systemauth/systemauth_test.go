@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -56,6 +57,11 @@ func TestOpenIDConfiguration(t *testing.T) {
 
 	if config.TokenEndpoint != "https://test.example.com/oauth/token" {
 		t.Errorf("expected token endpoint https://test.example.com/oauth/token, got %s", config.TokenEndpoint)
+	}
+
+	// The programmatic document is the one that is served.
+	if !reflect.DeepEqual(server.OpenIDConfiguration(), config) {
+		t.Errorf("OpenIDConfiguration() = %+v, served %+v", server.OpenIDConfiguration(), config)
 	}
 }
 

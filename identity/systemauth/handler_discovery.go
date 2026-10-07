@@ -62,6 +62,13 @@ type OpenIDConfigOutput struct {
 }
 
 func (s *Server) openIDConfigHandler(_ context.Context, _ *OpenIDConfigInput) (*OpenIDConfigOutput, error) {
+	return &OpenIDConfigOutput{Body: s.OpenIDConfiguration()}, nil
+}
+
+// OpenIDConfiguration returns the OpenID Provider configuration served at
+// /.well-known/openid-configuration. A relying party in the same process
+// can use it instead of fetching the discovery document over the network.
+func (s *Server) OpenIDConfiguration() OpenIDConfiguration {
 	issuer := s.config.Issuer
 
 	config := OpenIDConfiguration{
@@ -117,7 +124,7 @@ func (s *Server) openIDConfigHandler(_ context.Context, _ *OpenIDConfigInput) (*
 		},
 	}
 
-	return &OpenIDConfigOutput{Body: config}, nil
+	return config
 }
 
 // JWKSInput is the input for the JWKS endpoint (no params).

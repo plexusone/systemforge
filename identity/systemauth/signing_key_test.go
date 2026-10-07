@@ -112,7 +112,13 @@ func TestHealthEndpoints(t *testing.T) {
 	if w := get(ReadyzPath); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"database":"ok"`) {
 		t.Errorf("readyz: %d %s", w.Code, w.Body.String())
 	}
+	if err := s.Ready(t.Context()); err != nil {
+		t.Errorf("Ready: %v", err)
+	}
 	dbErr = failing
+	if err := s.Ready(t.Context()); !errors.Is(err, failing) || !strings.Contains(err.Error(), "database") {
+		t.Errorf("Ready failing: %v", err)
+	}
 	w := get(ReadyzPath)
 	if w.Code != http.StatusServiceUnavailable || !strings.Contains(w.Body.String(), `"database":"fail"`) || strings.Contains(w.Body.String(), "down") {
 		t.Errorf("readyz failing: %d %s", w.Code, w.Body.String())
