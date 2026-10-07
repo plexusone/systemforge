@@ -12,6 +12,7 @@ exclude github.com/authzed/cel-go v0.30.0
 
 require (
 	entgo.io/ent v0.14.6
+	github.com/aauth-dev/auth-go v0.2.0
 	github.com/authzed/authzed-go v1.11.0
 	github.com/authzed/grpcutil v0.0.0-20260105210157-e237581949c2
 	github.com/authzed/spicedb v1.56.2
@@ -35,6 +36,26 @@ require (
 	golang.org/x/oauth2 v0.37.0
 	google.golang.org/grpc v1.84.0
 	gopkg.in/yaml.v3 v3.0.1
+)
+
+require (
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
+	github.com/dunglas/httpsfv v1.0.2 // indirect
+	github.com/goccy/go-json v0.10.6 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
+	github.com/lestrrat-go/dsig v1.0.0 // indirect
+	github.com/lestrrat-go/dsig-secp256k1 v1.0.0 // indirect
+	github.com/lestrrat-go/httpcc v1.0.1 // indirect
+	github.com/lestrrat-go/httprc v1.0.6 // indirect
+	github.com/lestrrat-go/httprc/v3 v3.0.1 // indirect
+	github.com/lestrrat-go/iter v1.0.2 // indirect
+	github.com/lestrrat-go/jwx/v2 v2.1.2 // indirect
+	github.com/lestrrat-go/jwx/v3 v3.0.12 // indirect
+	github.com/lestrrat-go/option v1.0.1 // indirect
+	github.com/lestrrat-go/option/v2 v2.0.0 // indirect
+	github.com/segmentio/asm v1.2.1 // indirect
+	github.com/valyala/fastjson v1.6.4 // indirect
+	github.com/yaronf/httpsign v0.5.1 // indirect
 )
 
 require (
@@ -255,3 +276,5 @@ require (
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
 	resenje.org/singleflight v0.4.3 // indirect
 )
+
+replace github.com/aauth-dev/auth-go => ../../aauth-dev/auth-go
