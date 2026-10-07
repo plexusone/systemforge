@@ -44,6 +44,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 - 🔐 **OAuth Accounts** - External OAuth provider links (GitHub, Google)
 - 🌐 **Social Login** - GitHub/Google login served centrally by SystemAuth (`__Host-sf_login` session, provider-subject account linking, logout, consent)
 - 🤝 **Relying Parties** - `identity/relyingparty`: apps federate to SystemAuth via OIDC (ID-token/JWKS verification, `sub` → `sf_principal_id` linking), mount the `/bff/*` cookie-session surface, and accept SystemAuth JWTs or API keys from programmatic clients
+- 🧩 **Embeddable SystemAuth** - `identity/systemauthsvc` builds a production-checked SystemAuth `http.Handler` a host binary can mount next to its own apps, with provider metadata for discovery-free in-process relying parties
 - 🔑 **API Keys** - Machine-to-machine authentication with scopes
 
 ### OAuth 2.0 Server (Fosite)
@@ -288,6 +289,7 @@ github.com/plexusone/systemforge/
 │   ├── oauthclient/       # GitHub/Google/SystemAuth OAuth client primitives
 │   ├── relyingparty/      # OIDC relying party for apps federating to SystemAuth (/bff, bearer)
 │   ├── systemauth/        # SystemAuth OAuth 2.0 / OIDC server (social login, userinfo; cmd/systemauth binary)
+│   ├── systemauthsvc/     # Embeddable SystemAuth service setup for host binaries (config, production checks, migrations)
 │   ├── password.go        # Argon2id hashing
 │   └── service.go         # Identity service interfaces
 │
