@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://plexusone.github.io/systemforge/getting-started/configuration/">
+        <link rel="canonical" href="https://plexusone.github.io/systemforge/systemauth/embedding/">
       
       
-        <link rel="prev" href="../quickstart/">
+        <link rel="prev" href="../deployment/">
       
       
-        <link rel="next" href="../../identity/overview/">
+        <link rel="next" href="../production-stores/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Configuration - SystemForge</title>
+        <title>Embedding - SystemForge</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#configuration" class="md-skip">
+        <a href="#embedding-systemauth-in-a-host-binary" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Configuration
+              Embedding
             
           </span>
         </div>
@@ -292,8 +292,6 @@
       
   
   
-    
-  
   
   
     
@@ -306,11 +304,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
@@ -331,7 +331,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -349,7 +349,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -377,7 +377,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quickstart/" class="md-nav__link">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
         
   
   
@@ -402,37 +402,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Configuration
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
         
   
   
@@ -448,120 +421,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#oauth-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OAuth Configuration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#database-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Database Configuration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#environment-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Environment Variables
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Security Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pkce-enforcement" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PKCE Enforcement
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#token-rotation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token Rotation
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#password-hashing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Password Hashing
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#production-checklist" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Production Checklist
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1064,8 +923,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -1076,13 +937,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -1103,7 +962,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1121,7 +980,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../systemauth/overview/" class="md-nav__link">
+      <a href="../overview/" class="md-nav__link">
         
   
   
@@ -1149,7 +1008,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../systemauth/providers/" class="md-nav__link">
+      <a href="../providers/" class="md-nav__link">
         
   
   
@@ -1177,7 +1036,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../systemauth/social-login/" class="md-nav__link">
+      <a href="../social-login/" class="md-nav__link">
         
   
   
@@ -1205,7 +1064,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../systemauth/relying-party/" class="md-nav__link">
+      <a href="../relying-party/" class="md-nav__link">
         
   
   
@@ -1233,7 +1092,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../systemauth/deployment/" class="md-nav__link">
+      <a href="../deployment/" class="md-nav__link">
         
   
   
@@ -1258,10 +1117,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../systemauth/embedding/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Embedding
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1277,6 +1163,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#security-trade-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security trade-off
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1289,7 +1239,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../systemauth/production-stores/" class="md-nav__link">
+      <a href="../production-stores/" class="md-nav__link">
         
   
   
@@ -3367,10 +3317,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#oauth-configuration" class="md-nav__link">
+  <a href="#security-trade-off" class="md-nav__link">
     <span class="md-ellipsis">
       
-        OAuth Configuration
+        Security trade-off
       
     </span>
   </a>
@@ -3378,10 +3328,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#database-configuration" class="md-nav__link">
+  <a href="#setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Database Configuration
+        Setup
       
     </span>
   </a>
@@ -3389,10 +3339,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#environment-variables" class="md-nav__link">
+  <a href="#api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment Variables
+        API
       
     </span>
   </a>
@@ -3400,60 +3350,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#security-configuration" class="md-nav__link">
+  <a href="#database" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Security Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Security Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pkce-enforcement" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PKCE Enforcement
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#token-rotation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token Rotation
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#password-hashing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Password Hashing
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#production-checklist" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Production Checklist
+        Database
       
     </span>
   </a>
@@ -3480,120 +3380,169 @@
   
 
 
-<h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
-<p>SystemForge is configured through Go structs and environment variables.</p>
-<h2 id="oauth-configuration">OAuth Configuration<a class="headerlink" href="#oauth-configuration" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/oauth&quot;</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nx">cfg</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">oauth</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="c1">// Required: The base URL of your OAuth server</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">Issuer</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.example.com&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="c1">// Required: 32+ byte secret for HMAC token signing</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">HashSecret</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;OAUTH_SECRET&quot;</span><span class="p">)),</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="c1">// Optional: Token lifespans (defaults shown)</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nx">AccessTokenLifespan</span><span class="p">:</span><span class="w">  </span><span class="mi">15</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nx">RefreshTokenLifespan</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">,</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nx">AuthCodeLifespan</span><span class="p">:</span><span class="w">     </span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="c1">// Optional: RSA key for JWT signing</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="c1">// If nil, a key is generated at startup</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="nx">PrivateKey</span><span class="p">:</span><span class="w"> </span><span class="nx">rsaKey</span><span class="p">,</span>
+<h1 id="embedding-systemauth-in-a-host-binary">Embedding SystemAuth in a Host Binary<a class="headerlink" href="#embedding-systemauth-in-a-host-binary" title="Permanent link">&para;</a></h1>
+<p>The <code>cmd/systemauth</code> binary is a thin wrapper around the
+<code>identity/systemauthsvc</code> package. A host binary that serves several
+applications from one Go process (routing by <code>Host</code> header) can use the same
+package to run a production-grade SystemAuth next to them, with the same
+configuration file, production checks, database setup and stores as the
+standalone server.</p>
+<h2 id="security-trade-off">Security trade-off<a class="headerlink" href="#security-trade-off" title="Permanent link">&para;</a></h2>
+<p>Read this before choosing embedding over the standalone binary.</p>
+<ul>
+<li><strong>The signing key shares the process with application code.</strong> Anything that
+  can read the host's memory, or any code path in any embedded application
+  that leaks process state (a debug endpoint, a heap dump, a dependency with
+  a vulnerability), can expose the key that signs every ID and access token.
+  With the standalone binary only SystemAuth's own code runs next to the key.</li>
+<li><strong>A host restart is a login outage.</strong> Deploying, crashing or rolling back
+  any application restarts SystemAuth too. Login sessions, in-flight logins,
+  consent grants and tokens survive in the database, but requests during the
+  restart fail, and a crash loop in one application takes login down for all.</li>
+<li><strong>Shared resource limits.</strong> A memory leak or CPU spike in one application
+  affects token issuance for all relying parties.</li>
+</ul>
+<p>Embedding is reasonable when the host runs a small set of first-party
+applications from one codebase and one deployment pipeline, and running a
+separate service is not worth the operational cost. Keep SystemAuth on its
+own host name (<code>auth.example.com</code>) so its <code>__Host-</code> cookies are not shared
+with the applications. Prefer the standalone binary when third-party code runs
+in the host or when the applications deploy independently.</p>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/identity/relyingparty&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/identity/systemauthsvc&quot;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nx">cfg</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauthsvc</span><span class="p">.</span><span class="nx">LoadConfig</span><span class="p">(</span><span class="s">&quot;/etc/host/systemauth.yaml&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">systemauthsvc</span><span class="p">.</span><span class="nx">WithDefaultSigningKeyPEM</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;SYSTEMAUTH_SIGNING_KEY&quot;</span><span class="p">)),</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">}</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="nx">auth</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauthsvc</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">,</span><span class="w"> </span><span class="nx">systemauthsvc</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nx">Logger</span><span class="p">:</span><span class="w">  </span><span class="nx">logger</span><span class="p">,</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="nx">Migrate</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="p">})</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="c1">// e.g. ErrNotProductionReady: missing key, http issuer, no database</span>
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="p">}</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="k">defer</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">auth</span><span class="p">.</span><span class="nx">Close</span><span class="p">();</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">        </span><span class="nx">logger</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="s">&quot;closing SystemAuth&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;error&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="p">}()</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="c1">// An application in the same process federates to SystemAuth without</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="c1">// fetching the discovery document.</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="nx">rp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewClientWithMetadata</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">    </span><span class="nx">Issuer</span><span class="p">:</span><span class="w">      </span><span class="nx">auth</span><span class="p">.</span><span class="nx">Issuer</span><span class="p">(),</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;app&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">    </span><span class="nx">RedirectURL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://app.example.com/bff/auth/callback&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="p">},</span><span class="w"> </span><span class="nx">auth</span><span class="p">.</span><span class="nx">Metadata</span><span class="p">())</span>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="p">}</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="nx">mux</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">NewServeMux</span><span class="p">()</span>
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="nx">mux</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;auth.example.com/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">auth</span><span class="p">.</span><span class="nx">Handler</span><span class="p">())</span>
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="nx">mux</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;app.example.com/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">appHandler</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="database-configuration">Database Configuration<a class="headerlink" href="#database-configuration" title="Permanent link">&para;</a></h2>
-<p>SystemForge uses Ent with PostgreSQL:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/ent&quot;</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1">// Connection string</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nx">dsn</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="s">&quot;host=%s port=%d user=%s dbname=%s password=%s sslmode=%s&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;DB_HOST&quot;</span><span class="p">),</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;DB_PORT&quot;</span><span class="p">),</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;DB_USER&quot;</span><span class="p">),</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;DB_NAME&quot;</span><span class="p">),</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;DB_PASSWORD&quot;</span><span class="p">),</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;DB_SSLMODE&quot;</span><span class="p">),</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">)</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">ent</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="s">&quot;postgres&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">dsn</span><span class="p">)</span>
+<p>Overrides are applied before defaults and validation, so an override can
+fill in a value the file leaves out (for example <code>WithDefaultIssuer</code> for a
+file without <code>issuer</code>). When the SystemAuth settings live inside the host's
+own configuration file, load them from memory with the same overrides:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// section is the raw YAML or JSON of the host&#39;s &quot;systemauth&quot; block.</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nx">cfg</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauthsvc</span><span class="p">.</span><span class="nx">LoadConfigBytes</span><span class="p">(</span><span class="nx">section</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;yaml&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">systemauthsvc</span><span class="p">.</span><span class="nx">WithDefaultIssuer</span><span class="p">(</span><span class="s">&quot;http://localhost:8080&quot;</span><span class="p">),</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">systemauthsvc</span><span class="p">.</span><span class="nx">WithDefaultSigningKeyPEM</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;SYSTEMAUTH_SIGNING_KEY&quot;</span><span class="p">)),</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">)</span>
 </code></pre></div>
-<h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
-<p>Recommended environment variables:</p>
+<p><code>Handler()</code> serves every SystemAuth endpoint at the root of the issuer's host
+(discovery, JWKS, <code>/oauth/*</code>, <code>/login/*</code>, <code>/logout</code>, <code>/consent</code>, <code>/healthz</code>,
+<code>/readyz</code>); mount it on its own host name rather than under a path prefix,
+since endpoint URLs are derived from the issuer.</p>
+<p>The relying party still calls the token, JWKS and UserInfo endpoints over
+HTTP at the issuer URL, so the host must be reachable at that URL from
+itself (normally through the same reverse proxy).</p>
+<h2 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Variable</th>
-<th>Description</th>
-<th>Example</th>
+<th>Item</th>
+<th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>DATABASE_URL</code></td>
-<td>PostgreSQL connection string</td>
-<td><code>postgres://user:pass@host/db</code></td>
+<td><code>LoadConfig(path, overrides...)</code></td>
+<td>Read YAML/JSON (with <code>${ENV}</code> expansion), then apply overrides, defaults and validation, in that order. An empty path starts from an empty config.</td>
 </tr>
 <tr>
-<td><code>OAUTH_SECRET</code></td>
-<td>HMAC secret (32+ bytes)</td>
-<td>Random 32-byte string</td>
+<td><code>LoadConfigBytes(data, format, overrides...)</code></td>
+<td>The same for configuration already in memory. <code>format</code> is <code>"yaml"</code>, <code>"json"</code> or <code>""</code> (JSON when the data starts with <code>{</code>, otherwise YAML).</td>
 </tr>
 <tr>
-<td><code>OAUTH_ISSUER</code></td>
-<td>OAuth issuer URL</td>
-<td><code>https://api.example.com</code></td>
+<td><code>systemauth.DecodeConfig</code>, <code>systemauth.DecodeConfigFile</code></td>
+<td>Lower level: decode and expand <code>${ENV}</code> without defaults or validation; call <code>ApplyDefaults</code> and <code>Validate</code> after adjusting the result.</td>
 </tr>
 <tr>
-<td><code>ACCESS_TOKEN_TTL</code></td>
-<td>Access token lifetime</td>
-<td><code>900</code> (seconds)</td>
+<td><code>WithIssuer</code>, <code>WithDefaultIssuer</code>, <code>WithDatabase</code>, <code>WithSigningKeyFile</code>, <code>WithDefaultSigningKeyPEM</code>, <code>WithKeyID</code></td>
+<td>Overrides, the same ones the command's flags use.</td>
 </tr>
 <tr>
-<td><code>REFRESH_TOKEN_TTL</code></td>
-<td>Refresh token lifetime</td>
-<td><code>604800</code> (seconds)</td>
+<td><code>Options.Dev</code></td>
+<td>Allow an ephemeral key, in-memory storage, an http issuer and insecure cookies. Never in production.</td>
+</tr>
+<tr>
+<td><code>Options.Logger</code></td>
+<td><code>*slog.Logger</code>; <code>NewLogger(w, level, format)</code> builds one.</td>
+</tr>
+<tr>
+<td><code>Options.SigningKey</code></td>
+<td>An <code>*rsa.PrivateKey</code> from a secret manager, instead of a file or PEM.</td>
+</tr>
+<tr>
+<td><code>Options.DB</code> + <code>DBDialect</code>, <code>Options.EntClient</code></td>
+<td>Use an existing pool or Ent client (the caller keeps ownership; <code>Close</code> leaves it open).</td>
+</tr>
+<tr>
+<td><code>Options.Migrate</code></td>
+<td>Create or update the schema before the system user and static clients are written.</td>
+</tr>
+<tr>
+<td><code>Options.ServerOptions</code></td>
+<td>Extra <code>systemauth.Option</code>s, e.g. <code>WithObservability</code>.</td>
+</tr>
+<tr>
+<td><code>CheckProduction(cfg, opts)</code></td>
+<td>The checks <code>New</code> enforces, for a <code>validate</code> command.</td>
+</tr>
+<tr>
+<td><code>Migrate(ctx, cfg)</code></td>
+<td>Open, migrate and close (for a separate migration step).</td>
+</tr>
+<tr>
+<td><code>Service.Handler</code>, <code>Ready</code>, <code>Migrate</code>, <code>Close</code>, <code>Issuer</code>, <code>KeyID</code>, <code>Metadata</code>, <code>Discovery</code>, <code>Server</code></td>
+<td>The running service.</td>
 </tr>
 </tbody>
 </table>
-<h2 id="security-configuration">Security Configuration<a class="headerlink" href="#security-configuration" title="Permanent link">&para;</a></h2>
-<h3 id="pkce-enforcement">PKCE Enforcement<a class="headerlink" href="#pkce-enforcement" title="Permanent link">&para;</a></h3>
-<p>PKCE is enforced by default for public clients. This is configured in Fosite:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">fositeConfig</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">fosite</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">EnforcePKCE</span><span class="p">:</span><span class="w">                 </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">EnforcePKCEForPublicClients</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">}</span>
-</code></pre></div>
-<h3 id="token-rotation">Token Rotation<a class="headerlink" href="#token-rotation" title="Permanent link">&para;</a></h3>
-<p>Refresh token rotation is enabled per OAuth app:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">app</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">OAuthApp</span><span class="p">.</span><span class="nx">Create</span><span class="p">().</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">SetRefreshTokenRotation</span><span class="p">(</span><span class="kc">true</span><span class="p">).</span><span class="w"> </span><span class="c1">// Enable rotation</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="c1">// ...</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">Save</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-</code></pre></div>
-<h3 id="password-hashing">Password Hashing<a class="headerlink" href="#password-hashing" title="Permanent link">&para;</a></h3>
-<p>SystemForge uses Argon2id for password hashing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity&quot;</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1">// Hash a password</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nx">hash</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">identity</span><span class="p">.</span><span class="nx">HashPassword</span><span class="p">(</span><span class="s">&quot;user-password&quot;</span><span class="p">)</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1">// Verify a password</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="nx">valid</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">identity</span><span class="p">.</span><span class="nx">VerifyPassword</span><span class="p">(</span><span class="s">&quot;user-password&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">hash</span><span class="p">)</span>
-</code></pre></div>
-<h2 id="production-checklist">Production Checklist<a class="headerlink" href="#production-checklist" title="Permanent link">&para;</a></h2>
-<p>Before deploying to production:</p>
-<ul>
-<li>[ ] Use HTTPS for all endpoints</li>
-<li>[ ] Set strong <code>OAUTH_SECRET</code> (32+ random bytes)</li>
-<li>[ ] Configure proper token lifespans</li>
-<li>[ ] Enable database SSL (<code>sslmode=require</code>)</li>
-<li>[ ] Set up database connection pooling</li>
-<li>[ ] Configure rate limiting</li>
-<li>[ ] Enable audit logging</li>
-<li>[ ] Set up monitoring and alerting</li>
-</ul>
+<p><code>New</code> enforces the <a href="../deployment/#production-requirements">production requirements</a>
+whenever <code>Options.Dev</code> is false: a signing key, a public https issuer, a
+persistent database (configured or injected), and no
+<code>social_login.insecure_cookies</code>. It then connects, optionally migrates,
+creates the system user that owns statically configured clients, registers
+or updates those clients, and keeps tokens, login sessions, in-flight logins
+and consent grants in the database (see
+<a href="../production-stores/">Production Stores</a>).</p>
+<p><code>Ready(ctx)</code> runs the same checks as <code>GET /readyz</code> (the database ping); wire it
+into the host's own readiness endpoint.</p>
+<h2 id="database">Database<a class="headerlink" href="#database" title="Permanent link">&para;</a></h2>
+<p>The package links the PostgreSQL (<code>pgx</code>) and SQLite (<code>go-sqlite3</code>, cgo)
+drivers. SystemAuth's tables can share a PostgreSQL database with the host's
+applications only if their schemas do not collide; a separate database (or
+<code>Options.DB</code> on a dedicated database) is simpler to operate and to back up.</p>
 
 
 

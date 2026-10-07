@@ -16,7 +16,7 @@
         <link rel="prev" href="../relying-party/">
       
       
-        <link rel="next" href="../production-stores/">
+        <link rel="next" href="../embedding/">
       
       
         
@@ -1221,6 +1221,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../embedding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Embedding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2775,6 +2803,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/v0.13.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.13.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/v0.12.0/" class="md-nav__link">
         
   
@@ -3371,7 +3427,8 @@
 <h1 id="deploying-systemauth">Deploying SystemAuth<a class="headerlink" href="#deploying-systemauth" title="Permanent link">&para;</a></h1>
 <p>The <code>cmd/systemauth</code> binary is a self-contained SystemAuth server suitable for
 running under a process supervisor (systemd) behind a TLS-terminating reverse
-proxy (Caddy, nginx).</p>
+proxy (Caddy, nginx). To run SystemAuth inside another Go binary instead, see
+<a href="../embedding/">Embedding</a>.</p>
 <h2 id="production-requirements">Production requirements<a class="headerlink" href="#production-requirements" title="Permanent link">&para;</a></h2>
 <p>Unless started with <code>--dev</code>, the server refuses to start without:</p>
 <ul>
