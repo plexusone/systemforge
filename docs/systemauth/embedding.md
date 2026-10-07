@@ -73,6 +73,19 @@ mux.Handle("auth.example.com/", auth.Handler())
 mux.Handle("app.example.com/", appHandler)
 ```
 
+Overrides are applied before defaults and validation, so an override can
+fill in a value the file leaves out (for example `WithDefaultIssuer` for a
+file without `issuer`). When the SystemAuth settings live inside the host's
+own configuration file, load them from memory with the same overrides:
+
+```go
+// section is the raw YAML or JSON of the host's "systemauth" block.
+cfg, err := systemauthsvc.LoadConfigBytes(section, "yaml",
+	systemauthsvc.WithDefaultIssuer("http://localhost:8080"),
+	systemauthsvc.WithDefaultSigningKeyPEM(os.Getenv("SYSTEMAUTH_SIGNING_KEY")),
+)
+```
+
 `Handler()` serves every SystemAuth endpoint at the root of the issuer's host
 (discovery, JWKS, `/oauth/*`, `/login/*`, `/logout`, `/consent`, `/healthz`,
 `/readyz`); mount it on its own host name rather than under a path prefix,
@@ -86,7 +99,9 @@ itself (normally through the same reverse proxy).
 
 | Item | Purpose |
 |------|---------|
-| `LoadConfig(path, overrides...)` | Read YAML/JSON (with `${ENV}` expansion), apply overrides, defaults and validation. An empty path starts from an empty config. |
+| `LoadConfig(path, overrides...)` | Read YAML/JSON (with `${ENV}` expansion), then apply overrides, defaults and validation, in that order. An empty path starts from an empty config. |
+| `LoadConfigBytes(data, format, overrides...)` | The same for configuration already in memory. `format` is `"yaml"`, `"json"` or `""` (JSON when the data starts with `{`, otherwise YAML). |
+| `systemauth.DecodeConfig`, `systemauth.DecodeConfigFile` | Lower level: decode and expand `${ENV}` without defaults or validation; call `ApplyDefaults` and `Validate` after adjusting the result. |
 | `WithIssuer`, `WithDefaultIssuer`, `WithDatabase`, `WithSigningKeyFile`, `WithDefaultSigningKeyPEM`, `WithKeyID` | Overrides, the same ones the command's flags use. |
 | `Options.Dev` | Allow an ephemeral key, in-memory storage, an http issuer and insecure cookies. Never in production. |
 | `Options.Logger` | `*slog.Logger`; `NewLogger(w, level, format)` builds one. |
