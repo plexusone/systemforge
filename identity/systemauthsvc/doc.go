@@ -6,8 +6,9 @@
 // It owns the steps between a configuration file and a ready
 // http.Handler:
 //
-//   - LoadConfig: read the YAML/JSON configuration (with environment
-//     variable expansion), apply overrides, defaults and validation.
+//   - LoadConfig, LoadConfigBytes: read the YAML/JSON configuration from a
+//     file or memory (with environment variable expansion), then apply
+//     overrides, defaults and validation, in that order.
 //   - New: enforce the production requirements (signing key, https issuer,
 //     persistent database, secure cookies) unless Options.Dev is set; open
 //     PostgreSQL ("pgx") or SQLite ("sqlite3") or use an injected *sql.DB or

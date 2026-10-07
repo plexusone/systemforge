@@ -1,6 +1,7 @@
 package systemauthsvc
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/url"
@@ -94,19 +95,62 @@ func WithKeyID(kid string) Override {
 	}
 }
 
-// LoadConfig reads the configuration file at path (YAML or JSON, with
-// environment variable expansion; an empty path starts from an empty
-// configuration), applies the overrides in order, then applies defaults
-// and validates the result.
+// LoadConfig reads the configuration file at path (YAML or JSON by
+// extension, with environment variable expansion; an empty path starts
+// from an empty configuration), applies the overrides in order, then
+// applies defaults and validates the result. Validation runs after the
+// overrides, so an override can supply a value the file omits (e.g.
+// WithDefaultIssuer).
 func LoadConfig(path string, overrides ...Override) (*Config, error) {
 	cfg := &Config{}
 	if path != "" {
-		c, err := systemauth.LoadConfig(path)
+		c, err := systemauth.DecodeConfigFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config: %w", err)
 		}
 		cfg = c
 	}
+	return finishConfig(cfg, overrides)
+}
+
+// LoadConfigBytes is LoadConfig for configuration already in memory, e.g.
+// a section embedded in a host's own configuration file. format is "yaml"
+// (or "yml") or "json"; an empty format detects JSON when the first
+// non-space byte is '{' and YAML otherwise. Empty data starts from an
+// empty configuration.
+func LoadConfigBytes(data []byte, format string, overrides ...Override) (*Config, error) {
+	f, err := configFormat(data, format)
+	if err != nil {
+		return nil, err
+	}
+	cfg := &Config{}
+	if len(bytes.TrimSpace(data)) > 0 {
+		c, err := systemauth.DecodeConfig(data, f)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load config: %w", err)
+		}
+		cfg = c
+	}
+	return finishConfig(cfg, overrides)
+}
+
+func configFormat(data []byte, format string) (systemauth.ConfigFormat, error) {
+	switch strings.ToLower(format) {
+	case "yaml", "yml":
+		return systemauth.FormatYAML, nil
+	case "json":
+		return systemauth.FormatJSON, nil
+	case "":
+		if t := bytes.TrimSpace(data); len(t) > 0 && t[0] == '{' {
+			return systemauth.FormatJSON, nil
+		}
+		return systemauth.FormatYAML, nil
+	default:
+		return "", fmt.Errorf("unsupported config format %q (want yaml or json)", format)
+	}
+}
+
+func finishConfig(cfg *Config, overrides []Override) (*Config, error) {
 	for _, o := range overrides {
 		if err := o(cfg); err != nil {
 			return nil, err
