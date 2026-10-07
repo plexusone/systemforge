@@ -112,6 +112,84 @@ func TestLoadConfigOverrides(t *testing.T) {
 	}
 }
 
+func TestLoadConfigOverrideSuppliesIssuer(t *testing.T) {
+	t.Setenv("TEST_KID", "env-kid")
+	path := filepath.Join(t.TempDir(), "systemauth.yaml")
+	if err := os.WriteFile(path, []byte("keys:\n  key_id: ${TEST_KID}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := systemauthsvc.LoadConfig(path, systemauthsvc.WithDefaultIssuer("http://localhost:8080"))
+	if err != nil {
+		t.Fatalf("issuer from override: %v", err)
+	}
+	if cfg.Issuer != "http://localhost:8080" || cfg.Keys.KeyID != "env-kid" || cfg.Tokens.AccessTokenLifetime == 0 {
+		t.Errorf("config: issuer %q kid %q access %v", cfg.Issuer, cfg.Keys.KeyID, cfg.Tokens.AccessTokenLifetime)
+	}
+	if _, err := systemauthsvc.LoadConfig(path); !errors.Is(err, systemauth.ErrMissingIssuer) {
+		t.Errorf("no issuer anywhere: %v, want ErrMissingIssuer", err)
+	}
+}
+
+func TestLoadConfigBytes(t *testing.T) {
+	t.Setenv("TEST_BYTES_SECRET", "s3cret")
+	yamlCfg := "keys:\n  key_id: inline-kid\nclients:\n  - id: app\n    secret: ${TEST_BYTES_SECRET}\n"
+	jsonCfg := `{"keys":{"key_id":"inline-kid"},"clients":[{"id":"app","secret":"${TEST_BYTES_SECRET}"}]}`
+	for _, tc := range []struct {
+		name, format, data string
+	}{
+		{"yaml", "yaml", yamlCfg},
+		{"yml", "yml", yamlCfg},
+		{"json", "json", jsonCfg},
+		{"detect yaml", "", yamlCfg},
+		{"detect json", "", "\n  " + jsonCfg},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := systemauthsvc.LoadConfigBytes([]byte(tc.data), tc.format,
+				systemauthsvc.WithDefaultIssuer("https://auth.example.com"),
+				systemauthsvc.WithKeyID("override-kid"),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.Issuer != "https://auth.example.com" || cfg.Keys.KeyID != "override-kid" {
+				t.Errorf("overrides: issuer %q kid %q", cfg.Issuer, cfg.Keys.KeyID)
+			}
+			if len(cfg.Clients) != 1 || cfg.Clients[0].ID != "app" || cfg.Clients[0].Secret != "s3cret" {
+				t.Errorf("env expansion: %+v", cfg.Clients)
+			}
+			if cfg.Tokens.AccessTokenLifetime == 0 || cfg.Keys.Algorithm == "" {
+				t.Error("defaults not applied")
+			}
+		})
+	}
+
+	// Empty data starts from an empty configuration.
+	cfg, err := systemauthsvc.LoadConfigBytes(nil, "", systemauthsvc.WithIssuer("https://auth.example.com"))
+	if err != nil || cfg.Issuer != "https://auth.example.com" {
+		t.Errorf("empty data: %v %+v", err, cfg)
+	}
+
+	// Validation still runs after the overrides.
+	if _, err := systemauthsvc.LoadConfigBytes([]byte(yamlCfg), "yaml"); !errors.Is(err, systemauth.ErrMissingIssuer) {
+		t.Errorf("missing issuer: %v, want ErrMissingIssuer", err)
+	}
+	bad := "issuer: https://auth.example.com\ntokens:\n  refresh_token_lifetime: 48h\n  refresh_token_absolute_lifetime: 24h\n"
+	if _, err := systemauthsvc.LoadConfigBytes([]byte(bad), "yaml",
+		systemauthsvc.WithIssuer("https://other.example.com")); !errors.Is(err, systemauth.ErrInvalidConfig) {
+		t.Errorf("invalid lifetimes: %v, want ErrInvalidConfig", err)
+	}
+	if _, err := systemauthsvc.LoadConfigBytes([]byte(yamlCfg), "toml"); err == nil {
+		t.Error("unsupported format accepted")
+	}
+	if _, err := systemauthsvc.LoadConfigBytes([]byte("{"), "json"); err == nil {
+		t.Error("malformed JSON accepted")
+	}
+	if _, err := systemauthsvc.LoadConfigBytes([]byte(yamlCfg), "",
+		systemauthsvc.WithDatabase("sqlite", "")); err == nil {
+		t.Error("failing override accepted")
+	}
+}
+
 func TestProductionRefusals(t *testing.T) {
 	key := testKey(t)
 	good := func() *systemauthsvc.Config {
