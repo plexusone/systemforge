@@ -2,7 +2,8 @@
 
 The `cmd/systemauth` binary is a self-contained SystemAuth server suitable for
 running under a process supervisor (systemd) behind a TLS-terminating reverse
-proxy (Caddy, nginx).
+proxy (Caddy, nginx). To run SystemAuth inside another Go binary instead, see
+[Embedding](embedding.md).
 
 ## Production requirements
 

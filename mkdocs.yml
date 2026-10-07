@@ -70,6 +70,7 @@ nav:
     - Social Login: systemauth/social-login.md
     - Relying Parties: systemauth/relying-party.md
     - Deployment: systemauth/deployment.md
+    - Embedding: systemauth/embedding.md
     - Production Stores: systemauth/production-stores.md
   - Authorization:
     - SpiceDB Setup: authorization/spicedb-setup.md
