@@ -9,6 +9,62 @@
   ],
   "releases": [
     {
+      "version": "v0.13.0",
+      "date": "2026-10-06",
+      "highlights": [
+        {
+          "description": "`identity/systemauthsvc`: embed SystemAuth in a host binary with config loading, production checks, migrations, client bootstrap and health"
+        },
+        {
+          "description": "Production safety checks enforced by `systemauthsvc.New`, not only by the command"
+        },
+        {
+          "description": "`Service.Metadata()` lets in-process relying parties skip network discovery"
+        },
+        {
+          "description": "Configuration overrides apply before defaults and validation; SystemAuth configuration can be loaded from bytes"
+        }
+      ],
+      "added": [
+        {
+          "description": "`Server.OpenIDConfiguration()` and `Server.Ready(ctx)` on the SystemAuth server",
+          "commit": "d4e1834"
+        },
+        {
+          "description": "`identity/systemauthsvc` exported SystemAuth service setup for host binaries",
+          "commit": "77e642b"
+        },
+        {
+          "description": "`systemauth.DecodeConfig` and `DecodeConfigFile` decode configuration without validating",
+          "commit": "af3891e"
+        },
+        {
+          "description": "`systemauthsvc.LoadConfigBytes`; `LoadConfig` validates after overrides",
+          "commit": "974b8b0"
+        }
+      ],
+      "changed": [
+        {
+          "description": "`cmd/systemauth` builds the server through `systemauthsvc`; flags and defaults unchanged, production-refusal message reworded",
+          "commit": "adf9268"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Verified email design: ADR-003 and INIT-SYSTEMFORGE-006",
+          "commit": "9786049"
+        },
+        {
+          "description": "Embedding SystemAuth in a host binary",
+          "commit": "7a7e5f5"
+        },
+        {
+          "description": "`LoadConfigBytes` and override ordering",
+          "commit": "f52d8f2"
+        }
+      ]
+    },
+    {
       "version": "v0.12.0",
       "date": "2026-10-06",
       "highlights": [
