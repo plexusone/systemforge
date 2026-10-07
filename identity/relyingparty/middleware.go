@@ -138,7 +138,7 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 					writeAuthError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal error")
 					return
 				}
-				challenge := `Bearer realm="api"`
+				challenge := bearerChallenge
 				if authErr.code != "" {
 					challenge += `, error="` + authErr.code + `"`
 				}
@@ -158,6 +158,10 @@ type bearerError struct {
 }
 
 func (e *bearerError) Error() string { return e.message }
+
+// errNoCredentials is the failure for a request that carries no
+// credentials at all (as opposed to invalid ones).
+var errNoCredentials error = &bearerError{message: "authentication required"}
 
 func errUnauthenticated(code, message string) error {
 	return &bearerError{code: code, message: message}
@@ -186,7 +190,7 @@ func (cfg BearerConfig) authenticate(r *http.Request) (*AuthenticatedPrincipal, 
 				return nil, err
 			}
 		}
-		return nil, errUnauthenticated("", "authentication required")
+		return nil, errNoCredentials
 	}
 
 	if strings.Count(token, ".") == 2 {
