@@ -10,17 +10,30 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LoadConfig loads configuration from a file.
+// LoadConfig loads configuration from a file, applies defaults and
+// validates it.
 // Supports both YAML (.yaml, .yml) and JSON (.json) formats.
 // The format is detected by file extension.
 func LoadConfig(path string) (*Config, error) {
+	cfg, err := DecodeConfigFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return finishConfig(cfg)
+}
+
+// DecodeConfigFile reads and decodes the configuration file at path like
+// LoadConfig, expanding environment variables, but without applying
+// defaults or validating, so a caller can adjust the result first (then
+// call ApplyDefaults and Validate).
+func DecodeConfigFile(path string) (*Config, error) {
 	//nolint:gosec // G304: Path is provided by the user/caller for config loading
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	return ParseConfig(data, detectFormat(path))
+	return DecodeConfig(data, detectFormat(path))
 }
 
 // ConfigFormat represents a configuration file format.
@@ -47,8 +60,30 @@ func detectFormat(path string) ConfigFormat {
 	}
 }
 
-// ParseConfig parses configuration from bytes in the specified format.
+// ParseConfig parses configuration from bytes in the specified format,
+// expands environment variables, applies defaults and validates it.
 func ParseConfig(data []byte, format ConfigFormat) (*Config, error) {
+	cfg, err := DecodeConfig(data, format)
+	if err != nil {
+		return nil, err
+	}
+	return finishConfig(cfg)
+}
+
+// finishConfig applies defaults and validates a decoded configuration.
+func finishConfig(cfg *Config) (*Config, error) {
+	cfg.ApplyDefaults()
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// DecodeConfig decodes configuration from bytes in the specified format
+// and expands environment variables in it, without applying defaults or
+// validating. Callers that adjust the configuration afterwards (e.g. to
+// supply a missing issuer) then call ApplyDefaults and Validate.
+func DecodeConfig(data []byte, format ConfigFormat) (*Config, error) {
 	var cfg Config
 
 	switch format {
@@ -66,14 +101,6 @@ func ParseConfig(data []byte, format ConfigFormat) (*Config, error) {
 
 	// Expand environment variables in sensitive fields
 	cfg.expandEnvVars()
-
-	// Apply defaults
-	cfg.ApplyDefaults()
-
-	// Validate
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
 
 	return &cfg, nil
 }
