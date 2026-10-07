@@ -52,7 +52,7 @@ deletion rather than a production data migration.
 
 | Who | Impact |
 |---|---|
-| Application developers on SystemForge | One identity API; `identity/ent/user` and `identity/ent/membership` disappear and code importing them fails to compile |
+| Application developers on SystemForge | One identity API; `identity/ent/user` and `identity/ent/membership` disappear and code importing them fails to compile; the `identity/apikey` interface stays but `sf_api_keys` is no longer a backing option |
 | SystemAuth operators | Bootstrap owner becomes a service principal; dev databases run one drop migration |
 | Identity-provider admins using SCIM | Provisioned users are principals, visible to every other sign-in method |
 | INIT-SYSTEMFORGE-007 | Unblocked; single table to make email optional on |
@@ -82,6 +82,12 @@ deletion rather than a production data migration.
 - **F7.** A migration drops the retired tables.
 - **F8.** A CI gate fails on new references to `sf_users`, `ent.User`,
   `identity/ent/user`, `identity/ent/membership`, or `cf_`.
+- **F9.** `systemauth` exposes one human value type, `HumanPrincipal`,
+  replacing both `systemauth.User` and `systemauth.LoginPrincipal`; storage
+  method names follow (`GetHumanByEmail`, `GetHumanByExternalIdentity`).
+- **F10.** The `identity/apikey` interface is unchanged; its documented
+  backing store is `sf_credentials` type `api_key`. Applications that
+  intended to use `sf_api_keys` are told so in the release notes.
 
 ### Non-Functional
 

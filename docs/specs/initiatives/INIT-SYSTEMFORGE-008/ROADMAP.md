@@ -14,7 +14,7 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 - [ ] `RMI-SYSTEMFORGE-093` Bootstrap owner as service principal: replace the synthetic system user with a fixed-ID `Principal(type=service)` and repoint `OAuthApp.owner` to `Principal`
 - [ ] `RMI-SYSTEMFORGE-094` Drop `user` edges on OAuthToken, OAuthAuthCode, and OAuthConsent; remove `legacyUserID`; subjects are principal IDs
   - Depends on: `RMI-SYSTEMFORGE-093`
-- [ ] `RMI-SYSTEMFORGE-095` SystemAuth storage on Principal/Human: reimplement the user methods in Ent and memory storage over `Principal` + `Human`, with password login verified through `sf_credentials`
+- [ ] `RMI-SYSTEMFORGE-095` SystemAuth storage on Principal/Human: merge `User` and `LoginPrincipal` into one `HumanPrincipal` DTO, rename storage methods to `*Human*`, reimplement over `Principal` + `Human` in Ent and memory storage, password login verified through `sf_credentials`
   - Depends on: `RMI-SYSTEMFORGE-094`
 - [ ] `RMI-SYSTEMFORGE-096` Federation sync as external identities: create/update/delete resolve through `ExternalIdentity(provider, subject)`; drop `federation_id`; wire contract unchanged
   - Depends on: `RMI-SYSTEMFORGE-095`

@@ -62,10 +62,24 @@ equivalent, `federation_id`, is an upstream subject identifier and maps onto an
 ID). No new field is required.
 
 Four legacy tables have **no live callers** in this repository:
-`sf_oauth_accounts`, `sf_refresh_tokens`, `sf_api_keys` (the `identity/apikey`
-package is an interface that applications implement over their own store),
-and `sf_service_accounts` with its key pairs. `sf_memberships` is read only by
+`sf_oauth_accounts`, `sf_refresh_tokens`, `sf_api_keys`, and
+`sf_service_accounts` with its key pairs. `sf_memberships` is read only by
 the SCIM store. Only two test files exercise the legacy `User` paths.
+
+`sf_api_keys` deserves a note because its removal is a **consumer-contract
+change**, not just dead code. The `identity/apikey` package is an interface
+that applications implement over a store of their choosing; nothing in this
+repository writes `sf_api_keys`. But the schema ships in the shared Ent
+client, so an application embedding the identity schema could reasonably
+have planned to back that interface with it. After this decision, the
+supported backing store is `sf_credentials` with type `api_key` (owned by a
+principal, scoped, revocable), or an application-local table.
+
+SystemAuth also carries **two DTOs for the same human**: `systemauth.User`
+(in `federation_handlers.go`, used by storage, password login, and federation
+sync) and `systemauth.LoginPrincipal` (in `social_directory.go`, used by
+social login). They are the same `Principal` + `Human` join seen from two
+code paths.
 
 **Why now.** No consumer application has shipped against these tables.
 Downstream products that hold their own user records link to SystemAuth
@@ -100,6 +114,16 @@ support it are removed, with no dual-model compatibility layer.
   deleted.
 - **Bootstrap:** statically configured OAuth clients are owned by a
   `Principal(type=service)`, not a synthetic human user.
+- **One DTO, named for the table.** `systemauth.User` and
+  `systemauth.LoginPrincipal` are replaced by a single `HumanPrincipal`
+  value type (the `Principal` + `Human` join), and the storage methods are
+  renamed to match (`GetHumanByEmail`, `GetHumanByExternalIdentity`, ...).
+  The word *User* leaves the identity vocabulary entirely, as *Core* did in
+  ADR-001. *Account* was considered and rejected: in a multi-tenant system
+  with marketplace subscriptions it reads as the tenant or the billing
+  relationship, not the person.
+- **API keys:** the `identity/apikey` interface is unchanged; its supported
+  backing store is `sf_credentials` type `api_key`. `sf_api_keys` is removed.
 - **Removed schemas:** `User`, `Membership`, `OAuthAccount`, `RefreshToken`,
   `APIKey`. `ServiceAccount` and `ServiceAccountKeyPair` are removed as well
   if the RFC 7523 service-account path is confirmed to run on
@@ -134,8 +158,14 @@ support it are removed, with no dual-model compatibility layer.
   `cf_memberships` reference in `rls/testing.go` is fixed in passing.
 - A CI grep gate fails on any new reference to `sf_users`, `ent.User`,
   `cf_`, or the removed Ent packages so the legacy model cannot creep back.
-- The `identity/apikey` package's interface contract is unchanged;
-  applications keep implementing it over their own store.
+- The `identity/apikey` interface contract is unchanged, but applications
+  that embed the identity schema can no longer back it with `sf_api_keys`.
+  They use `sf_credentials` type `api_key` or an application-local table.
+  No shipped consumer does either today, which is why this is a one-line
+  consequence rather than a migration.
+- Callers inside `systemauth` that construct or read `User` or
+  `LoginPrincipal` move to `HumanPrincipal`; the change is mechanical and
+  contained to the package.
 
 ## References
 

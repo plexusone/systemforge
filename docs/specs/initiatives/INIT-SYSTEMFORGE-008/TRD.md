@@ -51,20 +51,33 @@ target model.
 ### 1. SystemAuth storage on Principal
 
 Replace the `User`-backed methods in `systemauth.Storage` with
-`Principal`/`Human`-backed ones, keeping the `systemauth.User` value type as
-the storage-layer DTO so callers in `provider_identity.go` and
-`federation_handlers.go` change minimally:
+`Principal`/`Human`-backed ones, and collapse the package's two human DTOs
+into one:
 
-- `GetUserByEmail` → query `Human` by `EmailEqualFold`, join `Principal`.
-- `GetUser(id)` → `Principal.Get` with `human` edge; non-human principals are
-  not users and return not-found.
-- `CreateUser` → create `Principal(type=human, identifier=email,
-  display_name=name)` + `Human(email, ...)` in one transaction, mirroring
-  `social_directory_ent.go`.
-- `UpdateUser` / `DeleteUser` → update `Principal.active` and `Human` fields;
-  delete cascades through the principal.
-- `GetUserByFederationID` → query `ExternalIdentity` by
-  `(provider = federation, subject = id)` and return its principal.
+- `systemauth.User` (`federation_handlers.go`; used by storage, password
+  login, federation sync) and `systemauth.LoginPrincipal`
+  (`social_directory.go`; used by social login) become a single
+  **`HumanPrincipal`** value type: `ID`, `Email`, `EmailVerified`,
+  `DisplayName`, `GivenName`, `FamilyName`, `AvatarURL`, `Locale`, `Active`,
+  `Metadata`. The `Federated` / `FederationID` fields are dropped; federation
+  is an `ExternalIdentity` like any other provider.
+- Storage methods are renamed with the type: `CreateHuman`, `GetHuman(id)`,
+  `GetHumanByEmail`, `GetHumanByExternalIdentity(provider, subject)`,
+  `UpdateHuman`, `DeleteHuman`.
+
+Implementations:
+
+- `GetHumanByEmail` → query `Human` by `EmailEqualFold`, join `Principal`.
+- `GetHuman(id)` → `Principal.Get` with `human` edge; non-human principals
+  return not-found.
+- `CreateHuman` → create `Principal(type=human, identifier=email,
+  display_name)` + `Human(email, ...)` in one transaction, mirroring what
+  `social_directory_ent.go` does today; social login then calls the same
+  helper instead of its own.
+- `UpdateHuman` / `DeleteHuman` → update `Principal.active` and `Human`
+  fields; delete cascades through the principal.
+- `GetHumanByExternalIdentity` → query `ExternalIdentity` by
+  `(provider, subject)` and return its principal.
 - Remove `legacyUserID`; Fosite request subjects are principal IDs and the
   OAuth token/auth-code/consent builders no longer set a user edge.
 
@@ -98,14 +111,26 @@ can be distinguished from social providers.
 
 ### 4. SCIM store on principals
 
-Rewrite `identity/scim/store/ent.go`:
+Rewrite `identity/scim/store/ent.go`. The group side is already on the
+target model and does not change:
 
-- Users ↔ `Principal(type=human)` + `Human`. SCIM `userName`/`emails` map to
-  `Human.email`; `active` to `Principal.active`; `name` to
-  `given_name`/`family_name`/`display_name`.
-- Group membership ↔ `PrincipalMembership` (organization + role).
+- **Groups ↔ `Organization`** (by ID, slug, display name, external ID),
+  exactly as today.
+- **Members ↔ `PrincipalMembership`** replacing `Membership`:
+  `AddMemberToGroup` creates `PrincipalMembership(principal_id,
+  organization_id, role = config.DefaultRole)` with the same idempotent
+  no-op when it exists; `RemoveMemberFromGroup` deletes by
+  `(principal_id, organization_id)`; group member listing reads
+  `PrincipalMembership` instead of `Membership`.
+- **Users ↔ `Principal(type=human)` + `Human`.** SCIM `userName`/`emails`
+  map to `Human.email`; `active` to `Principal.active`; `name` to
+  `given_name`/`family_name`/`display_name`. User create goes through the
+  shared `CreateHuman` helper from §1.
 - Filtering and pagination run on the `Human`/`Principal` query with the same
   SCIM filter semantics the existing tests encode.
+
+So the rewrite is a `Membership` → `PrincipalMembership` substitution plus
+re-targeting the user CRUD; no SCIM resource changes meaning.
 
 The SCIM mapper (`identity/scim/mapper`) and schema packages are unchanged
 except for type references.
@@ -139,6 +164,11 @@ api_key}.go` (plus service account schemas per §5), remove the corresponding
 - Extend the existing CI grep gate (from INIT-SYSTEMFORGE-004) to fail on
   `sf_users`, `ent\.User\b`, `identity/ent/user"`, and
   `identity/ent/membership"`.
+- Rewrite `docs/identity/api-keys.md` to state that the `identity/apikey`
+  interface is backed by `sf_credentials` type `api_key`, with the
+  `identity/credential` service as the reference implementation; note the
+  removal of `sf_api_keys` in the v0.14.0 release notes as a consumer-facing
+  change.
 
 ## Sequencing Constraints
 
