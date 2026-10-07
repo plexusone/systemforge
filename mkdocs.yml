@@ -57,6 +57,7 @@ nav:
     - API Keys: identity/api-keys.md
     - OAuth Client: identity/oauthclient.md
     - Account Security: identity/security.md
+    - AI Agents (AAuth): identity/ai-agents-aauth.md
   - OAuth 2.0:
     - Overview: oauth/overview.md
     - OAuth Apps: oauth/apps.md
