@@ -769,22 +769,24 @@ func (s *EntStore) applySortUser(q *ent.UserQuery, sortBy, sortOrder string) *en
 	desc := strings.EqualFold(sortOrder, "descending")
 	field := strings.ToLower(sortBy)
 
-	var orderOpt sql.OrderTermOption
+	// A nil OrderTermOption panics when Ent applies it, so pass the
+	// descending option only when it is requested.
+	var orderOpts []sql.OrderTermOption
 	if desc {
-		orderOpt = sql.OrderDesc()
+		orderOpts = append(orderOpts, sql.OrderDesc())
 	}
 
 	switch field {
 	case "username", "emails.value":
-		return q.Order(user.ByEmail(orderOpt))
+		return q.Order(user.ByEmail(orderOpts...))
 	case "displayname", "name.formatted":
-		return q.Order(user.ByName(orderOpt))
+		return q.Order(user.ByName(orderOpts...))
 	case "meta.created":
-		return q.Order(user.ByCreatedAt(orderOpt))
+		return q.Order(user.ByCreatedAt(orderOpts...))
 	case "meta.lastmodified":
-		return q.Order(user.ByUpdatedAt(orderOpt))
+		return q.Order(user.ByUpdatedAt(orderOpts...))
 	default:
-		return q.Order(user.ByCreatedAt(orderOpt))
+		return q.Order(user.ByCreatedAt(orderOpts...))
 	}
 }
 
@@ -906,22 +908,24 @@ func (s *EntStore) applySortGroup(q *ent.OrganizationQuery, sortBy, sortOrder st
 	desc := strings.EqualFold(sortOrder, "descending")
 	field := strings.ToLower(sortBy)
 
-	var orderOpt sql.OrderTermOption
+	// A nil OrderTermOption panics when Ent applies it, so pass the
+	// descending option only when it is requested.
+	var orderOpts []sql.OrderTermOption
 	if desc {
-		orderOpt = sql.OrderDesc()
+		orderOpts = append(orderOpts, sql.OrderDesc())
 	}
 
 	switch field {
 	case "displayname":
-		return q.Order(organization.ByName(orderOpt))
+		return q.Order(organization.ByName(orderOpts...))
 	case "externalid":
-		return q.Order(organization.BySlug(orderOpt))
+		return q.Order(organization.BySlug(orderOpts...))
 	case "meta.created":
-		return q.Order(organization.ByCreatedAt(orderOpt))
+		return q.Order(organization.ByCreatedAt(orderOpts...))
 	case "meta.lastmodified":
-		return q.Order(organization.ByUpdatedAt(orderOpt))
+		return q.Order(organization.ByUpdatedAt(orderOpts...))
 	default:
-		return q.Order(organization.ByCreatedAt(orderOpt))
+		return q.Order(organization.ByCreatedAt(orderOpts...))
 	}
 }
 
