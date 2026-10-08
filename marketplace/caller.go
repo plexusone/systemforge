@@ -25,15 +25,11 @@ type CallerResolver func(ctx context.Context) (uuid.UUID, error)
 // principal ID, such as issuer-qualified subjects of credentials issued
 // elsewhere, cannot act in the marketplace.
 func RequestPrincipalCaller(ctx context.Context) (uuid.UUID, error) {
-	rp, ok := requestprincipal.FromContext(ctx)
-	if !ok {
-		return uuid.Nil, ErrNoCaller
+	id, err := requestprincipal.PrincipalUUID(ctx)
+	if errors.Is(err, requestprincipal.ErrNoPrincipal) {
+		return uuid.Nil, fmt.Errorf("%w: %w", ErrNoCaller, err)
 	}
-	id, err := uuid.Parse(rp.PrincipalID)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("%w: principal %q is not a SystemForge principal", ErrNoCaller, rp.PrincipalID)
-	}
-	return id, nil
+	return id, err
 }
 
 // PurchaseAuthorizer decides whether a principal may buy on behalf of an

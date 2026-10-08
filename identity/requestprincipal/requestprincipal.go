@@ -13,8 +13,12 @@ package requestprincipal
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"slices"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Type is the kind of party a request principal is.
@@ -127,4 +131,24 @@ func WithPrincipal(ctx context.Context, p *RequestPrincipal) context.Context {
 func FromContext(ctx context.Context) (*RequestPrincipal, bool) {
 	p, ok := ctx.Value(contextKey{}).(*RequestPrincipal)
 	return p, ok && p != nil
+}
+
+// ErrNoPrincipal is returned by PrincipalUUID when the request carries no
+// principal that is a SystemForge principal.
+var ErrNoPrincipal = errors.New("requestprincipal: no SystemForge principal")
+
+// PrincipalUUID returns the SystemForge principal ID of the request's
+// principal. It returns ErrNoPrincipal when the request is
+// unauthenticated or its principal ID is not a SystemForge principal ID,
+// such as an issuer-qualified subject of a credential issued elsewhere.
+func PrincipalUUID(ctx context.Context) (uuid.UUID, error) {
+	p, ok := FromContext(ctx)
+	if !ok {
+		return uuid.Nil, ErrNoPrincipal
+	}
+	id, err := uuid.Parse(p.PrincipalID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("%w: %q", ErrNoPrincipal, p.PrincipalID)
+	}
+	return id, nil
 }
