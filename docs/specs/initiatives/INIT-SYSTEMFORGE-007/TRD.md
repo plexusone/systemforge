@@ -66,14 +66,19 @@ Unique on `(managed_principal_id, manager_principal_id, role)`.
 
 A new package owning the invariants:
 
-- `Create(ctx, CreateInput{DisplayName, Managers: []ManagerInput{PrincipalID, Role}, ApplicationID})`
-  checks the deployment setting and the application flag, validates every
+- `Create(ctx, CreateInput{ClientID, DisplayName, Managers: []ManagerInput{PrincipalID, Role}, ActorID})`
+  checks the deployment setting and the client's flag through
+  `Server.ManagedPrincipalsAllowed`, validates every
   manager (human, active, has email), then creates `Principal` (identifier
   `human:<id>`, capabilities with `CanManageProfile=false`,
   `CanDelegate=false`), `Human` (no email), and the relationships in one
   transaction. Refused with a typed error if `Managers` is empty.
 - `AddManager`, `RemoveManager`: `RemoveManager` refuses to remove the last
   active relationship while `Human.email` is null (`ErrLastManager`).
+  `AddManager` is idempotent and reactivates an inactive relationship;
+  `RemoveManager` deactivates rather than deletes. Both update the managed
+  principal's row first, so concurrent changes to one principal serialize
+  on its row lock and cannot together remove the last manager.
 - `IssueClaim(ctx, managedID, byManager) (claimCode, expiry)` and
   `RedeemClaim(ctx, code, claimantID)`: an `educator` or `guardian` issues a
   short-lived, single-use claim; a human with an email redeems it and becomes

@@ -16,7 +16,7 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
   - Depends on: `RMI-SYSTEMFORGE-099`
 - [x] `RMI-SYSTEMFORGE-103` Enablement switches: the OAuth client's `managed_principals_enabled` and the `managed_principals.enabled` deployment setting, both default off
   - Depends on: `RMI-SYSTEMFORGE-102`
-- [ ] `RMI-SYSTEMFORGE-104` `ManagerRelationship` schema and `identity/managedprincipal` service: transactional create with required manager, built-in `guardian`/`educator` roles, last-manager refusal, manager validation, audit
+- [x] `RMI-SYSTEMFORGE-104` `ManagerRelationship` schema and `identity/managedprincipal` service: transactional create with required manager, built-in `guardian`/`educator` roles, last-manager refusal, manager validation, audit
   - Depends on: `RMI-SYSTEMFORGE-103`
 
 ## Phase 2 — Sign-in and Control
