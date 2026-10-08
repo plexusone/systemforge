@@ -37,10 +37,11 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 **Theme:** Delete the legacy model and lock it out
 
-- [ ] `RMI-SYSTEMFORGE-099` Remove User, Membership, OAuthAccount, RefreshToken, APIKey, ServiceAccount, and ServiceAccountKeyPair schemas with `OAuthToken.service_account_id`; regenerate Ent; add migration `0002` dropping the tables
+- [x] `RMI-SYSTEMFORGE-099` Remove User, Membership, OAuthAccount, RefreshToken, APIKey, ServiceAccount, and ServiceAccountKeyPair schemas with `OAuthToken.service_account_id`; regenerate Ent; add migration `0002` dropping the tables
   - Depends on: `RMI-SYSTEMFORGE-096`
   - Depends on: `RMI-SYSTEMFORGE-097`
   - Depends on: `RMI-SYSTEMFORGE-098`
+  - Delivered: `0002` also creates the system service principal and reassigns legacy-owned OAuth apps before the tables go, because the new foreign keys otherwise stop an existing database from migrating. Verified on PostgreSQL by seeding a database with the pre-initiative code: without `0002` the new version fails to start; with it, the new version migrates and starts.
 - [ ] `RMI-SYSTEMFORGE-100` Documentation: rewrite `docs/identity/{users,memberships,api-keys}.md`, `docs/oauth/service-accounts.md`, and README identity bullets around the principal model; fix the stale `cf_memberships` reference in `rls/testing.go`
   - Depends on: `RMI-SYSTEMFORGE-099`
 - [ ] `RMI-SYSTEMFORGE-101` CI grep gate for `sf_users`, `ent.User`, and removed Ent packages; changelog entry and breaking tag v0.14.0; record the release

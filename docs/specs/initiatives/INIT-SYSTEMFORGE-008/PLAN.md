@@ -49,6 +49,11 @@ PRD hold.
 
 - INIT-SYSTEMFORGE-007: optional `Human.email` under application
   configuration, QR login credential type, guardian/educator relationships.
+- Enforce case-insensitive email uniqueness in the database with a
+  PostgreSQL `lower(email)` unique index on `sf_humans`, created by the
+  migrate step on PostgreSQL. Writes already check case-insensitively
+  inside their transaction, but only an index closes the race between
+  concurrent creates. It needs the dialect passed into the migrate step.
 - Implement the RFC 7523 JWT-bearer grant on `ServicePrincipal` plus
   `keypair` credentials. It was documented but never wired into Fosite;
   the service-account tables it described are removed by this initiative.
