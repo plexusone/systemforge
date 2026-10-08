@@ -10,6 +10,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/authz/noop"
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
@@ -29,13 +31,15 @@ const (
 
 // Service creates managed principals and maintains their managers.
 type Service struct {
-	client *ent.Client
-	creds  credential.Service
-	now    func() time.Time
-	gate   Gate
-	audit  audit.Emitter
-	logger *slog.Logger
-	roles  []string
+	client   *ent.Client
+	creds    credential.Service
+	now      func() time.Time
+	gate     Gate
+	audit    audit.Emitter
+	syncer   authz.RelationshipSyncer
+	syncMode authz.SyncMode
+	logger   *slog.Logger
+	roles    []string
 }
 
 // Option configures a Service.
@@ -44,6 +48,17 @@ type Option func(*Service)
 // WithAuditEmitter records every action through the given emitter.
 func WithAuditEmitter(e audit.Emitter) Option {
 	return func(s *Service) { s.audit = e }
+}
+
+// WithAuthzSyncer mirrors manager relationships into the authorization
+// backend as guardian and educator relations on the managed principal. In
+// authz.SyncModeStrict a sync failure is returned, after the database
+// change has committed; otherwise it is logged.
+func WithAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) Option {
+	return func(s *Service) {
+		s.syncer = syncer
+		s.syncMode = mode
+	}
 }
 
 // WithLogger sets the logger used for failures that cannot be returned,
@@ -68,12 +83,14 @@ func WithRoles(roles ...string) Option {
 // create managed principals; pass the SystemAuth server.
 func NewService(client *ent.Client, gate Gate, opts ...Option) *Service {
 	s := &Service{
-		client: client,
-		creds:  credential.NewService(client),
-		now:    time.Now,
-		gate:   gate,
-		logger: slog.Default(),
-		roles:  []string{RoleGuardian, RoleEducator},
+		client:   client,
+		creds:    credential.NewService(client),
+		now:      time.Now,
+		gate:     gate,
+		syncer:   noop.NewSyncer(),
+		syncMode: authz.SyncModeEventual,
+		logger:   slog.Default(),
+		roles:    []string{RoleGuardian, RoleEducator},
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -141,6 +158,14 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 
 	details := map[string]any{"client_id": in.ClientID, "managers": managerDetails(in.Managers)}
 	s.emit(ctx, EventCreated, "create", in.ActorID, id, details)
+
+	syncErr := s.sync(ctx, "register principal", id, s.syncer.RegisterPrincipal(ctx, id))
+	for _, m := range in.Managers {
+		syncErr = errors.Join(syncErr, s.sync(ctx, "add manager", id, s.syncer.AddPrincipalManager(ctx, id, m.PrincipalID, m.Role)))
+	}
+	if syncErr != nil {
+		return id, syncErr
+	}
 	return id, nil
 }
 
@@ -168,7 +193,7 @@ func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m Manager
 	}
 	s.emit(ctx, EventManagerAdded, "add_manager", actorID, managedID,
 		map[string]any{"manager_principal_id": m.PrincipalID.String(), "role": m.Role})
-	return nil
+	return s.sync(ctx, "add manager", managedID, s.syncer.AddPrincipalManager(ctx, managedID, m.PrincipalID, m.Role))
 }
 
 // RemoveManager deactivates a manager relationship. It refuses with
@@ -218,7 +243,7 @@ func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m Mana
 	}
 	s.emit(ctx, EventManagerRemoved, "remove_manager", actorID, managedID,
 		map[string]any{"manager_principal_id": m.PrincipalID.String(), "role": m.Role})
-	return nil
+	return s.sync(ctx, "remove manager", managedID, s.syncer.RemovePrincipalManager(ctx, managedID, m.PrincipalID, m.Role))
 }
 
 // IssueLoginToken issues a login token for a managed principal on behalf
@@ -328,6 +353,25 @@ func (s *Service) ListManagers(ctx context.Context, managedID uuid.UUID) ([]Rela
 	return out, nil
 }
 
+// ManagerRoles returns the roles managerID actively holds over managedID.
+// It matches authz.ManagerRoleGetter, so it can back the simple provider:
+// simple.WithManagerRoleGetter(svc.ManagerRoles).
+func (s *Service) ManagerRoles(ctx context.Context, managerID, managedID uuid.UUID) ([]string, error) {
+	roles, err := s.client.ManagerRelationship.Query().
+		Where(
+			managerrelationship.ManagedPrincipalID(managedID),
+			managerrelationship.ManagerPrincipalID(managerID),
+			managerrelationship.Active(true),
+			managerrelationship.HasManagerWith(entprincipal.Active(true)),
+		).
+		Select(managerrelationship.FieldRole).
+		Strings(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("managedprincipal: manager roles: %w", err)
+	}
+	return roles, nil
+}
+
 // IsManaged reports whether the principal is a human without an email.
 func (s *Service) IsManaged(ctx context.Context, principalID uuid.UUID) (bool, error) {
 	return s.client.Human.Query().
@@ -430,6 +474,19 @@ func (s *Service) withTx(ctx context.Context, fn func(*ent.Tx) error) error {
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("managedprincipal: commit: %w", err)
 	}
+	return nil
+}
+
+// sync applies the sync mode to the result of an authorization backend
+// write made after the database change committed.
+func (s *Service) sync(ctx context.Context, op string, managedID uuid.UUID, err error) error {
+	if err == nil {
+		return nil
+	}
+	if s.syncMode == authz.SyncModeStrict {
+		return fmt.Errorf("managedprincipal: sync %s to authz: %w", op, err)
+	}
+	s.logger.WarnContext(ctx, "managedprincipal: failed to sync to authz", "op", op, "principal_id", managedID, "error", err)
 	return nil
 }
 
