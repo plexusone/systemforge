@@ -86,6 +86,11 @@ func DelegatingPrincipalID(v uuid.UUID) predicate.Agent {
 	return predicate.Agent(sql.FieldEQ(FieldDelegatingPrincipalID, v))
 }
 
+// DelegationExpiresAt applies equality check predicate on the "delegation_expires_at" field. It's identical to DelegationExpiresAtEQ.
+func DelegationExpiresAt(v time.Time) predicate.Agent {
+	return predicate.Agent(sql.FieldEQ(FieldDelegationExpiresAt, v))
+}
+
 // MaxTokenLifetime applies equality check predicate on the "max_token_lifetime" field. It's identical to MaxTokenLifetimeEQ.
 func MaxTokenLifetime(v int) predicate.Agent {
 	return predicate.Agent(sql.FieldEQ(FieldMaxTokenLifetime, v))
@@ -369,6 +374,56 @@ func DelegatingPrincipalIDIsNil() predicate.Agent {
 // DelegatingPrincipalIDNotNil applies the NotNil predicate on the "delegating_principal_id" field.
 func DelegatingPrincipalIDNotNil() predicate.Agent {
 	return predicate.Agent(sql.FieldNotNull(FieldDelegatingPrincipalID))
+}
+
+// DelegationExpiresAtEQ applies the EQ predicate on the "delegation_expires_at" field.
+func DelegationExpiresAtEQ(v time.Time) predicate.Agent {
+	return predicate.Agent(sql.FieldEQ(FieldDelegationExpiresAt, v))
+}
+
+// DelegationExpiresAtNEQ applies the NEQ predicate on the "delegation_expires_at" field.
+func DelegationExpiresAtNEQ(v time.Time) predicate.Agent {
+	return predicate.Agent(sql.FieldNEQ(FieldDelegationExpiresAt, v))
+}
+
+// DelegationExpiresAtIn applies the In predicate on the "delegation_expires_at" field.
+func DelegationExpiresAtIn(vs ...time.Time) predicate.Agent {
+	return predicate.Agent(sql.FieldIn(FieldDelegationExpiresAt, vs...))
+}
+
+// DelegationExpiresAtNotIn applies the NotIn predicate on the "delegation_expires_at" field.
+func DelegationExpiresAtNotIn(vs ...time.Time) predicate.Agent {
+	return predicate.Agent(sql.FieldNotIn(FieldDelegationExpiresAt, vs...))
+}
+
+// DelegationExpiresAtGT applies the GT predicate on the "delegation_expires_at" field.
+func DelegationExpiresAtGT(v time.Time) predicate.Agent {
+	return predicate.Agent(sql.FieldGT(FieldDelegationExpiresAt, v))
+}
+
+// DelegationExpiresAtGTE applies the GTE predicate on the "delegation_expires_at" field.
+func DelegationExpiresAtGTE(v time.Time) predicate.Agent {
+	return predicate.Agent(sql.FieldGTE(FieldDelegationExpiresAt, v))
+}
+
+// DelegationExpiresAtLT applies the LT predicate on the "delegation_expires_at" field.
+func DelegationExpiresAtLT(v time.Time) predicate.Agent {
+	return predicate.Agent(sql.FieldLT(FieldDelegationExpiresAt, v))
+}
+
+// DelegationExpiresAtLTE applies the LTE predicate on the "delegation_expires_at" field.
+func DelegationExpiresAtLTE(v time.Time) predicate.Agent {
+	return predicate.Agent(sql.FieldLTE(FieldDelegationExpiresAt, v))
+}
+
+// DelegationExpiresAtIsNil applies the IsNil predicate on the "delegation_expires_at" field.
+func DelegationExpiresAtIsNil() predicate.Agent {
+	return predicate.Agent(sql.FieldIsNull(FieldDelegationExpiresAt))
+}
+
+// DelegationExpiresAtNotNil applies the NotNil predicate on the "delegation_expires_at" field.
+func DelegationExpiresAtNotNil() predicate.Agent {
+	return predicate.Agent(sql.FieldNotNull(FieldDelegationExpiresAt))
 }
 
 // MaxTokenLifetimeEQ applies the EQ predicate on the "max_token_lifetime" field.

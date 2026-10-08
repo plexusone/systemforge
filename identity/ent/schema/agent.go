@@ -63,6 +63,19 @@ func (Agent) Fields() []ent.Field {
 			Default([]string{}).
 			Comment("Resources this agent can access"),
 
+		field.JSON("action_constraints", []string{}).
+			Default([]string{}).
+			Comment("Actions this agent may perform; empty means unrestricted by this delegation"),
+
+		field.JSON("scope_constraints", []string{}).
+			Default([]string{}).
+			Comment("Scopes this agent may request; empty means unrestricted by this delegation"),
+
+		field.Time("delegation_expires_at").
+			Optional().
+			Nillable().
+			Comment("When the agent's delegation expires"),
+
 		// Token lifetime limits
 		field.Int("max_token_lifetime").
 			Default(3600).

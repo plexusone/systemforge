@@ -92,6 +92,11 @@ type AgentMutation struct {
 	appendcapability_constraints []string
 	resource_constraints         *[]string
 	appendresource_constraints   []string
+	action_constraints           *[]string
+	appendaction_constraints     []string
+	scope_constraints            *[]string
+	appendscope_constraints      []string
+	delegation_expires_at        *time.Time
 	max_token_lifetime           *int
 	addmax_token_lifetime        *int
 	session_id                   *string
@@ -554,6 +559,157 @@ func (m *AgentMutation) ResetResourceConstraints() {
 	m.appendresource_constraints = nil
 }
 
+// SetActionConstraints sets the "action_constraints" field.
+func (m *AgentMutation) SetActionConstraints(s []string) {
+	m.action_constraints = &s
+	m.appendaction_constraints = nil
+}
+
+// ActionConstraints returns the value of the "action_constraints" field in the mutation.
+func (m *AgentMutation) ActionConstraints() (r []string, exists bool) {
+	v := m.action_constraints
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActionConstraints returns the old "action_constraints" field's value of the Agent entity.
+// If the Agent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentMutation) OldActionConstraints(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActionConstraints is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActionConstraints requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActionConstraints: %w", err)
+	}
+	return oldValue.ActionConstraints, nil
+}
+
+// AppendActionConstraints adds s to the "action_constraints" field.
+func (m *AgentMutation) AppendActionConstraints(s []string) {
+	m.appendaction_constraints = append(m.appendaction_constraints, s...)
+}
+
+// AppendedActionConstraints returns the list of values that were appended to the "action_constraints" field in this mutation.
+func (m *AgentMutation) AppendedActionConstraints() ([]string, bool) {
+	if len(m.appendaction_constraints) == 0 {
+		return nil, false
+	}
+	return m.appendaction_constraints, true
+}
+
+// ResetActionConstraints resets all changes to the "action_constraints" field.
+func (m *AgentMutation) ResetActionConstraints() {
+	m.action_constraints = nil
+	m.appendaction_constraints = nil
+}
+
+// SetScopeConstraints sets the "scope_constraints" field.
+func (m *AgentMutation) SetScopeConstraints(s []string) {
+	m.scope_constraints = &s
+	m.appendscope_constraints = nil
+}
+
+// ScopeConstraints returns the value of the "scope_constraints" field in the mutation.
+func (m *AgentMutation) ScopeConstraints() (r []string, exists bool) {
+	v := m.scope_constraints
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScopeConstraints returns the old "scope_constraints" field's value of the Agent entity.
+// If the Agent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentMutation) OldScopeConstraints(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScopeConstraints is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScopeConstraints requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScopeConstraints: %w", err)
+	}
+	return oldValue.ScopeConstraints, nil
+}
+
+// AppendScopeConstraints adds s to the "scope_constraints" field.
+func (m *AgentMutation) AppendScopeConstraints(s []string) {
+	m.appendscope_constraints = append(m.appendscope_constraints, s...)
+}
+
+// AppendedScopeConstraints returns the list of values that were appended to the "scope_constraints" field in this mutation.
+func (m *AgentMutation) AppendedScopeConstraints() ([]string, bool) {
+	if len(m.appendscope_constraints) == 0 {
+		return nil, false
+	}
+	return m.appendscope_constraints, true
+}
+
+// ResetScopeConstraints resets all changes to the "scope_constraints" field.
+func (m *AgentMutation) ResetScopeConstraints() {
+	m.scope_constraints = nil
+	m.appendscope_constraints = nil
+}
+
+// SetDelegationExpiresAt sets the "delegation_expires_at" field.
+func (m *AgentMutation) SetDelegationExpiresAt(t time.Time) {
+	m.delegation_expires_at = &t
+}
+
+// DelegationExpiresAt returns the value of the "delegation_expires_at" field in the mutation.
+func (m *AgentMutation) DelegationExpiresAt() (r time.Time, exists bool) {
+	v := m.delegation_expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDelegationExpiresAt returns the old "delegation_expires_at" field's value of the Agent entity.
+// If the Agent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentMutation) OldDelegationExpiresAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDelegationExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDelegationExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDelegationExpiresAt: %w", err)
+	}
+	return oldValue.DelegationExpiresAt, nil
+}
+
+// ClearDelegationExpiresAt clears the value of the "delegation_expires_at" field.
+func (m *AgentMutation) ClearDelegationExpiresAt() {
+	m.delegation_expires_at = nil
+	m.clearedFields[agent.FieldDelegationExpiresAt] = struct{}{}
+}
+
+// DelegationExpiresAtCleared returns if the "delegation_expires_at" field was cleared in this mutation.
+func (m *AgentMutation) DelegationExpiresAtCleared() bool {
+	_, ok := m.clearedFields[agent.FieldDelegationExpiresAt]
+	return ok
+}
+
+// ResetDelegationExpiresAt resets all changes to the "delegation_expires_at" field.
+func (m *AgentMutation) ResetDelegationExpiresAt() {
+	m.delegation_expires_at = nil
+	delete(m.clearedFields, agent.FieldDelegationExpiresAt)
+}
+
 // SetMaxTokenLifetime sets the "max_token_lifetime" field.
 func (m *AgentMutation) SetMaxTokenLifetime(i int) {
 	m.max_token_lifetime = &i
@@ -783,7 +939,7 @@ func (m *AgentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AgentMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 14)
 	if m.created_at != nil {
 		fields = append(fields, agent.FieldCreatedAt)
 	}
@@ -807,6 +963,15 @@ func (m *AgentMutation) Fields() []string {
 	}
 	if m.resource_constraints != nil {
 		fields = append(fields, agent.FieldResourceConstraints)
+	}
+	if m.action_constraints != nil {
+		fields = append(fields, agent.FieldActionConstraints)
+	}
+	if m.scope_constraints != nil {
+		fields = append(fields, agent.FieldScopeConstraints)
+	}
+	if m.delegation_expires_at != nil {
+		fields = append(fields, agent.FieldDelegationExpiresAt)
 	}
 	if m.max_token_lifetime != nil {
 		fields = append(fields, agent.FieldMaxTokenLifetime)
@@ -841,6 +1006,12 @@ func (m *AgentMutation) Field(name string) (ent.Value, bool) {
 		return m.CapabilityConstraints()
 	case agent.FieldResourceConstraints:
 		return m.ResourceConstraints()
+	case agent.FieldActionConstraints:
+		return m.ActionConstraints()
+	case agent.FieldScopeConstraints:
+		return m.ScopeConstraints()
+	case agent.FieldDelegationExpiresAt:
+		return m.DelegationExpiresAt()
 	case agent.FieldMaxTokenLifetime:
 		return m.MaxTokenLifetime()
 	case agent.FieldSessionID:
@@ -872,6 +1043,12 @@ func (m *AgentMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldCapabilityConstraints(ctx)
 	case agent.FieldResourceConstraints:
 		return m.OldResourceConstraints(ctx)
+	case agent.FieldActionConstraints:
+		return m.OldActionConstraints(ctx)
+	case agent.FieldScopeConstraints:
+		return m.OldScopeConstraints(ctx)
+	case agent.FieldDelegationExpiresAt:
+		return m.OldDelegationExpiresAt(ctx)
 	case agent.FieldMaxTokenLifetime:
 		return m.OldMaxTokenLifetime(ctx)
 	case agent.FieldSessionID:
@@ -942,6 +1119,27 @@ func (m *AgentMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetResourceConstraints(v)
+		return nil
+	case agent.FieldActionConstraints:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActionConstraints(v)
+		return nil
+	case agent.FieldScopeConstraints:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScopeConstraints(v)
+		return nil
+	case agent.FieldDelegationExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDelegationExpiresAt(v)
 		return nil
 	case agent.FieldMaxTokenLifetime:
 		v, ok := value.(int)
@@ -1015,6 +1213,9 @@ func (m *AgentMutation) ClearedFields() []string {
 	if m.FieldCleared(agent.FieldDelegatingPrincipalID) {
 		fields = append(fields, agent.FieldDelegatingPrincipalID)
 	}
+	if m.FieldCleared(agent.FieldDelegationExpiresAt) {
+		fields = append(fields, agent.FieldDelegationExpiresAt)
+	}
 	if m.FieldCleared(agent.FieldSessionID) {
 		fields = append(fields, agent.FieldSessionID)
 	}
@@ -1037,6 +1238,9 @@ func (m *AgentMutation) ClearField(name string) error {
 		return nil
 	case agent.FieldDelegatingPrincipalID:
 		m.ClearDelegatingPrincipalID()
+		return nil
+	case agent.FieldDelegationExpiresAt:
+		m.ClearDelegationExpiresAt()
 		return nil
 	case agent.FieldSessionID:
 		m.ClearSessionID()
@@ -1072,6 +1276,15 @@ func (m *AgentMutation) ResetField(name string) error {
 		return nil
 	case agent.FieldResourceConstraints:
 		m.ResetResourceConstraints()
+		return nil
+	case agent.FieldActionConstraints:
+		m.ResetActionConstraints()
+		return nil
+	case agent.FieldScopeConstraints:
+		m.ResetScopeConstraints()
+		return nil
+	case agent.FieldDelegationExpiresAt:
+		m.ResetDelegationExpiresAt()
 		return nil
 	case agent.FieldMaxTokenLifetime:
 		m.ResetMaxTokenLifetime()

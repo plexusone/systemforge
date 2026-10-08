@@ -66,12 +66,20 @@ func init() {
 	agentDescResourceConstraints := agentFields[5].Descriptor()
 	// agent.DefaultResourceConstraints holds the default value on creation for the resource_constraints field.
 	agent.DefaultResourceConstraints = agentDescResourceConstraints.Default.([]string)
+	// agentDescActionConstraints is the schema descriptor for action_constraints field.
+	agentDescActionConstraints := agentFields[6].Descriptor()
+	// agent.DefaultActionConstraints holds the default value on creation for the action_constraints field.
+	agent.DefaultActionConstraints = agentDescActionConstraints.Default.([]string)
+	// agentDescScopeConstraints is the schema descriptor for scope_constraints field.
+	agentDescScopeConstraints := agentFields[7].Descriptor()
+	// agent.DefaultScopeConstraints holds the default value on creation for the scope_constraints field.
+	agent.DefaultScopeConstraints = agentDescScopeConstraints.Default.([]string)
 	// agentDescMaxTokenLifetime is the schema descriptor for max_token_lifetime field.
-	agentDescMaxTokenLifetime := agentFields[6].Descriptor()
+	agentDescMaxTokenLifetime := agentFields[9].Descriptor()
 	// agent.DefaultMaxTokenLifetime holds the default value on creation for the max_token_lifetime field.
 	agent.DefaultMaxTokenLifetime = agentDescMaxTokenLifetime.Default.(int)
 	// agentDescRequiresConfirmation is the schema descriptor for requires_confirmation field.
-	agentDescRequiresConfirmation := agentFields[8].Descriptor()
+	agentDescRequiresConfirmation := agentFields[11].Descriptor()
 	// agent.DefaultRequiresConfirmation holds the default value on creation for the requires_confirmation field.
 	agent.DefaultRequiresConfirmation = agentDescRequiresConfirmation.Default.(bool)
 	// agentDescID is the schema descriptor for id field.

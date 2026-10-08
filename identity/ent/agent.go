@@ -36,6 +36,12 @@ type Agent struct {
 	CapabilityConstraints []string `json:"capability_constraints,omitempty"`
 	// Resources this agent can access
 	ResourceConstraints []string `json:"resource_constraints,omitempty"`
+	// Actions this agent may perform; empty means unrestricted by this delegation
+	ActionConstraints []string `json:"action_constraints,omitempty"`
+	// Scopes this agent may request; empty means unrestricted by this delegation
+	ScopeConstraints []string `json:"scope_constraints,omitempty"`
+	// When the agent's delegation expires
+	DelegationExpiresAt *time.Time `json:"delegation_expires_at,omitempty"`
 	// Maximum token lifetime in seconds (default 1 hour)
 	MaxTokenLifetime int `json:"max_token_lifetime,omitempty"`
 	// Current session identifier
@@ -88,7 +94,7 @@ func (*Agent) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case agent.FieldDelegatingPrincipalID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case agent.FieldCapabilityConstraints, agent.FieldResourceConstraints:
+		case agent.FieldCapabilityConstraints, agent.FieldResourceConstraints, agent.FieldActionConstraints, agent.FieldScopeConstraints:
 			values[i] = new([]byte)
 		case agent.FieldRequiresConfirmation:
 			values[i] = new(sql.NullBool)
@@ -96,7 +102,7 @@ func (*Agent) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case agent.FieldModelID, agent.FieldVersion, agent.FieldSessionID:
 			values[i] = new(sql.NullString)
-		case agent.FieldCreatedAt, agent.FieldUpdatedAt:
+		case agent.FieldCreatedAt, agent.FieldUpdatedAt, agent.FieldDelegationExpiresAt:
 			values[i] = new(sql.NullTime)
 		case agent.FieldID, agent.FieldPrincipalID:
 			values[i] = new(uuid.UUID)
@@ -173,6 +179,29 @@ func (_m *Agent) assignValues(columns []string, values []any) error {
 				if err := json.Unmarshal(*value, &_m.ResourceConstraints); err != nil {
 					return fmt.Errorf("unmarshal field resource_constraints: %w", err)
 				}
+			}
+		case agent.FieldActionConstraints:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field action_constraints", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.ActionConstraints); err != nil {
+					return fmt.Errorf("unmarshal field action_constraints: %w", err)
+				}
+			}
+		case agent.FieldScopeConstraints:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field scope_constraints", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.ScopeConstraints); err != nil {
+					return fmt.Errorf("unmarshal field scope_constraints: %w", err)
+				}
+			}
+		case agent.FieldDelegationExpiresAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field delegation_expires_at", values[i])
+			} else if value.Valid {
+				_m.DelegationExpiresAt = new(time.Time)
+				*_m.DelegationExpiresAt = value.Time
 			}
 		case agent.FieldMaxTokenLifetime:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -264,6 +293,17 @@ func (_m *Agent) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("resource_constraints=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ResourceConstraints))
+	builder.WriteString(", ")
+	builder.WriteString("action_constraints=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ActionConstraints))
+	builder.WriteString(", ")
+	builder.WriteString("scope_constraints=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ScopeConstraints))
+	builder.WriteString(", ")
+	if v := _m.DelegationExpiresAt; v != nil {
+		builder.WriteString("delegation_expires_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("max_token_lifetime=")
 	builder.WriteString(fmt.Sprintf("%v", _m.MaxTokenLifetime))

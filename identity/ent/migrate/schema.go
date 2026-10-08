@@ -18,6 +18,9 @@ var (
 		{Name: "version", Type: field.TypeString, Nullable: true},
 		{Name: "capability_constraints", Type: field.TypeJSON},
 		{Name: "resource_constraints", Type: field.TypeJSON},
+		{Name: "action_constraints", Type: field.TypeJSON},
+		{Name: "scope_constraints", Type: field.TypeJSON},
+		{Name: "delegation_expires_at", Type: field.TypeTime, Nullable: true},
 		{Name: "max_token_lifetime", Type: field.TypeInt, Default: 3600},
 		{Name: "session_id", Type: field.TypeString, Nullable: true},
 		{Name: "requires_confirmation", Type: field.TypeBool, Default: true},
@@ -32,13 +35,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_agents_sf_principals_delegating_principal",
-				Columns:    []*schema.Column{SfAgentsColumns[10]},
+				Columns:    []*schema.Column{SfAgentsColumns[13]},
 				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "sf_agents_sf_principals_agent",
-				Columns:    []*schema.Column{SfAgentsColumns[11]},
+				Columns:    []*schema.Column{SfAgentsColumns[14]},
 				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -47,7 +50,7 @@ var (
 			{
 				Name:    "agent_principal_id",
 				Unique:  true,
-				Columns: []*schema.Column{SfAgentsColumns[11]},
+				Columns: []*schema.Column{SfAgentsColumns[14]},
 			},
 			{
 				Name:    "agent_model_id",
@@ -57,17 +60,17 @@ var (
 			{
 				Name:    "agent_delegating_principal_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfAgentsColumns[10]},
+				Columns: []*schema.Column{SfAgentsColumns[13]},
 			},
 			{
 				Name:    "agent_session_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfAgentsColumns[8]},
+				Columns: []*schema.Column{SfAgentsColumns[11]},
 			},
 			{
 				Name:    "agent_requires_confirmation",
 				Unique:  false,
-				Columns: []*schema.Column{SfAgentsColumns[9]},
+				Columns: []*schema.Column{SfAgentsColumns[12]},
 			},
 		},
 	}

@@ -31,6 +31,12 @@ const (
 	FieldCapabilityConstraints = "capability_constraints"
 	// FieldResourceConstraints holds the string denoting the resource_constraints field in the database.
 	FieldResourceConstraints = "resource_constraints"
+	// FieldActionConstraints holds the string denoting the action_constraints field in the database.
+	FieldActionConstraints = "action_constraints"
+	// FieldScopeConstraints holds the string denoting the scope_constraints field in the database.
+	FieldScopeConstraints = "scope_constraints"
+	// FieldDelegationExpiresAt holds the string denoting the delegation_expires_at field in the database.
+	FieldDelegationExpiresAt = "delegation_expires_at"
 	// FieldMaxTokenLifetime holds the string denoting the max_token_lifetime field in the database.
 	FieldMaxTokenLifetime = "max_token_lifetime"
 	// FieldSessionID holds the string denoting the session_id field in the database.
@@ -70,6 +76,9 @@ var Columns = []string{
 	FieldDelegatingPrincipalID,
 	FieldCapabilityConstraints,
 	FieldResourceConstraints,
+	FieldActionConstraints,
+	FieldScopeConstraints,
+	FieldDelegationExpiresAt,
 	FieldMaxTokenLifetime,
 	FieldSessionID,
 	FieldRequiresConfirmation,
@@ -98,6 +107,10 @@ var (
 	DefaultCapabilityConstraints []string
 	// DefaultResourceConstraints holds the default value on creation for the "resource_constraints" field.
 	DefaultResourceConstraints []string
+	// DefaultActionConstraints holds the default value on creation for the "action_constraints" field.
+	DefaultActionConstraints []string
+	// DefaultScopeConstraints holds the default value on creation for the "scope_constraints" field.
+	DefaultScopeConstraints []string
 	// DefaultMaxTokenLifetime holds the default value on creation for the "max_token_lifetime" field.
 	DefaultMaxTokenLifetime int
 	// DefaultRequiresConfirmation holds the default value on creation for the "requires_confirmation" field.
@@ -142,6 +155,11 @@ func ByVersion(opts ...sql.OrderTermOption) OrderOption {
 // ByDelegatingPrincipalID orders the results by the delegating_principal_id field.
 func ByDelegatingPrincipalID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDelegatingPrincipalID, opts...).ToFunc()
+}
+
+// ByDelegationExpiresAt orders the results by the delegation_expires_at field.
+func ByDelegationExpiresAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDelegationExpiresAt, opts...).ToFunc()
 }
 
 // ByMaxTokenLifetime orders the results by the max_token_lifetime field.

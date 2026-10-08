@@ -105,6 +105,32 @@ func (_c *AgentCreate) SetResourceConstraints(v []string) *AgentCreate {
 	return _c
 }
 
+// SetActionConstraints sets the "action_constraints" field.
+func (_c *AgentCreate) SetActionConstraints(v []string) *AgentCreate {
+	_c.mutation.SetActionConstraints(v)
+	return _c
+}
+
+// SetScopeConstraints sets the "scope_constraints" field.
+func (_c *AgentCreate) SetScopeConstraints(v []string) *AgentCreate {
+	_c.mutation.SetScopeConstraints(v)
+	return _c
+}
+
+// SetDelegationExpiresAt sets the "delegation_expires_at" field.
+func (_c *AgentCreate) SetDelegationExpiresAt(v time.Time) *AgentCreate {
+	_c.mutation.SetDelegationExpiresAt(v)
+	return _c
+}
+
+// SetNillableDelegationExpiresAt sets the "delegation_expires_at" field if the given value is not nil.
+func (_c *AgentCreate) SetNillableDelegationExpiresAt(v *time.Time) *AgentCreate {
+	if v != nil {
+		_c.SetDelegationExpiresAt(*v)
+	}
+	return _c
+}
+
 // SetMaxTokenLifetime sets the "max_token_lifetime" field.
 func (_c *AgentCreate) SetMaxTokenLifetime(v int) *AgentCreate {
 	_c.mutation.SetMaxTokenLifetime(v)
@@ -222,6 +248,14 @@ func (_c *AgentCreate) defaults() {
 		v := agent.DefaultResourceConstraints
 		_c.mutation.SetResourceConstraints(v)
 	}
+	if _, ok := _c.mutation.ActionConstraints(); !ok {
+		v := agent.DefaultActionConstraints
+		_c.mutation.SetActionConstraints(v)
+	}
+	if _, ok := _c.mutation.ScopeConstraints(); !ok {
+		v := agent.DefaultScopeConstraints
+		_c.mutation.SetScopeConstraints(v)
+	}
 	if _, ok := _c.mutation.MaxTokenLifetime(); !ok {
 		v := agent.DefaultMaxTokenLifetime
 		_c.mutation.SetMaxTokenLifetime(v)
@@ -260,6 +294,12 @@ func (_c *AgentCreate) check() error {
 	}
 	if _, ok := _c.mutation.ResourceConstraints(); !ok {
 		return &ValidationError{Name: "resource_constraints", err: errors.New(`ent: missing required field "Agent.resource_constraints"`)}
+	}
+	if _, ok := _c.mutation.ActionConstraints(); !ok {
+		return &ValidationError{Name: "action_constraints", err: errors.New(`ent: missing required field "Agent.action_constraints"`)}
+	}
+	if _, ok := _c.mutation.ScopeConstraints(); !ok {
+		return &ValidationError{Name: "scope_constraints", err: errors.New(`ent: missing required field "Agent.scope_constraints"`)}
 	}
 	if _, ok := _c.mutation.MaxTokenLifetime(); !ok {
 		return &ValidationError{Name: "max_token_lifetime", err: errors.New(`ent: missing required field "Agent.max_token_lifetime"`)}
@@ -329,6 +369,18 @@ func (_c *AgentCreate) createSpec() (*Agent, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ResourceConstraints(); ok {
 		_spec.SetField(agent.FieldResourceConstraints, field.TypeJSON, value)
 		_node.ResourceConstraints = value
+	}
+	if value, ok := _c.mutation.ActionConstraints(); ok {
+		_spec.SetField(agent.FieldActionConstraints, field.TypeJSON, value)
+		_node.ActionConstraints = value
+	}
+	if value, ok := _c.mutation.ScopeConstraints(); ok {
+		_spec.SetField(agent.FieldScopeConstraints, field.TypeJSON, value)
+		_node.ScopeConstraints = value
+	}
+	if value, ok := _c.mutation.DelegationExpiresAt(); ok {
+		_spec.SetField(agent.FieldDelegationExpiresAt, field.TypeTime, value)
+		_node.DelegationExpiresAt = &value
 	}
 	if value, ok := _c.mutation.MaxTokenLifetime(); ok {
 		_spec.SetField(agent.FieldMaxTokenLifetime, field.TypeInt, value)
@@ -509,6 +561,48 @@ func (u *AgentUpsert) SetResourceConstraints(v []string) *AgentUpsert {
 // UpdateResourceConstraints sets the "resource_constraints" field to the value that was provided on create.
 func (u *AgentUpsert) UpdateResourceConstraints() *AgentUpsert {
 	u.SetExcluded(agent.FieldResourceConstraints)
+	return u
+}
+
+// SetActionConstraints sets the "action_constraints" field.
+func (u *AgentUpsert) SetActionConstraints(v []string) *AgentUpsert {
+	u.Set(agent.FieldActionConstraints, v)
+	return u
+}
+
+// UpdateActionConstraints sets the "action_constraints" field to the value that was provided on create.
+func (u *AgentUpsert) UpdateActionConstraints() *AgentUpsert {
+	u.SetExcluded(agent.FieldActionConstraints)
+	return u
+}
+
+// SetScopeConstraints sets the "scope_constraints" field.
+func (u *AgentUpsert) SetScopeConstraints(v []string) *AgentUpsert {
+	u.Set(agent.FieldScopeConstraints, v)
+	return u
+}
+
+// UpdateScopeConstraints sets the "scope_constraints" field to the value that was provided on create.
+func (u *AgentUpsert) UpdateScopeConstraints() *AgentUpsert {
+	u.SetExcluded(agent.FieldScopeConstraints)
+	return u
+}
+
+// SetDelegationExpiresAt sets the "delegation_expires_at" field.
+func (u *AgentUpsert) SetDelegationExpiresAt(v time.Time) *AgentUpsert {
+	u.Set(agent.FieldDelegationExpiresAt, v)
+	return u
+}
+
+// UpdateDelegationExpiresAt sets the "delegation_expires_at" field to the value that was provided on create.
+func (u *AgentUpsert) UpdateDelegationExpiresAt() *AgentUpsert {
+	u.SetExcluded(agent.FieldDelegationExpiresAt)
+	return u
+}
+
+// ClearDelegationExpiresAt clears the value of the "delegation_expires_at" field.
+func (u *AgentUpsert) ClearDelegationExpiresAt() *AgentUpsert {
+	u.SetNull(agent.FieldDelegationExpiresAt)
 	return u
 }
 
@@ -709,6 +803,55 @@ func (u *AgentUpsertOne) SetResourceConstraints(v []string) *AgentUpsertOne {
 func (u *AgentUpsertOne) UpdateResourceConstraints() *AgentUpsertOne {
 	return u.Update(func(s *AgentUpsert) {
 		s.UpdateResourceConstraints()
+	})
+}
+
+// SetActionConstraints sets the "action_constraints" field.
+func (u *AgentUpsertOne) SetActionConstraints(v []string) *AgentUpsertOne {
+	return u.Update(func(s *AgentUpsert) {
+		s.SetActionConstraints(v)
+	})
+}
+
+// UpdateActionConstraints sets the "action_constraints" field to the value that was provided on create.
+func (u *AgentUpsertOne) UpdateActionConstraints() *AgentUpsertOne {
+	return u.Update(func(s *AgentUpsert) {
+		s.UpdateActionConstraints()
+	})
+}
+
+// SetScopeConstraints sets the "scope_constraints" field.
+func (u *AgentUpsertOne) SetScopeConstraints(v []string) *AgentUpsertOne {
+	return u.Update(func(s *AgentUpsert) {
+		s.SetScopeConstraints(v)
+	})
+}
+
+// UpdateScopeConstraints sets the "scope_constraints" field to the value that was provided on create.
+func (u *AgentUpsertOne) UpdateScopeConstraints() *AgentUpsertOne {
+	return u.Update(func(s *AgentUpsert) {
+		s.UpdateScopeConstraints()
+	})
+}
+
+// SetDelegationExpiresAt sets the "delegation_expires_at" field.
+func (u *AgentUpsertOne) SetDelegationExpiresAt(v time.Time) *AgentUpsertOne {
+	return u.Update(func(s *AgentUpsert) {
+		s.SetDelegationExpiresAt(v)
+	})
+}
+
+// UpdateDelegationExpiresAt sets the "delegation_expires_at" field to the value that was provided on create.
+func (u *AgentUpsertOne) UpdateDelegationExpiresAt() *AgentUpsertOne {
+	return u.Update(func(s *AgentUpsert) {
+		s.UpdateDelegationExpiresAt()
+	})
+}
+
+// ClearDelegationExpiresAt clears the value of the "delegation_expires_at" field.
+func (u *AgentUpsertOne) ClearDelegationExpiresAt() *AgentUpsertOne {
+	return u.Update(func(s *AgentUpsert) {
+		s.ClearDelegationExpiresAt()
 	})
 }
 
@@ -1084,6 +1227,55 @@ func (u *AgentUpsertBulk) SetResourceConstraints(v []string) *AgentUpsertBulk {
 func (u *AgentUpsertBulk) UpdateResourceConstraints() *AgentUpsertBulk {
 	return u.Update(func(s *AgentUpsert) {
 		s.UpdateResourceConstraints()
+	})
+}
+
+// SetActionConstraints sets the "action_constraints" field.
+func (u *AgentUpsertBulk) SetActionConstraints(v []string) *AgentUpsertBulk {
+	return u.Update(func(s *AgentUpsert) {
+		s.SetActionConstraints(v)
+	})
+}
+
+// UpdateActionConstraints sets the "action_constraints" field to the value that was provided on create.
+func (u *AgentUpsertBulk) UpdateActionConstraints() *AgentUpsertBulk {
+	return u.Update(func(s *AgentUpsert) {
+		s.UpdateActionConstraints()
+	})
+}
+
+// SetScopeConstraints sets the "scope_constraints" field.
+func (u *AgentUpsertBulk) SetScopeConstraints(v []string) *AgentUpsertBulk {
+	return u.Update(func(s *AgentUpsert) {
+		s.SetScopeConstraints(v)
+	})
+}
+
+// UpdateScopeConstraints sets the "scope_constraints" field to the value that was provided on create.
+func (u *AgentUpsertBulk) UpdateScopeConstraints() *AgentUpsertBulk {
+	return u.Update(func(s *AgentUpsert) {
+		s.UpdateScopeConstraints()
+	})
+}
+
+// SetDelegationExpiresAt sets the "delegation_expires_at" field.
+func (u *AgentUpsertBulk) SetDelegationExpiresAt(v time.Time) *AgentUpsertBulk {
+	return u.Update(func(s *AgentUpsert) {
+		s.SetDelegationExpiresAt(v)
+	})
+}
+
+// UpdateDelegationExpiresAt sets the "delegation_expires_at" field to the value that was provided on create.
+func (u *AgentUpsertBulk) UpdateDelegationExpiresAt() *AgentUpsertBulk {
+	return u.Update(func(s *AgentUpsert) {
+		s.UpdateDelegationExpiresAt()
+	})
+}
+
+// ClearDelegationExpiresAt clears the value of the "delegation_expires_at" field.
+func (u *AgentUpsertBulk) ClearDelegationExpiresAt() *AgentUpsertBulk {
+	return u.Update(func(s *AgentUpsert) {
+		s.ClearDelegationExpiresAt()
 	})
 }
 

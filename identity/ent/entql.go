@@ -59,6 +59,9 @@ var schemaGraph = func() *sqlgraph.Schema {
 			agent.FieldDelegatingPrincipalID: {Type: field.TypeUUID, Column: agent.FieldDelegatingPrincipalID},
 			agent.FieldCapabilityConstraints: {Type: field.TypeJSON, Column: agent.FieldCapabilityConstraints},
 			agent.FieldResourceConstraints:   {Type: field.TypeJSON, Column: agent.FieldResourceConstraints},
+			agent.FieldActionConstraints:     {Type: field.TypeJSON, Column: agent.FieldActionConstraints},
+			agent.FieldScopeConstraints:      {Type: field.TypeJSON, Column: agent.FieldScopeConstraints},
+			agent.FieldDelegationExpiresAt:   {Type: field.TypeTime, Column: agent.FieldDelegationExpiresAt},
 			agent.FieldMaxTokenLifetime:      {Type: field.TypeInt, Column: agent.FieldMaxTokenLifetime},
 			agent.FieldSessionID:             {Type: field.TypeString, Column: agent.FieldSessionID},
 			agent.FieldRequiresConfirmation:  {Type: field.TypeBool, Column: agent.FieldRequiresConfirmation},
@@ -1597,6 +1600,21 @@ func (f *AgentFilter) WhereCapabilityConstraints(p entql.BytesP) {
 // WhereResourceConstraints applies the entql json.RawMessage predicate on the resource_constraints field.
 func (f *AgentFilter) WhereResourceConstraints(p entql.BytesP) {
 	f.Where(p.Field(agent.FieldResourceConstraints))
+}
+
+// WhereActionConstraints applies the entql json.RawMessage predicate on the action_constraints field.
+func (f *AgentFilter) WhereActionConstraints(p entql.BytesP) {
+	f.Where(p.Field(agent.FieldActionConstraints))
+}
+
+// WhereScopeConstraints applies the entql json.RawMessage predicate on the scope_constraints field.
+func (f *AgentFilter) WhereScopeConstraints(p entql.BytesP) {
+	f.Where(p.Field(agent.FieldScopeConstraints))
+}
+
+// WhereDelegationExpiresAt applies the entql time.Time predicate on the delegation_expires_at field.
+func (f *AgentFilter) WhereDelegationExpiresAt(p entql.TimeP) {
+	f.Where(p.Field(agent.FieldDelegationExpiresAt))
 }
 
 // WhereMaxTokenLifetime applies the entql int predicate on the max_token_lifetime field.

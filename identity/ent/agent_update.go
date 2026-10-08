@@ -115,6 +115,50 @@ func (_u *AgentUpdate) AppendResourceConstraints(v []string) *AgentUpdate {
 	return _u
 }
 
+// SetActionConstraints sets the "action_constraints" field.
+func (_u *AgentUpdate) SetActionConstraints(v []string) *AgentUpdate {
+	_u.mutation.SetActionConstraints(v)
+	return _u
+}
+
+// AppendActionConstraints appends value to the "action_constraints" field.
+func (_u *AgentUpdate) AppendActionConstraints(v []string) *AgentUpdate {
+	_u.mutation.AppendActionConstraints(v)
+	return _u
+}
+
+// SetScopeConstraints sets the "scope_constraints" field.
+func (_u *AgentUpdate) SetScopeConstraints(v []string) *AgentUpdate {
+	_u.mutation.SetScopeConstraints(v)
+	return _u
+}
+
+// AppendScopeConstraints appends value to the "scope_constraints" field.
+func (_u *AgentUpdate) AppendScopeConstraints(v []string) *AgentUpdate {
+	_u.mutation.AppendScopeConstraints(v)
+	return _u
+}
+
+// SetDelegationExpiresAt sets the "delegation_expires_at" field.
+func (_u *AgentUpdate) SetDelegationExpiresAt(v time.Time) *AgentUpdate {
+	_u.mutation.SetDelegationExpiresAt(v)
+	return _u
+}
+
+// SetNillableDelegationExpiresAt sets the "delegation_expires_at" field if the given value is not nil.
+func (_u *AgentUpdate) SetNillableDelegationExpiresAt(v *time.Time) *AgentUpdate {
+	if v != nil {
+		_u.SetDelegationExpiresAt(*v)
+	}
+	return _u
+}
+
+// ClearDelegationExpiresAt clears the value of the "delegation_expires_at" field.
+func (_u *AgentUpdate) ClearDelegationExpiresAt() *AgentUpdate {
+	_u.mutation.ClearDelegationExpiresAt()
+	return _u
+}
+
 // SetMaxTokenLifetime sets the "max_token_lifetime" field.
 func (_u *AgentUpdate) SetMaxTokenLifetime(v int) *AgentUpdate {
 	_u.mutation.ResetMaxTokenLifetime()
@@ -275,6 +319,28 @@ func (_u *AgentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			sqljson.Append(u, agent.FieldResourceConstraints, value)
 		})
 	}
+	if value, ok := _u.mutation.ActionConstraints(); ok {
+		_spec.SetField(agent.FieldActionConstraints, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedActionConstraints(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, agent.FieldActionConstraints, value)
+		})
+	}
+	if value, ok := _u.mutation.ScopeConstraints(); ok {
+		_spec.SetField(agent.FieldScopeConstraints, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedScopeConstraints(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, agent.FieldScopeConstraints, value)
+		})
+	}
+	if value, ok := _u.mutation.DelegationExpiresAt(); ok {
+		_spec.SetField(agent.FieldDelegationExpiresAt, field.TypeTime, value)
+	}
+	if _u.mutation.DelegationExpiresAtCleared() {
+		_spec.ClearField(agent.FieldDelegationExpiresAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.MaxTokenLifetime(); ok {
 		_spec.SetField(agent.FieldMaxTokenLifetime, field.TypeInt, value)
 	}
@@ -420,6 +486,50 @@ func (_u *AgentUpdateOne) SetResourceConstraints(v []string) *AgentUpdateOne {
 // AppendResourceConstraints appends value to the "resource_constraints" field.
 func (_u *AgentUpdateOne) AppendResourceConstraints(v []string) *AgentUpdateOne {
 	_u.mutation.AppendResourceConstraints(v)
+	return _u
+}
+
+// SetActionConstraints sets the "action_constraints" field.
+func (_u *AgentUpdateOne) SetActionConstraints(v []string) *AgentUpdateOne {
+	_u.mutation.SetActionConstraints(v)
+	return _u
+}
+
+// AppendActionConstraints appends value to the "action_constraints" field.
+func (_u *AgentUpdateOne) AppendActionConstraints(v []string) *AgentUpdateOne {
+	_u.mutation.AppendActionConstraints(v)
+	return _u
+}
+
+// SetScopeConstraints sets the "scope_constraints" field.
+func (_u *AgentUpdateOne) SetScopeConstraints(v []string) *AgentUpdateOne {
+	_u.mutation.SetScopeConstraints(v)
+	return _u
+}
+
+// AppendScopeConstraints appends value to the "scope_constraints" field.
+func (_u *AgentUpdateOne) AppendScopeConstraints(v []string) *AgentUpdateOne {
+	_u.mutation.AppendScopeConstraints(v)
+	return _u
+}
+
+// SetDelegationExpiresAt sets the "delegation_expires_at" field.
+func (_u *AgentUpdateOne) SetDelegationExpiresAt(v time.Time) *AgentUpdateOne {
+	_u.mutation.SetDelegationExpiresAt(v)
+	return _u
+}
+
+// SetNillableDelegationExpiresAt sets the "delegation_expires_at" field if the given value is not nil.
+func (_u *AgentUpdateOne) SetNillableDelegationExpiresAt(v *time.Time) *AgentUpdateOne {
+	if v != nil {
+		_u.SetDelegationExpiresAt(*v)
+	}
+	return _u
+}
+
+// ClearDelegationExpiresAt clears the value of the "delegation_expires_at" field.
+func (_u *AgentUpdateOne) ClearDelegationExpiresAt() *AgentUpdateOne {
+	_u.mutation.ClearDelegationExpiresAt()
 	return _u
 }
 
@@ -612,6 +722,28 @@ func (_u *AgentUpdateOne) sqlSave(ctx context.Context) (_node *Agent, err error)
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, agent.FieldResourceConstraints, value)
 		})
+	}
+	if value, ok := _u.mutation.ActionConstraints(); ok {
+		_spec.SetField(agent.FieldActionConstraints, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedActionConstraints(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, agent.FieldActionConstraints, value)
+		})
+	}
+	if value, ok := _u.mutation.ScopeConstraints(); ok {
+		_spec.SetField(agent.FieldScopeConstraints, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedScopeConstraints(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, agent.FieldScopeConstraints, value)
+		})
+	}
+	if value, ok := _u.mutation.DelegationExpiresAt(); ok {
+		_spec.SetField(agent.FieldDelegationExpiresAt, field.TypeTime, value)
+	}
+	if _u.mutation.DelegationExpiresAtCleared() {
+		_spec.ClearField(agent.FieldDelegationExpiresAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.MaxTokenLifetime(); ok {
 		_spec.SetField(agent.FieldMaxTokenLifetime, field.TypeInt, value)
