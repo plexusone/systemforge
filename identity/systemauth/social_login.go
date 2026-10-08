@@ -496,8 +496,8 @@ func (s *Server) CurrentLoginSession(r *http.Request) (*LoginSession, error) {
 // social login session and send unauthenticated users to /login.
 type socialSessionProvider struct {
 	inner SessionProvider
-	// trustInner is false for the header-based DefaultSessionProvider, which
-	// must not be able to bypass social login.
+	// trustInner reports whether the wrapped provider is consulted after
+	// the login cookie.
 	trustInner bool
 	social     *socialLogin
 }
@@ -505,8 +505,10 @@ type socialSessionProvider struct {
 var _ SessionProvider = (*socialSessionProvider)(nil)
 
 func newSocialSessionProvider(inner SessionProvider, sl *socialLogin) *socialSessionProvider {
-	_, isDefault := inner.(*DefaultSessionProvider)
-	return &socialSessionProvider{inner: inner, trustInner: !isDefault, social: sl}
+	// The default provider authenticates nobody unless a trusted header was
+	// configured explicitly, so consulting it cannot bypass social login
+	// unless the operator asked for that.
+	return &socialSessionProvider{inner: inner, trustInner: true, social: sl}
 }
 
 // GetAuthenticatedUser implements SessionProvider.

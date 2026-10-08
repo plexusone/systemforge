@@ -2,7 +2,11 @@ package systemauth
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
@@ -39,8 +43,57 @@ type SessionProvider interface {
 	GetUserClaims(ctx context.Context, userID string, scopes []string) map[string]interface{}
 }
 
-// DefaultSessionProvider provides a basic session provider for testing.
-// In production, implement SessionProvider with your authentication system.
+// RequestGate decides whether a request may be believed when it carries
+// identity in a header. Headers are written by the client unless a proxy
+// in front of the server overwrites them, so identity read from one is
+// only as trustworthy as the gate that admits the request.
+type RequestGate func(r *http.Request) bool
+
+// TrustAllRequests is a RequestGate that admits every request. Use it only
+// when the server cannot be reached except through a proxy that removes
+// the identity header from client requests and sets it itself; otherwise
+// any client can sign in as anyone by sending the header.
+func TrustAllRequests(*http.Request) bool { return true }
+
+// TrustedProxyNetworks returns a RequestGate that admits requests whose
+// direct peer address (r.RemoteAddr, never a forwarded-for header) is in
+// one of the CIDR ranges, such as the load balancer's.
+func TrustedProxyNetworks(cidrs ...string) (RequestGate, error) {
+	prefixes := make([]netip.Prefix, 0, len(cidrs))
+	for _, c := range cidrs {
+		p, err := netip.ParsePrefix(c)
+		if err != nil {
+			return nil, fmt.Errorf("systemauth: trusted proxy network %q: %w", c, err)
+		}
+		prefixes = append(prefixes, p)
+	}
+	if len(prefixes) == 0 {
+		return nil, errors.New("systemauth: no trusted proxy networks given")
+	}
+	return func(r *http.Request) bool {
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			return false
+		}
+		addr, err := netip.ParseAddr(host)
+		if err != nil {
+			return false
+		}
+		addr = addr.Unmap()
+		for _, p := range prefixes {
+			if p.Contains(addr) {
+				return true
+			}
+		}
+		return false
+	}, nil
+}
+
+// DefaultSessionProvider is a minimal session provider. It authenticates
+// nobody unless configured with WithTrustedUserIDHeader, so by default
+// every authorization request is sent to the login URL. For a real
+// deployment configure social login, supply your own SessionProvider, or
+// trust a header written by your gateway.
 type DefaultSessionProvider struct {
 	// loginURL is the URL to redirect unauthenticated users to.
 	loginURL string
@@ -48,9 +101,12 @@ type DefaultSessionProvider struct {
 	// consentURL is the URL to redirect users for consent approval.
 	consentURL string
 
-	// userIDHeader is the header containing the authenticated user ID.
-	// Useful for BFF (Backend for Frontend) patterns where a gateway handles auth.
-	userIDHeader string
+	// trustedHeader is the header a trusted gateway sets to the
+	// authenticated user ID; empty means no header is trusted.
+	trustedHeader string
+
+	// gate admits the requests whose trustedHeader is believed.
+	gate RequestGate
 
 	// skipConsent when true, automatically grants all requested scopes.
 	// Useful for first-party applications.
@@ -74,11 +130,17 @@ func WithConsentURL(url string) DefaultSessionProviderOption {
 	}
 }
 
-// WithUserIDHeader sets the header to read user ID from.
-// Default is "X-User-ID".
-func WithUserIDHeader(header string) DefaultSessionProviderOption {
+// WithTrustedUserIDHeader makes the provider authenticate requests as the
+// user named in header, for a gateway that authenticates users and
+// forwards the result (a backend-for-frontend). Only requests the gate
+// admits are believed: pass TrustedProxyNetworks for the gateway's
+// addresses, or TrustAllRequests when the server is reachable only
+// through a gateway that overwrites the header. A nil gate or an empty
+// header trusts nothing.
+func WithTrustedUserIDHeader(header string, gate RequestGate) DefaultSessionProviderOption {
 	return func(p *DefaultSessionProvider) {
-		p.userIDHeader = header
+		p.trustedHeader = header
+		p.gate = gate
 	}
 }
 
@@ -92,10 +154,9 @@ func WithSkipConsent(skip bool) DefaultSessionProviderOption {
 // NewDefaultSessionProvider creates a default session provider.
 func NewDefaultSessionProvider(opts ...DefaultSessionProviderOption) *DefaultSessionProvider {
 	p := &DefaultSessionProvider{
-		loginURL:     "/login",
-		consentURL:   "/consent",
-		userIDHeader: "X-User-ID",
-		skipConsent:  false,
+		loginURL:    "/login",
+		consentURL:  "/consent",
+		skipConsent: false,
 	}
 	for _, opt := range opts {
 		opt(p)
@@ -103,9 +164,18 @@ func NewDefaultSessionProvider(opts ...DefaultSessionProviderOption) *DefaultSes
 	return p
 }
 
-// GetAuthenticatedUser returns the user ID from the configured header.
+// GetAuthenticatedUser returns the user ID from the trusted header when
+// one is configured and the request passes the gate, and "" otherwise.
 func (p *DefaultSessionProvider) GetAuthenticatedUser(r *http.Request) string {
-	return r.Header.Get(p.userIDHeader)
+	if !p.trustsHeader(r) {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(p.trustedHeader))
+}
+
+// trustsHeader reports whether the request's identity header is believed.
+func (p *DefaultSessionProvider) trustsHeader(r *http.Request) bool {
+	return p.trustedHeader != "" && p.gate != nil && p.gate(r)
 }
 
 // RedirectToLogin returns the login URL with the return URL as a
