@@ -1337,6 +1337,14 @@
       {
         "description": "delegation errors are typed and an agent without a delegation is denied; signup's SignupOrGetExisting requires SignupInput.EmailVerified to return an existing account, and SignupWithInvite requires the invited email",
         "commit": "a3682f3"
+      },
+      {
+        "description": "systemauth.WithUserIDHeader is removed; use WithTrustedUserIDHeader with a RequestGate (TrustedProxyNetworks or TrustAllRequests), social login, or your own SessionProvider. DefaultSessionProvider authenticates nobody by default",
+        "commit": "1da7bde"
+      },
+      {
+        "description": "identity/oauth's authorization endpoint refuses requests until WithUserAuthenticator or WithTrustedUserIDHeader is set, and third-party clients are refused until WithConsent is set",
+        "commit": "487920d"
       }
     ],
     "added": [
@@ -1455,6 +1463,10 @@
       {
         "description": "Agents store allowed actions, allowed scopes, and a delegation expiry",
         "commit": "39adbbb"
+      },
+      {
+        "description": "systemauth.RequestGate, TrustAllRequests, and TrustedProxyNetworks; oauth.WithUserAuthenticator, WithTrustedUserIDHeader, WithLoginURL, and WithConsent",
+        "commit": "487920d"
       }
     ],
     "changed": [
@@ -1579,6 +1591,10 @@
       {
         "description": "principal type-specific updates changed shared fields before checking the type, and CreateAgent accepted a missing or inactive delegating principal",
         "commit": "c610901"
+      },
+      {
+        "description": "identity/oauth.NewAPI panicked on every call because the Fosite interceptor was added after routes",
+        "commit": "487920d"
       }
     ],
     "documentation": [
@@ -1658,6 +1674,14 @@
       {
         "description": "SignupWithInvite let anyone holding an invite link join under any email, and SignupOrGetExisting returned an existing account for an unverified email",
         "commit": "ce145f0"
+      },
+      {
+        "description": "SystemAuth's default session provider and identity/oauth's authorization endpoint took the user from an X-User-ID request header, so anyone who could reach the endpoint could obtain an authorization code, and tokens, for any user; header identity is now an explicit, gated opt-in and the default authenticates nobody",
+        "commit": "1da7bde"
+      },
+      {
+        "description": "identity/oauth granted every requested scope to every client without consent; non-first-party clients now need a consent check",
+        "commit": "487920d"
       }
     ]
   }
