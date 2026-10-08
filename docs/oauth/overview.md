@@ -9,7 +9,10 @@ SystemForge includes a full OAuth 2.0 server implementation using [Fosite](https
 | Authorization Code | Web apps, SPAs, mobile apps | Yes (public clients) |
 | Client Credentials | Server-to-server | No |
 | Refresh Token | Token renewal | N/A |
-| JWT Bearer (RFC 7523) | Service accounts | No |
+
+The JWT Bearer grant (RFC 7523) is not implemented. See
+[Service Principals](service-accounts.md) for what exists today for
+non-human identities.
 
 ## Architecture
 
@@ -33,7 +36,7 @@ SystemForge includes a full OAuth 2.0 server implementation using [Fosite](https
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      PostgreSQL                              │
-│  cf_oauth_apps │ cf_oauth_tokens │ cf_oauth_auth_codes      │
+│  sf_oauth_apps │ sf_oauth_tokens │ sf_oauth_auth_codes      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -41,13 +44,11 @@ SystemForge includes a full OAuth 2.0 server implementation using [Fosite](https
 
 | Table | Description |
 |-------|-------------|
-| `cf_oauth_apps` | OAuth client applications |
-| `cf_oauth_app_secrets` | Client secrets (hashed) |
-| `cf_oauth_tokens` | Access and refresh tokens |
-| `cf_oauth_auth_codes` | Authorization codes |
-| `cf_oauth_consents` | User consent records |
-| `cf_service_accounts` | Service accounts |
-| `cf_service_account_key_pairs` | SA key pairs |
+| `sf_oauth_apps` | OAuth client applications |
+| `sf_oauth_app_secrets` | Client secrets (hashed) |
+| `sf_oauth_tokens` | Access and refresh tokens |
+| `sf_oauth_auth_codes` | Authorization codes |
+| `sf_oauth_consents` | User consent records |
 
 ## Endpoints
 
@@ -134,4 +135,4 @@ hash := argon2.IDKey(secret, salt, 3, 64*1024, 4, 32)
 - [OAuth Apps](apps.md) - Creating and managing OAuth apps
 - [Authorization Code](authorization-code.md) - User authorization flow
 - [Client Credentials](client-credentials.md) - Server-to-server auth
-- [Service Accounts](service-accounts.md) - JWT Bearer authentication
+- [Service Principals](service-accounts.md) - Non-human identities and keypair credentials

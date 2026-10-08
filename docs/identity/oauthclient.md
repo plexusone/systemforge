@@ -305,71 +305,54 @@ func (h *AuthHandler) GitHubCallback(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-## Storing OAuth Accounts
+## Linking Provider Logins to Principals
 
-Link OAuth accounts to local users for multiple provider support:
+SystemForge keys every upstream login by its `(provider, subject)` pair and links it to a human principal as an **external identity**. `systemauth.ResolveExternalLogin` implements the account-linking rules over a `systemauth.PrincipalDirectory`:
+
+1. If the `(provider, subject)` pair is already linked, that principal signs in, regardless of the email the provider reports today.
+2. Otherwise a **verified** upstream email links to an existing principal whose own email is also verified.
+3. Otherwise a new human principal is created, which requires a verified email.
+
+An unverified email never links to or creates an account.
 
 ```go
-func (s *UserService) FindOrCreateFromOAuth(ctx context.Context, oauthUser *cfoauth.User) (*User, error) {
-    // Try to find existing OAuth account
-    oauthAccount, err := s.db.OAuthAccount.Query().
-        Where(
-            oauthaccount.ProviderEQ(oauthUser.Provider),
-            oauthaccount.ProviderUserIDEQ(oauthUser.ProviderID),
-        ).
-        WithUser().
-        Only(ctx)
+import (
+    "errors"
+    "time"
 
-    if err == nil {
-        // Found existing account - update tokens
-        s.db.OAuthAccount.UpdateOneID(oauthAccount.ID).
-            SetAccessToken(oauthUser.AccessToken).
-            Save(ctx)
-        return oauthAccount.Edges.User, nil
+    cfoauth "github.com/plexusone/systemforge/identity/oauthclient"
+    "github.com/plexusone/systemforge/identity/systemauth"
+)
+
+// dir := systemauth.NewEntPrincipalDirectory(client)
+func signIn(ctx context.Context, dir systemauth.PrincipalDirectory, u *cfoauth.User) (*systemauth.HumanPrincipal, error) {
+    p, err := systemauth.ResolveExternalLogin(ctx, dir, systemauth.ExternalLogin{
+        Provider:      u.Provider,
+        Subject:       u.ProviderID,
+        Email:         u.Email,
+        EmailVerified: u.EmailVerified,
+        Name:          u.Name,
+        AvatarURL:     u.AvatarURL,
+    }, time.Now())
+    switch {
+    case errors.Is(err, systemauth.ErrEmailNotVerified):
+        // The provider did not assert a verified email; ask the user to verify it.
+    case errors.Is(err, systemauth.ErrEmailConflict):
+        // An account with this email exists but cannot be linked automatically.
+    case errors.Is(err, systemauth.ErrPrincipalInactive):
+        // The principal is deactivated.
     }
-
-    // Check if user exists by email (account linking)
-    user, err := s.db.User.Query().
-        Where(user.EmailEQ(oauthUser.Email)).
-        Only(ctx)
-
-    if err == nil {
-        // Link OAuth account to existing user
-        s.db.OAuthAccount.Create().
-            SetUser(user).
-            SetProvider(oauthUser.Provider).
-            SetProviderUserID(oauthUser.ProviderID).
-            SetAccessToken(oauthUser.AccessToken).
-            Save(ctx)
-        return user, nil
-    }
-
-    // Create new user and OAuth account
-    user, err = s.db.User.Create().
-        SetEmail(oauthUser.Email).
-        SetDisplayName(oauthUser.Name).
-        SetAvatarURL(oauthUser.AvatarURL).
-        Save(ctx)
-    if err != nil {
-        return nil, err
-    }
-
-    s.db.OAuthAccount.Create().
-        SetUser(user).
-        SetProvider(oauthUser.Provider).
-        SetProviderUserID(oauthUser.ProviderID).
-        SetAccessToken(oauthUser.AccessToken).
-        Save(ctx)
-
-    return user, nil
+    return p, err
 }
 ```
+
+The returned `HumanPrincipal.ID` is the principal ID to issue tokens for. `NewEntPrincipalDirectory` stores principals in `sf_principals` and `sf_humans` and links in `sf_external_identities`; `NewMemoryPrincipalDirectory` is available for development and tests. SystemAuth's built-in social login uses this same resolver, so a person who signs in through your application and through SystemAuth resolves to one principal.
 
 ## Security Considerations
 
 1. **Always validate state** - Use `StateManager` or your own CSRF protection
 2. **Use HTTPS in production** - `NewStateManager()` defaults to `Secure: true`; only use `NewStateManagerInsecure()` for local HTTP development
-3. **Store tokens securely** - Encrypt OAuth tokens at rest
+3. **Store tokens securely** - Encrypt any provider tokens you keep at rest
 4. **Validate email ownership** - Key accounts by `Provider` + `ProviderID`; only use `Email` to link to an existing account when `EmailVerified` is true
 5. **Check token expiry** - Refresh tokens before they expire
 
