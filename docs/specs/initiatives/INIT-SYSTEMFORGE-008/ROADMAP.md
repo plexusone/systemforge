@@ -42,7 +42,8 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
   - Depends on: `RMI-SYSTEMFORGE-097`
   - Depends on: `RMI-SYSTEMFORGE-098`
   - Delivered: `0002` also creates the system service principal and reassigns legacy-owned OAuth apps before the tables go, because the new foreign keys otherwise stop an existing database from migrating. Verified on PostgreSQL by seeding a database with the pre-initiative code: without `0002` the new version fails to start; with it, the new version migrates and starts.
-- [ ] `RMI-SYSTEMFORGE-100` Documentation: rewrite `docs/identity/{users,memberships,api-keys}.md`, `docs/oauth/service-accounts.md`, and README identity bullets around the principal model; fix the stale `cf_memberships` reference in `rls/testing.go`
+- [x] `RMI-SYSTEMFORGE-100` Documentation: rewrite `docs/identity/{users,memberships,api-keys}.md`, `docs/oauth/service-accounts.md`, and README identity bullets around the principal model; fix the stale `cf_memberships` reference in `rls/testing.go`
   - Depends on: `RMI-SYSTEMFORGE-099`
+  - Delivered: sixteen pages described the removed model, not four, several still with the Core-era `cf_` prefix. The schema reference is now generated from the Ent schema. Corrections to prior claims: the JWT-bearer grant is not implemented, and imported password hashes must be Argon2id (bcrypt was never accepted). The `rls` test helpers inserted into tables that no longer existed and are fixed and tested against PostgreSQL.
 - [ ] `RMI-SYSTEMFORGE-101` CI grep gate for `sf_users`, `ent.User`, and removed Ent packages; changelog entry and breaking tag v0.14.0; record the release
   - Depends on: `RMI-SYSTEMFORGE-100`
