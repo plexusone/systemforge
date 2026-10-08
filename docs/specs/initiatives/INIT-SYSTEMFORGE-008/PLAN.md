@@ -49,5 +49,6 @@ PRD hold.
 
 - INIT-SYSTEMFORGE-007: optional `Human.email` under application
   configuration, QR login credential type, guardian/educator relationships.
-- If deferred: migrate the service-account JWT-bearer flow onto
-  `ServicePrincipal` + keypair credentials and drop `sf_service_accounts`.
+- Implement the RFC 7523 JWT-bearer grant on `ServicePrincipal` plus
+  `keypair` credentials. It was documented but never wired into Fosite;
+  the service-account tables it described are removed by this initiative.

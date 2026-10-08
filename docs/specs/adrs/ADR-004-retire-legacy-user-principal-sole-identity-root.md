@@ -107,9 +107,8 @@ support it are removed, with no dual-model compatibility layer.
   with the federation as provider and the federation ID as subject.
   `federation_id` is dropped from the model.
 - **Memberships:** `sf_principal_memberships` everywhere, including SCIM.
-- **Ownership edges:** `OAuthApp.owner`, `ServiceAccount.creator` (if the
-  table is retained), and any other `→ User` edge are repointed to
-  `Principal`. The OAuth token, auth-code, and consent tables carry the
+- **Ownership edges:** `OAuthApp.owner` and any other `→ User` edge are
+  repointed to `Principal`. The OAuth token, auth-code, and consent tables carry the
   subject as a principal ID and lose their `user` edge; `legacyUserID` is
   deleted.
 - **Bootstrap:** statically configured OAuth clients are owned by a
@@ -125,10 +124,17 @@ support it are removed, with no dual-model compatibility layer.
 - **API keys:** the `identity/apikey` interface is unchanged; its supported
   backing store is `sf_credentials` type `api_key`. `sf_api_keys` is removed.
 - **Removed schemas:** `User`, `Membership`, `OAuthAccount`, `RefreshToken`,
-  `APIKey`. `ServiceAccount` and `ServiceAccountKeyPair` are removed as well
-  if the RFC 7523 service-account path is confirmed to run on
-  `ServicePrincipal` + keypair credentials; otherwise their creator edge is
-  repointed and their retirement becomes a follow-on.
+  `APIKey`, `ServiceAccount`, and `ServiceAccountKeyPair`, together with the
+  columns and edges that point at them (`OAuthToken.service_account_id`,
+  `Organization.service_accounts`).
+- **Service accounts:** resolved during execution. SystemAuth does not
+  implement the RFC 7523 JWT-bearer grant: neither Fosite composition
+  registers it, and no code reads `sf_service_accounts` or its key pairs,
+  so the tables are unreachable and are removed. Non-human identities use
+  `Principal(type=service)` with its `ServicePrincipal` extension, and
+  public keys are `sf_credentials` rows of type `keypair`, which the
+  `identity/credential` service already creates and looks up by key ID. A
+  future JWT-bearer grant is built on those, not on the removed tables.
 
 ### Execution
 
