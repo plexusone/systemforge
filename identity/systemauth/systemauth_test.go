@@ -203,7 +203,7 @@ func TestInvalidClient(t *testing.T) {
 func TestAuthorizationCodeFlow(t *testing.T) {
 	// Create a session provider that auto-authenticates and auto-consents
 	sessionProvider := systemauth.NewDefaultSessionProvider(
-		systemauth.WithUserIDHeader("X-Test-User"),
+		systemauth.WithTrustedUserIDHeader("X-Test-User", systemauth.TrustAllRequests),
 		systemauth.WithSkipConsent(true),
 	)
 
@@ -291,7 +291,7 @@ func TestAuthorizationCodeFlow(t *testing.T) {
 func TestAuthorizationCodeFlowConsentRequired(t *testing.T) {
 	// Create a session provider that requires consent
 	sessionProvider := systemauth.NewDefaultSessionProvider(
-		systemauth.WithUserIDHeader("X-Test-User"),
+		systemauth.WithTrustedUserIDHeader("X-Test-User", systemauth.TrustAllRequests),
 		systemauth.WithSkipConsent(false),
 		systemauth.WithConsentURL("/custom-consent"),
 	)

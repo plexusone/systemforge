@@ -110,7 +110,7 @@ func headerUser(id string) func(*http.Request) {
 
 func newRefreshTestServer(t *testing.T, opts ...Option) *Server {
 	t.Helper()
-	opts = append([]Option{WithSessionProvider(NewDefaultSessionProvider(WithSkipConsent(true)))}, opts...)
+	opts = append([]Option{WithSessionProvider(NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", TrustAllRequests), WithSkipConsent(true)))}, opts...)
 	s, err := NewEmbedded(Config{
 		Issuer: testIssuer,
 		Clients: []ClientConfig{{
@@ -522,5 +522,67 @@ func TestMemoryConsentStore(t *testing.T) {
 	}
 	if ok, err := store.HasConsent(ctx, "p", "c", nil); err != nil || ok {
 		t.Errorf("revoked consent still present: %v %v", ok, err)
+	}
+}
+
+func TestDefaultSessionProviderTrustsNoHeaderByDefault(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/oauth/authorize", nil)
+	req.Header.Set("X-User-ID", "someone-else")
+	if got := NewDefaultSessionProvider().GetAuthenticatedUser(req); got != "" {
+		t.Errorf("default provider authenticated %q from a client-supplied header", got)
+	}
+	// Naming a header without a gate trusts nothing either.
+	if got := NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", nil)).GetAuthenticatedUser(req); got != "" {
+		t.Errorf("a header without a gate authenticated %q", got)
+	}
+	if got := NewDefaultSessionProvider(WithTrustedUserIDHeader("", TrustAllRequests)).GetAuthenticatedUser(req); got != "" {
+		t.Errorf("an empty header name authenticated %q", got)
+	}
+}
+
+func TestTrustedHeaderIsGated(t *testing.T) {
+	gate, err := TrustedProxyNetworks("10.0.0.0/8", "2001:db8::/32")
+	if err != nil {
+		t.Fatalf("TrustedProxyNetworks: %v", err)
+	}
+	p := NewDefaultSessionProvider(WithTrustedUserIDHeader("X-Auth-User", gate))
+	for _, tc := range []struct {
+		name, remote, forwarded string
+		want                    string
+	}{
+		{"from the proxy", "10.1.2.3:4444", "", "kim"},
+		{"from the proxy over IPv6", "[2001:db8::7]:4444", "", "kim"},
+		{"from the internet", "203.0.113.9:4444", "", ""},
+		{"forged forwarded-for does not admit", "203.0.113.9:4444", "10.1.2.3", ""},
+		{"unparseable peer", "garbage", "", ""},
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/oauth/authorize", nil)
+		req.RemoteAddr = tc.remote
+		req.Header.Set("X-Auth-User", "kim")
+		if tc.forwarded != "" {
+			req.Header.Set("X-Forwarded-For", tc.forwarded)
+		}
+		if got := p.GetAuthenticatedUser(req); got != tc.want {
+			t.Errorf("%s: authenticated %q, want %q", tc.name, got, tc.want)
+		}
+	}
+	if _, err := TrustedProxyNetworks(); err == nil {
+		t.Error("no networks accepted")
+	}
+	if _, err := TrustedProxyNetworks("not-a-cidr"); err == nil {
+		t.Error("a malformed network accepted")
+	}
+}
+
+// TestUnauthenticatedAuthorizeGoesToLogin verifies that, by default, a
+// client-supplied header cannot obtain an authorization code.
+func TestUnauthenticatedAuthorizeGoesToLogin(t *testing.T) {
+	s := newRefreshTestServer(t, WithSessionProvider(NewDefaultSessionProvider(WithSkipConsent(true))))
+	req := httptest.NewRequest(http.MethodGet, authorizeURL("openid"), nil)
+	headerUser(uuid.NewString())(req)
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	if w.Code != http.StatusFound || !strings.HasPrefix(w.Header().Get("Location"), "/login") {
+		t.Errorf("authorize with only a header: %d %q, want a redirect to login", w.Code, w.Header().Get("Location"))
 	}
 }
