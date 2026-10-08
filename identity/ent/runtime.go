@@ -18,6 +18,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/listing"
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
@@ -397,6 +398,33 @@ func init() {
 	loginstateDescID := loginstateFields[0].Descriptor()
 	// loginstate.DefaultID holds the default value on creation for the id field.
 	loginstate.DefaultID = loginstateDescID.Default.(func() uuid.UUID)
+	managerrelationshipMixin := schema.ManagerRelationship{}.Mixin()
+	managerrelationshipMixinFields0 := managerrelationshipMixin[0].Fields()
+	_ = managerrelationshipMixinFields0
+	managerrelationshipFields := schema.ManagerRelationship{}.Fields()
+	_ = managerrelationshipFields
+	// managerrelationshipDescCreatedAt is the schema descriptor for created_at field.
+	managerrelationshipDescCreatedAt := managerrelationshipMixinFields0[1].Descriptor()
+	// managerrelationship.DefaultCreatedAt holds the default value on creation for the created_at field.
+	managerrelationship.DefaultCreatedAt = managerrelationshipDescCreatedAt.Default.(func() time.Time)
+	// managerrelationshipDescUpdatedAt is the schema descriptor for updated_at field.
+	managerrelationshipDescUpdatedAt := managerrelationshipMixinFields0[2].Descriptor()
+	// managerrelationship.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	managerrelationship.DefaultUpdatedAt = managerrelationshipDescUpdatedAt.Default.(func() time.Time)
+	// managerrelationship.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	managerrelationship.UpdateDefaultUpdatedAt = managerrelationshipDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// managerrelationshipDescRole is the schema descriptor for role field.
+	managerrelationshipDescRole := managerrelationshipFields[2].Descriptor()
+	// managerrelationship.RoleValidator is a validator for the "role" field. It is called by the builders before save.
+	managerrelationship.RoleValidator = managerrelationshipDescRole.Validators[0].(func(string) error)
+	// managerrelationshipDescActive is the schema descriptor for active field.
+	managerrelationshipDescActive := managerrelationshipFields[3].Descriptor()
+	// managerrelationship.DefaultActive holds the default value on creation for the active field.
+	managerrelationship.DefaultActive = managerrelationshipDescActive.Default.(bool)
+	// managerrelationshipDescID is the schema descriptor for id field.
+	managerrelationshipDescID := managerrelationshipMixinFields0[0].Descriptor()
+	// managerrelationship.DefaultID holds the default value on creation for the id field.
+	managerrelationship.DefaultID = managerrelationshipDescID.Default.(func() uuid.UUID)
 	oauthappFields := schema.OAuthApp{}.Fields()
 	_ = oauthappFields
 	// oauthappDescClientID is the schema descriptor for client_id field.

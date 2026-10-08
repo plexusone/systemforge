@@ -399,6 +399,30 @@ func (f LoginStateMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Muta
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.LoginStateMutation", m)
 }
 
+// The ManagerRelationshipQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type ManagerRelationshipQueryRuleFunc func(context.Context, *ent.ManagerRelationshipQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f ManagerRelationshipQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ManagerRelationshipQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ManagerRelationshipQuery", q)
+}
+
+// The ManagerRelationshipMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type ManagerRelationshipMutationRuleFunc func(context.Context, *ent.ManagerRelationshipMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f ManagerRelationshipMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.ManagerRelationshipMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ManagerRelationshipMutation", m)
+}
+
 // The OAuthAppQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type OAuthAppQueryRuleFunc func(context.Context, *ent.OAuthAppQuery) error
@@ -746,6 +770,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.LoginStateQuery:
 		return q.Filter(), nil
+	case *ent.ManagerRelationshipQuery:
+		return q.Filter(), nil
 	case *ent.OAuthAppQuery:
 		return q.Filter(), nil
 	case *ent.OAuthAppSecretQuery:
@@ -800,6 +826,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.LoginSessionMutation:
 		return m.Filter(), nil
 	case *ent.LoginStateMutation:
+		return m.Filter(), nil
+	case *ent.ManagerRelationshipMutation:
 		return m.Filter(), nil
 	case *ent.OAuthAppMutation:
 		return m.Filter(), nil

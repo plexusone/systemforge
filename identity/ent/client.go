@@ -28,6 +28,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/listing"
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
@@ -73,6 +74,8 @@ type Client struct {
 	LoginSession *LoginSessionClient
 	// LoginState is the client for interacting with the LoginState builders.
 	LoginState *LoginStateClient
+	// ManagerRelationship is the client for interacting with the ManagerRelationship builders.
+	ManagerRelationship *ManagerRelationshipClient
 	// OAuthApp is the client for interacting with the OAuthApp builders.
 	OAuthApp *OAuthAppClient
 	// OAuthAppSecret is the client for interacting with the OAuthAppSecret builders.
@@ -120,6 +123,7 @@ func (c *Client) init() {
 	c.Listing = NewListingClient(c.config)
 	c.LoginSession = NewLoginSessionClient(c.config)
 	c.LoginState = NewLoginStateClient(c.config)
+	c.ManagerRelationship = NewManagerRelationshipClient(c.config)
 	c.OAuthApp = NewOAuthAppClient(c.config)
 	c.OAuthAppSecret = NewOAuthAppSecretClient(c.config)
 	c.OAuthAuthCode = NewOAuthAuthCodeClient(c.config)
@@ -236,6 +240,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Listing:             NewListingClient(cfg),
 		LoginSession:        NewLoginSessionClient(cfg),
 		LoginState:          NewLoginStateClient(cfg),
+		ManagerRelationship: NewManagerRelationshipClient(cfg),
 		OAuthApp:            NewOAuthAppClient(cfg),
 		OAuthAppSecret:      NewOAuthAppSecretClient(cfg),
 		OAuthAuthCode:       NewOAuthAuthCodeClient(cfg),
@@ -279,6 +284,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Listing:             NewListingClient(cfg),
 		LoginSession:        NewLoginSessionClient(cfg),
 		LoginState:          NewLoginStateClient(cfg),
+		ManagerRelationship: NewManagerRelationshipClient(cfg),
 		OAuthApp:            NewOAuthAppClient(cfg),
 		OAuthAppSecret:      NewOAuthAppSecretClient(cfg),
 		OAuthAuthCode:       NewOAuthAuthCodeClient(cfg),
@@ -322,9 +328,10 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Agent, c.Application, c.ClientAssertionJTI, c.ConsentGrant, c.Credential,
 		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
-		c.LoginState, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent,
-		c.OAuthToken, c.Organization, c.Principal, c.PrincipalMembership,
-		c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal, c.Subscription,
+		c.LoginState, c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret,
+		c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
+		c.PrincipalMembership, c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal,
+		c.Subscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -336,9 +343,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Agent, c.Application, c.ClientAssertionJTI, c.ConsentGrant, c.Credential,
 		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
-		c.LoginState, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent,
-		c.OAuthToken, c.Organization, c.Principal, c.PrincipalMembership,
-		c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal, c.Subscription,
+		c.LoginState, c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret,
+		c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
+		c.PrincipalMembership, c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal,
+		c.Subscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -371,6 +379,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.LoginSession.mutate(ctx, m)
 	case *LoginStateMutation:
 		return c.LoginState.mutate(ctx, m)
+	case *ManagerRelationshipMutation:
+		return c.ManagerRelationship.mutate(ctx, m)
 	case *OAuthAppMutation:
 		return c.OAuthApp.mutate(ctx, m)
 	case *OAuthAppSecretMutation:
@@ -2252,6 +2262,171 @@ func (c *LoginStateClient) mutate(ctx context.Context, m *LoginStateMutation) (V
 	}
 }
 
+// ManagerRelationshipClient is a client for the ManagerRelationship schema.
+type ManagerRelationshipClient struct {
+	config
+}
+
+// NewManagerRelationshipClient returns a client for the ManagerRelationship from the given config.
+func NewManagerRelationshipClient(c config) *ManagerRelationshipClient {
+	return &ManagerRelationshipClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `managerrelationship.Hooks(f(g(h())))`.
+func (c *ManagerRelationshipClient) Use(hooks ...Hook) {
+	c.hooks.ManagerRelationship = append(c.hooks.ManagerRelationship, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `managerrelationship.Intercept(f(g(h())))`.
+func (c *ManagerRelationshipClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ManagerRelationship = append(c.inters.ManagerRelationship, interceptors...)
+}
+
+// Create returns a builder for creating a ManagerRelationship entity.
+func (c *ManagerRelationshipClient) Create() *ManagerRelationshipCreate {
+	mutation := newManagerRelationshipMutation(c.config, OpCreate)
+	return &ManagerRelationshipCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ManagerRelationship entities.
+func (c *ManagerRelationshipClient) CreateBulk(builders ...*ManagerRelationshipCreate) *ManagerRelationshipCreateBulk {
+	return &ManagerRelationshipCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ManagerRelationshipClient) MapCreateBulk(slice any, setFunc func(*ManagerRelationshipCreate, int)) *ManagerRelationshipCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ManagerRelationshipCreateBulk{err: fmt.Errorf("calling to ManagerRelationshipClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ManagerRelationshipCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ManagerRelationshipCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ManagerRelationship.
+func (c *ManagerRelationshipClient) Update() *ManagerRelationshipUpdate {
+	mutation := newManagerRelationshipMutation(c.config, OpUpdate)
+	return &ManagerRelationshipUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ManagerRelationshipClient) UpdateOne(_m *ManagerRelationship) *ManagerRelationshipUpdateOne {
+	mutation := newManagerRelationshipMutation(c.config, OpUpdateOne, withManagerRelationship(_m))
+	return &ManagerRelationshipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ManagerRelationshipClient) UpdateOneID(id uuid.UUID) *ManagerRelationshipUpdateOne {
+	mutation := newManagerRelationshipMutation(c.config, OpUpdateOne, withManagerRelationshipID(id))
+	return &ManagerRelationshipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ManagerRelationship.
+func (c *ManagerRelationshipClient) Delete() *ManagerRelationshipDelete {
+	mutation := newManagerRelationshipMutation(c.config, OpDelete)
+	return &ManagerRelationshipDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ManagerRelationshipClient) DeleteOne(_m *ManagerRelationship) *ManagerRelationshipDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ManagerRelationshipClient) DeleteOneID(id uuid.UUID) *ManagerRelationshipDeleteOne {
+	builder := c.Delete().Where(managerrelationship.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ManagerRelationshipDeleteOne{builder}
+}
+
+// Query returns a query builder for ManagerRelationship.
+func (c *ManagerRelationshipClient) Query() *ManagerRelationshipQuery {
+	return &ManagerRelationshipQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeManagerRelationship},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ManagerRelationship entity by its id.
+func (c *ManagerRelationshipClient) Get(ctx context.Context, id uuid.UUID) (*ManagerRelationship, error) {
+	return c.Query().Where(managerrelationship.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ManagerRelationshipClient) GetX(ctx context.Context, id uuid.UUID) *ManagerRelationship {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryManaged queries the managed edge of a ManagerRelationship.
+func (c *ManagerRelationshipClient) QueryManaged(_m *ManagerRelationship) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(managerrelationship.Table, managerrelationship.FieldID, id),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, managerrelationship.ManagedTable, managerrelationship.ManagedColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryManager queries the manager edge of a ManagerRelationship.
+func (c *ManagerRelationshipClient) QueryManager(_m *ManagerRelationship) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(managerrelationship.Table, managerrelationship.FieldID, id),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, managerrelationship.ManagerTable, managerrelationship.ManagerColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ManagerRelationshipClient) Hooks() []Hook {
+	return c.hooks.ManagerRelationship
+}
+
+// Interceptors returns the client interceptors.
+func (c *ManagerRelationshipClient) Interceptors() []Interceptor {
+	return c.inters.ManagerRelationship
+}
+
+func (c *ManagerRelationshipClient) mutate(ctx context.Context, m *ManagerRelationshipMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ManagerRelationshipCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ManagerRelationshipUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ManagerRelationshipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ManagerRelationshipDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ManagerRelationship mutation op: %q", m.Op())
+	}
+}
+
 // OAuthAppClient is a client for the OAuthApp schema.
 type OAuthAppClient struct {
 	config
@@ -3638,6 +3813,38 @@ func (c *PrincipalClient) QueryOwnedOauthApps(_m *Principal) *OAuthAppQuery {
 	return query
 }
 
+// QueryManagers queries the managers edge of a Principal.
+func (c *PrincipalClient) QueryManagers(_m *Principal) *ManagerRelationshipQuery {
+	query := (&ManagerRelationshipClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, id),
+			sqlgraph.To(managerrelationship.Table, managerrelationship.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.ManagersTable, principal.ManagersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryManaging queries the managing edge of a Principal.
+func (c *PrincipalClient) QueryManaging(_m *Principal) *ManagerRelationshipQuery {
+	query := (&ManagerRelationshipClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, id),
+			sqlgraph.To(managerrelationship.Table, managerrelationship.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.ManagingTable, principal.ManagingColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryOauthConsents queries the oauth_consents edge of a Principal.
 func (c *PrincipalClient) QueryOauthConsents(_m *Principal) *OAuthConsentQuery {
 	query := (&OAuthConsentClient{config: c.config}).Query()
@@ -4621,16 +4828,16 @@ type (
 	hooks struct {
 		Agent, Application, ClientAssertionJTI, ConsentGrant, Credential,
 		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
-		OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken,
-		Organization, Principal, PrincipalMembership, PrincipalToken, SeatAssignment,
-		ServicePrincipal, Subscription []ent.Hook
+		ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent,
+		OAuthToken, Organization, Principal, PrincipalMembership, PrincipalToken,
+		SeatAssignment, ServicePrincipal, Subscription []ent.Hook
 	}
 	inters struct {
 		Agent, Application, ClientAssertionJTI, ConsentGrant, Credential,
 		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
-		OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken,
-		Organization, Principal, PrincipalMembership, PrincipalToken, SeatAssignment,
-		ServicePrincipal, Subscription []ent.Interceptor
+		ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent,
+		OAuthToken, Organization, Principal, PrincipalMembership, PrincipalToken,
+		SeatAssignment, ServicePrincipal, Subscription []ent.Interceptor
 	}
 )
 

@@ -619,6 +619,49 @@ var (
 			},
 		},
 	}
+	// SfManagerRelationshipsColumns holds the columns for the "sf_manager_relationships" table.
+	SfManagerRelationshipsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "role", Type: field.TypeString},
+		{Name: "active", Type: field.TypeBool, Default: true},
+		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "managed_principal_id", Type: field.TypeUUID},
+		{Name: "manager_principal_id", Type: field.TypeUUID},
+	}
+	// SfManagerRelationshipsTable holds the schema information for the "sf_manager_relationships" table.
+	SfManagerRelationshipsTable = &schema.Table{
+		Name:       "sf_manager_relationships",
+		Columns:    SfManagerRelationshipsColumns,
+		PrimaryKey: []*schema.Column{SfManagerRelationshipsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "sf_manager_relationships_sf_principals_managers",
+				Columns:    []*schema.Column{SfManagerRelationshipsColumns[6]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "sf_manager_relationships_sf_principals_managing",
+				Columns:    []*schema.Column{SfManagerRelationshipsColumns[7]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "managerrelationship_managed_principal_id_manager_principal_id_role",
+				Unique:  true,
+				Columns: []*schema.Column{SfManagerRelationshipsColumns[6], SfManagerRelationshipsColumns[7], SfManagerRelationshipsColumns[3]},
+			},
+			{
+				Name:    "managerrelationship_manager_principal_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfManagerRelationshipsColumns[7]},
+			},
+		},
+	}
 	// SfOauthAppsColumns holds the columns for the "sf_oauth_apps" table.
 	SfOauthAppsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1385,6 +1428,7 @@ var (
 		SfListingsTable,
 		SfLoginSessionsTable,
 		SfLoginStatesTable,
+		SfManagerRelationshipsTable,
 		SfOauthAppsTable,
 		SfOauthAppSecretsTable,
 		SfOauthAuthCodesTable,
@@ -1449,6 +1493,11 @@ func init() {
 	}
 	SfLoginStatesTable.Annotation = &entsql.Annotation{
 		Table: "sf_login_states",
+	}
+	SfManagerRelationshipsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfManagerRelationshipsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
+	SfManagerRelationshipsTable.Annotation = &entsql.Annotation{
+		Table: "sf_manager_relationships",
 	}
 	SfOauthAppsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
 	SfOauthAppsTable.ForeignKeys[1].RefTable = SfPrincipalsTable

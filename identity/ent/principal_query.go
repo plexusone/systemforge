@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
@@ -50,6 +51,8 @@ type PrincipalQuery struct {
 	withPrincipalMemberships *PrincipalMembershipQuery
 	withOwnedOrganizations   *OrganizationQuery
 	withOwnedOauthApps       *OAuthAppQuery
+	withManagers             *ManagerRelationshipQuery
+	withManaging             *ManagerRelationshipQuery
 	withOauthConsents        *OAuthConsentQuery
 	withSentInvites          *InviteQuery
 	withOwnedListings        *ListingQuery
@@ -327,6 +330,50 @@ func (_q *PrincipalQuery) QueryOwnedOauthApps() *OAuthAppQuery {
 			sqlgraph.From(principal.Table, principal.FieldID, selector),
 			sqlgraph.To(oauthapp.Table, oauthapp.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, principal.OwnedOauthAppsTable, principal.OwnedOauthAppsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryManagers chains the current query on the "managers" edge.
+func (_q *PrincipalQuery) QueryManagers() *ManagerRelationshipQuery {
+	query := (&ManagerRelationshipClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, selector),
+			sqlgraph.To(managerrelationship.Table, managerrelationship.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.ManagersTable, principal.ManagersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryManaging chains the current query on the "managing" edge.
+func (_q *PrincipalQuery) QueryManaging() *ManagerRelationshipQuery {
+	query := (&ManagerRelationshipClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, selector),
+			sqlgraph.To(managerrelationship.Table, managerrelationship.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.ManagingTable, principal.ManagingColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -669,6 +716,8 @@ func (_q *PrincipalQuery) Clone() *PrincipalQuery {
 		withPrincipalMemberships: _q.withPrincipalMemberships.Clone(),
 		withOwnedOrganizations:   _q.withOwnedOrganizations.Clone(),
 		withOwnedOauthApps:       _q.withOwnedOauthApps.Clone(),
+		withManagers:             _q.withManagers.Clone(),
+		withManaging:             _q.withManaging.Clone(),
 		withOauthConsents:        _q.withOauthConsents.Clone(),
 		withSentInvites:          _q.withSentInvites.Clone(),
 		withOwnedListings:        _q.withOwnedListings.Clone(),
@@ -799,6 +848,28 @@ func (_q *PrincipalQuery) WithOwnedOauthApps(opts ...func(*OAuthAppQuery)) *Prin
 		opt(query)
 	}
 	_q.withOwnedOauthApps = query
+	return _q
+}
+
+// WithManagers tells the query-builder to eager-load the nodes that are connected to
+// the "managers" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PrincipalQuery) WithManagers(opts ...func(*ManagerRelationshipQuery)) *PrincipalQuery {
+	query := (&ManagerRelationshipClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withManagers = query
+	return _q
+}
+
+// WithManaging tells the query-builder to eager-load the nodes that are connected to
+// the "managing" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PrincipalQuery) WithManaging(opts ...func(*ManagerRelationshipQuery)) *PrincipalQuery {
+	query := (&ManagerRelationshipClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withManaging = query
 	return _q
 }
 
@@ -946,7 +1017,7 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 	var (
 		nodes       = []*Principal{}
 		_spec       = _q.querySpec()
-		loadedTypes = [17]bool{
+		loadedTypes = [19]bool{
 			_q.withOrganization != nil,
 			_q.withHuman != nil,
 			_q.withApplication != nil,
@@ -958,6 +1029,8 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 			_q.withPrincipalMemberships != nil,
 			_q.withOwnedOrganizations != nil,
 			_q.withOwnedOauthApps != nil,
+			_q.withManagers != nil,
+			_q.withManaging != nil,
 			_q.withOauthConsents != nil,
 			_q.withSentInvites != nil,
 			_q.withOwnedListings != nil,
@@ -1059,6 +1132,20 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 		if err := _q.loadOwnedOauthApps(ctx, query, nodes,
 			func(n *Principal) { n.Edges.OwnedOauthApps = []*OAuthApp{} },
 			func(n *Principal, e *OAuthApp) { n.Edges.OwnedOauthApps = append(n.Edges.OwnedOauthApps, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withManagers; query != nil {
+		if err := _q.loadManagers(ctx, query, nodes,
+			func(n *Principal) { n.Edges.Managers = []*ManagerRelationship{} },
+			func(n *Principal, e *ManagerRelationship) { n.Edges.Managers = append(n.Edges.Managers, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withManaging; query != nil {
+		if err := _q.loadManaging(ctx, query, nodes,
+			func(n *Principal) { n.Edges.Managing = []*ManagerRelationship{} },
+			func(n *Principal, e *ManagerRelationship) { n.Edges.Managing = append(n.Edges.Managing, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1425,6 +1512,66 @@ func (_q *PrincipalQuery) loadOwnedOauthApps(ctx context.Context, query *OAuthAp
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "owner_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PrincipalQuery) loadManagers(ctx context.Context, query *ManagerRelationshipQuery, nodes []*Principal, init func(*Principal), assign func(*Principal, *ManagerRelationship)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Principal)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(managerrelationship.FieldManagedPrincipalID)
+	}
+	query.Where(predicate.ManagerRelationship(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(principal.ManagersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ManagedPrincipalID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "managed_principal_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PrincipalQuery) loadManaging(ctx context.Context, query *ManagerRelationshipQuery, nodes []*Principal, init func(*Principal), assign func(*Principal, *ManagerRelationship)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Principal)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(managerrelationship.FieldManagerPrincipalID)
+	}
+	query.Where(predicate.ManagerRelationship(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(principal.ManagingColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ManagerPrincipalID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "manager_principal_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

@@ -132,6 +132,14 @@ func (Principal) Edges() []ent.Edge {
 		edge.To("owned_oauth_apps", OAuthApp.Type).
 			Comment("OAuth applications owned by this principal"),
 
+		// Manager relationships in which this principal is managed
+		edge.To("managers", ManagerRelationship.Type).
+			Comment("Relationships naming this principal's managers"),
+
+		// Manager relationships in which this principal is the manager
+		edge.To("managing", ManagerRelationship.Type).
+			Comment("Relationships in which this principal manages another"),
+
 		// OAuth consents granted by this principal
 		edge.To("oauth_consents", OAuthConsent.Type).
 			Comment("OAuth consents granted by this principal"),

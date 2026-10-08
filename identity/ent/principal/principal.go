@@ -58,6 +58,10 @@ const (
 	EdgeOwnedOrganizations = "owned_organizations"
 	// EdgeOwnedOauthApps holds the string denoting the owned_oauth_apps edge name in mutations.
 	EdgeOwnedOauthApps = "owned_oauth_apps"
+	// EdgeManagers holds the string denoting the managers edge name in mutations.
+	EdgeManagers = "managers"
+	// EdgeManaging holds the string denoting the managing edge name in mutations.
+	EdgeManaging = "managing"
 	// EdgeOauthConsents holds the string denoting the oauth_consents edge name in mutations.
 	EdgeOauthConsents = "oauth_consents"
 	// EdgeSentInvites holds the string denoting the sent_invites edge name in mutations.
@@ -149,6 +153,20 @@ const (
 	OwnedOauthAppsInverseTable = "sf_oauth_apps"
 	// OwnedOauthAppsColumn is the table column denoting the owned_oauth_apps relation/edge.
 	OwnedOauthAppsColumn = "owner_id"
+	// ManagersTable is the table that holds the managers relation/edge.
+	ManagersTable = "sf_manager_relationships"
+	// ManagersInverseTable is the table name for the ManagerRelationship entity.
+	// It exists in this package in order to avoid circular dependency with the "managerrelationship" package.
+	ManagersInverseTable = "sf_manager_relationships"
+	// ManagersColumn is the table column denoting the managers relation/edge.
+	ManagersColumn = "managed_principal_id"
+	// ManagingTable is the table that holds the managing relation/edge.
+	ManagingTable = "sf_manager_relationships"
+	// ManagingInverseTable is the table name for the ManagerRelationship entity.
+	// It exists in this package in order to avoid circular dependency with the "managerrelationship" package.
+	ManagingInverseTable = "sf_manager_relationships"
+	// ManagingColumn is the table column denoting the managing relation/edge.
+	ManagingColumn = "manager_principal_id"
 	// OauthConsentsTable is the table that holds the oauth_consents relation/edge.
 	OauthConsentsTable = "sf_oauth_consents"
 	// OauthConsentsInverseTable is the table name for the OAuthConsent entity.
@@ -426,6 +444,34 @@ func ByOwnedOauthApps(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByManagersCount orders the results by managers count.
+func ByManagersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newManagersStep(), opts...)
+	}
+}
+
+// ByManagers orders the results by managers terms.
+func ByManagers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newManagersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByManagingCount orders the results by managing count.
+func ByManagingCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newManagingStep(), opts...)
+	}
+}
+
+// ByManaging orders the results by managing terms.
+func ByManaging(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newManagingStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByOauthConsentsCount orders the results by oauth_consents count.
 func ByOauthConsentsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -584,6 +630,20 @@ func newOwnedOauthAppsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OwnedOauthAppsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, OwnedOauthAppsTable, OwnedOauthAppsColumn),
+	)
+}
+func newManagersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ManagersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ManagersTable, ManagersColumn),
+	)
+}
+func newManagingStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ManagingInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ManagingTable, ManagingColumn),
 	)
 }
 func newOauthConsentsStep() *sqlgraph.Step {

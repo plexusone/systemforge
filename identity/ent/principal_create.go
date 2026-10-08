@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
@@ -314,6 +315,36 @@ func (_c *PrincipalCreate) AddOwnedOauthApps(v ...*OAuthApp) *PrincipalCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddOwnedOauthAppIDs(ids...)
+}
+
+// AddManagerIDs adds the "managers" edge to the ManagerRelationship entity by IDs.
+func (_c *PrincipalCreate) AddManagerIDs(ids ...uuid.UUID) *PrincipalCreate {
+	_c.mutation.AddManagerIDs(ids...)
+	return _c
+}
+
+// AddManagers adds the "managers" edges to the ManagerRelationship entity.
+func (_c *PrincipalCreate) AddManagers(v ...*ManagerRelationship) *PrincipalCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddManagerIDs(ids...)
+}
+
+// AddManagingIDs adds the "managing" edge to the ManagerRelationship entity by IDs.
+func (_c *PrincipalCreate) AddManagingIDs(ids ...uuid.UUID) *PrincipalCreate {
+	_c.mutation.AddManagingIDs(ids...)
+	return _c
+}
+
+// AddManaging adds the "managing" edges to the ManagerRelationship entity.
+func (_c *PrincipalCreate) AddManaging(v ...*ManagerRelationship) *PrincipalCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddManagingIDs(ids...)
 }
 
 // AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by IDs.
@@ -750,6 +781,38 @@ func (_c *PrincipalCreate) createSpec() (*Principal, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ManagersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagersTable,
+			Columns: []string{principal.ManagersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ManagingIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagingTable,
+			Columns: []string{principal.ManagingColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

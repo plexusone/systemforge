@@ -24,6 +24,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/listing"
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
@@ -60,6 +61,7 @@ const (
 	TypeListing             = "Listing"
 	TypeLoginSession        = "LoginSession"
 	TypeLoginState          = "LoginState"
+	TypeManagerRelationship = "ManagerRelationship"
 	TypeOAuthApp            = "OAuthApp"
 	TypeOAuthAppSecret      = "OAuthAppSecret"
 	TypeOAuthAuthCode       = "OAuthAuthCode"
@@ -12476,6 +12478,810 @@ func (m *LoginStateMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown LoginState edge %s", name)
 }
 
+// ManagerRelationshipMutation represents an operation that mutates the ManagerRelationship nodes in the graph.
+type ManagerRelationshipMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	created_at     *time.Time
+	updated_at     *time.Time
+	role           *string
+	active         *bool
+	created_by     *uuid.UUID
+	clearedFields  map[string]struct{}
+	managed        *uuid.UUID
+	clearedmanaged bool
+	manager        *uuid.UUID
+	clearedmanager bool
+	done           bool
+	oldValue       func(context.Context) (*ManagerRelationship, error)
+	predicates     []predicate.ManagerRelationship
+}
+
+var _ ent.Mutation = (*ManagerRelationshipMutation)(nil)
+
+// managerrelationshipOption allows management of the mutation configuration using functional options.
+type managerrelationshipOption func(*ManagerRelationshipMutation)
+
+// newManagerRelationshipMutation creates new mutation for the ManagerRelationship entity.
+func newManagerRelationshipMutation(c config, op Op, opts ...managerrelationshipOption) *ManagerRelationshipMutation {
+	m := &ManagerRelationshipMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeManagerRelationship,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withManagerRelationshipID sets the ID field of the mutation.
+func withManagerRelationshipID(id uuid.UUID) managerrelationshipOption {
+	return func(m *ManagerRelationshipMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ManagerRelationship
+		)
+		m.oldValue = func(ctx context.Context) (*ManagerRelationship, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ManagerRelationship.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withManagerRelationship sets the old ManagerRelationship of the mutation.
+func withManagerRelationship(node *ManagerRelationship) managerrelationshipOption {
+	return func(m *ManagerRelationshipMutation) {
+		m.oldValue = func(context.Context) (*ManagerRelationship, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ManagerRelationshipMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ManagerRelationshipMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ManagerRelationship entities.
+func (m *ManagerRelationshipMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ManagerRelationshipMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ManagerRelationshipMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ManagerRelationship.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ManagerRelationshipMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ManagerRelationshipMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ManagerRelationship entity.
+// If the ManagerRelationship object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerRelationshipMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ManagerRelationshipMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ManagerRelationshipMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ManagerRelationshipMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ManagerRelationship entity.
+// If the ManagerRelationship object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerRelationshipMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ManagerRelationshipMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetManagedPrincipalID sets the "managed_principal_id" field.
+func (m *ManagerRelationshipMutation) SetManagedPrincipalID(u uuid.UUID) {
+	m.managed = &u
+}
+
+// ManagedPrincipalID returns the value of the "managed_principal_id" field in the mutation.
+func (m *ManagerRelationshipMutation) ManagedPrincipalID() (r uuid.UUID, exists bool) {
+	v := m.managed
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldManagedPrincipalID returns the old "managed_principal_id" field's value of the ManagerRelationship entity.
+// If the ManagerRelationship object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerRelationshipMutation) OldManagedPrincipalID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldManagedPrincipalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldManagedPrincipalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldManagedPrincipalID: %w", err)
+	}
+	return oldValue.ManagedPrincipalID, nil
+}
+
+// ResetManagedPrincipalID resets all changes to the "managed_principal_id" field.
+func (m *ManagerRelationshipMutation) ResetManagedPrincipalID() {
+	m.managed = nil
+}
+
+// SetManagerPrincipalID sets the "manager_principal_id" field.
+func (m *ManagerRelationshipMutation) SetManagerPrincipalID(u uuid.UUID) {
+	m.manager = &u
+}
+
+// ManagerPrincipalID returns the value of the "manager_principal_id" field in the mutation.
+func (m *ManagerRelationshipMutation) ManagerPrincipalID() (r uuid.UUID, exists bool) {
+	v := m.manager
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldManagerPrincipalID returns the old "manager_principal_id" field's value of the ManagerRelationship entity.
+// If the ManagerRelationship object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerRelationshipMutation) OldManagerPrincipalID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldManagerPrincipalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldManagerPrincipalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldManagerPrincipalID: %w", err)
+	}
+	return oldValue.ManagerPrincipalID, nil
+}
+
+// ResetManagerPrincipalID resets all changes to the "manager_principal_id" field.
+func (m *ManagerRelationshipMutation) ResetManagerPrincipalID() {
+	m.manager = nil
+}
+
+// SetRole sets the "role" field.
+func (m *ManagerRelationshipMutation) SetRole(s string) {
+	m.role = &s
+}
+
+// Role returns the value of the "role" field in the mutation.
+func (m *ManagerRelationshipMutation) Role() (r string, exists bool) {
+	v := m.role
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRole returns the old "role" field's value of the ManagerRelationship entity.
+// If the ManagerRelationship object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerRelationshipMutation) OldRole(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRole is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRole requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRole: %w", err)
+	}
+	return oldValue.Role, nil
+}
+
+// ResetRole resets all changes to the "role" field.
+func (m *ManagerRelationshipMutation) ResetRole() {
+	m.role = nil
+}
+
+// SetActive sets the "active" field.
+func (m *ManagerRelationshipMutation) SetActive(b bool) {
+	m.active = &b
+}
+
+// Active returns the value of the "active" field in the mutation.
+func (m *ManagerRelationshipMutation) Active() (r bool, exists bool) {
+	v := m.active
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActive returns the old "active" field's value of the ManagerRelationship entity.
+// If the ManagerRelationship object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerRelationshipMutation) OldActive(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActive is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActive requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActive: %w", err)
+	}
+	return oldValue.Active, nil
+}
+
+// ResetActive resets all changes to the "active" field.
+func (m *ManagerRelationshipMutation) ResetActive() {
+	m.active = nil
+}
+
+// SetCreatedBy sets the "created_by" field.
+func (m *ManagerRelationshipMutation) SetCreatedBy(u uuid.UUID) {
+	m.created_by = &u
+}
+
+// CreatedBy returns the value of the "created_by" field in the mutation.
+func (m *ManagerRelationshipMutation) CreatedBy() (r uuid.UUID, exists bool) {
+	v := m.created_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedBy returns the old "created_by" field's value of the ManagerRelationship entity.
+// If the ManagerRelationship object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerRelationshipMutation) OldCreatedBy(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedBy: %w", err)
+	}
+	return oldValue.CreatedBy, nil
+}
+
+// ClearCreatedBy clears the value of the "created_by" field.
+func (m *ManagerRelationshipMutation) ClearCreatedBy() {
+	m.created_by = nil
+	m.clearedFields[managerrelationship.FieldCreatedBy] = struct{}{}
+}
+
+// CreatedByCleared returns if the "created_by" field was cleared in this mutation.
+func (m *ManagerRelationshipMutation) CreatedByCleared() bool {
+	_, ok := m.clearedFields[managerrelationship.FieldCreatedBy]
+	return ok
+}
+
+// ResetCreatedBy resets all changes to the "created_by" field.
+func (m *ManagerRelationshipMutation) ResetCreatedBy() {
+	m.created_by = nil
+	delete(m.clearedFields, managerrelationship.FieldCreatedBy)
+}
+
+// SetManagedID sets the "managed" edge to the Principal entity by id.
+func (m *ManagerRelationshipMutation) SetManagedID(id uuid.UUID) {
+	m.managed = &id
+}
+
+// ClearManaged clears the "managed" edge to the Principal entity.
+func (m *ManagerRelationshipMutation) ClearManaged() {
+	m.clearedmanaged = true
+	m.clearedFields[managerrelationship.FieldManagedPrincipalID] = struct{}{}
+}
+
+// ManagedCleared reports if the "managed" edge to the Principal entity was cleared.
+func (m *ManagerRelationshipMutation) ManagedCleared() bool {
+	return m.clearedmanaged
+}
+
+// ManagedID returns the "managed" edge ID in the mutation.
+func (m *ManagerRelationshipMutation) ManagedID() (id uuid.UUID, exists bool) {
+	if m.managed != nil {
+		return *m.managed, true
+	}
+	return
+}
+
+// ManagedIDs returns the "managed" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ManagedID instead. It exists only for internal usage by the builders.
+func (m *ManagerRelationshipMutation) ManagedIDs() (ids []uuid.UUID) {
+	if id := m.managed; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetManaged resets all changes to the "managed" edge.
+func (m *ManagerRelationshipMutation) ResetManaged() {
+	m.managed = nil
+	m.clearedmanaged = false
+}
+
+// SetManagerID sets the "manager" edge to the Principal entity by id.
+func (m *ManagerRelationshipMutation) SetManagerID(id uuid.UUID) {
+	m.manager = &id
+}
+
+// ClearManager clears the "manager" edge to the Principal entity.
+func (m *ManagerRelationshipMutation) ClearManager() {
+	m.clearedmanager = true
+	m.clearedFields[managerrelationship.FieldManagerPrincipalID] = struct{}{}
+}
+
+// ManagerCleared reports if the "manager" edge to the Principal entity was cleared.
+func (m *ManagerRelationshipMutation) ManagerCleared() bool {
+	return m.clearedmanager
+}
+
+// ManagerID returns the "manager" edge ID in the mutation.
+func (m *ManagerRelationshipMutation) ManagerID() (id uuid.UUID, exists bool) {
+	if m.manager != nil {
+		return *m.manager, true
+	}
+	return
+}
+
+// ManagerIDs returns the "manager" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ManagerID instead. It exists only for internal usage by the builders.
+func (m *ManagerRelationshipMutation) ManagerIDs() (ids []uuid.UUID) {
+	if id := m.manager; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetManager resets all changes to the "manager" edge.
+func (m *ManagerRelationshipMutation) ResetManager() {
+	m.manager = nil
+	m.clearedmanager = false
+}
+
+// Where appends a list predicates to the ManagerRelationshipMutation builder.
+func (m *ManagerRelationshipMutation) Where(ps ...predicate.ManagerRelationship) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ManagerRelationshipMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ManagerRelationshipMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ManagerRelationship, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ManagerRelationshipMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ManagerRelationshipMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ManagerRelationship).
+func (m *ManagerRelationshipMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ManagerRelationshipMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.created_at != nil {
+		fields = append(fields, managerrelationship.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, managerrelationship.FieldUpdatedAt)
+	}
+	if m.managed != nil {
+		fields = append(fields, managerrelationship.FieldManagedPrincipalID)
+	}
+	if m.manager != nil {
+		fields = append(fields, managerrelationship.FieldManagerPrincipalID)
+	}
+	if m.role != nil {
+		fields = append(fields, managerrelationship.FieldRole)
+	}
+	if m.active != nil {
+		fields = append(fields, managerrelationship.FieldActive)
+	}
+	if m.created_by != nil {
+		fields = append(fields, managerrelationship.FieldCreatedBy)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ManagerRelationshipMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case managerrelationship.FieldCreatedAt:
+		return m.CreatedAt()
+	case managerrelationship.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case managerrelationship.FieldManagedPrincipalID:
+		return m.ManagedPrincipalID()
+	case managerrelationship.FieldManagerPrincipalID:
+		return m.ManagerPrincipalID()
+	case managerrelationship.FieldRole:
+		return m.Role()
+	case managerrelationship.FieldActive:
+		return m.Active()
+	case managerrelationship.FieldCreatedBy:
+		return m.CreatedBy()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ManagerRelationshipMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case managerrelationship.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case managerrelationship.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case managerrelationship.FieldManagedPrincipalID:
+		return m.OldManagedPrincipalID(ctx)
+	case managerrelationship.FieldManagerPrincipalID:
+		return m.OldManagerPrincipalID(ctx)
+	case managerrelationship.FieldRole:
+		return m.OldRole(ctx)
+	case managerrelationship.FieldActive:
+		return m.OldActive(ctx)
+	case managerrelationship.FieldCreatedBy:
+		return m.OldCreatedBy(ctx)
+	}
+	return nil, fmt.Errorf("unknown ManagerRelationship field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ManagerRelationshipMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case managerrelationship.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case managerrelationship.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case managerrelationship.FieldManagedPrincipalID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetManagedPrincipalID(v)
+		return nil
+	case managerrelationship.FieldManagerPrincipalID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetManagerPrincipalID(v)
+		return nil
+	case managerrelationship.FieldRole:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRole(v)
+		return nil
+	case managerrelationship.FieldActive:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActive(v)
+		return nil
+	case managerrelationship.FieldCreatedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedBy(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ManagerRelationship field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ManagerRelationshipMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ManagerRelationshipMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ManagerRelationshipMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ManagerRelationship numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ManagerRelationshipMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(managerrelationship.FieldCreatedBy) {
+		fields = append(fields, managerrelationship.FieldCreatedBy)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ManagerRelationshipMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ManagerRelationshipMutation) ClearField(name string) error {
+	switch name {
+	case managerrelationship.FieldCreatedBy:
+		m.ClearCreatedBy()
+		return nil
+	}
+	return fmt.Errorf("unknown ManagerRelationship nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ManagerRelationshipMutation) ResetField(name string) error {
+	switch name {
+	case managerrelationship.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case managerrelationship.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case managerrelationship.FieldManagedPrincipalID:
+		m.ResetManagedPrincipalID()
+		return nil
+	case managerrelationship.FieldManagerPrincipalID:
+		m.ResetManagerPrincipalID()
+		return nil
+	case managerrelationship.FieldRole:
+		m.ResetRole()
+		return nil
+	case managerrelationship.FieldActive:
+		m.ResetActive()
+		return nil
+	case managerrelationship.FieldCreatedBy:
+		m.ResetCreatedBy()
+		return nil
+	}
+	return fmt.Errorf("unknown ManagerRelationship field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ManagerRelationshipMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.managed != nil {
+		edges = append(edges, managerrelationship.EdgeManaged)
+	}
+	if m.manager != nil {
+		edges = append(edges, managerrelationship.EdgeManager)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ManagerRelationshipMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case managerrelationship.EdgeManaged:
+		if id := m.managed; id != nil {
+			return []ent.Value{*id}
+		}
+	case managerrelationship.EdgeManager:
+		if id := m.manager; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ManagerRelationshipMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ManagerRelationshipMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ManagerRelationshipMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedmanaged {
+		edges = append(edges, managerrelationship.EdgeManaged)
+	}
+	if m.clearedmanager {
+		edges = append(edges, managerrelationship.EdgeManager)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ManagerRelationshipMutation) EdgeCleared(name string) bool {
+	switch name {
+	case managerrelationship.EdgeManaged:
+		return m.clearedmanaged
+	case managerrelationship.EdgeManager:
+		return m.clearedmanager
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ManagerRelationshipMutation) ClearEdge(name string) error {
+	switch name {
+	case managerrelationship.EdgeManaged:
+		m.ClearManaged()
+		return nil
+	case managerrelationship.EdgeManager:
+		m.ClearManager()
+		return nil
+	}
+	return fmt.Errorf("unknown ManagerRelationship unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ManagerRelationshipMutation) ResetEdge(name string) error {
+	switch name {
+	case managerrelationship.EdgeManaged:
+		m.ResetManaged()
+		return nil
+	case managerrelationship.EdgeManager:
+		m.ResetManager()
+		return nil
+	}
+	return fmt.Errorf("unknown ManagerRelationship edge %s", name)
+}
+
 // OAuthAppMutation represents an operation that mutates the OAuthApp nodes in the graph.
 type OAuthAppMutation struct {
 	config
@@ -21089,6 +21895,12 @@ type PrincipalMutation struct {
 	owned_oauth_apps             map[uuid.UUID]struct{}
 	removedowned_oauth_apps      map[uuid.UUID]struct{}
 	clearedowned_oauth_apps      bool
+	managers                     map[uuid.UUID]struct{}
+	removedmanagers              map[uuid.UUID]struct{}
+	clearedmanagers              bool
+	managing                     map[uuid.UUID]struct{}
+	removedmanaging              map[uuid.UUID]struct{}
+	clearedmanaging              bool
 	oauth_consents               map[uuid.UUID]struct{}
 	removedoauth_consents        map[uuid.UUID]struct{}
 	clearedoauth_consents        bool
@@ -22124,6 +22936,114 @@ func (m *PrincipalMutation) ResetOwnedOauthApps() {
 	m.removedowned_oauth_apps = nil
 }
 
+// AddManagerIDs adds the "managers" edge to the ManagerRelationship entity by ids.
+func (m *PrincipalMutation) AddManagerIDs(ids ...uuid.UUID) {
+	if m.managers == nil {
+		m.managers = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.managers[ids[i]] = struct{}{}
+	}
+}
+
+// ClearManagers clears the "managers" edge to the ManagerRelationship entity.
+func (m *PrincipalMutation) ClearManagers() {
+	m.clearedmanagers = true
+}
+
+// ManagersCleared reports if the "managers" edge to the ManagerRelationship entity was cleared.
+func (m *PrincipalMutation) ManagersCleared() bool {
+	return m.clearedmanagers
+}
+
+// RemoveManagerIDs removes the "managers" edge to the ManagerRelationship entity by IDs.
+func (m *PrincipalMutation) RemoveManagerIDs(ids ...uuid.UUID) {
+	if m.removedmanagers == nil {
+		m.removedmanagers = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.managers, ids[i])
+		m.removedmanagers[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedManagers returns the removed IDs of the "managers" edge to the ManagerRelationship entity.
+func (m *PrincipalMutation) RemovedManagersIDs() (ids []uuid.UUID) {
+	for id := range m.removedmanagers {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ManagersIDs returns the "managers" edge IDs in the mutation.
+func (m *PrincipalMutation) ManagersIDs() (ids []uuid.UUID) {
+	for id := range m.managers {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetManagers resets all changes to the "managers" edge.
+func (m *PrincipalMutation) ResetManagers() {
+	m.managers = nil
+	m.clearedmanagers = false
+	m.removedmanagers = nil
+}
+
+// AddManagingIDs adds the "managing" edge to the ManagerRelationship entity by ids.
+func (m *PrincipalMutation) AddManagingIDs(ids ...uuid.UUID) {
+	if m.managing == nil {
+		m.managing = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.managing[ids[i]] = struct{}{}
+	}
+}
+
+// ClearManaging clears the "managing" edge to the ManagerRelationship entity.
+func (m *PrincipalMutation) ClearManaging() {
+	m.clearedmanaging = true
+}
+
+// ManagingCleared reports if the "managing" edge to the ManagerRelationship entity was cleared.
+func (m *PrincipalMutation) ManagingCleared() bool {
+	return m.clearedmanaging
+}
+
+// RemoveManagingIDs removes the "managing" edge to the ManagerRelationship entity by IDs.
+func (m *PrincipalMutation) RemoveManagingIDs(ids ...uuid.UUID) {
+	if m.removedmanaging == nil {
+		m.removedmanaging = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.managing, ids[i])
+		m.removedmanaging[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedManaging returns the removed IDs of the "managing" edge to the ManagerRelationship entity.
+func (m *PrincipalMutation) RemovedManagingIDs() (ids []uuid.UUID) {
+	for id := range m.removedmanaging {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ManagingIDs returns the "managing" edge IDs in the mutation.
+func (m *PrincipalMutation) ManagingIDs() (ids []uuid.UUID) {
+	for id := range m.managing {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetManaging resets all changes to the "managing" edge.
+func (m *PrincipalMutation) ResetManaging() {
+	m.managing = nil
+	m.clearedmanaging = false
+	m.removedmanaging = nil
+}
+
 // AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by ids.
 func (m *PrincipalMutation) AddOauthConsentIDs(ids ...uuid.UUID) {
 	if m.oauth_consents == nil {
@@ -22749,7 +23669,7 @@ func (m *PrincipalMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PrincipalMutation) AddedEdges() []string {
-	edges := make([]string, 0, 17)
+	edges := make([]string, 0, 19)
 	if m.organization != nil {
 		edges = append(edges, principal.EdgeOrganization)
 	}
@@ -22782,6 +23702,12 @@ func (m *PrincipalMutation) AddedEdges() []string {
 	}
 	if m.owned_oauth_apps != nil {
 		edges = append(edges, principal.EdgeOwnedOauthApps)
+	}
+	if m.managers != nil {
+		edges = append(edges, principal.EdgeManagers)
+	}
+	if m.managing != nil {
+		edges = append(edges, principal.EdgeManaging)
 	}
 	if m.oauth_consents != nil {
 		edges = append(edges, principal.EdgeOauthConsents)
@@ -22864,6 +23790,18 @@ func (m *PrincipalMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case principal.EdgeManagers:
+		ids := make([]ent.Value, 0, len(m.managers))
+		for id := range m.managers {
+			ids = append(ids, id)
+		}
+		return ids
+	case principal.EdgeManaging:
+		ids := make([]ent.Value, 0, len(m.managing))
+		for id := range m.managing {
+			ids = append(ids, id)
+		}
+		return ids
 	case principal.EdgeOauthConsents:
 		ids := make([]ent.Value, 0, len(m.oauth_consents))
 		for id := range m.oauth_consents {
@@ -22906,7 +23844,7 @@ func (m *PrincipalMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PrincipalMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 17)
+	edges := make([]string, 0, 19)
 	if m.removedcredentials != nil {
 		edges = append(edges, principal.EdgeCredentials)
 	}
@@ -22924,6 +23862,12 @@ func (m *PrincipalMutation) RemovedEdges() []string {
 	}
 	if m.removedowned_oauth_apps != nil {
 		edges = append(edges, principal.EdgeOwnedOauthApps)
+	}
+	if m.removedmanagers != nil {
+		edges = append(edges, principal.EdgeManagers)
+	}
+	if m.removedmanaging != nil {
+		edges = append(edges, principal.EdgeManaging)
 	}
 	if m.removedoauth_consents != nil {
 		edges = append(edges, principal.EdgeOauthConsents)
@@ -22986,6 +23930,18 @@ func (m *PrincipalMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case principal.EdgeManagers:
+		ids := make([]ent.Value, 0, len(m.removedmanagers))
+		for id := range m.removedmanagers {
+			ids = append(ids, id)
+		}
+		return ids
+	case principal.EdgeManaging:
+		ids := make([]ent.Value, 0, len(m.removedmanaging))
+		for id := range m.removedmanaging {
+			ids = append(ids, id)
+		}
+		return ids
 	case principal.EdgeOauthConsents:
 		ids := make([]ent.Value, 0, len(m.removedoauth_consents))
 		for id := range m.removedoauth_consents {
@@ -23028,7 +23984,7 @@ func (m *PrincipalMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PrincipalMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 17)
+	edges := make([]string, 0, 19)
 	if m.clearedorganization {
 		edges = append(edges, principal.EdgeOrganization)
 	}
@@ -23061,6 +24017,12 @@ func (m *PrincipalMutation) ClearedEdges() []string {
 	}
 	if m.clearedowned_oauth_apps {
 		edges = append(edges, principal.EdgeOwnedOauthApps)
+	}
+	if m.clearedmanagers {
+		edges = append(edges, principal.EdgeManagers)
+	}
+	if m.clearedmanaging {
+		edges = append(edges, principal.EdgeManaging)
 	}
 	if m.clearedoauth_consents {
 		edges = append(edges, principal.EdgeOauthConsents)
@@ -23109,6 +24071,10 @@ func (m *PrincipalMutation) EdgeCleared(name string) bool {
 		return m.clearedowned_organizations
 	case principal.EdgeOwnedOauthApps:
 		return m.clearedowned_oauth_apps
+	case principal.EdgeManagers:
+		return m.clearedmanagers
+	case principal.EdgeManaging:
+		return m.clearedmanaging
 	case principal.EdgeOauthConsents:
 		return m.clearedoauth_consents
 	case principal.EdgeSentInvites:
@@ -23184,6 +24150,12 @@ func (m *PrincipalMutation) ResetEdge(name string) error {
 		return nil
 	case principal.EdgeOwnedOauthApps:
 		m.ResetOwnedOauthApps()
+		return nil
+	case principal.EdgeManagers:
+		m.ResetManagers()
+		return nil
+	case principal.EdgeManaging:
+		m.ResetManaging()
 		return nil
 	case principal.EdgeOauthConsents:
 		m.ResetOauthConsents()

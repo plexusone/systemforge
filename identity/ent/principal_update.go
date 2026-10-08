@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
@@ -314,6 +315,36 @@ func (_u *PrincipalUpdate) AddOwnedOauthApps(v ...*OAuthApp) *PrincipalUpdate {
 	return _u.AddOwnedOauthAppIDs(ids...)
 }
 
+// AddManagerIDs adds the "managers" edge to the ManagerRelationship entity by IDs.
+func (_u *PrincipalUpdate) AddManagerIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.AddManagerIDs(ids...)
+	return _u
+}
+
+// AddManagers adds the "managers" edges to the ManagerRelationship entity.
+func (_u *PrincipalUpdate) AddManagers(v ...*ManagerRelationship) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddManagerIDs(ids...)
+}
+
+// AddManagingIDs adds the "managing" edge to the ManagerRelationship entity by IDs.
+func (_u *PrincipalUpdate) AddManagingIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.AddManagingIDs(ids...)
+	return _u
+}
+
+// AddManaging adds the "managing" edges to the ManagerRelationship entity.
+func (_u *PrincipalUpdate) AddManaging(v ...*ManagerRelationship) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddManagingIDs(ids...)
+}
+
 // AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by IDs.
 func (_u *PrincipalUpdate) AddOauthConsentIDs(ids ...uuid.UUID) *PrincipalUpdate {
 	_u.mutation.AddOauthConsentIDs(ids...)
@@ -563,6 +594,48 @@ func (_u *PrincipalUpdate) RemoveOwnedOauthApps(v ...*OAuthApp) *PrincipalUpdate
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOwnedOauthAppIDs(ids...)
+}
+
+// ClearManagers clears all "managers" edges to the ManagerRelationship entity.
+func (_u *PrincipalUpdate) ClearManagers() *PrincipalUpdate {
+	_u.mutation.ClearManagers()
+	return _u
+}
+
+// RemoveManagerIDs removes the "managers" edge to ManagerRelationship entities by IDs.
+func (_u *PrincipalUpdate) RemoveManagerIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.RemoveManagerIDs(ids...)
+	return _u
+}
+
+// RemoveManagers removes "managers" edges to ManagerRelationship entities.
+func (_u *PrincipalUpdate) RemoveManagers(v ...*ManagerRelationship) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveManagerIDs(ids...)
+}
+
+// ClearManaging clears all "managing" edges to the ManagerRelationship entity.
+func (_u *PrincipalUpdate) ClearManaging() *PrincipalUpdate {
+	_u.mutation.ClearManaging()
+	return _u
+}
+
+// RemoveManagingIDs removes the "managing" edge to ManagerRelationship entities by IDs.
+func (_u *PrincipalUpdate) RemoveManagingIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.RemoveManagingIDs(ids...)
+	return _u
+}
+
+// RemoveManaging removes "managing" edges to ManagerRelationship entities.
+func (_u *PrincipalUpdate) RemoveManaging(v ...*ManagerRelationship) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveManagingIDs(ids...)
 }
 
 // ClearOauthConsents clears all "oauth_consents" edges to the OAuthConsent entity.
@@ -1198,6 +1271,96 @@ func (_u *PrincipalUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.ManagersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagersTable,
+			Columns: []string{principal.ManagersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedManagersIDs(); len(nodes) > 0 && !_u.mutation.ManagersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagersTable,
+			Columns: []string{principal.ManagersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ManagersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagersTable,
+			Columns: []string{principal.ManagersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ManagingCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagingTable,
+			Columns: []string{principal.ManagingColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedManagingIDs(); len(nodes) > 0 && !_u.mutation.ManagingCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagingTable,
+			Columns: []string{principal.ManagingColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ManagingIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagingTable,
+			Columns: []string{principal.ManagingColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.OauthConsentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1757,6 +1920,36 @@ func (_u *PrincipalUpdateOne) AddOwnedOauthApps(v ...*OAuthApp) *PrincipalUpdate
 	return _u.AddOwnedOauthAppIDs(ids...)
 }
 
+// AddManagerIDs adds the "managers" edge to the ManagerRelationship entity by IDs.
+func (_u *PrincipalUpdateOne) AddManagerIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.AddManagerIDs(ids...)
+	return _u
+}
+
+// AddManagers adds the "managers" edges to the ManagerRelationship entity.
+func (_u *PrincipalUpdateOne) AddManagers(v ...*ManagerRelationship) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddManagerIDs(ids...)
+}
+
+// AddManagingIDs adds the "managing" edge to the ManagerRelationship entity by IDs.
+func (_u *PrincipalUpdateOne) AddManagingIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.AddManagingIDs(ids...)
+	return _u
+}
+
+// AddManaging adds the "managing" edges to the ManagerRelationship entity.
+func (_u *PrincipalUpdateOne) AddManaging(v ...*ManagerRelationship) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddManagingIDs(ids...)
+}
+
 // AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by IDs.
 func (_u *PrincipalUpdateOne) AddOauthConsentIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
 	_u.mutation.AddOauthConsentIDs(ids...)
@@ -2006,6 +2199,48 @@ func (_u *PrincipalUpdateOne) RemoveOwnedOauthApps(v ...*OAuthApp) *PrincipalUpd
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOwnedOauthAppIDs(ids...)
+}
+
+// ClearManagers clears all "managers" edges to the ManagerRelationship entity.
+func (_u *PrincipalUpdateOne) ClearManagers() *PrincipalUpdateOne {
+	_u.mutation.ClearManagers()
+	return _u
+}
+
+// RemoveManagerIDs removes the "managers" edge to ManagerRelationship entities by IDs.
+func (_u *PrincipalUpdateOne) RemoveManagerIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.RemoveManagerIDs(ids...)
+	return _u
+}
+
+// RemoveManagers removes "managers" edges to ManagerRelationship entities.
+func (_u *PrincipalUpdateOne) RemoveManagers(v ...*ManagerRelationship) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveManagerIDs(ids...)
+}
+
+// ClearManaging clears all "managing" edges to the ManagerRelationship entity.
+func (_u *PrincipalUpdateOne) ClearManaging() *PrincipalUpdateOne {
+	_u.mutation.ClearManaging()
+	return _u
+}
+
+// RemoveManagingIDs removes the "managing" edge to ManagerRelationship entities by IDs.
+func (_u *PrincipalUpdateOne) RemoveManagingIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.RemoveManagingIDs(ids...)
+	return _u
+}
+
+// RemoveManaging removes "managing" edges to ManagerRelationship entities.
+func (_u *PrincipalUpdateOne) RemoveManaging(v ...*ManagerRelationship) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveManagingIDs(ids...)
 }
 
 // ClearOauthConsents clears all "oauth_consents" edges to the OAuthConsent entity.
@@ -2664,6 +2899,96 @@ func (_u *PrincipalUpdateOne) sqlSave(ctx context.Context) (_node *Principal, er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ManagersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagersTable,
+			Columns: []string{principal.ManagersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedManagersIDs(); len(nodes) > 0 && !_u.mutation.ManagersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagersTable,
+			Columns: []string{principal.ManagersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ManagersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagersTable,
+			Columns: []string{principal.ManagersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ManagingCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagingTable,
+			Columns: []string{principal.ManagingColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedManagingIDs(); len(nodes) > 0 && !_u.mutation.ManagingCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagingTable,
+			Columns: []string{principal.ManagingColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ManagingIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagingTable,
+			Columns: []string{principal.ManagingColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

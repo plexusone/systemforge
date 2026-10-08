@@ -38,6 +38,8 @@ type Tx struct {
 	LoginSession *LoginSessionClient
 	// LoginState is the client for interacting with the LoginState builders.
 	LoginState *LoginStateClient
+	// ManagerRelationship is the client for interacting with the ManagerRelationship builders.
+	ManagerRelationship *ManagerRelationshipClient
 	// OAuthApp is the client for interacting with the OAuthApp builders.
 	OAuthApp *OAuthAppClient
 	// OAuthAppSecret is the client for interacting with the OAuthAppSecret builders.
@@ -205,6 +207,7 @@ func (tx *Tx) init() {
 	tx.Listing = NewListingClient(tx.config)
 	tx.LoginSession = NewLoginSessionClient(tx.config)
 	tx.LoginState = NewLoginStateClient(tx.config)
+	tx.ManagerRelationship = NewManagerRelationshipClient(tx.config)
 	tx.OAuthApp = NewOAuthAppClient(tx.config)
 	tx.OAuthAppSecret = NewOAuthAppSecretClient(tx.config)
 	tx.OAuthAuthCode = NewOAuthAuthCodeClient(tx.config)

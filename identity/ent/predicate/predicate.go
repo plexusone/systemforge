@@ -42,6 +42,9 @@ type LoginSession func(*sql.Selector)
 // LoginState is the predicate function for loginstate builders.
 type LoginState func(*sql.Selector)
 
+// ManagerRelationship is the predicate function for managerrelationship builders.
+type ManagerRelationship func(*sql.Selector)
+
 // OAuthApp is the predicate function for oauthapp builders.
 type OAuthApp func(*sql.Selector)
 
