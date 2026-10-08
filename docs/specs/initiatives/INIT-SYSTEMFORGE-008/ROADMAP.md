@@ -11,13 +11,16 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 **Theme:** Every sign-in method resolves to one `Principal` + `Human`
 
-- [ ] `RMI-SYSTEMFORGE-093` Bootstrap owner as service principal: replace the synthetic system user with a fixed-ID `Principal(type=service)` and repoint `OAuthApp.owner` to `Principal`
-- [ ] `RMI-SYSTEMFORGE-094` Drop `user` edges on OAuthToken, OAuthAuthCode, and OAuthConsent; remove `legacyUserID`; subjects are principal IDs
+- [x] `RMI-SYSTEMFORGE-093` Bootstrap owner as service principal: replace the synthetic system user with a fixed-ID `Principal(type=service)` and repoint `OAuthApp.owner` to `Principal`
+- [x] `RMI-SYSTEMFORGE-094` Drop `user` edges on OAuthToken, OAuthAuthCode, and OAuthConsent; remove `legacyUserID`; subjects are principal IDs
   - Depends on: `RMI-SYSTEMFORGE-093`
-- [ ] `RMI-SYSTEMFORGE-095` SystemAuth storage on Principal/Human: merge `User` and `LoginPrincipal` into one `HumanPrincipal` DTO, rename storage methods to `*Human*`, reimplement over `Principal` + `Human` in Ent and memory storage, password login verified through `sf_credentials`
+  - Delivered: also moved the `identity/oauth` Fosite storage onto the `subject` column (it had dropped non-UUID subjects), and made `CreateClient` report only genuine duplicates as `ErrClientExists`.
+- [x] `RMI-SYSTEMFORGE-095` SystemAuth storage on Principal/Human: merge `User` and `LoginPrincipal` into one `HumanPrincipal` DTO, rename storage methods to `*Human*`, reimplement over `Principal` + `Human` in Ent and memory storage, password login verified through `sf_credentials`
   - Depends on: `RMI-SYSTEMFORGE-094`
-- [ ] `RMI-SYSTEMFORGE-096` Federation sync as external identities: create/update/delete resolve through `ExternalIdentity(provider, subject)`; drop `federation_id`; wire contract unchanged
+  - Delivered together with 096: removing the federation-ID lookup from storage left the federation handlers without a way to resolve identities, so both items landed in one change. Password login needs no new code: `credential.Service.VerifyPassword` matches the injectable verifier signature once identity IDs are principal IDs. Email uniqueness is enforced case-insensitively on writes, matching lookups.
+- [x] `RMI-SYSTEMFORGE-096` Federation sync as external identities: create/update/delete resolve through `ExternalIdentity(provider, subject)`; drop `federation_id`; wire contract unchanged
   - Depends on: `RMI-SYSTEMFORGE-095`
+  - Delivered: `create` adopts an existing principal with the same email and links the federation identity, so later updates and deletes resolve to it; `delete` reports synced only for an identity that was never linked.
 
 ## Phase 2 — SCIM and Service Accounts
 
