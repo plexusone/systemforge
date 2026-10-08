@@ -28,48 +28,87 @@ entitlements from a login either.
 
 ## Decision
 
-1. **SystemAuth emits the principal's organizations in the ID token and at
-   the userinfo endpoint**, as an `orgs` claim: a list of objects with
-   `id`, `slug`, `name`, `type` (`personal`, `team`, `enterprise`), `role`
-   (the membership role, including `collaborator` from ADR-008) and `apps`
-   (the application identifiers the organization is entitled to and the
-   principal holds a seat for, where the application uses seats).
-2. **JWT access tokens carry a compact form**: `orgs` as a list of
-   `{id, role}` only, to keep the token small. Applications that need slug,
+1. **Access has three layers, and the claims carry the first two.**
+   - **Organization role** (`owner`, `admin`, `member`, `collaborator` from
+     ADR-008): governs the organization itself, its members, billing and
+     settings.
+   - **Application role**, per application the organization is entitled
+     to: one of the roles the application declares in its
+     `authz.AppVocabulary` (the standard ladder is `viewer`, `contributor`,
+     `maintainer`, `admin`; an application may declare more). It governs
+     what the principal may do inside that application. Where the
+     application is seat-licensed, holding an application role consumes a
+     seat.
+   - **Resource grants** (ADR-008) are the application's to look up; they
+     are not claims.
+
+   SystemAuth emits the principal's organizations in the ID token and at
+   the userinfo endpoint as an `orgs` claim: a list of objects with `id`,
+   `slug`, `name`, `type` (`personal`, `team`, `enterprise`), `role` (the
+   organization role) and `apps`, a map from application identifier to the
+   principal's application role there. An application absent from `apps`
+   is one the principal may not open.
+2. **Owners and admins hold `admin` in every entitled application**,
+   implicitly, so an organization can always be administered. Members hold
+   only the application roles assigned to them. Collaborators hold none;
+   their access is by resource grant.
+3. **Members get no application access by default.** Adding or inviting a
+   member requires choosing an application role for at least one entitled
+   application; applications left unselected stay closed to that member.
+   Roles are changed per application without touching the membership, and
+   removal from the organization removes every application role and grant.
+4. **Custom roles are not supported.** The roles available in an
+   application are the ones its vocabulary declares. Organization-defined
+   roles (permission bundles) and teams (groups that carry application
+   roles) are deferred; if assigning roles one person at a time becomes the
+   problem, teams are the first addition.
+5. **JWT access tokens carry a compact form**: `orgs` as a list of
+   `{id, role, apps}` with `apps` as a map of application identifier to
+   role, and no slug or name, to keep the token small. Applications that need slug,
    name or entitlements read them from the ID token, userinfo, or the
    memberships endpoint.
-3. **Large membership lists are truncated, not dropped.** A token carries at
+6. **Large membership lists are truncated, not dropped.** A token carries at
    most 50 organizations, ordered personal first, then by most recent
    membership, and sets `orgs_truncated: true` when it omitted any.
    `GET /userinfo/memberships` returns the full, paginated list for the
    presenting token's principal.
-4. **The relying-party package reads memberships from claims by default.**
+7. **The relying-party package reads memberships from claims by default.**
    `relyingparty` gains `ClaimsMemberships` (from the ID token or userinfo)
    and `RemoteMemberships` (from the memberships endpoint, used when
    `orgs_truncated` is set or the compact access-token form is all the
    application has). `LocalMemberships` remains for development and tests
    and is documented as not for production.
-5. **Entitlements come from the marketplace.** An organization's `apps` are
-   derived from its active subscriptions and licenses, mapped to application
-   identifiers registered through `authz.AppVocabulary`. A deployment may
-   declare applications every organization is entitled to by default.
-6. **Freshness is bounded by token lifetime, and removals revoke.** Removing
+8. **Entitlements come from the marketplace.** The applications an
+   organization may assign roles in are derived from its active
+   subscriptions and licenses, mapped to application identifiers registered
+   through `authz.AppVocabulary`. A deployment may declare applications
+   every organization is entitled to by default. Application roles are
+   stored per (principal, organization, application) in a new
+   `sf_app_roles` table, which replaces seat assignments as the record of
+   who may use what; a seat-licensed application counts its rows against
+   the license.
+9. **Freshness is bounded by token lifetime, and removals revoke.** Removing
    a principal from an organization, or changing their role, revokes the
    principal's refresh tokens, so the next refresh carries the new
    memberships; access-token lifetime bounds how long the old ones are
    honored. Applications must handle a membership that disappears between
    requests.
-7. **Applications stop keeping membership tables.** An application keys its
-   data by the SystemAuth organization ID and provisions itself for an
-   organization on first use by an entitled member; it does not store who
-   the members are.
+10. **Applications stop keeping membership and role tables.** An
+    application keys its data by the SystemAuth organization ID, reads the
+    principal's application role from the claims, and provisions itself for
+    an organization on first use by a principal holding a role in it; it
+    does not store who the members are or what their roles are.
 
 ## Consequences
 
-- **One invite gives access to every application** the organization is
-  entitled to, and one removal takes it away everywhere.
-- **Applications need no organization or membership tables**, only an
-  organization ID on their own records.
+- **One invite carries the person's application roles**, chosen by the
+  inviter per application, and one removal takes every role away. Nobody
+  gets into an application by being a member alone.
+- **Applications need no organization, membership or role tables**, only
+  an organization ID on their own records and a mapping from their
+  vocabulary roles to permissions.
+- **Invitation and member-management screens become role pickers**: the
+  entitled applications, each with its ladder, none selected by default.
 - **Token size is bounded** by the 50-organization cap; applications with
   users in more organizations than that must use the memberships endpoint.
 - **SystemAuth is on the path of every organization decision.** Relying
