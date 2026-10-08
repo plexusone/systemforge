@@ -1345,6 +1345,30 @@
       {
         "description": "identity/oauth's authorization endpoint refuses requests until WithUserAuthenticator or WithTrustedUserIDHeader is set, and third-party clients are refused until WithConsent is set",
         "commit": "487920d"
+      },
+      {
+        "description": "session/ratelimit: IPKey and the Limiter default no longer read X-Forwarded-For or X-Real-IP (use ForwardedIPKey or ForwardedClientIP behind proxies), the middleware answers 503 on storage errors unless WithFailOpen is given, and MemoryStorage returns ErrTooManyKeys when full",
+        "commit": "f6d1a8b"
+      },
+      {
+        "description": "session/bff: TrustProxy and TrustCloudflare do nothing without TrustedProxies or CloudflareIPRanges; session/middleware no longer reads forwarding headers for API key usage addresses unless an IPExtractor is given",
+        "commit": "825b1e8"
+      },
+      {
+        "description": "scim: a provider without WithAuthorizationHook answers 403 to every request; DefaultAuthorizationHook is deprecated for AllowAllAuthorizationHook",
+        "commit": "1afa3b7"
+      },
+      {
+        "description": "systemauth: NewFederationEndpoints registers the sync and lookup routes only with WithFederationAuthenticator; introspection callers need a confidential client or the introspect scope",
+        "commit": "893b79d"
+      },
+      {
+        "description": "session/jwt and contract: tokens without exp are refused, and jwt refuses another issuer when Config.Issuer is set; relyingparty.BearerMiddleware requires an allowed Origin and JSON body for cookie-authenticated POST, PUT, and DELETE",
+        "commit": "2096e27"
+      },
+      {
+        "description": "credential.ValidateClientSecret returns ErrInvalidClientCredentials for every rejection; multiapp.AppAwareDB.ForSchema returns an error",
+        "commit": "3ab264c"
       }
     ],
     "added": [
@@ -1467,6 +1491,10 @@
       {
         "description": "systemauth.RequestGate, TrustAllRequests, and TrustedProxyNetworks; oauth.WithUserAuthenticator, WithTrustedUserIDHeader, WithLoginURL, and WithConsent",
         "commit": "487920d"
+      },
+      {
+        "description": "jwt.ValidateAccessTokenForAudience and middleware.HTTPAuthForAudience; ratelimit.PeerIP, ForwardedClientIP, ForwardedIPKey, WithMaxKeys, WithFailOpen; systemauth.WithLoginTokenClientIP, FederationAuthenticator, SharedSecretAuthenticator, and AuthorizeIntrospectionCaller; scim.DenyAllAuthorizationHook",
+        "commit": "f6d1a8b"
       }
     ],
     "changed": [
@@ -1595,6 +1623,14 @@
       {
         "description": "identity/oauth.NewAPI panicked on every call because the Fosite interceptor was added after routes",
         "commit": "487920d"
+      },
+      {
+        "description": "The federation lookup handler read its path parameter with net/http's PathValue, which chi does not populate",
+        "commit": "893b79d"
+      },
+      {
+        "description": "The memory rate-limit store panicked when used after Close, and discarded windows after a fixed hour whatever their period",
+        "commit": "f6d1a8b"
       }
     ],
     "documentation": [
@@ -1682,6 +1718,50 @@
       {
         "description": "identity/oauth granted every requested scope to every client without consent; non-first-party clients now need a consent check",
         "commit": "487920d"
+      },
+      {
+        "description": "SCIM listing and search never asked the authorization hook, so any caller with a token could dump every user and group, and the provider's default hook allowed everything; listings are authorized and the default denies",
+        "commit": "1afa3b7"
+      },
+      {
+        "description": "The federation identity sync endpoint trusted any well-formed request and acted on its body, letting an unauthenticated caller link to and then deactivate or rewrite any account by email; it and the lookup endpoint now require a FederationAuthenticator and are not registered without one",
+        "commit": "893b79d"
+      },
+      {
+        "description": "Rate limits keyed on client-supplied X-Forwarded-For and X-Real-IP, so a client could evade a limit by rotating the header or poison a victim's; they key on the direct peer, and forwarded headers are believed only from configured trusted proxies, here and in the BFF client IP handling and the API key middleware",
+        "commit": "f6d1a8b"
+      },
+      {
+        "description": "The in-memory rate-limit store grew without bound from attacker-chosen keys, the middleware failed open on storage errors, and the login token endpoint keyed on raw client_id values; the store is bounded, the middleware fails closed, and only registered clients get a bucket",
+        "commit": "f6d1a8b"
+      },
+      {
+        "description": "Token introspection accepted any valid access token or any client's Basic credentials, public clients included, as the caller's credential; it now requires a confidential client or a token with the introspect scope",
+        "commit": "9d3e9c4"
+      },
+      {
+        "description": "The default storage accepted every client-assertion JWT ID as new, so a captured private_key_jwt assertion could be replayed until it expired",
+        "commit": "27ccd27"
+      },
+      {
+        "description": "BFF cookies lost Secure and HttpOnly when a CookieConfig omitted them; both are now unconditional unless AllowInsecure is set for development",
+        "commit": "5182e80"
+      },
+      {
+        "description": "Cookie-authenticated writes through relyingparty.BearerMiddleware skipped the same-origin check, allowing cross-site requests",
+        "commit": "5a24dd4"
+      },
+      {
+        "description": "JWT validation accepted tokens with no expiry and ignored the issuer; the contract middleware did the same and skipped the audience check without an app ID",
+        "commit": "2096e27"
+      },
+      {
+        "description": "Client secret validation revealed whether a client ID existed by error message and timing, and lockout counted differently spelled identifiers separately, restarting the count",
+        "commit": "3ab264c"
+      },
+      {
+        "description": "multiapp's SchemaDB left a schema's search_path on pooled connections, which could carry one application's schema to unrelated code, and ForSchema interpolated unvalidated names into SQL",
+        "commit": "d483b7a"
       }
     ]
   }
