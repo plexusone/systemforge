@@ -1,103 +1,102 @@
 # Migration Guide
 
-This guide covers database migrations when integrating SystemForge.
+This guide covers moving an existing application's users, organizations, and memberships into SystemForge's identity tables.
+
+## Target Model
+
+SystemForge has a single identity root. Every person is a **principal**:
+
+| Concept | Table | Notes |
+|---------|-------|-------|
+| Person | `sf_principals` (`type = 'human'`) + `sf_humans` | `sf_principals.identifier` is the email; `sf_humans.principal_id` links the two |
+| Password | `sf_credentials` (`type = 'password'`) | Argon2id hash in `secret_hash` |
+| Social or SSO login | `sf_external_identities` | One row per `(provider, subject)` |
+| Organization | `sf_organizations` | |
+| Membership | `sf_principal_memberships` | One row per `(principal_id, organization_id)` |
+
+All tables use the `sf_` prefix. See the [schema reference](../reference/schemas.md) for every column.
 
 ## Migration Strategy
 
-### Phase 1: Side-by-Side (Safe)
+### Phase 1: Side-by-Side
 
-```
-Week 1-2: Create SystemForge tables
-Week 3:   Sync existing data
-Week 4:   Enable dual-write
-```
+- Create the SystemForge tables alongside your existing ones.
+- Copy existing users, organizations, and memberships.
+- Write new data to both until reads move over.
 
-### Phase 2: Cutover (Careful)
+### Phase 2: Cutover
 
-```
-Week 5:   Switch reads to SystemForge
-Week 6:   Validate data integrity
-Week 7:   Disable old writes
-```
+- Switch reads to SystemForge.
+- Validate counts and spot-check records.
+- Stop writing to the old tables.
 
-### Phase 3: Cleanup (Final)
+### Phase 3: Cleanup
 
-```
-Week 8:   Archive old tables
-Week 9:   Drop old tables
-Week 10:  Remove dual-write code
-```
+- Archive the old tables.
+- Drop them once nothing reads them.
+- Remove the dual-write code.
 
 ## Creating SystemForge Tables
 
-### Using Ent Migrations
+### Using the SystemAuth CLI
+
+```bash
+systemauth migrate
+```
+
+This creates or updates every table from the current schema and is safe to run repeatedly.
+
+### Using Ent Directly
 
 ```go
 package main
 
 import (
     "context"
+    "database/sql"
     "log"
 
+    "entgo.io/ent/dialect"
+    entsql "entgo.io/ent/dialect/sql"
+    _ "github.com/jackc/pgx/v5/stdlib"
+
     "github.com/plexusone/systemforge/identity/ent"
-    _ "github.com/lib/pq"
 )
 
 func main() {
-    client, err := ent.Open("postgres",
-        "postgres://user:pass@localhost/myapp?sslmode=disable")
+    db, err := sql.Open("pgx", "postgres://user:pass@localhost/myapp?sslmode=disable")
     if err != nil {
         log.Fatal(err)
     }
+    client := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, db)))
     defer client.Close()
 
-    // Create tables
     if err := client.Schema.Create(context.Background()); err != nil {
         log.Fatal(err)
     }
-
     log.Println("SystemForge tables created")
 }
 ```
 
-### Using SQL Migrations
+Ent's migration creates and alters tables and columns but never drops them.
 
-If you use a migration tool (golang-migrate, goose, etc.):
+## Copying Data
 
-```sql
--- migrations/001_systemforge_users.up.sql
-CREATE TABLE cf_users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) NOT NULL UNIQUE,
-    name VARCHAR(255) NOT NULL,
-    avatar_url TEXT,
-    password_hash TEXT,
-    is_platform_admin BOOLEAN NOT NULL DEFAULT false,
-    active BOOLEAN NOT NULL DEFAULT true,
-    last_login_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+The examples below use PostgreSQL and copy from `users`, `tenants`, and `tenant_members` tables; adapt the source queries to your schema. Several columns have no database default because Ent fills them in Go, so the inserts set them explicitly:
 
-CREATE INDEX idx_cf_users_email ON cf_users(email);
-CREATE INDEX idx_cf_users_active ON cf_users(active);
-```
+- `id` on `sf_humans`, `sf_credentials`, and `sf_principal_memberships`
+- `created_at` and `updated_at`
+- `capabilities` (JSON object) and `allowed_scopes` (JSON array) on `sf_principals`
+- `scopes` (JSON array) on `sf_credentials`
 
-## Data Sync Scripts
+### Users
 
-### Sync Users
+Each user becomes a principal plus a human row. Reusing the existing user ID as the principal ID keeps foreign keys in your application valid.
 
 ```go
-func syncUsers(ctx context.Context, src, dst *sql.DB) error {
-    tx, err := dst.BeginTx(ctx, nil)
-    if err != nil {
-        return err
-    }
-    defer tx.Rollback()
-
+func copyUsers(ctx context.Context, src, dst *sql.DB) error {
     rows, err := src.QueryContext(ctx, `
-        SELECT id, email, name, COALESCE(avatar_url, ''),
-               COALESCE(password_hash, ''), created_at
+        SELECT id, email, name, COALESCE(avatar_url, ''), created_at
         FROM users
         WHERE deleted_at IS NULL
     `)
@@ -106,69 +105,129 @@ func syncUsers(ctx context.Context, src, dst *sql.DB) error {
     }
     defer rows.Close()
 
-    stmt, err := tx.PrepareContext(ctx, `
-        INSERT INTO cf_users (id, email, name, avatar_url, password_hash, created_at, updated_at)
-        VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, ''), $6, $6)
-        ON CONFLICT (id) DO UPDATE SET
-            email = EXCLUDED.email,
-            name = EXCLUDED.name,
-            avatar_url = EXCLUDED.avatar_url,
-            password_hash = EXCLUDED.password_hash,
-            updated_at = now()
-    `)
+    tx, err := dst.BeginTx(ctx, nil)
     if err != nil {
         return err
     }
-    defer stmt.Close()
+    defer tx.Rollback()
 
     count := 0
     for rows.Next() {
         var id uuid.UUID
-        var email, name, avatar, pwHash string
+        var email, name, avatar string
         var createdAt time.Time
-
-        if err := rows.Scan(&id, &email, &name, &avatar, &pwHash, &createdAt); err != nil {
+        if err := rows.Scan(&id, &email, &name, &avatar, &createdAt); err != nil {
             return err
         }
 
-        if _, err := stmt.ExecContext(ctx, id, email, name, avatar, pwHash, createdAt); err != nil {
-            return fmt.Errorf("sync user %s: %w", id, err)
+        if _, err := tx.ExecContext(ctx, `
+            INSERT INTO sf_principals
+                (id, created_at, updated_at, type, identifier, display_name, active, capabilities, allowed_scopes)
+            VALUES ($1, $2, $2, 'human', $3, $4, true, '{}', '[]')
+            ON CONFLICT (id) DO UPDATE SET
+                identifier = EXCLUDED.identifier,
+                display_name = EXCLUDED.display_name,
+                updated_at = now()
+        `, id, createdAt, email, name); err != nil {
+            return fmt.Errorf("copy principal %s: %w", id, err)
+        }
+
+        if _, err := tx.ExecContext(ctx, `
+            INSERT INTO sf_humans (id, created_at, updated_at, principal_id, email, avatar_url)
+            VALUES (gen_random_uuid(), $2, $2, $1, $3, NULLIF($4, ''))
+            ON CONFLICT (principal_id) DO UPDATE SET
+                email = EXCLUDED.email,
+                avatar_url = EXCLUDED.avatar_url,
+                updated_at = now()
+        `, id, createdAt, email, avatar); err != nil {
+            return fmt.Errorf("copy human %s: %w", id, err)
         }
         count++
     }
-
+    if err := rows.Err(); err != nil {
+        return err
+    }
     if err := tx.Commit(); err != nil {
         return err
     }
-
-    log.Printf("Synced %d users", count)
+    log.Printf("copied %d users", count)
     return nil
 }
 ```
 
-### Sync Organizations
+Before copying, check your source for emails that differ only in case. SystemForge looks people up by email without regard to case, so two rows such as `Ada@example.com` and `ada@example.com` make that lookup ambiguous. Merge or rename them first:
 
-```go
-func syncOrganizations(ctx context.Context, src, dst *sql.DB) error {
-    rows, err := src.QueryContext(ctx, `
-        SELECT id, name, slug, logo_url, settings, plan, created_at
-        FROM tenants
-        WHERE deleted_at IS NULL
-    `)
-    // ... similar pattern
-}
+```sql
+SELECT lower(email), count(*)
+FROM users
+WHERE deleted_at IS NULL
+GROUP BY lower(email)
+HAVING count(*) > 1;
 ```
 
-### Sync Memberships
+### Passwords
+
+Passwords are `sf_credentials` rows of type `password`. SystemForge verifies **only** Argon2id hashes in the standard encoded form:
+
+```
+$argon2id$v=19$m=<memory>,t=<iterations>,p=<parallelism>$<salt>$<hash>
+```
+
+where the salt and hash are unpadded standard base64. Any parameters are accepted; they are read from the hash. A hash in any other format (bcrypt, scrypt, PBKDF2, Argon2i) is rejected at login with an error, so do not import it. Leave those users without a password credential and have them reset their password, which stores a new Argon2id hash.
+
+```sql
+INSERT INTO sf_credentials
+    (id, created_at, updated_at, principal_id, type, secret_hash, scopes, active, revoked)
+SELECT gen_random_uuid(), now(), now(), u.id, 'password', u.password_hash, '[]', true, false
+FROM users u
+WHERE u.deleted_at IS NULL
+  AND u.password_hash LIKE '$argon2id$v=19$%'
+  AND NOT EXISTS (
+      SELECT 1 FROM sf_credentials c
+      WHERE c.principal_id = u.id AND c.type = 'password'
+  );
+```
+
+To set passwords from application code instead, use the credential service, which hashes with Argon2id:
 
 ```go
-func syncMemberships(ctx context.Context, src, dst *sql.DB) error {
-    rows, err := src.QueryContext(ctx, `
-        SELECT user_id, tenant_id, role, created_at
-        FROM tenant_members
-    `)
-    // ... similar pattern
-}
+creds := credential.NewService(client)
+err := creds.CreatePassword(ctx, credential.CreatePasswordInput{
+    PrincipalID: principalID,
+    Password:    plaintext,
+})
+```
+
+### Organizations
+
+```sql
+INSERT INTO sf_organizations
+    (id, created_at, updated_at, name, slug, org_type, plan, active)
+SELECT t.id, t.created_at, now(), t.name, t.slug, 'team', 'free', true
+FROM tenants t
+WHERE t.deleted_at IS NULL
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    updated_at = now();
+```
+
+`org_type` is one of `personal`, `team`, or `enterprise`; `plan` is one of `free`, `starter`, `pro`, or `enterprise`.
+
+### Memberships
+
+`role` is an application-defined string.
+
+```sql
+INSERT INTO sf_principal_memberships
+    (id, created_at, updated_at, principal_id, organization_id, role, active)
+SELECT gen_random_uuid(), m.created_at, now(), m.user_id, m.tenant_id, m.role, true
+FROM tenant_members m
+JOIN sf_principals p ON p.id = m.user_id
+JOIN sf_organizations o ON o.id = m.tenant_id
+ON CONFLICT (principal_id, organization_id) DO UPDATE SET
+    role = EXCLUDED.role,
+    active = true,
+    updated_at = now();
 ```
 
 ## Validation Queries
@@ -176,78 +235,74 @@ func syncMemberships(ctx context.Context, src, dst *sql.DB) error {
 ### Compare Counts
 
 ```sql
--- Users
+-- People
 SELECT
-    (SELECT COUNT(*) FROM users WHERE deleted_at IS NULL) as old_count,
-    (SELECT COUNT(*) FROM cf_users) as new_count;
+    (SELECT count(*) FROM users WHERE deleted_at IS NULL) AS old_count,
+    (SELECT count(*) FROM sf_principals WHERE type = 'human') AS new_count;
 
 -- Organizations
 SELECT
-    (SELECT COUNT(*) FROM tenants WHERE deleted_at IS NULL) as old_count,
-    (SELECT COUNT(*) FROM cf_organizations) as new_count;
+    (SELECT count(*) FROM tenants WHERE deleted_at IS NULL) AS old_count,
+    (SELECT count(*) FROM sf_organizations) AS new_count;
 
 -- Memberships
 SELECT
-    (SELECT COUNT(*) FROM tenant_members) as old_count,
-    (SELECT COUNT(*) FROM cf_memberships) as new_count;
+    (SELECT count(*) FROM tenant_members) AS old_count,
+    (SELECT count(*) FROM sf_principal_memberships) AS new_count;
 ```
 
 ### Find Missing Records
 
 ```sql
--- Users in old table but not in SystemForge
+-- Users in the old table with no SystemForge principal
 SELECT u.id, u.email
 FROM users u
-LEFT JOIN cf_users cf ON u.id = cf.id
-WHERE u.deleted_at IS NULL AND cf.id IS NULL;
+LEFT JOIN sf_principals p ON p.id = u.id
+WHERE u.deleted_at IS NULL AND p.id IS NULL;
+
+-- Principals missing their human row
+SELECT p.id, p.identifier
+FROM sf_principals p
+LEFT JOIN sf_humans h ON h.principal_id = p.id
+WHERE p.type = 'human' AND h.id IS NULL;
 ```
 
 ### Compare Data
 
 ```sql
--- Find data mismatches
-SELECT u.id, u.email as old_email, cf.email as new_email
+SELECT u.id, u.email AS old_email, h.email AS new_email
 FROM users u
-JOIN cf_users cf ON u.id = cf.id
-WHERE u.email != cf.email;
+JOIN sf_humans h ON h.principal_id = u.id
+WHERE u.email <> h.email;
 ```
 
 ## Rollback Plan
 
-### Keep Sync Running
+### Keep the Old Tables in Sync
 
-During dual-write phase, sync changes back to old tables:
+During the dual-write phase, mirror SystemForge changes back to the old tables so reads can move back if needed:
 
 ```go
-// On SystemForge user update
-func onUserUpdate(ctx context.Context, user *ent.User) {
-    // Also update old table
-    _, err := oldDB.ExecContext(ctx, `
-        UPDATE users SET
-            email = $2,
-            name = $3,
-            updated_at = now()
-        WHERE id = $1
-    `, user.ID, user.Email, user.Name)
-    if err != nil {
-        log.Printf("Warning: failed to sync to old table: %v", err)
+func mirrorToOldTable(ctx context.Context, oldDB *sql.DB, p *ent.Principal) error {
+    if p.Edges.Human == nil {
+        return fmt.Errorf("principal %s loaded without its human edge", p.ID)
     }
+    _, err := oldDB.ExecContext(ctx, `
+        UPDATE users SET email = $2, name = $3, updated_at = now()
+        WHERE id = $1
+    `, p.ID, p.Edges.Human.Email, p.DisplayName)
+    return err
 }
 ```
 
-### Rollback Script
+Load the principal with its human edge, for example `client.Principal.Query().Where(principal.IDEQ(id)).WithHuman().Only(ctx)`.
 
-If issues arise, rollback reads to old tables:
+### Switch Reads Back
+
+Gate reads behind a flag so they can move back to the old tables without a deploy:
 
 ```go
 var useOldTables = os.Getenv("USE_OLD_TABLES") == "true"
-
-func getUser(ctx context.Context, id uuid.UUID) (*User, error) {
-    if useOldTables {
-        return getOldUser(ctx, id)
-    }
-    return getSystemForgeUser(ctx, id)
-}
 ```
 
 ## Archive and Cleanup
@@ -255,10 +310,8 @@ func getUser(ctx context.Context, id uuid.UUID) (*User, error) {
 ### Archive Old Tables
 
 ```sql
--- Create archive schema
 CREATE SCHEMA archive;
 
--- Move old tables
 ALTER TABLE users SET SCHEMA archive;
 ALTER TABLE tenants SET SCHEMA archive;
 ALTER TABLE tenant_members SET SCHEMA archive;
@@ -267,45 +320,26 @@ ALTER TABLE tenant_members SET SCHEMA archive;
 ### Drop After Validation
 
 ```sql
--- After 30 days with no issues
 DROP SCHEMA archive CASCADE;
 ```
 
 ## Common Issues
 
-### UUID Mismatches
+### Integer User IDs
 
-If your old tables use integers:
+Principal IDs are UUIDs. If your old tables use integers, generate a mapping first and use `new_id` everywhere a principal ID is needed:
 
-```go
-// Create mapping table
-_, err := db.ExecContext(ctx, `
-    CREATE TABLE user_id_mapping (
-        old_id BIGINT PRIMARY KEY,
-        new_id UUID NOT NULL
-    )
-`)
+```sql
+CREATE TABLE user_id_mapping (
+    old_id BIGINT PRIMARY KEY,
+    new_id UUID NOT NULL UNIQUE
+);
 
-// Generate UUIDs for existing records
-_, err = db.ExecContext(ctx, `
-    INSERT INTO user_id_mapping (old_id, new_id)
-    SELECT id, gen_random_uuid()
-    FROM users
-`)
+INSERT INTO user_id_mapping (old_id, new_id)
+SELECT id, gen_random_uuid()
+FROM users;
 ```
 
-### Password Hash Format
+### Password Hashes in Another Format
 
-If using different hash format:
-
-```go
-func migratePasswordHash(oldHash string) string {
-    // If old hash is bcrypt, it works with SystemForge
-    if strings.HasPrefix(oldHash, "$2a$") || strings.HasPrefix(oldHash, "$2b$") {
-        return oldHash
-    }
-
-    // If old hash is unsupported, users must reset password
-    return ""
-}
-```
+Only Argon2id hashes in the encoded form above can be imported. Users whose hashes use another algorithm must reset their password after the migration.

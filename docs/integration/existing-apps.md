@@ -1,51 +1,31 @@
 # Integrating with Existing Apps
 
-This guide covers integrating SystemForge into existing Go applications.
+This guide covers integrating SystemForge into an existing Go application that already has its own users, organizations, and memberships.
+
+## How SystemForge Models People
+
+Every actor in SystemForge is a **principal**. A person is a principal of type `human` plus a one-to-one `Human` row with their email and profile. Passwords are credentials, organizations are organizations, and membership links a principal to an organization with a role:
+
+```
+existing tables          SystemForge tables
+─────────────────       ──────────────────────────────────────
+users            ←──→   sf_principals (type = 'human') + sf_humans
+                        sf_credentials (type = 'password')
+organizations    ←──→   sf_organizations
+user_orgs        ←──→   sf_principal_memberships
+```
+
+See the [schema reference](../reference/schemas.md) for every column.
 
 ## Integration Patterns
 
 ### Pattern 1: Side-by-Side Tables
 
-Keep existing tables, add SystemForge tables alongside:
+Keep your existing tables and add the SystemForge tables alongside them, copying data across and switching reads over time. The [migration guide](migration.md) covers the copy in detail.
 
-```
-existing tables          SystemForge tables
-─────────────────       ─────────────────
-users            ←──→   cf_users
-organizations    ←──→   cf_organizations
-user_orgs        ←──→   cf_memberships
-```
+### Pattern 2: Extension Tables
 
-### Pattern 2: Mixin Composition
-
-Compose SystemForge mixins into your existing Ent schemas:
-
-```go
-// your-app/ent/schema/user.go
-import cfmixin "github.com/plexusone/systemforge/identity/ent/mixin"
-
-type User struct {
-    ent.Schema
-}
-
-func (User) Mixin() []ent.Mixin {
-    return []ent.Mixin{
-        cfmixin.UserBase{}, // SystemForge fields
-    }
-}
-
-func (User) Fields() []ent.Field {
-    return []ent.Field{
-        // Your app-specific fields
-        field.String("username").Unique(),
-        field.String("bio").Optional(),
-    }
-}
-```
-
-### Pattern 3: Extension Tables
-
-Link your tables to SystemForge via foreign keys:
+Keep app-specific data in your own tables and reference the SystemForge principal by ID:
 
 ```go
 type UserProfile struct {
@@ -54,225 +34,203 @@ type UserProfile struct {
 
 func (UserProfile) Fields() []ent.Field {
     return []ent.Field{
-        field.UUID("cf_user_id", uuid.UUID{}).Unique(),
+        field.UUID("principal_id", uuid.UUID{}).Unique(),
         field.String("username").Unique(),
         field.String("bio").Optional(),
     }
 }
 ```
 
+The principal ID is stable across every sign-in method (password, social login, federation, SCIM), so it is the right key for application data.
+
 ## Step-by-Step Integration
 
-### Step 1: Add Dependency
+### Step 1: Add the Dependency
 
 ```bash
 go get github.com/plexusone/systemforge
 ```
 
-### Step 2: Create SystemForge Tables
+### Step 2: Create the SystemForge Tables
 
-Run migrations to create `cf_*` tables:
+Run `systemauth migrate`, or create the schema from your own code:
 
 ```go
-import "github.com/plexusone/systemforge/identity/ent"
+import (
+    "database/sql"
 
-func migrate(ctx context.Context) error {
-    cfClient, err := ent.Open("postgres", dsn)
+    "entgo.io/ent/dialect"
+    entsql "entgo.io/ent/dialect/sql"
+    _ "github.com/jackc/pgx/v5/stdlib"
+
+    "github.com/plexusone/systemforge/identity/ent"
+)
+
+func migrate(ctx context.Context, dsn string) (*ent.Client, error) {
+    db, err := sql.Open("pgx", dsn)
     if err != nil {
-        return err
+        return nil, err
     }
-
-    return cfClient.Schema.Create(ctx)
+    client := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, db)))
+    if err := client.Schema.Create(ctx); err != nil {
+        return nil, errors.Join(err, client.Close())
+    }
+    return client, nil
 }
 ```
 
-### Step 3: Sync Existing Data
+### Step 3: Copy Existing Data
 
-Create a migration to copy existing data:
-
-```go
-func syncUsers(ctx context.Context, appDB, cfDB *sql.DB) error {
-    rows, err := appDB.QueryContext(ctx, `
-        SELECT id, email, name, password_hash, created_at
-        FROM users
-    `)
-    if err != nil {
-        return err
-    }
-    defer rows.Close()
-
-    for rows.Next() {
-        var u struct {
-            ID           uuid.UUID
-            Email        string
-            Name         string
-            PasswordHash string
-            CreatedAt    time.Time
-        }
-        rows.Scan(&u.ID, &u.Email, &u.Name, &u.PasswordHash, &u.CreatedAt)
-
-        _, err = cfDB.ExecContext(ctx, `
-            INSERT INTO cf_users (id, email, name, password_hash, created_at, updated_at, active)
-            VALUES ($1, $2, $3, $4, $5, $5, true)
-            ON CONFLICT (id) DO UPDATE SET
-                email = EXCLUDED.email,
-                name = EXCLUDED.name,
-                password_hash = EXCLUDED.password_hash
-        `, u.ID, u.Email, u.Name, u.PasswordHash, u.CreatedAt)
-        if err != nil {
-            return err
-        }
-    }
-    return nil
-}
-```
+Copy users into `sf_principals` and `sf_humans`, compatible password hashes into `sf_credentials`, and then organizations and memberships. The [migration guide](migration.md#copying-data) has the SQL, including which password hash formats can be imported.
 
 ### Step 4: Set Up Dual-Write
 
-Write to both old and new tables during transition:
+Create people through the principal service, which writes the principal and its human row together and uses the email as the principal's identifier. Then write your own row with the returned principal ID:
 
 ```go
+import (
+    "github.com/plexusone/systemforge/identity/credential"
+    "github.com/plexusone/systemforge/identity/principal"
+)
+
 type UserService struct {
-    appClient *appent.Client
-    cfClient  *ent.Client
+    appClient  *appent.Client
+    principals principal.Service
+    creds      credential.Service
 }
 
-func (s *UserService) CreateUser(ctx context.Context, email, name string) error {
-    // Write to SystemForge
-    cfUser, err := s.cfClient.User.Create().
-        SetEmail(email).
-        SetName(name).
-        Save(ctx)
+func NewUserService(appClient *appent.Client, sfClient *ent.Client) *UserService {
+    return &UserService{
+        appClient:  appClient,
+        principals: principal.NewService(sfClient),
+        creds:      credential.NewService(sfClient),
+    }
+}
+
+func (s *UserService) CreateUser(ctx context.Context, email, name, password string) error {
+    p, err := s.principals.CreateHuman(ctx, principal.CreateHumanInput{
+        Email:       email,
+        DisplayName: name,
+    })
     if err != nil {
         return err
     }
 
-    // Write to app tables
+    if password != "" {
+        if err := s.creds.CreatePassword(ctx, credential.CreatePasswordInput{
+            PrincipalID: p.ID,
+            Password:    password,
+        }); err != nil {
+            return err
+        }
+    }
+
+    // Write to app tables with the same ID.
     _, err = s.appClient.User.Create().
-        SetID(cfUser.ID). // Use same ID
+        SetID(p.ID).
         SetEmail(email).
         SetName(name).
         Save(ctx)
-
     return err
 }
 ```
 
+`CreatePassword` hashes with Argon2id, and `credential.Service.VerifyPassword` checks a password against it.
+
 ### Step 5: Switch Reads
 
-Gradually switch reads to SystemForge:
+Read people from SystemForge. `GetByID` returns the principal with its human extension populated in `Human`:
 
 ```go
 func (s *UserService) GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
-    // Read from SystemForge
-    cfUser, err := s.cfClient.User.Get(ctx, id)
+    p, err := s.principals.GetByID(ctx, id)
     if err != nil {
         return nil, err
     }
 
-    // Optionally fetch app-specific data
-    profile, _ := s.appClient.UserProfile.Query().
-        Where(userprofile.CfUserIDEQ(id)).
+    profile, err := s.appClient.UserProfile.Query().
+        Where(userprofile.PrincipalIDEQ(id)).
         Only(ctx)
+    if err != nil && !appent.IsNotFound(err) {
+        return nil, err
+    }
 
-    return &User{
-        User:    cfUser,
-        Profile: profile,
-    }, nil
+    return &User{Principal: p, Profile: profile}, nil
 }
 ```
 
+To find someone by email, query the human row without regard to case, since SystemForge treats emails case-insensitively:
+
+```go
+p, err := sfClient.Principal.Query().
+    Where(
+        principal.TypeEQ(principal.TypeHuman),
+        principal.HasHumanWith(human.EmailEqualFold(email)),
+    ).
+    WithHuman().
+    Only(ctx)
+```
+
+This query uses the Ent packages `identity/ent/principal` and `identity/ent/human`.
+
 ### Step 6: Remove Old Tables
 
-After validation, remove the old user tables:
+After validation, archive and drop the old user tables:
 
 ```sql
--- Archive first
 CREATE TABLE users_archive AS SELECT * FROM users;
-
--- Drop old table
 DROP TABLE users;
 ```
 
 ## OAuth Integration
 
-### Add OAuth to Existing Auth
+SystemForge's OAuth 2.0 and OpenID Connect server is **SystemAuth**. An existing application has two supported ways to use it:
 
-```go
-import (
-    "github.com/plexusone/systemforge/identity/oauth"
-)
+- **Run SystemAuth as an identity provider and federate to it.** The application becomes an OpenID Connect client with the `identity/relyingparty` package, which handles the authorization flow, token verification, and finding or creating the application's local record for each principal. See [Relying Parties](../systemauth/relying-party.md).
+- **Embed SystemAuth in the application's binary.** The `identity/systemauthsvc` package runs the same server as the standalone `systemauth` binary inside your process, with the same configuration, production checks, and database setup. See [Embedding SystemAuth](../systemauth/embedding.md).
 
-func setupAuth(entClient *ent.Client) {
-    // Create OAuth provider
-    cfg := oauth.DefaultConfig("https://api.example.com", []byte("secret"))
-    provider, _ := oauth.NewProvider(entClient, cfg)
-
-    // Create OAuth API (endpoints auto-registered)
-    api, _ := oauth.NewAPI(provider)
-
-    // Mount to existing router
-    router.Mount("/", api.Router())
-}
-```
-
-### Link Existing Sessions
-
-```go
-func linkSession(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-    // Get existing session
-    session := getExistingSession(r)
-
-    // Find SystemForge user
-    cfUser, _ := cfClient.User.Query().
-        Where(user.EmailEQ(session.Email)).
-        Only(ctx)
-
-    // Store in context for OAuth
-    ctx = WithUserID(ctx, cfUser.ID)
-
-    // Continue to OAuth authorize
-    oauthHandler.AuthorizeEndpoint(w, r.WithContext(ctx))
-}
-```
+Either way, the subject of every token is the SystemForge principal ID, so it can be used directly as the key into your extension tables.
 
 ## Multi-Tenant Integration
 
 ### Map Existing Tenants
 
 ```go
-func syncOrganizations(ctx context.Context) error {
-    // Get existing tenants
-    tenants, _ := appClient.Tenant.Query().All(ctx)
-
+func copyOrganizations(ctx context.Context, appClient *appent.Client, sfClient *ent.Client) error {
+    tenants, err := appClient.Tenant.Query().All(ctx)
+    if err != nil {
+        return err
+    }
     for _, t := range tenants {
-        _, err := cfClient.Organization.Create().
+        if _, err := sfClient.Organization.Create().
             SetID(t.ID).
             SetName(t.Name).
             SetSlug(t.Slug).
             SetPlan(mapPlan(t.Plan)).
-            Save(ctx)
-        if err != nil {
+            Save(ctx); err != nil {
             return err
         }
     }
     return nil
 }
 ```
+
+`mapPlan` returns an `organization.Plan` value: `free`, `starter`, `pro`, or `enterprise`.
 
 ### Map Existing Memberships
 
 ```go
-func syncMemberships(ctx context.Context) error {
-    members, _ := appClient.TenantMember.Query().All(ctx)
-
+func copyMemberships(ctx context.Context, appClient *appent.Client, sfClient *ent.Client) error {
+    members, err := appClient.TenantMember.Query().All(ctx)
+    if err != nil {
+        return err
+    }
     for _, m := range members {
-        _, err := cfClient.Membership.Create().
-            SetUserID(m.UserID).
+        if _, err := sfClient.PrincipalMembership.Create().
+            SetPrincipalID(m.UserID).
             SetOrganizationID(m.TenantID).
             SetRole(mapRole(m.Role)).
-            Save(ctx)
-        if err != nil {
+            Save(ctx); err != nil {
             return err
         }
     }
@@ -280,14 +238,17 @@ func syncMemberships(ctx context.Context) error {
 }
 ```
 
+`role` is an application-defined string; `PrincipalMembership` also has an `active` flag (default true) for deactivating a membership without deleting it.
+
 ## Validation Checklist
 
-- [ ] SystemForge tables created (`cf_*`)
-- [ ] Existing data migrated
+- [ ] SystemForge tables created (`sf_*`)
+- [ ] People copied to `sf_principals` and `sf_humans`
+- [ ] Compatible password hashes copied to `sf_credentials`; other users told to reset
+- [ ] Organizations and memberships copied
 - [ ] Dual-write enabled
 - [ ] Read paths switched
-- [ ] OAuth endpoints working
-- [ ] Multi-tenant queries working
+- [ ] Sign-in through SystemAuth working, with token subjects mapped to principal IDs
 - [ ] Old tables archived
 - [ ] Dual-write disabled
 - [ ] Old tables dropped
