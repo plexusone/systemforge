@@ -1239,6 +1239,9 @@
   "unreleased": {
     "highlights": [
       {
+        "description": "Managed principals: humans without an email, such as young learners, created and controlled by guardian and educator managers, who sign them in with QR-friendly login tokens; opt-in per deployment and per client (ADR-005)"
+      },
+      {
         "description": "Principal is the sole identity root: the legacy User model and its dependent tables are removed, so password login, social login, federation sync, and SCIM all resolve a person to the same principal (ADR-004)"
       },
       {
@@ -1246,6 +1249,12 @@
       },
       {
         "description": "Fixed a panic on every ascending SCIM list sort, including the default order"
+      },
+      {
+        "description": "Security: the marketplace, organization, and invite APIs act for the authenticated caller and check organization permissions, instead of trusting IDs in the request; invite tokens are stored hashed"
+      },
+      {
+        "description": "The simple and SpiceDB authorization providers grant the same organization and manager permissions, held to the base schema by a parity test and a shared conformance suite"
       }
     ],
     "breaking": [
@@ -1284,6 +1293,38 @@
       {
         "description": "mixin.UserBase and mixin.MembershipBase are removed",
         "commit": "a083a0a"
+      },
+      {
+        "description": "Human.email is optional: a human without one is a managed principal with the identifier human:<id>. HumanPrincipal.Email, principal.Human.Email, and contract identity types treat it as optional; existing creation paths still require an email",
+        "commit": "f6346cb"
+      },
+      {
+        "description": "Marketplace checkout buys as the authenticated caller for an organization the caller may buy for, and answers 501 until marketplace.WithPurchaseAuthorizer or WithAuthorizer is configured; purchaser_id is optional, deprecated, and must equal the caller",
+        "commit": "63b6db8"
+      },
+      {
+        "description": "Marketplace listing and license operations answer 501 until marketplace.WithAuthorizer is configured and require an authenticated caller; only published listings are readable anonymously; owner_id and assigned_by are optional, deprecated, and must equal the caller",
+        "commit": "2c09db4"
+      },
+      {
+        "description": "Organization API endpoints require an authenticated caller and, except creating an organization and checking a slug, answer 501 until APIConfig.Authorizer is set",
+        "commit": "7a81c8b"
+      },
+      {
+        "description": "Invite API endpoints require an authenticated caller and organization endpoints answer 501 until APIConfig.Authorizer is set; accepting and declining require the invite to be addressed to the caller's email; inviter_principal_id, principal_id, and the email query are optional, deprecated, and must match the caller",
+        "commit": "61b845e"
+      },
+      {
+        "description": "Invite tokens are stored hashed and invite.Invite no longer has a Token field; the token is only in InviteResult.InviteURL. Existing PostgreSQL databases run migrations/0003_hash_invite_tokens.sql when deploying",
+        "commit": "b52c9a0"
+      },
+      {
+        "description": "spicedb.BaseSchema is now authz.BaseSpiceDBSchema: members hold contribute rather than edit on an organization, and editors are recognized",
+        "commit": "6a9274a"
+      },
+      {
+        "description": "authz.RelationshipSyncer gains AddPrincipalManager and RemovePrincipalManager; credential.Service gains IssueLoginToken and VerifyLoginToken; managedprincipal.Gate implementers also provide LoginTokenPolicy",
+        "commit": "a955205"
       }
     ],
     "added": [
@@ -1322,6 +1363,74 @@
       {
         "description": "The members endpoint accepts includeInactive to list deactivated memberships",
         "commit": "5b05d5c"
+      },
+      {
+        "description": "identity/managedprincipal creates managed principals with their managers in one transaction, maintains manager relationships with a last-manager guard, and audits every action",
+        "commit": "e49ccc6"
+      },
+      {
+        "description": "ManagerRelationship (sf_manager_relationships) and ManagerClaim (sf_manager_claims) Ent schemas",
+        "commit": "cd1483e"
+      },
+      {
+        "description": "Deployment managed_principals settings and the per-client managed_principals flag, both off by default, checked through Server.ManagedPrincipalsAllowed",
+        "commit": "0243306"
+      },
+      {
+        "description": "login_token credentials: issued by a manager, hashed, verified in constant time, single-use option, with lifetimes from the request, the client's login_token_ttl, or the deployment default (30 days) under a ceiling (400 days); single-use tokens last 20 minutes",
+        "commit": "81eb9ad"
+      },
+      {
+        "description": "POST /login-token exchanges a login token for a SystemAuth login session, with identical responses for every failure and per-address and per-client rate limits (WithLoginTokenRateLimit)",
+        "commit": "0237ff4"
+      },
+      {
+        "description": "ID token and userinfo claim managed: true for managed principals, and relying parties read it into VerifiedIdentity.Managed",
+        "commit": "0237ff4"
+      },
+      {
+        "description": "Managers list and revoke a managed principal's login tokens, login sessions, and token families, individually or all at once, through managedprincipal.Service or NewHandler",
+        "commit": "6953bc2"
+      },
+      {
+        "description": "Guardian claims: a manager issues a single-use code that makes a human with an email a guardian; AttachVerifiedEmail turns a managed principal into an ordinary human",
+        "commit": "cc7eb6c"
+      },
+      {
+        "description": "Base schema relations guardian and educator on principal with manage_account, manage_credentials, view_profile, and manage_managers; authz.ManagerRolePermissions and simple.WithManagerRoleGetter",
+        "commit": "a955205"
+      },
+      {
+        "description": "authz.OrgRolePermissions and the PermOrg* actions name the base organization permissions both providers evaluate",
+        "commit": "b52c69d"
+      },
+      {
+        "description": "providertest.RunOrgPermissionTests and RunManagerRelationTests hold providers to the base schema's grants",
+        "commit": "4ee182c"
+      },
+      {
+        "description": "marketplace.PurchaserChecker and stripe.WithPurchaserChecker refuse checkout to managed principals",
+        "commit": "6da101b"
+      },
+      {
+        "description": "marketplace.WithAuthorizer, WithPurchaseAuthorizer, OrgRolePurchaseAuthorizer, and WithCallerResolver configure how the marketplace API authorizes callers",
+        "commit": "63b6db8"
+      },
+      {
+        "description": "organization.MembershipRoleGetter backs the simple provider with active memberships; APIConfig.Authorizer and Caller configure the organization and invite APIs",
+        "commit": "7a81c8b"
+      },
+      {
+        "description": "requestprincipal.PrincipalUUID resolves the caller's SystemForge principal ID",
+        "commit": "1c10256"
+      },
+      {
+        "description": "spicedb.Client.DeleteRelationships deletes relationships by filter",
+        "commit": "f9bd91c"
+      },
+      {
+        "description": "migrations/0003 converts stored invite tokens to hashes",
+        "commit": "b52c9a0"
       }
     ],
     "changed": [
@@ -1340,6 +1449,22 @@
       {
         "description": "SCIM memberships honor the active flag, and deleting a user who belongs to a group removes the memberships instead of failing",
         "commit": "5a16f01"
+      },
+      {
+        "description": "Creating an organization through the API makes the caller its owner, and every organization with an owner gives it an owner membership",
+        "commit": "87d623d"
+      },
+      {
+        "description": "Listing organizations returns the caller's organizations, or all of them for platform administrators",
+        "commit": "7a81c8b"
+      },
+      {
+        "description": "SCIM no longer lists, reads, changes, deletes, or groups managed principals",
+        "commit": "549cc84"
+      },
+      {
+        "description": "Signup requires a bare email address",
+        "commit": "a13b125"
       }
     ],
     "fixed": [
@@ -1382,6 +1507,38 @@
       {
         "description": "Changing a user's email through SCIM no longer keeps the previous address's verification",
         "commit": "a5fdbe0"
+      },
+      {
+        "description": "The marketplace, organization, and invite APIs panicked at registration because list filters used pointer query parameters",
+        "commit": "603d444"
+      },
+      {
+        "description": "The simple provider denied every organization permission check, because its permission names did not match the ones it looked up",
+        "commit": "b52c69d"
+      },
+      {
+        "description": "SpiceDB GetRole reported editors as non-members",
+        "commit": "6a9274a"
+      },
+      {
+        "description": "A managed principal's first sign-in to a relying party failed for lack of a verified email",
+        "commit": "d439f6b"
+      },
+      {
+        "description": "In-memory stores, password login, and federation sync could match or adopt a human by an empty email",
+        "commit": "12c8194"
+      },
+      {
+        "description": "Invite emails are matched case-insensitively",
+        "commit": "61b845e"
+      },
+      {
+        "description": "organization.Service.Create failed for an organization without a plan instead of defaulting to free",
+        "commit": "03bfd60"
+      },
+      {
+        "description": "GetMembership reports a missing membership as organization.ErrMembershipNotFound",
+        "commit": "87d623d"
       }
     ],
     "documentation": [
@@ -1397,12 +1554,46 @@
       {
         "description": "Resource servers accepting AI agents via AAuth",
         "commit": "00b495f"
+      },
+      {
+        "description": "Managed principals guide, with the email exception, login token security, and base manager relations added to the users, account security, and authorization conventions docs",
+        "commit": "35c4961"
       }
     ],
     "deprecated": [
       {
         "description": "mixin.HumanMixin, mixin.OAuthAccountMixin, and mixin.RefreshTokenMixin: applications should authenticate through SystemAuth and link local records by sf_principal_id",
         "commit": "37776a2"
+      },
+      {
+        "description": "spicedb.BaseSchema: use authz.BaseSpiceDBSchema",
+        "commit": "6a9274a"
+      }
+    ],
+    "security": [
+      {
+        "description": "Marketplace checkout took the purchaser from the request body, so anyone could start a purchase in another principal's name for any organization",
+        "commit": "63b6db8"
+      },
+      {
+        "description": "Marketplace listing, license, and seat endpoints acted on any IDs a request named; they now check the caller's permissions on the owning organization",
+        "commit": "2c09db4"
+      },
+      {
+        "description": "The organization API listed every organization and let any caller read, change, or delete organizations, change members, and transfer ownership; it now authorizes each operation",
+        "commit": "7a81c8b"
+      },
+      {
+        "description": "Invite management needed no permission, and anyone holding an invite link could accept it as any principal; invites are now managed with invite_member and accepted only by the addressee",
+        "commit": "61b845e"
+      },
+      {
+        "description": "Invite tokens were stored in plain text, so a leaked table or backup could accept invites; they are stored as SHA-256 hashes",
+        "commit": "b52c9a0"
+      },
+      {
+        "description": "SpiceDB principal and organization cleanup ignored failures and missed editor and manager relations, leaving access behind while reporting success",
+        "commit": "f9bd91c"
       }
     ]
   }
