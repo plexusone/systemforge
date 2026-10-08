@@ -13,6 +13,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/pgschema"
 	"github.com/plexusone/systemforge/identity/systemauth"
 
 	// Database drivers: "pgx" (PostgreSQL) and "sqlite3".
@@ -26,6 +27,8 @@ type Database struct {
 	Client *ent.Client
 	// DB is the connection pool.
 	DB *sql.DB
+	// Dialect is the Ent dialect (dialect.Postgres or dialect.SQLite).
+	Dialect string
 }
 
 // Close closes the Ent client and its connection pool.
@@ -69,7 +72,7 @@ func OpenDatabase(cfg *systemauth.DatabaseConfig) (*Database, error) {
 }
 
 func wrapDB(db *sql.DB, dialectName string) *Database {
-	return &Database{Client: ent.NewClient(ent.Driver(entsql.OpenDB(dialectName, db))), DB: db}
+	return &Database{Client: ent.NewClient(ent.Driver(entsql.OpenDB(dialectName, db))), DB: db, Dialect: dialectName}
 }
 
 // Migrate opens the configured database, creates or updates the schema,
@@ -87,12 +90,19 @@ func Migrate(ctx context.Context, cfg *Config) (err error) {
 			err = fmt.Errorf("closing database: %w", cerr)
 		}
 	}()
-	return migrate(ctx, db.Client)
+	return migrate(ctx, db.Client, db.Dialect)
 }
 
-func migrate(ctx context.Context, client *ent.Client) error {
+// migrate creates or updates the Ent schema and, on PostgreSQL, the
+// schema objects Ent cannot express (see pgschema).
+func migrate(ctx context.Context, client *ent.Client, dialectName string) error {
 	if err := client.Schema.Create(ctx); err != nil {
 		return fmt.Errorf("running migrations: %w", err)
+	}
+	if dialectName == dialect.Postgres {
+		if err := pgschema.Apply(ctx, client); err != nil {
+			return fmt.Errorf("running PostgreSQL migrations: %w", err)
+		}
 	}
 	return nil
 }

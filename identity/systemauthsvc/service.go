@@ -68,7 +68,10 @@ type Service struct {
 	db          *sql.DB
 	owned       *Database
 	storageName string
-	logger      *slog.Logger
+	// dialect is the Ent dialect of the database, or "" when unknown (an
+	// injected Ent client without Options.DBDialect) or in-memory.
+	dialect string
+	logger  *slog.Logger
 }
 
 // New builds a SystemAuth server from cfg. Unless opts.Dev is set it
@@ -172,11 +175,15 @@ func (s *Service) openStorage(ctx context.Context, c *Config, opts Options) erro
 	case opts.EntClient != nil:
 		s.client, s.db, s.storageName = opts.EntClient, opts.DB, "ent"
 		if opts.DBDialect != "" {
-			s.storageName = opts.DBDialect
+			_, dialectName, err := driverDialect(opts.DBDialect)
+			if err != nil {
+				return fmt.Errorf("systemauthsvc: Options.DBDialect: %w", err)
+			}
+			s.storageName, s.dialect = opts.DBDialect, dialectName
 		}
 	case opts.DB != nil:
 		d := wrapDB(opts.DB, opts.DBDialect)
-		s.client, s.db, s.storageName = d.Client, d.DB, opts.DBDialect
+		s.client, s.db, s.storageName, s.dialect = d.Client, d.DB, opts.DBDialect, opts.DBDialect
 	case c.Database != nil:
 		s.logger.Info("connecting to database", "driver", c.Database.Driver)
 		d, err := OpenDatabase(c.Database)
@@ -184,7 +191,7 @@ func (s *Service) openStorage(ctx context.Context, c *Config, opts Options) erro
 			return err
 		}
 		s.owned = d
-		s.client, s.db, s.storageName = d.Client, d.DB, c.Database.Driver
+		s.client, s.db, s.storageName, s.dialect = d.Client, d.DB, c.Database.Driver, d.Dialect
 	default:
 		return nil
 	}
@@ -260,7 +267,7 @@ func (s *Service) Migrate(ctx context.Context) error {
 	if s.client == nil {
 		return nil
 	}
-	return migrate(ctx, s.client)
+	return migrate(ctx, s.client, s.dialect)
 }
 
 // Ready runs the readiness checks behind GET /readyz (the database ping)
