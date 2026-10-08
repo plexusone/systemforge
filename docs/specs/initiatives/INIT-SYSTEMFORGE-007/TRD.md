@@ -90,6 +90,18 @@ A new package owning the invariants:
   restores default human capabilities. Relationships are untouched.
 - `IsManaged(ctx, principalID) bool` for callers that need the distinction.
 
+As implemented: claims live in their own table, `sf_manager_claims`
+(hashed `SFMC` codes of 160 bits, a lookup prefix, issuer, expiry,
+redemption), not in `sf_credentials`, so a claim code can never be
+verified as a login token. Issuing a claim requires `manage_credentials`;
+codes last seven days by default (`WithClaimTTL`) so a letter home can
+reach a parent; redemption spends the claim conditionally inside the
+transaction that adds the guardian, so it succeeds once. Because
+INIT-SYSTEMFORGE-006 is not yet implemented, the attach step is
+`AttachVerifiedEmail(ctx, actorID, managedID, email, verifiedAt)`: it
+requires `manage_account`, and proving control of the address is the
+caller's job until SystemAuth's verification flow drives it.
+
 Deployment setting: `identity.managed_principals.enabled` in the SystemAuth
 config, default `false`, surfaced through `systemauthsvc`.
 

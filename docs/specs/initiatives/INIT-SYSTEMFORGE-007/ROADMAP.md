@@ -39,7 +39,7 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 - [ ] `RMI-SYSTEMFORGE-109` Email-assuming path audit: social login, invite, signup, SCIM, relying-party views, `session/jwt`, `contract` types, marketplace purchaser check
   - Depends on: `RMI-SYSTEMFORGE-102`
-- [ ] `RMI-SYSTEMFORGE-110` Claim and attach-email flows: `educator`/`guardian`-issued single-use claim redeemed by an emailed human to become `guardian`; attach a verified email to a managed principal and restore default capabilities
+- [x] `RMI-SYSTEMFORGE-110` Claim and attach-email flows: `educator`/`guardian`-issued single-use claim redeemed by an emailed human to become `guardian`; attach a verified email to a managed principal and restore default capabilities
   - Depends on: `RMI-SYSTEMFORGE-104`
   - Depends on: `RMI-SYSTEMFORGE-105`
 - [ ] `RMI-SYSTEMFORGE-111` Documentation and release: `docs/identity/managed-principals.md`, updates to users, security, and authorization conventions docs; changelog; tag v0.15.0; record the release
