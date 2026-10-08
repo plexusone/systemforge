@@ -142,6 +142,10 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 				if authErr.code != "" {
 					challenge += `, error="` + authErr.code + `"`
 				}
+				if authErr.status == http.StatusForbidden {
+					writeAuthError(w, http.StatusForbidden, "CSRF_REJECTED", authErr.message)
+					return
+				}
 				w.Header().Set("WWW-Authenticate", challenge)
 				writeAuthError(w, http.StatusUnauthorized, "UNAUTHENTICATED", authErr.message)
 				return
@@ -155,6 +159,8 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 type bearerError struct {
 	code    string
 	message string
+	// status overrides the 401 the client is sent.
+	status int
 }
 
 func (e *bearerError) Error() string { return e.message }
@@ -184,6 +190,12 @@ func (cfg BearerConfig) authenticate(r *http.Request) (*AuthenticatedPrincipal, 
 		if cfg.Sessions != nil {
 			p, err := cfg.Sessions.authenticate(r)
 			if err == nil {
+				// A browser attaches the cookie to cross-site requests on
+				// its own, so state-changing ones must prove they come
+				// from an allowed origin, as RequireSession demands.
+				if isUnsafeMethod(r.Method) && !cfg.Sessions.sameOriginRequest(r) {
+					return nil, &bearerError{message: "cross-origin request rejected", status: http.StatusForbidden}
+				}
 				return p, nil
 			}
 			if !errors.Is(err, ErrSessionNotFound) {
