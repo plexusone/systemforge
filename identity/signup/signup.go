@@ -31,6 +31,11 @@ type SignupInput struct {
 	PersonalOrgName string
 	// Metadata contains optional metadata for the user.
 	Metadata map[string]any
+	// EmailVerified asserts that the caller verified Email belongs to the
+	// person signing up, for example an identity provider's verified
+	// flag. SignupOrGetExisting returns an existing account for an email
+	// only when it is set.
+	EmailVerified bool
 }
 
 // SignupResult contains the result of a signup operation.

@@ -5,8 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/mail"
+	"strings"
+
+	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/invite"
 	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/identity/principal"
@@ -68,27 +72,20 @@ func (s *DefaultService) Signup(ctx context.Context, input SignupInput) (*Signup
 	}
 
 	// Check if email already exists
-	existing, err := s.principalSvc.GetByIdentifier(ctx, input.Email)
-	if err == nil && existing != nil {
-		return nil, fmt.Errorf("user with email %s already exists", input.Email)
+	if _, err := s.principalSvc.GetByIdentifier(ctx, input.Email); err == nil {
+		return nil, fmt.Errorf("%w: %s", ErrEmailTaken, input.Email)
+	} else if !errors.Is(err, principal.ErrNotFound) {
+		return nil, fmt.Errorf("failed to check email: %w", err)
 	}
 
 	// Check if slug is available
-	_, err = s.orgSvc.GetBySlug(ctx, input.PersonalOrgSlug)
-	if err == nil {
+	if _, err := s.orgSvc.GetBySlug(ctx, input.PersonalOrgSlug); err == nil {
 		return nil, fmt.Errorf("slug %s is already taken", input.PersonalOrgSlug)
 	}
 
-	// Start transaction
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start transaction: %w", err)
-	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	// The principal and organization services each write in their own
+	// transaction, so a failure after the principal exists is undone by
+	// deleting it; otherwise a retry would find the email taken.
 
 	// Create human principal
 	humanPrincipal, err := s.principalSvc.CreateHuman(ctx, principal.CreateHumanInput{
@@ -120,17 +117,13 @@ func (s *DefaultService) Signup(ctx context.Context, input SignupInput) (*Signup
 		LogoURL:          input.AvatarURL,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create personal organization: %w", err)
+		return nil, errors.Join(fmt.Errorf("failed to create personal organization: %w", err), s.deletePrincipal(ctx, humanPrincipal.ID))
 	}
 
 	// Get the membership that was created
 	membership, err := s.orgSvc.GetMembership(ctx, personalOrg.ID, humanPrincipal.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get owner membership: %w", err)
-	}
-
-	if err = tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit: %w", err)
 	}
 
 	return &SignupResult{
@@ -153,8 +146,11 @@ func (s *DefaultService) SignupWithInvite(ctx context.Context, input AcceptInvit
 		return nil, fmt.Errorf("invite is no longer valid (status: %s)", inv.Status)
 	}
 
-	// Check email matches if we want to enforce that
-	// For now, we allow any email to accept an invite (GitHub style)
+	// The invite was sent to one address; holding its link does not let
+	// someone sign up under another and join the organization.
+	if !strings.EqualFold(inv.Email, input.Email) {
+		return nil, ErrInviteEmailMismatch
+	}
 
 	// First, do the standard signup
 	result, err := s.Signup(ctx, input.SignupInput)
@@ -187,7 +183,15 @@ func (s *DefaultService) SignupOrGetExisting(ctx context.Context, input SignupIn
 	}
 	// Try to find existing user by email
 	existing, err := s.principalSvc.GetByIdentifier(ctx, input.Email)
-	if err == nil && existing != nil {
+	if err != nil && !errors.Is(err, principal.ErrNotFound) {
+		return nil, false, fmt.Errorf("failed to look up email: %w", err)
+	}
+	if err == nil {
+		// Returning an account for an unverified address would let anyone
+		// who claims it sign in as its owner.
+		if !input.EmailVerified {
+			return nil, false, ErrEmailNotVerified
+		}
 		// User exists, get their personal org
 		personalOrg, err := s.orgSvc.GetPersonalOrg(ctx, existing.ID)
 		if err != nil {
@@ -232,6 +236,30 @@ func (s *DefaultService) SignupOrGetExisting(ctx context.Context, input SignupIn
 // ErrInvalidEmail is returned for a signup email that is not a plain
 // address.
 var ErrInvalidEmail = errors.New("signup: invalid email address")
+
+// ErrEmailTaken is returned when signing up with an email that already
+// has an account.
+var ErrEmailTaken = errors.New("signup: email already has an account")
+
+// ErrEmailNotVerified is returned by SignupOrGetExisting when an account
+// exists for an email the caller has not verified.
+var ErrEmailNotVerified = errors.New("signup: email not verified; cannot sign in to the existing account")
+
+// ErrInviteEmailMismatch is returned when signing up with an invite under
+// an email other than the one invited.
+var ErrInviteEmailMismatch = errors.New("signup: email does not match the invite")
+
+// deletePrincipal removes a principal created by a signup that failed
+// afterwards.
+func (s *DefaultService) deletePrincipal(ctx context.Context, id uuid.UUID) error {
+	if _, err := s.client.Human.Delete().Where(human.PrincipalID(id)).Exec(ctx); err != nil {
+		return fmt.Errorf("undoing signup: deleting human: %w", err)
+	}
+	if err := s.client.Principal.DeleteOneID(id).Exec(ctx); err != nil {
+		return fmt.Errorf("undoing signup: deleting principal: %w", err)
+	}
+	return nil
+}
 
 // validateEmail requires a bare address such as kim@example.com. Signup
 // looks principals up by identifier, so this also keeps a managed
