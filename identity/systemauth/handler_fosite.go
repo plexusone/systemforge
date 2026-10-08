@@ -393,6 +393,29 @@ func (s *Server) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 		defer span.End()
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	if !AuthorizeIntrospectionCaller(r,
+		func(id string) (bool, bool) {
+			c, err := s.storage.GetClientByID(ctx, id)
+			if err != nil {
+				return false, false
+			}
+			return true, c.IsPublic()
+		},
+		func(token string) []string {
+			ar, err := s.introspect(ctx, token, fosite.AccessToken, s.Session(""))
+			if err != nil {
+				return nil
+			}
+			return ar.GetGrantedScopes()
+		}) {
+		if s.observability != nil {
+			s.observability.RecordTokenValidation(ctx, observability.ResultInvalid)
+		}
+		writeIntrospectionUnauthorized(w)
+		return
+	}
+
 	session := s.Session("")
 
 	ir, err := s.oauth2.NewIntrospectionRequest(ctx, r, session)

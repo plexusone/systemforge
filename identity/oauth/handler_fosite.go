@@ -9,6 +9,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/ory/fosite"
+
+	"github.com/plexusone/systemforge/identity/systemauth"
 )
 
 // registerFositeEndpoints registers OAuth endpoints that use Fosite directly.
@@ -258,9 +260,44 @@ func (a *API) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	oauth2 := a.provider.OAuth2Provider()
 
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	if !systemauth.AuthorizeIntrospectionCaller(r,
+		func(id string) (bool, bool) {
+			c, err := a.provider.storage.GetClient(ctx, id)
+			if err != nil {
+				return false, false
+			}
+			return true, c.IsPublic()
+		},
+		func(token string) []string {
+			_, ar, err := oauth2.IntrospectToken(ctx, token, fosite.AccessToken, a.provider.Session(""))
+			if err != nil {
+				return nil
+			}
+			return ar.GetGrantedScopes()
+		}) {
+		w.Header().Set("WWW-Authenticate", `Basic realm="introspection", Bearer`)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		if err := json.NewEncoder(w).Encode(map[string]string{"error": "invalid_client"}); err != nil {
+			LoggerFromContext(ctx).Error("writing introspection error", "error", err)
+		}
+		return
+	}
+
 	session := a.provider.Session("")
 
 	ir, err := oauth2.NewIntrospectionRequest(ctx, r, session)
+	if err == nil && ir.IsActive() {
+		// A token of a principal that is no longer active is inactive.
+		active, perr := a.provider.storage.grants.PrincipalActive(ctx, ir.GetAccessRequester().GetSession().GetSubject())
+		if perr != nil {
+			LoggerFromContext(ctx).Error("checking principal", "error", perr)
+		}
+		if perr != nil || !active {
+			err = fosite.ErrInactiveToken
+		}
+	}
 	if err != nil {
 		// Introspection MUST return 200 even for invalid tokens
 		w.Header().Set("Content-Type", "application/json")
