@@ -228,9 +228,6 @@ func TestResolveExternalLoginEnt(t *testing.T) {
 		if n := db.ExternalIdentity.Query().CountX(ctx); n != 1 {
 			t.Errorf("external identities = %d, want 1", n)
 		}
-		if n := db.User.Query().CountX(ctx); n != 0 {
-			t.Errorf("legacy users = %d, want 0", n)
-		}
 		got, err := dir.GetPrincipal(ctx, p1.ID)
 		if err != nil {
 			t.Fatal(err)

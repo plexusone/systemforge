@@ -12,8 +12,8 @@ import (
 )
 
 // TestStaticClientsOwnedBySystemServicePrincipal verifies that statically
-// configured clients are owned by a service principal, not a synthetic
-// human user, and that repeated starts reuse the same principal.
+// configured clients are owned by a service principal and that repeated
+// starts reuse the same principal.
 func TestStaticClientsOwnedBySystemServicePrincipal(t *testing.T) {
 	dbCfg := &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)}
 	cfg := &systemauthsvc.Config{
@@ -84,13 +84,5 @@ func TestStaticClientsOwnedBySystemServicePrincipal(t *testing.T) {
 	}
 	if app.Edges.Owner == nil || app.Edges.Owner.ID != wantID {
 		t.Errorf("static client owner = %v, want principal %s", app.Edges.Owner, wantID)
-	}
-
-	users, err := db.Client.User.Query().Count(ctx)
-	if err != nil {
-		t.Fatalf("count users: %v", err)
-	}
-	if users != 0 {
-		t.Errorf("bootstrap created %d legacy users, want 0", users)
 	}
 }

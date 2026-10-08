@@ -53,14 +53,8 @@ type Organization struct {
 
 // OrganizationEdges holds the relations/edges for other nodes in the graph.
 type OrganizationEdges struct {
-	// Memberships holds the value of the memberships edge.
-	Memberships []*Membership `json:"memberships,omitempty"`
-	// APIKeys holds the value of the api_keys edge.
-	APIKeys []*APIKey `json:"api_keys,omitempty"`
 	// OauthApps holds the value of the oauth_apps edge.
 	OauthApps []*OAuthApp `json:"oauth_apps,omitempty"`
-	// ServiceAccounts holds the value of the service_accounts edge.
-	ServiceAccounts []*ServiceAccount `json:"service_accounts,omitempty"`
 	// Principals holds the value of the principals edge.
 	Principals []*Principal `json:"principals,omitempty"`
 	// PrincipalMemberships holds the value of the principal_memberships edge.
@@ -77,49 +71,22 @@ type OrganizationEdges struct {
 	Subscription *Subscription `json:"subscription,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [11]bool
-}
-
-// MembershipsOrErr returns the Memberships value or an error if the edge
-// was not loaded in eager-loading.
-func (e OrganizationEdges) MembershipsOrErr() ([]*Membership, error) {
-	if e.loadedTypes[0] {
-		return e.Memberships, nil
-	}
-	return nil, &NotLoadedError{edge: "memberships"}
-}
-
-// APIKeysOrErr returns the APIKeys value or an error if the edge
-// was not loaded in eager-loading.
-func (e OrganizationEdges) APIKeysOrErr() ([]*APIKey, error) {
-	if e.loadedTypes[1] {
-		return e.APIKeys, nil
-	}
-	return nil, &NotLoadedError{edge: "api_keys"}
+	loadedTypes [8]bool
 }
 
 // OauthAppsOrErr returns the OauthApps value or an error if the edge
 // was not loaded in eager-loading.
 func (e OrganizationEdges) OauthAppsOrErr() ([]*OAuthApp, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[0] {
 		return e.OauthApps, nil
 	}
 	return nil, &NotLoadedError{edge: "oauth_apps"}
 }
 
-// ServiceAccountsOrErr returns the ServiceAccounts value or an error if the edge
-// was not loaded in eager-loading.
-func (e OrganizationEdges) ServiceAccountsOrErr() ([]*ServiceAccount, error) {
-	if e.loadedTypes[3] {
-		return e.ServiceAccounts, nil
-	}
-	return nil, &NotLoadedError{edge: "service_accounts"}
-}
-
 // PrincipalsOrErr returns the Principals value or an error if the edge
 // was not loaded in eager-loading.
 func (e OrganizationEdges) PrincipalsOrErr() ([]*Principal, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[1] {
 		return e.Principals, nil
 	}
 	return nil, &NotLoadedError{edge: "principals"}
@@ -128,7 +95,7 @@ func (e OrganizationEdges) PrincipalsOrErr() ([]*Principal, error) {
 // PrincipalMembershipsOrErr returns the PrincipalMemberships value or an error if the edge
 // was not loaded in eager-loading.
 func (e OrganizationEdges) PrincipalMembershipsOrErr() ([]*PrincipalMembership, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[2] {
 		return e.PrincipalMemberships, nil
 	}
 	return nil, &NotLoadedError{edge: "principal_memberships"}
@@ -139,7 +106,7 @@ func (e OrganizationEdges) PrincipalMembershipsOrErr() ([]*PrincipalMembership, 
 func (e OrganizationEdges) OwnerOrErr() (*Principal, error) {
 	if e.Owner != nil {
 		return e.Owner, nil
-	} else if e.loadedTypes[6] {
+	} else if e.loadedTypes[3] {
 		return nil, &NotFoundError{label: principal.Label}
 	}
 	return nil, &NotLoadedError{edge: "owner"}
@@ -148,7 +115,7 @@ func (e OrganizationEdges) OwnerOrErr() (*Principal, error) {
 // InvitesOrErr returns the Invites value or an error if the edge
 // was not loaded in eager-loading.
 func (e OrganizationEdges) InvitesOrErr() ([]*Invite, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[4] {
 		return e.Invites, nil
 	}
 	return nil, &NotLoadedError{edge: "invites"}
@@ -157,7 +124,7 @@ func (e OrganizationEdges) InvitesOrErr() ([]*Invite, error) {
 // ListingsOrErr returns the Listings value or an error if the edge
 // was not loaded in eager-loading.
 func (e OrganizationEdges) ListingsOrErr() ([]*Listing, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[5] {
 		return e.Listings, nil
 	}
 	return nil, &NotLoadedError{edge: "listings"}
@@ -166,7 +133,7 @@ func (e OrganizationEdges) ListingsOrErr() ([]*Listing, error) {
 // LicensesOrErr returns the Licenses value or an error if the edge
 // was not loaded in eager-loading.
 func (e OrganizationEdges) LicensesOrErr() ([]*License, error) {
-	if e.loadedTypes[9] {
+	if e.loadedTypes[6] {
 		return e.Licenses, nil
 	}
 	return nil, &NotLoadedError{edge: "licenses"}
@@ -177,7 +144,7 @@ func (e OrganizationEdges) LicensesOrErr() ([]*License, error) {
 func (e OrganizationEdges) SubscriptionOrErr() (*Subscription, error) {
 	if e.Subscription != nil {
 		return e.Subscription, nil
-	} else if e.loadedTypes[10] {
+	} else if e.loadedTypes[7] {
 		return nil, &NotFoundError{label: subscription.Label}
 	}
 	return nil, &NotLoadedError{edge: "subscription"}
@@ -312,24 +279,9 @@ func (_m *Organization) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryMemberships queries the "memberships" edge of the Organization entity.
-func (_m *Organization) QueryMemberships() *MembershipQuery {
-	return NewOrganizationClient(_m.config).QueryMemberships(_m)
-}
-
-// QueryAPIKeys queries the "api_keys" edge of the Organization entity.
-func (_m *Organization) QueryAPIKeys() *APIKeyQuery {
-	return NewOrganizationClient(_m.config).QueryAPIKeys(_m)
-}
-
 // QueryOauthApps queries the "oauth_apps" edge of the Organization entity.
 func (_m *Organization) QueryOauthApps() *OAuthAppQuery {
 	return NewOrganizationClient(_m.config).QueryOauthApps(_m)
-}
-
-// QueryServiceAccounts queries the "service_accounts" edge of the Organization entity.
-func (_m *Organization) QueryServiceAccounts() *ServiceAccountQuery {
-	return NewOrganizationClient(_m.config).QueryServiceAccounts(_m)
 }
 
 // QueryPrincipals queries the "principals" edge of the Organization entity.

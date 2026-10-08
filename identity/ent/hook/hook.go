@@ -9,18 +9,6 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 )
 
-// The APIKeyFunc type is an adapter to allow the use of ordinary
-// function as APIKey mutator.
-type APIKeyFunc func(context.Context, *ent.APIKeyMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f APIKeyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.APIKeyMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.APIKeyMutation", m)
-}
-
 // The AgentFunc type is an adapter to allow the use of ordinary
 // function as Agent mutator.
 type AgentFunc func(context.Context, *ent.AgentMutation) (ent.Value, error)
@@ -153,30 +141,6 @@ func (f LoginStateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LoginStateMutation", m)
 }
 
-// The MembershipFunc type is an adapter to allow the use of ordinary
-// function as Membership mutator.
-type MembershipFunc func(context.Context, *ent.MembershipMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f MembershipFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.MembershipMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MembershipMutation", m)
-}
-
-// The OAuthAccountFunc type is an adapter to allow the use of ordinary
-// function as OAuthAccount mutator.
-type OAuthAccountFunc func(context.Context, *ent.OAuthAccountMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f OAuthAccountFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.OAuthAccountMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OAuthAccountMutation", m)
-}
-
 // The OAuthAppFunc type is an adapter to allow the use of ordinary
 // function as OAuthApp mutator.
 type OAuthAppFunc func(context.Context, *ent.OAuthAppMutation) (ent.Value, error)
@@ -285,18 +249,6 @@ func (f PrincipalTokenFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PrincipalTokenMutation", m)
 }
 
-// The RefreshTokenFunc type is an adapter to allow the use of ordinary
-// function as RefreshToken mutator.
-type RefreshTokenFunc func(context.Context, *ent.RefreshTokenMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f RefreshTokenFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.RefreshTokenMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RefreshTokenMutation", m)
-}
-
 // The SeatAssignmentFunc type is an adapter to allow the use of ordinary
 // function as SeatAssignment mutator.
 type SeatAssignmentFunc func(context.Context, *ent.SeatAssignmentMutation) (ent.Value, error)
@@ -307,30 +259,6 @@ func (f SeatAssignmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SeatAssignmentMutation", m)
-}
-
-// The ServiceAccountFunc type is an adapter to allow the use of ordinary
-// function as ServiceAccount mutator.
-type ServiceAccountFunc func(context.Context, *ent.ServiceAccountMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f ServiceAccountFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.ServiceAccountMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ServiceAccountMutation", m)
-}
-
-// The ServiceAccountKeyPairFunc type is an adapter to allow the use of ordinary
-// function as ServiceAccountKeyPair mutator.
-type ServiceAccountKeyPairFunc func(context.Context, *ent.ServiceAccountKeyPairMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f ServiceAccountKeyPairFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.ServiceAccountKeyPairMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ServiceAccountKeyPairMutation", m)
 }
 
 // The ServicePrincipalFunc type is an adapter to allow the use of ordinary
@@ -355,18 +283,6 @@ func (f SubscriptionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SubscriptionMutation", m)
-}
-
-// The UserFunc type is an adapter to allow the use of ordinary
-// function as User mutator.
-type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f UserFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.UserMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserMutation", m)
 }
 
 // Condition is a hook condition function.

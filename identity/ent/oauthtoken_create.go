@@ -45,20 +45,6 @@ func (_c *OAuthTokenCreate) SetNillableSubject(v *string) *OAuthTokenCreate {
 	return _c
 }
 
-// SetServiceAccountID sets the "service_account_id" field.
-func (_c *OAuthTokenCreate) SetServiceAccountID(v uuid.UUID) *OAuthTokenCreate {
-	_c.mutation.SetServiceAccountID(v)
-	return _c
-}
-
-// SetNillableServiceAccountID sets the "service_account_id" field if the given value is not nil.
-func (_c *OAuthTokenCreate) SetNillableServiceAccountID(v *uuid.UUID) *OAuthTokenCreate {
-	if v != nil {
-		_c.SetServiceAccountID(*v)
-	}
-	return _c
-}
-
 // SetAccessTokenSignature sets the "access_token_signature" field.
 func (_c *OAuthTokenCreate) SetAccessTokenSignature(v string) *OAuthTokenCreate {
 	_c.mutation.SetAccessTokenSignature(v)
@@ -400,10 +386,6 @@ func (_c *OAuthTokenCreate) createSpec() (*OAuthToken, *sqlgraph.CreateSpec) {
 		_spec.SetField(oauthtoken.FieldSubject, field.TypeString, value)
 		_node.Subject = value
 	}
-	if value, ok := _c.mutation.ServiceAccountID(); ok {
-		_spec.SetField(oauthtoken.FieldServiceAccountID, field.TypeUUID, value)
-		_node.ServiceAccountID = &value
-	}
 	if value, ok := _c.mutation.AccessTokenSignature(); ok {
 		_spec.SetField(oauthtoken.FieldAccessTokenSignature, field.TypeString, value)
 		_node.AccessTokenSignature = value
@@ -564,24 +546,6 @@ func (u *OAuthTokenUpsert) UpdateSubject() *OAuthTokenUpsert {
 // ClearSubject clears the value of the "subject" field.
 func (u *OAuthTokenUpsert) ClearSubject() *OAuthTokenUpsert {
 	u.SetNull(oauthtoken.FieldSubject)
-	return u
-}
-
-// SetServiceAccountID sets the "service_account_id" field.
-func (u *OAuthTokenUpsert) SetServiceAccountID(v uuid.UUID) *OAuthTokenUpsert {
-	u.Set(oauthtoken.FieldServiceAccountID, v)
-	return u
-}
-
-// UpdateServiceAccountID sets the "service_account_id" field to the value that was provided on create.
-func (u *OAuthTokenUpsert) UpdateServiceAccountID() *OAuthTokenUpsert {
-	u.SetExcluded(oauthtoken.FieldServiceAccountID)
-	return u
-}
-
-// ClearServiceAccountID clears the value of the "service_account_id" field.
-func (u *OAuthTokenUpsert) ClearServiceAccountID() *OAuthTokenUpsert {
-	u.SetNull(oauthtoken.FieldServiceAccountID)
 	return u
 }
 
@@ -902,27 +866,6 @@ func (u *OAuthTokenUpsertOne) UpdateSubject() *OAuthTokenUpsertOne {
 func (u *OAuthTokenUpsertOne) ClearSubject() *OAuthTokenUpsertOne {
 	return u.Update(func(s *OAuthTokenUpsert) {
 		s.ClearSubject()
-	})
-}
-
-// SetServiceAccountID sets the "service_account_id" field.
-func (u *OAuthTokenUpsertOne) SetServiceAccountID(v uuid.UUID) *OAuthTokenUpsertOne {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.SetServiceAccountID(v)
-	})
-}
-
-// UpdateServiceAccountID sets the "service_account_id" field to the value that was provided on create.
-func (u *OAuthTokenUpsertOne) UpdateServiceAccountID() *OAuthTokenUpsertOne {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.UpdateServiceAccountID()
-	})
-}
-
-// ClearServiceAccountID clears the value of the "service_account_id" field.
-func (u *OAuthTokenUpsertOne) ClearServiceAccountID() *OAuthTokenUpsertOne {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.ClearServiceAccountID()
 	})
 }
 
@@ -1449,27 +1392,6 @@ func (u *OAuthTokenUpsertBulk) UpdateSubject() *OAuthTokenUpsertBulk {
 func (u *OAuthTokenUpsertBulk) ClearSubject() *OAuthTokenUpsertBulk {
 	return u.Update(func(s *OAuthTokenUpsert) {
 		s.ClearSubject()
-	})
-}
-
-// SetServiceAccountID sets the "service_account_id" field.
-func (u *OAuthTokenUpsertBulk) SetServiceAccountID(v uuid.UUID) *OAuthTokenUpsertBulk {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.SetServiceAccountID(v)
-	})
-}
-
-// UpdateServiceAccountID sets the "service_account_id" field to the value that was provided on create.
-func (u *OAuthTokenUpsertBulk) UpdateServiceAccountID() *OAuthTokenUpsertBulk {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.UpdateServiceAccountID()
-	})
-}
-
-// ClearServiceAccountID clears the value of the "service_account_id" field.
-func (u *OAuthTokenUpsertBulk) ClearServiceAccountID() *OAuthTokenUpsertBulk {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.ClearServiceAccountID()
 	})
 }
 

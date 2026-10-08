@@ -12,8 +12,6 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
-	// APIKey is the client for interacting with the APIKey builders.
-	APIKey *APIKeyClient
 	// Agent is the client for interacting with the Agent builders.
 	Agent *AgentClient
 	// Application is the client for interacting with the Application builders.
@@ -36,10 +34,6 @@ type Tx struct {
 	LoginSession *LoginSessionClient
 	// LoginState is the client for interacting with the LoginState builders.
 	LoginState *LoginStateClient
-	// Membership is the client for interacting with the Membership builders.
-	Membership *MembershipClient
-	// OAuthAccount is the client for interacting with the OAuthAccount builders.
-	OAuthAccount *OAuthAccountClient
 	// OAuthApp is the client for interacting with the OAuthApp builders.
 	OAuthApp *OAuthAppClient
 	// OAuthAppSecret is the client for interacting with the OAuthAppSecret builders.
@@ -58,20 +52,12 @@ type Tx struct {
 	PrincipalMembership *PrincipalMembershipClient
 	// PrincipalToken is the client for interacting with the PrincipalToken builders.
 	PrincipalToken *PrincipalTokenClient
-	// RefreshToken is the client for interacting with the RefreshToken builders.
-	RefreshToken *RefreshTokenClient
 	// SeatAssignment is the client for interacting with the SeatAssignment builders.
 	SeatAssignment *SeatAssignmentClient
-	// ServiceAccount is the client for interacting with the ServiceAccount builders.
-	ServiceAccount *ServiceAccountClient
-	// ServiceAccountKeyPair is the client for interacting with the ServiceAccountKeyPair builders.
-	ServiceAccountKeyPair *ServiceAccountKeyPairClient
 	// ServicePrincipal is the client for interacting with the ServicePrincipal builders.
 	ServicePrincipal *ServicePrincipalClient
 	// Subscription is the client for interacting with the Subscription builders.
 	Subscription *SubscriptionClient
-	// User is the client for interacting with the User builders.
-	User *UserClient
 
 	// lazily loaded.
 	client     *Client
@@ -203,7 +189,6 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
-	tx.APIKey = NewAPIKeyClient(tx.config)
 	tx.Agent = NewAgentClient(tx.config)
 	tx.Application = NewApplicationClient(tx.config)
 	tx.ConsentGrant = NewConsentGrantClient(tx.config)
@@ -215,8 +200,6 @@ func (tx *Tx) init() {
 	tx.Listing = NewListingClient(tx.config)
 	tx.LoginSession = NewLoginSessionClient(tx.config)
 	tx.LoginState = NewLoginStateClient(tx.config)
-	tx.Membership = NewMembershipClient(tx.config)
-	tx.OAuthAccount = NewOAuthAccountClient(tx.config)
 	tx.OAuthApp = NewOAuthAppClient(tx.config)
 	tx.OAuthAppSecret = NewOAuthAppSecretClient(tx.config)
 	tx.OAuthAuthCode = NewOAuthAuthCodeClient(tx.config)
@@ -226,13 +209,9 @@ func (tx *Tx) init() {
 	tx.Principal = NewPrincipalClient(tx.config)
 	tx.PrincipalMembership = NewPrincipalMembershipClient(tx.config)
 	tx.PrincipalToken = NewPrincipalTokenClient(tx.config)
-	tx.RefreshToken = NewRefreshTokenClient(tx.config)
 	tx.SeatAssignment = NewSeatAssignmentClient(tx.config)
-	tx.ServiceAccount = NewServiceAccountClient(tx.config)
-	tx.ServiceAccountKeyPair = NewServiceAccountKeyPairClient(tx.config)
 	tx.ServicePrincipal = NewServicePrincipalClient(tx.config)
 	tx.Subscription = NewSubscriptionClient(tx.config)
-	tx.User = NewUserClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.
@@ -242,7 +221,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: APIKey.QueryXXX(), the query will be executed
+// applies a query, for example: Agent.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

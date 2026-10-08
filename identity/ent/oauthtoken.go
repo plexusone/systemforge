@@ -24,8 +24,6 @@ type OAuthToken struct {
 	AppID uuid.UUID `json:"app_id,omitempty"`
 	// Authenticated subject (principal ID); empty for client_credentials
 	Subject string `json:"subject,omitempty"`
-	// Service account (for JWT bearer grant)
-	ServiceAccountID *uuid.UUID `json:"service_account_id,omitempty"`
 	// SHA256 signature of access token
 	AccessTokenSignature string `json:"access_token_signature,omitempty"`
 	// SHA256 signature of refresh token
@@ -89,8 +87,6 @@ func (*OAuthToken) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case oauthtoken.FieldServiceAccountID:
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case oauthtoken.FieldScopes, oauthtoken.FieldAudience:
 			values[i] = new([]byte)
 		case oauthtoken.FieldRevoked:
@@ -133,13 +129,6 @@ func (_m *OAuthToken) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field subject", values[i])
 			} else if value.Valid {
 				_m.Subject = value.String
-			}
-		case oauthtoken.FieldServiceAccountID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field service_account_id", values[i])
-			} else if value.Valid {
-				_m.ServiceAccountID = new(uuid.UUID)
-				*_m.ServiceAccountID = *value.S.(*uuid.UUID)
 			}
 		case oauthtoken.FieldAccessTokenSignature:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -291,11 +280,6 @@ func (_m *OAuthToken) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("subject=")
 	builder.WriteString(_m.Subject)
-	builder.WriteString(", ")
-	if v := _m.ServiceAccountID; v != nil {
-		builder.WriteString("service_account_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
 	builder.WriteString(", ")
 	builder.WriteString("access_token_signature=")
 	builder.WriteString(_m.AccessTokenSignature)

@@ -40,14 +40,8 @@ const (
 	FieldPlan = "plan"
 	// FieldActive holds the string denoting the active field in the database.
 	FieldActive = "active"
-	// EdgeMemberships holds the string denoting the memberships edge name in mutations.
-	EdgeMemberships = "memberships"
-	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
-	EdgeAPIKeys = "api_keys"
 	// EdgeOauthApps holds the string denoting the oauth_apps edge name in mutations.
 	EdgeOauthApps = "oauth_apps"
-	// EdgeServiceAccounts holds the string denoting the service_accounts edge name in mutations.
-	EdgeServiceAccounts = "service_accounts"
 	// EdgePrincipals holds the string denoting the principals edge name in mutations.
 	EdgePrincipals = "principals"
 	// EdgePrincipalMemberships holds the string denoting the principal_memberships edge name in mutations.
@@ -64,20 +58,6 @@ const (
 	EdgeSubscription = "subscription"
 	// Table holds the table name of the organization in the database.
 	Table = "sf_organizations"
-	// MembershipsTable is the table that holds the memberships relation/edge.
-	MembershipsTable = "sf_memberships"
-	// MembershipsInverseTable is the table name for the Membership entity.
-	// It exists in this package in order to avoid circular dependency with the "membership" package.
-	MembershipsInverseTable = "sf_memberships"
-	// MembershipsColumn is the table column denoting the memberships relation/edge.
-	MembershipsColumn = "organization_id"
-	// APIKeysTable is the table that holds the api_keys relation/edge.
-	APIKeysTable = "sf_api_keys"
-	// APIKeysInverseTable is the table name for the APIKey entity.
-	// It exists in this package in order to avoid circular dependency with the "apikey" package.
-	APIKeysInverseTable = "sf_api_keys"
-	// APIKeysColumn is the table column denoting the api_keys relation/edge.
-	APIKeysColumn = "organization_api_keys"
 	// OauthAppsTable is the table that holds the oauth_apps relation/edge.
 	OauthAppsTable = "sf_oauth_apps"
 	// OauthAppsInverseTable is the table name for the OAuthApp entity.
@@ -85,13 +65,6 @@ const (
 	OauthAppsInverseTable = "sf_oauth_apps"
 	// OauthAppsColumn is the table column denoting the oauth_apps relation/edge.
 	OauthAppsColumn = "organization_id"
-	// ServiceAccountsTable is the table that holds the service_accounts relation/edge.
-	ServiceAccountsTable = "sf_service_accounts"
-	// ServiceAccountsInverseTable is the table name for the ServiceAccount entity.
-	// It exists in this package in order to avoid circular dependency with the "serviceaccount" package.
-	ServiceAccountsInverseTable = "sf_service_accounts"
-	// ServiceAccountsColumn is the table column denoting the service_accounts relation/edge.
-	ServiceAccountsColumn = "organization_id"
 	// PrincipalsTable is the table that holds the principals relation/edge.
 	PrincipalsTable = "sf_principals"
 	// PrincipalsInverseTable is the table name for the Principal entity.
@@ -305,34 +278,6 @@ func ByActive(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldActive, opts...).ToFunc()
 }
 
-// ByMembershipsCount orders the results by memberships count.
-func ByMembershipsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newMembershipsStep(), opts...)
-	}
-}
-
-// ByMemberships orders the results by memberships terms.
-func ByMemberships(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newMembershipsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// ByAPIKeysCount orders the results by api_keys count.
-func ByAPIKeysCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newAPIKeysStep(), opts...)
-	}
-}
-
-// ByAPIKeys orders the results by api_keys terms.
-func ByAPIKeys(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newAPIKeysStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByOauthAppsCount orders the results by oauth_apps count.
 func ByOauthAppsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -344,20 +289,6 @@ func ByOauthAppsCount(opts ...sql.OrderTermOption) OrderOption {
 func ByOauthApps(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newOauthAppsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// ByServiceAccountsCount orders the results by service_accounts count.
-func ByServiceAccountsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newServiceAccountsStep(), opts...)
-	}
-}
-
-// ByServiceAccounts orders the results by service_accounts terms.
-func ByServiceAccounts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newServiceAccountsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -444,32 +375,11 @@ func BySubscriptionField(field string, opts ...sql.OrderTermOption) OrderOption 
 		sqlgraph.OrderByNeighborTerms(s, newSubscriptionStep(), sql.OrderByField(field, opts...))
 	}
 }
-func newMembershipsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(MembershipsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, MembershipsTable, MembershipsColumn),
-	)
-}
-func newAPIKeysStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(APIKeysInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, APIKeysTable, APIKeysColumn),
-	)
-}
 func newOauthAppsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OauthAppsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, OauthAppsTable, OauthAppsColumn),
-	)
-}
-func newServiceAccountsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ServiceAccountsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ServiceAccountsTable, ServiceAccountsColumn),
 	)
 }
 func newPrincipalsStep() *sqlgraph.Step {

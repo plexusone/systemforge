@@ -13,16 +13,13 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
-	"github.com/plexusone/systemforge/identity/ent/membership"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
-	"github.com/plexusone/systemforge/identity/ent/serviceaccount"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 )
 
@@ -192,36 +189,6 @@ func (_c *OrganizationCreate) SetNillableID(v *uuid.UUID) *OrganizationCreate {
 	return _c
 }
 
-// AddMembershipIDs adds the "memberships" edge to the Membership entity by IDs.
-func (_c *OrganizationCreate) AddMembershipIDs(ids ...uuid.UUID) *OrganizationCreate {
-	_c.mutation.AddMembershipIDs(ids...)
-	return _c
-}
-
-// AddMemberships adds the "memberships" edges to the Membership entity.
-func (_c *OrganizationCreate) AddMemberships(v ...*Membership) *OrganizationCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddMembershipIDs(ids...)
-}
-
-// AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
-func (_c *OrganizationCreate) AddAPIKeyIDs(ids ...uuid.UUID) *OrganizationCreate {
-	_c.mutation.AddAPIKeyIDs(ids...)
-	return _c
-}
-
-// AddAPIKeys adds the "api_keys" edges to the APIKey entity.
-func (_c *OrganizationCreate) AddAPIKeys(v ...*APIKey) *OrganizationCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddAPIKeyIDs(ids...)
-}
-
 // AddOauthAppIDs adds the "oauth_apps" edge to the OAuthApp entity by IDs.
 func (_c *OrganizationCreate) AddOauthAppIDs(ids ...uuid.UUID) *OrganizationCreate {
 	_c.mutation.AddOauthAppIDs(ids...)
@@ -235,21 +202,6 @@ func (_c *OrganizationCreate) AddOauthApps(v ...*OAuthApp) *OrganizationCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddOauthAppIDs(ids...)
-}
-
-// AddServiceAccountIDs adds the "service_accounts" edge to the ServiceAccount entity by IDs.
-func (_c *OrganizationCreate) AddServiceAccountIDs(ids ...uuid.UUID) *OrganizationCreate {
-	_c.mutation.AddServiceAccountIDs(ids...)
-	return _c
-}
-
-// AddServiceAccounts adds the "service_accounts" edges to the ServiceAccount entity.
-func (_c *OrganizationCreate) AddServiceAccounts(v ...*ServiceAccount) *OrganizationCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddServiceAccountIDs(ids...)
 }
 
 // AddPrincipalIDs adds the "principals" edge to the Principal entity by IDs.
@@ -549,38 +501,6 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 		_spec.SetField(organization.FieldActive, field.TypeBool, value)
 		_node.Active = value
 	}
-	if nodes := _c.mutation.MembershipsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.MembershipsTable,
-			Columns: []string{organization.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.APIKeysTable,
-			Columns: []string{organization.APIKeysColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := _c.mutation.OauthAppsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -590,22 +510,6 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.ServiceAccountsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.ServiceAccountsTable,
-			Columns: []string{organization.ServiceAccountsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(serviceaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

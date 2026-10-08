@@ -40,11 +40,6 @@ func (OAuthToken) Fields() []ent.Field {
 			Optional().
 			Comment("Authenticated subject (principal ID); empty for client_credentials"),
 
-		field.UUID("service_account_id", uuid.UUID{}).
-			Optional().
-			Nillable().
-			Comment("Service account (for JWT bearer grant)"),
-
 		// Token signatures (hashed for lookup)
 		field.String("access_token_signature").
 			Unique().

@@ -19,8 +19,6 @@ const (
 	FieldAppID = "app_id"
 	// FieldSubject holds the string denoting the subject field in the database.
 	FieldSubject = "subject"
-	// FieldServiceAccountID holds the string denoting the service_account_id field in the database.
-	FieldServiceAccountID = "service_account_id"
 	// FieldAccessTokenSignature holds the string denoting the access_token_signature field in the database.
 	FieldAccessTokenSignature = "access_token_signature"
 	// FieldRefreshTokenSignature holds the string denoting the refresh_token_signature field in the database.
@@ -71,7 +69,6 @@ var Columns = []string{
 	FieldID,
 	FieldAppID,
 	FieldSubject,
-	FieldServiceAccountID,
 	FieldAccessTokenSignature,
 	FieldRefreshTokenSignature,
 	FieldFamilyID,
@@ -131,11 +128,6 @@ func ByAppID(opts ...sql.OrderTermOption) OrderOption {
 // BySubject orders the results by the subject field.
 func BySubject(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSubject, opts...).ToFunc()
-}
-
-// ByServiceAccountID orders the results by the service_account_id field.
-func ByServiceAccountID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldServiceAccountID, opts...).ToFunc()
 }
 
 // ByAccessTokenSignature orders the results by the access_token_signature field.

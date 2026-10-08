@@ -12,17 +12,14 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
-	"github.com/plexusone/systemforge/identity/ent/membership"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
-	"github.com/plexusone/systemforge/identity/ent/serviceaccount"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 )
 
@@ -207,36 +204,6 @@ func (_u *OrganizationUpdate) SetNillableActive(v *bool) *OrganizationUpdate {
 	return _u
 }
 
-// AddMembershipIDs adds the "memberships" edge to the Membership entity by IDs.
-func (_u *OrganizationUpdate) AddMembershipIDs(ids ...uuid.UUID) *OrganizationUpdate {
-	_u.mutation.AddMembershipIDs(ids...)
-	return _u
-}
-
-// AddMemberships adds the "memberships" edges to the Membership entity.
-func (_u *OrganizationUpdate) AddMemberships(v ...*Membership) *OrganizationUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddMembershipIDs(ids...)
-}
-
-// AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
-func (_u *OrganizationUpdate) AddAPIKeyIDs(ids ...uuid.UUID) *OrganizationUpdate {
-	_u.mutation.AddAPIKeyIDs(ids...)
-	return _u
-}
-
-// AddAPIKeys adds the "api_keys" edges to the APIKey entity.
-func (_u *OrganizationUpdate) AddAPIKeys(v ...*APIKey) *OrganizationUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddAPIKeyIDs(ids...)
-}
-
 // AddOauthAppIDs adds the "oauth_apps" edge to the OAuthApp entity by IDs.
 func (_u *OrganizationUpdate) AddOauthAppIDs(ids ...uuid.UUID) *OrganizationUpdate {
 	_u.mutation.AddOauthAppIDs(ids...)
@@ -250,21 +217,6 @@ func (_u *OrganizationUpdate) AddOauthApps(v ...*OAuthApp) *OrganizationUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddOauthAppIDs(ids...)
-}
-
-// AddServiceAccountIDs adds the "service_accounts" edge to the ServiceAccount entity by IDs.
-func (_u *OrganizationUpdate) AddServiceAccountIDs(ids ...uuid.UUID) *OrganizationUpdate {
-	_u.mutation.AddServiceAccountIDs(ids...)
-	return _u
-}
-
-// AddServiceAccounts adds the "service_accounts" edges to the ServiceAccount entity.
-func (_u *OrganizationUpdate) AddServiceAccounts(v ...*ServiceAccount) *OrganizationUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddServiceAccountIDs(ids...)
 }
 
 // AddPrincipalIDs adds the "principals" edge to the Principal entity by IDs.
@@ -385,48 +337,6 @@ func (_u *OrganizationUpdate) Mutation() *OrganizationMutation {
 	return _u.mutation
 }
 
-// ClearMemberships clears all "memberships" edges to the Membership entity.
-func (_u *OrganizationUpdate) ClearMemberships() *OrganizationUpdate {
-	_u.mutation.ClearMemberships()
-	return _u
-}
-
-// RemoveMembershipIDs removes the "memberships" edge to Membership entities by IDs.
-func (_u *OrganizationUpdate) RemoveMembershipIDs(ids ...uuid.UUID) *OrganizationUpdate {
-	_u.mutation.RemoveMembershipIDs(ids...)
-	return _u
-}
-
-// RemoveMemberships removes "memberships" edges to Membership entities.
-func (_u *OrganizationUpdate) RemoveMemberships(v ...*Membership) *OrganizationUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveMembershipIDs(ids...)
-}
-
-// ClearAPIKeys clears all "api_keys" edges to the APIKey entity.
-func (_u *OrganizationUpdate) ClearAPIKeys() *OrganizationUpdate {
-	_u.mutation.ClearAPIKeys()
-	return _u
-}
-
-// RemoveAPIKeyIDs removes the "api_keys" edge to APIKey entities by IDs.
-func (_u *OrganizationUpdate) RemoveAPIKeyIDs(ids ...uuid.UUID) *OrganizationUpdate {
-	_u.mutation.RemoveAPIKeyIDs(ids...)
-	return _u
-}
-
-// RemoveAPIKeys removes "api_keys" edges to APIKey entities.
-func (_u *OrganizationUpdate) RemoveAPIKeys(v ...*APIKey) *OrganizationUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveAPIKeyIDs(ids...)
-}
-
 // ClearOauthApps clears all "oauth_apps" edges to the OAuthApp entity.
 func (_u *OrganizationUpdate) ClearOauthApps() *OrganizationUpdate {
 	_u.mutation.ClearOauthApps()
@@ -446,27 +356,6 @@ func (_u *OrganizationUpdate) RemoveOauthApps(v ...*OAuthApp) *OrganizationUpdat
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOauthAppIDs(ids...)
-}
-
-// ClearServiceAccounts clears all "service_accounts" edges to the ServiceAccount entity.
-func (_u *OrganizationUpdate) ClearServiceAccounts() *OrganizationUpdate {
-	_u.mutation.ClearServiceAccounts()
-	return _u
-}
-
-// RemoveServiceAccountIDs removes the "service_accounts" edge to ServiceAccount entities by IDs.
-func (_u *OrganizationUpdate) RemoveServiceAccountIDs(ids ...uuid.UUID) *OrganizationUpdate {
-	_u.mutation.RemoveServiceAccountIDs(ids...)
-	return _u
-}
-
-// RemoveServiceAccounts removes "service_accounts" edges to ServiceAccount entities.
-func (_u *OrganizationUpdate) RemoveServiceAccounts(v ...*ServiceAccount) *OrganizationUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveServiceAccountIDs(ids...)
 }
 
 // ClearPrincipals clears all "principals" edges to the Principal entity.
@@ -701,96 +590,6 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.Active(); ok {
 		_spec.SetField(organization.FieldActive, field.TypeBool, value)
 	}
-	if _u.mutation.MembershipsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.MembershipsTable,
-			Columns: []string{organization.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedMembershipsIDs(); len(nodes) > 0 && !_u.mutation.MembershipsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.MembershipsTable,
-			Columns: []string{organization.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.MembershipsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.MembershipsTable,
-			Columns: []string{organization.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.APIKeysCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.APIKeysTable,
-			Columns: []string{organization.APIKeysColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedAPIKeysIDs(); len(nodes) > 0 && !_u.mutation.APIKeysCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.APIKeysTable,
-			Columns: []string{organization.APIKeysColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.APIKeysIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.APIKeysTable,
-			Columns: []string{organization.APIKeysColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if _u.mutation.OauthAppsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -829,51 +628,6 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ServiceAccountsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.ServiceAccountsTable,
-			Columns: []string{organization.ServiceAccountsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(serviceaccount.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedServiceAccountsIDs(); len(nodes) > 0 && !_u.mutation.ServiceAccountsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.ServiceAccountsTable,
-			Columns: []string{organization.ServiceAccountsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(serviceaccount.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ServiceAccountsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.ServiceAccountsTable,
-			Columns: []string{organization.ServiceAccountsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(serviceaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1352,36 +1106,6 @@ func (_u *OrganizationUpdateOne) SetNillableActive(v *bool) *OrganizationUpdateO
 	return _u
 }
 
-// AddMembershipIDs adds the "memberships" edge to the Membership entity by IDs.
-func (_u *OrganizationUpdateOne) AddMembershipIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
-	_u.mutation.AddMembershipIDs(ids...)
-	return _u
-}
-
-// AddMemberships adds the "memberships" edges to the Membership entity.
-func (_u *OrganizationUpdateOne) AddMemberships(v ...*Membership) *OrganizationUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddMembershipIDs(ids...)
-}
-
-// AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
-func (_u *OrganizationUpdateOne) AddAPIKeyIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
-	_u.mutation.AddAPIKeyIDs(ids...)
-	return _u
-}
-
-// AddAPIKeys adds the "api_keys" edges to the APIKey entity.
-func (_u *OrganizationUpdateOne) AddAPIKeys(v ...*APIKey) *OrganizationUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddAPIKeyIDs(ids...)
-}
-
 // AddOauthAppIDs adds the "oauth_apps" edge to the OAuthApp entity by IDs.
 func (_u *OrganizationUpdateOne) AddOauthAppIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
 	_u.mutation.AddOauthAppIDs(ids...)
@@ -1395,21 +1119,6 @@ func (_u *OrganizationUpdateOne) AddOauthApps(v ...*OAuthApp) *OrganizationUpdat
 		ids[i] = v[i].ID
 	}
 	return _u.AddOauthAppIDs(ids...)
-}
-
-// AddServiceAccountIDs adds the "service_accounts" edge to the ServiceAccount entity by IDs.
-func (_u *OrganizationUpdateOne) AddServiceAccountIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
-	_u.mutation.AddServiceAccountIDs(ids...)
-	return _u
-}
-
-// AddServiceAccounts adds the "service_accounts" edges to the ServiceAccount entity.
-func (_u *OrganizationUpdateOne) AddServiceAccounts(v ...*ServiceAccount) *OrganizationUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddServiceAccountIDs(ids...)
 }
 
 // AddPrincipalIDs adds the "principals" edge to the Principal entity by IDs.
@@ -1530,48 +1239,6 @@ func (_u *OrganizationUpdateOne) Mutation() *OrganizationMutation {
 	return _u.mutation
 }
 
-// ClearMemberships clears all "memberships" edges to the Membership entity.
-func (_u *OrganizationUpdateOne) ClearMemberships() *OrganizationUpdateOne {
-	_u.mutation.ClearMemberships()
-	return _u
-}
-
-// RemoveMembershipIDs removes the "memberships" edge to Membership entities by IDs.
-func (_u *OrganizationUpdateOne) RemoveMembershipIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
-	_u.mutation.RemoveMembershipIDs(ids...)
-	return _u
-}
-
-// RemoveMemberships removes "memberships" edges to Membership entities.
-func (_u *OrganizationUpdateOne) RemoveMemberships(v ...*Membership) *OrganizationUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveMembershipIDs(ids...)
-}
-
-// ClearAPIKeys clears all "api_keys" edges to the APIKey entity.
-func (_u *OrganizationUpdateOne) ClearAPIKeys() *OrganizationUpdateOne {
-	_u.mutation.ClearAPIKeys()
-	return _u
-}
-
-// RemoveAPIKeyIDs removes the "api_keys" edge to APIKey entities by IDs.
-func (_u *OrganizationUpdateOne) RemoveAPIKeyIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
-	_u.mutation.RemoveAPIKeyIDs(ids...)
-	return _u
-}
-
-// RemoveAPIKeys removes "api_keys" edges to APIKey entities.
-func (_u *OrganizationUpdateOne) RemoveAPIKeys(v ...*APIKey) *OrganizationUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveAPIKeyIDs(ids...)
-}
-
 // ClearOauthApps clears all "oauth_apps" edges to the OAuthApp entity.
 func (_u *OrganizationUpdateOne) ClearOauthApps() *OrganizationUpdateOne {
 	_u.mutation.ClearOauthApps()
@@ -1591,27 +1258,6 @@ func (_u *OrganizationUpdateOne) RemoveOauthApps(v ...*OAuthApp) *OrganizationUp
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOauthAppIDs(ids...)
-}
-
-// ClearServiceAccounts clears all "service_accounts" edges to the ServiceAccount entity.
-func (_u *OrganizationUpdateOne) ClearServiceAccounts() *OrganizationUpdateOne {
-	_u.mutation.ClearServiceAccounts()
-	return _u
-}
-
-// RemoveServiceAccountIDs removes the "service_accounts" edge to ServiceAccount entities by IDs.
-func (_u *OrganizationUpdateOne) RemoveServiceAccountIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
-	_u.mutation.RemoveServiceAccountIDs(ids...)
-	return _u
-}
-
-// RemoveServiceAccounts removes "service_accounts" edges to ServiceAccount entities.
-func (_u *OrganizationUpdateOne) RemoveServiceAccounts(v ...*ServiceAccount) *OrganizationUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveServiceAccountIDs(ids...)
 }
 
 // ClearPrincipals clears all "principals" edges to the Principal entity.
@@ -1876,96 +1522,6 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 	if value, ok := _u.mutation.Active(); ok {
 		_spec.SetField(organization.FieldActive, field.TypeBool, value)
 	}
-	if _u.mutation.MembershipsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.MembershipsTable,
-			Columns: []string{organization.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedMembershipsIDs(); len(nodes) > 0 && !_u.mutation.MembershipsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.MembershipsTable,
-			Columns: []string{organization.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.MembershipsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.MembershipsTable,
-			Columns: []string{organization.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.APIKeysCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.APIKeysTable,
-			Columns: []string{organization.APIKeysColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedAPIKeysIDs(); len(nodes) > 0 && !_u.mutation.APIKeysCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.APIKeysTable,
-			Columns: []string{organization.APIKeysColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.APIKeysIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.APIKeysTable,
-			Columns: []string{organization.APIKeysColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if _u.mutation.OauthAppsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -2004,51 +1560,6 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ServiceAccountsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.ServiceAccountsTable,
-			Columns: []string{organization.ServiceAccountsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(serviceaccount.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedServiceAccountsIDs(); len(nodes) > 0 && !_u.mutation.ServiceAccountsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.ServiceAccountsTable,
-			Columns: []string{organization.ServiceAccountsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(serviceaccount.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ServiceAccountsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   organization.ServiceAccountsTable,
-			Columns: []string{organization.ServiceAccountsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(serviceaccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

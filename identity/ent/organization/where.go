@@ -626,52 +626,6 @@ func ActiveNEQ(v bool) predicate.Organization {
 	return predicate.Organization(sql.FieldNEQ(FieldActive, v))
 }
 
-// HasMemberships applies the HasEdge predicate on the "memberships" edge.
-func HasMemberships() predicate.Organization {
-	return predicate.Organization(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, MembershipsTable, MembershipsColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasMembershipsWith applies the HasEdge predicate on the "memberships" edge with a given conditions (other predicates).
-func HasMembershipsWith(preds ...predicate.Membership) predicate.Organization {
-	return predicate.Organization(func(s *sql.Selector) {
-		step := newMembershipsStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.
-func HasAPIKeys() predicate.Organization {
-	return predicate.Organization(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, APIKeysTable, APIKeysColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasAPIKeysWith applies the HasEdge predicate on the "api_keys" edge with a given conditions (other predicates).
-func HasAPIKeysWith(preds ...predicate.APIKey) predicate.Organization {
-	return predicate.Organization(func(s *sql.Selector) {
-		step := newAPIKeysStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasOauthApps applies the HasEdge predicate on the "oauth_apps" edge.
 func HasOauthApps() predicate.Organization {
 	return predicate.Organization(func(s *sql.Selector) {
@@ -687,29 +641,6 @@ func HasOauthApps() predicate.Organization {
 func HasOauthAppsWith(preds ...predicate.OAuthApp) predicate.Organization {
 	return predicate.Organization(func(s *sql.Selector) {
 		step := newOauthAppsStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasServiceAccounts applies the HasEdge predicate on the "service_accounts" edge.
-func HasServiceAccounts() predicate.Organization {
-	return predicate.Organization(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ServiceAccountsTable, ServiceAccountsColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasServiceAccountsWith applies the HasEdge predicate on the "service_accounts" edge with a given conditions (other predicates).
-func HasServiceAccountsWith(preds ...predicate.ServiceAccount) predicate.Organization {
-	return predicate.Organization(func(s *sql.Selector) {
-		step := newServiceAccountsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -9,74 +9,6 @@ import (
 )
 
 var (
-	// SfAPIKeysColumns holds the columns for the "sf_api_keys" table.
-	SfAPIKeysColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "name", Type: field.TypeString},
-		{Name: "prefix", Type: field.TypeString, Unique: true},
-		{Name: "key_hash", Type: field.TypeString},
-		{Name: "scopes", Type: field.TypeJSON, Nullable: true},
-		{Name: "description", Type: field.TypeString, Nullable: true},
-		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
-		{Name: "last_used_at", Type: field.TypeTime, Nullable: true},
-		{Name: "last_used_ip", Type: field.TypeString, Nullable: true},
-		{Name: "revoked", Type: field.TypeBool, Default: false},
-		{Name: "revoked_at", Type: field.TypeTime, Nullable: true},
-		{Name: "revoked_reason", Type: field.TypeString, Nullable: true},
-		{Name: "environment", Type: field.TypeEnum, Enums: []string{"live", "test"}, Default: "live"},
-		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
-		{Name: "organization_api_keys", Type: field.TypeUUID, Nullable: true},
-		{Name: "user_api_keys", Type: field.TypeUUID},
-	}
-	// SfAPIKeysTable holds the schema information for the "sf_api_keys" table.
-	SfAPIKeysTable = &schema.Table{
-		Name:       "sf_api_keys",
-		Columns:    SfAPIKeysColumns,
-		PrimaryKey: []*schema.Column{SfAPIKeysColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "sf_api_keys_sf_organizations_api_keys",
-				Columns:    []*schema.Column{SfAPIKeysColumns[16]},
-				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "sf_api_keys_sf_users_api_keys",
-				Columns:    []*schema.Column{SfAPIKeysColumns[17]},
-				RefColumns: []*schema.Column{SfUsersColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "apikey_prefix",
-				Unique:  true,
-				Columns: []*schema.Column{SfAPIKeysColumns[4]},
-			},
-			{
-				Name:    "apikey_user_api_keys",
-				Unique:  false,
-				Columns: []*schema.Column{SfAPIKeysColumns[17]},
-			},
-			{
-				Name:    "apikey_organization_api_keys",
-				Unique:  false,
-				Columns: []*schema.Column{SfAPIKeysColumns[16]},
-			},
-			{
-				Name:    "apikey_revoked_expires_at",
-				Unique:  false,
-				Columns: []*schema.Column{SfAPIKeysColumns[11], SfAPIKeysColumns[8]},
-			},
-			{
-				Name:    "apikey_environment",
-				Unique:  false,
-				Columns: []*schema.Column{SfAPIKeysColumns[14]},
-			},
-		},
-	}
 	// SfAgentsColumns holds the columns for the "sf_agents" table.
 	SfAgentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -666,101 +598,6 @@ var (
 			},
 		},
 	}
-	// SfMembershipsColumns holds the columns for the "sf_memberships" table.
-	SfMembershipsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "role", Type: field.TypeString},
-		{Name: "permissions", Type: field.TypeJSON, Nullable: true},
-		{Name: "organization_id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID},
-	}
-	// SfMembershipsTable holds the schema information for the "sf_memberships" table.
-	SfMembershipsTable = &schema.Table{
-		Name:       "sf_memberships",
-		Columns:    SfMembershipsColumns,
-		PrimaryKey: []*schema.Column{SfMembershipsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "sf_memberships_sf_organizations_memberships",
-				Columns:    []*schema.Column{SfMembershipsColumns[5]},
-				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "sf_memberships_sf_users_memberships",
-				Columns:    []*schema.Column{SfMembershipsColumns[6]},
-				RefColumns: []*schema.Column{SfUsersColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "membership_user_id_organization_id",
-				Unique:  true,
-				Columns: []*schema.Column{SfMembershipsColumns[6], SfMembershipsColumns[5]},
-			},
-			{
-				Name:    "membership_user_id",
-				Unique:  false,
-				Columns: []*schema.Column{SfMembershipsColumns[6]},
-			},
-			{
-				Name:    "membership_organization_id",
-				Unique:  false,
-				Columns: []*schema.Column{SfMembershipsColumns[5]},
-			},
-			{
-				Name:    "membership_role",
-				Unique:  false,
-				Columns: []*schema.Column{SfMembershipsColumns[3]},
-			},
-		},
-	}
-	// SfOauthAccountsColumns holds the columns for the "sf_oauth_accounts" table.
-	SfOauthAccountsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "provider", Type: field.TypeString},
-		{Name: "provider_user_id", Type: field.TypeString},
-		{Name: "access_token", Type: field.TypeString, Nullable: true},
-		{Name: "refresh_token", Type: field.TypeString, Nullable: true},
-		{Name: "token_expires_at", Type: field.TypeTime, Nullable: true},
-		{Name: "user_id", Type: field.TypeUUID},
-	}
-	// SfOauthAccountsTable holds the schema information for the "sf_oauth_accounts" table.
-	SfOauthAccountsTable = &schema.Table{
-		Name:       "sf_oauth_accounts",
-		Columns:    SfOauthAccountsColumns,
-		PrimaryKey: []*schema.Column{SfOauthAccountsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "sf_oauth_accounts_sf_users_oauth_accounts",
-				Columns:    []*schema.Column{SfOauthAccountsColumns[8]},
-				RefColumns: []*schema.Column{SfUsersColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "oauthaccount_provider_provider_user_id",
-				Unique:  true,
-				Columns: []*schema.Column{SfOauthAccountsColumns[3], SfOauthAccountsColumns[4]},
-			},
-			{
-				Name:    "oauthaccount_user_id",
-				Unique:  false,
-				Columns: []*schema.Column{SfOauthAccountsColumns[8]},
-			},
-			{
-				Name:    "oauthaccount_provider",
-				Unique:  false,
-				Columns: []*schema.Column{SfOauthAccountsColumns[3]},
-			},
-		},
-	}
 	// SfOauthAppsColumns holds the columns for the "sf_oauth_apps" table.
 	SfOauthAppsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -993,7 +830,6 @@ var (
 	SfOauthTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "subject", Type: field.TypeString, Nullable: true},
-		{Name: "service_account_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "access_token_signature", Type: field.TypeString, Unique: true},
 		{Name: "refresh_token_signature", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "family_id", Type: field.TypeUUID},
@@ -1020,7 +856,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_oauth_tokens_sf_oauth_apps_tokens",
-				Columns:    []*schema.Column{SfOauthTokensColumns[19]},
+				Columns:    []*schema.Column{SfOauthTokensColumns[18]},
 				RefColumns: []*schema.Column{SfOauthAppsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1029,17 +865,17 @@ var (
 			{
 				Name:    "oauthtoken_access_token_signature",
 				Unique:  true,
-				Columns: []*schema.Column{SfOauthTokensColumns[3]},
+				Columns: []*schema.Column{SfOauthTokensColumns[2]},
 			},
 			{
 				Name:    "oauthtoken_refresh_token_signature",
 				Unique:  true,
-				Columns: []*schema.Column{SfOauthTokensColumns[4]},
+				Columns: []*schema.Column{SfOauthTokensColumns[3]},
 			},
 			{
 				Name:    "oauthtoken_app_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthTokensColumns[19]},
+				Columns: []*schema.Column{SfOauthTokensColumns[18]},
 			},
 			{
 				Name:    "oauthtoken_subject",
@@ -1049,17 +885,17 @@ var (
 			{
 				Name:    "oauthtoken_family_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthTokensColumns[5]},
+				Columns: []*schema.Column{SfOauthTokensColumns[4]},
 			},
 			{
 				Name:    "oauthtoken_revoked",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthTokensColumns[12]},
+				Columns: []*schema.Column{SfOauthTokensColumns[11]},
 			},
 			{
 				Name:    "oauthtoken_access_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthTokensColumns[10]},
+				Columns: []*schema.Column{SfOauthTokensColumns[9]},
 			},
 		},
 	}
@@ -1343,60 +1179,6 @@ var (
 			},
 		},
 	}
-	// SfRefreshTokensColumns holds the columns for the "sf_refresh_tokens" table.
-	SfRefreshTokensColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "token", Type: field.TypeString, Unique: true},
-		{Name: "family", Type: field.TypeString},
-		{Name: "expires_at", Type: field.TypeTime},
-		{Name: "revoked", Type: field.TypeBool, Default: false},
-		{Name: "user_agent", Type: field.TypeString, Nullable: true},
-		{Name: "ip_address", Type: field.TypeString, Nullable: true},
-		{Name: "user_id", Type: field.TypeUUID},
-	}
-	// SfRefreshTokensTable holds the schema information for the "sf_refresh_tokens" table.
-	SfRefreshTokensTable = &schema.Table{
-		Name:       "sf_refresh_tokens",
-		Columns:    SfRefreshTokensColumns,
-		PrimaryKey: []*schema.Column{SfRefreshTokensColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "sf_refresh_tokens_sf_users_refresh_tokens",
-				Columns:    []*schema.Column{SfRefreshTokensColumns[9]},
-				RefColumns: []*schema.Column{SfUsersColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "refreshtoken_token",
-				Unique:  true,
-				Columns: []*schema.Column{SfRefreshTokensColumns[3]},
-			},
-			{
-				Name:    "refreshtoken_user_id",
-				Unique:  false,
-				Columns: []*schema.Column{SfRefreshTokensColumns[9]},
-			},
-			{
-				Name:    "refreshtoken_family",
-				Unique:  false,
-				Columns: []*schema.Column{SfRefreshTokensColumns[4]},
-			},
-			{
-				Name:    "refreshtoken_expires_at",
-				Unique:  false,
-				Columns: []*schema.Column{SfRefreshTokensColumns[5]},
-			},
-			{
-				Name:    "refreshtoken_revoked",
-				Unique:  false,
-				Columns: []*schema.Column{SfRefreshTokensColumns[6]},
-			},
-		},
-	}
 	// SfSeatAssignmentsColumns holds the columns for the "sf_seat_assignments" table.
 	SfSeatAssignmentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1450,108 +1232,6 @@ var (
 				Name:    "seatassignment_license_id_principal_id",
 				Unique:  true,
 				Columns: []*schema.Column{SfSeatAssignmentsColumns[2], SfSeatAssignmentsColumns[3]},
-			},
-		},
-	}
-	// SfServiceAccountsColumns holds the columns for the "sf_service_accounts" table.
-	SfServiceAccountsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "name", Type: field.TypeString, Size: 255},
-		{Name: "description", Type: field.TypeString, Nullable: true, Size: 1000},
-		{Name: "email", Type: field.TypeString, Unique: true},
-		{Name: "allowed_scopes", Type: field.TypeJSON},
-		{Name: "active", Type: field.TypeBool, Default: true},
-		{Name: "last_used_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "organization_id", Type: field.TypeUUID},
-		{Name: "created_by", Type: field.TypeUUID},
-	}
-	// SfServiceAccountsTable holds the schema information for the "sf_service_accounts" table.
-	SfServiceAccountsTable = &schema.Table{
-		Name:       "sf_service_accounts",
-		Columns:    SfServiceAccountsColumns,
-		PrimaryKey: []*schema.Column{SfServiceAccountsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "sf_service_accounts_sf_organizations_service_accounts",
-				Columns:    []*schema.Column{SfServiceAccountsColumns[9]},
-				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "sf_service_accounts_sf_users_created_service_accounts",
-				Columns:    []*schema.Column{SfServiceAccountsColumns[10]},
-				RefColumns: []*schema.Column{SfUsersColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "serviceaccount_email",
-				Unique:  true,
-				Columns: []*schema.Column{SfServiceAccountsColumns[3]},
-			},
-			{
-				Name:    "serviceaccount_organization_id",
-				Unique:  false,
-				Columns: []*schema.Column{SfServiceAccountsColumns[9]},
-			},
-			{
-				Name:    "serviceaccount_active",
-				Unique:  false,
-				Columns: []*schema.Column{SfServiceAccountsColumns[5]},
-			},
-		},
-	}
-	// SfServiceAccountKeyPairsColumns holds the columns for the "sf_service_account_key_pairs" table.
-	SfServiceAccountKeyPairsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "key_id", Type: field.TypeString},
-		{Name: "key_type", Type: field.TypeEnum, Enums: []string{"rsa", "ec"}, Default: "rsa"},
-		{Name: "algorithm", Type: field.TypeEnum, Enums: []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512"}, Default: "RS256"},
-		{Name: "public_key_pem", Type: field.TypeString, Size: 2147483647},
-		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
-		{Name: "active", Type: field.TypeBool, Default: true},
-		{Name: "last_used_at", Type: field.TypeTime, Nullable: true},
-		{Name: "revoked", Type: field.TypeBool, Default: false},
-		{Name: "revoked_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "service_account_id", Type: field.TypeUUID},
-	}
-	// SfServiceAccountKeyPairsTable holds the schema information for the "sf_service_account_key_pairs" table.
-	SfServiceAccountKeyPairsTable = &schema.Table{
-		Name:       "sf_service_account_key_pairs",
-		Columns:    SfServiceAccountKeyPairsColumns,
-		PrimaryKey: []*schema.Column{SfServiceAccountKeyPairsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "sf_service_account_key_pairs_sf_service_accounts_key_pairs",
-				Columns:    []*schema.Column{SfServiceAccountKeyPairsColumns[11]},
-				RefColumns: []*schema.Column{SfServiceAccountsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "serviceaccountkeypair_service_account_id_key_id",
-				Unique:  true,
-				Columns: []*schema.Column{SfServiceAccountKeyPairsColumns[11], SfServiceAccountKeyPairsColumns[1]},
-			},
-			{
-				Name:    "serviceaccountkeypair_service_account_id",
-				Unique:  false,
-				Columns: []*schema.Column{SfServiceAccountKeyPairsColumns[11]},
-			},
-			{
-				Name:    "serviceaccountkeypair_active",
-				Unique:  false,
-				Columns: []*schema.Column{SfServiceAccountKeyPairsColumns[6]},
-			},
-			{
-				Name:    "serviceaccountkeypair_revoked",
-				Unique:  false,
-				Columns: []*schema.Column{SfServiceAccountKeyPairsColumns[8]},
 			},
 		},
 	}
@@ -1669,46 +1349,8 @@ var (
 			},
 		},
 	}
-	// SfUsersColumns holds the columns for the "sf_users" table.
-	SfUsersColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "email", Type: field.TypeString, Unique: true},
-		{Name: "name", Type: field.TypeString},
-		{Name: "avatar_url", Type: field.TypeString, Nullable: true},
-		{Name: "password_hash", Type: field.TypeString, Nullable: true},
-		{Name: "is_platform_admin", Type: field.TypeBool, Default: false},
-		{Name: "active", Type: field.TypeBool, Default: true},
-		{Name: "last_login_at", Type: field.TypeTime, Nullable: true},
-		{Name: "federation_id", Type: field.TypeUUID, Unique: true, Nullable: true},
-	}
-	// SfUsersTable holds the schema information for the "sf_users" table.
-	SfUsersTable = &schema.Table{
-		Name:       "sf_users",
-		Columns:    SfUsersColumns,
-		PrimaryKey: []*schema.Column{SfUsersColumns[0]},
-		Indexes: []*schema.Index{
-			{
-				Name:    "user_email",
-				Unique:  true,
-				Columns: []*schema.Column{SfUsersColumns[3]},
-			},
-			{
-				Name:    "user_active",
-				Unique:  false,
-				Columns: []*schema.Column{SfUsersColumns[8]},
-			},
-			{
-				Name:    "user_federation_id",
-				Unique:  true,
-				Columns: []*schema.Column{SfUsersColumns[10]},
-			},
-		},
-	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
-		SfAPIKeysTable,
 		SfAgentsTable,
 		SfApplicationsTable,
 		SfConsentGrantsTable,
@@ -1720,8 +1362,6 @@ var (
 		SfListingsTable,
 		SfLoginSessionsTable,
 		SfLoginStatesTable,
-		SfMembershipsTable,
-		SfOauthAccountsTable,
 		SfOauthAppsTable,
 		SfOauthAppSecretsTable,
 		SfOauthAuthCodesTable,
@@ -1731,22 +1371,13 @@ var (
 		SfPrincipalsTable,
 		SfPrincipalMembershipsTable,
 		SfPrincipalTokensTable,
-		SfRefreshTokensTable,
 		SfSeatAssignmentsTable,
-		SfServiceAccountsTable,
-		SfServiceAccountKeyPairsTable,
 		SfServicePrincipalsTable,
 		SfSubscriptionsTable,
-		SfUsersTable,
 	}
 )
 
 func init() {
-	SfAPIKeysTable.ForeignKeys[0].RefTable = SfOrganizationsTable
-	SfAPIKeysTable.ForeignKeys[1].RefTable = SfUsersTable
-	SfAPIKeysTable.Annotation = &entsql.Annotation{
-		Table: "sf_api_keys",
-	}
 	SfAgentsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfAgentsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfAgentsTable.Annotation = &entsql.Annotation{
@@ -1793,15 +1424,6 @@ func init() {
 	SfLoginStatesTable.Annotation = &entsql.Annotation{
 		Table: "sf_login_states",
 	}
-	SfMembershipsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
-	SfMembershipsTable.ForeignKeys[1].RefTable = SfUsersTable
-	SfMembershipsTable.Annotation = &entsql.Annotation{
-		Table: "sf_memberships",
-	}
-	SfOauthAccountsTable.ForeignKeys[0].RefTable = SfUsersTable
-	SfOauthAccountsTable.Annotation = &entsql.Annotation{
-		Table: "sf_oauth_accounts",
-	}
 	SfOauthAppsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
 	SfOauthAppsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfOauthAppsTable.Annotation = &entsql.Annotation{
@@ -1843,24 +1465,11 @@ func init() {
 	SfPrincipalTokensTable.Annotation = &entsql.Annotation{
 		Table: "sf_principal_tokens",
 	}
-	SfRefreshTokensTable.ForeignKeys[0].RefTable = SfUsersTable
-	SfRefreshTokensTable.Annotation = &entsql.Annotation{
-		Table: "sf_refresh_tokens",
-	}
 	SfSeatAssignmentsTable.ForeignKeys[0].RefTable = SfLicensesTable
 	SfSeatAssignmentsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfSeatAssignmentsTable.ForeignKeys[2].RefTable = SfPrincipalsTable
 	SfSeatAssignmentsTable.Annotation = &entsql.Annotation{
 		Table: "sf_seat_assignments",
-	}
-	SfServiceAccountsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
-	SfServiceAccountsTable.ForeignKeys[1].RefTable = SfUsersTable
-	SfServiceAccountsTable.Annotation = &entsql.Annotation{
-		Table: "sf_service_accounts",
-	}
-	SfServiceAccountKeyPairsTable.ForeignKeys[0].RefTable = SfServiceAccountsTable
-	SfServiceAccountKeyPairsTable.Annotation = &entsql.Annotation{
-		Table: "sf_service_account_key_pairs",
 	}
 	SfServicePrincipalsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfServicePrincipalsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
@@ -1870,8 +1479,5 @@ func init() {
 	SfSubscriptionsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
 	SfSubscriptionsTable.Annotation = &entsql.Annotation{
 		Table: "sf_subscriptions",
-	}
-	SfUsersTable.Annotation = &entsql.Annotation{
-		Table: "sf_users",
 	}
 }

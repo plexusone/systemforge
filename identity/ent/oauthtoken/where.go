@@ -66,11 +66,6 @@ func Subject(v string) predicate.OAuthToken {
 	return predicate.OAuthToken(sql.FieldEQ(FieldSubject, v))
 }
 
-// ServiceAccountID applies equality check predicate on the "service_account_id" field. It's identical to ServiceAccountIDEQ.
-func ServiceAccountID(v uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldEQ(FieldServiceAccountID, v))
-}
-
 // AccessTokenSignature applies equality check predicate on the "access_token_signature" field. It's identical to AccessTokenSignatureEQ.
 func AccessTokenSignature(v string) predicate.OAuthToken {
 	return predicate.OAuthToken(sql.FieldEQ(FieldAccessTokenSignature, v))
@@ -234,56 +229,6 @@ func SubjectEqualFold(v string) predicate.OAuthToken {
 // SubjectContainsFold applies the ContainsFold predicate on the "subject" field.
 func SubjectContainsFold(v string) predicate.OAuthToken {
 	return predicate.OAuthToken(sql.FieldContainsFold(FieldSubject, v))
-}
-
-// ServiceAccountIDEQ applies the EQ predicate on the "service_account_id" field.
-func ServiceAccountIDEQ(v uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldEQ(FieldServiceAccountID, v))
-}
-
-// ServiceAccountIDNEQ applies the NEQ predicate on the "service_account_id" field.
-func ServiceAccountIDNEQ(v uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldNEQ(FieldServiceAccountID, v))
-}
-
-// ServiceAccountIDIn applies the In predicate on the "service_account_id" field.
-func ServiceAccountIDIn(vs ...uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldIn(FieldServiceAccountID, vs...))
-}
-
-// ServiceAccountIDNotIn applies the NotIn predicate on the "service_account_id" field.
-func ServiceAccountIDNotIn(vs ...uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldNotIn(FieldServiceAccountID, vs...))
-}
-
-// ServiceAccountIDGT applies the GT predicate on the "service_account_id" field.
-func ServiceAccountIDGT(v uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldGT(FieldServiceAccountID, v))
-}
-
-// ServiceAccountIDGTE applies the GTE predicate on the "service_account_id" field.
-func ServiceAccountIDGTE(v uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldGTE(FieldServiceAccountID, v))
-}
-
-// ServiceAccountIDLT applies the LT predicate on the "service_account_id" field.
-func ServiceAccountIDLT(v uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldLT(FieldServiceAccountID, v))
-}
-
-// ServiceAccountIDLTE applies the LTE predicate on the "service_account_id" field.
-func ServiceAccountIDLTE(v uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldLTE(FieldServiceAccountID, v))
-}
-
-// ServiceAccountIDIsNil applies the IsNil predicate on the "service_account_id" field.
-func ServiceAccountIDIsNil() predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldIsNull(FieldServiceAccountID))
-}
-
-// ServiceAccountIDNotNil applies the NotNil predicate on the "service_account_id" field.
-func ServiceAccountIDNotNil() predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldNotNull(FieldServiceAccountID))
 }
 
 // AccessTokenSignatureEQ applies the EQ predicate on the "access_token_signature" field.

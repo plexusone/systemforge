@@ -76,12 +76,8 @@ func (Organization) Fields() []ent.Field {
 // Edges of the Organization.
 func (Organization) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("memberships", Membership.Type),
-		edge.To("api_keys", APIKey.Type),
-
 		// OAuth 2.0 edges
 		edge.To("oauth_apps", OAuthApp.Type),
-		edge.To("service_accounts", ServiceAccount.Type),
 
 		// Principal-centric edges
 		edge.To("principals", Principal.Type),

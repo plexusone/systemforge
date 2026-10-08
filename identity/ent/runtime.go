@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/agent"
-	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
@@ -18,8 +17,6 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/listing"
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
-	"github.com/plexusone/systemforge/identity/ent/membership"
-	"github.com/plexusone/systemforge/identity/ent/oauthaccount"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
@@ -29,55 +26,16 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
-	"github.com/plexusone/systemforge/identity/ent/refreshtoken"
 	"github.com/plexusone/systemforge/identity/ent/schema"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
-	"github.com/plexusone/systemforge/identity/ent/serviceaccount"
-	"github.com/plexusone/systemforge/identity/ent/serviceaccountkeypair"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
-	"github.com/plexusone/systemforge/identity/ent/user"
 )
 
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
-	apikeyMixin := schema.APIKey{}.Mixin()
-	apikeyMixinFields0 := apikeyMixin[0].Fields()
-	_ = apikeyMixinFields0
-	apikeyFields := schema.APIKey{}.Fields()
-	_ = apikeyFields
-	// apikeyDescCreatedAt is the schema descriptor for created_at field.
-	apikeyDescCreatedAt := apikeyMixinFields0[1].Descriptor()
-	// apikey.DefaultCreatedAt holds the default value on creation for the created_at field.
-	apikey.DefaultCreatedAt = apikeyDescCreatedAt.Default.(func() time.Time)
-	// apikeyDescUpdatedAt is the schema descriptor for updated_at field.
-	apikeyDescUpdatedAt := apikeyMixinFields0[2].Descriptor()
-	// apikey.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	apikey.DefaultUpdatedAt = apikeyDescUpdatedAt.Default.(func() time.Time)
-	// apikey.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	apikey.UpdateDefaultUpdatedAt = apikeyDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// apikeyDescName is the schema descriptor for name field.
-	apikeyDescName := apikeyFields[0].Descriptor()
-	// apikey.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	apikey.NameValidator = apikeyDescName.Validators[0].(func(string) error)
-	// apikeyDescPrefix is the schema descriptor for prefix field.
-	apikeyDescPrefix := apikeyFields[1].Descriptor()
-	// apikey.PrefixValidator is a validator for the "prefix" field. It is called by the builders before save.
-	apikey.PrefixValidator = apikeyDescPrefix.Validators[0].(func(string) error)
-	// apikeyDescKeyHash is the schema descriptor for key_hash field.
-	apikeyDescKeyHash := apikeyFields[2].Descriptor()
-	// apikey.KeyHashValidator is a validator for the "key_hash" field. It is called by the builders before save.
-	apikey.KeyHashValidator = apikeyDescKeyHash.Validators[0].(func(string) error)
-	// apikeyDescRevoked is the schema descriptor for revoked field.
-	apikeyDescRevoked := apikeyFields[8].Descriptor()
-	// apikey.DefaultRevoked holds the default value on creation for the revoked field.
-	apikey.DefaultRevoked = apikeyDescRevoked.Default.(bool)
-	// apikeyDescID is the schema descriptor for id field.
-	apikeyDescID := apikeyMixinFields0[0].Descriptor()
-	// apikey.DefaultID holds the default value on creation for the id field.
-	apikey.DefaultID = apikeyDescID.Default.(func() uuid.UUID)
 	agentMixin := schema.Agent{}.Mixin()
 	agentMixinFields0 := agentMixin[0].Fields()
 	_ = agentMixinFields0
@@ -415,56 +373,6 @@ func init() {
 	loginstateDescID := loginstateFields[0].Descriptor()
 	// loginstate.DefaultID holds the default value on creation for the id field.
 	loginstate.DefaultID = loginstateDescID.Default.(func() uuid.UUID)
-	membershipMixin := schema.Membership{}.Mixin()
-	membershipMixinFields0 := membershipMixin[0].Fields()
-	_ = membershipMixinFields0
-	membershipFields := schema.Membership{}.Fields()
-	_ = membershipFields
-	// membershipDescCreatedAt is the schema descriptor for created_at field.
-	membershipDescCreatedAt := membershipMixinFields0[1].Descriptor()
-	// membership.DefaultCreatedAt holds the default value on creation for the created_at field.
-	membership.DefaultCreatedAt = membershipDescCreatedAt.Default.(func() time.Time)
-	// membershipDescUpdatedAt is the schema descriptor for updated_at field.
-	membershipDescUpdatedAt := membershipMixinFields0[2].Descriptor()
-	// membership.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	membership.DefaultUpdatedAt = membershipDescUpdatedAt.Default.(func() time.Time)
-	// membership.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	membership.UpdateDefaultUpdatedAt = membershipDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// membershipDescRole is the schema descriptor for role field.
-	membershipDescRole := membershipFields[2].Descriptor()
-	// membership.RoleValidator is a validator for the "role" field. It is called by the builders before save.
-	membership.RoleValidator = membershipDescRole.Validators[0].(func(string) error)
-	// membershipDescID is the schema descriptor for id field.
-	membershipDescID := membershipMixinFields0[0].Descriptor()
-	// membership.DefaultID holds the default value on creation for the id field.
-	membership.DefaultID = membershipDescID.Default.(func() uuid.UUID)
-	oauthaccountMixin := schema.OAuthAccount{}.Mixin()
-	oauthaccountMixinFields0 := oauthaccountMixin[0].Fields()
-	_ = oauthaccountMixinFields0
-	oauthaccountFields := schema.OAuthAccount{}.Fields()
-	_ = oauthaccountFields
-	// oauthaccountDescCreatedAt is the schema descriptor for created_at field.
-	oauthaccountDescCreatedAt := oauthaccountMixinFields0[1].Descriptor()
-	// oauthaccount.DefaultCreatedAt holds the default value on creation for the created_at field.
-	oauthaccount.DefaultCreatedAt = oauthaccountDescCreatedAt.Default.(func() time.Time)
-	// oauthaccountDescUpdatedAt is the schema descriptor for updated_at field.
-	oauthaccountDescUpdatedAt := oauthaccountMixinFields0[2].Descriptor()
-	// oauthaccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	oauthaccount.DefaultUpdatedAt = oauthaccountDescUpdatedAt.Default.(func() time.Time)
-	// oauthaccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	oauthaccount.UpdateDefaultUpdatedAt = oauthaccountDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// oauthaccountDescProvider is the schema descriptor for provider field.
-	oauthaccountDescProvider := oauthaccountFields[1].Descriptor()
-	// oauthaccount.ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
-	oauthaccount.ProviderValidator = oauthaccountDescProvider.Validators[0].(func(string) error)
-	// oauthaccountDescProviderUserID is the schema descriptor for provider_user_id field.
-	oauthaccountDescProviderUserID := oauthaccountFields[2].Descriptor()
-	// oauthaccount.ProviderUserIDValidator is a validator for the "provider_user_id" field. It is called by the builders before save.
-	oauthaccount.ProviderUserIDValidator = oauthaccountDescProviderUserID.Validators[0].(func(string) error)
-	// oauthaccountDescID is the schema descriptor for id field.
-	oauthaccountDescID := oauthaccountMixinFields0[0].Descriptor()
-	// oauthaccount.DefaultID holds the default value on creation for the id field.
-	oauthaccount.DefaultID = oauthaccountDescID.Default.(func() uuid.UUID)
 	oauthappFields := schema.OAuthApp{}.Fields()
 	_ = oauthappFields
 	// oauthappDescClientID is the schema descriptor for client_id field.
@@ -626,23 +534,23 @@ func init() {
 	oauthtokenFields := schema.OAuthToken{}.Fields()
 	_ = oauthtokenFields
 	// oauthtokenDescFamilyID is the schema descriptor for family_id field.
-	oauthtokenDescFamilyID := oauthtokenFields[6].Descriptor()
+	oauthtokenDescFamilyID := oauthtokenFields[5].Descriptor()
 	// oauthtoken.DefaultFamilyID holds the default value on creation for the family_id field.
 	oauthtoken.DefaultFamilyID = oauthtokenDescFamilyID.Default.(func() uuid.UUID)
 	// oauthtokenDescScopes is the schema descriptor for scopes field.
-	oauthtokenDescScopes := oauthtokenFields[7].Descriptor()
+	oauthtokenDescScopes := oauthtokenFields[6].Descriptor()
 	// oauthtoken.DefaultScopes holds the default value on creation for the scopes field.
 	oauthtoken.DefaultScopes = oauthtokenDescScopes.Default.([]string)
 	// oauthtokenDescAudience is the schema descriptor for audience field.
-	oauthtokenDescAudience := oauthtokenFields[8].Descriptor()
+	oauthtokenDescAudience := oauthtokenFields[7].Descriptor()
 	// oauthtoken.DefaultAudience holds the default value on creation for the audience field.
 	oauthtoken.DefaultAudience = oauthtokenDescAudience.Default.([]string)
 	// oauthtokenDescRevoked is the schema descriptor for revoked field.
-	oauthtokenDescRevoked := oauthtokenFields[13].Descriptor()
+	oauthtokenDescRevoked := oauthtokenFields[12].Descriptor()
 	// oauthtoken.DefaultRevoked holds the default value on creation for the revoked field.
 	oauthtoken.DefaultRevoked = oauthtokenDescRevoked.Default.(bool)
 	// oauthtokenDescCreatedAt is the schema descriptor for created_at field.
-	oauthtokenDescCreatedAt := oauthtokenFields[19].Descriptor()
+	oauthtokenDescCreatedAt := oauthtokenFields[18].Descriptor()
 	// oauthtoken.DefaultCreatedAt holds the default value on creation for the created_at field.
 	oauthtoken.DefaultCreatedAt = oauthtokenDescCreatedAt.Default.(func() time.Time)
 	// oauthtokenDescID is the schema descriptor for id field.
@@ -780,37 +688,6 @@ func init() {
 	principaltokenDescID := principaltokenFields[0].Descriptor()
 	// principaltoken.DefaultID holds the default value on creation for the id field.
 	principaltoken.DefaultID = principaltokenDescID.Default.(func() uuid.UUID)
-	refreshtokenMixin := schema.RefreshToken{}.Mixin()
-	refreshtokenMixinFields0 := refreshtokenMixin[0].Fields()
-	_ = refreshtokenMixinFields0
-	refreshtokenFields := schema.RefreshToken{}.Fields()
-	_ = refreshtokenFields
-	// refreshtokenDescCreatedAt is the schema descriptor for created_at field.
-	refreshtokenDescCreatedAt := refreshtokenMixinFields0[1].Descriptor()
-	// refreshtoken.DefaultCreatedAt holds the default value on creation for the created_at field.
-	refreshtoken.DefaultCreatedAt = refreshtokenDescCreatedAt.Default.(func() time.Time)
-	// refreshtokenDescUpdatedAt is the schema descriptor for updated_at field.
-	refreshtokenDescUpdatedAt := refreshtokenMixinFields0[2].Descriptor()
-	// refreshtoken.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	refreshtoken.DefaultUpdatedAt = refreshtokenDescUpdatedAt.Default.(func() time.Time)
-	// refreshtoken.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	refreshtoken.UpdateDefaultUpdatedAt = refreshtokenDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// refreshtokenDescToken is the schema descriptor for token field.
-	refreshtokenDescToken := refreshtokenFields[1].Descriptor()
-	// refreshtoken.TokenValidator is a validator for the "token" field. It is called by the builders before save.
-	refreshtoken.TokenValidator = refreshtokenDescToken.Validators[0].(func(string) error)
-	// refreshtokenDescFamily is the schema descriptor for family field.
-	refreshtokenDescFamily := refreshtokenFields[2].Descriptor()
-	// refreshtoken.FamilyValidator is a validator for the "family" field. It is called by the builders before save.
-	refreshtoken.FamilyValidator = refreshtokenDescFamily.Validators[0].(func(string) error)
-	// refreshtokenDescRevoked is the schema descriptor for revoked field.
-	refreshtokenDescRevoked := refreshtokenFields[4].Descriptor()
-	// refreshtoken.DefaultRevoked holds the default value on creation for the revoked field.
-	refreshtoken.DefaultRevoked = refreshtokenDescRevoked.Default.(bool)
-	// refreshtokenDescID is the schema descriptor for id field.
-	refreshtokenDescID := refreshtokenMixinFields0[0].Descriptor()
-	// refreshtoken.DefaultID holds the default value on creation for the id field.
-	refreshtoken.DefaultID = refreshtokenDescID.Default.(func() uuid.UUID)
 	seatassignmentMixin := schema.SeatAssignment{}.Mixin()
 	seatassignmentMixinFields0 := seatassignmentMixin[0].Fields()
 	_ = seatassignmentMixinFields0
@@ -824,82 +701,6 @@ func init() {
 	seatassignmentDescID := seatassignmentMixinFields0[0].Descriptor()
 	// seatassignment.DefaultID holds the default value on creation for the id field.
 	seatassignment.DefaultID = seatassignmentDescID.Default.(func() uuid.UUID)
-	serviceaccountFields := schema.ServiceAccount{}.Fields()
-	_ = serviceaccountFields
-	// serviceaccountDescName is the schema descriptor for name field.
-	serviceaccountDescName := serviceaccountFields[1].Descriptor()
-	// serviceaccount.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	serviceaccount.NameValidator = func() func(string) error {
-		validators := serviceaccountDescName.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(name string) error {
-			for _, fn := range fns {
-				if err := fn(name); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// serviceaccountDescDescription is the schema descriptor for description field.
-	serviceaccountDescDescription := serviceaccountFields[2].Descriptor()
-	// serviceaccount.DescriptionValidator is a validator for the "description" field. It is called by the builders before save.
-	serviceaccount.DescriptionValidator = serviceaccountDescDescription.Validators[0].(func(string) error)
-	// serviceaccountDescEmail is the schema descriptor for email field.
-	serviceaccountDescEmail := serviceaccountFields[3].Descriptor()
-	// serviceaccount.EmailValidator is a validator for the "email" field. It is called by the builders before save.
-	serviceaccount.EmailValidator = serviceaccountDescEmail.Validators[0].(func(string) error)
-	// serviceaccountDescAllowedScopes is the schema descriptor for allowed_scopes field.
-	serviceaccountDescAllowedScopes := serviceaccountFields[6].Descriptor()
-	// serviceaccount.DefaultAllowedScopes holds the default value on creation for the allowed_scopes field.
-	serviceaccount.DefaultAllowedScopes = serviceaccountDescAllowedScopes.Default.([]string)
-	// serviceaccountDescActive is the schema descriptor for active field.
-	serviceaccountDescActive := serviceaccountFields[7].Descriptor()
-	// serviceaccount.DefaultActive holds the default value on creation for the active field.
-	serviceaccount.DefaultActive = serviceaccountDescActive.Default.(bool)
-	// serviceaccountDescCreatedAt is the schema descriptor for created_at field.
-	serviceaccountDescCreatedAt := serviceaccountFields[9].Descriptor()
-	// serviceaccount.DefaultCreatedAt holds the default value on creation for the created_at field.
-	serviceaccount.DefaultCreatedAt = serviceaccountDescCreatedAt.Default.(func() time.Time)
-	// serviceaccountDescUpdatedAt is the schema descriptor for updated_at field.
-	serviceaccountDescUpdatedAt := serviceaccountFields[10].Descriptor()
-	// serviceaccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	serviceaccount.DefaultUpdatedAt = serviceaccountDescUpdatedAt.Default.(func() time.Time)
-	// serviceaccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	serviceaccount.UpdateDefaultUpdatedAt = serviceaccountDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// serviceaccountDescID is the schema descriptor for id field.
-	serviceaccountDescID := serviceaccountFields[0].Descriptor()
-	// serviceaccount.DefaultID holds the default value on creation for the id field.
-	serviceaccount.DefaultID = serviceaccountDescID.Default.(func() uuid.UUID)
-	serviceaccountkeypairFields := schema.ServiceAccountKeyPair{}.Fields()
-	_ = serviceaccountkeypairFields
-	// serviceaccountkeypairDescKeyID is the schema descriptor for key_id field.
-	serviceaccountkeypairDescKeyID := serviceaccountkeypairFields[2].Descriptor()
-	// serviceaccountkeypair.KeyIDValidator is a validator for the "key_id" field. It is called by the builders before save.
-	serviceaccountkeypair.KeyIDValidator = serviceaccountkeypairDescKeyID.Validators[0].(func(string) error)
-	// serviceaccountkeypairDescPublicKeyPem is the schema descriptor for public_key_pem field.
-	serviceaccountkeypairDescPublicKeyPem := serviceaccountkeypairFields[5].Descriptor()
-	// serviceaccountkeypair.PublicKeyPemValidator is a validator for the "public_key_pem" field. It is called by the builders before save.
-	serviceaccountkeypair.PublicKeyPemValidator = serviceaccountkeypairDescPublicKeyPem.Validators[0].(func(string) error)
-	// serviceaccountkeypairDescActive is the schema descriptor for active field.
-	serviceaccountkeypairDescActive := serviceaccountkeypairFields[7].Descriptor()
-	// serviceaccountkeypair.DefaultActive holds the default value on creation for the active field.
-	serviceaccountkeypair.DefaultActive = serviceaccountkeypairDescActive.Default.(bool)
-	// serviceaccountkeypairDescRevoked is the schema descriptor for revoked field.
-	serviceaccountkeypairDescRevoked := serviceaccountkeypairFields[9].Descriptor()
-	// serviceaccountkeypair.DefaultRevoked holds the default value on creation for the revoked field.
-	serviceaccountkeypair.DefaultRevoked = serviceaccountkeypairDescRevoked.Default.(bool)
-	// serviceaccountkeypairDescCreatedAt is the schema descriptor for created_at field.
-	serviceaccountkeypairDescCreatedAt := serviceaccountkeypairFields[11].Descriptor()
-	// serviceaccountkeypair.DefaultCreatedAt holds the default value on creation for the created_at field.
-	serviceaccountkeypair.DefaultCreatedAt = serviceaccountkeypairDescCreatedAt.Default.(func() time.Time)
-	// serviceaccountkeypairDescID is the schema descriptor for id field.
-	serviceaccountkeypairDescID := serviceaccountkeypairFields[0].Descriptor()
-	// serviceaccountkeypair.DefaultID holds the default value on creation for the id field.
-	serviceaccountkeypair.DefaultID = serviceaccountkeypairDescID.Default.(func() uuid.UUID)
 	serviceprincipalMixin := schema.ServicePrincipal{}.Mixin()
 	serviceprincipalMixinFields0 := serviceprincipalMixin[0].Fields()
 	_ = serviceprincipalMixinFields0
@@ -964,39 +765,4 @@ func init() {
 	subscriptionDescID := subscriptionMixinFields0[0].Descriptor()
 	// subscription.DefaultID holds the default value on creation for the id field.
 	subscription.DefaultID = subscriptionDescID.Default.(func() uuid.UUID)
-	userMixin := schema.User{}.Mixin()
-	userMixinFields0 := userMixin[0].Fields()
-	_ = userMixinFields0
-	userFields := schema.User{}.Fields()
-	_ = userFields
-	// userDescCreatedAt is the schema descriptor for created_at field.
-	userDescCreatedAt := userMixinFields0[1].Descriptor()
-	// user.DefaultCreatedAt holds the default value on creation for the created_at field.
-	user.DefaultCreatedAt = userDescCreatedAt.Default.(func() time.Time)
-	// userDescUpdatedAt is the schema descriptor for updated_at field.
-	userDescUpdatedAt := userMixinFields0[2].Descriptor()
-	// user.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	user.DefaultUpdatedAt = userDescUpdatedAt.Default.(func() time.Time)
-	// user.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	user.UpdateDefaultUpdatedAt = userDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// userDescEmail is the schema descriptor for email field.
-	userDescEmail := userFields[0].Descriptor()
-	// user.EmailValidator is a validator for the "email" field. It is called by the builders before save.
-	user.EmailValidator = userDescEmail.Validators[0].(func(string) error)
-	// userDescName is the schema descriptor for name field.
-	userDescName := userFields[1].Descriptor()
-	// user.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	user.NameValidator = userDescName.Validators[0].(func(string) error)
-	// userDescIsPlatformAdmin is the schema descriptor for is_platform_admin field.
-	userDescIsPlatformAdmin := userFields[4].Descriptor()
-	// user.DefaultIsPlatformAdmin holds the default value on creation for the is_platform_admin field.
-	user.DefaultIsPlatformAdmin = userDescIsPlatformAdmin.Default.(bool)
-	// userDescActive is the schema descriptor for active field.
-	userDescActive := userFields[5].Descriptor()
-	// user.DefaultActive holds the default value on creation for the active field.
-	user.DefaultActive = userDescActive.Default.(bool)
-	// userDescID is the schema descriptor for id field.
-	userDescID := userMixinFields0[0].Descriptor()
-	// user.DefaultID holds the default value on creation for the id field.
-	user.DefaultID = userDescID.Default.(func() uuid.UUID)
 }

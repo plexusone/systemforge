@@ -65,26 +65,6 @@ func (_u *OAuthTokenUpdate) ClearSubject() *OAuthTokenUpdate {
 	return _u
 }
 
-// SetServiceAccountID sets the "service_account_id" field.
-func (_u *OAuthTokenUpdate) SetServiceAccountID(v uuid.UUID) *OAuthTokenUpdate {
-	_u.mutation.SetServiceAccountID(v)
-	return _u
-}
-
-// SetNillableServiceAccountID sets the "service_account_id" field if the given value is not nil.
-func (_u *OAuthTokenUpdate) SetNillableServiceAccountID(v *uuid.UUID) *OAuthTokenUpdate {
-	if v != nil {
-		_u.SetServiceAccountID(*v)
-	}
-	return _u
-}
-
-// ClearServiceAccountID clears the value of the "service_account_id" field.
-func (_u *OAuthTokenUpdate) ClearServiceAccountID() *OAuthTokenUpdate {
-	_u.mutation.ClearServiceAccountID()
-	return _u
-}
-
 // SetAccessTokenSignature sets the "access_token_signature" field.
 func (_u *OAuthTokenUpdate) SetAccessTokenSignature(v string) *OAuthTokenUpdate {
 	_u.mutation.SetAccessTokenSignature(v)
@@ -414,12 +394,6 @@ func (_u *OAuthTokenUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.SubjectCleared() {
 		_spec.ClearField(oauthtoken.FieldSubject, field.TypeString)
 	}
-	if value, ok := _u.mutation.ServiceAccountID(); ok {
-		_spec.SetField(oauthtoken.FieldServiceAccountID, field.TypeUUID, value)
-	}
-	if _u.mutation.ServiceAccountIDCleared() {
-		_spec.ClearField(oauthtoken.FieldServiceAccountID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.AccessTokenSignature(); ok {
 		_spec.SetField(oauthtoken.FieldAccessTokenSignature, field.TypeString, value)
 	}
@@ -582,26 +556,6 @@ func (_u *OAuthTokenUpdateOne) SetNillableSubject(v *string) *OAuthTokenUpdateOn
 // ClearSubject clears the value of the "subject" field.
 func (_u *OAuthTokenUpdateOne) ClearSubject() *OAuthTokenUpdateOne {
 	_u.mutation.ClearSubject()
-	return _u
-}
-
-// SetServiceAccountID sets the "service_account_id" field.
-func (_u *OAuthTokenUpdateOne) SetServiceAccountID(v uuid.UUID) *OAuthTokenUpdateOne {
-	_u.mutation.SetServiceAccountID(v)
-	return _u
-}
-
-// SetNillableServiceAccountID sets the "service_account_id" field if the given value is not nil.
-func (_u *OAuthTokenUpdateOne) SetNillableServiceAccountID(v *uuid.UUID) *OAuthTokenUpdateOne {
-	if v != nil {
-		_u.SetServiceAccountID(*v)
-	}
-	return _u
-}
-
-// ClearServiceAccountID clears the value of the "service_account_id" field.
-func (_u *OAuthTokenUpdateOne) ClearServiceAccountID() *OAuthTokenUpdateOne {
-	_u.mutation.ClearServiceAccountID()
 	return _u
 }
 
@@ -963,12 +917,6 @@ func (_u *OAuthTokenUpdateOne) sqlSave(ctx context.Context) (_node *OAuthToken, 
 	}
 	if _u.mutation.SubjectCleared() {
 		_spec.ClearField(oauthtoken.FieldSubject, field.TypeString)
-	}
-	if value, ok := _u.mutation.ServiceAccountID(); ok {
-		_spec.SetField(oauthtoken.FieldServiceAccountID, field.TypeUUID, value)
-	}
-	if _u.mutation.ServiceAccountIDCleared() {
-		_spec.ClearField(oauthtoken.FieldServiceAccountID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.AccessTokenSignature(); ok {
 		_spec.SetField(oauthtoken.FieldAccessTokenSignature, field.TypeString, value)

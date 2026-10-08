@@ -6,9 +6,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
-// APIKey is the predicate function for apikey builders.
-type APIKey func(*sql.Selector)
-
 // Agent is the predicate function for agent builders.
 type Agent func(*sql.Selector)
 
@@ -42,12 +39,6 @@ type LoginSession func(*sql.Selector)
 // LoginState is the predicate function for loginstate builders.
 type LoginState func(*sql.Selector)
 
-// Membership is the predicate function for membership builders.
-type Membership func(*sql.Selector)
-
-// OAuthAccount is the predicate function for oauthaccount builders.
-type OAuthAccount func(*sql.Selector)
-
 // OAuthApp is the predicate function for oauthapp builders.
 type OAuthApp func(*sql.Selector)
 
@@ -75,23 +66,11 @@ type PrincipalMembership func(*sql.Selector)
 // PrincipalToken is the predicate function for principaltoken builders.
 type PrincipalToken func(*sql.Selector)
 
-// RefreshToken is the predicate function for refreshtoken builders.
-type RefreshToken func(*sql.Selector)
-
 // SeatAssignment is the predicate function for seatassignment builders.
 type SeatAssignment func(*sql.Selector)
-
-// ServiceAccount is the predicate function for serviceaccount builders.
-type ServiceAccount func(*sql.Selector)
-
-// ServiceAccountKeyPair is the predicate function for serviceaccountkeypair builders.
-type ServiceAccountKeyPair func(*sql.Selector)
 
 // ServicePrincipal is the predicate function for serviceprincipal builders.
 type ServicePrincipal func(*sql.Selector)
 
 // Subscription is the predicate function for subscription builders.
 type Subscription func(*sql.Selector)
-
-// User is the predicate function for user builders.
-type User func(*sql.Selector)
