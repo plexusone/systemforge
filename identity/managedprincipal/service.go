@@ -12,6 +12,7 @@ import (
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
+	"github.com/plexusone/systemforge/authz/simple"
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
@@ -38,6 +39,7 @@ type Service struct {
 	audit    audit.Emitter
 	syncer   authz.RelationshipSyncer
 	syncMode authz.SyncMode
+	authz    authz.Authorizer
 	logger   *slog.Logger
 	roles    []string
 }
@@ -59,6 +61,14 @@ func WithAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) Optio
 		s.syncer = syncer
 		s.syncMode = mode
 	}
+}
+
+// WithAuthorizer sets the authorizer that checks managers' permissions on
+// managed principals, such as a SpiceDB provider or a simple provider with
+// a platform-administrator check. Defaults to a simple provider backed by
+// ManagerRoles.
+func WithAuthorizer(a authz.Authorizer) Option {
+	return func(s *Service) { s.authz = a }
 }
 
 // WithLogger sets the logger used for failures that cannot be returned,
@@ -94,6 +104,9 @@ func NewService(client *ent.Client, gate Gate, opts ...Option) *Service {
 	}
 	for _, opt := range opts {
 		opt(s)
+	}
+	if s.authz == nil {
+		s.authz = simple.New(simple.WithManagerRoleGetter(s.ManagerRoles))
 	}
 	return s
 }

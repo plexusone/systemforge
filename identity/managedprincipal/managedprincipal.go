@@ -52,6 +52,9 @@ var (
 	// ErrNotManager is returned when the acting principal is not an
 	// active manager of the managed principal.
 	ErrNotManager = errors.New("managedprincipal: not an active manager of this principal")
+	// ErrForbidden is returned when the acting principal lacks the
+	// permission an operation requires.
+	ErrForbidden = errors.New("managedprincipal: forbidden")
 	// ErrNotFound is returned when a principal or relationship does not exist.
 	ErrNotFound = errors.New("managedprincipal: not found")
 )
