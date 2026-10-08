@@ -91,18 +91,34 @@ vocabularies, lookups), so the pattern should be defined once.
    agent-facing scopes (for example per-resource AAuth scopes) are checked
    against the same relationships.
 
-### Choosing a provider
+### Naming the providers by what they do
 
-Both providers implement the same platform contract — organization roles,
+The providers are named for the model they evaluate, not the technology:
+
+- **role-based** (`rbac`): roles, plus direct grants on resources. The
+  `simple` package becomes `authz/rbac`.
+- **relationship-based** (`rebac`): permissions derived through
+  relationships, evaluated by an engine. The `spicedb` package becomes the
+  engine `authz/rebac/spicedb`; another engine (for example OpenFGA) would
+  sit beside it without changing an application's configuration vocabulary.
+
+An application configures `authz.mode: rbac | rebac`, and for `rebac` an
+engine. "Coarse-grained" and "fine-grained" are not used: after this ADR
+both modes grant per resource, and the relationship engines market
+themselves as fine-grained, so the pair would mislead in both directions.
+
+### Choosing a mode
+
+Both modes implement the same platform contract — organization roles,
 application roles (ADR-007), resource grants, `ListResources` — with the
 same semantics, verified by the shared `providertest` suite. An application
-written to the contract switches from `simple` to `spicedb` by
+written to the contract switches from `rbac` to `rebac` by
 configuration; its relationships are rebuilt from the membership, role and
-grant tables. The cost of `spicedb` is operational (a service with its own
+grant tables. The cost of `rebac` is operational (a service with its own
 datastore, schema management, relationship sync), not a function of whether
 the application is paid.
 
-| Use `simple` while | Switch to `spicedb` when |
+| Use `rbac` while | Switch to `rebac` when |
 |---|---|
 | Access is organization roles, application roles and direct grants on resources | Permissions flow through relationships: nested groups or teams, folder-style hierarchies, "shared with me" graphs |
 | One level of inheritance (organization → resource) is enough | Resources inherit from parents more than one level deep |
@@ -111,7 +127,7 @@ the application is paid.
 
 In terms of what each provider can answer:
 
-| Question | `simple` today | `simple` with this ADR | `spicedb` |
+| Question | `rbac` today | `rbac` with this ADR | `rebac` |
 |---|---|---|---|
 | Does the principal's organization or application role grant this action? | yes | yes | yes |
 | Does the principal own this resource? | yes | yes | yes |
@@ -119,9 +135,9 @@ In terms of what each provider can answer:
 | Does a permission reach the principal through relationships (team membership, a parent resource, a share with a group)? | no | no | yes, through the schema fragment |
 
 The grants this ADR adds to `simple` are one hop: principal, role,
-resource. That is enough for collaborators. What `spicedb` adds beyond the
+resource. That is enough for collaborators. What `rebac` adds beyond the
 contract is the application's schema fragment: relations and inheritance
-the `simple` provider cannot express.
+`rbac` cannot express.
 An application that needs them declares its fragment and switches; until
 then it declares none and the contract is all it uses.
 
