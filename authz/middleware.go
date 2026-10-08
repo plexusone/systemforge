@@ -2,6 +2,7 @@ package authz
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -306,8 +307,11 @@ func writeForbidden(w http.ResponseWriter, message string) {
 func writeError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(ErrorResponse{
+	if err := json.NewEncoder(w).Encode(ErrorResponse{
 		Error:   http.StatusText(status),
 		Message: message,
-	})
+	}); err != nil {
+		// The status is already sent; the client sees a truncated body.
+		slog.Error("authz: writing error response", "status", status, "error", err)
+	}
 }
