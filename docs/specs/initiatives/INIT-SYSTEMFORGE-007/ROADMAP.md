@@ -23,7 +23,7 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 **Theme:** Manager-issued tokens with the mitigations that make them safe
 
-- [ ] `RMI-SYSTEMFORGE-105` `login_token` credential type: issue, constant-time verify, revoke, expiry, single-use option; lifetime resolved from request, then per-application `login_token_ttl`, then 30-day platform default, under a platform ceiling
+- [x] `RMI-SYSTEMFORGE-105` `login_token` credential type: issue, constant-time verify, revoke, expiry, single-use option; lifetime resolved from request, then per-application `login_token_ttl`, then 30-day platform default, under a platform ceiling
   - Depends on: `RMI-SYSTEMFORGE-104`
 - [ ] `RMI-SYSTEMFORGE-106` SystemAuth token exchange: endpoint with identical failure responses and rate limiting, `managed` claim, conditional `email` claims in ID token and `userinfo`
   - Depends on: `RMI-SYSTEMFORGE-105`

@@ -106,6 +106,20 @@ In `identity/credential`:
   updates `last_used_at`/`last_used_ip`; revokes the row when `single_use`.
 - Existing `Revoke` applies.
 
+As implemented: tokens are `SFLT` followed by the base32 encoding of the
+random bytes without padding, so they use only uppercase letters and digits
+and a QR code can encode them in alphanumeric mode; verification also
+accepts lowercase and grouping spaces or hyphens for typed entry. The
+stored `identifier` is the first 12 characters and is the lookup key; the
+SHA-256 hash is then compared in constant time. Every unusable token yields
+the same `ErrInvalidLoginToken`. Recording a use re-checks `active` and
+`revoked` in the `UPDATE`, and a single-use token is revoked in that same
+statement, so it succeeds at most once under concurrent presentation.
+`LoginTokenPolicy.ExpiresAt` resolves the lifetime; `systemauth.Server`
+supplies the policy for a client through `LoginTokenPolicy`, and
+`managedprincipal.IssueLoginToken` requires the issuer to be an active
+manager until the authorization relations of RMI-SYSTEMFORGE-107 land.
+
 Lifetime policy, resolved at issue time:
 
 1. An explicit `ExpiresAt` on the request, if present.
