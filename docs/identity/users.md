@@ -10,7 +10,7 @@ A person is a **human principal**: a row in `sf_principals` with `type = human`,
 |-------|------|-------------|
 | `id` | UUID | Primary key, used as the subject (`sub`) in tokens |
 | `type` | enum | `human`, `application`, `agent`, or `service` |
-| `identifier` | string | Unique lookup key; the email for humans |
+| `identifier` | string | Unique lookup key: the email for humans, or `human:<id>` for a managed principal |
 | `display_name` | string | Human-readable name |
 | `organization_id` | UUID | Optional owning organization |
 | `active` | bool | Whether the principal can authenticate |
@@ -24,7 +24,7 @@ A person is a **human principal**: a row in `sf_principals` with `type = human`,
 | Field | Type | Description |
 |-------|------|-------------|
 | `principal_id` | UUID | The owning principal |
-| `email` | string | Primary email address |
+| `email` | string | Primary email address; null only for a [managed principal](managed-principals.md) |
 | `given_name`, `family_name` | string | Name parts |
 | `avatar_url` | string | Profile picture URL |
 | `locale`, `timezone` | string | Preferences |
@@ -73,6 +73,18 @@ err := creds.CreatePassword(ctx, credential.CreatePasswordInput{
 ```
 
 `VerifyPassword` and `UpdatePassword` on the same service check and rotate it. A human without a password credential signs in only through an upstream provider.
+
+## Email Requirement
+
+Every human has an email unless it is a **managed principal**: a human whose
+account is created and controlled by managers with an email, enabled per
+deployment and per client. Every creation path documented here (the
+principal service, SystemAuth storage, signup, SCIM, social login, and
+federation sync) refuses a human without an email; managed principals are
+created only through `identity/managedprincipal`. See
+[Managed Principals](managed-principals.md).
+
+The identifier is a lookup key, not an address: never send mail to it.
 
 ## Email Uniqueness
 

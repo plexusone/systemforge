@@ -194,3 +194,25 @@ type LockoutStatus struct {
 | `ErrAccountLocked` | Account is currently locked |
 | `ErrStorageFailure` | Storage backend error |
 | `ErrInvalidThreshold` | Invalid configuration value |
+
+## Login Tokens
+
+A [managed principal](managed-principals.md) signs in with a manager-issued
+login token, which is password-equivalent for that principal while it is
+valid. The mitigations are structural:
+
+- Tokens are 256-bit random values stored only as SHA-256 hashes and
+  compared in constant time; their values appear once, at issue, and never
+  in listings, audit events, or logs.
+- They expire: 30 days by default, never more than the 400-day ceiling, and
+  20 minutes for single-use tokens, which succeed at most once even under
+  concurrent presentation.
+- The `POST /login-token` exchange gives every failure the same response
+  and is rate limited per source address and per client.
+- Managed principals carry reduced capabilities: they cannot manage their
+  own profile or delegate.
+- Managers see every live token and session and can revoke any of them, or
+  all at once; every issue and revocation is audited.
+
+Applications that need stronger assurance can issue single-use tokens or add
+device binding of their own.

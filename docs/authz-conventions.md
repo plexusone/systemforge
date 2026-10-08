@@ -63,6 +63,14 @@ SystemForge owns the base definitions (`authz.BaseSpiceDBSchema`):
 `view` plus org administration), and `platform`. **Apps never redefine
 these.**
 
+The base `principal` definition carries the manager relations of
+[managed principals](identity/managed-principals.md): `guardian` and
+`educator`, with the platform permissions `manage_account`,
+`manage_credentials`, `view_profile`, and `manage_managers`. Apps reference
+them (for example `learner->view_profile`) rather than inventing
+`parent`/`teacher` relations of their own; the simple provider applies the
+same grants through `authz.ManagerRolePermissions`.
+
 An app attaches through a *facet*: an `{app}_org` definition that references
 the shared `organization` and adds the app's domain-role relations:
 

@@ -52,6 +52,7 @@ nav:
   - Identity:
     - Overview: identity/overview.md
     - Users: identity/users.md
+    - Managed Principals: identity/managed-principals.md
     - Organizations: identity/organizations.md
     - Memberships: identity/memberships.md
     - API Keys: identity/api-keys.md
