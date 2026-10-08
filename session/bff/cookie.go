@@ -23,12 +23,18 @@ type CookieConfig struct {
 	// Set to -1 to delete the cookie.
 	MaxAge int
 
-	// Secure indicates the cookie should only be sent over HTTPS.
-	// Default: true.
+	// Secure indicates the cookie should only be sent over HTTPS. The
+	// cookie is always Secure unless AllowInsecure is set, so a config
+	// that leaves this field out cannot weaken it.
 	Secure bool
 
-	// HTTPOnly prevents JavaScript access to the cookie.
-	// Default: true (required for security).
+	// AllowInsecure permits a cookie without the Secure flag when Secure
+	// is false, for local development over plain HTTP. Never set it in
+	// production.
+	AllowInsecure bool
+
+	// HTTPOnly prevents JavaScript access to the cookie. The session
+	// cookie is always HttpOnly; the field is kept for compatibility.
 	HTTPOnly bool
 
 	// SameSite controls cross-site cookie behavior.
@@ -64,9 +70,14 @@ func NewCookieManager(config CookieConfig) *CookieManager {
 	if config.SameSite == 0 {
 		config.SameSite = http.SameSiteStrictMode
 	}
-	// HTTPOnly defaults to true if not explicitly set to false
-	// We can't distinguish between "not set" and "set to false" for bool,
-	// so we trust the caller to explicitly set it. DefaultCookieConfig sets it.
+	// A bool left out of a config is indistinguishable from false, so the
+	// flags that protect the session are not configurable downward: the
+	// cookie is always HttpOnly, and Secure unless AllowInsecure says
+	// otherwise.
+	config.HTTPOnly = true
+	if !config.AllowInsecure {
+		config.Secure = true
+	}
 
 	return &CookieManager{config: config}
 }
