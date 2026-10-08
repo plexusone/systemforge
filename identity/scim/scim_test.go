@@ -366,7 +366,7 @@ func setupTestProvider() (*Provider, *mockStore, error) {
 	}
 
 	store := newMockStore()
-	provider, err := NewProvider(config, store)
+	provider, err := NewProvider(config, store, WithAuthorizationHook(AllowAllAuthorizationHook{}))
 	if err != nil {
 		return nil, nil, err
 	}
