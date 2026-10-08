@@ -61,14 +61,25 @@ type TokenOptions struct {
 	// DPoPThumbprint binds the token to a DPoP key pair.
 	// When set, the token will include a cnf.jkt claim.
 	DPoPThumbprint string
+
+	// Audience replaces the configured audience on this token, for example to
+	// address it to one application when several share a signing key.
+	Audience []string
+}
+
+func (o TokenOptions) apply(c *Claims) {
+	if o.DPoPThumbprint != "" {
+		c.WithDPoPBinding(o.DPoPThumbprint)
+	}
+	if len(o.Audience) > 0 {
+		c.WithAudience(o.Audience...)
+	}
 }
 
 // GenerateAccessTokenWithOptions creates a new access token with optional parameters.
 func (s *Service) GenerateAccessTokenWithOptions(principalID uuid.UUID, email, name string, opts TokenOptions) (string, error) {
 	claims := NewAccessClaims(s.config, principalID, email, name)
-	if opts.DPoPThumbprint != "" {
-		claims.WithDPoPBinding(opts.DPoPThumbprint)
-	}
+	opts.apply(claims)
 	return s.signToken(claims)
 }
 
@@ -100,9 +111,7 @@ func (s *Service) GenerateAccessTokenWithOrgAndOptions(
 	claims := NewAccessClaims(s.config, principalID, email, name).
 		WithOrganization(orgID, orgSlug, role, permissions).
 		WithPlatformAdmin(isPlatformAdmin)
-	if opts.DPoPThumbprint != "" {
-		claims.WithDPoPBinding(opts.DPoPThumbprint)
-	}
+	opts.apply(claims)
 	return s.signToken(claims)
 }
 
