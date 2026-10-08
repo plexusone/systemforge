@@ -2,6 +2,7 @@ package systemauth
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -272,5 +273,86 @@ func TestManagedClaims(t *testing.T) {
 	}
 	if _, ok := got[ManagedClaim]; ok {
 		t.Errorf("adult claims include managed: %v", got)
+	}
+}
+
+// TestLoginTokenRateLimitIgnoresForwardingHeaders verifies that rotating
+// X-Forwarded-For does not evade the per-address limit, and that made-up
+// client IDs do not each get a rate-limit bucket.
+func TestLoginTokenRateLimitIgnoresForwardingHeaders(t *testing.T) {
+	rates := ratelimit.NewMemoryStorage(ratelimit.WithMaxKeys(50))
+	t.Cleanup(func() {
+		if err := rates.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	f := newLoginTokenFixture(t, WithLoginTokenRateLimit(rates, ratelimit.PerMinute(3), ratelimit.PerMinute(1000)))
+
+	send := func(forwarded, clientID string) int {
+		req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(url.Values{"token": {"nope"}, "client_id": {clientID}}.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("X-Forwarded-For", forwarded)
+		req.RemoteAddr = "203.0.113.9:4000"
+		w := httptest.NewRecorder()
+		f.srv.ServeHTTP(w, req)
+		return w.Code
+	}
+	for i := range 3 {
+		if code := send(fmt.Sprintf("198.51.100.%d", i), "learning"); code != http.StatusUnauthorized {
+			t.Fatalf("attempt %d: %d", i, code)
+		}
+	}
+	if code := send("198.51.100.200", "learning"); code != http.StatusTooManyRequests {
+		t.Errorf("a fresh X-Forwarded-For evaded the per-address limit: %d", code)
+	}
+
+	// Made-up client IDs share one bucket instead of each growing the store.
+	g := newLoginTokenFixture(t, WithLoginTokenRateLimit(rates, ratelimit.PerMinute(1000), ratelimit.PerMinute(1000)))
+	for i := range 200 {
+		req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(url.Values{"token": {"x"}, "client_id": {fmt.Sprintf("made-up-%d", i)}}.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.RemoteAddr = "203.0.113.10:1"
+		g.srv.ServeHTTP(httptest.NewRecorder(), req)
+	}
+	rates2 := ratelimit.NewMemoryStorage(ratelimit.WithMaxKeys(5))
+	t.Cleanup(func() {
+		if err := rates2.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	h := newLoginTokenFixture(t, WithLoginTokenRateLimit(rates2, ratelimit.PerMinute(1000), ratelimit.PerMinute(1000)))
+	for i := range 100 {
+		req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(url.Values{"token": {"x"}, "client_id": {fmt.Sprintf("made-up-%d", i)}}.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.RemoteAddr = "203.0.113.11:1"
+		w := httptest.NewRecorder()
+		h.srv.ServeHTTP(w, req)
+		if w.Code == http.StatusTooManyRequests {
+			t.Fatalf("made-up client %d used up the limiter's keys: %d", i, w.Code)
+		}
+	}
+
+	// Behind a configured proxy the forwarded address is believed.
+	clientIP, err := ratelimit.ForwardedClientIP("203.0.113.0/24")
+	if err != nil {
+		t.Fatalf("ForwardedClientIP: %v", err)
+	}
+	p := newLoginTokenFixture(t, WithLoginTokenClientIP(clientIP),
+		WithLoginTokenRateLimit(ratelimit.NewMemoryStorage(), ratelimit.PerMinute(1), ratelimit.PerMinute(1000)))
+	for _, c := range []struct {
+		ip   string
+		want int
+	}{{"198.51.100.1", http.StatusUnauthorized}, {"198.51.100.2", http.StatusUnauthorized}, {"198.51.100.1", http.StatusTooManyRequests}} {
+		if got := func() int {
+			req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(url.Values{"token": {"x"}, "client_id": {"learning"}}.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("X-Forwarded-For", c.ip)
+			req.RemoteAddr = "203.0.113.9:1"
+			w := httptest.NewRecorder()
+			p.srv.ServeHTTP(w, req)
+			return w.Code
+		}(); got != c.want {
+			t.Errorf("client %s behind the proxy: %d, want %d", c.ip, got, c.want)
+		}
 	}
 }
