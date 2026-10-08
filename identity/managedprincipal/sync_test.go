@@ -12,7 +12,7 @@ import (
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
-	"github.com/plexusone/systemforge/authz/simple"
+	"github.com/plexusone/systemforge/authz/rbac"
 )
 
 // syncRecorder records manager relation writes and can fail them.
@@ -101,7 +101,7 @@ func TestSimpleProviderWithManagerRoles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
-	provider := simple.New(simple.WithManagerRoleGetter(svc.ManagerRoles))
+	provider := rbac.New(rbac.WithManagerRoleGetter(svc.ManagerRoles))
 	can := func(who uuid.UUID, a authz.Action) bool {
 		ok, err := provider.Can(ctx, authz.NewUserPrincipal(who), a, authz.NewPrincipalResource(id))
 		if err != nil {

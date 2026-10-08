@@ -11,7 +11,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
 
-	"github.com/plexusone/systemforge/authz/simple"
+	"github.com/plexusone/systemforge/authz/rbac"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
@@ -78,7 +78,7 @@ func newAccessFixture(t *testing.T, opts ...APIOption) *accessFixture {
 			roles[[2]uuid.UUID{p.ID, membership.org}] = membership.role
 		}
 	}
-	authorizer := simple.New(simple.WithRoleGetter(func(_ context.Context, pid, oid uuid.UUID) (string, error) {
+	authorizer := rbac.New(rbac.WithRoleGetter(func(_ context.Context, pid, oid uuid.UUID) (string, error) {
 		return roles[[2]uuid.UUID{pid, oid}], nil
 	}))
 

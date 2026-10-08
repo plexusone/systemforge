@@ -686,7 +686,7 @@ import (
 
     "entgo.io/ent"
     "github.com/plexusone/systemforge/authz"
-    "github.com/plexusone/systemforge/authz/spicedb"
+    "github.com/plexusone/systemforge/authz/rebac/spicedb"
 )
 
 // AuthzHooks creates Ent hooks for SpiceDB synchronization.

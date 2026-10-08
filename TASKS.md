@@ -193,7 +193,7 @@ These are used directly by consumers of the library.
 - [ ] `WithResourceID` - Resource ID injection
 - [ ] `Error` - Error handling method
 
-#### SpiceDB Provider (`authz/spicedb/`)
+#### SpiceDB Provider (`authz/rebac/spicedb/`)
 
 - [ ] `BaseSchema` - Base SpiceDB schema constant
 - [ ] `ResourceSchema` - Resource schema generation

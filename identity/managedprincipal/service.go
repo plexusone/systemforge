@@ -12,7 +12,7 @@ import (
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
-	"github.com/plexusone/systemforge/authz/simple"
+	"github.com/plexusone/systemforge/authz/rbac"
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
@@ -108,7 +108,7 @@ func NewService(client *ent.Client, gate Gate, opts ...Option) *Service {
 		opt(s)
 	}
 	if s.authz == nil {
-		s.authz = simple.New(simple.WithManagerRoleGetter(s.ManagerRoles))
+		s.authz = rbac.New(rbac.WithManagerRoleGetter(s.ManagerRoles))
 	}
 	return s
 }
@@ -370,7 +370,7 @@ func (s *Service) ListManagers(ctx context.Context, managedID uuid.UUID) ([]Rela
 
 // ManagerRoles returns the roles managerID actively holds over managedID.
 // It matches authz.ManagerRoleGetter, so it can back the simple provider:
-// simple.WithManagerRoleGetter(svc.ManagerRoles).
+// rbac.WithManagerRoleGetter(svc.ManagerRoles).
 func (s *Service) ManagerRoles(ctx context.Context, managerID, managedID uuid.UUID) ([]string, error) {
 	roles, err := s.client.ManagerRelationship.Query().
 		Where(

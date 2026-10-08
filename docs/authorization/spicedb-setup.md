@@ -20,7 +20,7 @@ For development and testing, SystemForge can run an embedded SpiceDB instance:
 ```go
 import (
     "context"
-    "github.com/plexusone/systemforge/authz/spicedb"
+    "github.com/plexusone/systemforge/authz/rebac/spicedb"
 )
 
 func main() {
@@ -163,7 +163,7 @@ To sync identity operations to SpiceDB:
 
 ```go
 import (
-    "github.com/plexusone/systemforge/authz/spicedb"
+    "github.com/plexusone/systemforge/authz/rebac/spicedb"
     "github.com/plexusone/systemforge/identity/organization"
     "github.com/plexusone/systemforge/identity/principal"
 )

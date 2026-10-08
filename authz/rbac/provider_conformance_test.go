@@ -1,4 +1,4 @@
-package simple_test
+package rbac_test
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/providertest"
-	"github.com/plexusone/systemforge/authz/simple"
+	"github.com/plexusone/systemforge/authz/rbac"
 )
 
 // TestConformance runs the full conformance test suite for the simple provider.
@@ -24,23 +24,23 @@ func TestConformance(t *testing.T) {
 	platformAdmins := map[string]bool{}
 	managers := map[[2]uuid.UUID][]string{} // {manager, managed} -> roles
 
-	provider := simple.New(
-		simple.WithRoleHierarchy(authz.DefaultRoleHierarchy),
-		simple.WithPermissions(authz.DefaultRolePermissions),
-		simple.WithRoleGetter(func(ctx context.Context, pid, oid uuid.UUID) (string, error) {
+	provider := rbac.New(
+		rbac.WithRoleHierarchy(authz.DefaultRoleHierarchy),
+		rbac.WithPermissions(authz.DefaultRolePermissions),
+		rbac.WithRoleGetter(func(ctx context.Context, pid, oid uuid.UUID) (string, error) {
 			if orgRoles, ok := roles[pid.String()]; ok {
 				return orgRoles[oid.String()], nil
 			}
 			return "", nil
 		}),
-		simple.WithPlatformAdminChecker(func(ctx context.Context, pid uuid.UUID) (bool, error) {
+		rbac.WithPlatformAdminChecker(func(ctx context.Context, pid uuid.UUID) (bool, error) {
 			return platformAdmins[pid.String()], nil
 		}),
-		simple.WithManagerRoleGetter(func(_ context.Context, manager, managed uuid.UUID) ([]string, error) {
+		rbac.WithManagerRoleGetter(func(_ context.Context, manager, managed uuid.UUID) ([]string, error) {
 			return managers[[2]uuid.UUID{manager, managed}], nil
 		}),
-		simple.WithOwnerFullAccess(true),
-		simple.WithPlatformAdminBypass(true),
+		rbac.WithOwnerFullAccess(true),
+		rbac.WithPlatformAdminBypass(true),
 	)
 
 	providertest.RunAll(t, providertest.Config{
@@ -61,9 +61,9 @@ func TestConformance(t *testing.T) {
 	})
 }
 
-// TestInterfaceConformance verifies simple.Provider implements all expected interfaces.
+// TestInterfaceConformance verifies rbac.Provider implements all expected interfaces.
 func TestInterfaceConformance(t *testing.T) {
-	provider := simple.New()
+	provider := rbac.New()
 
 	// Verify interface implementation via type assertions
 	var _ authz.Authorizer = provider
@@ -95,10 +95,10 @@ func TestWithCustomHierarchy(t *testing.T) {
 		},
 	}
 
-	provider := simple.New(
-		simple.WithRoleHierarchy(customHierarchy),
-		simple.WithPermissions(customPermissions),
-		simple.WithRoleGetter(func(ctx context.Context, pid, oid uuid.UUID) (string, error) {
+	provider := rbac.New(
+		rbac.WithRoleHierarchy(customHierarchy),
+		rbac.WithPermissions(customPermissions),
+		rbac.WithRoleGetter(func(ctx context.Context, pid, oid uuid.UUID) (string, error) {
 			if orgRoles, ok := roles[pid.String()]; ok {
 				return orgRoles[oid.String()], nil
 			}
@@ -139,8 +139,8 @@ func TestDecideReturnsDetailedDecision(t *testing.T) {
 		},
 	}
 
-	provider := simple.New(
-		simple.WithRoleGetter(func(ctx context.Context, pid, oid uuid.UUID) (string, error) {
+	provider := rbac.New(
+		rbac.WithRoleGetter(func(ctx context.Context, pid, oid uuid.UUID) (string, error) {
 			if orgRoles, ok := roles[pid.String()]; ok {
 				return orgRoles[oid.String()], nil
 			}
@@ -184,8 +184,8 @@ func TestOwnerBypass(t *testing.T) {
 	ownerID := uuid.New()
 	resourceID := uuid.New()
 
-	provider := simple.New(
-		simple.WithOwnerFullAccess(true),
+	provider := rbac.New(
+		rbac.WithOwnerFullAccess(true),
 	)
 
 	principal := authz.NewUserPrincipal(ownerID)
@@ -206,9 +206,9 @@ func TestPlatformAdminBypass(t *testing.T) {
 	adminID := uuid.New()
 	orgID := uuid.New()
 
-	provider := simple.New(
-		simple.WithPlatformAdminBypass(true),
-		simple.WithPlatformAdminChecker(func(ctx context.Context, pid uuid.UUID) (bool, error) {
+	provider := rbac.New(
+		rbac.WithPlatformAdminBypass(true),
+		rbac.WithPlatformAdminChecker(func(ctx context.Context, pid uuid.UUID) (bool, error) {
 			return pid == adminID, nil
 		}),
 	)
@@ -231,8 +231,8 @@ func TestNonMemberDenied(t *testing.T) {
 	nonMemberID := uuid.New()
 	orgID := uuid.New()
 
-	provider := simple.New(
-		simple.WithRoleGetter(func(ctx context.Context, pid, oid uuid.UUID) (string, error) {
+	provider := rbac.New(
+		rbac.WithRoleGetter(func(ctx context.Context, pid, oid uuid.UUID) (string, error) {
 			return "", nil // No role = not a member
 		}),
 	)
@@ -252,7 +252,7 @@ func TestNonMemberDenied(t *testing.T) {
 // TestManagerRolesWithoutGetter verifies that principal resources are
 // denied when no manager role getter is configured.
 func TestManagerRolesWithoutGetter(t *testing.T) {
-	provider := simple.New()
+	provider := rbac.New()
 	d, err := provider.Decide(context.Background(), authz.NewUserPrincipal(uuid.New()), authz.PermViewProfile, authz.NewPrincipalResource(uuid.New()))
 	if err != nil || d.Allowed || d.Reason == "" {
 		t.Errorf("Decide = %+v, %v; want denied with a reason", d, err)

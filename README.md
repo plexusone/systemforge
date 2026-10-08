@@ -262,7 +262,7 @@ r.Handle("/api/*", proxy.Handler())
 ```go
 import (
     "github.com/plexusone/systemforge/authz"
-    "github.com/plexusone/systemforge/authz/simple"
+    "github.com/plexusone/systemforge/authz/rbac"
 )
 
 // Create authorization provider

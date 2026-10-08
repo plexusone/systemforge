@@ -3,7 +3,7 @@
 // This provider uses role hierarchy and permission mappings to make authorization
 // decisions. It has no external dependencies and is suitable for applications
 // with straightforward RBAC requirements.
-package simple
+package rbac
 
 import (
 	"context"

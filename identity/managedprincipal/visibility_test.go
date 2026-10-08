@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/plexusone/systemforge/authz/simple"
+	"github.com/plexusone/systemforge/authz/rbac"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
@@ -217,9 +217,9 @@ func TestVisibilityAuthorization(t *testing.T) {
 	// A configured authorizer replaces the default, here adding a
 	// platform administrator.
 	admin := addHuman(t, f.db, "admin@example.com", true)
-	withAdmin := NewService(f.db, gate{client: true}, WithAuthorizer(simple.New(
-		simple.WithManagerRoleGetter(f.svc.ManagerRoles),
-		simple.WithPlatformAdminChecker(func(_ context.Context, id uuid.UUID) (bool, error) { return id == admin, nil }),
+	withAdmin := NewService(f.db, gate{client: true}, WithAuthorizer(rbac.New(
+		rbac.WithManagerRoleGetter(f.svc.ManagerRoles),
+		rbac.WithPlatformAdminChecker(func(_ context.Context, id uuid.UUID) (bool, error) { return id == admin, nil }),
 	)))
 	if _, err := withAdmin.ListSessions(ctx, admin, f.learner); err != nil {
 		t.Errorf("platform admin ListSessions: %v", err)

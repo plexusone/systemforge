@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/plexusone/systemforge/authz/simple"
+	"github.com/plexusone/systemforge/authz/rbac"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
@@ -64,7 +64,7 @@ func newInviteAPI(t *testing.T) *inviteAPI {
 		}
 	}
 	cfg := invite.DefaultAPIConfig()
-	cfg.Authorizer = simple.New(simple.WithRoleGetter(organization.MembershipRoleGetter(orgs)))
+	cfg.Authorizer = rbac.New(rbac.WithRoleGetter(organization.MembershipRoleGetter(orgs)))
 	a.h = invite.NewAPI(invite.NewService(db, "https://app.example.com"), orgs, cfg)
 	return a
 }

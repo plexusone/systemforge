@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/providertest"
-	"github.com/plexusone/systemforge/authz/spicedb"
+	"github.com/plexusone/systemforge/authz/rebac/spicedb"
 )
 
 // TestIntegration_OrgMembership tests organization membership sync and authorization.

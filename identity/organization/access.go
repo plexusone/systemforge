@@ -98,7 +98,7 @@ func (a *API) isPlatformAdmin(ctx context.Context, caller uuid.UUID) (bool, erro
 	return admin, nil
 }
 
-// MembershipRoleGetter returns a role getter for simple.WithRoleGetter
+// MembershipRoleGetter returns a role getter for rbac.WithRoleGetter
 // that reads a principal's role from its active membership in the
 // organization. A missing or deactivated membership has no role.
 func MembershipRoleGetter(svc Service) func(ctx context.Context, principalID, orgID uuid.UUID) (string, error) {

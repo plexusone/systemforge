@@ -373,7 +373,7 @@ Apply SystemForge to Dashforge.
 
 **Acceptance Criteria**:
 - [ ] Create Dashforge-specific permissions
-- [ ] Use SystemForge authz/simple provider
+- [ ] Use SystemForge authz/rbac provider
 - [ ] Update API handlers to check permissions
 
 ### Task 6.6: Integration Testing

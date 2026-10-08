@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/plexusone/systemforge/authz/simple"
+	"github.com/plexusone/systemforge/authz/rbac"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 	"github.com/plexusone/systemforge/identity/organization"
@@ -19,10 +19,10 @@ import (
 
 // memberAuthorizer authorizes from real memberships, with optional
 // platform administrators.
-func memberAuthorizer(svc organization.Service, admins ...uuid.UUID) *simple.Provider {
-	return simple.New(
-		simple.WithRoleGetter(organization.MembershipRoleGetter(svc)),
-		simple.WithPlatformAdminChecker(func(_ context.Context, pid uuid.UUID) (bool, error) {
+func memberAuthorizer(svc organization.Service, admins ...uuid.UUID) *rbac.Provider {
+	return rbac.New(
+		rbac.WithRoleGetter(organization.MembershipRoleGetter(svc)),
+		rbac.WithPlatformAdminChecker(func(_ context.Context, pid uuid.UUID) (bool, error) {
 			for _, a := range admins {
 				if a == pid {
 					return true, nil

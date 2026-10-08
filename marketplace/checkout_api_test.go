@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
-	"github.com/plexusone/systemforge/authz/simple"
+	"github.com/plexusone/systemforge/authz/rbac"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
 )
 
@@ -56,7 +56,7 @@ func TestCheckoutActsForTheAuthenticatedCaller(t *testing.T) {
 	owner, member, stranger := uuid.New(), uuid.New(), uuid.New()
 	org := uuid.New()
 	roles := map[uuid.UUID]string{owner: "owner", member: "member"}
-	orgs := simple.New(simple.WithRoleGetter(func(_ context.Context, pid, oid uuid.UUID) (string, error) {
+	orgs := rbac.New(rbac.WithRoleGetter(func(_ context.Context, pid, oid uuid.UUID) (string, error) {
 		if oid != org {
 			return "", nil
 		}
@@ -155,7 +155,7 @@ func TestOrgRolePurchaseAuthorizerRoles(t *testing.T) {
 	ctx := context.Background()
 	p, org := uuid.New(), uuid.New()
 	role := "admin"
-	orgs := simple.New(simple.WithRoleGetter(func(context.Context, uuid.UUID, uuid.UUID) (string, error) { return role, nil }))
+	orgs := rbac.New(rbac.WithRoleGetter(func(context.Context, uuid.UUID, uuid.UUID) (string, error) { return role, nil }))
 	if ok, err := OrgRolePurchaseAuthorizer(orgs).CanPurchase(ctx, p, org); err != nil || !ok {
 		t.Errorf("admin default = %v, %v", ok, err)
 	}

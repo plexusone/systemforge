@@ -38,7 +38,7 @@ Create an injectable authorization sync interface that identity services can use
   ```
 
 ### 1.2 Implement SpiceDB Syncer
-- [x] Create `authz/spicedb/syncer.go` implementing `RelationshipSyncer`
+- [x] Create `authz/rebac/spicedb/syncer.go` implementing `RelationshipSyncer`
 - [x] Use existing `Provider.AddOrgMember()` / `RemoveOrgMember()` methods
 - [ ] Add batch operations for efficiency (deferred)
 
@@ -99,7 +99,7 @@ Wire principal service to register/unregister principals in SpiceDB.
 Test the full authorization flow with identity operations.
 
 ### 4.1 Test Infrastructure
-- [x] Create `authz/spicedb/integration_test.go`
+- [x] Create `authz/rebac/spicedb/integration_test.go`
 - [x] Use embedded SpiceDB (in-memory) for tests
 - [x] Create test helpers for setting up principals and orgs
 
@@ -207,7 +207,7 @@ After implementation, verify:
 go test -v ./authz/...
 
 # Run integration tests (requires embedded SpiceDB)
-go test -v ./authz/spicedb/... -tags=integration
+go test -v ./authz/rebac/spicedb/... -tags=integration
 go test -v ./identity/... -tags=integration
 
 # Build docs
