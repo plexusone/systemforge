@@ -124,7 +124,7 @@ type Principal struct {
 
 // Human represents human-specific principal data.
 type Human struct {
-	Email           string     `json:"email"`
+	Email           string     `json:"email,omitempty"` // absent for a managed principal
 	GivenName       string     `json:"given_name,omitempty"`
 	FamilyName      string     `json:"family_name,omitempty"`
 	AvatarURL       *string    `json:"avatar_url,omitempty"`

@@ -2,7 +2,9 @@ package signup
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/mail"
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/invite"
@@ -54,6 +56,9 @@ func (s *DefaultService) Signup(ctx context.Context, input SignupInput) (*Signup
 	// Validate input
 	if input.Email == "" {
 		return nil, fmt.Errorf("email is required")
+	}
+	if err := validateEmail(input.Email); err != nil {
+		return nil, err
 	}
 	if input.DisplayName == "" {
 		return nil, fmt.Errorf("display name is required")
@@ -175,6 +180,11 @@ func (s *DefaultService) SignupWithInvite(ctx context.Context, input AcceptInvit
 
 // SignupOrGetExisting handles OAuth login - gets existing user or creates new one.
 func (s *DefaultService) SignupOrGetExisting(ctx context.Context, input SignupInput) (*SignupResult, bool, error) {
+	// The lookup is by identifier, which for a managed principal is
+	// human:<id>, so only a real address may be looked up.
+	if err := validateEmail(input.Email); err != nil {
+		return nil, false, err
+	}
 	// Try to find existing user by email
 	existing, err := s.principalSvc.GetByIdentifier(ctx, input.Email)
 	if err == nil && existing != nil {
@@ -217,4 +227,19 @@ func (s *DefaultService) SignupOrGetExisting(ctx context.Context, input SignupIn
 	}
 
 	return result, true, nil
+}
+
+// ErrInvalidEmail is returned for a signup email that is not a plain
+// address.
+var ErrInvalidEmail = errors.New("signup: invalid email address")
+
+// validateEmail requires a bare address such as kim@example.com. Signup
+// looks principals up by identifier, so this also keeps a managed
+// principal's human:<id> identifier from matching.
+func validateEmail(email string) error {
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return ErrInvalidEmail
+	}
+	return nil
 }
