@@ -1,5 +1,6 @@
 // Package credential provides credential management for principals.
-// Credentials can be passwords, API keys, keypairs, WebAuthn credentials, or TOTP secrets.
+// Credentials can be passwords, API keys, keypairs, WebAuthn credentials,
+// TOTP secrets, client secrets, or login tokens.
 package credential
 
 import (
@@ -25,6 +26,9 @@ const (
 	TypeTOTP Type = "totp"
 	// TypeClientSecret represents an OAuth client secret.
 	TypeClientSecret Type = "client_secret"
+	// TypeLoginToken represents a manager-issued sign-in token for a
+	// managed principal.
+	TypeLoginToken Type = "login_token"
 )
 
 // Credential represents a credential record.
@@ -124,6 +128,10 @@ type Service interface {
 	CreateKeypair(ctx context.Context, input CreateKeypairInput) (*KeypairCredential, error)
 	GetKeypairByKeyID(ctx context.Context, keyID string) (*KeypairCredential, error)
 	ListKeypairs(ctx context.Context, principalID uuid.UUID) ([]*KeypairCredential, error)
+
+	// Login token operations
+	IssueLoginToken(ctx context.Context, input IssueLoginTokenInput) (*GeneratedLoginToken, error)
+	VerifyLoginToken(ctx context.Context, plainToken, ip string) (*Credential, error)
 
 	// Common operations
 	GetByID(ctx context.Context, id uuid.UUID) (*Credential, error)
