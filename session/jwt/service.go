@@ -208,6 +208,25 @@ func (s *Service) ValidateAccessToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
+// ValidateAccessTokenForAudience is ValidateAccessToken for a verifier
+// that serves one kind of client: the token must be addressed to one of
+// the audiences (AudienceBFF, AudienceAPI, or an application's own). A
+// token minted for another audience, for example a narrowly scoped API
+// token, is refused with ErrAudienceMismatch rather than accepted as a
+// full session.
+func (s *Service) ValidateAccessTokenForAudience(tokenString string, audiences ...string) (*Claims, error) {
+	claims, err := s.ValidateAccessToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range audiences {
+		if claims.HasAudience(a) {
+			return claims, nil
+		}
+	}
+	return nil, ErrAudienceMismatch
+}
+
 // ValidateRefreshToken validates and parses a refresh token.
 func (s *Service) ValidateRefreshToken(tokenString string) (*Claims, error) {
 	claims, err := s.parseToken(tokenString)
@@ -373,8 +392,17 @@ func (s *Service) parseToken(tokenString string) (*Claims, error) {
 		}
 	}
 
+	// Pin the algorithm, and require an expiry so a token minted without
+	// one never becomes immortal. The issuer is checked when configured.
+	parserOpts := []jwt.ParserOption{
+		jwt.WithValidMethods([]string{s.config.Algorithm}),
+		jwt.WithExpirationRequired(),
+	}
+	if s.config.Issuer != "" {
+		parserOpts = append(parserOpts, jwt.WithIssuer(s.config.Issuer))
+	}
 	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, keyFunc)
+	token, err := jwt.ParseWithClaims(tokenString, claims, keyFunc, parserOpts...)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
 			return nil, ErrTokenExpired

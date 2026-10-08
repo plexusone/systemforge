@@ -17,6 +17,29 @@ func HTTPAuth(jwtService *jwt.Service) func(http.Handler) http.Handler {
 	return HTTPAuthWithObservability(jwtService, nil)
 }
 
+// HTTPAuthForAudience is HTTPAuth for routes that serve one kind of client:
+// it admits only access tokens addressed to one of the audiences (for
+// example jwt.AudienceBFF on browser routes), so a token minted for
+// another audience, such as a narrowly scoped API token, cannot be used
+// as a full session. HTTPAuth itself accepts any audience.
+func HTTPAuthForAudience(jwtService *jwt.Service, audiences ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token := extractBearerToken(r)
+			if token == "" {
+				writeUnauthorized(w, "missing authorization header")
+				return
+			}
+			claims, err := jwtService.ValidateAccessTokenForAudience(token, audiences...)
+			if err != nil {
+				writeUnauthorized(w, err.Error())
+				return
+			}
+			next.ServeHTTP(w, r.WithContext(ContextWithClaims(r.Context(), claims)))
+		})
+	}
+}
+
 // HTTPAuthWithObservability returns JWT validation middleware with observability.
 // If obs is nil, metrics are not recorded.
 func HTTPAuthWithObservability(jwtService *jwt.Service, obs *observability.Observability) func(http.Handler) http.Handler {
