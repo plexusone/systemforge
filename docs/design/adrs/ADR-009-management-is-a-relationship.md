@@ -1,10 +1,11 @@
 # ADR-009: Management Is a Relationship, Not the Absence of an Email
 
-**Status:** Proposed
+**Status:** Accepted
 **Deciders:** @grokify
 **Relates to:** ADR-005 (managed principals; this ADR amends its definition
 and its invariant 4), ADR-003 (verified email), ADR-006 (organization
 lifecycle: slugs for managed principals).
+**Updates:** `docs/design/architecture/managed-principals.md`.
 
 ## Context
 

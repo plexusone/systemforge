@@ -14,8 +14,8 @@ under `docs/specs/` and execute these decisions.
 | [ADR-005](ADR-005-managed-principals-and-manager-relationships.md) | Managed Principals and Manager Relationships | Accepted, amended by ADR-009 |
 | [ADR-006](ADR-006-organization-lifecycle-personal-team-slugs.md) | Organization Lifecycle — Signup, Personal and Team Organizations, Slugs | Proposed |
 | [ADR-007](ADR-007-memberships-and-entitlements-as-claims.md) | Organization Memberships and Entitlements as Claims | Accepted |
-| [ADR-008](ADR-008-resource-scoped-collaborators.md) | Resource-Scoped Collaborators on the Authorization Substrate | Proposed |
-| [ADR-009](ADR-009-management-is-a-relationship.md) | Management Is a Relationship, Not the Absence of an Email (amends ADR-005) | Proposed |
+| [ADR-008](ADR-008-resource-scoped-collaborators.md) | Resource-Scoped Collaborators on the Authorization Substrate | Accepted |
+| [ADR-009](ADR-009-management-is-a-relationship.md) | Management Is a Relationship, Not the Absence of an Email (amends ADR-005) | Accepted |
 
 ## Statuses
 

@@ -1,11 +1,12 @@
 # ADR-008: Resource-Scoped Collaborators on the Authorization Substrate
 
-**Status:** Proposed
+**Status:** Accepted
 **Deciders:** @grokify
 **Relates to:** ADR-006 (personal organizations have collaborators, not
 members), ADR-007 (memberships as claims), INIT-SYSTEMFORGE-001 (base
 authorization schema), `docs/authz-conventions.md` (the cross-application
 authorization contract).
+**Updates:** `docs/design/architecture/authorization.md` (modes, collaborators, resource roles).
 
 ## Context
 
