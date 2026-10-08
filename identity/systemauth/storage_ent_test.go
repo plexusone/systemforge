@@ -370,3 +370,43 @@ func TestArgon2idDecoding(t *testing.T) {
 		}
 	}
 }
+
+// TestEntStorageCreateClientConstraintErrors verifies that only a genuine
+// duplicate client ID is reported as ErrClientExists; other constraint
+// failures, such as an owner that does not exist, surface as themselves.
+func TestEntStorageCreateClientConstraintErrors(t *testing.T) {
+	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	ctx := context.Background()
+	newClient := func() *Client {
+		return &Client{
+			ID:           "client-" + uuid.NewString()[:8],
+			Type:         ClientTypePublic,
+			Name:         "Client",
+			RedirectURIs: []string{"https://example.com/callback"},
+			GrantTypes:   []string{"authorization_code"},
+		}
+	}
+
+	storage := NewEntStorage(db, WithDefaultOwner(createTestOwner(t, db)))
+	c := newClient()
+	if err := storage.CreateClient(ctx, c); err != nil {
+		t.Fatalf("CreateClient: %v", err)
+	}
+	if err := storage.CreateClient(ctx, c); !errors.Is(err, ErrClientExists) {
+		t.Errorf("duplicate CreateClient error = %v, want ErrClientExists", err)
+	}
+
+	orphan := NewEntStorage(db, WithDefaultOwner(uuid.New()))
+	err := orphan.CreateClient(ctx, newClient())
+	if err == nil {
+		t.Fatal("CreateClient with a nonexistent owner succeeded")
+	}
+	if errors.Is(err, ErrClientExists) {
+		t.Errorf("nonexistent owner reported as ErrClientExists: %v", err)
+	}
+}
