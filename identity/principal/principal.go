@@ -61,6 +61,19 @@ type Capabilities struct {
 	CanRequestOffline bool `json:"can_request_offline"`
 }
 
+// ManagedHumanCapabilities returns the capabilities of a managed principal:
+// a human without an email whose profile and credentials are controlled by
+// its managers, so it can use the UI but cannot manage its own profile or
+// delegate (ADR-005).
+func ManagedHumanCapabilities() Capabilities {
+	return Capabilities{CanAccessUI: true}
+}
+
+// ToMap returns the capabilities in the form stored on a principal.
+func (c Capabilities) ToMap() map[string]bool {
+	return capabilitiesToMap(c)
+}
+
 // DefaultCapabilitiesForType returns the default capabilities for a principal type.
 func DefaultCapabilitiesForType(t Type) Capabilities {
 	switch t {
