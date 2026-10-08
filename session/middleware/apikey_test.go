@@ -732,27 +732,23 @@ func TestGetPrincipal_NotSet(t *testing.T) {
 	}
 }
 
-func TestExtractIP_XForwardedFor(t *testing.T) {
+// TestExtractIPIgnoresForwardingHeaders verifies that the address recorded
+// for an API key use cannot be forged with headers.
+func TestExtractIPIgnoresForwardingHeaders(t *testing.T) {
 	config := DefaultAPIKeyMiddlewareConfig()
 
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("X-Forwarded-For", "192.168.1.1, 10.0.0.1")
+	req.Header.Set("X-Real-IP", "192.168.1.2")
 
-	ip := extractIP(req, config)
-	if ip != "192.168.1.1" {
-		t.Errorf("extractIP() = %s, want 192.168.1.1", ip)
+	if ip := extractIP(req, config); ip != "192.0.2.1" {
+		t.Errorf("extractIP() = %s, want the peer 192.0.2.1", ip)
 	}
-}
 
-func TestExtractIP_XRealIP(t *testing.T) {
-	config := DefaultAPIKeyMiddlewareConfig()
-
-	req := httptest.NewRequest("GET", "/", nil)
-	req.Header.Set("X-Real-IP", "192.168.1.1")
-
-	ip := extractIP(req, config)
-	if ip != "192.168.1.1" {
-		t.Errorf("extractIP() = %s, want 192.168.1.1", ip)
+	// Behind a proxy, the caller says how to find the client.
+	config.IPExtractor = func(*http.Request) string { return "198.51.100.7" }
+	if ip := extractIP(req, config); ip != "198.51.100.7" {
+		t.Errorf("extractIP() with an extractor = %s", ip)
 	}
 }
 

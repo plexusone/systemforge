@@ -25,7 +25,7 @@ func TestClientIPExtractor_GetClientIP(t *testing.T) {
 		},
 		{
 			name:       "trust cloudflare - uses CF-Connecting-IP",
-			config:     CloudflareClientIPConfig(),
+			config:     cloudflareConfigWithRanges(),
 			remoteAddr: "172.16.0.1:54321",
 			headers: map[string]string{
 				"CF-Connecting-IP": "203.0.113.50",
@@ -35,7 +35,7 @@ func TestClientIPExtractor_GetClientIP(t *testing.T) {
 		},
 		{
 			name:       "trust cloudflare - uses True-Client-IP when CF-Connecting-IP missing",
-			config:     CloudflareClientIPConfig(),
+			config:     cloudflareConfigWithRanges(),
 			remoteAddr: "172.16.0.1:54321",
 			headers: map[string]string{
 				"True-Client-IP": "198.51.100.25",
@@ -45,7 +45,8 @@ func TestClientIPExtractor_GetClientIP(t *testing.T) {
 		{
 			name: "trust proxy - uses X-Real-IP",
 			config: ClientIPConfig{
-				TrustProxy: true,
+				TrustProxy:     true,
+				TrustedProxies: []string{"10.0.0.0/8"},
 			},
 			remoteAddr: "10.0.0.1:54321",
 			headers: map[string]string{
@@ -56,7 +57,8 @@ func TestClientIPExtractor_GetClientIP(t *testing.T) {
 		{
 			name: "trust proxy - uses X-Forwarded-For first IP",
 			config: ClientIPConfig{
-				TrustProxy: true,
+				TrustProxy:     true,
+				TrustedProxies: []string{"10.0.0.0/8"},
 			},
 			remoteAddr: "10.0.0.1:54321",
 			headers: map[string]string{
@@ -175,5 +177,56 @@ func TestClientIPExtractor_CloudflareIPRanges(t *testing.T) {
 	got2 := extractor.GetClientIP(req2)
 	if got2 != "192.168.1.1" {
 		t.Errorf("Untrusted range: got %q, want %q", got2, "192.168.1.1")
+	}
+}
+
+func cloudflareConfigWithRanges() ClientIPConfig {
+	c := CloudflareClientIPConfig()
+	c.CloudflareIPRanges = []string{"172.16.0.0/12"}
+	return c
+}
+
+// TestClientIPNeverBelievesAnUnknownPeer verifies that forwarding headers
+// are ignored unless the direct peer is in the configured ranges, including
+// in the shipped Cloudflare configuration, which names no ranges itself.
+func TestClientIPNeverBelievesAnUnknownPeer(t *testing.T) {
+	for name, tc := range map[string]struct {
+		config ClientIPConfig
+		remote string
+		want   string
+	}{
+		"Cloudflare config without ranges":    {CloudflareClientIPConfig(), "203.0.113.9:1", "203.0.113.9"},
+		"proxy trust without proxies":         {ClientIPConfig{TrustProxy: true}, "203.0.113.9:1", "203.0.113.9"},
+		"Cloudflare header from the internet": {cloudflareConfigWithRanges(), "203.0.113.9:1", "203.0.113.9"},
+		"proxy header from the internet": {ClientIPConfig{TrustProxy: true, TrustedProxies: []string{"10.0.0.0/8"}},
+			"203.0.113.9:1", "203.0.113.9"},
+	} {
+		extractor := NewClientIPExtractor(tc.config)
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = tc.remote
+		req.Header.Set("CF-Connecting-IP", "192.0.2.77")
+		req.Header.Set("True-Client-IP", "192.0.2.77")
+		req.Header.Set("X-Real-IP", "192.0.2.77")
+		req.Header.Set("X-Forwarded-For", "192.0.2.77")
+		if got := extractor.GetClientIP(req); got != tc.want {
+			t.Errorf("%s: %q, want %q", name, got, tc.want)
+		}
+		if extractor.IsCloudflareRequest(req) && tc.remote == "203.0.113.9:1" {
+			t.Errorf("%s: an outside peer counted as Cloudflare", name)
+		}
+	}
+
+	// The client cannot write the part of the chain that matters, and junk
+	// is not used as a key.
+	proxy := NewClientIPExtractor(ClientIPConfig{TrustProxy: true, TrustedProxies: []string{"10.0.0.0/8"}})
+	req := httptest.NewRequest("GET", "/", nil)
+	req.RemoteAddr = "10.0.0.1:1"
+	req.Header.Set("X-Forwarded-For", "192.0.2.77, 198.51.100.4, 10.0.0.2")
+	if got := proxy.GetClientIP(req); got != "198.51.100.4" {
+		t.Errorf("forged left of the chain: %q, want the address the proxy saw", got)
+	}
+	req.Header.Set("X-Forwarded-For", "not-an-ip")
+	if got := proxy.GetClientIP(req); got != "10.0.0.1" {
+		t.Errorf("junk header: %q, want the peer", got)
 	}
 }

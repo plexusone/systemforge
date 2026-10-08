@@ -240,3 +240,27 @@ func TestCookieManager_IntegrationRoundTrip(t *testing.T) {
 		t.Errorf("Round-trip: got %s, want %s", result, sessionID)
 	}
 }
+
+// TestCookieKeepsItsProtectionsWhenPartiallyConfigured verifies that a
+// config naming only some fields cannot yield a script-readable or
+// plaintext-HTTP session cookie by accident.
+func TestCookieKeepsItsProtectionsWhenPartiallyConfigured(t *testing.T) {
+	set := func(cfg CookieConfig) *http.Cookie {
+		w := httptest.NewRecorder()
+		NewCookieManager(cfg).SetSessionCookie(w, "sid", time.Now().Add(time.Hour))
+		cookies := w.Result().Cookies()
+		if len(cookies) != 1 {
+			t.Fatalf("cookies = %v", cookies)
+		}
+		return cookies[0]
+	}
+	c := set(CookieConfig{Name: "app_session", Domain: "example.com"})
+	if !c.Secure || !c.HttpOnly {
+		t.Errorf("partial config gave Secure=%v HttpOnly=%v", c.Secure, c.HttpOnly)
+	}
+	// Local development can opt out of Secure, never out of HttpOnly.
+	dev := set(CookieConfig{Name: "dev", AllowInsecure: true})
+	if dev.Secure || !dev.HttpOnly {
+		t.Errorf("AllowInsecure gave Secure=%v HttpOnly=%v", dev.Secure, dev.HttpOnly)
+	}
+}

@@ -244,7 +244,10 @@ func TestRateLimiter_CloudflareIP(t *testing.T) {
 	rl := NewRateLimiter(RateLimitConfig{
 		RequestsPerMinute: 60,
 		BurstSize:         1,
-		TrustCloudflare:   true,
+		ClientIPConfig: ClientIPConfig{
+			TrustCloudflare:    true,
+			CloudflareIPRanges: []string{"172.16.0.0/12"},
+		},
 	})
 	defer rl.Close()
 
