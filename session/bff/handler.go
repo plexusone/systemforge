@@ -108,7 +108,7 @@ func NewHandler(config HandlerConfig) (*Handler, error) {
 	}
 
 	clientIPConfig := config.ClientIPConfig
-	if !clientIPConfig.TrustCloudflare && !clientIPConfig.TrustProxy && len(clientIPConfig.TrustedProxies) == 0 {
+	if clientIPConfig.isZero() {
 		clientIPConfig = DefaultClientIPConfig()
 	}
 
@@ -141,7 +141,12 @@ func NewHandler(config HandlerConfig) (*Handler, error) {
 	// Create rate limiter if configured
 	var rateLimiter *RateLimiter
 	if config.RateLimitConfig != nil {
-		rateLimiter = NewRateLimiter(*config.RateLimitConfig)
+		rlc := *config.RateLimitConfig
+		if rlc.ClientIPConfig.isZero() && !rlc.TrustCloudflare {
+			// Limit by the same client address the sessions record.
+			rlc.ClientIPConfig = clientIPConfig
+		}
+		rateLimiter = NewRateLimiter(rlc)
 	}
 
 	return &Handler{
@@ -231,7 +236,7 @@ func (h *Handler) CreateSession(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	// Add Cloudflare metadata if available
-	if h.config.ClientIPConfig.TrustCloudflare {
+	if h.ipExtractor.IsCloudflareRequest(r) {
 		cfMeta := GetCloudflareMetadata(r)
 		if session.Metadata == nil {
 			session.Metadata = make(map[string]string)

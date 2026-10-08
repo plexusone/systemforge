@@ -33,8 +33,16 @@ type RateLimitConfig struct {
 	// Example: []string{"/health", "/metrics"}
 	ExcludePaths []string
 
+	// ClientIPConfig configures client address extraction for the default
+	// key. NewHandler fills it from HandlerConfig.ClientIPConfig when it is
+	// left zero. The default keys on the direct peer.
+	ClientIPConfig ClientIPConfig
+
 	// TrustCloudflare uses CF-Connecting-IP for client identification.
-	// Default: false.
+	//
+	// Deprecated: set ClientIPConfig with CloudflareIPRanges. Without
+	// ranges proving the request came through Cloudflare the header is
+	// ignored, because any client can send it.
 	TrustCloudflare bool
 
 	// CleanupInterval is how often to clean up expired entries.
@@ -103,9 +111,9 @@ func NewRateLimiter(config RateLimitConfig) *RateLimiter {
 	}
 
 	// Create IP extractor
-	ipConfig := DefaultClientIPConfig()
+	ipConfig := config.ClientIPConfig
 	if config.TrustCloudflare {
-		ipConfig = CloudflareClientIPConfig()
+		ipConfig.TrustCloudflare = true
 	}
 
 	rl := &RateLimiter{
