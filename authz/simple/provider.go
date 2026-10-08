@@ -120,6 +120,10 @@ func (a *Provider) Can(ctx context.Context, principal authz.Principal, action au
 		role, err := a.managerRoleFor(ctx, principal.ID, *resource.ID, action)
 		return role != "", err
 	}
+	if isBaseOrgCheck(resource, action) {
+		role, err := a.orgRole(ctx, principal.ID, resource)
+		return authz.OrgRoleAllows(role, action), err
+	}
 
 	// Get organization ID from resource
 	if resource.OrgID == nil {
@@ -254,6 +258,21 @@ func (a *Provider) Decide(ctx context.Context, principal authz.Principal, action
 		}, nil
 	}
 
+	if isBaseOrgCheck(resource, action) {
+		role, err := a.orgRole(ctx, principal.ID, resource)
+		if err != nil {
+			return authz.Decision{Allowed: false, Reason: "error getting role"}, err
+		}
+		if !authz.OrgRoleAllows(role, action) {
+			return authz.Decision{Allowed: false, Reason: fmt.Sprintf("organization role %q lacks %s", role, action)}, nil
+		}
+		return authz.Decision{
+			Allowed:  true,
+			Reason:   fmt.Sprintf("organization role %s grants %s", role, action),
+			PolicyID: fmt.Sprintf("org:%s:permission:%s", role, action),
+		}, nil
+	}
+
 	// Get organization ID from resource
 	if resource.OrgID == nil {
 		allowed, err := a.checkPermissionWithoutOrg(principal, action, resource)
@@ -292,6 +311,30 @@ func (a *Provider) Decide(ctx context.Context, principal authz.Principal, action
 		Allowed: false,
 		Reason:  fmt.Sprintf("role %s lacks permission %s", role, permission),
 	}, nil
+}
+
+// isBaseOrgCheck reports a check of a base organization permission (such
+// as manage or view) on an organization, which follows
+// authz.OrgRolePermissions so that it matches the SpiceDB base schema.
+func isBaseOrgCheck(resource authz.Resource, action authz.Action) bool {
+	return resource.Type == authz.ResourceTypeOrganization && authz.IsOrgPermission(action)
+}
+
+// orgRole returns the principal's role in the organization resource,
+// which is identified by its ID (or, failing that, its OrgID).
+func (a *Provider) orgRole(ctx context.Context, principalID uuid.UUID, resource authz.Resource) (string, error) {
+	orgID := resource.ID
+	if orgID == nil {
+		orgID = resource.OrgID
+	}
+	if orgID == nil || a.getRoleFn == nil {
+		return "", nil
+	}
+	role, err := a.getRoleFn(ctx, principalID, *orgID)
+	if err != nil {
+		return "", fmt.Errorf("getting role: %w", err)
+	}
+	return role, nil
 }
 
 // managerRoleFor returns a manager role managerID holds over managedID
