@@ -171,6 +171,13 @@ type CheckoutSession struct {
 	URL string
 }
 
+// PurchaserChecker reports whether a principal is managed: a human
+// without an email whose managers control the account. Managed principals
+// cannot purchase. identity/managedprincipal.Service implements it.
+type PurchaserChecker interface {
+	IsManaged(ctx context.Context, principalID uuid.UUID) (bool, error)
+}
+
 // AuthzSyncer syncs marketplace entities to the authorization system.
 type AuthzSyncer interface {
 	// SyncListing syncs a listing to the authorization system.

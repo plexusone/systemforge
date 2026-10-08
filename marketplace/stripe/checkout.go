@@ -31,21 +31,46 @@ type CheckoutService struct {
 	listings  marketplace.ListingService
 	licenses  marketplace.LicenseService
 	authzSync marketplace.AuthzSyncer
+	purchaser marketplace.PurchaserChecker
+}
+
+// CheckoutOption configures a CheckoutService.
+type CheckoutOption func(*CheckoutService)
+
+// WithPurchaserChecker refuses checkout to managed principals with
+// marketplace.ErrManagedPurchaser. Deployments that enable managed
+// principals must set it.
+func WithPurchaserChecker(c marketplace.PurchaserChecker) CheckoutOption {
+	return func(s *CheckoutService) { s.purchaser = c }
 }
 
 // NewCheckoutService creates a new Stripe checkout service.
-func NewCheckoutService(cfg Config, listings marketplace.ListingService, licenses marketplace.LicenseService, authzSync marketplace.AuthzSyncer) *CheckoutService {
+func NewCheckoutService(cfg Config, listings marketplace.ListingService, licenses marketplace.LicenseService, authzSync marketplace.AuthzSyncer, opts ...CheckoutOption) *CheckoutService {
 	stripe.Key = cfg.SecretKey
-	return &CheckoutService{
+	s := &CheckoutService{
 		config:    cfg,
 		listings:  listings,
 		licenses:  licenses,
 		authzSync: authzSync,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // CreateCheckoutSession creates a Stripe checkout session for a listing.
 func (s *CheckoutService) CreateCheckoutSession(ctx context.Context, req marketplace.CheckoutRequest) (*marketplace.CheckoutSession, error) {
+	if s.purchaser != nil {
+		managed, err := s.purchaser.IsManaged(ctx, req.PurchaserID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check purchaser: %w", err)
+		}
+		if managed {
+			return nil, marketplace.ErrManagedPurchaser
+		}
+	}
+
 	// Get the listing
 	listing, err := s.listings.Get(ctx, req.ListingID)
 	if err != nil {

@@ -46,6 +46,11 @@ var (
 	// ErrAlreadyLicensed is returned when an org already has a license.
 	ErrAlreadyLicensed = errors.New("organization already licensed for this listing")
 
+	// ErrManagedPurchaser is returned when a managed principal (a human
+	// without an email, ADR-005) tries to purchase; billing is a guardian's
+	// action.
+	ErrManagedPurchaser = errors.New("managed principals cannot purchase")
+
 	// ErrCannotPurchaseOwnListing is returned when a creator tries to purchase their own listing.
 	ErrCannotPurchaseOwnListing = errors.New("cannot purchase your own listing")
 

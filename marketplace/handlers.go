@@ -2,6 +2,7 @@ package marketplace
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -835,6 +836,9 @@ func (a *API) createCheckout(ctx context.Context, input *CreateCheckoutInput) (*
 	}
 
 	session, err := a.checkout.CreateCheckoutSession(ctx, req)
+	if errors.Is(err, ErrManagedPurchaser) {
+		return nil, huma.Error403Forbidden(err.Error())
+	}
 	if err != nil {
 		return nil, huma.Error400BadRequest(err.Error())
 	}
