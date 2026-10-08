@@ -57,6 +57,10 @@ type Config struct {
 	// TestResourceID is a UUID for test resources. Default: random UUID.
 	TestResourceID uuid.UUID
 
+	// GrantOrgRole, when set, gives principalID a role in orgID, enabling
+	// the organization permission tests.
+	GrantOrgRole func(t *testing.T, orgID, principalID uuid.UUID, role string)
+
 	// GrantManager, when set, records that managerID manages managedID
 	// with a manager role, enabling the manager relation tests (ADR-005).
 	GrantManager func(t *testing.T, managedID, managerID uuid.UUID, role string)
@@ -176,6 +180,22 @@ func RunIntegrationTests(t *testing.T, cfg Config) {
 	if cfg.GrantManager != nil {
 		RunManagerRelationTests(t, cfg)
 	}
+	if cfg.GrantOrgRole != nil {
+		RunOrgPermissionTests(t, cfg)
+	}
+}
+
+// RunOrgPermissionTests checks every base organization permission for
+// every organization role and for a non-member, so providers agree with
+// authz.OrgRolePermissions and the base SpiceDB schema. It requires
+// cfg.GrantOrgRole.
+func RunOrgPermissionTests(t *testing.T, cfg Config) {
+	t.Helper()
+	cfg = cfg.withDefaults()
+	if cfg.GrantOrgRole == nil {
+		t.Fatal("providertest: RunOrgPermissionTests requires Config.GrantOrgRole")
+	}
+	t.Run("Org_Permissions", func(t *testing.T) { testOrgPermissions(t, cfg) })
 }
 
 // RunManagerRelationTests checks the guardian and educator permissions on
@@ -613,5 +633,55 @@ func testManagerRelations(t *testing.T, cfg Config) {
 	}
 	if got {
 		t.Error("guardian of one principal can view another's profile")
+	}
+}
+
+func testOrgPermissions(t *testing.T, cfg Config) {
+	t.Helper()
+	if cfg.SetupFunc != nil {
+		cfg.SetupFunc(t)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout)
+	defer cancel()
+
+	org := uuid.New()
+	members := map[string]uuid.UUID{}
+	for role := range authz.OrgRolePermissions {
+		members[role] = uuid.New()
+		cfg.GrantOrgRole(t, org, members[role], role)
+	}
+	members["non-member"] = uuid.New()
+	resource := authz.NewResourceWithID(authz.ResourceTypeOrganization, org)
+
+	for who, id := range members {
+		for _, action := range authz.OrgRolePermissions["owner"] {
+			want := authz.OrgRoleAllows(who, action)
+			got, err := cfg.Provider.Can(ctx, authz.NewUserPrincipal(id), action, resource)
+			if err != nil {
+				t.Fatalf("Can(%s, %s): %v", who, action, err)
+			}
+			if got != want {
+				t.Errorf("Can(%s, %s) = %v, want %v", who, action, got, want)
+			}
+		}
+		if cfg.OrgProvider != nil {
+			role, err := cfg.OrgProvider.GetRole(ctx, authz.NewUserPrincipal(id), org)
+			if err != nil {
+				t.Fatalf("GetRole(%s): %v", who, err)
+			}
+			want := who
+			if who == "non-member" {
+				want = ""
+			}
+			if role != want {
+				t.Errorf("GetRole(%s) = %q, want %q", who, role, want)
+			}
+		}
+	}
+
+	// A role in one organization grants nothing in another.
+	other := authz.NewResourceWithID(authz.ResourceTypeOrganization, uuid.New())
+	if got, err := cfg.Provider.Can(ctx, authz.NewUserPrincipal(members["owner"]), authz.PermOrgView, other); err != nil || got {
+		t.Errorf("owner of one organization views another = %v, %v", got, err)
 	}
 }

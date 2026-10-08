@@ -48,6 +48,12 @@ func TestConformance(t *testing.T) {
 		SkipIntegration: false,
 		TestPrincipalID: principalID,
 		TestOrgID:       orgID,
+		GrantOrgRole: func(_ *testing.T, org, principal uuid.UUID, role string) {
+			if roles[principal.String()] == nil {
+				roles[principal.String()] = map[string]string{}
+			}
+			roles[principal.String()][org.String()] = role
+		},
 		GrantManager: func(_ *testing.T, managed, manager uuid.UUID, role string) {
 			k := [2]uuid.UUID{manager, managed}
 			managers[k] = append(managers[k], role)

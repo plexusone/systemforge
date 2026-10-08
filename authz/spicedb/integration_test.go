@@ -79,16 +79,16 @@ func TestIntegration_OrgMembership(t *testing.T) {
 			t.Error("member should have view permission")
 		}
 
-		// Member should have edit permission (members can edit per schema)
-		canEdit, err := provider.Can(ctx, memberPrincipal, "edit", authz.Resource{
+		// Members contribute; editing is the editor role's.
+		canContribute, err := provider.Can(ctx, memberPrincipal, "contribute", authz.Resource{
 			Type: "organization",
 			ID:   &orgID,
 		})
 		if err != nil {
 			t.Fatalf("Can check failed: %v", err)
 		}
-		if !canEdit {
-			t.Error("member should have edit permission")
+		if !canContribute {
+			t.Error("member should have contribute permission")
 		}
 
 		// Member should NOT have manage permission
@@ -286,7 +286,8 @@ func TestIntegration_RoleHierarchy(t *testing.T) {
 
 		// Member permissions
 		{"member_cannot_manage", memberID, "manage", false},
-		{"member_can_edit", memberID, "edit", true},
+		{"member_can_contribute", memberID, "contribute", true},
+		{"member_cannot_edit", memberID, "edit", false},
 		{"member_can_view", memberID, "view", true},
 		{"member_cannot_delete", memberID, "delete", false},
 
@@ -355,4 +356,33 @@ func TestIntegration_ManagerRelations(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestIntegration_OrgPermissions runs the organization permission
+// conformance case against SpiceDB, so it agrees with the simple provider.
+func TestIntegration_OrgPermissions(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	client, err := spicedb.NewClient(ctx, spicedb.DefaultConfig(), nil)
+	if err != nil {
+		t.Fatalf("failed to create SpiceDB client: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	if err := client.WriteSchema(ctx, authz.BaseSpiceDBSchema); err != nil {
+		t.Fatalf("failed to write schema: %v", err)
+	}
+	syncer := spicedb.NewSyncer(client)
+	providertest.RunOrgPermissionTests(t, providertest.Config{
+		Provider: spicedb.NewProvider(client),
+		GrantOrgRole: func(t *testing.T, org, principal uuid.UUID, role string) {
+			if err := syncer.AddOrgMembership(ctx, principal, org, role); err != nil {
+				t.Fatalf("AddOrgMembership: %v", err)
+			}
+		},
+	})
 }
