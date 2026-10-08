@@ -90,7 +90,7 @@ func (s *Syncer) UnregisterPrincipal(ctx context.Context, principalID uuid.UUID)
 
 	// Find all organizations where this principal has membership
 	// and remove those relationships
-	for _, role := range []string{RelOwner, RelAdmin, RelMember, RelViewer} {
+	for _, role := range orgRoles {
 		// Look up organizations where this principal has this role
 		orgs, err := s.client.LookupResources(ctx, &LookupResourcesRequest{
 			ResourceType: TypeOrganization,
@@ -142,7 +142,7 @@ func (s *Syncer) UnregisterOrganization(ctx context.Context, orgID uuid.UUID) er
 	orgIDStr := orgID.String()
 
 	// Remove all membership relationships for this organization
-	for _, role := range []string{RelOwner, RelAdmin, RelMember, RelViewer} {
+	for _, role := range orgRoles {
 		// Look up all principals with this role
 		principals, err := s.client.LookupSubjects(ctx, &LookupSubjectsRequest{
 			ResourceType: TypeOrganization,

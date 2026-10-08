@@ -100,3 +100,7 @@ const (
 	// RelEditor represents the editor relation.
 	RelEditor = "editor"
 )
+
+// orgRoles are the organization relations of the base schema, highest
+// privilege first.
+var orgRoles = []string{RelOwner, RelAdmin, RelEditor, RelMember, RelViewer}

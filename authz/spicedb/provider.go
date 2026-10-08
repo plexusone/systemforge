@@ -101,9 +101,9 @@ func (p *Provider) CanForOrg(ctx context.Context, principal authz.Principal, org
 func (p *Provider) GetRole(ctx context.Context, principal authz.Principal, orgID uuid.UUID) (string, error) {
 	orgIDStr := orgID.String()
 
-	// Check roles in order of privilege
-	roles := []string{RelOwner, RelAdmin, RelMember, RelViewer}
-	for _, role := range roles {
+	// Check roles in order of privilege; a principal holding several
+	// relations reports the highest.
+	for _, role := range orgRoles {
 		hasRole, err := p.client.Check(ctx, &CheckRequest{
 			ResourceType: TypeOrganization,
 			ResourceID:   orgIDStr,
@@ -189,48 +189,13 @@ var (
 	_ authz.PlatformAuthorizer = (*Provider)(nil)
 )
 
-// BaseSchema provides a minimal SpiceDB schema for SystemForge applications.
-// Applications can extend this with their own resource types.
-const BaseSchema = `
-definition principal {
-    // Manager relations (ADR-005): a guardian or educator manages this
-    // principal. Applications add domain permissions in their facets.
-    relation guardian: principal
-    relation educator: principal
-
-    permission manage_account     = guardian
-    permission manage_credentials = guardian + educator
-    permission view_profile       = guardian + educator
-    permission manage_managers    = guardian
-}
-
-definition organization {
-    relation owner: principal
-    relation admin: principal
-    relation member: principal
-    relation viewer: principal
-
-    // Owners and admins can manage the organization
-    permission manage = owner + admin
-
-    // Anyone in the org can view it
-    permission view = manage + member + viewer
-
-    // Editors can edit (owners, admins, members)
-    permission edit = manage + member
-
-    // Only owners can delete
-    permission delete = owner
-}
-
-definition platform {
-    relation admin: principal
-
-    // Platform admins have all permissions
-    permission manage = admin
-    permission view = admin
-}
-`
+// BaseSchema is the SystemForge base SpiceDB schema.
+//
+// Deprecated: use authz.BaseSpiceDBSchema, or compose a deployment schema
+// with authz.VocabularyRegistry.ComposeSpiceDBSchema. BaseSchema is the
+// same schema; it previously diverged (no editor role, and members held
+// edit), so the providers disagreed.
+const BaseSchema = authz.BaseSpiceDBSchema
 
 // ResourceSchema returns a SpiceDB schema definition for a custom resource type.
 // This can be used to define app-specific resources that integrate with organizations.
