@@ -167,12 +167,14 @@ type ArchiveListingOutput struct {
 
 // ListListingsInput is the request for listing listings.
 type ListListingsInput struct {
-	Status       *string `query:"status" enum:"draft,pending_review,published,archived"`
-	ProductType  *string `query:"product_type"`
-	CreatorOrgID *string `query:"creator_org_id" format:"uuid"`
-	Published    *bool   `query:"published"`
-	Limit        int     `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset       int     `query:"offset" default:"0" minimum:"0"`
+	// Huma does not support pointer parameters; an empty value means
+	// the filter is not applied.
+	Status       string `query:"status" enum:"draft,pending_review,published,archived"`
+	ProductType  string `query:"product_type"`
+	CreatorOrgID string `query:"creator_org_id" format:"uuid"`
+	Published    bool   `query:"published"`
+	Limit        int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset       int    `query:"offset" default:"0" minimum:"0"`
 }
 
 // ListListingsOutput is the response for listing listings.
@@ -430,21 +432,21 @@ func (a *API) listListings(ctx context.Context, input *ListListingsInput) (*List
 		Offset: input.Offset,
 	}
 
-	if input.Status != nil {
-		s := ListingStatus(*input.Status)
+	if input.Status != "" {
+		s := ListingStatus(input.Status)
 		opts.Status = &s
 	}
-	if input.ProductType != nil {
-		opts.ProductType = input.ProductType
+	if input.ProductType != "" {
+		opts.ProductType = &input.ProductType
 	}
-	if input.CreatorOrgID != nil {
-		id, err := uuid.Parse(*input.CreatorOrgID)
+	if input.CreatorOrgID != "" {
+		id, err := uuid.Parse(input.CreatorOrgID)
 		if err != nil {
 			return nil, huma.Error400BadRequest("invalid creator_org_id")
 		}
 		opts.CreatorOrgID = &id
 	}
-	if input.Published != nil && *input.Published {
+	if input.Published {
 		opts.PublishedOnly = true
 	}
 
