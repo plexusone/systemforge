@@ -92,7 +92,11 @@ same namespace.
    - an organization's entitlements (ADR-007 `apps`) derive from its
      active subscriptions and licenses per listing, not from one
      organization-wide plan. The `plan` column on `sf_organizations` is
-     informational and is not consulted for entitlement.
+     removed: it was a placeholder from before the marketplace, set at
+     creation and never consulted, and a single value cannot describe an
+     organization holding several subscriptions. A plan's human-friendly
+     name lives on its marketplace listing, resolved through the
+     subscription, never copied onto the organization.
 
 ### Schema
 
@@ -122,9 +126,10 @@ same namespace.
 - **`AddMember` and `TransferOwnership` gain a type check**; existing tests
   that add members to personal organizations must use team organizations.
 - **Entitlement is per listing, not per organization.** Applications read
-  what an organization may use from its subscriptions and licenses; any
-  code that read `Organization.plan` for access decisions must move to
-  the marketplace, and the enum stays only as a display or reporting
-  value.
+  what an organization may use from its subscriptions and licenses. The
+  `Plan` field leaves the organization API's create, update, list filter
+  and responses (and SCIM's default), replaced by an `entitlements`
+  summary derived from the marketplace; the `organization.Plan*`
+  constants go with it.
 - **Slug derivation lives in one place**, so every login provider and the
   managed-principal flow produce the same shape of handle.
