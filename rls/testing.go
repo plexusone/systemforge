@@ -179,7 +179,8 @@ func (th *TestHelper) AssertCannotRead(tenantID, userID uuid.UUID, table, whereC
 	})
 }
 
-// SetupTestTenant creates a test tenant and returns cleanup function.
+// SetupTestTenant creates a test tenant (organization) and returns a cleanup
+// function.
 func (th *TestHelper) SetupTestTenant(name string) (tenantID uuid.UUID, cleanup func()) {
 	th.t.Helper()
 
@@ -187,7 +188,7 @@ func (th *TestHelper) SetupTestTenant(name string) (tenantID uuid.UUID, cleanup 
 	ctx := context.Background()
 
 	_, err := th.db.ExecContext(ctx,
-		"INSERT INTO cf_organizations (id, name, slug) VALUES ($1, $2, $3)",
+		"INSERT INTO sf_organizations (id, created_at, updated_at, name, slug) VALUES ($1, now(), now(), $2, $3)",
 		tenantID, name, name,
 	)
 	if err != nil {
@@ -195,13 +196,14 @@ func (th *TestHelper) SetupTestTenant(name string) (tenantID uuid.UUID, cleanup 
 	}
 
 	cleanup = func() {
-		_, _ = th.db.ExecContext(ctx, "DELETE FROM cf_organizations WHERE id = $1", tenantID)
+		th.exec(ctx, "DELETE FROM sf_organizations WHERE id = $1", tenantID)
 	}
 
 	return tenantID, cleanup
 }
 
-// SetupTestUser creates a test user in a tenant and returns cleanup function.
+// SetupTestUser creates a human principal that is a member of a tenant with
+// the given role, and returns its principal ID and a cleanup function.
 func (th *TestHelper) SetupTestUser(tenantID uuid.UUID, email, role string) (userID uuid.UUID, cleanup func()) {
 	th.t.Helper()
 
@@ -209,26 +211,46 @@ func (th *TestHelper) SetupTestUser(tenantID uuid.UUID, email, role string) (use
 	ctx := context.Background()
 
 	_, err := th.db.ExecContext(ctx,
-		"INSERT INTO cf_users (id, email, name) VALUES ($1, $2, $3)",
-		userID, email, email,
+		"INSERT INTO sf_principals (id, created_at, updated_at, type, identifier, display_name, capabilities, allowed_scopes) "+
+			"VALUES ($1, now(), now(), 'human', $2, $2, '{}', '[]')",
+		userID, email,
 	)
 	if err != nil {
-		th.t.Fatalf("failed to create test user: %v", err)
+		th.t.Fatalf("failed to create test principal: %v", err)
+	}
+
+	_, err = th.db.ExecContext(ctx,
+		"INSERT INTO sf_humans (id, created_at, updated_at, email, principal_id) VALUES ($1, now(), now(), $2, $3)",
+		uuid.New(), email, userID,
+	)
+	if err != nil {
+		th.t.Fatalf("failed to create test human: %v", err)
 	}
 
 	membershipID := uuid.New()
 	_, err = th.db.ExecContext(ctx,
-		"INSERT INTO cf_memberships (id, user_id, organization_id, role) VALUES ($1, $2, $3, $4)",
-		membershipID, userID, tenantID, role,
+		"INSERT INTO sf_principal_memberships (id, created_at, updated_at, role, organization_id, principal_id) "+
+			"VALUES ($1, now(), now(), $2, $3, $4)",
+		membershipID, role, tenantID, userID,
 	)
 	if err != nil {
 		th.t.Fatalf("failed to create membership: %v", err)
 	}
 
 	cleanup = func() {
-		_, _ = th.db.ExecContext(ctx, "DELETE FROM cf_memberships WHERE id = $1", membershipID)
-		_, _ = th.db.ExecContext(ctx, "DELETE FROM cf_users WHERE id = $1", userID)
+		th.exec(ctx, "DELETE FROM sf_principal_memberships WHERE id = $1", membershipID)
+		th.exec(ctx, "DELETE FROM sf_humans WHERE principal_id = $1", userID)
+		th.exec(ctx, "DELETE FROM sf_principals WHERE id = $1", userID)
 	}
 
 	return userID, cleanup
+}
+
+// exec runs a cleanup statement and reports a failure on the test instead of
+// discarding it.
+func (th *TestHelper) exec(ctx context.Context, query string, args ...any) {
+	th.t.Helper()
+	if _, err := th.db.ExecContext(ctx, query, args...); err != nil {
+		th.t.Errorf("cleanup %q: %v", query, err)
+	}
 }
