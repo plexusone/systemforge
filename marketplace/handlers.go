@@ -9,6 +9,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+
+	"github.com/plexusone/systemforge/authz"
 )
 
 // API handles marketplace HTTP endpoints.
@@ -21,6 +23,7 @@ type API struct {
 
 	caller    CallerResolver
 	purchases PurchaseAuthorizer
+	authz     authz.Authorizer
 }
 
 // APIConfig holds API configuration.
@@ -104,7 +107,7 @@ func listingToResponse(l *Listing) *ListingResponse {
 type CreateListingInput struct {
 	Body struct {
 		CreatorOrgID string         `json:"creator_org_id" required:"true" format:"uuid"`
-		OwnerID      string         `json:"owner_id" required:"true" format:"uuid"`
+		OwnerID      string         `json:"owner_id,omitempty" required:"false" format:"uuid" doc:"Deprecated: the owner is the authenticated caller; when present it must equal the caller"`
 		ProductType  string         `json:"product_type" required:"true" minLength:"1" maxLength:"50"`
 		ProductID    *string        `json:"product_id,omitempty" format:"uuid"`
 		Title        string         `json:"title" required:"true" minLength:"1" maxLength:"200"`
@@ -274,9 +277,20 @@ func (a *API) createListing(ctx context.Context, input *CreateListingInput) (*Cr
 	if err != nil {
 		return nil, huma.Error400BadRequest("invalid creator_org_id")
 	}
-	ownerID, err := uuid.Parse(input.Body.OwnerID)
+	// The owner is the caller, who must be able to edit for the
+	// organization the listing is sold under.
+	ownerID, err := a.requireOrg(ctx, creatorOrgID, authz.PermOrgEdit)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid owner_id")
+		return nil, err
+	}
+	if input.Body.OwnerID != "" {
+		claimed, err := uuid.Parse(input.Body.OwnerID)
+		if err != nil {
+			return nil, huma.Error400BadRequest("invalid owner_id")
+		}
+		if claimed != ownerID {
+			return nil, huma.Error403Forbidden("owner_id must be the authenticated caller")
+		}
 	}
 
 	var productID uuid.UUID
@@ -321,23 +335,27 @@ func (a *API) getListing(ctx context.Context, input *GetListingInput) (*GetListi
 		}
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
+	// Published listings are public; others are visible to their creator
+	// organization only, and do not exist for anyone else.
+	if !listing.IsPublished() {
+		ok, err := a.canViewOrg(ctx, listing.CreatorOrgID)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, huma.Error404NotFound("listing not found")
+		}
+	}
 
 	return &GetListingOutput{Body: listingToResponse(listing)}, nil
 }
 
 func (a *API) updateListing(ctx context.Context, input *UpdateListingInput) (*UpdateListingOutput, error) {
-	id, err := uuid.Parse(input.ID)
+	listing, err := a.listingFor(ctx, input.ID, authz.PermOrgEdit)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid listing ID")
+		return nil, err
 	}
-
-	listing, err := a.listings.Get(ctx, id)
-	if err != nil {
-		if err == ErrListingNotFound {
-			return nil, huma.Error404NotFound("listing not found")
-		}
-		return nil, huma.Error500InternalServerError(err.Error())
-	}
+	id := listing.ID
 
 	if input.Body.Title != nil {
 		listing.Title = *input.Body.Title
@@ -379,12 +397,12 @@ func (a *API) updateListing(ctx context.Context, input *UpdateListingInput) (*Up
 }
 
 func (a *API) deleteListing(ctx context.Context, input *DeleteListingInput) (*struct{}, error) {
-	id, err := uuid.Parse(input.ID)
+	listing, err := a.listingFor(ctx, input.ID, authz.PermOrgManage)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid listing ID")
+		return nil, err
 	}
 
-	if err := a.listings.Delete(ctx, id); err != nil {
+	if err := a.listings.Delete(ctx, listing.ID); err != nil {
 		if err == ErrListingNotFound {
 			return nil, huma.Error404NotFound("listing not found")
 		}
@@ -395,10 +413,11 @@ func (a *API) deleteListing(ctx context.Context, input *DeleteListingInput) (*st
 }
 
 func (a *API) publishListing(ctx context.Context, input *PublishListingInput) (*PublishListingOutput, error) {
-	id, err := uuid.Parse(input.ID)
+	current, err := a.listingFor(ctx, input.ID, authz.PermOrgManage)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid listing ID")
+		return nil, err
 	}
+	id := current.ID
 
 	if err := a.listings.Publish(ctx, id); err != nil {
 		if err == ErrListingNotFound {
@@ -416,10 +435,11 @@ func (a *API) publishListing(ctx context.Context, input *PublishListingInput) (*
 }
 
 func (a *API) archiveListing(ctx context.Context, input *ArchiveListingInput) (*ArchiveListingOutput, error) {
-	id, err := uuid.Parse(input.ID)
+	current, err := a.listingFor(ctx, input.ID, authz.PermOrgManage)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid listing ID")
+		return nil, err
 	}
+	id := current.ID
 
 	if err := a.listings.Archive(ctx, id); err != nil {
 		if err == ErrListingNotFound {
@@ -449,15 +469,27 @@ func (a *API) listListings(ctx context.Context, input *ListListingsInput) (*List
 	if input.ProductType != "" {
 		opts.ProductType = &input.ProductType
 	}
+	// Unpublished listings are listed only to members of the creator
+	// organization the request filters on; everyone else sees published
+	// listings.
+	membersView := false
 	if input.CreatorOrgID != "" {
 		id, err := uuid.Parse(input.CreatorOrgID)
 		if err != nil {
 			return nil, huma.Error400BadRequest("invalid creator_org_id")
 		}
 		opts.CreatorOrgID = &id
+		if membersView, err = a.canViewOrg(ctx, id); err != nil {
+			return nil, err
+		}
 	}
-	if input.Published {
+	if input.Published || !membersView {
 		opts.PublishedOnly = true
+		if opts.Status != nil && *opts.Status != ListingStatusPublished {
+			output := &ListListingsOutput{}
+			output.Body.Listings = []*ListingResponse{}
+			return output, nil
+		}
 	}
 
 	listings, err := a.listings.List(ctx, opts)
@@ -558,7 +590,7 @@ type AssignSeatInput struct {
 	LicenseID string `path:"license_id" format:"uuid"`
 	Body      struct {
 		PrincipalID string `json:"principal_id" required:"true" format:"uuid"`
-		AssignedBy  string `json:"assigned_by" required:"true" format:"uuid"`
+		AssignedBy  string `json:"assigned_by,omitempty" required:"false" format:"uuid" doc:"Deprecated: the assigner is the authenticated caller; when present it must equal the caller"`
 	}
 }
 
@@ -647,6 +679,9 @@ func (a *API) listLicenses(ctx context.Context, input *ListLicensesInput) (*List
 	if err != nil {
 		return nil, huma.Error400BadRequest("invalid organization_id")
 	}
+	if _, err := a.requireOrg(ctx, orgID, authz.PermOrgView); err != nil {
+		return nil, err
+	}
 
 	licenses, err := a.licenses.List(ctx, orgID)
 	if err != nil {
@@ -665,34 +700,40 @@ func (a *API) listLicenses(ctx context.Context, input *ListLicensesInput) (*List
 }
 
 func (a *API) getLicense(ctx context.Context, input *GetLicenseInput) (*GetLicenseOutput, error) {
-	id, err := uuid.Parse(input.ID)
+	license, _, err := a.licenseFor(ctx, input.ID, authz.PermOrgView)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid license ID")
-	}
-
-	license, err := a.licenses.Get(ctx, id)
-	if err != nil {
-		if err == ErrLicenseNotFound {
-			return nil, huma.Error404NotFound("license not found")
-		}
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, err
 	}
 
 	return &GetLicenseOutput{Body: licenseToResponse(license)}, nil
 }
 
 func (a *API) assignSeat(ctx context.Context, input *AssignSeatInput) (*AssignSeatOutput, error) {
-	licenseID, err := uuid.Parse(input.LicenseID)
+	license, assignedBy, err := a.licenseFor(ctx, input.LicenseID, authz.PermOrgManage)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid license_id")
+		return nil, err
 	}
+	licenseID := license.ID
 	principalID, err := uuid.Parse(input.Body.PrincipalID)
 	if err != nil {
 		return nil, huma.Error400BadRequest("invalid principal_id")
 	}
-	assignedBy, err := uuid.Parse(input.Body.AssignedBy)
+	if input.Body.AssignedBy != "" {
+		claimed, err := uuid.Parse(input.Body.AssignedBy)
+		if err != nil {
+			return nil, huma.Error400BadRequest("invalid assigned_by")
+		}
+		if claimed != assignedBy {
+			return nil, huma.Error403Forbidden("assigned_by must be the authenticated caller")
+		}
+	}
+	// Seats go to members of the licensed organization.
+	member, err := a.canOrg(ctx, principalID, license.OrganizationID, authz.PermOrgView)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid assigned_by")
+		return nil, err
+	}
+	if !member {
+		return nil, huma.Error400BadRequest("principal is not a member of the licensed organization")
 	}
 
 	assignment := &SeatAssignment{
@@ -719,10 +760,11 @@ func (a *API) assignSeat(ctx context.Context, input *AssignSeatInput) (*AssignSe
 }
 
 func (a *API) unassignSeat(ctx context.Context, input *UnassignSeatInput) (*struct{}, error) {
-	licenseID, err := uuid.Parse(input.LicenseID)
+	license, _, err := a.licenseFor(ctx, input.LicenseID, authz.PermOrgManage)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid license_id")
+		return nil, err
 	}
+	licenseID := license.ID
 	principalID, err := uuid.Parse(input.PrincipalID)
 	if err != nil {
 		return nil, huma.Error400BadRequest("invalid principal_id")
@@ -742,18 +784,11 @@ func (a *API) unassignSeat(ctx context.Context, input *UnassignSeatInput) (*stru
 }
 
 func (a *API) listSeats(ctx context.Context, input *ListSeatsInput) (*ListSeatsOutput, error) {
-	licenseID, err := uuid.Parse(input.LicenseID)
+	license, _, err := a.licenseFor(ctx, input.LicenseID, authz.PermOrgView)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid license_id")
+		return nil, err
 	}
-
-	license, err := a.licenses.Get(ctx, licenseID)
-	if err != nil {
-		if err == ErrLicenseNotFound {
-			return nil, huma.Error404NotFound("license not found")
-		}
-		return nil, huma.Error500InternalServerError(err.Error())
-	}
+	licenseID := license.ID
 
 	assignments, err := a.licenses.ListSeatAssignments(ctx, licenseID)
 	if err != nil {
@@ -835,19 +870,16 @@ func (a *API) createCheckout(ctx context.Context, input *CreateCheckoutInput) (*
 	if err != nil {
 		return nil, huma.Error400BadRequest("invalid organization_id")
 	}
-	if a.purchases == nil {
+	if a.purchases == nil && a.authz == nil {
 		return nil, huma.Error501NotImplemented("checkout purchase authorization not configured")
 	}
 
 	// The purchaser is whoever is authenticated, never a body field, and
-	// must be allowed to buy for the organization.
-	purchaserID, err := a.caller(ctx)
-	if errors.Is(err, ErrNoCaller) {
-		return nil, huma.Error401Unauthorized("authentication required")
-	}
+	// must be allowed to buy for the organization: by the configured
+	// PurchaseAuthorizer, or else by managing the organization.
+	purchaserID, err := a.callerID(ctx)
 	if err != nil {
-		slog.ErrorContext(ctx, "marketplace: identifying caller", "error", err)
-		return nil, huma.Error500InternalServerError("identifying caller")
+		return nil, err
 	}
 	if input.Body.PurchaserID != "" {
 		claimed, err := uuid.Parse(input.Body.PurchaserID)
@@ -858,10 +890,15 @@ func (a *API) createCheckout(ctx context.Context, input *CreateCheckoutInput) (*
 			return nil, huma.Error403Forbidden("purchaser_id must be the authenticated caller")
 		}
 	}
-	allowed, err := a.purchases.CanPurchase(ctx, purchaserID, orgID)
-	if err != nil {
-		slog.ErrorContext(ctx, "marketplace: checking purchase authorization", "error", err)
-		return nil, huma.Error500InternalServerError("checking purchase authorization")
+	var allowed bool
+	if a.purchases != nil {
+		allowed, err = a.purchases.CanPurchase(ctx, purchaserID, orgID)
+		if err != nil {
+			slog.ErrorContext(ctx, "marketplace: checking purchase authorization", "error", err)
+			return nil, huma.Error500InternalServerError("checking purchase authorization")
+		}
+	} else if allowed, err = a.canOrg(ctx, purchaserID, orgID, authz.PermOrgManage); err != nil {
+		return nil, err
 	}
 	if !allowed {
 		return nil, huma.Error403Forbidden("not allowed to purchase for this organization")
