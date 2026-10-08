@@ -176,6 +176,16 @@ In `identity/managedprincipal` with handlers mounted on SystemAuth:
 - Every call authorizes the caller through `authz` with `manage_credentials`
   on the managed principal (§7).
 
+As implemented: sessions are live browser login sessions, OAuth token
+families (subject is the principal), and principal token families; a family
+is listed once and revoked whole, so its refresh token cannot renew it.
+Listing returns live tokens and sessions only. The operations apply only to
+managed principals: once an email is attached, the principal manages its
+own credentials. `managedprincipal.NewHandler` serves them as JSON and
+identifies the manager through `requestprincipal`; mount it under
+`/managed-principals` on the SystemAuth router or an application's, behind
+`requestprincipal.Middleware`.
+
 ### 6. Email-assuming paths
 
 Each becomes conditional on `Human.email != nil`:
