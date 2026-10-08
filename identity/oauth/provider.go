@@ -124,9 +124,12 @@ func (p *Provider) Storage() *Storage {
 	return p.storage
 }
 
-// Session creates a new OAuth session.
+// Session creates a new OAuth session for subject. The subject is set on
+// the session itself, which Fosite reads for introspection and token
+// storage, as well as on the ID token claims.
 func (p *Provider) Session(subject string) *openid.DefaultSession {
 	return &openid.DefaultSession{
+		Subject: subject,
 		Claims: &jwt.IDTokenClaims{
 			Issuer:    p.config.Issuer,
 			Subject:   subject,
