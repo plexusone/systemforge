@@ -17,7 +17,9 @@ import (
 	"github.com/ory/fosite"
 	"golang.org/x/oauth2"
 
+	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/oauthclient"
+	"github.com/plexusone/systemforge/session/ratelimit"
 )
 
 // Social login routes mounted on the SystemAuth router when
@@ -43,6 +45,11 @@ type socialOptions struct {
 	states     oauthclient.StateStore
 	consents   ConsentStore
 	connectors []*oauthclient.Connector
+
+	credentials    credential.Service
+	loginTokenRate ratelimit.Storage
+	loginTokenIP   ratelimit.Limit
+	loginTokenCli  ratelimit.Limit
 }
 
 // WithPrincipalDirectory sets the principal store used by social login.
@@ -93,6 +100,10 @@ type socialLogin struct {
 	cookies    loginCookies
 	now        func() time.Time
 
+	// loginTokens exchanges managed principals' login tokens for
+	// sessions; nil when managed principals are off.
+	loginTokens *loginTokenExchange
+
 	// clients looks up OAuth clients for the consent page.
 	clients interface {
 		GetClientByID(ctx context.Context, id string) (*Client, error)
@@ -104,8 +115,7 @@ type socialLogin struct {
 	revoker SubjectTokenRevoker
 }
 
-func newSocialLogin(s *Server) (*socialLogin, error) {
-	cfg := s.config.SocialLogin
+func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 	issuer := strings.TrimRight(s.config.Issuer, "/")
 
 	redirects, err := newRedirectPolicy(s.config.Issuer, cfg)
@@ -138,7 +148,9 @@ func newSocialLogin(s *Server) (*socialLogin, error) {
 		}
 		connectors[c.Provider] = c
 	}
-	if len(connectors) == 0 {
+	// Managed principals sign in with login tokens through the same
+	// browser sessions, so they need no social provider.
+	if len(connectors) == 0 && !s.managedPrincipalsEnabled() {
 		return nil, fmt.Errorf("%w: no providers configured", ErrInvalidSocialLoginConfig)
 	}
 	providers := make([]string, 0, len(connectors))
@@ -189,6 +201,7 @@ func newSocialLogin(s *Server) (*socialLogin, error) {
 		s.logger.Warn("social login using in-memory login sessions; users are signed out on restart and sessions are not shared between instances")
 		sl.sessions = NewMemoryLoginSessionStore()
 	}
+	sl.setupLoginTokens(s)
 	if sl.directory == nil {
 		if es, ok := s.storage.(*EntStorage); ok {
 			sl.directory = NewEntPrincipalDirectory(es.db)
@@ -201,13 +214,20 @@ func newSocialLogin(s *Server) (*socialLogin, error) {
 }
 
 func (sl *socialLogin) registerRoutes(r chi.Router) {
-	r.Get(LoginPath, sl.handleChooser)
-	r.Get(loginStartPattern, sl.handleStart)
-	r.Get(loginCallbackPattern, sl.handleCallback)
+	// Without social providers, browser login exists only for login
+	// tokens, so there is nothing to choose or call back to.
+	if len(sl.providers) > 0 {
+		r.Get(LoginPath, sl.handleChooser)
+		r.Get(loginStartPattern, sl.handleStart)
+		r.Get(loginCallbackPattern, sl.handleCallback)
+	}
 	r.Get(LogoutPath, sl.handleLogoutPage)
 	r.Post(LogoutPath, sl.handleLogout)
 	r.Get(ConsentPath, sl.handleConsentPage)
 	r.Post(ConsentPath, sl.handleConsent)
+	if sl.loginTokens != nil {
+		r.Post(LoginTokenPath, sl.handleLoginToken)
+	}
 }
 
 func noStore(w http.ResponseWriter) {
@@ -574,9 +594,17 @@ func (p *socialSessionProvider) GetUserClaims(ctx context.Context, userID string
 		return p.inner.GetUserClaims(ctx, userID, scopes)
 	}
 	claims := map[string]interface{}{"sub": userID}
+	// A human without an email is a managed principal (ADR-005); relying
+	// parties need to know regardless of the scopes granted.
+	if lp.Email == "" {
+		claims[ManagedClaim] = true
+	}
 	for _, scope := range scopes {
 		switch scope {
 		case "email":
+			if lp.Email == "" {
+				continue
+			}
 			claims["email"] = lp.Email
 			claims["email_verified"] = lp.EmailVerified
 		case "profile":

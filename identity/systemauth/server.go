@@ -144,9 +144,10 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		}
 	}
 
-	// Set up GitHub/Google social login if configured
-	if cfg.SocialLogin != nil {
-		social, err := newSocialLogin(s)
+	// Set up browser login: GitHub/Google social login if configured, and
+	// login-token sign-in for managed principals when they are enabled.
+	if loginCfg := s.browserLoginConfig(); loginCfg != nil {
+		social, err := newSocialLogin(s, loginCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -384,6 +385,25 @@ func (s *Server) ManagedPrincipalsAllowed(ctx context.Context, clientID string) 
 		return false, err
 	}
 	return client.ManagedPrincipalsEnabled, nil
+}
+
+// managedPrincipalsEnabled reports whether the deployment allows managed
+// principals at all.
+func (s *Server) managedPrincipalsEnabled() bool {
+	return s.config.ManagedPrincipals != nil && s.config.ManagedPrincipals.Enabled
+}
+
+// browserLoginConfig returns the configuration of browser login sessions:
+// the social login configuration, or defaults when only managed
+// principals need sessions. Nil means browser login is off.
+func (s *Server) browserLoginConfig() *SocialLoginConfig {
+	if s.config.SocialLogin != nil {
+		return s.config.SocialLogin
+	}
+	if !s.managedPrincipalsEnabled() {
+		return nil
+	}
+	return &SocialLoginConfig{DefaultRedirect: "/", SessionLifetime: Duration(12 * time.Hour)}
 }
 
 // LoginTokenPolicy returns the lifetime policy for login tokens issued for
