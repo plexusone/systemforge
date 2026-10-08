@@ -93,17 +93,22 @@ vocabularies, lookups), so the pattern should be defined once.
 
 ### Naming the providers by what they do
 
-The providers are named for the model they evaluate, not the technology:
+The modes are named for the model they evaluate, not the technology:
 
-- **role-based** (`rbac`): roles, plus direct grants on resources. The
-  `simple` package becomes `authz/rbac`.
+- **role-based** (`rbac`): roles, plus direct grants on resources.
+  Implemented by the `simple` package.
 - **relationship-based** (`rebac`): permissions derived through
-  relationships, evaluated by an engine. The `spicedb` package becomes the
-  engine `authz/rebac/spicedb`; another engine (for example OpenFGA) would
-  sit beside it without changing an application's configuration vocabulary.
+  relationships, evaluated by an engine. SpiceDB is the engine today (the
+  `spicedb` package); another engine, for example OpenFGA, would sit beside
+  it without changing an application's configuration vocabulary.
 
 An application configures `authz.mode: rbac | rebac`, and for `rebac` an
-engine. "Coarse-grained" and "fine-grained" are not used: after this ADR
+engine. These names are used in configuration, documentation, the
+architecture pages and the vocabulary registry. The Go package paths are
+unchanged: renaming them would break every importer for no gain in
+behavior, and `spicedb` already names an engine correctly. If `simple` is
+ever renamed to match, that is a separate change with a deprecated alias,
+made at a release where breaking is cheap. "Coarse-grained" and "fine-grained" are not used: after this ADR
 both modes grant per resource, and the relationship engines market
 themselves as fine-grained, so the pair would mislead in both directions.
 
