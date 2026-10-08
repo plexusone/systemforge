@@ -228,6 +228,33 @@ func (_u *OAuthAppUpdate) AddRefreshTokenTTL(v int) *OAuthAppUpdate {
 	return _u
 }
 
+// SetLoginTokenTTL sets the "login_token_ttl" field.
+func (_u *OAuthAppUpdate) SetLoginTokenTTL(v int) *OAuthAppUpdate {
+	_u.mutation.ResetLoginTokenTTL()
+	_u.mutation.SetLoginTokenTTL(v)
+	return _u
+}
+
+// SetNillableLoginTokenTTL sets the "login_token_ttl" field if the given value is not nil.
+func (_u *OAuthAppUpdate) SetNillableLoginTokenTTL(v *int) *OAuthAppUpdate {
+	if v != nil {
+		_u.SetLoginTokenTTL(*v)
+	}
+	return _u
+}
+
+// AddLoginTokenTTL adds value to the "login_token_ttl" field.
+func (_u *OAuthAppUpdate) AddLoginTokenTTL(v int) *OAuthAppUpdate {
+	_u.mutation.AddLoginTokenTTL(v)
+	return _u
+}
+
+// ClearLoginTokenTTL clears the value of the "login_token_ttl" field.
+func (_u *OAuthAppUpdate) ClearLoginTokenTTL() *OAuthAppUpdate {
+	_u.mutation.ClearLoginTokenTTL()
+	return _u
+}
+
 // SetRefreshTokenRotation sets the "refresh_token_rotation" field.
 func (_u *OAuthAppUpdate) SetRefreshTokenRotation(v bool) *OAuthAppUpdate {
 	_u.mutation.SetRefreshTokenRotation(v)
@@ -560,6 +587,11 @@ func (_u *OAuthAppUpdate) check() error {
 			return &ValidationError{Name: "app_type", err: fmt.Errorf(`ent: validator failed for field "OAuthApp.app_type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.LoginTokenTTL(); ok {
+		if err := oauthapp.LoginTokenTTLValidator(v); err != nil {
+			return &ValidationError{Name: "login_token_ttl", err: fmt.Errorf(`ent: validator failed for field "OAuthApp.login_token_ttl": %w`, err)}
+		}
+	}
 	if _u.mutation.OwnerCleared() && len(_u.mutation.OwnerIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "OAuthApp.owner"`)
 	}
@@ -639,6 +671,15 @@ func (_u *OAuthAppUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedRefreshTokenTTL(); ok {
 		_spec.AddField(oauthapp.FieldRefreshTokenTTL, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.LoginTokenTTL(); ok {
+		_spec.SetField(oauthapp.FieldLoginTokenTTL, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedLoginTokenTTL(); ok {
+		_spec.AddField(oauthapp.FieldLoginTokenTTL, field.TypeInt, value)
+	}
+	if _u.mutation.LoginTokenTTLCleared() {
+		_spec.ClearField(oauthapp.FieldLoginTokenTTL, field.TypeInt)
 	}
 	if value, ok := _u.mutation.RefreshTokenRotation(); ok {
 		_spec.SetField(oauthapp.FieldRefreshTokenRotation, field.TypeBool, value)
@@ -1120,6 +1161,33 @@ func (_u *OAuthAppUpdateOne) AddRefreshTokenTTL(v int) *OAuthAppUpdateOne {
 	return _u
 }
 
+// SetLoginTokenTTL sets the "login_token_ttl" field.
+func (_u *OAuthAppUpdateOne) SetLoginTokenTTL(v int) *OAuthAppUpdateOne {
+	_u.mutation.ResetLoginTokenTTL()
+	_u.mutation.SetLoginTokenTTL(v)
+	return _u
+}
+
+// SetNillableLoginTokenTTL sets the "login_token_ttl" field if the given value is not nil.
+func (_u *OAuthAppUpdateOne) SetNillableLoginTokenTTL(v *int) *OAuthAppUpdateOne {
+	if v != nil {
+		_u.SetLoginTokenTTL(*v)
+	}
+	return _u
+}
+
+// AddLoginTokenTTL adds value to the "login_token_ttl" field.
+func (_u *OAuthAppUpdateOne) AddLoginTokenTTL(v int) *OAuthAppUpdateOne {
+	_u.mutation.AddLoginTokenTTL(v)
+	return _u
+}
+
+// ClearLoginTokenTTL clears the value of the "login_token_ttl" field.
+func (_u *OAuthAppUpdateOne) ClearLoginTokenTTL() *OAuthAppUpdateOne {
+	_u.mutation.ClearLoginTokenTTL()
+	return _u
+}
+
 // SetRefreshTokenRotation sets the "refresh_token_rotation" field.
 func (_u *OAuthAppUpdateOne) SetRefreshTokenRotation(v bool) *OAuthAppUpdateOne {
 	_u.mutation.SetRefreshTokenRotation(v)
@@ -1465,6 +1533,11 @@ func (_u *OAuthAppUpdateOne) check() error {
 			return &ValidationError{Name: "app_type", err: fmt.Errorf(`ent: validator failed for field "OAuthApp.app_type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.LoginTokenTTL(); ok {
+		if err := oauthapp.LoginTokenTTLValidator(v); err != nil {
+			return &ValidationError{Name: "login_token_ttl", err: fmt.Errorf(`ent: validator failed for field "OAuthApp.login_token_ttl": %w`, err)}
+		}
+	}
 	if _u.mutation.OwnerCleared() && len(_u.mutation.OwnerIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "OAuthApp.owner"`)
 	}
@@ -1561,6 +1634,15 @@ func (_u *OAuthAppUpdateOne) sqlSave(ctx context.Context) (_node *OAuthApp, err 
 	}
 	if value, ok := _u.mutation.AddedRefreshTokenTTL(); ok {
 		_spec.AddField(oauthapp.FieldRefreshTokenTTL, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.LoginTokenTTL(); ok {
+		_spec.SetField(oauthapp.FieldLoginTokenTTL, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedLoginTokenTTL(); ok {
+		_spec.AddField(oauthapp.FieldLoginTokenTTL, field.TypeInt, value)
+	}
+	if _u.mutation.LoginTokenTTLCleared() {
+		_spec.ClearField(oauthapp.FieldLoginTokenTTL, field.TypeInt)
 	}
 	if value, ok := _u.mutation.RefreshTokenRotation(); ok {
 		_spec.SetField(oauthapp.FieldRefreshTokenRotation, field.TypeBool, value)

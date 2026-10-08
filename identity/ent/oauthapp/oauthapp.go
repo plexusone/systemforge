@@ -42,6 +42,8 @@ const (
 	FieldAccessTokenTTL = "access_token_ttl"
 	// FieldRefreshTokenTTL holds the string denoting the refresh_token_ttl field in the database.
 	FieldRefreshTokenTTL = "refresh_token_ttl"
+	// FieldLoginTokenTTL holds the string denoting the login_token_ttl field in the database.
+	FieldLoginTokenTTL = "login_token_ttl"
 	// FieldRefreshTokenRotation holds the string denoting the refresh_token_rotation field in the database.
 	FieldRefreshTokenRotation = "refresh_token_rotation"
 	// FieldManagedPrincipalsEnabled holds the string denoting the managed_principals_enabled field in the database.
@@ -134,6 +136,7 @@ var Columns = []string{
 	FieldAllowedResponseTypes,
 	FieldAccessTokenTTL,
 	FieldRefreshTokenTTL,
+	FieldLoginTokenTTL,
 	FieldRefreshTokenRotation,
 	FieldManagedPrincipalsEnabled,
 	FieldFirstParty,
@@ -174,6 +177,8 @@ var (
 	DefaultAccessTokenTTL int
 	// DefaultRefreshTokenTTL holds the default value on creation for the "refresh_token_ttl" field.
 	DefaultRefreshTokenTTL int
+	// LoginTokenTTLValidator is a validator for the "login_token_ttl" field. It is called by the builders before save.
+	LoginTokenTTLValidator func(int) error
 	// DefaultRefreshTokenRotation holds the default value on creation for the "refresh_token_rotation" field.
 	DefaultRefreshTokenRotation bool
 	// DefaultManagedPrincipalsEnabled holds the default value on creation for the "managed_principals_enabled" field.
@@ -274,6 +279,11 @@ func ByAccessTokenTTL(opts ...sql.OrderTermOption) OrderOption {
 // ByRefreshTokenTTL orders the results by the refresh_token_ttl field.
 func ByRefreshTokenTTL(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRefreshTokenTTL, opts...).ToFunc()
+}
+
+// ByLoginTokenTTL orders the results by the login_token_ttl field.
+func ByLoginTokenTTL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLoginTokenTTL, opts...).ToFunc()
 }
 
 // ByRefreshTokenRotation orders the results by the refresh_token_rotation field.

@@ -91,6 +91,12 @@ func (OAuthApp) Fields() []ent.Field {
 			Default(604800).
 			Comment("Refresh token TTL in seconds (default 7 days)"),
 
+		field.Int("login_token_ttl").
+			Optional().
+			Nillable().
+			Positive().
+			Comment("Default lifetime in seconds of login tokens issued for this client's managed principals; null uses the platform default (ADR-005)"),
+
 		field.Bool("refresh_token_rotation").
 			Default(true).
 			Comment("Rotate refresh tokens on use"),

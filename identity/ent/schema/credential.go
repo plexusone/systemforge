@@ -38,7 +38,7 @@ func (Credential) Fields() []ent.Field {
 
 		// Credential type
 		field.Enum("type").
-			Values("password", "api_key", "keypair", "webauthn", "totp", "client_secret").
+			Values("password", "api_key", "keypair", "webauthn", "totp", "client_secret", "login_token").
 			Comment("Type of credential"),
 
 		// Unique identifier within type (e.g., key prefix for API keys)

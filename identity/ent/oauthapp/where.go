@@ -96,6 +96,11 @@ func RefreshTokenTTL(v int) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldEQ(FieldRefreshTokenTTL, v))
 }
 
+// LoginTokenTTL applies equality check predicate on the "login_token_ttl" field. It's identical to LoginTokenTTLEQ.
+func LoginTokenTTL(v int) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldEQ(FieldLoginTokenTTL, v))
+}
+
 // RefreshTokenRotation applies equality check predicate on the "refresh_token_rotation" field. It's identical to RefreshTokenRotationEQ.
 func RefreshTokenRotation(v bool) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldEQ(FieldRefreshTokenRotation, v))
@@ -564,6 +569,56 @@ func RefreshTokenTTLLT(v int) predicate.OAuthApp {
 // RefreshTokenTTLLTE applies the LTE predicate on the "refresh_token_ttl" field.
 func RefreshTokenTTLLTE(v int) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldLTE(FieldRefreshTokenTTL, v))
+}
+
+// LoginTokenTTLEQ applies the EQ predicate on the "login_token_ttl" field.
+func LoginTokenTTLEQ(v int) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldEQ(FieldLoginTokenTTL, v))
+}
+
+// LoginTokenTTLNEQ applies the NEQ predicate on the "login_token_ttl" field.
+func LoginTokenTTLNEQ(v int) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldNEQ(FieldLoginTokenTTL, v))
+}
+
+// LoginTokenTTLIn applies the In predicate on the "login_token_ttl" field.
+func LoginTokenTTLIn(vs ...int) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldIn(FieldLoginTokenTTL, vs...))
+}
+
+// LoginTokenTTLNotIn applies the NotIn predicate on the "login_token_ttl" field.
+func LoginTokenTTLNotIn(vs ...int) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldNotIn(FieldLoginTokenTTL, vs...))
+}
+
+// LoginTokenTTLGT applies the GT predicate on the "login_token_ttl" field.
+func LoginTokenTTLGT(v int) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldGT(FieldLoginTokenTTL, v))
+}
+
+// LoginTokenTTLGTE applies the GTE predicate on the "login_token_ttl" field.
+func LoginTokenTTLGTE(v int) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldGTE(FieldLoginTokenTTL, v))
+}
+
+// LoginTokenTTLLT applies the LT predicate on the "login_token_ttl" field.
+func LoginTokenTTLLT(v int) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldLT(FieldLoginTokenTTL, v))
+}
+
+// LoginTokenTTLLTE applies the LTE predicate on the "login_token_ttl" field.
+func LoginTokenTTLLTE(v int) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldLTE(FieldLoginTokenTTL, v))
+}
+
+// LoginTokenTTLIsNil applies the IsNil predicate on the "login_token_ttl" field.
+func LoginTokenTTLIsNil() predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldIsNull(FieldLoginTokenTTL))
+}
+
+// LoginTokenTTLNotNil applies the NotNil predicate on the "login_token_ttl" field.
+func LoginTokenTTLNotNil() predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldNotNull(FieldLoginTokenTTL))
 }
 
 // RefreshTokenRotationEQ applies the EQ predicate on the "refresh_token_rotation" field.

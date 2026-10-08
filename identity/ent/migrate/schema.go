@@ -176,7 +176,7 @@ var (
 	// SfCredentialsColumns holds the columns for the "sf_credentials" table.
 	SfCredentialsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"password", "api_key", "keypair", "webauthn", "totp", "client_secret"}},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"password", "api_key", "keypair", "webauthn", "totp", "client_secret", "login_token"}},
 		{Name: "identifier", Type: field.TypeString, Nullable: true},
 		{Name: "secret_hash", Type: field.TypeString, Nullable: true},
 		{Name: "public_key", Type: field.TypeString, Nullable: true, Size: 2147483647},
@@ -676,6 +676,7 @@ var (
 		{Name: "allowed_response_types", Type: field.TypeJSON},
 		{Name: "access_token_ttl", Type: field.TypeInt, Default: 900},
 		{Name: "refresh_token_ttl", Type: field.TypeInt, Default: 604800},
+		{Name: "login_token_ttl", Type: field.TypeInt, Nullable: true},
 		{Name: "refresh_token_rotation", Type: field.TypeBool, Default: true},
 		{Name: "managed_principals_enabled", Type: field.TypeBool, Default: false},
 		{Name: "first_party", Type: field.TypeBool, Default: false},
@@ -696,13 +697,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_oauth_apps_sf_organizations_oauth_apps",
-				Columns:    []*schema.Column{SfOauthAppsColumns[21]},
+				Columns:    []*schema.Column{SfOauthAppsColumns[22]},
 				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "sf_oauth_apps_sf_principals_owned_oauth_apps",
-				Columns:    []*schema.Column{SfOauthAppsColumns[22]},
+				Columns:    []*schema.Column{SfOauthAppsColumns[23]},
 				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -716,17 +717,17 @@ var (
 			{
 				Name:    "oauthapp_owner_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[22]},
+				Columns: []*schema.Column{SfOauthAppsColumns[23]},
 			},
 			{
 				Name:    "oauthapp_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[21]},
+				Columns: []*schema.Column{SfOauthAppsColumns[22]},
 			},
 			{
 				Name:    "oauthapp_active",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[16]},
+				Columns: []*schema.Column{SfOauthAppsColumns[17]},
 			},
 		},
 	}

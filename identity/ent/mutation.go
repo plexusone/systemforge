@@ -13305,6 +13305,8 @@ type OAuthAppMutation struct {
 	addaccess_token_ttl          *int
 	refresh_token_ttl            *int
 	addrefresh_token_ttl         *int
+	login_token_ttl              *int
+	addlogin_token_ttl           *int
 	refresh_token_rotation       *bool
 	managed_principals_enabled   *bool
 	first_party                  *bool
@@ -14047,6 +14049,76 @@ func (m *OAuthAppMutation) ResetRefreshTokenTTL() {
 	m.addrefresh_token_ttl = nil
 }
 
+// SetLoginTokenTTL sets the "login_token_ttl" field.
+func (m *OAuthAppMutation) SetLoginTokenTTL(i int) {
+	m.login_token_ttl = &i
+	m.addlogin_token_ttl = nil
+}
+
+// LoginTokenTTL returns the value of the "login_token_ttl" field in the mutation.
+func (m *OAuthAppMutation) LoginTokenTTL() (r int, exists bool) {
+	v := m.login_token_ttl
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLoginTokenTTL returns the old "login_token_ttl" field's value of the OAuthApp entity.
+// If the OAuthApp object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OAuthAppMutation) OldLoginTokenTTL(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLoginTokenTTL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLoginTokenTTL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLoginTokenTTL: %w", err)
+	}
+	return oldValue.LoginTokenTTL, nil
+}
+
+// AddLoginTokenTTL adds i to the "login_token_ttl" field.
+func (m *OAuthAppMutation) AddLoginTokenTTL(i int) {
+	if m.addlogin_token_ttl != nil {
+		*m.addlogin_token_ttl += i
+	} else {
+		m.addlogin_token_ttl = &i
+	}
+}
+
+// AddedLoginTokenTTL returns the value that was added to the "login_token_ttl" field in this mutation.
+func (m *OAuthAppMutation) AddedLoginTokenTTL() (r int, exists bool) {
+	v := m.addlogin_token_ttl
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearLoginTokenTTL clears the value of the "login_token_ttl" field.
+func (m *OAuthAppMutation) ClearLoginTokenTTL() {
+	m.login_token_ttl = nil
+	m.addlogin_token_ttl = nil
+	m.clearedFields[oauthapp.FieldLoginTokenTTL] = struct{}{}
+}
+
+// LoginTokenTTLCleared returns if the "login_token_ttl" field was cleared in this mutation.
+func (m *OAuthAppMutation) LoginTokenTTLCleared() bool {
+	_, ok := m.clearedFields[oauthapp.FieldLoginTokenTTL]
+	return ok
+}
+
+// ResetLoginTokenTTL resets all changes to the "login_token_ttl" field.
+func (m *OAuthAppMutation) ResetLoginTokenTTL() {
+	m.login_token_ttl = nil
+	m.addlogin_token_ttl = nil
+	delete(m.clearedFields, oauthapp.FieldLoginTokenTTL)
+}
+
 // SetRefreshTokenRotation sets the "refresh_token_rotation" field.
 func (m *OAuthAppMutation) SetRefreshTokenRotation(b bool) {
 	m.refresh_token_rotation = &b
@@ -14701,7 +14773,7 @@ func (m *OAuthAppMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuthAppMutation) Fields() []string {
-	fields := make([]string, 0, 22)
+	fields := make([]string, 0, 23)
 	if m.client_id != nil {
 		fields = append(fields, oauthapp.FieldClientID)
 	}
@@ -14740,6 +14812,9 @@ func (m *OAuthAppMutation) Fields() []string {
 	}
 	if m.refresh_token_ttl != nil {
 		fields = append(fields, oauthapp.FieldRefreshTokenTTL)
+	}
+	if m.login_token_ttl != nil {
+		fields = append(fields, oauthapp.FieldLoginTokenTTL)
 	}
 	if m.refresh_token_rotation != nil {
 		fields = append(fields, oauthapp.FieldRefreshTokenRotation)
@@ -14802,6 +14877,8 @@ func (m *OAuthAppMutation) Field(name string) (ent.Value, bool) {
 		return m.AccessTokenTTL()
 	case oauthapp.FieldRefreshTokenTTL:
 		return m.RefreshTokenTTL()
+	case oauthapp.FieldLoginTokenTTL:
+		return m.LoginTokenTTL()
 	case oauthapp.FieldRefreshTokenRotation:
 		return m.RefreshTokenRotation()
 	case oauthapp.FieldManagedPrincipalsEnabled:
@@ -14855,6 +14932,8 @@ func (m *OAuthAppMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldAccessTokenTTL(ctx)
 	case oauthapp.FieldRefreshTokenTTL:
 		return m.OldRefreshTokenTTL(ctx)
+	case oauthapp.FieldLoginTokenTTL:
+		return m.OldLoginTokenTTL(ctx)
 	case oauthapp.FieldRefreshTokenRotation:
 		return m.OldRefreshTokenRotation(ctx)
 	case oauthapp.FieldManagedPrincipalsEnabled:
@@ -14973,6 +15052,13 @@ func (m *OAuthAppMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRefreshTokenTTL(v)
 		return nil
+	case oauthapp.FieldLoginTokenTTL:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLoginTokenTTL(v)
+		return nil
 	case oauthapp.FieldRefreshTokenRotation:
 		v, ok := value.(bool)
 		if !ok {
@@ -15050,6 +15136,9 @@ func (m *OAuthAppMutation) AddedFields() []string {
 	if m.addrefresh_token_ttl != nil {
 		fields = append(fields, oauthapp.FieldRefreshTokenTTL)
 	}
+	if m.addlogin_token_ttl != nil {
+		fields = append(fields, oauthapp.FieldLoginTokenTTL)
+	}
 	return fields
 }
 
@@ -15062,6 +15151,8 @@ func (m *OAuthAppMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedAccessTokenTTL()
 	case oauthapp.FieldRefreshTokenTTL:
 		return m.AddedRefreshTokenTTL()
+	case oauthapp.FieldLoginTokenTTL:
+		return m.AddedLoginTokenTTL()
 	}
 	return nil, false
 }
@@ -15085,6 +15176,13 @@ func (m *OAuthAppMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddRefreshTokenTTL(v)
 		return nil
+	case oauthapp.FieldLoginTokenTTL:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLoginTokenTTL(v)
+		return nil
 	}
 	return fmt.Errorf("unknown OAuthApp numeric field %s", name)
 }
@@ -15101,6 +15199,9 @@ func (m *OAuthAppMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(oauthapp.FieldOrganizationID) {
 		fields = append(fields, oauthapp.FieldOrganizationID)
+	}
+	if m.FieldCleared(oauthapp.FieldLoginTokenTTL) {
+		fields = append(fields, oauthapp.FieldLoginTokenTTL)
 	}
 	if m.FieldCleared(oauthapp.FieldRevokedAt) {
 		fields = append(fields, oauthapp.FieldRevokedAt)
@@ -15130,6 +15231,9 @@ func (m *OAuthAppMutation) ClearField(name string) error {
 		return nil
 	case oauthapp.FieldOrganizationID:
 		m.ClearOrganizationID()
+		return nil
+	case oauthapp.FieldLoginTokenTTL:
+		m.ClearLoginTokenTTL()
 		return nil
 	case oauthapp.FieldRevokedAt:
 		m.ClearRevokedAt()
@@ -15183,6 +15287,9 @@ func (m *OAuthAppMutation) ResetField(name string) error {
 		return nil
 	case oauthapp.FieldRefreshTokenTTL:
 		m.ResetRefreshTokenTTL()
+		return nil
+	case oauthapp.FieldLoginTokenTTL:
+		m.ResetLoginTokenTTL()
 		return nil
 	case oauthapp.FieldRefreshTokenRotation:
 		m.ResetRefreshTokenRotation()

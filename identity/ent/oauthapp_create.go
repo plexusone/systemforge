@@ -156,6 +156,20 @@ func (_c *OAuthAppCreate) SetNillableRefreshTokenTTL(v *int) *OAuthAppCreate {
 	return _c
 }
 
+// SetLoginTokenTTL sets the "login_token_ttl" field.
+func (_c *OAuthAppCreate) SetLoginTokenTTL(v int) *OAuthAppCreate {
+	_c.mutation.SetLoginTokenTTL(v)
+	return _c
+}
+
+// SetNillableLoginTokenTTL sets the "login_token_ttl" field if the given value is not nil.
+func (_c *OAuthAppCreate) SetNillableLoginTokenTTL(v *int) *OAuthAppCreate {
+	if v != nil {
+		_c.SetLoginTokenTTL(*v)
+	}
+	return _c
+}
+
 // SetRefreshTokenRotation sets the "refresh_token_rotation" field.
 func (_c *OAuthAppCreate) SetRefreshTokenRotation(v bool) *OAuthAppCreate {
 	_c.mutation.SetRefreshTokenRotation(v)
@@ -507,6 +521,11 @@ func (_c *OAuthAppCreate) check() error {
 	if _, ok := _c.mutation.RefreshTokenTTL(); !ok {
 		return &ValidationError{Name: "refresh_token_ttl", err: errors.New(`ent: missing required field "OAuthApp.refresh_token_ttl"`)}
 	}
+	if v, ok := _c.mutation.LoginTokenTTL(); ok {
+		if err := oauthapp.LoginTokenTTLValidator(v); err != nil {
+			return &ValidationError{Name: "login_token_ttl", err: fmt.Errorf(`ent: validator failed for field "OAuthApp.login_token_ttl": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.RefreshTokenRotation(); !ok {
 		return &ValidationError{Name: "refresh_token_rotation", err: errors.New(`ent: missing required field "OAuthApp.refresh_token_rotation"`)}
 	}
@@ -610,6 +629,10 @@ func (_c *OAuthAppCreate) createSpec() (*OAuthApp, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.RefreshTokenTTL(); ok {
 		_spec.SetField(oauthapp.FieldRefreshTokenTTL, field.TypeInt, value)
 		_node.RefreshTokenTTL = value
+	}
+	if value, ok := _c.mutation.LoginTokenTTL(); ok {
+		_spec.SetField(oauthapp.FieldLoginTokenTTL, field.TypeInt, value)
+		_node.LoginTokenTTL = &value
 	}
 	if value, ok := _c.mutation.RefreshTokenRotation(); ok {
 		_spec.SetField(oauthapp.FieldRefreshTokenRotation, field.TypeBool, value)
@@ -968,6 +991,30 @@ func (u *OAuthAppUpsert) UpdateRefreshTokenTTL() *OAuthAppUpsert {
 // AddRefreshTokenTTL adds v to the "refresh_token_ttl" field.
 func (u *OAuthAppUpsert) AddRefreshTokenTTL(v int) *OAuthAppUpsert {
 	u.Add(oauthapp.FieldRefreshTokenTTL, v)
+	return u
+}
+
+// SetLoginTokenTTL sets the "login_token_ttl" field.
+func (u *OAuthAppUpsert) SetLoginTokenTTL(v int) *OAuthAppUpsert {
+	u.Set(oauthapp.FieldLoginTokenTTL, v)
+	return u
+}
+
+// UpdateLoginTokenTTL sets the "login_token_ttl" field to the value that was provided on create.
+func (u *OAuthAppUpsert) UpdateLoginTokenTTL() *OAuthAppUpsert {
+	u.SetExcluded(oauthapp.FieldLoginTokenTTL)
+	return u
+}
+
+// AddLoginTokenTTL adds v to the "login_token_ttl" field.
+func (u *OAuthAppUpsert) AddLoginTokenTTL(v int) *OAuthAppUpsert {
+	u.Add(oauthapp.FieldLoginTokenTTL, v)
+	return u
+}
+
+// ClearLoginTokenTTL clears the value of the "login_token_ttl" field.
+func (u *OAuthAppUpsert) ClearLoginTokenTTL() *OAuthAppUpsert {
+	u.SetNull(oauthapp.FieldLoginTokenTTL)
 	return u
 }
 
@@ -1333,6 +1380,34 @@ func (u *OAuthAppUpsertOne) AddRefreshTokenTTL(v int) *OAuthAppUpsertOne {
 func (u *OAuthAppUpsertOne) UpdateRefreshTokenTTL() *OAuthAppUpsertOne {
 	return u.Update(func(s *OAuthAppUpsert) {
 		s.UpdateRefreshTokenTTL()
+	})
+}
+
+// SetLoginTokenTTL sets the "login_token_ttl" field.
+func (u *OAuthAppUpsertOne) SetLoginTokenTTL(v int) *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.SetLoginTokenTTL(v)
+	})
+}
+
+// AddLoginTokenTTL adds v to the "login_token_ttl" field.
+func (u *OAuthAppUpsertOne) AddLoginTokenTTL(v int) *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.AddLoginTokenTTL(v)
+	})
+}
+
+// UpdateLoginTokenTTL sets the "login_token_ttl" field to the value that was provided on create.
+func (u *OAuthAppUpsertOne) UpdateLoginTokenTTL() *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.UpdateLoginTokenTTL()
+	})
+}
+
+// ClearLoginTokenTTL clears the value of the "login_token_ttl" field.
+func (u *OAuthAppUpsertOne) ClearLoginTokenTTL() *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.ClearLoginTokenTTL()
 	})
 }
 
@@ -1883,6 +1958,34 @@ func (u *OAuthAppUpsertBulk) AddRefreshTokenTTL(v int) *OAuthAppUpsertBulk {
 func (u *OAuthAppUpsertBulk) UpdateRefreshTokenTTL() *OAuthAppUpsertBulk {
 	return u.Update(func(s *OAuthAppUpsert) {
 		s.UpdateRefreshTokenTTL()
+	})
+}
+
+// SetLoginTokenTTL sets the "login_token_ttl" field.
+func (u *OAuthAppUpsertBulk) SetLoginTokenTTL(v int) *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.SetLoginTokenTTL(v)
+	})
+}
+
+// AddLoginTokenTTL adds v to the "login_token_ttl" field.
+func (u *OAuthAppUpsertBulk) AddLoginTokenTTL(v int) *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.AddLoginTokenTTL(v)
+	})
+}
+
+// UpdateLoginTokenTTL sets the "login_token_ttl" field to the value that was provided on create.
+func (u *OAuthAppUpsertBulk) UpdateLoginTokenTTL() *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.UpdateLoginTokenTTL()
+	})
+}
+
+// ClearLoginTokenTTL clears the value of the "login_token_ttl" field.
+func (u *OAuthAppUpsertBulk) ClearLoginTokenTTL() *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.ClearLoginTokenTTL()
 	})
 }
 

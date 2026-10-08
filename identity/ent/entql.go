@@ -366,6 +366,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			oauthapp.FieldAllowedResponseTypes:     {Type: field.TypeJSON, Column: oauthapp.FieldAllowedResponseTypes},
 			oauthapp.FieldAccessTokenTTL:           {Type: field.TypeInt, Column: oauthapp.FieldAccessTokenTTL},
 			oauthapp.FieldRefreshTokenTTL:          {Type: field.TypeInt, Column: oauthapp.FieldRefreshTokenTTL},
+			oauthapp.FieldLoginTokenTTL:            {Type: field.TypeInt, Column: oauthapp.FieldLoginTokenTTL},
 			oauthapp.FieldRefreshTokenRotation:     {Type: field.TypeBool, Column: oauthapp.FieldRefreshTokenRotation},
 			oauthapp.FieldManagedPrincipalsEnabled: {Type: field.TypeBool, Column: oauthapp.FieldManagedPrincipalsEnabled},
 			oauthapp.FieldFirstParty:               {Type: field.TypeBool, Column: oauthapp.FieldFirstParty},
@@ -3017,6 +3018,11 @@ func (f *OAuthAppFilter) WhereAccessTokenTTL(p entql.IntP) {
 // WhereRefreshTokenTTL applies the entql int predicate on the refresh_token_ttl field.
 func (f *OAuthAppFilter) WhereRefreshTokenTTL(p entql.IntP) {
 	f.Where(p.Field(oauthapp.FieldRefreshTokenTTL))
+}
+
+// WhereLoginTokenTTL applies the entql int predicate on the login_token_ttl field.
+func (f *OAuthAppFilter) WhereLoginTokenTTL(p entql.IntP) {
+	f.Where(p.Field(oauthapp.FieldLoginTokenTTL))
 }
 
 // WhereRefreshTokenRotation applies the entql bool predicate on the refresh_token_rotation field.

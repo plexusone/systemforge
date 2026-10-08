@@ -47,6 +47,8 @@ type OAuthApp struct {
 	AccessTokenTTL int `json:"access_token_ttl,omitempty"`
 	// Refresh token TTL in seconds (default 7 days)
 	RefreshTokenTTL int `json:"refresh_token_ttl,omitempty"`
+	// Default lifetime in seconds of login tokens issued for this client's managed principals; null uses the platform default (ADR-005)
+	LoginTokenTTL *int `json:"login_token_ttl,omitempty"`
 	// Rotate refresh tokens on use
 	RefreshTokenRotation bool `json:"refresh_token_rotation,omitempty"`
 	// Whether this client may create and sign in managed principals; also requires the deployment setting (ADR-005)
@@ -159,7 +161,7 @@ func (*OAuthApp) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case oauthapp.FieldRefreshTokenRotation, oauthapp.FieldManagedPrincipalsEnabled, oauthapp.FieldFirstParty, oauthapp.FieldPublic, oauthapp.FieldActive:
 			values[i] = new(sql.NullBool)
-		case oauthapp.FieldAccessTokenTTL, oauthapp.FieldRefreshTokenTTL:
+		case oauthapp.FieldAccessTokenTTL, oauthapp.FieldRefreshTokenTTL, oauthapp.FieldLoginTokenTTL:
 			values[i] = new(sql.NullInt64)
 		case oauthapp.FieldClientID, oauthapp.FieldName, oauthapp.FieldDescription, oauthapp.FieldLogoURL, oauthapp.FieldAppType:
 			values[i] = new(sql.NullString)
@@ -274,6 +276,13 @@ func (_m *OAuthApp) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field refresh_token_ttl", values[i])
 			} else if value.Valid {
 				_m.RefreshTokenTTL = int(value.Int64)
+			}
+		case oauthapp.FieldLoginTokenTTL:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field login_token_ttl", values[i])
+			} else if value.Valid {
+				_m.LoginTokenTTL = new(int)
+				*_m.LoginTokenTTL = int(value.Int64)
 			}
 		case oauthapp.FieldRefreshTokenRotation:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -438,6 +447,11 @@ func (_m *OAuthApp) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("refresh_token_ttl=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RefreshTokenTTL))
+	builder.WriteString(", ")
+	if v := _m.LoginTokenTTL; v != nil {
+		builder.WriteString("login_token_ttl=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("refresh_token_rotation=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RefreshTokenRotation))
