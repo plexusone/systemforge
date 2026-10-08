@@ -1,175 +1,188 @@
-# Users
+# Humans
 
-Users represent individual accounts in the system.
+A person is a **human principal**: a row in `sf_principals` with `type = human`, joined one-to-one with its `sf_humans` extension. There is no separate user table. Every sign-in method (password, social login, federation sync, SCIM) resolves to the same human principal, so one person has one identity.
 
 ## Schema
 
-The `cf_users` table contains:
+`sf_principals` holds what every principal type shares:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | UUID | Primary key |
-| `email` | string | Unique email address |
-| `name` | string | Display name |
+| `id` | UUID | Primary key, used as the subject (`sub`) in tokens |
+| `type` | enum | `human`, `application`, `agent`, or `service` |
+| `identifier` | string | Unique lookup key; the email for humans |
+| `display_name` | string | Human-readable name |
+| `organization_id` | UUID | Optional owning organization |
+| `active` | bool | Whether the principal can authenticate |
+| `capabilities` | JSON | Principal capabilities |
+| `allowed_scopes` | JSON | Scopes the principal may request |
+| `metadata` | JSON | Custom metadata |
+| `created_at`, `updated_at` | time | Timestamps |
+
+`sf_humans` holds the human-specific fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `principal_id` | UUID | The owning principal |
+| `email` | string | Primary email address |
+| `given_name`, `family_name` | string | Name parts |
 | `avatar_url` | string | Profile picture URL |
-| `password_hash` | string | Argon2id hashed password |
-| `is_platform_admin` | bool | Cross-org admin access |
-| `active` | bool | Account status |
-| `last_login_at` | time | Last login timestamp |
-| `created_at` | time | Account creation time |
-| `updated_at` | time | Last modification time |
+| `locale`, `timezone` | string | Preferences |
+| `is_platform_admin` | bool | Cross-organization admin access |
+| `last_login_at` | time | Last successful login |
+| `email_verified_at` | time | When the email was verified |
 
-## Creating Users
+Related records:
 
-### With Password
+- **Passwords** are rows in `sf_credentials` with type `password` (Argon2id hashes).
+- **Upstream logins** (GitHub, Google, a federation hub) are rows in `sf_external_identities`, keyed by provider and subject.
+- **Organization memberships** are rows in `sf_principal_memberships`; see [Memberships](memberships.md).
+
+## Creating Humans
+
+Use the principal service, which creates the principal and its human extension in one transaction:
 
 ```go
-import "github.com/plexusone/systemforge/identity"
+import "github.com/plexusone/systemforge/identity/principal"
 
-// Hash the password
-hash, err := identity.HashPassword("secure-password")
+principals := principal.NewService(client)
+
+p, err := principals.CreateHuman(ctx, principal.CreateHumanInput{
+    Email:       "user@example.com",
+    DisplayName: "Jane Doe",
+    GivenName:   "Jane",
+    FamilyName:  "Doe",
+})
 if err != nil {
     return err
 }
-
-// Create the user
-user, err := client.User.Create().
-    SetEmail("user@example.com").
-    SetName("John Doe").
-    SetPasswordHash(hash).
-    Save(ctx)
+// p.ID is the principal ID; p.Human holds the extension fields.
 ```
 
-### OAuth-Only User
-
-Users can be created without passwords if they authenticate via OAuth:
+### Setting a Password
 
 ```go
-user, err := client.User.Create().
-    SetEmail("user@example.com").
-    SetName("John Doe").
-    // No password_hash - OAuth only
-    Save(ctx)
+import "github.com/plexusone/systemforge/identity/credential"
 
-// Link OAuth account
-_, err = client.OAuthAccount.Create().
-    SetUserID(user.ID).
-    SetProvider("github").
-    SetProviderUserID("12345").
-    Save(ctx)
+creds := credential.NewService(client)
+
+err := creds.CreatePassword(ctx, credential.CreatePasswordInput{
+    PrincipalID: p.ID,
+    Password:    password,
+})
 ```
 
-## Querying Users
+`VerifyPassword` and `UpdatePassword` on the same service check and rotate it. A human without a password credential signs in only through an upstream provider.
 
-### By Email
+## Email Uniqueness
+
+Emails are unique **ignoring case**. Lookups by email are case-insensitive, and SystemAuth's storage rejects a create or update whose email differs only in case from another human's, so `Ada@Example.com` and `ada@example.com` cannot both exist.
+
+## Querying Humans
+
+### By ID or Email
 
 ```go
-user, err := client.User.Query().
-    Where(user.EmailEQ("user@example.com")).
+p, err := principals.GetByID(ctx, principalID)
+
+// The identifier of a human principal is its email.
+p, err = principals.GetByIdentifier(ctx, "user@example.com")
+```
+
+### With Ent Directly
+
+```go
+import (
+    "github.com/plexusone/systemforge/identity/ent/human"
+    entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
+)
+
+p, err := client.Principal.Query().
+    Where(
+        entprincipal.TypeEQ(entprincipal.TypeHuman),
+        entprincipal.HasHumanWith(human.EmailEqualFold("user@example.com")),
+    ).
+    WithHuman().
     Only(ctx)
 ```
 
-### By Organization
+## Updating Humans
 
 ```go
-users, err := client.User.Query().
-    Where(user.HasMembershipsWith(
-        membership.OrganizationIDEQ(orgID),
-    )).
-    All(ctx)
+name := "Jane Smith"
+family := "Smith"
+
+p, err := principals.UpdateHuman(ctx, principalID, principal.UpdateHumanInput{
+    UpdateInput: principal.UpdateInput{DisplayName: &name},
+    FamilyName:  &family,
+})
 ```
 
-### With Memberships
+`Deactivate` and `Reactivate` toggle `active`; a deactivated principal cannot authenticate.
+
+## SystemAuth Storage
+
+The SystemAuth server works with humans through its `Storage` interface using one value type, `systemauth.HumanPrincipal`, which joins a human principal with its extension:
+
+| Method | Purpose |
+|--------|---------|
+| `CreateHuman(ctx, h)` | Create a human; assigns `h.ID` when it is `uuid.Nil` |
+| `GetHuman(ctx, id)` | Look up by principal ID |
+| `GetHumanByEmail(ctx, email)` | Look up by email, ignoring case |
+| `GetHumanByExternalIdentity(ctx, provider, subject)` | Look up through a linked upstream identity |
+| `LinkExternalIdentity(ctx, principalID, provider, subject)` | Link an upstream identity; relinking the same pair is a no-op |
+| `UpdateHuman(ctx, h)` | Replace the profile fields |
+| `DeleteHuman(ctx, id)` | Delete the human with its extension, external identities, and credentials |
+
+Not-found lookups return `systemauth.ErrPrincipalNotFound`; a taken email returns `systemauth.ErrPrincipalExists`; an upstream identity already linked to another human returns `systemauth.ErrExternalIdentityExists`. Both `systemauth.NewEntStorage` and `systemauth.NewMemoryStorage` implement these methods.
+
+### Password Login
+
+Password login uses an injectable verifier. Because identity IDs are principal IDs, the credential service's `VerifyPassword` plugs in directly:
 
 ```go
-user, err := client.User.Query().
-    Where(user.IDEQ(userID)).
-    WithMemberships(func(q *ent.MembershipQuery) {
-        q.WithOrganization()
-    }).
-    Only(ctx)
+creds := credential.NewService(client)
 
-for _, m := range user.Edges.Memberships {
-    fmt.Printf("Org: %s, Role: %s\n", m.Edges.Organization.Name, m.Role)
-}
+providers := systemauth.NewProvidersFromStorage(
+    systemauth.NewEntStorage(client),
+    systemauth.WithProviderPasswordVerifier(creds.VerifyPassword),
+)
+
+session, err := providers.Authentication.Authenticate(ctx, &systemauth.AuthenticateRequest{
+    Method:     systemauth.AuthMethodPassword,
+    Identifier: "user@example.com",
+    Password:   password,
+})
 ```
 
-## Updating Users
+A person who first signed in with a social provider and later sets a password authenticates as the same principal.
 
-```go
-user, err := client.User.UpdateOneID(userID).
-    SetName("Jane Doe").
-    SetAvatarURL("https://example.com/avatar.jpg").
-    Save(ctx)
-```
+### Federation Sync
 
-## Password Management
-
-### Verify Password
-
-```go
-import "github.com/plexusone/systemforge/identity"
-
-user, _ := client.User.Query().
-    Where(user.EmailEQ(email)).
-    Only(ctx)
-
-if user.PasswordHash == "" {
-    // User has no password (OAuth only)
-    return ErrNoPassword
-}
-
-if !identity.VerifyPassword(password, user.PasswordHash) {
-    return ErrInvalidPassword
-}
-```
-
-### Change Password
-
-```go
-newHash, _ := identity.HashPassword(newPassword)
-
-_, err := client.User.UpdateOneID(userID).
-    SetPasswordHash(newHash).
-    Save(ctx)
-```
-
-## Deactivating Users
-
-Soft-delete by deactivating:
-
-```go
-_, err := client.User.UpdateOneID(userID).
-    SetActive(false).
-    Save(ctx)
-```
+Identities synced from a federation hub are linked as external identities with the provider `systemauth.FederationProvider` and the federation identity ID as the subject. Creating an identity whose email already exists links the existing human instead of creating a second one.
 
 ## Platform Admins
 
-Platform admins have access across all organizations:
+`is_platform_admin` on the human extension grants cross-organization access:
 
 ```go
-// Make user a platform admin
-_, err := client.User.UpdateOneID(userID).
-    SetIsPlatformAdmin(true).
-    Save(ctx)
-
-// Check if user is platform admin
-if user.IsPlatformAdmin {
-    // Grant full access
-}
+admin := true
+_, err := principals.UpdateHuman(ctx, principalID, principal.UpdateHumanInput{
+    IsPlatformAdmin: &admin,
+})
 ```
 
-## User Edges
+## Edges
 
-Users have relationships to:
+A human principal relates to:
 
 | Edge | Target | Description |
 |------|--------|-------------|
-| `memberships` | Membership | Organization memberships |
-| `oauth_accounts` | OAuthAccount | Linked OAuth providers |
-| `refresh_tokens` | RefreshToken | Active sessions |
-| `api_keys` | APIKey | User's API keys |
-| `oauth_apps` | OAuthApp | Apps created by user |
-| `oauth_tokens` | OAuthToken | Tokens issued to user |
+| `human` | Human | Human extension |
+| `credentials` | Credential | Passwords, API keys, keypairs |
+| `external_identities` | ExternalIdentity | Linked upstream logins |
+| `principal_memberships` | PrincipalMembership | Organization memberships |
+| `principal_tokens` | PrincipalToken | Issued tokens |
+| `owned_organizations` | Organization | Personal organizations |
+| `owned_oauth_apps` | OAuthApp | OAuth apps it owns |
 | `oauth_consents` | OAuthConsent | Consent grants |

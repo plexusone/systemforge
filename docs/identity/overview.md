@@ -1,24 +1,27 @@
 # Identity Module Overview
 
-The Identity module provides core user and organization management for multi-tenant SaaS applications.
+The Identity module provides principal and organization management for multi-tenant SaaS applications.
 
 ## Core Concepts
 
-### Users
+### Principals
 
-Users are individual accounts that can authenticate and access the system. A user can belong to multiple organizations with different roles in each.
+A **principal** is any actor that can authenticate: a human, an OAuth application, an AI agent, or a backend service. Every principal is a row in `sf_principals`, with a one-to-one extension table for its type. A person is a human principal; there is no separate user table. See [Humans](users.md).
 
 ```go
-user, err := client.User.Create().
-    SetEmail("user@example.com").
-    SetName("John Doe").
-    SetPasswordHash(hashedPassword).
-    Save(ctx)
+import "github.com/plexusone/systemforge/identity/principal"
+
+principals := principal.NewService(client)
+
+p, err := principals.CreateHuman(ctx, principal.CreateHumanInput{
+    Email:       "user@example.com",
+    DisplayName: "Jane Doe",
+})
 ```
 
 ### Organizations
 
-Organizations (tenants) group users together with shared resources. Each organization has its own settings, members, and data.
+Organizations (tenants) group principals with shared resources. Each organization has its own settings, members, and data.
 
 ```go
 org, err := client.Organization.Create().
@@ -30,98 +33,112 @@ org, err := client.Organization.Create().
 
 ### Memberships
 
-Memberships link users to organizations with specific roles. A user can have different roles in different organizations.
+Memberships link principals to organizations with a role, and can be suspended with their `active` flag. See [Memberships](memberships.md).
 
 ```go
-membership, err := client.Membership.Create().
-    SetUserID(user.ID).
-    SetOrganizationID(org.ID).
-    SetRole("admin").
-    Save(ctx)
+import "github.com/plexusone/systemforge/identity/organization"
+
+orgs := organization.NewService(client)
+
+m, err := orgs.AddMember(ctx, organization.AddMemberInput{
+    OrganizationID: org.ID,
+    PrincipalID:    p.ID,
+    Role:           "admin",
+})
 ```
+
+### Credentials
+
+Passwords, API keys, client secrets, and public keys are rows in `sf_credentials`, typed and owned by a principal, and managed by `identity/credential`.
 
 ## Database Schema
 
-All tables use the `cf_` prefix to avoid conflicts:
+All tables use the `sf_` prefix:
 
 | Table | Description |
 |-------|-------------|
-| `cf_users` | User accounts |
-| `cf_organizations` | Organizations/tenants |
-| `cf_memberships` | User-org relationships |
-| `cf_oauth_accounts` | External OAuth logins |
-| `cf_refresh_tokens` | Session refresh tokens |
-| `cf_api_keys` | API key credentials |
+| `sf_principals` | Every actor: humans, applications, agents, services |
+| `sf_humans` | Human extension (email, names, avatar, platform admin) |
+| `sf_applications` | OAuth application extension |
+| `sf_agents` | AI agent extension |
+| `sf_service_principals` | Backend service extension |
+| `sf_organizations` | Organizations (tenants) |
+| `sf_principal_memberships` | Principal-organization memberships |
+| `sf_credentials` | Passwords, API keys, client secrets, keypairs |
+| `sf_external_identities` | Linked upstream logins (GitHub, Google, federation) |
+| `sf_principal_tokens` | Tokens issued to principals |
 
 ## Entity Relationships
 
 ```
-┌─────────┐     ┌─────────────┐     ┌──────────────┐
-│  User   │────▶│ Membership  │◀────│ Organization │
-└─────────┘     └─────────────┘     └──────────────┘
-     │                                     │
-     │                                     │
-     ▼                                     ▼
-┌─────────────┐                    ┌─────────────┐
-│OAuthAccount │                    │   APIKey    │
-└─────────────┘                    └─────────────┘
-     │
-     ▼
-┌─────────────┐
-│RefreshToken │
-└─────────────┘
+                      ┌────────────────────┐
+                      │     Principal      │
+                      │ human | application│
+                      │ agent | service    │
+                      └─────────┬──────────┘
+          ┌──────────────┬──────┴───────┬────────────────┐
+          ▼              ▼              ▼                ▼
+   ┌────────────┐ ┌────────────┐ ┌──────────────┐ ┌─────────────────────┐
+   │   Human    │ │ Credential │ │  External    │ │ PrincipalMembership │
+   │ (extension)│ │            │ │  Identity    │ │                     │
+   └────────────┘ └────────────┘ └──────────────┘ └──────────┬──────────┘
+                                                             ▼
+                                                     ┌──────────────┐
+                                                     │ Organization │
+                                                     └──────────────┘
 ```
 
 ## Key Features
 
 ### Multi-Tenancy
 
-Every resource can be scoped to an organization:
+Every resource can be scoped to an organization. To find the human members of an organization:
 
 ```go
-// Query users in an organization
-users, err := client.User.Query().
-    Where(user.HasMembershipsWith(
-        membership.OrganizationIDEQ(orgID),
-    )).
+import (
+    entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
+    "github.com/plexusone/systemforge/identity/ent/principalmembership"
+)
+
+members, err := client.Principal.Query().
+    Where(
+        entprincipal.TypeEQ(entprincipal.TypeHuman),
+        entprincipal.HasPrincipalMembershipsWith(
+            principalmembership.OrganizationIDEQ(orgID),
+            principalmembership.ActiveEQ(true),
+        ),
+    ).
+    WithHuman().
     All(ctx)
 ```
 
 ### Platform Admins
 
-Users can be marked as platform admins for cross-organization access:
+Humans can be marked as platform admins for cross-organization access:
 
 ```go
-user.Update().
-    SetIsPlatformAdmin(true).
-    Save(ctx)
+admin := true
+_, err := principals.UpdateHuman(ctx, p.ID, principal.UpdateHumanInput{
+    IsPlatformAdmin: &admin,
+})
 ```
 
-### OAuth Integration
+### Upstream Logins
 
-Users can authenticate via external OAuth providers (GitHub, Google, SystemAuth). The [OAuth Client](oauthclient.md) package handles the OAuth flow:
+Humans can authenticate through upstream OAuth providers (GitHub, Google, SystemAuth). The [OAuth Client](oauthclient.md) package handles the OAuth flow:
 
 ```go
 import cfoauth "github.com/plexusone/systemforge/identity/oauthclient"
 
-// Exchange OAuth code for user info
-user, err := cfoauth.FetchGitHubUser(ctx, githubConfig, code)
+// Exchange an OAuth code for the provider's user info.
+info, err := cfoauth.FetchGitHubUser(ctx, githubConfig, code)
 ```
 
-OAuth accounts are then linked to local users:
-
-```go
-oauthAccount, err := client.OAuthAccount.Create().
-    SetUserID(user.ID).
-    SetProvider("github").
-    SetProviderUserID("12345").
-    SetAccessToken(encryptedToken).
-    Save(ctx)
-```
+The upstream identity is recorded as an external identity on the human principal, keyed by provider and subject, so later logins from the same provider resolve to the same person. SystemAuth's social login does this automatically.
 
 ## Next Steps
 
-- [Users](users.md) - User management in detail
+- [Humans](users.md) - Human principals, passwords, and SystemAuth storage
 - [Organizations](organizations.md) - Organization setup
 - [Memberships](memberships.md) - Role-based membership
 - [API Keys](api-keys.md) - Server-to-server authentication

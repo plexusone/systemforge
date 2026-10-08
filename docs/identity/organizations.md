@@ -4,7 +4,7 @@ Organizations represent tenants in a multi-tenant application.
 
 ## Schema
 
-The `cf_organizations` table contains:
+The `sf_organizations` table contains:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -66,12 +66,13 @@ org, err := client.Organization.Query().
     Only(ctx)
 ```
 
-### User's Organizations
+### A Principal's Organizations
 
 ```go
 orgs, err := client.Organization.Query().
-    Where(organization.HasMembershipsWith(
-        membership.UserIDEQ(userID),
+    Where(organization.HasPrincipalMembershipsWith(
+        principalmembership.PrincipalIDEQ(principalID),
+        principalmembership.ActiveEQ(true),
     )).
     All(ctx)
 ```
@@ -81,13 +82,13 @@ orgs, err := client.Organization.Query().
 ```go
 org, err := client.Organization.Query().
     Where(organization.IDEQ(orgID)).
-    WithMemberships(func(q *ent.MembershipQuery) {
-        q.WithUser()
+    WithPrincipalMemberships(func(q *ent.PrincipalMembershipQuery) {
+        q.WithPrincipal()
     }).
     Only(ctx)
 
-for _, m := range org.Edges.Memberships {
-    fmt.Printf("User: %s, Role: %s\n", m.Edges.User.Name, m.Role)
+for _, m := range org.Edges.PrincipalMemberships {
+    fmt.Printf("Member: %s, Role: %s\n", m.Edges.Principal.DisplayName, m.Role)
 }
 ```
 
@@ -134,21 +135,26 @@ Organizations have relationships to:
 
 | Edge | Target | Description |
 |------|--------|-------------|
-| `memberships` | Membership | Organization members |
-| `api_keys` | APIKey | Organization API keys |
+| `principal_memberships` | PrincipalMembership | Organization members |
+| `principals` | Principal | Principals scoped to the organization |
 | `oauth_apps` | OAuthApp | OAuth apps owned by org |
-| `service_accounts` | ServiceAccount | Service accounts |
+| `owner` | Principal | Owner of a personal organization |
 
 ## Multi-Tenant Queries
 
 ### Scope All Queries to Organization
 
 ```go
-func getUsersInOrg(ctx context.Context, client *ent.Client, orgID uuid.UUID) ([]*ent.User, error) {
-    return client.User.Query().
-        Where(user.HasMembershipsWith(
-            membership.OrganizationIDEQ(orgID),
-        )).
+func getHumansInOrg(ctx context.Context, client *ent.Client, orgID uuid.UUID) ([]*ent.Principal, error) {
+    return client.Principal.Query().
+        Where(
+            principal.TypeEQ(principal.TypeHuman),
+            principal.HasPrincipalMembershipsWith(
+                principalmembership.OrganizationIDEQ(orgID),
+                principalmembership.ActiveEQ(true),
+            ),
+        ).
+        WithHuman().
         All(ctx)
 }
 ```
