@@ -114,6 +114,7 @@ nav:
       - "ADR-006: Organization Lifecycle": design/adrs/ADR-006-organization-lifecycle-personal-team-slugs.md
       - "ADR-007: Memberships and Entitlements as Claims": design/adrs/ADR-007-memberships-and-entitlements-as-claims.md
       - "ADR-008: Resource-Scoped Collaborators": design/adrs/ADR-008-resource-scoped-collaborators.md
+      - "ADR-009: Management Is a Relationship": design/adrs/ADR-009-management-is-a-relationship.md
     - Authentication PRD: design/PRD_AUTHN.md
     - OAuth PRD: design/PRD_OAUTH.md
     - Authentication TRD: design/TRD_AUTHN.md

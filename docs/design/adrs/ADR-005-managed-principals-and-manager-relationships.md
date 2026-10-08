@@ -1,6 +1,6 @@
 # ADR-005: Managed Principals and Manager Relationships
 
-**Status:** Accepted
+**Status:** Accepted. Amended by ADR-009: management is a relationship, independent of email; the definition of *managed principal* and invariant 4 below are superseded by it.
 **Deciders:** @grokify
 **Relates to:** ADR-004 / INIT-SYSTEMFORGE-008 (single `Principal` root this
 builds on), INIT-SYSTEMFORGE-006 (email verification, used when a managed
