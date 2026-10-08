@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"path"
 	"testing"
 
 	"github.com/google/uuid"
@@ -105,11 +107,12 @@ func (a *inviteAPI) invite(email string) (string, string) {
 	if out.Invite.InviterPrincipalID != a.people["admin"].String() {
 		a.t.Errorf("inviter = %s, want the caller", out.Invite.InviterPrincipalID)
 	}
-	inv, err := a.db.Invite.Get(context.Background(), uuid.MustParse(out.Invite.ID))
+	// The token reaches the invitee only in the link.
+	u, err := url.Parse(out.InviteURL)
 	if err != nil {
-		a.t.Fatalf("load invite: %v", err)
+		a.t.Fatalf("invite URL %q: %v", out.InviteURL, err)
 	}
-	return out.Invite.ID, inv.Token
+	return out.Invite.ID, path.Base(u.Path)
 }
 
 func TestInviteManagementAuthorization(t *testing.T) {
