@@ -3,6 +3,7 @@ package marketplace
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -17,6 +18,9 @@ type API struct {
 	listings ListingService
 	licenses LicenseService
 	checkout CheckoutService
+
+	caller    CallerResolver
+	purchases PurchaseAuthorizer
 }
 
 // APIConfig holds API configuration.
@@ -25,14 +29,20 @@ type APIConfig struct {
 	BasePath string
 }
 
-// NewAPI creates a new marketplace API handler.
-func NewAPI(humaAPI huma.API, cfg APIConfig, svc Service) *API {
+// NewAPI creates a new marketplace API handler. Checkout acts for the
+// authenticated caller (see WithCallerResolver) and requires a
+// PurchaseAuthorizer (see WithPurchaseAuthorizer).
+func NewAPI(humaAPI huma.API, cfg APIConfig, svc Service, opts ...APIOption) *API {
 	api := &API{
 		huma:     humaAPI,
 		config:   cfg,
 		listings: svc.Listings(),
 		licenses: svc.Licenses(),
 		checkout: svc.Checkout(),
+		caller:   RequestPrincipalCaller,
+	}
+	for _, opt := range opts {
+		opt(api)
 	}
 	api.registerEndpoints()
 	return api
@@ -775,10 +785,12 @@ type CreateCheckoutInput struct {
 	Body struct {
 		ListingID      string `json:"listing_id" required:"true" format:"uuid"`
 		OrganizationID string `json:"organization_id" required:"true" format:"uuid"`
-		PurchaserID    string `json:"purchaser_id" required:"true" format:"uuid"`
-		Seats          *int   `json:"seats,omitempty" minimum:"1"`
-		SuccessURL     string `json:"success_url" required:"true" format:"uri"`
-		CancelURL      string `json:"cancel_url" required:"true" format:"uri"`
+		// PurchaserID is deprecated: the purchaser is the authenticated
+		// caller. When present it must name the caller.
+		PurchaserID string `json:"purchaser_id,omitempty" required:"false" format:"uuid" doc:"Deprecated: the purchaser is the authenticated caller; when present it must equal the caller"`
+		Seats       *int   `json:"seats,omitempty" minimum:"1"`
+		SuccessURL  string `json:"success_url" required:"true" format:"uri"`
+		CancelURL   string `json:"cancel_url" required:"true" format:"uri"`
 	}
 }
 
@@ -804,7 +816,7 @@ func (a *API) registerCheckoutEndpoints() {
 		Method:        http.MethodPost,
 		Path:          basePath + "/checkout",
 		Summary:       "Create checkout session",
-		Description:   "Creates a Stripe checkout session for purchasing a listing",
+		Description:   "Creates a Stripe checkout session in which the authenticated caller buys a listing for an organization they may purchase for",
 		Tags:          []string{"Checkout"},
 		DefaultStatus: http.StatusOK,
 	}, a.createCheckout)
@@ -823,9 +835,36 @@ func (a *API) createCheckout(ctx context.Context, input *CreateCheckoutInput) (*
 	if err != nil {
 		return nil, huma.Error400BadRequest("invalid organization_id")
 	}
-	purchaserID, err := uuid.Parse(input.Body.PurchaserID)
+	if a.purchases == nil {
+		return nil, huma.Error501NotImplemented("checkout purchase authorization not configured")
+	}
+
+	// The purchaser is whoever is authenticated, never a body field, and
+	// must be allowed to buy for the organization.
+	purchaserID, err := a.caller(ctx)
+	if errors.Is(err, ErrNoCaller) {
+		return nil, huma.Error401Unauthorized("authentication required")
+	}
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid purchaser_id")
+		slog.ErrorContext(ctx, "marketplace: identifying caller", "error", err)
+		return nil, huma.Error500InternalServerError("identifying caller")
+	}
+	if input.Body.PurchaserID != "" {
+		claimed, err := uuid.Parse(input.Body.PurchaserID)
+		if err != nil {
+			return nil, huma.Error400BadRequest("invalid purchaser_id")
+		}
+		if claimed != purchaserID {
+			return nil, huma.Error403Forbidden("purchaser_id must be the authenticated caller")
+		}
+	}
+	allowed, err := a.purchases.CanPurchase(ctx, purchaserID, orgID)
+	if err != nil {
+		slog.ErrorContext(ctx, "marketplace: checking purchase authorization", "error", err)
+		return nil, huma.Error500InternalServerError("checking purchase authorization")
+	}
+	if !allowed {
+		return nil, huma.Error403Forbidden("not allowed to purchase for this organization")
 	}
 
 	req := CheckoutRequest{
