@@ -1,10 +1,11 @@
 # ADR-006: Organization Lifecycle — Signup, Personal and Team Organizations, Slugs
 
-**Status:** Proposed
+**Status:** Accepted
 **Deciders:** @grokify
 **Relates to:** ADR-002 (social login creates principals), ADR-004 (the
 `Principal` root), ADR-005 (managed principals), ADR-007 (memberships as
 claims), ADR-008 (resource-scoped collaborators).
+**Updates:** `docs/design/architecture/organizations.md` (lifecycle, slugs, conversion, plans and entitlements).
 
 ## Context
 
