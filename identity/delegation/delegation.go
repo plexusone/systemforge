@@ -5,6 +5,7 @@ package delegation
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,9 @@ type Link struct {
 	DisplayName   string         `json:"display_name"`
 	Constraints   Constraints    `json:"constraints"`
 	GrantedAt     time.Time      `json:"granted_at"`
+	// Active reports whether the principal is active; a chain with an
+	// inactive principal authorizes nothing.
+	Active bool `json:"active"`
 }
 
 // Chain represents a full delegation chain from root to current principal.
@@ -49,7 +53,11 @@ func (c *Chain) Depth() int {
 	return len(c.Links)
 }
 
-// Constraints defines what a delegated principal can do.
+// Constraints defines what a delegated principal can do. In a delegation
+// request, an empty list leaves that dimension unrestricted by the
+// delegation. In a chain's effective constraints, a nil list is
+// unrestricted and an empty, non-nil list allows nothing, which is what
+// constraints that do not overlap leave.
 type Constraints struct {
 	// AllowedCapabilities lists capabilities the delegate can use.
 	// Empty means all capabilities of the parent are available.
@@ -120,3 +128,21 @@ type Service interface {
 	// by intersecting constraints through the delegation chain.
 	ComputeEffectiveConstraints(chain *Chain) Constraints
 }
+
+var (
+	// ErrNotFound is returned for an unknown principal.
+	ErrNotFound = errors.New("delegation: principal not found")
+	// ErrNotAgent is returned when the delegate is not an agent.
+	ErrNotAgent = errors.New("delegation: delegate must be an agent principal")
+	// ErrCannotDelegate is returned when the delegator lacks the
+	// can_delegate capability or is not active.
+	ErrCannotDelegate = errors.New("delegation: delegator cannot delegate")
+	// ErrSelfDelegation is returned when a principal delegates to itself.
+	ErrSelfDelegation = errors.New("delegation: a principal cannot delegate to itself")
+	// ErrCircularDelegation is returned when a delegation would make the
+	// delegate its own ancestor.
+	ErrCircularDelegation = errors.New("delegation: circular delegation")
+	// ErrDelegatorMismatch is returned when revoking a delegation the
+	// principal did not grant.
+	ErrDelegatorMismatch = errors.New("delegation: delegator mismatch")
+)
