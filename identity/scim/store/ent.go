@@ -3,6 +3,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -10,10 +11,13 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/ent"
-	"github.com/plexusone/systemforge/identity/ent/membership"
+	"github.com/plexusone/systemforge/identity/ent/credential"
+	"github.com/plexusone/systemforge/identity/ent/externalidentity"
+	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
-	"github.com/plexusone/systemforge/identity/ent/user"
+	"github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/scim"
 	"github.com/plexusone/systemforge/identity/scim/filter"
 )
@@ -54,43 +58,42 @@ func NewEntStore(client *ent.Client, config *Config) *EntStore {
 
 // User Operations
 
+// humanQuery returns a query over human principals with the Human edge loaded.
+func (s *EntStore) humanQuery() *ent.PrincipalQuery {
+	return s.client.Principal.Query().
+		Where(principal.TypeEQ(principal.TypeHuman)).
+		WithHuman()
+}
+
+func (s *EntStore) onlyUser(ctx context.Context, q *ent.PrincipalQuery) (*scim.User, error) {
+	p, err := q.Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, scim.ErrNotFound("user not found")
+		}
+		return nil, scim.ErrInternal(err.Error())
+	}
+	return s.principalToSCIMUser(p), nil
+}
+
 // GetUserByID retrieves a user by SCIM ID.
 func (s *EntStore) GetUserByID(ctx context.Context, id string) (*scim.User, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, scim.ErrNotFound("invalid user ID")
 	}
-
-	u, err := s.client.User.Get(ctx, uid)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, scim.ErrNotFound("user not found")
-		}
-		return nil, scim.ErrInternal(err.Error())
-	}
-
-	return s.entUserToSCIM(u), nil
+	return s.onlyUser(ctx, s.humanQuery().Where(principal.IDEQ(uid)))
 }
 
-// GetUserByUserName retrieves a user by userName (email).
+// GetUserByUserName retrieves a user by userName (email). userName is not
+// case-exact (RFC 7643 section 4.1.1), so the match ignores case.
 func (s *EntStore) GetUserByUserName(ctx context.Context, userName string) (*scim.User, error) {
-	u, err := s.client.User.Query().
-		Where(user.EmailEQ(userName)).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, scim.ErrNotFound("user not found")
-		}
-		return nil, scim.ErrInternal(err.Error())
-	}
-
-	return s.entUserToSCIM(u), nil
+	return s.onlyUser(ctx, s.humanQuery().Where(principal.HasHumanWith(human.EmailEqualFold(userName))))
 }
 
 // GetUserByExternalID retrieves a user by externalId.
-// Since SystemForge doesn't have an externalId field, we return not found.
+// SystemForge does not store externalId, so this always reports not found.
 func (s *EntStore) GetUserByExternalID(ctx context.Context, externalID string) (*scim.User, error) {
-	// SystemForge doesn't store externalId - could be added as metadata
 	return nil, scim.ErrNotFound("user not found")
 }
 
@@ -98,7 +101,7 @@ func (s *EntStore) GetUserByExternalID(ctx context.Context, externalID string) (
 //
 //nolint:dupl // Mirrors ListGroups - same query pattern for different entity types
 func (s *EntStore) ListUsers(ctx context.Context, opts scim.ListOptions) ([]*scim.User, int, error) {
-	query := s.client.User.Query()
+	query := s.humanQuery()
 
 	// Apply filter if provided
 	if opts.Filter != "" {
@@ -127,20 +130,68 @@ func (s *EntStore) ListUsers(ctx context.Context, opts scim.ListOptions) ([]*sci
 	}
 	query = query.Offset(offset).Limit(opts.Count)
 
-	users, err := query.All(ctx)
+	principals, err := query.All(ctx)
 	if err != nil {
 		return nil, 0, scim.ErrInternal(err.Error())
 	}
 
-	result := make([]*scim.User, len(users))
-	for i, u := range users {
-		result[i] = s.entUserToSCIM(u)
+	result := make([]*scim.User, len(principals))
+	for i, p := range principals {
+		result[i] = s.principalToSCIMUser(p)
 	}
 
 	return result, total, nil
 }
 
-// CreateUser creates a new user.
+// emailTaken reports whether a human other than exceptID uses email,
+// ignoring case.
+func emailTaken(ctx context.Context, tx *ent.Tx, email string, exceptID uuid.UUID) (bool, error) {
+	return tx.Human.Query().
+		Where(human.EmailEqualFold(email), human.PrincipalIDNEQ(exceptID)).
+		Exist(ctx)
+}
+
+// primaryPhoto returns the primary or "photo"-typed photo URL, if any.
+func primaryPhoto(photos []scim.MultiValue) (string, bool) {
+	for _, photo := range photos {
+		if photo.Primary || photo.Type == "photo" {
+			return photo.Value, true
+		}
+	}
+	return "", false
+}
+
+// withTx runs fn in a transaction, rolling back on error.
+func (s *EntStore) withTx(ctx context.Context, fn func(tx *ent.Tx) error) error {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return scim.ErrInternal(err.Error())
+	}
+	if err := fn(tx); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return scim.ErrInternal(errors.Join(err, rbErr).Error())
+		}
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return scim.ErrInternal(err.Error())
+	}
+	return nil
+}
+
+// asSCIMError passes SCIM errors through and wraps anything else as internal.
+func asSCIMError(err error) error {
+	var se *scim.Error
+	if errors.As(err, &se) {
+		return se
+	}
+	if ent.IsConstraintError(err) {
+		return scim.ErrConflict("user already exists")
+	}
+	return scim.ErrInternal(err.Error())
+}
+
+// CreateUser creates a new user as a human principal.
 func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.User, error) {
 	// Extract email from userName or emails
 	email := scimUser.UserName
@@ -159,15 +210,6 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		return nil, scim.ErrInvalidValue("userName or email is required")
 	}
 
-	// Check for existing user
-	exists, err := s.client.User.Query().Where(user.EmailEQ(email)).Exist(ctx)
-	if err != nil {
-		return nil, scim.ErrInternal(err.Error())
-	}
-	if exists {
-		return nil, scim.ErrConflict("user with this email already exists")
-	}
-
 	// Extract name
 	name := scimUser.DisplayName
 	if name == "" && scimUser.Name != nil {
@@ -183,29 +225,37 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		active = *scimUser.Active
 	}
 
-	// Create user
-	create := s.client.User.Create().
-		SetEmail(email).
-		SetName(name).
-		SetActive(active)
-
-	// Set optional fields
-	for _, photo := range scimUser.Photos {
-		if photo.Primary || photo.Type == "photo" {
-			create = create.SetAvatarURL(photo.Value)
-			break
+	id := uuid.New()
+	err := s.withTx(ctx, func(tx *ent.Tx) error {
+		taken, err := emailTaken(ctx, tx, email, uuid.Nil)
+		if err != nil {
+			return err
 		}
-	}
-
-	u, err := create.Save(ctx)
+		if taken {
+			return scim.ErrConflict("user with this email already exists")
+		}
+		if _, err := tx.Principal.Create().
+			SetID(id).
+			SetType(principal.TypeHuman).
+			SetIdentifier(email).
+			SetDisplayName(name).
+			SetActive(active).
+			Save(ctx); err != nil {
+			return err
+		}
+		hc := tx.Human.Create().
+			SetPrincipalID(id).
+			SetEmail(email)
+		if url, ok := primaryPhoto(scimUser.Photos); ok {
+			hc.SetAvatarURL(url)
+		}
+		_, err = hc.Save(ctx)
+		return err
+	})
 	if err != nil {
-		if ent.IsConstraintError(err) {
-			return nil, scim.ErrConflict("user already exists")
-		}
-		return nil, scim.ErrInternal(err.Error())
+		return nil, asSCIMError(err)
 	}
-
-	return s.entUserToSCIM(u), nil
+	return s.GetUserByID(ctx, id.String())
 }
 
 // UpdateUser updates an existing user.
@@ -215,58 +265,99 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 		return nil, scim.ErrNotFound("invalid user ID")
 	}
 
-	update := s.client.User.UpdateOneID(uid)
-
-	// Update fields if provided
-	if scimUser.UserName != "" {
-		update = update.SetEmail(scimUser.UserName)
-	}
-	if scimUser.DisplayName != "" {
-		update = update.SetName(scimUser.DisplayName)
-	} else if scimUser.Name != nil && scimUser.Name.Formatted != "" {
-		update = update.SetName(scimUser.Name.Formatted)
-	}
-	if scimUser.Active != nil {
-		update = update.SetActive(*scimUser.Active)
-	}
-
-	// Update avatar from photos
-	for _, photo := range scimUser.Photos {
-		if photo.Primary || photo.Type == "photo" {
-			update = update.SetAvatarURL(photo.Value)
-			break
+	err = s.withTx(ctx, func(tx *ent.Tx) error {
+		p, err := tx.Principal.Query().
+			Where(principal.IDEQ(uid), principal.TypeEQ(principal.TypeHuman)).
+			WithHuman().
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return scim.ErrNotFound("user not found")
+			}
+			return err
 		}
-	}
+		if p.Edges.Human == nil {
+			return scim.ErrInternal("user has no human record")
+		}
 
-	u, err := update.Save(ctx)
+		pu := tx.Principal.UpdateOne(p)
+		hu := tx.Human.UpdateOne(p.Edges.Human)
+
+		// Update fields if provided
+		if scimUser.UserName != "" {
+			taken, err := emailTaken(ctx, tx, scimUser.UserName, uid)
+			if err != nil {
+				return err
+			}
+			if taken {
+				return scim.ErrConflict("email already in use")
+			}
+			pu.SetIdentifier(scimUser.UserName)
+			hu.SetEmail(scimUser.UserName)
+		}
+		if scimUser.DisplayName != "" {
+			pu.SetDisplayName(scimUser.DisplayName)
+		} else if scimUser.Name != nil && scimUser.Name.Formatted != "" {
+			pu.SetDisplayName(scimUser.Name.Formatted)
+		}
+		if scimUser.Active != nil {
+			pu.SetActive(*scimUser.Active)
+		}
+		if url, ok := primaryPhoto(scimUser.Photos); ok {
+			hu.SetAvatarURL(url)
+		}
+
+		if _, err := pu.Save(ctx); err != nil {
+			return err
+		}
+		_, err = hu.Save(ctx)
+		return err
+	})
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, scim.ErrNotFound("user not found")
-		}
-		if ent.IsConstraintError(err) {
-			return nil, scim.ErrConflict("email already in use")
-		}
-		return nil, scim.ErrInternal(err.Error())
+		return nil, asSCIMError(err)
 	}
-
-	return s.entUserToSCIM(u), nil
+	return s.GetUserByID(ctx, id)
 }
 
-// DeleteUser deletes a user.
+// DeleteUser deletes a user together with its group memberships and the
+// records that belong only to it.
 func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return scim.ErrNotFound("invalid user ID")
 	}
 
-	err = s.client.User.DeleteOneID(uid).Exec(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
+	err = s.withTx(ctx, func(tx *ent.Tx) error {
+		exists, err := tx.Principal.Query().
+			Where(principal.IDEQ(uid), principal.TypeEQ(principal.TypeHuman)).
+			Exist(ctx)
+		if err != nil {
+			return err
+		}
+		if !exists {
 			return scim.ErrNotFound("user not found")
+		}
+		if _, err := tx.PrincipalMembership.Delete().Where(principalmembership.PrincipalIDEQ(uid)).Exec(ctx); err != nil {
+			return err
+		}
+		if _, err := tx.Human.Delete().Where(human.PrincipalIDEQ(uid)).Exec(ctx); err != nil {
+			return err
+		}
+		if _, err := tx.ExternalIdentity.Delete().Where(externalidentity.PrincipalIDEQ(uid)).Exec(ctx); err != nil {
+			return err
+		}
+		if _, err := tx.Credential.Delete().Where(credential.PrincipalIDEQ(uid)).Exec(ctx); err != nil {
+			return err
+		}
+		return tx.Principal.DeleteOneID(uid).Exec(ctx)
+	})
+	if err != nil {
+		var se *scim.Error
+		if errors.As(err, &se) {
+			return se
 		}
 		return scim.ErrInternal(err.Error())
 	}
-
 	return nil
 }
 
@@ -457,8 +548,11 @@ func (s *EntStore) GetGroupsForUser(ctx context.Context, userID string) ([]scim.
 		return nil, scim.ErrNotFound("invalid user ID")
 	}
 
-	memberships, err := s.client.Membership.Query().
-		Where(membership.UserIDEQ(uid)).
+	memberships, err := s.client.PrincipalMembership.Query().
+		Where(
+			principalmembership.PrincipalIDEQ(uid),
+			principalmembership.ActiveEQ(true),
+		).
 		WithOrganization().
 		All(ctx)
 	if err != nil {
@@ -480,7 +574,7 @@ func (s *EntStore) GetGroupsForUser(ctx context.Context, userID string) ([]scim.
 	return groups, nil
 }
 
-// GetMembersForGroup returns all members of a group.
+// GetMembersForGroup returns all human members of a group.
 //
 //nolint:dupl // Mirrors GetGroupsForUser - intentional symmetry for membership queries
 func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]scim.MemberRef, error) {
@@ -489,9 +583,13 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 		return nil, scim.ErrNotFound("invalid group ID")
 	}
 
-	memberships, err := s.client.Membership.Query().
-		Where(membership.OrganizationIDEQ(gid)).
-		WithUser().
+	memberships, err := s.client.PrincipalMembership.Query().
+		Where(
+			principalmembership.OrganizationIDEQ(gid),
+			principalmembership.ActiveEQ(true),
+			principalmembership.HasPrincipalWith(principal.TypeEQ(principal.TypeHuman)),
+		).
+		WithPrincipal().
 		All(ctx)
 	if err != nil {
 		return nil, scim.ErrInternal(err.Error())
@@ -499,11 +597,11 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 
 	members := make([]scim.MemberRef, 0, len(memberships))
 	for _, m := range memberships {
-		if m.Edges.User != nil {
+		if m.Edges.Principal != nil {
 			members = append(members, scim.MemberRef{
-				Value:   m.UserID.String(),
-				Ref:     s.config.BaseURL + "/Users/" + m.UserID.String(),
-				Display: m.Edges.User.Name,
+				Value:   m.PrincipalID.String(),
+				Ref:     s.config.BaseURL + "/Users/" + m.PrincipalID.String(),
+				Display: m.Edges.Principal.DisplayName,
 				Type:    "User",
 			})
 		}
@@ -512,7 +610,8 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 	return members, nil
 }
 
-// AddMemberToGroup adds a user to a group.
+// AddMemberToGroup adds a user to a group. Adding an existing member is a
+// no-op; re-adding a deactivated member reactivates the membership.
 func (s *EntStore) AddMemberToGroup(ctx context.Context, groupID, userID string) error {
 	gid, err := uuid.Parse(groupID)
 	if err != nil {
@@ -523,23 +622,27 @@ func (s *EntStore) AddMemberToGroup(ctx context.Context, groupID, userID string)
 		return scim.ErrNotFound("invalid user ID")
 	}
 
-	// Check if membership already exists
-	exists, err := s.client.Membership.Query().
+	existing, err := s.client.PrincipalMembership.Query().
 		Where(
-			membership.UserIDEQ(uid),
-			membership.OrganizationIDEQ(gid),
+			principalmembership.PrincipalIDEQ(uid),
+			principalmembership.OrganizationIDEQ(gid),
 		).
-		Exist(ctx)
-	if err != nil {
+		Only(ctx)
+	switch {
+	case err == nil:
+		if existing.Active {
+			return nil
+		}
+		if _, err := s.client.PrincipalMembership.UpdateOne(existing).SetActive(true).Save(ctx); err != nil {
+			return scim.ErrInternal(err.Error())
+		}
+		return nil
+	case !ent.IsNotFound(err):
 		return scim.ErrInternal(err.Error())
 	}
-	if exists {
-		return nil // Already a member, no-op
-	}
 
-	// Create membership
-	_, err = s.client.Membership.Create().
-		SetUserID(uid).
+	_, err = s.client.PrincipalMembership.Create().
+		SetPrincipalID(uid).
 		SetOrganizationID(gid).
 		SetRole(s.config.DefaultRole).
 		Save(ctx)
@@ -561,10 +664,10 @@ func (s *EntStore) RemoveMemberFromGroup(ctx context.Context, groupID, userID st
 		return scim.ErrNotFound("invalid user ID")
 	}
 
-	_, err = s.client.Membership.Delete().
+	_, err = s.client.PrincipalMembership.Delete().
 		Where(
-			membership.UserIDEQ(uid),
-			membership.OrganizationIDEQ(gid),
+			principalmembership.PrincipalIDEQ(uid),
+			principalmembership.OrganizationIDEQ(gid),
 		).
 		Exec(ctx)
 	if err != nil {
@@ -576,40 +679,47 @@ func (s *EntStore) RemoveMemberFromGroup(ctx context.Context, groupID, userID st
 
 // Helper methods
 
-// entUserToSCIM converts an Ent User to a SCIM User.
-func (s *EntStore) entUserToSCIM(u *ent.User) *scim.User {
-	active := u.Active
+// principalToSCIMUser converts a human Principal, loaded with its Human edge,
+// to a SCIM User.
+func (s *EntStore) principalToSCIMUser(p *ent.Principal) *scim.User {
+	active := p.Active
+	var email string
+	var avatar *string
+	if h := p.Edges.Human; h != nil {
+		email = h.Email
+		avatar = h.AvatarURL
+	}
 	scimUser := &scim.User{
 		Resource: scim.Resource{
 			Schemas: []string{scim.SchemaUser},
-			ID:      u.ID.String(),
+			ID:      p.ID.String(),
 			Meta: &scim.Meta{
 				ResourceType: scim.ResourceTypeUser,
-				Created:      &u.CreatedAt,
-				LastModified: &u.UpdatedAt,
-				Location:     s.config.BaseURL + "/Users/" + u.ID.String(),
-				Version:      u.UpdatedAt.Format("20060102150405"),
+				Created:      &p.CreatedAt,
+				LastModified: &p.UpdatedAt,
+				Location:     s.config.BaseURL + "/Users/" + p.ID.String(),
+				Version:      p.UpdatedAt.Format("20060102150405"),
 			},
 		},
-		UserName:    u.Email,
-		DisplayName: u.Name,
+		UserName:    email,
+		DisplayName: p.DisplayName,
 		Active:      &active,
 		Name: &scim.Name{
-			Formatted: u.Name,
+			Formatted: p.DisplayName,
 		},
 		Emails: []scim.MultiValue{
 			{
-				Value:   u.Email,
+				Value:   email,
 				Type:    "work",
 				Primary: true,
 			},
 		},
 	}
 
-	if u.AvatarURL != nil && *u.AvatarURL != "" {
+	if avatar != nil && *avatar != "" {
 		scimUser.Photos = []scim.MultiValue{
 			{
-				Value:   *u.AvatarURL,
+				Value:   *avatar,
 				Type:    "photo",
 				Primary: true,
 			},
@@ -639,7 +749,7 @@ func (s *EntStore) entOrgToSCIM(org *ent.Organization) *scim.Group {
 }
 
 // buildUserPredicates builds Ent predicates from a SCIM filter.
-func (s *EntStore) buildUserPredicates(filterExpr string) ([]predicate.User, error) {
+func (s *EntStore) buildUserPredicates(filterExpr string) ([]predicate.Principal, error) {
 	node, err := filter.ParseFilter(filterExpr)
 	if err != nil {
 		return nil, scim.ErrInvalidFilter(err.Error())
@@ -654,8 +764,8 @@ func (s *EntStore) buildUserPredicates(filterExpr string) ([]predicate.User, err
 // collectUserPredicates recursively collects predicates from a filter node.
 //
 //nolint:dupl // Mirrors collectGroupPredicates - same traversal logic for different predicate types
-func (s *EntStore) collectUserPredicates(node filter.Node) []predicate.User {
-	var predicates []predicate.User
+func (s *EntStore) collectUserPredicates(node filter.Node) []predicate.Principal {
+	var predicates []predicate.Principal
 
 	switch n := node.(type) {
 	case *filter.ComparisonNode:
@@ -669,20 +779,27 @@ func (s *EntStore) collectUserPredicates(node filter.Node) []predicate.User {
 		left := s.collectUserPredicates(n.Left)
 		right := s.collectUserPredicates(n.Right)
 		if len(left) > 0 && len(right) > 0 {
-			predicates = append(predicates, user.Or(append(left, right...)...))
+			predicates = append(predicates, principal.Or(append(left, right...)...))
 		}
 	case *filter.LogicalNotNode:
 		inner := s.collectUserPredicates(n.Operand)
 		if len(inner) > 0 {
-			predicates = append(predicates, user.Not(user.And(inner...)))
+			predicates = append(predicates, principal.Not(principal.And(inner...)))
 		}
 	}
 
 	return predicates
 }
 
-// userComparisonToPredicate converts a comparison node to a user predicate.
-func (s *EntStore) userComparisonToPredicate(node *filter.ComparisonNode) predicate.User {
+// hasEmail wraps a Human email predicate as a Principal predicate.
+func hasEmail(p predicate.Human) predicate.Principal {
+	return principal.HasHumanWith(p)
+}
+
+// userComparisonToPredicate converts a comparison node to a principal
+// predicate. userName and emails.value are not case-exact (RFC 7643), so
+// equality and containment ignore case.
+func (s *EntStore) userComparisonToPredicate(node *filter.ComparisonNode) predicate.Principal {
 	attr := strings.ToLower(node.AttributePath)
 	value, _ := node.Value.(string)
 
@@ -694,69 +811,69 @@ func (s *EntStore) userComparisonToPredicate(node *filter.ComparisonNode) predic
 		}
 		switch node.Operator {
 		case filter.OpEqual:
-			return user.IDEQ(id)
+			return principal.IDEQ(id)
 		case filter.OpNotEqual:
-			return user.IDNEQ(id)
+			return principal.IDNEQ(id)
 		}
 	case "username", "emails.value":
 		switch node.Operator {
 		case filter.OpEqual:
-			return user.EmailEQ(value)
+			return hasEmail(human.EmailEqualFold(value))
 		case filter.OpNotEqual:
-			return user.EmailNEQ(value)
+			return principal.Not(hasEmail(human.EmailEqualFold(value)))
 		case filter.OpContains:
-			return user.EmailContains(value)
+			return hasEmail(human.EmailContainsFold(value))
 		case filter.OpStartsWith:
-			return user.EmailHasPrefix(value)
+			return hasEmail(human.EmailHasPrefix(value))
 		case filter.OpEndsWith:
-			return user.EmailHasSuffix(value)
+			return hasEmail(human.EmailHasSuffix(value))
 		case filter.OpPresent:
-			return user.EmailNEQ("")
+			return hasEmail(human.EmailNEQ(""))
 		}
 	case "displayname", "name.formatted":
 		switch node.Operator {
 		case filter.OpEqual:
-			return user.NameEQ(value)
+			return principal.DisplayNameEQ(value)
 		case filter.OpNotEqual:
-			return user.NameNEQ(value)
+			return principal.DisplayNameNEQ(value)
 		case filter.OpContains:
-			return user.NameContains(value)
+			return principal.DisplayNameContains(value)
 		case filter.OpStartsWith:
-			return user.NameHasPrefix(value)
+			return principal.DisplayNameHasPrefix(value)
 		case filter.OpEndsWith:
-			return user.NameHasSuffix(value)
+			return principal.DisplayNameHasSuffix(value)
 		case filter.OpPresent:
-			return user.NameNEQ("")
+			return principal.DisplayNameNEQ("")
 		}
 	case "active":
 		boolValue, ok := node.Value.(bool)
 		if ok && node.Operator == filter.OpEqual {
-			return user.ActiveEQ(boolValue)
+			return principal.ActiveEQ(boolValue)
 		}
 	case "meta.created":
 		if t, err := time.Parse(time.RFC3339, value); err == nil {
 			switch node.Operator {
 			case filter.OpGreaterThan:
-				return user.CreatedAtGT(t)
+				return principal.CreatedAtGT(t)
 			case filter.OpGreaterThanOrEqual:
-				return user.CreatedAtGTE(t)
+				return principal.CreatedAtGTE(t)
 			case filter.OpLessThan:
-				return user.CreatedAtLT(t)
+				return principal.CreatedAtLT(t)
 			case filter.OpLessThanOrEqual:
-				return user.CreatedAtLTE(t)
+				return principal.CreatedAtLTE(t)
 			}
 		}
 	case "meta.lastmodified":
 		if t, err := time.Parse(time.RFC3339, value); err == nil {
 			switch node.Operator {
 			case filter.OpGreaterThan:
-				return user.UpdatedAtGT(t)
+				return principal.UpdatedAtGT(t)
 			case filter.OpGreaterThanOrEqual:
-				return user.UpdatedAtGTE(t)
+				return principal.UpdatedAtGTE(t)
 			case filter.OpLessThan:
-				return user.UpdatedAtLT(t)
+				return principal.UpdatedAtLT(t)
 			case filter.OpLessThanOrEqual:
-				return user.UpdatedAtLTE(t)
+				return principal.UpdatedAtLTE(t)
 			}
 		}
 	}
@@ -765,7 +882,7 @@ func (s *EntStore) userComparisonToPredicate(node *filter.ComparisonNode) predic
 }
 
 // applySortUser applies sorting to a user query.
-func (s *EntStore) applySortUser(q *ent.UserQuery, sortBy, sortOrder string) *ent.UserQuery {
+func (s *EntStore) applySortUser(q *ent.PrincipalQuery, sortBy, sortOrder string) *ent.PrincipalQuery {
 	desc := strings.EqualFold(sortOrder, "descending")
 	field := strings.ToLower(sortBy)
 
@@ -778,15 +895,15 @@ func (s *EntStore) applySortUser(q *ent.UserQuery, sortBy, sortOrder string) *en
 
 	switch field {
 	case "username", "emails.value":
-		return q.Order(user.ByEmail(orderOpts...))
+		return q.Order(principal.ByHumanField(human.FieldEmail, orderOpts...))
 	case "displayname", "name.formatted":
-		return q.Order(user.ByName(orderOpts...))
+		return q.Order(principal.ByDisplayName(orderOpts...))
 	case "meta.created":
-		return q.Order(user.ByCreatedAt(orderOpts...))
+		return q.Order(principal.ByCreatedAt(orderOpts...))
 	case "meta.lastmodified":
-		return q.Order(user.ByUpdatedAt(orderOpts...))
+		return q.Order(principal.ByUpdatedAt(orderOpts...))
 	default:
-		return q.Order(user.ByCreatedAt(orderOpts...))
+		return q.Order(principal.ByCreatedAt(orderOpts...))
 	}
 }
 
