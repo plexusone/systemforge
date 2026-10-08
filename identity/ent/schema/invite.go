@@ -54,12 +54,14 @@ func (Invite) Fields() []ent.Field {
 			Default("member").
 			Comment("Role to assign when invite is accepted"),
 
-		// Secure token for invite link
+		// SHA-256 of the invite link's token; the token itself is never
+		// stored. The column keeps its name so existing databases migrate
+		// in place (migrations/0003_hash_invite_tokens.sql).
 		field.String("token").
 			NotEmpty().
 			Unique().
 			Sensitive().
-			Comment("Secure token for invite URL"),
+			Comment("Hex SHA-256 of the invite URL token"),
 
 		// Invite status
 		field.Enum("status").

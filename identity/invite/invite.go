@@ -25,7 +25,6 @@ type Invite struct {
 	InviterPrincipalID    uuid.UUID
 	Email                 string
 	Role                  string
-	Token                 string
 	Status                Status
 	Message               *string
 	ExpiresAt             time.Time

@@ -32,7 +32,7 @@ type Invite struct {
 	Email string `json:"email,omitempty"`
 	// Role to assign when invite is accepted
 	Role string `json:"role,omitempty"`
-	// Secure token for invite URL
+	// Hex SHA-256 of the invite URL token
 	Token string `json:"-"`
 	// Current status of the invite
 	Status invite.Status `json:"status,omitempty"`

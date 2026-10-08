@@ -3,7 +3,9 @@ package invite
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -97,7 +99,7 @@ func (s *DefaultService) Create(ctx context.Context, input CreateInviteInput) (*
 		SetInviterPrincipalID(input.InviterPrincipalID).
 		SetEmail(input.Email).
 		SetRole(input.Role).
-		SetToken(token).
+		SetToken(hashToken(token)).
 		SetStatus(invite.StatusPending).
 		SetExpiresAt(expiresAt).
 		SetLastSentAt(time.Now())
@@ -120,7 +122,7 @@ func (s *DefaultService) Create(ctx context.Context, input CreateInviteInput) (*
 // GetByToken retrieves an invite by its token.
 func (s *DefaultService) GetByToken(ctx context.Context, token string) (*Invite, error) {
 	inv, err := s.client.Invite.Query().
-		Where(invite.Token(token)).
+		Where(invite.Token(hashToken(token))).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -147,7 +149,7 @@ func (s *DefaultService) GetByID(ctx context.Context, id uuid.UUID) (*Invite, er
 func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*Invite, error) {
 	// Get invite
 	inv, err := s.client.Invite.Query().
-		Where(invite.Token(input.Token)).
+		Where(invite.Token(hashToken(input.Token))).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -227,7 +229,7 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 // Decline declines an invite.
 func (s *DefaultService) Decline(ctx context.Context, token string) (*Invite, error) {
 	inv, err := s.client.Invite.Query().
-		Where(invite.Token(token)).
+		Where(invite.Token(hashToken(token))).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -286,7 +288,7 @@ func (s *DefaultService) Resend(ctx context.Context, id uuid.UUID) (*InviteResul
 
 	// Update invite
 	inv, err = s.client.Invite.UpdateOne(inv).
-		SetToken(token).
+		SetToken(hashToken(token)).
 		SetResendCount(inv.ResendCount + 1).
 		SetLastSentAt(time.Now()).
 		SetExpiresAt(time.Now().Add(DefaultInviteExpiry)). // Reset expiry
@@ -375,6 +377,14 @@ func (s *DefaultService) HasPendingInvite(ctx context.Context, organizationID uu
 
 // Helper functions
 
+// hashToken returns the stored form of an invite token. Tokens carry 256
+// bits of randomness, so an unsalted SHA-256 is enough to make a leaked
+// table useless for accepting invites.
+func hashToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
+}
+
 func generateToken() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
@@ -394,7 +404,6 @@ func entInviteToModel(inv *ent.Invite) *Invite {
 		InviterPrincipalID: inv.InviterPrincipalID,
 		Email:              inv.Email,
 		Role:               inv.Role,
-		Token:              inv.Token,
 		Status:             Status(inv.Status),
 		Message:            inv.Message,
 		ExpiresAt:          inv.ExpiresAt,
