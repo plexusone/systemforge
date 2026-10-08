@@ -1235,5 +1235,125 @@
         }
       ]
     }
-  ]
+  ],
+  "unreleased": {
+    "highlights": [
+      {
+        "description": "Principal is the sole identity root: the legacy User model and its dependent tables are removed, so password login, social login, federation sync, and SCIM all resolve a person to the same principal (ADR-004)"
+      },
+      {
+        "description": "Resource servers can authenticate AI agents with AAuth through a protocol-neutral request principal and authenticator chain shared with bearer, API-key, and BFF-session credentials"
+      },
+      {
+        "description": "Fixed a panic on every ascending SCIM list sort, including the default order"
+      }
+    ],
+    "breaking": [
+      {
+        "description": "Removed Ent schemas and packages user, membership, oauthaccount, refreshtoken, apikey, serviceaccount, and serviceaccountkeypair, with the Organization memberships, api_keys, and service_accounts edges and OAuthToken.service_account_id",
+        "commit": "344af04"
+      },
+      {
+        "description": "systemauth.Storage user methods are replaced by CreateHuman, GetHuman, GetHumanByEmail, GetHumanByExternalIdentity, LinkExternalIdentity, UpdateHuman, and DeleteHuman on one HumanPrincipal type; systemauth.User, LoginPrincipal, ErrUserNotFound, and ErrUserExists are removed in favor of HumanPrincipal, ErrPrincipalNotFound, and ErrPrincipalExists",
+        "commit": "e0946ab"
+      },
+      {
+        "description": "OAuthApp.owner references Principal; statically configured clients are owned by a service principal at the fixed system ID instead of a synthetic user",
+        "commit": "6b8322c"
+      },
+      {
+        "description": "OAuth tokens and authorization codes drop user_id and the user edge in favor of the subject column; OAuthConsent.user_id becomes principal_id",
+        "commit": "519f77c"
+      },
+      {
+        "description": "SCIM users are human principals and group membership uses PrincipalMembership; users provisioned before this release are not visible through SCIM",
+        "commit": "5a16f01"
+      },
+      {
+        "description": "An existing PostgreSQL development database must run migrations/0002_drop_legacy_user_tables.sql before starting this version; fresh databases need no migration",
+        "commit": "a4de9a8"
+      }
+    ],
+    "added": [
+      {
+        "description": "identity/requestprincipal: a protocol-neutral RequestPrincipal, an Authenticator interface, and middleware that tries authenticators in order and challenges with every protocol when none recognizes the request",
+        "commit": "780ef1a"
+      },
+      {
+        "description": "relyingparty.NewRequestAuthenticator adapts bearer authentication (SystemAuth access tokens, API keys, BFF sessions) to the request authenticator chain",
+        "commit": "d86c3f0"
+      },
+      {
+        "description": "identity/requestprincipal/aauthrs authenticates AI agents at resource servers with AAuth: message-signature and token verification, an issuer allowlist checked before key discovery, per-route scopes, and AAuth-Requirement challenges",
+        "commit": "afd69bb"
+      },
+      {
+        "description": "migrations/0002 creates the system service principal, reassigns OAuth apps owned by legacy users, and drops the legacy tables and columns on existing PostgreSQL databases",
+        "commit": "a4de9a8"
+      },
+      {
+        "description": "A repository-wide test fails on references to the retired legacy identity model in code or current documentation",
+        "commit": "d82d1c2"
+      }
+    ],
+    "changed": [
+      {
+        "description": "Federation sync records the federation identity as an ExternalIdentity; creating an identity for an existing email links it so later updates and deletes resolve to the same principal",
+        "commit": "e0946ab"
+      },
+      {
+        "description": "Human email uniqueness is enforced case-insensitively on create and update in SystemAuth and SCIM, matching the case-insensitive lookups",
+        "commit": "e0946ab"
+      },
+      {
+        "description": "SCIM userName is not case-exact (RFC 7643): lookups, uniqueness, and eq and co filters ignore case",
+        "commit": "5a16f01"
+      },
+      {
+        "description": "SCIM memberships honor the active flag, and deleting a user who belongs to a group removes the memberships instead of failing",
+        "commit": "5a16f01"
+      }
+    ],
+    "fixed": [
+      {
+        "description": "SCIM user and group listing panicked on every ascending sort, including the default order",
+        "commit": "cf556cd"
+      },
+      {
+        "description": "The identity/oauth Fosite storage dropped any subject that was not a UUID; tokens and authorization codes now record the subject",
+        "commit": "519f77c"
+      },
+      {
+        "description": "CreateClient reported every constraint failure, such as a nonexistent owner, as ErrClientExists; it now does so only for a duplicate client ID",
+        "commit": "f835592"
+      },
+      {
+        "description": "Federation sync no longer discards lookup errors, and a delete reports synced only for an identity that was never linked",
+        "commit": "e0946ab"
+      },
+      {
+        "description": "rls.SetupTestTenant and SetupTestUser inserted into tables that no longer existed; they now create organizations, human principals, and principal memberships, and report cleanup failures",
+        "commit": "2ac912a"
+      },
+      {
+        "description": "rls.SystemForgeTables named a table that no longer existed, so MigrateSystemForge failed; it now names sf_principal_memberships",
+        "commit": "67fa61d"
+      }
+    ],
+    "documentation": [
+      {
+        "description": "ADR-004 (retire legacy User; Principal as the sole identity root) and ADR-005 (managed principals and manager relationships), with specs for INIT-SYSTEMFORGE-007 and INIT-SYSTEMFORGE-008"
+      },
+      {
+        "description": "Identity, OAuth, integration, and getting-started documentation rewritten for the principal model; the schema reference is generated from the Ent schema"
+      },
+      {
+        "description": "The service-accounts page states that the RFC 7523 JWT-bearer grant is not implemented; the migration guide states that only Argon2id password hashes can be imported"
+      },
+      {
+        "description": "Resource servers accepting AI agents via AAuth",
+        "commit": "00b495f"
+      }
+    ]
+  }
 }
