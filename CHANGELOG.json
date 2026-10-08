@@ -1518,6 +1518,7 @@
       }
     ],
     "changed": [
+      { "description": "`authz` providers are named for their mode: role-based `authz/rbac` (formerly `authz/simple`) and relationship-based `authz/rebac/spicedb` (formerly `authz/spicedb`), so another engine can sit beside SpiceDB under the same mode", "commit": "3d9d4e7" },
       {
         "description": "Federation sync records the federation identity as an ExternalIdentity; creating an identity for an existing email links it so later updates and deletes resolve to the same principal",
         "commit": "e0946ab"
@@ -1654,6 +1655,7 @@
       }
     ],
     "documentation": [
+      { "description": "ADRs live in `docs/design/adrs/` with an index of statuses, under a Design section in the docs nav; ADR-006 (organization lifecycle), ADR-007 (memberships and entitlements as claims), ADR-008 (resource-scoped collaborators, with rbac/rebac guidance) and ADR-009 (management is a relationship) are added", "commit": "91f593c" },
       {
         "description": "ADR-004 (retire legacy User; Principal as the sole identity root) and ADR-005 (managed principals and manager relationships), with specs for INIT-SYSTEMFORGE-007 and INIT-SYSTEMFORGE-008"
       },
@@ -1673,6 +1675,7 @@
       }
     ],
     "deprecated": [
+      { "description": "`authz/simple` and `authz/spicedb` forward to `authz/rbac` and `authz/rebac/spicedb` as deprecated packages for one release; importers should move to the new paths", "commit": "3d9d4e7" },
       {
         "description": "mixin.HumanMixin, mixin.OAuthAccountMixin, and mixin.RefreshTokenMixin: applications should authenticate through SystemAuth and link local records by sf_principal_id",
         "commit": "37776a2"
