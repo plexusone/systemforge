@@ -139,6 +139,7 @@ func newResourceServer(t *testing.T, mode string, trusted ...string) *resourceSe
 		t.Fatal(err)
 	}
 	auth, err := aauthrs.New(aauthrs.Config{
+		HTTPClient:     http.DefaultClient,
 		Resource:       srv.URL,
 		TrustedIssuers: trusted,
 		AccessMode:     mode,
@@ -227,7 +228,8 @@ func newDeployment(t *testing.T) *deployment {
 		t.Fatal(err)
 	}
 	ap, err := agentprovider.New(agentprovider.Config{
-		Issuer: issuer, Domain: "agents.example", Key: apKey, Registrar: registrar{ps: issuer},
+		HTTPClient: http.DefaultClient,
+		Issuer:     issuer, Domain: "agents.example", Key: apKey, Registrar: registrar{ps: issuer},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -237,7 +239,8 @@ func newDeployment(t *testing.T) *deployment {
 		t.Fatal(err)
 	}
 	ps, err := personserver.New(personserver.Config{
-		Issuer: issuer, Key: psKey, SubjectKey: bytes.Repeat([]byte{7}, 32), Store: personserver.NewMemoryStore(),
+		HTTPClient: http.DefaultClient,
+		Issuer:     issuer, Key: psKey, SubjectKey: bytes.Repeat([]byte{7}, 32), Store: personserver.NewMemoryStore(),
 		Decider: personserver.DeciderFunc(func(_ context.Context, r *personserver.TokenRequest) (personserver.Decision, error) {
 			if r.Person == "" {
 				return personserver.Allow(personserver.Grant{Person: "alice"}), nil

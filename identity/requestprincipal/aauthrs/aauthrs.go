@@ -88,9 +88,10 @@ type Config struct {
 	// AgentResolver locates agent token keys (AccessModeAgentToken).
 	// Default: a JWKS resolver over HTTPClient and JWKSCache.
 	AgentResolver aauth.KeyResolver
-	// HTTPClient performs key discovery. Supply one that applies egress
-	// admission (HTTPS only, no private addresses, bounded timeouts).
-	// Default: http.DefaultClient.
+	// HTTPClient performs key discovery. Default: aauth.DiscoveryClient,
+	// which reaches only public https destinations; a client supplied here
+	// should apply the same egress admission. Local development needs a
+	// client that can reach the local issuer.
 	HTTPClient *http.Client
 	// JWKSCache caches discovered key sets. Default: a new cache.
 	JWKSCache *aauth.JWKSCache
