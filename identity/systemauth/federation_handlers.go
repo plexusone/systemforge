@@ -2,11 +2,14 @@ package systemauth
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/ory/fosite"
 )
 
 // IdentitySyncHandler handles identity sync requests from SystemAuth.
@@ -26,41 +29,120 @@ type FederationHealthResponse struct {
 	Details      map[string]string `json:"details,omitempty"`
 }
 
+// FederationAuthenticator decides whether a request to a federation
+// endpoint comes from the federation hub. It returns nil to admit the
+// request.
+type FederationAuthenticator func(r *http.Request) error
+
+// ErrFederationUnauthorized is returned by authenticators for a request
+// that does not prove it comes from the federation hub.
+var ErrFederationUnauthorized = errors.New("systemauth: federation request not authorized")
+
+// SharedSecretAuthenticator admits requests carrying the shared secret as
+// a bearer token, compared in constant time. The secret should be long and
+// random, and distinct per federated application.
+func SharedSecretAuthenticator(secret string) FederationAuthenticator {
+	want := []byte(secret)
+	return func(r *http.Request) error {
+		if len(want) == 0 {
+			return ErrFederationUnauthorized
+		}
+		got := []byte(fosite.AccessTokenFromRequest(r))
+		if subtle.ConstantTimeCompare(got, want) != 1 {
+			return ErrFederationUnauthorized
+		}
+		return nil
+	}
+}
+
+// TokenAuthenticator admits requests whose bearer token is a valid access
+// token of this server carrying scope.
+func (s *Server) TokenAuthenticator(scope string) FederationAuthenticator {
+	return func(r *http.Request) error {
+		token := fosite.AccessTokenFromRequest(r)
+		if token == "" {
+			return ErrFederationUnauthorized
+		}
+		ar, err := s.introspect(r.Context(), token, fosite.AccessToken, s.Session(""))
+		if err != nil || !ar.GetGrantedScopes().Has(scope) {
+			return ErrFederationUnauthorized
+		}
+		return nil
+	}
+}
+
+// FederationOption configures FederationEndpoints.
+type FederationOption func(*FederationEndpoints)
+
+// WithFederationAuthenticator sets how requests to the identity sync and
+// lookup endpoints are authenticated. Without it those endpoints are not
+// registered: they act on the request body as truth, so they must never
+// be reachable unauthenticated.
+func WithFederationAuthenticator(auth FederationAuthenticator) FederationOption {
+	return func(f *FederationEndpoints) { f.authenticate = auth }
+}
+
 // FederationEndpoints provides SystemForge federation contract endpoints.
 type FederationEndpoints struct {
-	server      *Server
-	syncHandler IdentitySyncHandler
-	appID       string
-	version     string
+	server       *Server
+	syncHandler  IdentitySyncHandler
+	authenticate FederationAuthenticator
+	appID        string
+	version      string
 }
 
 // NewFederationEndpoints creates federation endpoints for the server.
-func NewFederationEndpoints(server *Server, syncHandler IdentitySyncHandler) *FederationEndpoints {
+func NewFederationEndpoints(server *Server, syncHandler IdentitySyncHandler, opts ...FederationOption) *FederationEndpoints {
 	appID := ""
 	if server.config.Federation != nil {
 		appID = server.config.Federation.AppID
 	}
 
-	return &FederationEndpoints{
+	f := &FederationEndpoints{
 		server:      server,
 		syncHandler: syncHandler,
 		appID:       appID,
 		version:     "1.0",
 	}
+	for _, opt := range opts {
+		opt(f)
+	}
+	return f
 }
 
 // RegisterRoutes registers the federation endpoints on the server's router.
+// The identity sync and lookup endpoints are registered only when an
+// authenticator was configured (WithFederationAuthenticator).
 func (f *FederationEndpoints) RegisterRoutes() {
 	router := f.server.Router()
 
 	// Health endpoint for SystemAuth to check app status
 	router.Get("/systemforge/health", f.healthHandler)
 
+	if f.authenticate == nil {
+		f.server.logger.Error("federation identity sync and lookup endpoints not registered: no authenticator configured (see WithFederationAuthenticator)")
+		return
+	}
+
 	// Identity sync endpoint
-	router.Post("/systemforge/identity/sync", f.identitySyncHandler)
+	router.Post("/systemforge/identity/sync", f.authenticated(f.identitySyncHandler))
 
 	// Identity lookup endpoint (find local principal by global ID)
-	router.Get("/systemforge/identity/lookup/{globalId}", f.identityLookupHandler)
+	router.Get("/systemforge/identity/lookup/{globalId}", f.authenticated(f.identityLookupHandler))
+}
+
+// authenticated requires the federation authenticator to admit the
+// request before the handler runs.
+func (f *FederationEndpoints) authenticated(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := f.authenticate(r); err != nil {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+		next(w, r)
+	}
 }
 
 // healthHandler returns the health status of this app.
@@ -90,9 +172,6 @@ func (f *FederationEndpoints) identitySyncHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Verify the request is from SystemAuth (in production, verify JWT or signature)
-	// For now, we trust the request if it has a valid format
-
 	var req IdentitySyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -121,7 +200,7 @@ func (f *FederationEndpoints) identityLookupHandler(w http.ResponseWriter, r *ht
 	// This endpoint allows SystemAuth to verify identity mappings
 	// Implementation depends on the app's user storage
 
-	globalIDStr := r.PathValue("globalId")
+	globalIDStr := chi.URLParam(r, "globalId")
 	if globalIDStr == "" {
 		http.Error(w, "globalId required", http.StatusBadRequest)
 		return
