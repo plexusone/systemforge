@@ -11,8 +11,11 @@ package managedprincipal
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/plexusone/systemforge/identity/credential"
 )
 
 // Built-in manager roles.
@@ -40,20 +43,27 @@ var (
 	ErrInvalidManager = errors.New("managedprincipal: manager must be an active human with an email")
 	// ErrInvalidRole is returned for a manager role that is not registered.
 	ErrInvalidRole = errors.New("managedprincipal: unknown manager role")
-	// ErrNotManaged is returned when the principal is not a human.
-	ErrNotManaged = errors.New("managedprincipal: principal is not a human")
+	// ErrNotManaged is returned when the principal is not a human, or for
+	// operations that apply only to managed principals, has an email.
+	ErrNotManaged = errors.New("managedprincipal: principal is not a managed human")
 	// ErrLastManager is returned when removing the last active manager of
 	// a principal that has no email.
 	ErrLastManager = errors.New("managedprincipal: cannot remove the last manager of a principal without an email")
+	// ErrNotManager is returned when the acting principal is not an
+	// active manager of the managed principal.
+	ErrNotManager = errors.New("managedprincipal: not an active manager of this principal")
 	// ErrNotFound is returned when a principal or relationship does not exist.
 	ErrNotFound = errors.New("managedprincipal: not found")
 )
 
-// Gate reports whether a client may create managed principals.
-// *systemauth.Server implements it with ManagedPrincipalsAllowed, which
-// requires both the deployment setting and the client's flag.
+// Gate reports whether a client may create and sign in managed
+// principals, and the login token lifetimes that apply to it.
+// *systemauth.Server implements it: ManagedPrincipalsAllowed requires both
+// the deployment setting and the client's flag, and LoginTokenPolicy
+// applies the client's own default lifetime over the deployment's.
 type Gate interface {
 	ManagedPrincipalsAllowed(ctx context.Context, clientID string) (bool, error)
+	LoginTokenPolicy(ctx context.Context, clientID string) (credential.LoginTokenPolicy, error)
 }
 
 // ManagerInput names a manager and the role it holds.
@@ -81,4 +91,22 @@ type Relationship struct {
 	ManagerPrincipalID uuid.UUID
 	Role               string
 	Active             bool
+}
+
+// IssueLoginTokenInput describes a login token to issue for a managed
+// principal.
+type IssueLoginTokenInput struct {
+	// ManagedID is the managed principal the token signs in.
+	ManagedID uuid.UUID
+	// ClientID is the OAuth client requesting the token; it must allow
+	// managed principals and supplies the default lifetime.
+	ClientID string
+	// IssuedBy is the issuing manager.
+	IssuedBy uuid.UUID
+	// ExpiresAt optionally sets the expiry; it is clamped to the ceiling.
+	ExpiresAt *time.Time
+	// SingleUse makes the token valid for one sign-in.
+	SingleUse bool
+	// Name optionally labels the token, such as the card or device.
+	Name string
 }

@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/contract/audit"
+	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
@@ -22,11 +24,14 @@ const (
 	EventCreated        = "managed_principal.created"
 	EventManagerAdded   = "managed_principal.manager_added"
 	EventManagerRemoved = "managed_principal.manager_removed"
+	EventTokenIssued    = "managed_principal.login_token_issued"
 )
 
 // Service creates managed principals and maintains their managers.
 type Service struct {
 	client *ent.Client
+	creds  credential.Service
+	now    func() time.Time
 	gate   Gate
 	audit  audit.Emitter
 	logger *slog.Logger
@@ -64,6 +69,8 @@ func WithRoles(roles ...string) Option {
 func NewService(client *ent.Client, gate Gate, opts ...Option) *Service {
 	s := &Service{
 		client: client,
+		creds:  credential.NewService(client),
+		now:    time.Now,
 		gate:   gate,
 		logger: slog.Default(),
 		roles:  []string{RoleGuardian, RoleEducator},
@@ -211,6 +218,89 @@ func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m Mana
 	}
 	s.emit(ctx, EventManagerRemoved, "remove_manager", actorID, managedID,
 		map[string]any{"manager_principal_id": m.PrincipalID.String(), "role": m.Role})
+	return nil
+}
+
+// IssueLoginToken issues a login token for a managed principal on behalf
+// of one of its active managers. The plain token is returned once.
+func (s *Service) IssueLoginToken(ctx context.Context, in IssueLoginTokenInput) (*credential.GeneratedLoginToken, error) {
+	allowed, err := s.gate.ManagedPrincipalsAllowed(ctx, in.ClientID)
+	if err != nil {
+		return nil, fmt.Errorf("managedprincipal: check client: %w", err)
+	}
+	if !allowed {
+		return nil, ErrNotAllowed
+	}
+	if err := s.checkIssuer(ctx, in.ManagedID, in.IssuedBy); err != nil {
+		return nil, err
+	}
+	policy, err := s.gate.LoginTokenPolicy(ctx, in.ClientID)
+	if err != nil {
+		return nil, fmt.Errorf("managedprincipal: login token policy: %w", err)
+	}
+	expiresAt, clamped, err := policy.ExpiresAt(s.now(), in.ExpiresAt, in.SingleUse)
+	if err != nil {
+		return nil, err
+	}
+	if clamped {
+		s.logger.Info("managedprincipal: login token lifetime clamped to the platform ceiling",
+			"principal_id", in.ManagedID, "client_id", in.ClientID, "expires_at", expiresAt)
+	}
+
+	tok, err := s.creds.IssueLoginToken(ctx, credential.IssueLoginTokenInput{
+		PrincipalID: in.ManagedID,
+		IssuedBy:    in.IssuedBy,
+		ExpiresAt:   expiresAt,
+		SingleUse:   in.SingleUse,
+		Name:        in.Name,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("managedprincipal: %w", err)
+	}
+	s.emit(ctx, EventTokenIssued, "issue_login_token", in.IssuedBy, in.ManagedID, map[string]any{
+		"client_id":     in.ClientID,
+		"credential_id": tok.Credential.ID.String(),
+		"prefix":        tok.Prefix,
+		"expires_at":    expiresAt,
+		"single_use":    in.SingleUse,
+		"clamped":       clamped,
+	})
+	return tok, nil
+}
+
+// checkIssuer requires an active managed principal and an issuer that is
+// one of its active managers and still a valid manager.
+func (s *Service) checkIssuer(ctx context.Context, managedID, issuerID uuid.UUID) error {
+	ok, err := s.client.Human.Query().
+		Where(
+			human.PrincipalID(managedID),
+			human.EmailIsNil(),
+			human.HasPrincipalWith(entprincipal.Active(true)),
+		).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("managedprincipal: check principal: %w", err)
+	}
+	if !ok {
+		return ErrNotManaged
+	}
+	ok, err = s.client.ManagerRelationship.Query().
+		Where(
+			managerrelationship.ManagedPrincipalID(managedID),
+			managerrelationship.ManagerPrincipalID(issuerID),
+			managerrelationship.Active(true),
+			managerrelationship.HasManagerWith(
+				entprincipal.Active(true),
+				entprincipal.HasHumanWith(human.EmailNotNil()),
+			),
+		).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("managedprincipal: check manager: %w", err)
+	}
+	if !ok {
+		return ErrNotManager
+	}
 	return nil
 }
 

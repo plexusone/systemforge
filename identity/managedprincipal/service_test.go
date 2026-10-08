@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -12,17 +13,29 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/plexusone/systemforge/contract/audit"
+	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/internal/pgtest"
 )
+
+// The SystemAuth server is the production gate.
+var _ Gate = (*systemauth.Server)(nil)
 
 type gate map[string]bool
 
 func (g gate) ManagedPrincipalsAllowed(_ context.Context, clientID string) (bool, error) {
 	return g[clientID], nil
+}
+
+func (g gate) LoginTokenPolicy(_ context.Context, clientID string) (credential.LoginTokenPolicy, error) {
+	if clientID == schoolClient {
+		return credential.LoginTokenPolicy{DefaultTTL: schoolYear}, nil
+	}
+	return credential.LoginTokenPolicy{}, nil
 }
 
 type recorder struct {
@@ -47,7 +60,11 @@ func (r *recorder) types() []string {
 	return out
 }
 
-const client = "learning-app"
+const (
+	client       = "learning-app"
+	schoolClient = "school-app"
+	schoolYear   = 300 * 24 * time.Hour
+)
 
 func openSQLite(t *testing.T) *ent.Client {
 	t.Helper()
@@ -63,7 +80,7 @@ func openSQLite(t *testing.T) *ent.Client {
 func newService(t *testing.T, db *ent.Client) (*Service, *recorder) {
 	t.Helper()
 	rec := &recorder{}
-	return NewService(db, gate{client: true}, WithAuditEmitter(rec)), rec
+	return NewService(db, gate{client: true, schoolClient: true}, WithAuditEmitter(rec)), rec
 }
 
 // addHuman creates a human principal; an empty email creates one without.
@@ -318,5 +335,111 @@ func TestConcurrentRemoveKeepsAManager(t *testing.T) {
 		if failed != 1 {
 			t.Fatalf("ErrLastManager count = %d, want 1", failed)
 		}
+	}
+}
+
+func TestIssueLoginToken(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	svc, rec := newService(t, db)
+	now := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return now }
+	teacher := addHuman(t, db, "teacher@example.com", true)
+	parent := addHuman(t, db, "parent@example.com", true)
+	stranger := addHuman(t, db, "stranger@example.com", true)
+	id, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client,
+		Managers: []ManagerInput{{teacher, RoleEducator}, {parent, RoleGuardian}}})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	day := 24 * time.Hour
+	in := func(mod func(*IssueLoginTokenInput)) IssueLoginTokenInput {
+		v := IssueLoginTokenInput{ManagedID: id, ClientID: client, IssuedBy: teacher, Name: "card"}
+		mod(&v)
+		return v
+	}
+	at := func(d time.Duration) *time.Time { v := now.Add(d); return &v }
+
+	for _, tc := range []struct {
+		name string
+		in   IssueLoginTokenInput
+		want time.Time
+	}{
+		{"platform default", in(func(*IssueLoginTokenInput) {}), now.Add(30 * day)},
+		{"client default", in(func(v *IssueLoginTokenInput) { v.ClientID = schoolClient }), now.Add(schoolYear)},
+		{"explicit", in(func(v *IssueLoginTokenInput) { v.ExpiresAt = at(7 * day) }), now.Add(7 * day)},
+		{"clamped", in(func(v *IssueLoginTokenInput) { v.ExpiresAt = at(500 * day) }), now.Add(400 * day)},
+		{"single use", in(func(v *IssueLoginTokenInput) { v.SingleUse = true; v.ClientID = schoolClient }), now.Add(20 * time.Minute)},
+		{"guardian", in(func(v *IssueLoginTokenInput) { v.IssuedBy = parent }), now.Add(30 * day)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tok, err := svc.IssueLoginToken(ctx, tc.in)
+			if err != nil {
+				t.Fatalf("IssueLoginToken: %v", err)
+			}
+			if tok.Credential.PrincipalID != id || tok.Credential.ExpiresAt == nil || !tok.Credential.ExpiresAt.Equal(tc.want) {
+				t.Errorf("credential = %+v, want expiry %v", tok.Credential, tc.want)
+			}
+			issuer, err := credential.LoginTokenIssuedBy(tok.Credential)
+			if err != nil || issuer != tc.in.IssuedBy {
+				t.Errorf("issued by = %v, %v; want %v", issuer, err, tc.in.IssuedBy)
+			}
+			if credential.LoginTokenSingleUse(tok.Credential) != tc.in.SingleUse {
+				t.Errorf("single use = %v", !tc.in.SingleUse)
+			}
+		})
+	}
+	issued := 0
+	for _, e := range rec.events {
+		if e.EventType == EventTokenIssued {
+			issued++
+			for _, v := range e.Details {
+				if s, ok := v.(string); ok && len(s) > 40 {
+					t.Errorf("audit detail %q may hold the plain token", s)
+				}
+			}
+		}
+	}
+	if issued != 6 {
+		t.Errorf("issued audit events = %d, want 6", issued)
+	}
+
+	// Refusals.
+	if err := svc.RemoveManager(ctx, id, ManagerInput{parent, RoleGuardian}, teacher); err != nil {
+		t.Fatalf("RemoveManager: %v", err)
+	}
+	ordinary := addHuman(t, db, "adult@example.com", true)
+	for _, tc := range []struct {
+		name string
+		in   IssueLoginTokenInput
+		want error
+	}{
+		{"client not allowed", in(func(v *IssueLoginTokenInput) { v.ClientID = "other" }), ErrNotAllowed},
+		{"not a manager", in(func(v *IssueLoginTokenInput) { v.IssuedBy = stranger }), ErrNotManager},
+		{"removed manager", in(func(v *IssueLoginTokenInput) { v.IssuedBy = parent }), ErrNotManager},
+		{"principal has email", in(func(v *IssueLoginTokenInput) { v.ManagedID = ordinary }), ErrNotManaged},
+		{"unknown principal", in(func(v *IssueLoginTokenInput) { v.ManagedID = uuid.New() }), ErrNotManaged},
+		{"past expiry", in(func(v *IssueLoginTokenInput) { v.ExpiresAt = at(-time.Hour) }), credential.ErrInvalidExpiry},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := svc.IssueLoginToken(ctx, tc.in); !errors.Is(err, tc.want) {
+				t.Errorf("err = %v, want %v", err, tc.want)
+			}
+		})
+	}
+
+	// A manager who is deactivated cannot issue, nor can anyone for a
+	// deactivated principal.
+	if err := db.Principal.UpdateOneID(teacher).SetActive(false).Exec(ctx); err != nil {
+		t.Fatalf("deactivate teacher: %v", err)
+	}
+	if _, err := svc.IssueLoginToken(ctx, in(func(*IssueLoginTokenInput) {})); !errors.Is(err, ErrNotManager) {
+		t.Errorf("inactive manager: %v", err)
+	}
+	if err := db.Principal.UpdateOneID(id).SetActive(false).Exec(ctx); err != nil {
+		t.Fatalf("deactivate learner: %v", err)
+	}
+	if _, err := svc.IssueLoginToken(ctx, in(func(*IssueLoginTokenInput) {})); !errors.Is(err, ErrNotManaged) {
+		t.Errorf("inactive principal: %v", err)
 	}
 }
