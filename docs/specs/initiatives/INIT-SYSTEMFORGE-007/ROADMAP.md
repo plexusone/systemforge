@@ -25,7 +25,7 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 - [x] `RMI-SYSTEMFORGE-105` `login_token` credential type: issue, constant-time verify, revoke, expiry, single-use option; lifetime resolved from request, then per-application `login_token_ttl`, then 30-day platform default, under a platform ceiling
   - Depends on: `RMI-SYSTEMFORGE-104`
-- [ ] `RMI-SYSTEMFORGE-106` SystemAuth token exchange: endpoint with identical failure responses and rate limiting, `managed` claim, conditional `email` claims in ID token and `userinfo`
+- [x] `RMI-SYSTEMFORGE-106` SystemAuth token exchange: endpoint with identical failure responses and rate limiting, `managed` claim, conditional `email` claims in ID token and `userinfo`
   - Depends on: `RMI-SYSTEMFORGE-105`
 - [x] `RMI-SYSTEMFORGE-107` Base authorization relations: `guardian` and `educator` on `principal` with `manage_account`, `manage_credentials`, `view_profile`, `manage_managers`; synced from `ManagerRelationship` for both providers
   - Depends on: `RMI-SYSTEMFORGE-104`

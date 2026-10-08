@@ -150,6 +150,18 @@ issue codes that last a term or a school year.
 - Session and ID-token claims: `email` and `email_verified` are omitted when
   absent; a `managed: true` claim is added for managed principals. `userinfo`
   follows the same rule.
+- As implemented: `POST /login-token` with form fields `token`,
+  `client_id`, and optional `return_to`, answering `303` to the target on
+  success, one identical `401` for every rejection, and `429` with
+  `Retry-After` when limited. Login sessions, cookies, and redirect policy
+  are the existing browser-login ones; that component now also starts when
+  managed principals are enabled without social providers, mounting only
+  the session, consent, and login token routes. The default limits are 60
+  requests a minute per source address, enough for a classroom behind one
+  address, and 600 per client; `WithLoginTokenRateLimit` sets shared
+  storage and other limits. The source address follows the rate limiter's
+  `X-Forwarded-For` handling, so the per-client limit is the bound that a
+  spoofed header cannot evade. The `managed` claim is not scope-gated.
 - Capabilities already flow into `PrincipalToken.capabilities`; managed
   principals' tokens therefore carry `can_manage_profile=false`.
 
