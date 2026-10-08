@@ -78,7 +78,7 @@
           "description": "OpenID Connect: ID tokens, optional RS256 JWT access tokens, and the `/oauth/userinfo` endpoint"
         },
         {
-          "description": "`identity/relyingparty`: reusable OIDC relying party with `sub` → `sf_principal_id` linking, `/bff/*` cookie sessions, and bearer middleware for JWTs and API keys"
+          "description": "`identity/relyingparty`: reusable OIDC relying party with `sub` \u2192 `sf_principal_id` linking, `/bff/*` cookie sessions, and bearer middleware for JWTs and API keys"
         },
         {
           "description": "Durable stores: Ent-backed SystemAuth login sessions, login state and consent grants; `identity/relyingparty/pgstore` encrypted PostgreSQL session stores with key rotation"
@@ -317,7 +317,7 @@
       ],
       "fixed": [
         {
-          "description": "Close a line-anchored regex bypass in SpiceDB schema-definition detection: a fragment packing two `definition`s onto one physical line hid the second from both the `{app}_`-prefix check and the duplicate-shadowing check, while the raw fragment was still concatenated verbatim into the composed schema — letting an app silently redefine a reserved or foreign definition",
+          "description": "Close a line-anchored regex bypass in SpiceDB schema-definition detection: a fragment packing two `definition`s onto one physical line hid the second from both the `{app}_`-prefix check and the duplicate-shadowing check, while the raw fragment was still concatenated verbatim into the composed schema \u2014 letting an app silently redefine a reserved or foreign definition",
           "commit": "3f43040"
         },
         {
@@ -1369,6 +1369,14 @@
       {
         "description": "credential.ValidateClientSecret returns ErrInvalidClientCredentials for every rejection; multiapp.AppAwareDB.ForSchema returns an error",
         "commit": "3ab264c"
+      },
+      {
+        "description": "identity/apikey: Get, Revoke, and Delete take the owning principal and report other keys as not found; a service with no AllowedScopes grants no scopes unless AllowAnyScope is set; RevokeInOrganization added for organization administrators",
+        "commit": "cbc7171"
+      },
+      {
+        "description": "rls: Helper.SetTenant and SetUser return ErrNotInTransaction for *sql.DB and *sql.Conn; Middleware.SetRLSContext no longer touches the database and Middleware.WithTx scopes a transaction",
+        "commit": "2b7ad39"
       }
     ],
     "added": [
@@ -1495,6 +1503,18 @@
       {
         "description": "jwt.ValidateAccessTokenForAudience and middleware.HTTPAuthForAudience; ratelimit.PeerIP, ForwardedClientIP, ForwardedIPKey, WithMaxKeys, WithFailOpen; systemauth.WithLoginTokenClientIP, FederationAuthenticator, SharedSecretAuthenticator, and AuthorizeIntrospectionCaller; scim.DenyAllAuthorizationHook",
         "commit": "f6d1a8b"
+      },
+      {
+        "description": "session/jwt: TokenOptions.Audience addresses one token to its own audience",
+        "commit": "da5b98a"
+      },
+      {
+        "description": "multiapp: MiddlewareConfig.AppAudiences binds tokens to the app a request is routed to",
+        "commit": "55881bc"
+      },
+      {
+        "description": "identity/security: Lockout.Begin and Attempt reserve a login attempt before verification",
+        "commit": "174098f"
       }
     ],
     "changed": [
@@ -1660,6 +1680,14 @@
       {
         "description": "spicedb.BaseSchema: use authz.BaseSpiceDBSchema",
         "commit": "6a9274a"
+      },
+      {
+        "description": "identity/security: Lockout.CheckAndRecord in favor of Begin",
+        "commit": "174098f"
+      },
+      {
+        "description": "rls: EntHook.SetContextFromContext, ContextInjector, ConnWithRLS, NewConnWithRLS, and GetConnWithRLS, which cannot take effect outside a transaction",
+        "commit": "2b7ad39"
       }
     ],
     "security": [
@@ -1762,6 +1790,26 @@
       {
         "description": "multiapp's SchemaDB left a schema's search_path on pooled connections, which could carry one application's schema to unrelated code, and ForSchema interpolated unvalidated names into SQL",
         "commit": "d483b7a"
+      },
+      {
+        "description": "The BFF proxy forwarded the browser's session cookie upstream when a ProxyConfig was built by hand; Cookie, Authorization, and DPoP headers are now always stripped",
+        "commit": "b6bbb49"
+      },
+      {
+        "description": "multiapp trusted the X-App-ID header, so with a shared signing key a token for one app authenticated requests for another; MiddlewareConfig.AppAudiences binds tokens to the routed app",
+        "commit": "55881bc"
+      },
+      {
+        "description": "API keys could be read, revoked, or deleted by ID alone, requested any scope including the wildcard when no allow-list was set, and ignored MaxKeysPerUser",
+        "commit": "cbc7171"
+      },
+      {
+        "description": "Lockout let a burst of parallel guesses exceed MaxAttempts; Lockout.Begin reserves the attempt before the credential is verified",
+        "commit": "174098f"
+      },
+      {
+        "description": "Concurrent BFF refreshes spent one refresh token several times, which token reuse detection treats as theft; refresh is now serialized per session",
+        "commit": "94fd8e0"
       }
     ]
   }
