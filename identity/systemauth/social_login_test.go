@@ -110,7 +110,7 @@ func TestResolveExternalLoginMemory(t *testing.T) {
 
 	t.Run("verified email links to verified principal", func(t *testing.T) {
 		dir := NewMemoryPrincipalDirectory()
-		existing := LoginPrincipal{ID: uuid.New(), Email: "b@example.com", EmailVerified: true, Active: true}
+		existing := HumanPrincipal{ID: uuid.New(), Email: "b@example.com", EmailVerified: true, Active: true}
 		if err := dir.AddPrincipal(existing); err != nil {
 			t.Fatal(err)
 		}
@@ -128,7 +128,7 @@ func TestResolveExternalLoginMemory(t *testing.T) {
 
 	t.Run("unverified email is not linked", func(t *testing.T) {
 		dir := NewMemoryPrincipalDirectory()
-		existing := LoginPrincipal{ID: uuid.New(), Email: "c@example.com", EmailVerified: true, Active: true}
+		existing := HumanPrincipal{ID: uuid.New(), Email: "c@example.com", EmailVerified: true, Active: true}
 		if err := dir.AddPrincipal(existing); err != nil {
 			t.Fatal(err)
 		}
@@ -143,7 +143,7 @@ func TestResolveExternalLoginMemory(t *testing.T) {
 
 	t.Run("verified email does not link to unverified principal", func(t *testing.T) {
 		dir := NewMemoryPrincipalDirectory()
-		if err := dir.AddPrincipal(LoginPrincipal{Email: "d@example.com", Active: true}); err != nil {
+		if err := dir.AddPrincipal(HumanPrincipal{Email: "d@example.com", Active: true}); err != nil {
 			t.Fatal(err)
 		}
 		_, err := ResolveExternalLogin(ctx, dir, githubLogin("4", "d@example.com", true), now)
@@ -162,7 +162,7 @@ func TestResolveExternalLoginMemory(t *testing.T) {
 
 	t.Run("inactive principal rejected", func(t *testing.T) {
 		dir := NewMemoryPrincipalDirectory()
-		if err := dir.AddPrincipal(LoginPrincipal{Email: "f@example.com", EmailVerified: true, Active: false}); err != nil {
+		if err := dir.AddPrincipal(HumanPrincipal{Email: "f@example.com", EmailVerified: true, Active: false}); err != nil {
 			t.Fatal(err)
 		}
 		_, err := ResolveExternalLogin(ctx, dir, githubLogin("6", "f@example.com", true), now)
@@ -522,7 +522,7 @@ func TestSocialLoginUnverifiedEmail(t *testing.T) {
 	f := newFakeGitHub(t)
 	f.verified = false
 	dir := NewMemoryPrincipalDirectory()
-	if err := dir.AddPrincipal(LoginPrincipal{Email: f.email, EmailVerified: true, Active: true}); err != nil {
+	if err := dir.AddPrincipal(HumanPrincipal{Email: f.email, EmailVerified: true, Active: true}); err != nil {
 		t.Fatal(err)
 	}
 	s := newSocialTestServer(t, f, dir)

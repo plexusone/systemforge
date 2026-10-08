@@ -3,7 +3,6 @@ package systemauth
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -24,65 +23,40 @@ func (p *EmbeddedIdentityProvider) CreateIdentity(ctx context.Context, identity 
 		identity.ID = uuid.New()
 	}
 
-	now := time.Now()
-	user := &User{
-		ID:            identity.ID,
-		Email:         identity.Traits.Email,
-		EmailVerified: identity.Traits.EmailVerified,
-		Name:          identity.Traits.Name,
-		GivenName:     identity.Traits.GivenName,
-		FamilyName:    identity.Traits.FamilyName,
-		Picture:       identity.Traits.Picture,
-		Locale:        identity.Traits.Locale,
-		Active:        identity.State == IdentityStateActive,
-		Metadata:      identity.Metadata,
-		CreatedAt:     now,
-		UpdatedAt:     now,
+	h := identityToHuman(identity)
+	if err := p.storage.CreateHuman(ctx, h); err != nil {
+		return err
 	}
-
-	return p.storage.CreateUser(ctx, user)
+	identity.ID = h.ID
+	return nil
 }
 
 // GetIdentity implements IdentityProvider.
 func (p *EmbeddedIdentityProvider) GetIdentity(ctx context.Context, id uuid.UUID) (*Identity, error) {
-	user, err := p.storage.GetUserByID(ctx, id)
+	h, err := p.storage.GetHuman(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return userToIdentity(user), nil
+	return humanToIdentity(h), nil
 }
 
 // GetIdentityByEmail implements IdentityProvider.
 func (p *EmbeddedIdentityProvider) GetIdentityByEmail(ctx context.Context, email string) (*Identity, error) {
-	user, err := p.storage.GetUserByEmail(ctx, email)
+	h, err := p.storage.GetHumanByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
-	return userToIdentity(user), nil
+	return humanToIdentity(h), nil
 }
 
 // UpdateIdentity implements IdentityProvider.
 func (p *EmbeddedIdentityProvider) UpdateIdentity(ctx context.Context, identity *Identity) error {
-	user := &User{
-		ID:            identity.ID,
-		Email:         identity.Traits.Email,
-		EmailVerified: identity.Traits.EmailVerified,
-		Name:          identity.Traits.Name,
-		GivenName:     identity.Traits.GivenName,
-		FamilyName:    identity.Traits.FamilyName,
-		Picture:       identity.Traits.Picture,
-		Locale:        identity.Traits.Locale,
-		Active:        identity.State == IdentityStateActive,
-		Metadata:      identity.Metadata,
-		UpdatedAt:     time.Now(),
-	}
-
-	return p.storage.UpdateUser(ctx, user)
+	return p.storage.UpdateHuman(ctx, identityToHuman(identity))
 }
 
 // DeleteIdentity implements IdentityProvider.
 func (p *EmbeddedIdentityProvider) DeleteIdentity(ctx context.Context, id uuid.UUID) error {
-	return p.storage.DeleteUser(ctx, id)
+	return p.storage.DeleteHuman(ctx, id)
 }
 
 // ListIdentities implements IdentityProvider.
@@ -91,28 +65,44 @@ func (p *EmbeddedIdentityProvider) ListIdentities(ctx context.Context, filter *I
 	return nil, errors.New("listing identities not supported in embedded storage")
 }
 
-// userToIdentity converts a User to an Identity.
-func userToIdentity(user *User) *Identity {
+// identityToHuman converts an Identity to a HumanPrincipal.
+func identityToHuman(identity *Identity) *HumanPrincipal {
+	return &HumanPrincipal{
+		ID:            identity.ID,
+		Email:         identity.Traits.Email,
+		EmailVerified: identity.Traits.EmailVerified,
+		DisplayName:   identity.Traits.Name,
+		GivenName:     identity.Traits.GivenName,
+		FamilyName:    identity.Traits.FamilyName,
+		AvatarURL:     identity.Traits.Picture,
+		Locale:        identity.Traits.Locale,
+		Active:        identity.State == IdentityStateActive,
+		Metadata:      identity.Metadata,
+	}
+}
+
+// humanToIdentity converts a HumanPrincipal to an Identity.
+func humanToIdentity(h *HumanPrincipal) *Identity {
 	state := IdentityStateActive
-	if !user.Active {
+	if !h.Active {
 		state = IdentityStateInactive
 	}
 
 	return &Identity{
-		ID:    user.ID,
+		ID:    h.ID,
 		State: state,
 		Traits: IdentityTraits{
-			Email:         user.Email,
-			EmailVerified: user.EmailVerified,
-			Name:          user.Name,
-			GivenName:     user.GivenName,
-			FamilyName:    user.FamilyName,
-			Picture:       user.Picture,
-			Locale:        user.Locale,
+			Email:         h.Email,
+			EmailVerified: h.EmailVerified,
+			Name:          h.DisplayName,
+			GivenName:     h.GivenName,
+			FamilyName:    h.FamilyName,
+			Picture:       h.AvatarURL,
+			Locale:        h.Locale,
 		},
-		Metadata:  user.Metadata,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		Metadata:  h.Metadata,
+		CreatedAt: h.CreatedAt,
+		UpdatedAt: h.UpdatedAt,
 	}
 }
 

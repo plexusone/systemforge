@@ -22,7 +22,6 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
-	userEnt "github.com/plexusone/systemforge/identity/ent/user"
 )
 
 // ownerIDContextKey is used to pass owner ID through context.
@@ -57,109 +56,6 @@ func NewEntStorage(db *ent.Client, opts ...EntStorageOption) *EntStorage {
 		opt(s)
 	}
 	return s
-}
-
-// --- User Management for Federation ---
-// Note: These methods work with the systemauth User type for federation sync.
-// The Ent User entity will need federation fields added for full support.
-
-// CreateUser creates a new user from federation sync.
-func (s *EntStorage) CreateUser(ctx context.Context, user *User) error {
-	// Use the Ent User entity
-	_, err := s.db.User.Create().
-		SetID(user.ID).
-		SetEmail(user.Email).
-		SetName(user.Name).
-		SetActive(user.Active).
-		Save(ctx)
-	if err != nil {
-		if ent.IsConstraintError(err) {
-			return ErrUserExists
-		}
-		return fmt.Errorf("failed to create user: %w", err)
-	}
-	return nil
-}
-
-// GetUserByID retrieves a user by ID.
-func (s *EntStorage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
-	entUser, err := s.db.User.Get(ctx, id)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, ErrUserNotFound
-		}
-		return nil, fmt.Errorf("failed to get user: %w", err)
-	}
-	return s.entUserToUser(entUser), nil
-}
-
-// GetUserByEmail retrieves a user by email.
-func (s *EntStorage) GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	entUser, err := s.db.User.Query().
-		Where(userEnt.EmailEQ(email)).
-		First(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, ErrUserNotFound
-		}
-		return nil, fmt.Errorf("failed to get user: %w", err)
-	}
-	return s.entUserToUser(entUser), nil
-}
-
-// GetUserByFederationID retrieves a user by their federation ID.
-func (s *EntStorage) GetUserByFederationID(ctx context.Context, federationID uuid.UUID) (*User, error) {
-	entUser, err := s.db.User.Query().
-		Where(userEnt.FederationIDEQ(federationID)).
-		First(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, ErrUserNotFound
-		}
-		return nil, fmt.Errorf("failed to get user by federation ID: %w", err)
-	}
-	return s.entUserToUser(entUser), nil
-}
-
-// UpdateUser updates an existing user.
-func (s *EntStorage) UpdateUser(ctx context.Context, user *User) error {
-	_, err := s.db.User.UpdateOneID(user.ID).
-		SetEmail(user.Email).
-		SetName(user.Name).
-		SetActive(user.Active).
-		Save(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return ErrUserNotFound
-		}
-		return fmt.Errorf("failed to update user: %w", err)
-	}
-	return nil
-}
-
-// DeleteUser deletes a user.
-func (s *EntStorage) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	err := s.db.User.DeleteOneID(id).Exec(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return ErrUserNotFound
-		}
-		return fmt.Errorf("failed to delete user: %w", err)
-	}
-	return nil
-}
-
-// entUserToUser converts an Ent User to a systemauth User.
-func (s *EntStorage) entUserToUser(entUser *ent.User) *User {
-	user := &User{
-		ID:           entUser.ID,
-		Email:        entUser.Email,
-		Name:         entUser.Name,
-		Active:       entUser.Active,
-		Federated:    entUser.FederationID != nil,
-		FederationID: entUser.FederationID,
-	}
-	return user
 }
 
 // Ensure EntStorage implements Storage.

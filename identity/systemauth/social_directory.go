@@ -16,16 +16,6 @@ import (
 // resolver treats it as a lost race and re-reads the existing link.
 var ErrExternalIdentityExists = errors.New("systemauth: external identity already linked")
 
-// LoginPrincipal is the view of a human Principal that social login needs.
-type LoginPrincipal struct {
-	ID            uuid.UUID
-	Email         string
-	EmailVerified bool
-	DisplayName   string
-	AvatarURL     string
-	Active        bool
-}
-
 // ExternalLogin is a normalized, upstream-authenticated identity.
 type ExternalLogin struct {
 	// Provider is the upstream provider name (github, google).
@@ -47,17 +37,17 @@ type ExternalLogin struct {
 type PrincipalDirectory interface {
 	// FindByExternalIdentity returns the principal linked to (provider,
 	// subject), or ErrPrincipalNotFound.
-	FindByExternalIdentity(ctx context.Context, provider, subject string) (*LoginPrincipal, error)
+	FindByExternalIdentity(ctx context.Context, provider, subject string) (*HumanPrincipal, error)
 
 	// FindByVerifiedEmail returns the human principal whose email matches
 	// (case-insensitively) and is itself verified, or ErrPrincipalNotFound.
-	FindByVerifiedEmail(ctx context.Context, email string) (*LoginPrincipal, error)
+	FindByVerifiedEmail(ctx context.Context, email string) (*HumanPrincipal, error)
 
 	// CreateFromExternal creates a human principal from login, with the
 	// email marked verified, and links the external identity. It returns
 	// ErrEmailConflict if the email is already taken, and
 	// ErrExternalIdentityExists if the identity was linked concurrently.
-	CreateFromExternal(ctx context.Context, login ExternalLogin) (*LoginPrincipal, error)
+	CreateFromExternal(ctx context.Context, login ExternalLogin) (*HumanPrincipal, error)
 
 	// LinkExternalIdentity links login's identity to an existing principal.
 	// It returns ErrExternalIdentityExists if already linked.
@@ -68,7 +58,7 @@ type PrincipalDirectory interface {
 	RecordLogin(ctx context.Context, principalID uuid.UUID, login ExternalLogin, at time.Time) error
 
 	// GetPrincipal returns a principal by ID, or ErrPrincipalNotFound.
-	GetPrincipal(ctx context.Context, id uuid.UUID) (*LoginPrincipal, error)
+	GetPrincipal(ctx context.Context, id uuid.UUID) (*HumanPrincipal, error)
 }
 
 // ResolveExternalLogin finds or creates the principal for an upstream login
@@ -81,7 +71,7 @@ type PrincipalDirectory interface {
 //  3. Otherwise a new principal is created, which requires a verified email.
 //
 // An unverified email never links to or creates an account.
-func ResolveExternalLogin(ctx context.Context, dir PrincipalDirectory, login ExternalLogin, now time.Time) (*LoginPrincipal, error) {
+func ResolveExternalLogin(ctx context.Context, dir PrincipalDirectory, login ExternalLogin, now time.Time) (*HumanPrincipal, error) {
 	if login.Provider == "" || login.Subject == "" {
 		return nil, errors.New("systemauth: external login requires provider and subject")
 	}
@@ -132,7 +122,7 @@ func ResolveExternalLogin(ctx context.Context, dir PrincipalDirectory, login Ext
 	return nil, ErrExternalIdentityExists
 }
 
-func finishLogin(ctx context.Context, dir PrincipalDirectory, p *LoginPrincipal, login ExternalLogin, now time.Time) (*LoginPrincipal, error) {
+func finishLogin(ctx context.Context, dir PrincipalDirectory, p *HumanPrincipal, login ExternalLogin, now time.Time) (*HumanPrincipal, error) {
 	if !p.Active {
 		return nil, ErrPrincipalInactive
 	}
@@ -146,7 +136,7 @@ func finishLogin(ctx context.Context, dir PrincipalDirectory, p *LoginPrincipal,
 // and tests.
 type MemoryPrincipalDirectory struct {
 	mu         sync.Mutex
-	principals map[uuid.UUID]*LoginPrincipal
+	principals map[uuid.UUID]*HumanPrincipal
 	byEmail    map[string]uuid.UUID
 	byExternal map[string]uuid.UUID
 	lastLogin  map[uuid.UUID]time.Time
@@ -155,7 +145,7 @@ type MemoryPrincipalDirectory struct {
 // NewMemoryPrincipalDirectory creates an empty in-memory directory.
 func NewMemoryPrincipalDirectory() *MemoryPrincipalDirectory {
 	return &MemoryPrincipalDirectory{
-		principals: map[uuid.UUID]*LoginPrincipal{},
+		principals: map[uuid.UUID]*HumanPrincipal{},
 		byEmail:    map[string]uuid.UUID{},
 		byExternal: map[string]uuid.UUID{},
 		lastLogin:  map[uuid.UUID]time.Time{},
@@ -165,7 +155,7 @@ func NewMemoryPrincipalDirectory() *MemoryPrincipalDirectory {
 func externalKey(provider, subject string) string { return provider + "\x00" + subject }
 
 // AddPrincipal seeds a principal (e.g. one created by password signup).
-func (d *MemoryPrincipalDirectory) AddPrincipal(p LoginPrincipal) error {
+func (d *MemoryPrincipalDirectory) AddPrincipal(p HumanPrincipal) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	key := strings.ToLower(p.Email)
@@ -188,7 +178,7 @@ func (d *MemoryPrincipalDirectory) LastLogin(id uuid.UUID) (time.Time, bool) {
 	return t, ok
 }
 
-func (d *MemoryPrincipalDirectory) copyOf(id uuid.UUID) (*LoginPrincipal, error) {
+func (d *MemoryPrincipalDirectory) copyOf(id uuid.UUID) (*HumanPrincipal, error) {
 	p, ok := d.principals[id]
 	if !ok {
 		return nil, ErrPrincipalNotFound
@@ -198,7 +188,7 @@ func (d *MemoryPrincipalDirectory) copyOf(id uuid.UUID) (*LoginPrincipal, error)
 }
 
 // FindByExternalIdentity implements PrincipalDirectory.
-func (d *MemoryPrincipalDirectory) FindByExternalIdentity(_ context.Context, provider, subject string) (*LoginPrincipal, error) {
+func (d *MemoryPrincipalDirectory) FindByExternalIdentity(_ context.Context, provider, subject string) (*HumanPrincipal, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	id, ok := d.byExternal[externalKey(provider, subject)]
@@ -209,7 +199,7 @@ func (d *MemoryPrincipalDirectory) FindByExternalIdentity(_ context.Context, pro
 }
 
 // FindByVerifiedEmail implements PrincipalDirectory.
-func (d *MemoryPrincipalDirectory) FindByVerifiedEmail(_ context.Context, email string) (*LoginPrincipal, error) {
+func (d *MemoryPrincipalDirectory) FindByVerifiedEmail(_ context.Context, email string) (*HumanPrincipal, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	id, ok := d.byEmail[strings.ToLower(email)]
@@ -220,7 +210,7 @@ func (d *MemoryPrincipalDirectory) FindByVerifiedEmail(_ context.Context, email 
 }
 
 // CreateFromExternal implements PrincipalDirectory.
-func (d *MemoryPrincipalDirectory) CreateFromExternal(_ context.Context, login ExternalLogin) (*LoginPrincipal, error) {
+func (d *MemoryPrincipalDirectory) CreateFromExternal(_ context.Context, login ExternalLogin) (*HumanPrincipal, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if _, ok := d.byExternal[externalKey(login.Provider, login.Subject)]; ok {
@@ -230,7 +220,7 @@ func (d *MemoryPrincipalDirectory) CreateFromExternal(_ context.Context, login E
 	if _, ok := d.byEmail[key]; ok {
 		return nil, ErrEmailConflict
 	}
-	p := &LoginPrincipal{
+	p := &HumanPrincipal{
 		ID:            uuid.New(),
 		Email:         login.Email,
 		EmailVerified: true,
@@ -272,7 +262,7 @@ func (d *MemoryPrincipalDirectory) RecordLogin(_ context.Context, principalID uu
 }
 
 // GetPrincipal implements PrincipalDirectory.
-func (d *MemoryPrincipalDirectory) GetPrincipal(_ context.Context, id uuid.UUID) (*LoginPrincipal, error) {
+func (d *MemoryPrincipalDirectory) GetPrincipal(_ context.Context, id uuid.UUID) (*HumanPrincipal, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return d.copyOf(id)

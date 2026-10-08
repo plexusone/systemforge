@@ -74,13 +74,11 @@ var (
 	ErrInvalidGlobalToken = errors.New("systemauth: invalid global identity token")
 )
 
-// User errors.
+// Human principal errors.
 var (
-	// ErrUserNotFound is returned when a user is not found.
-	ErrUserNotFound = errors.New("systemauth: user not found")
-
-	// ErrUserExists is returned when trying to create a user that already exists.
-	ErrUserExists = errors.New("systemauth: user already exists")
+	// ErrPrincipalExists is returned when creating a human principal whose ID
+	// or email is already taken.
+	ErrPrincipalExists = errors.New("systemauth: principal already exists")
 )
 
 // Social login errors.

@@ -54,13 +54,18 @@ type Storage interface {
 	DeleteClient(ctx context.Context, id string) error
 	ListClients(ctx context.Context) ([]*Client, error)
 
-	// User management for federation (optional - may return ErrNotImplemented)
-	CreateUser(ctx context.Context, user *User) error
-	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
-	GetUserByEmail(ctx context.Context, email string) (*User, error)
-	GetUserByFederationID(ctx context.Context, federationID uuid.UUID) (*User, error)
-	UpdateUser(ctx context.Context, user *User) error
-	DeleteUser(ctx context.Context, id uuid.UUID) error
+	// Human principals, used by password login and federation sync.
+	// CreateHuman assigns an ID when h.ID is uuid.Nil and writes it back.
+	CreateHuman(ctx context.Context, h *HumanPrincipal) error
+	GetHuman(ctx context.Context, id uuid.UUID) (*HumanPrincipal, error)
+	GetHumanByEmail(ctx context.Context, email string) (*HumanPrincipal, error)
+	GetHumanByExternalIdentity(ctx context.Context, provider, subject string) (*HumanPrincipal, error)
+	// LinkExternalIdentity records an upstream identity for a human. Linking
+	// the same identity to the same principal again is a no-op; linking it
+	// to a different principal returns ErrExternalIdentityExists.
+	LinkExternalIdentity(ctx context.Context, principalID uuid.UUID, provider, subject string) error
+	UpdateHuman(ctx context.Context, h *HumanPrincipal) error
+	DeleteHuman(ctx context.Context, id uuid.UUID) error
 }
 
 // SubjectTokenRevoker is implemented by storage that can revoke every

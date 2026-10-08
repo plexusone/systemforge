@@ -3,8 +3,8 @@ package systemauth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -165,88 +165,17 @@ func (h *DefaultIdentitySyncHandler) SyncIdentity(ctx context.Context, req *Iden
 
 	switch req.Action {
 	case "create":
-		// Check if user already exists
-		_, err := h.storage.GetUserByEmail(ctx, req.Identity.Email)
-		if err == nil {
-			// User exists, return the existing ID
-			user, _ := h.storage.GetUserByEmail(ctx, req.Identity.Email)
-			return &IdentitySyncResponse{
-				LocalPrincipalID: user.ID,
-				Status:           "synced",
-			}, nil
-		}
-
-		// Create new user
-		user := &User{
-			ID:           uuid.New(),
-			Email:        req.Identity.Email,
-			Name:         req.Identity.DisplayName,
-			Active:       true,
-			Federated:    true,
-			FederationID: &req.Identity.ID,
-		}
-
-		if err := h.storage.CreateUser(ctx, user); err != nil {
-			return &IdentitySyncResponse{
-				Status: "failed",
-				Error:  err.Error(),
-			}, nil
-		}
-
-		return &IdentitySyncResponse{
-			LocalPrincipalID: user.ID,
-			Status:           "synced",
-		}, nil
-
+		return h.syncCreate(ctx, req.Identity), nil
 	case "update":
-		// Find user by federation ID
-		user, err := h.storage.GetUserByFederationID(ctx, req.Identity.ID)
-		if err != nil {
-			return &IdentitySyncResponse{
-				Status: "failed",
-				Error:  "user not found",
-			}, nil
-		}
-
-		// Update user fields
-		user.Email = req.Identity.Email
-		user.Name = req.Identity.DisplayName
-		user.Active = req.Identity.Status == "active"
-
-		if err := h.storage.UpdateUser(ctx, user); err != nil {
-			return &IdentitySyncResponse{
-				Status: "failed",
-				Error:  err.Error(),
-			}, nil
-		}
-
-		return &IdentitySyncResponse{
-			LocalPrincipalID: user.ID,
-			Status:           "synced",
-		}, nil
-
+		return h.syncUpdate(ctx, req.Identity, false, func(hp *HumanPrincipal) {
+			hp.Email = req.Identity.Email
+			hp.DisplayName = req.Identity.DisplayName
+			hp.Active = req.Identity.Status == "active"
+		}), nil
 	case "delete":
-		// Find and deactivate user
-		user, err := h.storage.GetUserByFederationID(ctx, req.Identity.ID)
-		if err != nil {
-			return &IdentitySyncResponse{
-				Status: "synced", // Already gone
-			}, nil
-		}
-
-		user.Active = false
-		if err := h.storage.UpdateUser(ctx, user); err != nil {
-			return &IdentitySyncResponse{
-				Status: "failed",
-				Error:  err.Error(),
-			}, nil
-		}
-
-		return &IdentitySyncResponse{
-			LocalPrincipalID: user.ID,
-			Status:           "synced",
-		}, nil
-
+		return h.syncUpdate(ctx, req.Identity, true, func(hp *HumanPrincipal) {
+			hp.Active = false
+		}), nil
 	default:
 		return &IdentitySyncResponse{
 			Status: "failed",
@@ -255,20 +184,48 @@ func (h *DefaultIdentitySyncHandler) SyncIdentity(ctx context.Context, req *Iden
 	}
 }
 
-// User represents a local user identity.
-type User struct {
-	ID            uuid.UUID      `json:"id"`
-	Email         string         `json:"email"`
-	EmailVerified bool           `json:"email_verified,omitempty"`
-	Name          string         `json:"name"`
-	GivenName     string         `json:"given_name,omitempty"`
-	FamilyName    string         `json:"family_name,omitempty"`
-	Picture       string         `json:"picture,omitempty"`
-	Locale        string         `json:"locale,omitempty"`
-	Active        bool           `json:"active"`
-	Federated     bool           `json:"federated"`
-	FederationID  *uuid.UUID     `json:"federation_id,omitempty"`
-	Metadata      map[string]any `json:"metadata,omitempty"`
-	CreatedAt     time.Time      `json:"created_at,omitzero"`
-	UpdatedAt     time.Time      `json:"updated_at,omitzero"`
+func syncFailed(err error) *IdentitySyncResponse {
+	return &IdentitySyncResponse{Status: "failed", Error: err.Error()}
+}
+
+// syncCreate creates a local human principal for a federated identity, or
+// adopts an existing one with the same email, and links the federation
+// identity to it so later updates and deletes resolve to the same principal.
+func (h *DefaultIdentitySyncHandler) syncCreate(ctx context.Context, fi *GlobalIdentity) *IdentitySyncResponse {
+	hp, err := h.storage.GetHumanByEmail(ctx, fi.Email)
+	switch {
+	case errors.Is(err, ErrPrincipalNotFound):
+		hp = &HumanPrincipal{
+			Email:       fi.Email,
+			DisplayName: fi.DisplayName,
+			Active:      true,
+		}
+		if err := h.storage.CreateHuman(ctx, hp); err != nil {
+			return syncFailed(err)
+		}
+	case err != nil:
+		return syncFailed(err)
+	}
+	if err := h.storage.LinkExternalIdentity(ctx, hp.ID, FederationProvider, fi.ID.String()); err != nil {
+		return syncFailed(err)
+	}
+	return &IdentitySyncResponse{LocalPrincipalID: hp.ID, Status: "synced"}
+}
+
+// syncUpdate applies change to the principal linked to a federated identity.
+// When missingOK is set (deletes), an identity with no linked principal is
+// already gone and reports synced; any other lookup error fails.
+func (h *DefaultIdentitySyncHandler) syncUpdate(ctx context.Context, fi *GlobalIdentity, missingOK bool, change func(*HumanPrincipal)) *IdentitySyncResponse {
+	hp, err := h.storage.GetHumanByExternalIdentity(ctx, FederationProvider, fi.ID.String())
+	if err != nil {
+		if missingOK && errors.Is(err, ErrPrincipalNotFound) {
+			return &IdentitySyncResponse{Status: "synced"}
+		}
+		return syncFailed(err)
+	}
+	change(hp)
+	if err := h.storage.UpdateHuman(ctx, hp); err != nil {
+		return syncFailed(err)
+	}
+	return &IdentitySyncResponse{LocalPrincipalID: hp.ID, Status: "synced"}
 }

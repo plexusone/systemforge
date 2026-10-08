@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,8 +36,9 @@ type MemoryStorage struct {
 	// OpenID Connect sessions keyed by authorization code
 	oidcSessions map[string]fosite.Requester
 
-	// User storage for federation
-	users map[uuid.UUID]*User
+	// Human principals and their linked external identities
+	humans   map[uuid.UUID]*HumanPrincipal
+	external map[string]uuid.UUID // externalKey(provider, subject) -> principal ID
 }
 
 // storedAuthCode holds an authorization code with its request data.
@@ -63,7 +65,8 @@ func NewMemoryStorage() *MemoryStorage {
 		refreshTokens: make(map[string]*storedToken),
 		pkceSessions:  make(map[string]*storedAuthCode),
 		oidcSessions:  make(map[string]fosite.Requester),
-		users:         make(map[uuid.UUID]*User),
+		humans:        make(map[uuid.UUID]*HumanPrincipal),
+		external:      make(map[string]uuid.UUID),
 	}
 }
 
@@ -509,82 +512,144 @@ func (s *MemoryStorage) CleanupExpired(ctx context.Context) error {
 	return nil
 }
 
-// --- User Storage for Federation ---
+// --- Human Principal Storage ---
 
-// CreateUser creates a new user.
-func (s *MemoryStorage) CreateUser(ctx context.Context, user *User) error {
+func copyHuman(h *HumanPrincipal) *HumanPrincipal {
+	cp := *h
+	if h.Metadata != nil {
+		cp.Metadata = make(map[string]any, len(h.Metadata))
+		for k, v := range h.Metadata {
+			cp.Metadata[k] = v
+		}
+	}
+	return &cp
+}
+
+// humanByEmailLocked returns the human with the given email, ignoring case.
+// The caller must hold s.mu.
+func (s *MemoryStorage) humanByEmailLocked(email string) (*HumanPrincipal, bool) {
+	for _, h := range s.humans {
+		if strings.EqualFold(h.Email, email) {
+			return h, true
+		}
+	}
+	return nil, false
+}
+
+// CreateHuman implements Storage.
+func (s *MemoryStorage) CreateHuman(_ context.Context, h *HumanPrincipal) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.users[user.ID]; exists {
-		return ErrUserExists
+	if h.ID == uuid.Nil {
+		h.ID = uuid.New()
 	}
-
-	s.users[user.ID] = user
+	if _, exists := s.humans[h.ID]; exists {
+		return ErrPrincipalExists
+	}
+	if _, exists := s.humanByEmailLocked(h.Email); exists {
+		return ErrPrincipalExists
+	}
+	now := time.Now()
+	stored := copyHuman(h)
+	stored.CreatedAt, stored.UpdatedAt = now, now
+	s.humans[h.ID] = stored
 	return nil
 }
 
-// GetUserByID retrieves a user by ID.
-func (s *MemoryStorage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
+// GetHuman implements Storage.
+func (s *MemoryStorage) GetHuman(_ context.Context, id uuid.UUID) (*HumanPrincipal, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	user, ok := s.users[id]
+	h, ok := s.humans[id]
 	if !ok {
-		return nil, ErrUserNotFound
+		return nil, ErrPrincipalNotFound
 	}
-	return user, nil
+	return copyHuman(h), nil
 }
 
-// GetUserByEmail retrieves a user by email.
-func (s *MemoryStorage) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+// GetHumanByEmail implements Storage. The match is case-insensitive.
+func (s *MemoryStorage) GetHumanByEmail(_ context.Context, email string) (*HumanPrincipal, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	for _, user := range s.users {
-		if user.Email == email {
-			return user, nil
-		}
+	h, ok := s.humanByEmailLocked(email)
+	if !ok {
+		return nil, ErrPrincipalNotFound
 	}
-	return nil, ErrUserNotFound
+	return copyHuman(h), nil
 }
 
-// GetUserByFederationID retrieves a user by their federation ID.
-func (s *MemoryStorage) GetUserByFederationID(ctx context.Context, federationID uuid.UUID) (*User, error) {
+// GetHumanByExternalIdentity implements Storage.
+func (s *MemoryStorage) GetHumanByExternalIdentity(_ context.Context, provider, subject string) (*HumanPrincipal, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	for _, user := range s.users {
-		if user.FederationID != nil && *user.FederationID == federationID {
-			return user, nil
-		}
+	id, ok := s.external[externalKey(provider, subject)]
+	if !ok {
+		return nil, ErrPrincipalNotFound
 	}
-	return nil, ErrUserNotFound
+	h, ok := s.humans[id]
+	if !ok {
+		return nil, ErrPrincipalNotFound
+	}
+	return copyHuman(h), nil
 }
 
-// UpdateUser updates an existing user.
-func (s *MemoryStorage) UpdateUser(ctx context.Context, user *User) error {
+// LinkExternalIdentity implements Storage.
+func (s *MemoryStorage) LinkExternalIdentity(_ context.Context, principalID uuid.UUID, provider, subject string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.users[user.ID]; !exists {
-		return ErrUserNotFound
+	key := externalKey(provider, subject)
+	if existing, ok := s.external[key]; ok {
+		if existing == principalID {
+			return nil
+		}
+		return ErrExternalIdentityExists
 	}
-
-	s.users[user.ID] = user
+	if _, ok := s.humans[principalID]; !ok {
+		return ErrPrincipalNotFound
+	}
+	s.external[key] = principalID
 	return nil
 }
 
-// DeleteUser deletes a user.
-func (s *MemoryStorage) DeleteUser(ctx context.Context, id uuid.UUID) error {
+// UpdateHuman implements Storage.
+func (s *MemoryStorage) UpdateHuman(_ context.Context, h *HumanPrincipal) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.users[id]; !exists {
-		return ErrUserNotFound
+	current, ok := s.humans[h.ID]
+	if !ok {
+		return ErrPrincipalNotFound
 	}
+	if other, taken := s.humanByEmailLocked(h.Email); taken && other.ID != h.ID {
+		return ErrPrincipalExists
+	}
+	stored := copyHuman(h)
+	stored.CreatedAt = current.CreatedAt
+	stored.UpdatedAt = time.Now()
+	s.humans[h.ID] = stored
+	return nil
+}
 
-	delete(s.users, id)
+// DeleteHuman implements Storage. It also removes the human's external
+// identities.
+func (s *MemoryStorage) DeleteHuman(_ context.Context, id uuid.UUID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.humans[id]; !ok {
+		return ErrPrincipalNotFound
+	}
+	delete(s.humans, id)
+	for key, pid := range s.external {
+		if pid == id {
+			delete(s.external, key)
+		}
+	}
 	return nil
 }
 

@@ -27,24 +27,8 @@ func NewEntPrincipalDirectory(db *ent.Client) *EntPrincipalDirectory {
 
 var _ PrincipalDirectory = (*EntPrincipalDirectory)(nil)
 
-func toLoginPrincipal(p *ent.Principal) *LoginPrincipal {
-	lp := &LoginPrincipal{
-		ID:          p.ID,
-		DisplayName: p.DisplayName,
-		Active:      p.Active,
-	}
-	if h := p.Edges.Human; h != nil {
-		lp.Email = h.Email
-		lp.EmailVerified = h.EmailVerifiedAt != nil
-		if h.AvatarURL != nil {
-			lp.AvatarURL = *h.AvatarURL
-		}
-	}
-	return lp
-}
-
 // FindByExternalIdentity implements PrincipalDirectory.
-func (d *EntPrincipalDirectory) FindByExternalIdentity(ctx context.Context, provider, subject string) (*LoginPrincipal, error) {
+func (d *EntPrincipalDirectory) FindByExternalIdentity(ctx context.Context, provider, subject string) (*HumanPrincipal, error) {
 	p, err := d.db.Principal.Query().
 		Where(principal.HasExternalIdentitiesWith(
 			externalidentity.ProviderEQ(provider),
@@ -58,11 +42,11 @@ func (d *EntPrincipalDirectory) FindByExternalIdentity(ctx context.Context, prov
 		}
 		return nil, err
 	}
-	return toLoginPrincipal(p), nil
+	return toHumanPrincipal(p), nil
 }
 
 // FindByVerifiedEmail implements PrincipalDirectory.
-func (d *EntPrincipalDirectory) FindByVerifiedEmail(ctx context.Context, email string) (*LoginPrincipal, error) {
+func (d *EntPrincipalDirectory) FindByVerifiedEmail(ctx context.Context, email string) (*HumanPrincipal, error) {
 	p, err := d.db.Principal.Query().
 		Where(
 			principal.TypeEQ(principal.TypeHuman),
@@ -79,11 +63,11 @@ func (d *EntPrincipalDirectory) FindByVerifiedEmail(ctx context.Context, email s
 		}
 		return nil, err
 	}
-	return toLoginPrincipal(p), nil
+	return toHumanPrincipal(p), nil
 }
 
 // CreateFromExternal implements PrincipalDirectory.
-func (d *EntPrincipalDirectory) CreateFromExternal(ctx context.Context, login ExternalLogin) (*LoginPrincipal, error) {
+func (d *EntPrincipalDirectory) CreateFromExternal(ctx context.Context, login ExternalLogin) (*HumanPrincipal, error) {
 	tx, err := d.db.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -104,32 +88,21 @@ func (d *EntPrincipalDirectory) CreateFromExternal(ctx context.Context, login Ex
 	return p, nil
 }
 
-func (d *EntPrincipalDirectory) createInTx(ctx context.Context, tx *ent.Tx, login ExternalLogin) (*LoginPrincipal, error) {
+func (d *EntPrincipalDirectory) createInTx(ctx context.Context, tx *ent.Tx, login ExternalLogin) (*HumanPrincipal, error) {
 	now := time.Now()
-	p, err := tx.Principal.Create().
-		SetType(principal.TypeHuman).
-		SetIdentifier(login.Email).
-		SetDisplayName(displayNameFor(login)).
-		Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("creating principal: %w", err)
+	hp := &HumanPrincipal{
+		Email:         login.Email,
+		EmailVerified: true,
+		DisplayName:   displayNameFor(login),
+		AvatarURL:     login.AvatarURL,
+		Active:        true,
 	}
-
-	hc := tx.Human.Create().
-		SetPrincipalID(p.ID).
-		SetEmail(login.Email).
-		SetEmailVerifiedAt(now).
-		SetLastLoginAt(now)
-	if login.AvatarURL != "" {
-		hc.SetAvatarURL(login.AvatarURL)
-	}
-	h, err := hc.Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("creating human: %w", err)
+	if err := createHumanRows(ctx, tx, hp, &now, &now); err != nil {
+		return nil, err
 	}
 
 	if _, err := tx.ExternalIdentity.Create().
-		SetPrincipalID(p.ID).
+		SetPrincipalID(hp.ID).
 		SetProvider(login.Provider).
 		SetSubject(login.Subject).
 		SetEmail(login.Email).
@@ -139,8 +112,7 @@ func (d *EntPrincipalDirectory) createInTx(ctx context.Context, tx *ent.Tx, logi
 		return nil, fmt.Errorf("creating external identity: %w", err)
 	}
 
-	p.Edges.Human = h
-	return toLoginPrincipal(p), nil
+	return hp, nil
 }
 
 // classifyCreateError maps unique-constraint failures to the sentinel the
@@ -206,7 +178,7 @@ func (d *EntPrincipalDirectory) RecordLogin(ctx context.Context, principalID uui
 }
 
 // GetPrincipal implements PrincipalDirectory.
-func (d *EntPrincipalDirectory) GetPrincipal(ctx context.Context, id uuid.UUID) (*LoginPrincipal, error) {
+func (d *EntPrincipalDirectory) GetPrincipal(ctx context.Context, id uuid.UUID) (*HumanPrincipal, error) {
 	p, err := d.db.Principal.Query().
 		Where(principal.IDEQ(id)).
 		WithHuman().
@@ -217,5 +189,5 @@ func (d *EntPrincipalDirectory) GetPrincipal(ctx context.Context, id uuid.UUID) 
 		}
 		return nil, err
 	}
-	return toLoginPrincipal(p), nil
+	return toHumanPrincipal(p), nil
 }

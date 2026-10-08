@@ -521,7 +521,7 @@ func (p *socialSessionProvider) RedirectToLogin(returnURL string) string {
 	return LoginPath + "?return_to=" + url.QueryEscape(returnURL)
 }
 
-func (p *socialSessionProvider) socialPrincipal(ctx context.Context, userID string) (*LoginPrincipal, bool) {
+func (p *socialSessionProvider) socialPrincipal(ctx context.Context, userID string) (*HumanPrincipal, bool) {
 	id, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, false
