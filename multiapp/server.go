@@ -144,7 +144,10 @@ func (s *Server) RegisterApp(backend AppBackend) error {
 	}
 
 	// Create scoped dependencies
-	schemaDB := s.db.ForSchema(schema)
+	schemaDB, err := s.db.ForSchema(schema)
+	if err != nil {
+		return fmt.Errorf("multiapp: %w", err)
+	}
 	deps := Dependencies{
 		DB:     schemaDB,
 		Cache:  s.cache.WithPrefix(slug + ":"),

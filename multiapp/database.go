@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
@@ -128,12 +129,18 @@ func (db *AppAwareDB) GetSchemaSize(ctx context.Context, schemaName string) (int
 	return size, nil
 }
 
-// ForSchema returns a SchemaDB scoped to a specific schema.
-func (db *AppAwareDB) ForSchema(schemaName string) *SchemaDB {
+// ForSchema returns a SchemaDB scoped to a specific schema. The name is
+// used in SQL, so it must be a plain identifier (lowercase letters, digits,
+// and underscores); anything else is refused.
+func (db *AppAwareDB) ForSchema(schemaName string) (*SchemaDB, error) {
+	if !isValidSchemaName(schemaName) {
+		return nil, fmt.Errorf("multiapp: invalid schema name %q", schemaName)
+	}
+
 	db.mu.RLock()
 	if schemaDB, ok := db.schemas[schemaName]; ok {
 		db.mu.RUnlock()
-		return schemaDB
+		return schemaDB, nil
 	}
 	db.mu.RUnlock()
 
@@ -142,7 +149,7 @@ func (db *AppAwareDB) ForSchema(schemaName string) *SchemaDB {
 
 	// Double-check after acquiring write lock
 	if schemaDB, ok := db.schemas[schemaName]; ok {
-		return schemaDB
+		return schemaDB, nil
 	}
 
 	schemaDB := &SchemaDB{
@@ -150,7 +157,7 @@ func (db *AppAwareDB) ForSchema(schemaName string) *SchemaDB {
 		schema: schemaName,
 	}
 	db.schemas[schemaName] = schemaDB
-	return schemaDB
+	return schemaDB, nil
 }
 
 // Pool returns the underlying connection pool.
@@ -194,36 +201,123 @@ func (db *SchemaDB) Schema() string {
 	return db.schema
 }
 
-// Exec executes a query with the schema's search_path.
+// setSearchPath scopes the schema to the current transaction. SET LOCAL,
+// unlike SET, ends with the transaction, so a pooled connection never
+// goes back to the pool carrying one application's schema.
+func (db *SchemaDB) setSearchPath(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO %s, public", db.schema)); err != nil {
+		return fmt.Errorf("failed to set search_path: %w", err)
+	}
+	return nil
+}
+
+// Exec executes a statement with the schema's search_path, in its own
+// transaction.
 func (db *SchemaDB) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
-	return db.pool.Exec(ctx, db.withSearchPath(sql), args...)
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return pgconn.CommandTag{}, err
+	}
+	tag, err := tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return tag, errors.Join(err, tx.Rollback(ctx))
+	}
+	return tag, tx.Commit(ctx)
 }
 
 // Query executes a query and returns rows with the schema's search_path.
+// The rows hold a transaction open until they are closed (Close, or Next
+// returning false), so always close them.
 func (db *SchemaDB) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
-	return db.pool.Query(ctx, db.withSearchPath(sql), args...)
-}
-
-// QueryRow executes a query and returns a single row with the schema's search_path.
-func (db *SchemaDB) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
-	return db.pool.QueryRow(ctx, db.withSearchPath(sql), args...)
-}
-
-// Begin starts a transaction with the schema's search_path.
-func (db *SchemaDB) Begin(ctx context.Context) (*SchemaTx, error) {
-	tx, err := db.pool.Begin(ctx)
+	tx, err := db.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	// Set search_path for this transaction
-	_, err = tx.Exec(ctx, fmt.Sprintf("SET search_path TO %s, public", db.schema))
+	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
-		_ = tx.Rollback(ctx)
-		return nil, fmt.Errorf("failed to set search_path: %w", err)
+		return nil, errors.Join(err, tx.Rollback(ctx))
 	}
+	return &schemaRows{Rows: rows, tx: tx, ctx: ctx}, nil
+}
 
-	return &SchemaTx{tx: tx, schema: db.schema}, nil
+// QueryRow executes a query and returns a single row with the schema's
+// search_path. The transaction ends when the row is scanned.
+func (db *SchemaDB) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+	rows, err := db.Query(ctx, sql, args...)
+	if err != nil {
+		return errRow{err}
+	}
+	return &schemaRow{rows: rows}
+}
+
+// schemaRows ends the transaction its rows were read in: committing it
+// when the query succeeded, so a write that returns rows (INSERT ...
+// RETURNING) takes effect, and rolling it back otherwise.
+type schemaRows struct {
+	pgx.Rows
+	tx     *SchemaTx
+	ctx    context.Context
+	closed bool
+	endErr error
+}
+
+func (r *schemaRows) Next() bool {
+	if r.Rows.Next() {
+		return true
+	}
+	r.Close()
+	return false
+}
+
+func (r *schemaRows) Close() {
+	if r.closed {
+		return
+	}
+	r.closed = true
+	r.Rows.Close()
+	if r.Rows.Err() != nil {
+		if err := r.tx.Rollback(r.ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			slog.Error("multiapp: rolling back a failed query", "error", err)
+		}
+		return
+	}
+	r.endErr = r.tx.Commit(r.ctx)
+}
+
+// Err returns the query's error, or the failure to end its transaction.
+func (r *schemaRows) Err() error {
+	if err := r.Rows.Err(); err != nil {
+		return err
+	}
+	return r.endErr
+}
+
+// schemaRow scans a single row and ends its transaction.
+type schemaRow struct{ rows pgx.Rows }
+
+func (r *schemaRow) Scan(dest ...any) error {
+	defer r.rows.Close()
+	if !r.rows.Next() {
+		if err := r.rows.Err(); err != nil {
+			return err
+		}
+		return pgx.ErrNoRows
+	}
+	if err := r.rows.Scan(dest...); err != nil {
+		return err
+	}
+	r.rows.Close()
+	return r.rows.Err()
+}
+
+// errRow is a row that failed to start.
+type errRow struct{ err error }
+
+func (r errRow) Scan(...any) error { return r.err }
+
+// Begin starts a transaction with the schema's search_path.
+func (db *SchemaDB) Begin(ctx context.Context) (*SchemaTx, error) {
+	return db.BeginTx(ctx, pgx.TxOptions{})
 }
 
 // BeginTx starts a transaction with options and the schema's search_path.
@@ -232,23 +326,18 @@ func (db *SchemaDB) BeginTx(ctx context.Context, opts pgx.TxOptions) (*SchemaTx,
 	if err != nil {
 		return nil, err
 	}
-
-	// Set search_path for this transaction
-	_, err = tx.Exec(ctx, fmt.Sprintf("SET search_path TO %s, public", db.schema))
-	if err != nil {
-		_ = tx.Rollback(ctx)
-		return nil, fmt.Errorf("failed to set search_path: %w", err)
+	if err := db.setSearchPath(ctx, tx); err != nil {
+		return nil, errors.Join(err, tx.Rollback(ctx))
 	}
-
 	return &SchemaTx{tx: tx, schema: db.schema}, nil
 }
 
-// withSearchPath wraps a SQL statement to set the search_path.
-func (db *SchemaDB) withSearchPath(sqlQuery string) string {
-	return fmt.Sprintf("SET search_path TO %s, public; %s", db.schema, sqlQuery)
-}
-
-// AcquireConn acquires a connection with the schema's search_path set.
+// AcquireConn acquires a connection with the schema's search_path set for
+// the whole session.
+//
+// Deprecated: the setting stays on the connection after Release, so the
+// pool can hand it, with this schema, to unrelated code. Use Begin, whose
+// search_path ends with the transaction.
 func (db *SchemaDB) AcquireConn(ctx context.Context) (*pgxpool.Conn, error) {
 	conn, err := db.pool.Acquire(ctx)
 	if err != nil {
