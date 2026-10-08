@@ -1,10 +1,11 @@
 # ADR-007: Organization Memberships and Entitlements as Claims
 
-**Status:** Proposed
+**Status:** Accepted
 **Deciders:** @grokify
 **Relates to:** ADR-002 (relying parties federate to SystemAuth), ADR-006
 (organization lifecycle), ADR-008 (resource-scoped collaborators),
 INIT-SYSTEMFORGE-005 (relying-party contract).
+**Updates:** `docs/design/architecture/organizations.md` (memberships, application roles, claims).
 
 ## Context
 
