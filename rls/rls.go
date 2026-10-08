@@ -4,8 +4,25 @@ package rls
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 )
+
+// ErrNotInTransaction is returned when a session variable is set through a
+// *sql.DB or *sql.Conn. SET LOCAL lasts only until the end of the current
+// transaction; outside one it is a no-op that the database reports as a
+// warning, so the query that follows would run with no tenant. Run the work in
+// a transaction, for example with WithTenant.
+var ErrNotInTransaction = errors.New("rls: SET LOCAL needs a transaction, use rls.WithTenant")
+
+// requireTransaction refuses executors that cannot hold a SET LOCAL.
+func requireTransaction(db Executor) error {
+	switch db.(type) {
+	case *sql.DB, *sql.Conn:
+		return ErrNotInTransaction
+	}
+	return nil
+}
 
 // Config holds RLS configuration.
 type Config struct {
@@ -51,7 +68,13 @@ func NewHelper(cfg *Config) *Helper {
 
 // SetTenant sets the current tenant in the database session.
 // This should be called at the start of each request/transaction.
+//
+// db must be a transaction: SetTenant returns ErrNotInTransaction for a
+// *sql.DB or *sql.Conn.
 func (h *Helper) SetTenant(ctx context.Context, db Executor, tenantID string) error {
+	if err := requireTransaction(db); err != nil {
+		return err
+	}
 	query := fmt.Sprintf("SET LOCAL %s = $1", h.config.SessionVariable)
 	_, err := db.ExecContext(ctx, query, tenantID)
 	if err != nil {
@@ -61,7 +84,12 @@ func (h *Helper) SetTenant(ctx context.Context, db Executor, tenantID string) er
 }
 
 // SetUser sets the current user in the database session.
+//
+// db must be a transaction, as for SetTenant.
 func (h *Helper) SetUser(ctx context.Context, db Executor, userID string) error {
+	if err := requireTransaction(db); err != nil {
+		return err
+	}
 	query := fmt.Sprintf("SET LOCAL %s = $1", h.config.UserSessionVariable)
 	_, err := db.ExecContext(ctx, query, userID)
 	if err != nil {

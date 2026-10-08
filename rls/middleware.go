@@ -1,6 +1,7 @@
 package rls
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 
@@ -22,12 +23,15 @@ func NewMiddleware(db *sql.DB, cfg *Config) *Middleware {
 	}
 }
 
-// SetRLSContext returns middleware that sets PostgreSQL session variables
-// from the authenticated user's JWT claims.
+// SetRLSContext returns middleware that puts the authenticated caller's
+// organization and principal on the request context, where WithTx and
+// WithTenant pick them up to scope a transaction.
+//
+// It does not touch the database. PostgreSQL's SET LOCAL lasts only for a
+// transaction, and a middleware that runs before the handler has none, so
+// setting the variables here would scope nothing. Do the work through WithTx.
 //
 // This middleware should be used AFTER authentication middleware.
-// It extracts the user ID and organization ID from the JWT claims
-// and sets them as PostgreSQL session variables for RLS policies.
 //
 // Usage with Chi:
 //
@@ -45,27 +49,21 @@ func (m *Middleware) SetRLSContext() func(http.Handler) http.Handler {
 				return
 			}
 
-			// Set tenant context if organization is present
 			if claims.OrganizationID != nil {
-				if err := m.helper.SetTenant(ctx, m.db, claims.OrganizationID.String()); err != nil {
-					http.Error(w, "failed to set tenant context", http.StatusInternalServerError)
-					return
-				}
-
-				// Also add to Go context for non-DB use
 				ctx = ContextWithTenant(ctx, *claims.OrganizationID)
-			}
-
-			// Set user context
-			if err := m.helper.SetUser(ctx, m.db, claims.PrincipalID.String()); err != nil {
-				http.Error(w, "failed to set user context", http.StatusInternalServerError)
-				return
 			}
 			ctx = ContextWithUser(ctx, claims.PrincipalID)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// WithTx runs fn in a transaction scoped to the tenant and user that
+// SetRLSContext put on ctx. The session variables are set inside the
+// transaction, which is the only place they take effect.
+func (m *Middleware) WithTx(ctx context.Context, fn TxFunc) error {
+	return WithTenant(ctx, m.db, m.helper, TenantIDFromContext(ctx), UserIDFromContext(ctx), fn)
 }
 
 // RequireTenant returns middleware that ensures a tenant context is present.

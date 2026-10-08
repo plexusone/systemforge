@@ -30,7 +30,10 @@ func NewEntHook(db *sql.DB, cfg *Config) *EntHook {
 }
 
 // SetContextFromContext sets RLS context using tenant/user from Go context.
-// This should be called at the start of each request/operation.
+//
+// Deprecated: it sets the variables on the pool, not on a transaction, where
+// SET LOCAL has no effect, so it now returns ErrNotInTransaction whenever a
+// tenant or user is present. Run the work in rls.WithTenant instead.
 func (h *EntHook) SetContextFromContext(ctx context.Context) error {
 	tenantID := TenantIDFromContext(ctx)
 	userID := UserIDFromContext(ctx)
@@ -76,25 +79,22 @@ func NewContextInjector(cfg *Config) *ContextInjector {
 }
 
 // InjectContext sets RLS session variables on a connection.
-// Use this with connection pool acquire hooks.
+//
+// Deprecated: SET LOCAL on a connection outside a transaction has no effect,
+// so it returns ErrNotInTransaction whenever a tenant or user is present. Run
+// the work in rls.WithTenant instead.
 func (ci *ContextInjector) InjectContext(ctx context.Context, conn *sql.Conn) error {
 	tenantID := TenantIDFromContext(ctx)
 	userID := UserIDFromContext(ctx)
 
 	if tenantID.String() != "00000000-0000-0000-0000-000000000000" {
-		if _, err := conn.ExecContext(ctx,
-			fmt.Sprintf("SET LOCAL %s = $1", ci.helper.config.SessionVariable),
-			tenantID.String(),
-		); err != nil {
+		if err := ci.helper.SetTenant(ctx, conn, tenantID.String()); err != nil {
 			return fmt.Errorf("setting tenant: %w", err)
 		}
 	}
 
 	if userID.String() != "00000000-0000-0000-0000-000000000000" {
-		if _, err := conn.ExecContext(ctx,
-			fmt.Sprintf("SET LOCAL %s = $1", ci.helper.config.UserSessionVariable),
-			userID.String(),
-		); err != nil {
+		if err := ci.helper.SetUser(ctx, conn, userID.String()); err != nil {
 			return fmt.Errorf("setting user: %w", err)
 		}
 	}
@@ -110,6 +110,10 @@ type ConnWithRLS struct {
 }
 
 // NewConnWithRLS wraps a connection with RLS context injection.
+//
+// Deprecated: SET LOCAL on a connection outside a transaction has no effect,
+// so it returns ErrNotInTransaction whenever a tenant or user is present. Run
+// the work in rls.WithTenant instead.
 func NewConnWithRLS(ctx context.Context, conn *sql.Conn, cfg *Config) (*ConnWithRLS, error) {
 	c := &ConnWithRLS{
 		Conn:   conn,
@@ -122,19 +126,13 @@ func NewConnWithRLS(ctx context.Context, conn *sql.Conn, cfg *Config) (*ConnWith
 	userID := UserIDFromContext(ctx)
 
 	if tenantID.String() != "00000000-0000-0000-0000-000000000000" {
-		if _, err := conn.ExecContext(ctx,
-			fmt.Sprintf("SET LOCAL %s = $1", c.helper.config.SessionVariable),
-			tenantID.String(),
-		); err != nil {
+		if err := c.helper.SetTenant(ctx, conn, tenantID.String()); err != nil {
 			return nil, fmt.Errorf("setting tenant: %w", err)
 		}
 	}
 
 	if userID.String() != "00000000-0000-0000-0000-000000000000" {
-		if _, err := conn.ExecContext(ctx,
-			fmt.Sprintf("SET LOCAL %s = $1", c.helper.config.UserSessionVariable),
-			userID.String(),
-		); err != nil {
+		if err := c.helper.SetUser(ctx, conn, userID.String()); err != nil {
 			return nil, fmt.Errorf("setting user: %w", err)
 		}
 	}
@@ -143,6 +141,8 @@ func NewConnWithRLS(ctx context.Context, conn *sql.Conn, cfg *Config) (*ConnWith
 }
 
 // GetConnWithRLS gets a connection from the pool with RLS context set.
+//
+// Deprecated: see NewConnWithRLS.
 func GetConnWithRLS(ctx context.Context, db *sql.DB, cfg *Config) (*ConnWithRLS, error) {
 	conn, err := db.Conn(ctx)
 	if err != nil {
