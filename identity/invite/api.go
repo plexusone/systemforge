@@ -9,6 +9,9 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
+
+	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/organization"
 )
 
@@ -18,6 +21,17 @@ type APIConfig struct {
 	BasePath string
 	// Logger is the logger to use (default: slog.Default()).
 	Logger *slog.Logger
+	// Authorizer checks the caller's organization permissions; managing
+	// an organization's invites needs authz.PermOrgInviteMember. Until it
+	// is set, those endpoints answer 501.
+	Authorizer authz.Authorizer
+	// Caller identifies the authenticated principal (default:
+	// requestprincipal.PrincipalUUID, set by requestprincipal.Middleware).
+	Caller func(ctx context.Context) (uuid.UUID, error)
+	// PrincipalEmail returns the caller's email, which an invite must be
+	// addressed to (default: the service's PrincipalEmail, when it has
+	// one, as DefaultService does).
+	PrincipalEmail PrincipalEmailFunc
 }
 
 // DefaultAPIConfig returns the default API configuration.

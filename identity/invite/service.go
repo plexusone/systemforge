@@ -309,7 +309,7 @@ func (s *DefaultService) List(ctx context.Context, input ListInvitesInput) ([]*I
 		query.Where(invite.OrganizationID(*input.OrganizationID))
 	}
 	if input.Email != nil {
-		query.Where(invite.Email(*input.Email))
+		query.Where(invite.EmailEqualFold(*input.Email))
 	}
 	if input.Status != nil {
 		query.Where(invite.StatusEQ(invite.Status(*input.Status)))
@@ -366,7 +366,7 @@ func (s *DefaultService) HasPendingInvite(ctx context.Context, organizationID uu
 	return s.client.Invite.Query().
 		Where(
 			invite.OrganizationID(organizationID),
-			invite.Email(email),
+			invite.EmailEqualFold(email),
 			invite.StatusEQ(invite.StatusPending),
 			invite.ExpiresAtGT(time.Now()),
 		).

@@ -3,10 +3,14 @@ package invite
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/google/uuid"
+	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/identity/organization"
 )
 
 // InviteResponse is the API representation of an invite.
@@ -70,7 +74,7 @@ type CreateInviteRequest struct {
 		Email              string  `json:"email" required:"true" format:"email"`
 		Role               string  `json:"role" required:"true" enum:"owner,admin,member"`
 		Message            *string `json:"message,omitempty"`
-		InviterPrincipalID string  `json:"inviter_principal_id" required:"true" format:"uuid"`
+		InviterPrincipalID string  `json:"inviter_principal_id,omitempty" required:"false" format:"uuid" doc:"Deprecated: the inviter is the authenticated caller; when present it must equal the caller"`
 		ExpiresInHours     int     `json:"expires_in_hours,omitempty" minimum:"1" maximum:"720"`
 	}
 }
@@ -94,7 +98,7 @@ type GetInviteByTokenResponse struct {
 type AcceptInviteRequest struct {
 	Token string `path:"token"`
 	Body  struct {
-		PrincipalID string `json:"principal_id" required:"true" format:"uuid"`
+		PrincipalID string `json:"principal_id,omitempty" required:"false" format:"uuid" doc:"Deprecated: the accepting principal is the authenticated caller; when present it must equal the caller"`
 	}
 }
 
@@ -132,10 +136,11 @@ type ResendInviteResponse struct {
 
 // ListInvitesRequest is the request for listing invites.
 type ListInvitesRequest struct {
-	Slug   string  `path:"slug"`
-	Status *string `query:"status" enum:"pending,accepted,declined,expired,revoked"`
-	Limit  int     `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset int     `query:"offset" default:"0" minimum:"0"`
+	Slug string `path:"slug"`
+	// Huma does not support pointer parameters; empty lists every status.
+	Status string `query:"status" enum:"pending,accepted,declined,expired,revoked"`
+	Limit  int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset int    `query:"offset" default:"0" minimum:"0"`
 }
 
 // ListInvitesResponse is the response for listing invites.
@@ -147,7 +152,9 @@ type ListInvitesResponse struct {
 
 // ListPendingInvitesForEmailRequest is the request for listing pending invites by email.
 type ListPendingInvitesForEmailRequest struct {
-	Email string `query:"email" required:"true" format:"email"`
+	// Email is deprecated: the invites listed are the caller's. When
+	// present it must be the caller's email.
+	Email string `query:"email" format:"email" doc:"Deprecated: invites are listed for the authenticated caller's email; when present it must match"`
 }
 
 // ListPendingInvitesForEmailResponse is the response for listing pending invites.
@@ -251,14 +258,28 @@ func (a *API) registerInviteEndpoints() {
 }
 
 func (a *API) createInvite(ctx context.Context, input *CreateInviteRequest) (*CreateInviteResponse, error) {
-	org, err := a.orgSvc.GetBySlug(ctx, input.Slug)
+	org, inviterID, err := a.orgForInvites(ctx, input.Slug)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
-
-	inviterID, err := uuid.Parse(input.Body.InviterPrincipalID)
-	if err != nil {
-		return nil, huma.Error400BadRequest("invalid inviter_principal_id")
+	if input.Body.InviterPrincipalID != "" {
+		claimed, err := uuid.Parse(input.Body.InviterPrincipalID)
+		if err != nil {
+			return nil, huma.Error400BadRequest("invalid inviter_principal_id")
+		}
+		if claimed != inviterID {
+			return nil, huma.Error403Forbidden("inviter_principal_id must be the authenticated caller")
+		}
+	}
+	// Inviting an owner needs owner rights.
+	if input.Body.Role == organization.RoleOwner {
+		ok, err := a.can(ctx, inviterID, org.ID, authz.PermOrgDelete)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, huma.Error403Forbidden("only an owner may invite an owner")
+		}
 	}
 
 	expiresIn := DefaultInviteExpiry
@@ -282,14 +303,14 @@ func (a *API) createInvite(ctx context.Context, input *CreateInviteRequest) (*Cr
 }
 
 func (a *API) listInvites(ctx context.Context, input *ListInvitesRequest) (*ListInvitesResponse, error) {
-	org, err := a.orgSvc.GetBySlug(ctx, input.Slug)
+	org, _, err := a.orgForInvites(ctx, input.Slug)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
 
 	var status *Status
-	if input.Status != nil {
-		s := Status(*input.Status)
+	if input.Status != "" {
+		s := Status(input.Status)
 		status = &s
 	}
 
@@ -315,15 +336,13 @@ func (a *API) listInvites(ctx context.Context, input *ListInvitesRequest) (*List
 }
 
 func (a *API) revokeInvite(ctx context.Context, input *RevokeInviteRequest) (*struct{}, error) {
-	// Verify org exists
-	_, err := a.orgSvc.GetBySlug(ctx, input.Slug)
+	org, _, err := a.orgForInvites(ctx, input.Slug)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
-
-	inviteID, err := uuid.Parse(input.InviteID)
+	inviteID, err := a.inviteInOrg(ctx, input.InviteID, org)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid invite_id")
+		return nil, err
 	}
 
 	if err := a.service.Revoke(ctx, inviteID); err != nil {
@@ -334,15 +353,13 @@ func (a *API) revokeInvite(ctx context.Context, input *RevokeInviteRequest) (*st
 }
 
 func (a *API) resendInvite(ctx context.Context, input *ResendInviteRequest) (*ResendInviteResponse, error) {
-	// Verify org exists
-	_, err := a.orgSvc.GetBySlug(ctx, input.Slug)
+	org, _, err := a.orgForInvites(ctx, input.Slug)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
-
-	inviteID, err := uuid.Parse(input.InviteID)
+	inviteID, err := a.inviteInOrg(ctx, input.InviteID, org)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid invite_id")
+		return nil, err
 	}
 
 	result, err := a.service.Resend(ctx, inviteID)
@@ -363,9 +380,19 @@ func (a *API) getInviteByToken(ctx context.Context, input *GetInviteByTokenReque
 }
 
 func (a *API) acceptInvite(ctx context.Context, input *AcceptInviteRequest) (*AcceptInviteResponse, error) {
-	principalID, err := uuid.Parse(input.Body.PrincipalID)
+	// The invite joins the caller, and only when addressed to its email.
+	principalID, err := a.callerForInvite(ctx, input.Token)
 	if err != nil {
-		return nil, huma.Error400BadRequest("invalid principal_id")
+		return nil, err
+	}
+	if input.Body.PrincipalID != "" {
+		claimed, err := uuid.Parse(input.Body.PrincipalID)
+		if err != nil {
+			return nil, huma.Error400BadRequest("invalid principal_id")
+		}
+		if claimed != principalID {
+			return nil, huma.Error403Forbidden("principal_id must be the authenticated caller")
+		}
 	}
 
 	invite, err := a.service.Accept(ctx, AcceptInviteInput{
@@ -380,6 +407,9 @@ func (a *API) acceptInvite(ctx context.Context, input *AcceptInviteRequest) (*Ac
 }
 
 func (a *API) declineInvite(ctx context.Context, input *DeclineInviteRequest) (*DeclineInviteResponse, error) {
+	if _, err := a.callerForInvite(ctx, input.Token); err != nil {
+		return nil, err
+	}
 	invite, err := a.service.Decline(ctx, input.Token)
 	if err != nil {
 		return nil, huma.Error400BadRequest(err.Error())
@@ -389,7 +419,14 @@ func (a *API) declineInvite(ctx context.Context, input *DeclineInviteRequest) (*
 }
 
 func (a *API) listPendingInvitesForEmail(ctx context.Context, input *ListPendingInvitesForEmailRequest) (*ListPendingInvitesForEmailResponse, error) {
-	invites, err := a.service.ListPendingForEmail(ctx, input.Email)
+	_, email, err := a.callerEmail(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if input.Email != "" && !strings.EqualFold(input.Email, email) {
+		return nil, huma.Error403Forbidden("invites can be listed only for your own email")
+	}
+	invites, err := a.service.ListPendingForEmail(ctx, email)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
