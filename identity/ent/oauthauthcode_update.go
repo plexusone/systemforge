@@ -16,7 +16,6 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
-	"github.com/plexusone/systemforge/identity/ent/user"
 )
 
 // OAuthAuthCodeUpdate is the builder for updating OAuthAuthCode entities.
@@ -57,26 +56,6 @@ func (_u *OAuthAuthCodeUpdate) SetNillableAppID(v *uuid.UUID) *OAuthAuthCodeUpda
 	if v != nil {
 		_u.SetAppID(*v)
 	}
-	return _u
-}
-
-// SetUserID sets the "user_id" field.
-func (_u *OAuthAuthCodeUpdate) SetUserID(v uuid.UUID) *OAuthAuthCodeUpdate {
-	_u.mutation.SetUserID(v)
-	return _u
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (_u *OAuthAuthCodeUpdate) SetNillableUserID(v *uuid.UUID) *OAuthAuthCodeUpdate {
-	if v != nil {
-		_u.SetUserID(*v)
-	}
-	return _u
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (_u *OAuthAuthCodeUpdate) ClearUserID() *OAuthAuthCodeUpdate {
-	_u.mutation.ClearUserID()
 	return _u
 }
 
@@ -319,11 +298,6 @@ func (_u *OAuthAuthCodeUpdate) SetApp(v *OAuthApp) *OAuthAuthCodeUpdate {
 	return _u.SetAppID(v.ID)
 }
 
-// SetUser sets the "user" edge to the User entity.
-func (_u *OAuthAuthCodeUpdate) SetUser(v *User) *OAuthAuthCodeUpdate {
-	return _u.SetUserID(v.ID)
-}
-
 // Mutation returns the OAuthAuthCodeMutation object of the builder.
 func (_u *OAuthAuthCodeUpdate) Mutation() *OAuthAuthCodeMutation {
 	return _u.mutation
@@ -332,12 +306,6 @@ func (_u *OAuthAuthCodeUpdate) Mutation() *OAuthAuthCodeMutation {
 // ClearApp clears the "app" edge to the OAuthApp entity.
 func (_u *OAuthAuthCodeUpdate) ClearApp() *OAuthAuthCodeUpdate {
 	_u.mutation.ClearApp()
-	return _u
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (_u *OAuthAuthCodeUpdate) ClearUser() *OAuthAuthCodeUpdate {
-	_u.mutation.ClearUser()
 	return _u
 }
 
@@ -491,35 +459,6 @@ func (_u *OAuthAuthCodeUpdate) sqlSave(ctx context.Context) (_node int, err erro
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   oauthauthcode.UserTable,
-			Columns: []string{oauthauthcode.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   oauthauthcode.UserTable,
-			Columns: []string{oauthauthcode.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{oauthauthcode.Label}
@@ -565,26 +504,6 @@ func (_u *OAuthAuthCodeUpdateOne) SetNillableAppID(v *uuid.UUID) *OAuthAuthCodeU
 	if v != nil {
 		_u.SetAppID(*v)
 	}
-	return _u
-}
-
-// SetUserID sets the "user_id" field.
-func (_u *OAuthAuthCodeUpdateOne) SetUserID(v uuid.UUID) *OAuthAuthCodeUpdateOne {
-	_u.mutation.SetUserID(v)
-	return _u
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (_u *OAuthAuthCodeUpdateOne) SetNillableUserID(v *uuid.UUID) *OAuthAuthCodeUpdateOne {
-	if v != nil {
-		_u.SetUserID(*v)
-	}
-	return _u
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (_u *OAuthAuthCodeUpdateOne) ClearUserID() *OAuthAuthCodeUpdateOne {
-	_u.mutation.ClearUserID()
 	return _u
 }
 
@@ -827,11 +746,6 @@ func (_u *OAuthAuthCodeUpdateOne) SetApp(v *OAuthApp) *OAuthAuthCodeUpdateOne {
 	return _u.SetAppID(v.ID)
 }
 
-// SetUser sets the "user" edge to the User entity.
-func (_u *OAuthAuthCodeUpdateOne) SetUser(v *User) *OAuthAuthCodeUpdateOne {
-	return _u.SetUserID(v.ID)
-}
-
 // Mutation returns the OAuthAuthCodeMutation object of the builder.
 func (_u *OAuthAuthCodeUpdateOne) Mutation() *OAuthAuthCodeMutation {
 	return _u.mutation
@@ -840,12 +754,6 @@ func (_u *OAuthAuthCodeUpdateOne) Mutation() *OAuthAuthCodeMutation {
 // ClearApp clears the "app" edge to the OAuthApp entity.
 func (_u *OAuthAuthCodeUpdateOne) ClearApp() *OAuthAuthCodeUpdateOne {
 	_u.mutation.ClearApp()
-	return _u
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (_u *OAuthAuthCodeUpdateOne) ClearUser() *OAuthAuthCodeUpdateOne {
-	_u.mutation.ClearUser()
 	return _u
 }
 
@@ -1022,35 +930,6 @@ func (_u *OAuthAuthCodeUpdateOne) sqlSave(ctx context.Context) (_node *OAuthAuth
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   oauthauthcode.UserTable,
-			Columns: []string{oauthauthcode.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   oauthauthcode.UserTable,
-			Columns: []string{oauthauthcode.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -54,17 +54,11 @@ type UserEdges struct {
 	RefreshTokens []*RefreshToken `json:"refresh_tokens,omitempty"`
 	// APIKeys holds the value of the api_keys edge.
 	APIKeys []*APIKey `json:"api_keys,omitempty"`
-	// OauthTokens holds the value of the oauth_tokens edge.
-	OauthTokens []*OAuthToken `json:"oauth_tokens,omitempty"`
-	// OauthAuthCodes holds the value of the oauth_auth_codes edge.
-	OauthAuthCodes []*OAuthAuthCode `json:"oauth_auth_codes,omitempty"`
-	// OauthConsents holds the value of the oauth_consents edge.
-	OauthConsents []*OAuthConsent `json:"oauth_consents,omitempty"`
 	// CreatedServiceAccounts holds the value of the created_service_accounts edge.
 	CreatedServiceAccounts []*ServiceAccount `json:"created_service_accounts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [8]bool
+	loadedTypes [5]bool
 }
 
 // MembershipsOrErr returns the Memberships value or an error if the edge
@@ -103,37 +97,10 @@ func (e UserEdges) APIKeysOrErr() ([]*APIKey, error) {
 	return nil, &NotLoadedError{edge: "api_keys"}
 }
 
-// OauthTokensOrErr returns the OauthTokens value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) OauthTokensOrErr() ([]*OAuthToken, error) {
-	if e.loadedTypes[4] {
-		return e.OauthTokens, nil
-	}
-	return nil, &NotLoadedError{edge: "oauth_tokens"}
-}
-
-// OauthAuthCodesOrErr returns the OauthAuthCodes value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) OauthAuthCodesOrErr() ([]*OAuthAuthCode, error) {
-	if e.loadedTypes[5] {
-		return e.OauthAuthCodes, nil
-	}
-	return nil, &NotLoadedError{edge: "oauth_auth_codes"}
-}
-
-// OauthConsentsOrErr returns the OauthConsents value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) OauthConsentsOrErr() ([]*OAuthConsent, error) {
-	if e.loadedTypes[6] {
-		return e.OauthConsents, nil
-	}
-	return nil, &NotLoadedError{edge: "oauth_consents"}
-}
-
 // CreatedServiceAccountsOrErr returns the CreatedServiceAccounts value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) CreatedServiceAccountsOrErr() ([]*ServiceAccount, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[4] {
 		return e.CreatedServiceAccounts, nil
 	}
 	return nil, &NotLoadedError{edge: "created_service_accounts"}
@@ -269,21 +236,6 @@ func (_m *User) QueryRefreshTokens() *RefreshTokenQuery {
 // QueryAPIKeys queries the "api_keys" edge of the User entity.
 func (_m *User) QueryAPIKeys() *APIKeyQuery {
 	return NewUserClient(_m.config).QueryAPIKeys(_m)
-}
-
-// QueryOauthTokens queries the "oauth_tokens" edge of the User entity.
-func (_m *User) QueryOauthTokens() *OAuthTokenQuery {
-	return NewUserClient(_m.config).QueryOauthTokens(_m)
-}
-
-// QueryOauthAuthCodes queries the "oauth_auth_codes" edge of the User entity.
-func (_m *User) QueryOauthAuthCodes() *OAuthAuthCodeQuery {
-	return NewUserClient(_m.config).QueryOauthAuthCodes(_m)
-}
-
-// QueryOauthConsents queries the "oauth_consents" edge of the User entity.
-func (_m *User) QueryOauthConsents() *OAuthConsentQuery {
-	return NewUserClient(_m.config).QueryOauthConsents(_m)
 }
 
 // QueryCreatedServiceAccounts queries the "created_service_accounts" edge of the User entity.

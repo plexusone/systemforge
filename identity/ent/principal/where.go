@@ -619,6 +619,29 @@ func HasOwnedOauthAppsWith(preds ...predicate.OAuthApp) predicate.Principal {
 	})
 }
 
+// HasOauthConsents applies the HasEdge predicate on the "oauth_consents" edge.
+func HasOauthConsents() predicate.Principal {
+	return predicate.Principal(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OauthConsentsTable, OauthConsentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOauthConsentsWith applies the HasEdge predicate on the "oauth_consents" edge with a given conditions (other predicates).
+func HasOauthConsentsWith(preds ...predicate.OAuthConsent) predicate.Principal {
+	return predicate.Principal(func(s *sql.Selector) {
+		step := newOauthConsentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasSentInvites applies the HasEdge predicate on the "sent_invites" edge.
 func HasSentInvites() predicate.Principal {
 	return predicate.Principal(func(s *sql.Selector) {

@@ -15,7 +15,6 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
-	"github.com/plexusone/systemforge/identity/ent/user"
 )
 
 // OAuthAuthCodeQuery is the builder for querying OAuthAuthCode entities.
@@ -26,7 +25,6 @@ type OAuthAuthCodeQuery struct {
 	inters     []Interceptor
 	predicates []predicate.OAuthAuthCode
 	withApp    *OAuthAppQuery
-	withUser   *UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -78,28 +76,6 @@ func (_q *OAuthAuthCodeQuery) QueryApp() *OAuthAppQuery {
 			sqlgraph.From(oauthauthcode.Table, oauthauthcode.FieldID, selector),
 			sqlgraph.To(oauthapp.Table, oauthapp.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, oauthauthcode.AppTable, oauthauthcode.AppColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryUser chains the current query on the "user" edge.
-func (_q *OAuthAuthCodeQuery) QueryUser() *UserQuery {
-	query := (&UserClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(oauthauthcode.Table, oauthauthcode.FieldID, selector),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, oauthauthcode.UserTable, oauthauthcode.UserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -300,7 +276,6 @@ func (_q *OAuthAuthCodeQuery) Clone() *OAuthAuthCodeQuery {
 		inters:     append([]Interceptor{}, _q.inters...),
 		predicates: append([]predicate.OAuthAuthCode{}, _q.predicates...),
 		withApp:    _q.withApp.Clone(),
-		withUser:   _q.withUser.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -315,17 +290,6 @@ func (_q *OAuthAuthCodeQuery) WithApp(opts ...func(*OAuthAppQuery)) *OAuthAuthCo
 		opt(query)
 	}
 	_q.withApp = query
-	return _q
-}
-
-// WithUser tells the query-builder to eager-load the nodes that are connected to
-// the "user" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *OAuthAuthCodeQuery) WithUser(opts ...func(*UserQuery)) *OAuthAuthCodeQuery {
-	query := (&UserClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withUser = query
 	return _q
 }
 
@@ -407,9 +371,8 @@ func (_q *OAuthAuthCodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	var (
 		nodes       = []*OAuthAuthCode{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [1]bool{
 			_q.withApp != nil,
-			_q.withUser != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -433,12 +396,6 @@ func (_q *OAuthAuthCodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if query := _q.withApp; query != nil {
 		if err := _q.loadApp(ctx, query, nodes, nil,
 			func(n *OAuthAuthCode, e *OAuthApp) { n.Edges.App = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withUser; query != nil {
-		if err := _q.loadUser(ctx, query, nodes, nil,
-			func(n *OAuthAuthCode, e *User) { n.Edges.User = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -474,38 +431,6 @@ func (_q *OAuthAuthCodeQuery) loadApp(ctx context.Context, query *OAuthAppQuery,
 	}
 	return nil
 }
-func (_q *OAuthAuthCodeQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*OAuthAuthCode, init func(*OAuthAuthCode), assign func(*OAuthAuthCode, *User)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*OAuthAuthCode)
-	for i := range nodes {
-		if nodes[i].UserID == nil {
-			continue
-		}
-		fk := *nodes[i].UserID
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(user.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
 
 func (_q *OAuthAuthCodeQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -534,9 +459,6 @@ func (_q *OAuthAuthCodeQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withApp != nil {
 			_spec.Node.AddColumnOnce(oauthauthcode.FieldAppID)
-		}
-		if _q.withUser != nil {
-			_spec.Node.AddColumnOnce(oauthauthcode.FieldUserID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

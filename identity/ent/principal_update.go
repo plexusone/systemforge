@@ -22,6 +22,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
+	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principal"
@@ -313,6 +314,21 @@ func (_u *PrincipalUpdate) AddOwnedOauthApps(v ...*OAuthApp) *PrincipalUpdate {
 	return _u.AddOwnedOauthAppIDs(ids...)
 }
 
+// AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by IDs.
+func (_u *PrincipalUpdate) AddOauthConsentIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.AddOauthConsentIDs(ids...)
+	return _u
+}
+
+// AddOauthConsents adds the "oauth_consents" edges to the OAuthConsent entity.
+func (_u *PrincipalUpdate) AddOauthConsents(v ...*OAuthConsent) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOauthConsentIDs(ids...)
+}
+
 // AddSentInviteIDs adds the "sent_invites" edge to the Invite entity by IDs.
 func (_u *PrincipalUpdate) AddSentInviteIDs(ids ...uuid.UUID) *PrincipalUpdate {
 	_u.mutation.AddSentInviteIDs(ids...)
@@ -547,6 +563,27 @@ func (_u *PrincipalUpdate) RemoveOwnedOauthApps(v ...*OAuthApp) *PrincipalUpdate
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOwnedOauthAppIDs(ids...)
+}
+
+// ClearOauthConsents clears all "oauth_consents" edges to the OAuthConsent entity.
+func (_u *PrincipalUpdate) ClearOauthConsents() *PrincipalUpdate {
+	_u.mutation.ClearOauthConsents()
+	return _u
+}
+
+// RemoveOauthConsentIDs removes the "oauth_consents" edge to OAuthConsent entities by IDs.
+func (_u *PrincipalUpdate) RemoveOauthConsentIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.RemoveOauthConsentIDs(ids...)
+	return _u
+}
+
+// RemoveOauthConsents removes "oauth_consents" edges to OAuthConsent entities.
+func (_u *PrincipalUpdate) RemoveOauthConsents(v ...*OAuthConsent) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOauthConsentIDs(ids...)
 }
 
 // ClearSentInvites clears all "sent_invites" edges to the Invite entity.
@@ -1161,6 +1198,51 @@ func (_u *PrincipalUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.OauthConsentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OauthConsentsTable,
+			Columns: []string{principal.OauthConsentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthconsent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOauthConsentsIDs(); len(nodes) > 0 && !_u.mutation.OauthConsentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OauthConsentsTable,
+			Columns: []string{principal.OauthConsentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthconsent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OauthConsentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OauthConsentsTable,
+			Columns: []string{principal.OauthConsentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthconsent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.SentInvitesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1675,6 +1757,21 @@ func (_u *PrincipalUpdateOne) AddOwnedOauthApps(v ...*OAuthApp) *PrincipalUpdate
 	return _u.AddOwnedOauthAppIDs(ids...)
 }
 
+// AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by IDs.
+func (_u *PrincipalUpdateOne) AddOauthConsentIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.AddOauthConsentIDs(ids...)
+	return _u
+}
+
+// AddOauthConsents adds the "oauth_consents" edges to the OAuthConsent entity.
+func (_u *PrincipalUpdateOne) AddOauthConsents(v ...*OAuthConsent) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOauthConsentIDs(ids...)
+}
+
 // AddSentInviteIDs adds the "sent_invites" edge to the Invite entity by IDs.
 func (_u *PrincipalUpdateOne) AddSentInviteIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
 	_u.mutation.AddSentInviteIDs(ids...)
@@ -1909,6 +2006,27 @@ func (_u *PrincipalUpdateOne) RemoveOwnedOauthApps(v ...*OAuthApp) *PrincipalUpd
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOwnedOauthAppIDs(ids...)
+}
+
+// ClearOauthConsents clears all "oauth_consents" edges to the OAuthConsent entity.
+func (_u *PrincipalUpdateOne) ClearOauthConsents() *PrincipalUpdateOne {
+	_u.mutation.ClearOauthConsents()
+	return _u
+}
+
+// RemoveOauthConsentIDs removes the "oauth_consents" edge to OAuthConsent entities by IDs.
+func (_u *PrincipalUpdateOne) RemoveOauthConsentIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.RemoveOauthConsentIDs(ids...)
+	return _u
+}
+
+// RemoveOauthConsents removes "oauth_consents" edges to OAuthConsent entities.
+func (_u *PrincipalUpdateOne) RemoveOauthConsents(v ...*OAuthConsent) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOauthConsentIDs(ids...)
 }
 
 // ClearSentInvites clears all "sent_invites" edges to the Invite entity.
@@ -2546,6 +2664,51 @@ func (_u *PrincipalUpdateOne) sqlSave(ctx context.Context) (_node *Principal, er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OauthConsentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OauthConsentsTable,
+			Columns: []string{principal.OauthConsentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthconsent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOauthConsentsIDs(); len(nodes) > 0 && !_u.mutation.OauthConsentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OauthConsentsTable,
+			Columns: []string{principal.OauthConsentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthconsent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OauthConsentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OauthConsentsTable,
+			Columns: []string{principal.OauthConsentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthconsent.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

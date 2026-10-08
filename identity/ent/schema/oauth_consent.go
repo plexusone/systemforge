@@ -32,8 +32,8 @@ func (OAuthConsent) Fields() []ent.Field {
 			Default(uuid.New).
 			Immutable(),
 
-		field.UUID("user_id", uuid.UUID{}).
-			Comment("User who granted consent"),
+		field.UUID("principal_id", uuid.UUID{}).
+			Comment("Principal who granted consent"),
 
 		field.UUID("app_id", uuid.UUID{}).
 			Comment("OAuth app that received consent"),
@@ -83,9 +83,9 @@ func (OAuthConsent) Fields() []ent.Field {
 // Edges of the OAuthConsent.
 func (OAuthConsent) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("user", User.Type).
+		edge.From("principal", Principal.Type).
 			Ref("oauth_consents").
-			Field("user_id").
+			Field("principal_id").
 			Required().
 			Unique(),
 
@@ -100,9 +100,9 @@ func (OAuthConsent) Edges() []ent.Edge {
 // Indexes of the OAuthConsent.
 func (OAuthConsent) Indexes() []ent.Index {
 	return []ent.Index{
-		// One consent record per user-app pair
-		index.Fields("user_id", "app_id").Unique(),
-		index.Fields("user_id"),
+		// One consent record per principal-app pair
+		index.Fields("principal_id", "app_id").Unique(),
+		index.Fields("principal_id"),
 		index.Fields("app_id"),
 		index.Fields("granted"),
 		index.Fields("revoked"),

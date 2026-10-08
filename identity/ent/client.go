@@ -3150,22 +3150,6 @@ func (c *OAuthAuthCodeClient) QueryApp(_m *OAuthAuthCode) *OAuthAppQuery {
 	return query
 }
 
-// QueryUser queries the user edge of a OAuthAuthCode.
-func (c *OAuthAuthCodeClient) QueryUser(_m *OAuthAuthCode) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(oauthauthcode.Table, oauthauthcode.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, oauthauthcode.UserTable, oauthauthcode.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *OAuthAuthCodeClient) Hooks() []Hook {
 	return c.hooks.OAuthAuthCode
@@ -3299,15 +3283,15 @@ func (c *OAuthConsentClient) GetX(ctx context.Context, id uuid.UUID) *OAuthConse
 	return obj
 }
 
-// QueryUser queries the user edge of a OAuthConsent.
-func (c *OAuthConsentClient) QueryUser(_m *OAuthConsent) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
+// QueryPrincipal queries the principal edge of a OAuthConsent.
+func (c *OAuthConsentClient) QueryPrincipal(_m *OAuthConsent) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(oauthconsent.Table, oauthconsent.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, oauthconsent.UserTable, oauthconsent.UserColumn),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, oauthconsent.PrincipalTable, oauthconsent.PrincipalColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3473,22 +3457,6 @@ func (c *OAuthTokenClient) QueryApp(_m *OAuthToken) *OAuthAppQuery {
 			sqlgraph.From(oauthtoken.Table, oauthtoken.FieldID, id),
 			sqlgraph.To(oauthapp.Table, oauthapp.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, oauthtoken.AppTable, oauthtoken.AppColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryUser queries the user edge of a OAuthToken.
-func (c *OAuthTokenClient) QueryUser(_m *OAuthToken) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(oauthtoken.Table, oauthtoken.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, oauthtoken.UserTable, oauthtoken.UserColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -4107,6 +4075,22 @@ func (c *PrincipalClient) QueryOwnedOauthApps(_m *Principal) *OAuthAppQuery {
 			sqlgraph.From(principal.Table, principal.FieldID, id),
 			sqlgraph.To(oauthapp.Table, oauthapp.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, principal.OwnedOauthAppsTable, principal.OwnedOauthAppsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOauthConsents queries the oauth_consents edge of a Principal.
+func (c *PrincipalClient) QueryOauthConsents(_m *Principal) *OAuthConsentQuery {
+	query := (&OAuthConsentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, id),
+			sqlgraph.To(oauthconsent.Table, oauthconsent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.OauthConsentsTable, principal.OauthConsentsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -5720,54 +5704,6 @@ func (c *UserClient) QueryAPIKeys(_m *User) *APIKeyQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(apikey.Table, apikey.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.APIKeysTable, user.APIKeysColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryOauthTokens queries the oauth_tokens edge of a User.
-func (c *UserClient) QueryOauthTokens(_m *User) *OAuthTokenQuery {
-	query := (&OAuthTokenClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(oauthtoken.Table, oauthtoken.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.OauthTokensTable, user.OauthTokensColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryOauthAuthCodes queries the oauth_auth_codes edge of a User.
-func (c *UserClient) QueryOauthAuthCodes(_m *User) *OAuthAuthCodeQuery {
-	query := (&OAuthAuthCodeClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(oauthauthcode.Table, oauthauthcode.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.OauthAuthCodesTable, user.OauthAuthCodesColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryOauthConsents queries the oauth_consents edge of a User.
-func (c *UserClient) QueryOauthConsents(_m *User) *OAuthConsentQuery {
-	query := (&OAuthConsentClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(oauthconsent.Table, oauthconsent.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.OauthConsentsTable, user.OauthConsentsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

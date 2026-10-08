@@ -16,7 +16,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
-	"github.com/plexusone/systemforge/identity/ent/user"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 )
 
 // OAuthConsentUpdate is the builder for updating OAuthConsent entities.
@@ -32,16 +32,16 @@ func (_u *OAuthConsentUpdate) Where(ps ...predicate.OAuthConsent) *OAuthConsentU
 	return _u
 }
 
-// SetUserID sets the "user_id" field.
-func (_u *OAuthConsentUpdate) SetUserID(v uuid.UUID) *OAuthConsentUpdate {
-	_u.mutation.SetUserID(v)
+// SetPrincipalID sets the "principal_id" field.
+func (_u *OAuthConsentUpdate) SetPrincipalID(v uuid.UUID) *OAuthConsentUpdate {
+	_u.mutation.SetPrincipalID(v)
 	return _u
 }
 
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (_u *OAuthConsentUpdate) SetNillableUserID(v *uuid.UUID) *OAuthConsentUpdate {
+// SetNillablePrincipalID sets the "principal_id" field if the given value is not nil.
+func (_u *OAuthConsentUpdate) SetNillablePrincipalID(v *uuid.UUID) *OAuthConsentUpdate {
 	if v != nil {
-		_u.SetUserID(*v)
+		_u.SetPrincipalID(*v)
 	}
 	return _u
 }
@@ -180,9 +180,9 @@ func (_u *OAuthConsentUpdate) SetUpdatedAt(v time.Time) *OAuthConsentUpdate {
 	return _u
 }
 
-// SetUser sets the "user" edge to the User entity.
-func (_u *OAuthConsentUpdate) SetUser(v *User) *OAuthConsentUpdate {
-	return _u.SetUserID(v.ID)
+// SetPrincipal sets the "principal" edge to the Principal entity.
+func (_u *OAuthConsentUpdate) SetPrincipal(v *Principal) *OAuthConsentUpdate {
+	return _u.SetPrincipalID(v.ID)
 }
 
 // SetApp sets the "app" edge to the OAuthApp entity.
@@ -195,9 +195,9 @@ func (_u *OAuthConsentUpdate) Mutation() *OAuthConsentMutation {
 	return _u.mutation
 }
 
-// ClearUser clears the "user" edge to the User entity.
-func (_u *OAuthConsentUpdate) ClearUser() *OAuthConsentUpdate {
-	_u.mutation.ClearUser()
+// ClearPrincipal clears the "principal" edge to the Principal entity.
+func (_u *OAuthConsentUpdate) ClearPrincipal() *OAuthConsentUpdate {
+	_u.mutation.ClearPrincipal()
 	return _u
 }
 
@@ -245,8 +245,8 @@ func (_u *OAuthConsentUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *OAuthConsentUpdate) check() error {
-	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "OAuthConsent.user"`)
+	if _u.mutation.PrincipalCleared() && len(_u.mutation.PrincipalIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "OAuthConsent.principal"`)
 	}
 	if _u.mutation.AppCleared() && len(_u.mutation.AppIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "OAuthConsent.app"`)
@@ -304,28 +304,28 @@ func (_u *OAuthConsentUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(oauthconsent.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if _u.mutation.UserCleared() {
+	if _u.mutation.PrincipalCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   oauthconsent.UserTable,
-			Columns: []string{oauthconsent.UserColumn},
+			Table:   oauthconsent.PrincipalTable,
+			Columns: []string{oauthconsent.PrincipalColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(principal.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PrincipalIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   oauthconsent.UserTable,
-			Columns: []string{oauthconsent.UserColumn},
+			Table:   oauthconsent.PrincipalTable,
+			Columns: []string{oauthconsent.PrincipalColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(principal.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -382,16 +382,16 @@ type OAuthConsentUpdateOne struct {
 	mutation *OAuthConsentMutation
 }
 
-// SetUserID sets the "user_id" field.
-func (_u *OAuthConsentUpdateOne) SetUserID(v uuid.UUID) *OAuthConsentUpdateOne {
-	_u.mutation.SetUserID(v)
+// SetPrincipalID sets the "principal_id" field.
+func (_u *OAuthConsentUpdateOne) SetPrincipalID(v uuid.UUID) *OAuthConsentUpdateOne {
+	_u.mutation.SetPrincipalID(v)
 	return _u
 }
 
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (_u *OAuthConsentUpdateOne) SetNillableUserID(v *uuid.UUID) *OAuthConsentUpdateOne {
+// SetNillablePrincipalID sets the "principal_id" field if the given value is not nil.
+func (_u *OAuthConsentUpdateOne) SetNillablePrincipalID(v *uuid.UUID) *OAuthConsentUpdateOne {
 	if v != nil {
-		_u.SetUserID(*v)
+		_u.SetPrincipalID(*v)
 	}
 	return _u
 }
@@ -530,9 +530,9 @@ func (_u *OAuthConsentUpdateOne) SetUpdatedAt(v time.Time) *OAuthConsentUpdateOn
 	return _u
 }
 
-// SetUser sets the "user" edge to the User entity.
-func (_u *OAuthConsentUpdateOne) SetUser(v *User) *OAuthConsentUpdateOne {
-	return _u.SetUserID(v.ID)
+// SetPrincipal sets the "principal" edge to the Principal entity.
+func (_u *OAuthConsentUpdateOne) SetPrincipal(v *Principal) *OAuthConsentUpdateOne {
+	return _u.SetPrincipalID(v.ID)
 }
 
 // SetApp sets the "app" edge to the OAuthApp entity.
@@ -545,9 +545,9 @@ func (_u *OAuthConsentUpdateOne) Mutation() *OAuthConsentMutation {
 	return _u.mutation
 }
 
-// ClearUser clears the "user" edge to the User entity.
-func (_u *OAuthConsentUpdateOne) ClearUser() *OAuthConsentUpdateOne {
-	_u.mutation.ClearUser()
+// ClearPrincipal clears the "principal" edge to the Principal entity.
+func (_u *OAuthConsentUpdateOne) ClearPrincipal() *OAuthConsentUpdateOne {
+	_u.mutation.ClearPrincipal()
 	return _u
 }
 
@@ -608,8 +608,8 @@ func (_u *OAuthConsentUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *OAuthConsentUpdateOne) check() error {
-	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "OAuthConsent.user"`)
+	if _u.mutation.PrincipalCleared() && len(_u.mutation.PrincipalIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "OAuthConsent.principal"`)
 	}
 	if _u.mutation.AppCleared() && len(_u.mutation.AppIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "OAuthConsent.app"`)
@@ -684,28 +684,28 @@ func (_u *OAuthConsentUpdateOne) sqlSave(ctx context.Context) (_node *OAuthConse
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(oauthconsent.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if _u.mutation.UserCleared() {
+	if _u.mutation.PrincipalCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   oauthconsent.UserTable,
-			Columns: []string{oauthconsent.UserColumn},
+			Table:   oauthconsent.PrincipalTable,
+			Columns: []string{oauthconsent.PrincipalColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(principal.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PrincipalIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   oauthconsent.UserTable,
-			Columns: []string{oauthconsent.UserColumn},
+			Table:   oauthconsent.PrincipalTable,
+			Columns: []string{oauthconsent.PrincipalColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(principal.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

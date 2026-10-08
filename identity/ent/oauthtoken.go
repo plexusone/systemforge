@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
-	"github.com/plexusone/systemforge/identity/ent/user"
 )
 
 // OAuthToken is the model entity for the OAuthToken schema.
@@ -23,8 +22,6 @@ type OAuthToken struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// OAuth app that issued this token
 	AppID uuid.UUID `json:"app_id,omitempty"`
-	// User this token represents (nil for client_credentials)
-	UserID *uuid.UUID `json:"user_id,omitempty"`
 	// Authenticated subject (principal ID); empty for client_credentials
 	Subject string `json:"subject,omitempty"`
 	// Service account (for JWT bearer grant)
@@ -71,11 +68,9 @@ type OAuthToken struct {
 type OAuthTokenEdges struct {
 	// App holds the value of the app edge.
 	App *OAuthApp `json:"app,omitempty"`
-	// User holds the value of the user edge.
-	User *User `json:"user,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [1]bool
 }
 
 // AppOrErr returns the App value or an error if the edge
@@ -89,23 +84,12 @@ func (e OAuthTokenEdges) AppOrErr() (*OAuthApp, error) {
 	return nil, &NotLoadedError{edge: "app"}
 }
 
-// UserOrErr returns the User value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e OAuthTokenEdges) UserOrErr() (*User, error) {
-	if e.User != nil {
-		return e.User, nil
-	} else if e.loadedTypes[1] {
-		return nil, &NotFoundError{label: user.Label}
-	}
-	return nil, &NotLoadedError{edge: "user"}
-}
-
 // scanValues returns the types for scanning values from sql.Rows.
 func (*OAuthToken) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case oauthtoken.FieldUserID, oauthtoken.FieldServiceAccountID:
+		case oauthtoken.FieldServiceAccountID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case oauthtoken.FieldScopes, oauthtoken.FieldAudience:
 			values[i] = new([]byte)
@@ -143,13 +127,6 @@ func (_m *OAuthToken) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field app_id", values[i])
 			} else if value != nil {
 				_m.AppID = *value
-			}
-		case oauthtoken.FieldUserID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
-			} else if value.Valid {
-				_m.UserID = new(uuid.UUID)
-				*_m.UserID = *value.S.(*uuid.UUID)
 			}
 		case oauthtoken.FieldSubject:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -286,11 +263,6 @@ func (_m *OAuthToken) QueryApp() *OAuthAppQuery {
 	return NewOAuthTokenClient(_m.config).QueryApp(_m)
 }
 
-// QueryUser queries the "user" edge of the OAuthToken entity.
-func (_m *OAuthToken) QueryUser() *UserQuery {
-	return NewOAuthTokenClient(_m.config).QueryUser(_m)
-}
-
 // Update returns a builder for updating this OAuthToken.
 // Note that you need to call OAuthToken.Unwrap() before calling this method if this OAuthToken
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -316,11 +288,6 @@ func (_m *OAuthToken) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("app_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AppID))
-	builder.WriteString(", ")
-	if v := _m.UserID; v != nil {
-		builder.WriteString("user_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
 	builder.WriteString(", ")
 	builder.WriteString("subject=")
 	builder.WriteString(_m.Subject)

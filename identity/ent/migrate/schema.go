@@ -885,7 +885,6 @@ var (
 		{Name: "user_agent", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "app_id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// SfOauthAuthCodesTable holds the schema information for the "sf_oauth_auth_codes" table.
 	SfOauthAuthCodesTable = &schema.Table{
@@ -899,12 +898,6 @@ var (
 				RefColumns: []*schema.Column{SfOauthAppsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
-			{
-				Symbol:     "sf_oauth_auth_codes_sf_users_oauth_auth_codes",
-				Columns:    []*schema.Column{SfOauthAuthCodesColumns[17]},
-				RefColumns: []*schema.Column{SfUsersColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
 		},
 		Indexes: []*schema.Index{
 			{
@@ -916,11 +909,6 @@ var (
 				Name:    "oauthauthcode_app_id",
 				Unique:  false,
 				Columns: []*schema.Column{SfOauthAuthCodesColumns[16]},
-			},
-			{
-				Name:    "oauthauthcode_user_id",
-				Unique:  false,
-				Columns: []*schema.Column{SfOauthAuthCodesColumns[17]},
 			},
 			{
 				Name:    "oauthauthcode_subject",
@@ -952,7 +940,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "app_id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID},
+		{Name: "principal_id", Type: field.TypeUUID},
 	}
 	// SfOauthConsentsTable holds the schema information for the "sf_oauth_consents" table.
 	SfOauthConsentsTable = &schema.Table{
@@ -967,20 +955,20 @@ var (
 				OnDelete:   schema.NoAction,
 			},
 			{
-				Symbol:     "sf_oauth_consents_sf_users_oauth_consents",
+				Symbol:     "sf_oauth_consents_sf_principals_oauth_consents",
 				Columns:    []*schema.Column{SfOauthConsentsColumns[11]},
-				RefColumns: []*schema.Column{SfUsersColumns[0]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "oauthconsent_user_id_app_id",
+				Name:    "oauthconsent_principal_id_app_id",
 				Unique:  true,
 				Columns: []*schema.Column{SfOauthConsentsColumns[11], SfOauthConsentsColumns[10]},
 			},
 			{
-				Name:    "oauthconsent_user_id",
+				Name:    "oauthconsent_principal_id",
 				Unique:  false,
 				Columns: []*schema.Column{SfOauthConsentsColumns[11]},
 			},
@@ -1023,7 +1011,6 @@ var (
 		{Name: "last_used_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "app_id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// SfOauthTokensTable holds the schema information for the "sf_oauth_tokens" table.
 	SfOauthTokensTable = &schema.Table{
@@ -1036,12 +1023,6 @@ var (
 				Columns:    []*schema.Column{SfOauthTokensColumns[19]},
 				RefColumns: []*schema.Column{SfOauthAppsColumns[0]},
 				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "sf_oauth_tokens_sf_users_oauth_tokens",
-				Columns:    []*schema.Column{SfOauthTokensColumns[20]},
-				RefColumns: []*schema.Column{SfUsersColumns[0]},
-				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
@@ -1059,11 +1040,6 @@ var (
 				Name:    "oauthtoken_app_id",
 				Unique:  false,
 				Columns: []*schema.Column{SfOauthTokensColumns[19]},
-			},
-			{
-				Name:    "oauthtoken_user_id",
-				Unique:  false,
-				Columns: []*schema.Column{SfOauthTokensColumns[20]},
 			},
 			{
 				Name:    "oauthtoken_subject",
@@ -1836,17 +1812,15 @@ func init() {
 		Table: "sf_oauth_app_secrets",
 	}
 	SfOauthAuthCodesTable.ForeignKeys[0].RefTable = SfOauthAppsTable
-	SfOauthAuthCodesTable.ForeignKeys[1].RefTable = SfUsersTable
 	SfOauthAuthCodesTable.Annotation = &entsql.Annotation{
 		Table: "sf_oauth_auth_codes",
 	}
 	SfOauthConsentsTable.ForeignKeys[0].RefTable = SfOauthAppsTable
-	SfOauthConsentsTable.ForeignKeys[1].RefTable = SfUsersTable
+	SfOauthConsentsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfOauthConsentsTable.Annotation = &entsql.Annotation{
 		Table: "sf_oauth_consents",
 	}
 	SfOauthTokensTable.ForeignKeys[0].RefTable = SfOauthAppsTable
-	SfOauthTokensTable.ForeignKeys[1].RefTable = SfUsersTable
 	SfOauthTokensTable.Annotation = &entsql.Annotation{
 		Table: "sf_oauth_tokens",
 	}

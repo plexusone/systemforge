@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
-	"github.com/plexusone/systemforge/identity/ent/user"
 )
 
 // OAuthAuthCode is the model entity for the OAuthAuthCode schema.
@@ -25,8 +24,6 @@ type OAuthAuthCode struct {
 	CodeSignature string `json:"code_signature,omitempty"`
 	// OAuth app this code was issued to
 	AppID uuid.UUID `json:"app_id,omitempty"`
-	// Legacy User who authorized (nil when the subject is not a User row)
-	UserID *uuid.UUID `json:"user_id,omitempty"`
 	// Authenticated subject (principal ID) the code was issued for
 	Subject string `json:"subject,omitempty"`
 	// PKCE code challenge
@@ -65,11 +62,9 @@ type OAuthAuthCode struct {
 type OAuthAuthCodeEdges struct {
 	// App holds the value of the app edge.
 	App *OAuthApp `json:"app,omitempty"`
-	// User holds the value of the user edge.
-	User *User `json:"user,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [1]bool
 }
 
 // AppOrErr returns the App value or an error if the edge
@@ -83,24 +78,11 @@ func (e OAuthAuthCodeEdges) AppOrErr() (*OAuthApp, error) {
 	return nil, &NotLoadedError{edge: "app"}
 }
 
-// UserOrErr returns the User value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e OAuthAuthCodeEdges) UserOrErr() (*User, error) {
-	if e.User != nil {
-		return e.User, nil
-	} else if e.loadedTypes[1] {
-		return nil, &NotFoundError{label: user.Label}
-	}
-	return nil, &NotLoadedError{edge: "user"}
-}
-
 // scanValues returns the types for scanning values from sql.Rows.
 func (*OAuthAuthCode) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case oauthauthcode.FieldUserID:
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case oauthauthcode.FieldScopes:
 			values[i] = new([]byte)
 		case oauthauthcode.FieldUsed:
@@ -143,13 +125,6 @@ func (_m *OAuthAuthCode) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field app_id", values[i])
 			} else if value != nil {
 				_m.AppID = *value
-			}
-		case oauthauthcode.FieldUserID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
-			} else if value.Valid {
-				_m.UserID = new(uuid.UUID)
-				*_m.UserID = *value.S.(*uuid.UUID)
 			}
 		case oauthauthcode.FieldSubject:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -256,11 +231,6 @@ func (_m *OAuthAuthCode) QueryApp() *OAuthAppQuery {
 	return NewOAuthAuthCodeClient(_m.config).QueryApp(_m)
 }
 
-// QueryUser queries the "user" edge of the OAuthAuthCode entity.
-func (_m *OAuthAuthCode) QueryUser() *UserQuery {
-	return NewOAuthAuthCodeClient(_m.config).QueryUser(_m)
-}
-
 // Update returns a builder for updating this OAuthAuthCode.
 // Note that you need to call OAuthAuthCode.Unwrap() before calling this method if this OAuthAuthCode
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -289,11 +259,6 @@ func (_m *OAuthAuthCode) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("app_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AppID))
-	builder.WriteString(", ")
-	if v := _m.UserID; v != nil {
-		builder.WriteString("user_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
 	builder.WriteString(", ")
 	builder.WriteString("subject=")
 	builder.WriteString(_m.Subject)

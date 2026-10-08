@@ -22,6 +22,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
+	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
@@ -313,6 +314,21 @@ func (_c *PrincipalCreate) AddOwnedOauthApps(v ...*OAuthApp) *PrincipalCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddOwnedOauthAppIDs(ids...)
+}
+
+// AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by IDs.
+func (_c *PrincipalCreate) AddOauthConsentIDs(ids ...uuid.UUID) *PrincipalCreate {
+	_c.mutation.AddOauthConsentIDs(ids...)
+	return _c
+}
+
+// AddOauthConsents adds the "oauth_consents" edges to the OAuthConsent entity.
+func (_c *PrincipalCreate) AddOauthConsents(v ...*OAuthConsent) *PrincipalCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddOauthConsentIDs(ids...)
 }
 
 // AddSentInviteIDs adds the "sent_invites" edge to the Invite entity by IDs.
@@ -734,6 +750,22 @@ func (_c *PrincipalCreate) createSpec() (*Principal, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OauthConsentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OauthConsentsTable,
+			Columns: []string{principal.OauthConsentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthconsent.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

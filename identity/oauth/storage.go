@@ -57,12 +57,10 @@ func (s *Storage) CreateAuthorizeCodeSession(ctx context.Context, code string, r
 	client := request.GetClient().(*Client)
 	session := request.GetSession()
 
-	userID, _ := uuid.Parse(session.GetSubject())
-
 	builder := s.db.OAuthAuthCode.Create().
 		SetCodeSignature(signature).
 		SetAppID(client.app.ID).
-		SetUserID(userID).
+		SetSubject(session.GetSubject()).
 		SetRedirectURI(request.GetRequestForm().Get("redirect_uri")).
 		SetScopes(scopesToStrings(request.GetGrantedScopes())).
 		SetState(request.GetRequestForm().Get("state")).
@@ -94,7 +92,6 @@ func (s *Storage) GetAuthorizeCodeSession(ctx context.Context, code string, sess
 	authCode, err := s.db.OAuthAuthCode.Query().
 		Where(oauthauthcode.CodeSignatureEQ(signature)).
 		WithApp().
-		WithUser().
 		First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -150,11 +147,9 @@ func (s *Storage) CreateAccessTokenSession(ctx context.Context, signature string
 		SetScopes(scopesToStrings(request.GetGrantedScopes())).
 		SetAccessExpiresAt(session.GetExpiresAt(fosite.AccessToken))
 
-	// Set user ID if present (not client_credentials)
+	// Record the subject when present (empty for client_credentials).
 	if subject := session.GetSubject(); subject != "" {
-		if userID, err := uuid.Parse(subject); err == nil {
-			builder.SetUserID(userID)
-		}
+		builder.SetSubject(subject)
 	}
 
 	_, err := builder.Save(ctx)
@@ -170,7 +165,6 @@ func (s *Storage) GetAccessTokenSession(ctx context.Context, signature string, s
 	token, err := s.db.OAuthToken.Query().
 		Where(oauthtoken.AccessTokenSignatureEQ(hashToken(signature))).
 		WithApp().
-		WithUser().
 		First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -226,9 +220,7 @@ func (s *Storage) CreateRefreshTokenSession(ctx context.Context, signature strin
 		SetRefreshExpiresAt(session.GetExpiresAt(fosite.RefreshToken))
 
 	if subject := session.GetSubject(); subject != "" {
-		if userID, err := uuid.Parse(subject); err == nil {
-			builder.SetUserID(userID)
-		}
+		builder.SetSubject(subject)
 	}
 
 	_, err := builder.Save(ctx)
@@ -244,7 +236,6 @@ func (s *Storage) GetRefreshTokenSession(ctx context.Context, signature string, 
 	token, err := s.db.OAuthToken.Query().
 		Where(oauthtoken.RefreshTokenSignatureEQ(hashToken(signature))).
 		WithApp().
-		WithUser().
 		First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {

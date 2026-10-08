@@ -22,6 +22,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
+	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principal"
@@ -49,6 +50,7 @@ type PrincipalQuery struct {
 	withPrincipalMemberships *PrincipalMembershipQuery
 	withOwnedOrganizations   *OrganizationQuery
 	withOwnedOauthApps       *OAuthAppQuery
+	withOauthConsents        *OAuthConsentQuery
 	withSentInvites          *InviteQuery
 	withOwnedListings        *ListingQuery
 	withPurchasedLicenses    *LicenseQuery
@@ -325,6 +327,28 @@ func (_q *PrincipalQuery) QueryOwnedOauthApps() *OAuthAppQuery {
 			sqlgraph.From(principal.Table, principal.FieldID, selector),
 			sqlgraph.To(oauthapp.Table, oauthapp.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, principal.OwnedOauthAppsTable, principal.OwnedOauthAppsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOauthConsents chains the current query on the "oauth_consents" edge.
+func (_q *PrincipalQuery) QueryOauthConsents() *OAuthConsentQuery {
+	query := (&OAuthConsentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, selector),
+			sqlgraph.To(oauthconsent.Table, oauthconsent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.OauthConsentsTable, principal.OauthConsentsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -645,6 +669,7 @@ func (_q *PrincipalQuery) Clone() *PrincipalQuery {
 		withPrincipalMemberships: _q.withPrincipalMemberships.Clone(),
 		withOwnedOrganizations:   _q.withOwnedOrganizations.Clone(),
 		withOwnedOauthApps:       _q.withOwnedOauthApps.Clone(),
+		withOauthConsents:        _q.withOauthConsents.Clone(),
 		withSentInvites:          _q.withSentInvites.Clone(),
 		withOwnedListings:        _q.withOwnedListings.Clone(),
 		withPurchasedLicenses:    _q.withPurchasedLicenses.Clone(),
@@ -774,6 +799,17 @@ func (_q *PrincipalQuery) WithOwnedOauthApps(opts ...func(*OAuthAppQuery)) *Prin
 		opt(query)
 	}
 	_q.withOwnedOauthApps = query
+	return _q
+}
+
+// WithOauthConsents tells the query-builder to eager-load the nodes that are connected to
+// the "oauth_consents" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PrincipalQuery) WithOauthConsents(opts ...func(*OAuthConsentQuery)) *PrincipalQuery {
+	query := (&OAuthConsentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOauthConsents = query
 	return _q
 }
 
@@ -910,7 +946,7 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 	var (
 		nodes       = []*Principal{}
 		_spec       = _q.querySpec()
-		loadedTypes = [16]bool{
+		loadedTypes = [17]bool{
 			_q.withOrganization != nil,
 			_q.withHuman != nil,
 			_q.withApplication != nil,
@@ -922,6 +958,7 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 			_q.withPrincipalMemberships != nil,
 			_q.withOwnedOrganizations != nil,
 			_q.withOwnedOauthApps != nil,
+			_q.withOauthConsents != nil,
 			_q.withSentInvites != nil,
 			_q.withOwnedListings != nil,
 			_q.withPurchasedLicenses != nil,
@@ -1022,6 +1059,13 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 		if err := _q.loadOwnedOauthApps(ctx, query, nodes,
 			func(n *Principal) { n.Edges.OwnedOauthApps = []*OAuthApp{} },
 			func(n *Principal, e *OAuthApp) { n.Edges.OwnedOauthApps = append(n.Edges.OwnedOauthApps, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOauthConsents; query != nil {
+		if err := _q.loadOauthConsents(ctx, query, nodes,
+			func(n *Principal) { n.Edges.OauthConsents = []*OAuthConsent{} },
+			func(n *Principal, e *OAuthConsent) { n.Edges.OauthConsents = append(n.Edges.OauthConsents, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1381,6 +1425,36 @@ func (_q *PrincipalQuery) loadOwnedOauthApps(ctx context.Context, query *OAuthAp
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "owner_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PrincipalQuery) loadOauthConsents(ctx context.Context, query *OAuthConsentQuery, nodes []*Principal, init func(*Principal), assign func(*Principal, *OAuthConsent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Principal)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(oauthconsent.FieldPrincipalID)
+	}
+	query.Where(predicate.OAuthConsent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(principal.OauthConsentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.PrincipalID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "principal_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

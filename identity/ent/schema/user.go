@@ -68,9 +68,6 @@ func (User) Edges() []ent.Edge {
 		edge.To("api_keys", APIKey.Type),
 
 		// OAuth 2.0 edges
-		edge.To("oauth_tokens", OAuthToken.Type),
-		edge.To("oauth_auth_codes", OAuthAuthCode.Type),
-		edge.To("oauth_consents", OAuthConsent.Type),
 		edge.To("created_service_accounts", ServiceAccount.Type),
 	}
 }

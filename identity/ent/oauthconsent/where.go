@@ -56,9 +56,9 @@ func IDLTE(id uuid.UUID) predicate.OAuthConsent {
 	return predicate.OAuthConsent(sql.FieldLTE(FieldID, id))
 }
 
-// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
-func UserID(v uuid.UUID) predicate.OAuthConsent {
-	return predicate.OAuthConsent(sql.FieldEQ(FieldUserID, v))
+// PrincipalID applies equality check predicate on the "principal_id" field. It's identical to PrincipalIDEQ.
+func PrincipalID(v uuid.UUID) predicate.OAuthConsent {
+	return predicate.OAuthConsent(sql.FieldEQ(FieldPrincipalID, v))
 }
 
 // AppID applies equality check predicate on the "app_id" field. It's identical to AppIDEQ.
@@ -106,24 +106,24 @@ func UpdatedAt(v time.Time) predicate.OAuthConsent {
 	return predicate.OAuthConsent(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
-// UserIDEQ applies the EQ predicate on the "user_id" field.
-func UserIDEQ(v uuid.UUID) predicate.OAuthConsent {
-	return predicate.OAuthConsent(sql.FieldEQ(FieldUserID, v))
+// PrincipalIDEQ applies the EQ predicate on the "principal_id" field.
+func PrincipalIDEQ(v uuid.UUID) predicate.OAuthConsent {
+	return predicate.OAuthConsent(sql.FieldEQ(FieldPrincipalID, v))
 }
 
-// UserIDNEQ applies the NEQ predicate on the "user_id" field.
-func UserIDNEQ(v uuid.UUID) predicate.OAuthConsent {
-	return predicate.OAuthConsent(sql.FieldNEQ(FieldUserID, v))
+// PrincipalIDNEQ applies the NEQ predicate on the "principal_id" field.
+func PrincipalIDNEQ(v uuid.UUID) predicate.OAuthConsent {
+	return predicate.OAuthConsent(sql.FieldNEQ(FieldPrincipalID, v))
 }
 
-// UserIDIn applies the In predicate on the "user_id" field.
-func UserIDIn(vs ...uuid.UUID) predicate.OAuthConsent {
-	return predicate.OAuthConsent(sql.FieldIn(FieldUserID, vs...))
+// PrincipalIDIn applies the In predicate on the "principal_id" field.
+func PrincipalIDIn(vs ...uuid.UUID) predicate.OAuthConsent {
+	return predicate.OAuthConsent(sql.FieldIn(FieldPrincipalID, vs...))
 }
 
-// UserIDNotIn applies the NotIn predicate on the "user_id" field.
-func UserIDNotIn(vs ...uuid.UUID) predicate.OAuthConsent {
-	return predicate.OAuthConsent(sql.FieldNotIn(FieldUserID, vs...))
+// PrincipalIDNotIn applies the NotIn predicate on the "principal_id" field.
+func PrincipalIDNotIn(vs ...uuid.UUID) predicate.OAuthConsent {
+	return predicate.OAuthConsent(sql.FieldNotIn(FieldPrincipalID, vs...))
 }
 
 // AppIDEQ applies the EQ predicate on the "app_id" field.
@@ -461,21 +461,21 @@ func UpdatedAtLTE(v time.Time) predicate.OAuthConsent {
 	return predicate.OAuthConsent(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
-// HasUser applies the HasEdge predicate on the "user" edge.
-func HasUser() predicate.OAuthConsent {
+// HasPrincipal applies the HasEdge predicate on the "principal" edge.
+func HasPrincipal() predicate.OAuthConsent {
 	return predicate.OAuthConsent(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, PrincipalTable, PrincipalColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
-func HasUserWith(preds ...predicate.User) predicate.OAuthConsent {
+// HasPrincipalWith applies the HasEdge predicate on the "principal" edge with a given conditions (other predicates).
+func HasPrincipalWith(preds ...predicate.Principal) predicate.OAuthConsent {
 	return predicate.OAuthConsent(func(s *sql.Selector) {
-		step := newUserStep()
+		step := newPrincipalStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

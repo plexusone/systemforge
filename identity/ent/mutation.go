@@ -17852,8 +17852,6 @@ type OAuthAuthCodeMutation struct {
 	clearedFields         map[string]struct{}
 	app                   *uuid.UUID
 	clearedapp            bool
-	user                  *uuid.UUID
-	cleareduser           bool
 	done                  bool
 	oldValue              func(context.Context) (*OAuthAuthCode, error)
 	predicates            []predicate.OAuthAuthCode
@@ -18033,55 +18031,6 @@ func (m *OAuthAuthCodeMutation) OldAppID(ctx context.Context) (v uuid.UUID, err 
 // ResetAppID resets all changes to the "app_id" field.
 func (m *OAuthAuthCodeMutation) ResetAppID() {
 	m.app = nil
-}
-
-// SetUserID sets the "user_id" field.
-func (m *OAuthAuthCodeMutation) SetUserID(u uuid.UUID) {
-	m.user = &u
-}
-
-// UserID returns the value of the "user_id" field in the mutation.
-func (m *OAuthAuthCodeMutation) UserID() (r uuid.UUID, exists bool) {
-	v := m.user
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUserID returns the old "user_id" field's value of the OAuthAuthCode entity.
-// If the OAuthAuthCode object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OAuthAuthCodeMutation) OldUserID(ctx context.Context) (v *uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUserID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
-	}
-	return oldValue.UserID, nil
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (m *OAuthAuthCodeMutation) ClearUserID() {
-	m.user = nil
-	m.clearedFields[oauthauthcode.FieldUserID] = struct{}{}
-}
-
-// UserIDCleared returns if the "user_id" field was cleared in this mutation.
-func (m *OAuthAuthCodeMutation) UserIDCleared() bool {
-	_, ok := m.clearedFields[oauthauthcode.FieldUserID]
-	return ok
-}
-
-// ResetUserID resets all changes to the "user_id" field.
-func (m *OAuthAuthCodeMutation) ResetUserID() {
-	m.user = nil
-	delete(m.clearedFields, oauthauthcode.FieldUserID)
 }
 
 // SetSubject sets the "subject" field.
@@ -18747,33 +18696,6 @@ func (m *OAuthAuthCodeMutation) ResetApp() {
 	m.clearedapp = false
 }
 
-// ClearUser clears the "user" edge to the User entity.
-func (m *OAuthAuthCodeMutation) ClearUser() {
-	m.cleareduser = true
-	m.clearedFields[oauthauthcode.FieldUserID] = struct{}{}
-}
-
-// UserCleared reports if the "user" edge to the User entity was cleared.
-func (m *OAuthAuthCodeMutation) UserCleared() bool {
-	return m.UserIDCleared() || m.cleareduser
-}
-
-// UserIDs returns the "user" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// UserID instead. It exists only for internal usage by the builders.
-func (m *OAuthAuthCodeMutation) UserIDs() (ids []uuid.UUID) {
-	if id := m.user; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetUser resets all changes to the "user" edge.
-func (m *OAuthAuthCodeMutation) ResetUser() {
-	m.user = nil
-	m.cleareduser = false
-}
-
 // Where appends a list predicates to the OAuthAuthCodeMutation builder.
 func (m *OAuthAuthCodeMutation) Where(ps ...predicate.OAuthAuthCode) {
 	m.predicates = append(m.predicates, ps...)
@@ -18808,15 +18730,12 @@ func (m *OAuthAuthCodeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuthAuthCodeMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 16)
 	if m.code_signature != nil {
 		fields = append(fields, oauthauthcode.FieldCodeSignature)
 	}
 	if m.app != nil {
 		fields = append(fields, oauthauthcode.FieldAppID)
-	}
-	if m.user != nil {
-		fields = append(fields, oauthauthcode.FieldUserID)
 	}
 	if m.subject != nil {
 		fields = append(fields, oauthauthcode.FieldSubject)
@@ -18872,8 +18791,6 @@ func (m *OAuthAuthCodeMutation) Field(name string) (ent.Value, bool) {
 		return m.CodeSignature()
 	case oauthauthcode.FieldAppID:
 		return m.AppID()
-	case oauthauthcode.FieldUserID:
-		return m.UserID()
 	case oauthauthcode.FieldSubject:
 		return m.Subject()
 	case oauthauthcode.FieldCodeChallenge:
@@ -18915,8 +18832,6 @@ func (m *OAuthAuthCodeMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldCodeSignature(ctx)
 	case oauthauthcode.FieldAppID:
 		return m.OldAppID(ctx)
-	case oauthauthcode.FieldUserID:
-		return m.OldUserID(ctx)
 	case oauthauthcode.FieldSubject:
 		return m.OldSubject(ctx)
 	case oauthauthcode.FieldCodeChallenge:
@@ -18967,13 +18882,6 @@ func (m *OAuthAuthCodeMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAppID(v)
-		return nil
-	case oauthauthcode.FieldUserID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUserID(v)
 		return nil
 	case oauthauthcode.FieldSubject:
 		v, ok := value.(string)
@@ -19103,9 +19011,6 @@ func (m *OAuthAuthCodeMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *OAuthAuthCodeMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(oauthauthcode.FieldUserID) {
-		fields = append(fields, oauthauthcode.FieldUserID)
-	}
 	if m.FieldCleared(oauthauthcode.FieldSubject) {
 		fields = append(fields, oauthauthcode.FieldSubject)
 	}
@@ -19147,9 +19052,6 @@ func (m *OAuthAuthCodeMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *OAuthAuthCodeMutation) ClearField(name string) error {
 	switch name {
-	case oauthauthcode.FieldUserID:
-		m.ClearUserID()
-		return nil
 	case oauthauthcode.FieldSubject:
 		m.ClearSubject()
 		return nil
@@ -19190,9 +19092,6 @@ func (m *OAuthAuthCodeMutation) ResetField(name string) error {
 		return nil
 	case oauthauthcode.FieldAppID:
 		m.ResetAppID()
-		return nil
-	case oauthauthcode.FieldUserID:
-		m.ResetUserID()
 		return nil
 	case oauthauthcode.FieldSubject:
 		m.ResetSubject()
@@ -19242,12 +19141,9 @@ func (m *OAuthAuthCodeMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *OAuthAuthCodeMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 1)
 	if m.app != nil {
 		edges = append(edges, oauthauthcode.EdgeApp)
-	}
-	if m.user != nil {
-		edges = append(edges, oauthauthcode.EdgeUser)
 	}
 	return edges
 }
@@ -19260,17 +19156,13 @@ func (m *OAuthAuthCodeMutation) AddedIDs(name string) []ent.Value {
 		if id := m.app; id != nil {
 			return []ent.Value{*id}
 		}
-	case oauthauthcode.EdgeUser:
-		if id := m.user; id != nil {
-			return []ent.Value{*id}
-		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *OAuthAuthCodeMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -19282,12 +19174,9 @@ func (m *OAuthAuthCodeMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *OAuthAuthCodeMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 1)
 	if m.clearedapp {
 		edges = append(edges, oauthauthcode.EdgeApp)
-	}
-	if m.cleareduser {
-		edges = append(edges, oauthauthcode.EdgeUser)
 	}
 	return edges
 }
@@ -19298,8 +19187,6 @@ func (m *OAuthAuthCodeMutation) EdgeCleared(name string) bool {
 	switch name {
 	case oauthauthcode.EdgeApp:
 		return m.clearedapp
-	case oauthauthcode.EdgeUser:
-		return m.cleareduser
 	}
 	return false
 }
@@ -19310,9 +19197,6 @@ func (m *OAuthAuthCodeMutation) ClearEdge(name string) error {
 	switch name {
 	case oauthauthcode.EdgeApp:
 		m.ClearApp()
-		return nil
-	case oauthauthcode.EdgeUser:
-		m.ClearUser()
 		return nil
 	}
 	return fmt.Errorf("unknown OAuthAuthCode unique edge %s", name)
@@ -19325,9 +19209,6 @@ func (m *OAuthAuthCodeMutation) ResetEdge(name string) error {
 	case oauthauthcode.EdgeApp:
 		m.ResetApp()
 		return nil
-	case oauthauthcode.EdgeUser:
-		m.ResetUser()
-		return nil
 	}
 	return fmt.Errorf("unknown OAuthAuthCode edge %s", name)
 }
@@ -19335,27 +19216,27 @@ func (m *OAuthAuthCodeMutation) ResetEdge(name string) error {
 // OAuthConsentMutation represents an operation that mutates the OAuthConsent nodes in the graph.
 type OAuthConsentMutation struct {
 	config
-	op             Op
-	typ            string
-	id             *uuid.UUID
-	scopes         *[]string
-	appendscopes   []string
-	granted        *bool
-	granted_at     *time.Time
-	last_used_at   *time.Time
-	revoked        *bool
-	revoked_at     *time.Time
-	revoked_reason *string
-	created_at     *time.Time
-	updated_at     *time.Time
-	clearedFields  map[string]struct{}
-	user           *uuid.UUID
-	cleareduser    bool
-	app            *uuid.UUID
-	clearedapp     bool
-	done           bool
-	oldValue       func(context.Context) (*OAuthConsent, error)
-	predicates     []predicate.OAuthConsent
+	op               Op
+	typ              string
+	id               *uuid.UUID
+	scopes           *[]string
+	appendscopes     []string
+	granted          *bool
+	granted_at       *time.Time
+	last_used_at     *time.Time
+	revoked          *bool
+	revoked_at       *time.Time
+	revoked_reason   *string
+	created_at       *time.Time
+	updated_at       *time.Time
+	clearedFields    map[string]struct{}
+	principal        *uuid.UUID
+	clearedprincipal bool
+	app              *uuid.UUID
+	clearedapp       bool
+	done             bool
+	oldValue         func(context.Context) (*OAuthConsent, error)
+	predicates       []predicate.OAuthConsent
 }
 
 var _ ent.Mutation = (*OAuthConsentMutation)(nil)
@@ -19462,40 +19343,40 @@ func (m *OAuthConsentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetUserID sets the "user_id" field.
-func (m *OAuthConsentMutation) SetUserID(u uuid.UUID) {
-	m.user = &u
+// SetPrincipalID sets the "principal_id" field.
+func (m *OAuthConsentMutation) SetPrincipalID(u uuid.UUID) {
+	m.principal = &u
 }
 
-// UserID returns the value of the "user_id" field in the mutation.
-func (m *OAuthConsentMutation) UserID() (r uuid.UUID, exists bool) {
-	v := m.user
+// PrincipalID returns the value of the "principal_id" field in the mutation.
+func (m *OAuthConsentMutation) PrincipalID() (r uuid.UUID, exists bool) {
+	v := m.principal
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldUserID returns the old "user_id" field's value of the OAuthConsent entity.
+// OldPrincipalID returns the old "principal_id" field's value of the OAuthConsent entity.
 // If the OAuthConsent object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OAuthConsentMutation) OldUserID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *OAuthConsentMutation) OldPrincipalID(ctx context.Context) (v uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+		return v, errors.New("OldPrincipalID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUserID requires an ID field in the mutation")
+		return v, errors.New("OldPrincipalID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+		return v, fmt.Errorf("querying old value for OldPrincipalID: %w", err)
 	}
-	return oldValue.UserID, nil
+	return oldValue.PrincipalID, nil
 }
 
-// ResetUserID resets all changes to the "user_id" field.
-func (m *OAuthConsentMutation) ResetUserID() {
-	m.user = nil
+// ResetPrincipalID resets all changes to the "principal_id" field.
+func (m *OAuthConsentMutation) ResetPrincipalID() {
+	m.principal = nil
 }
 
 // SetAppID sets the "app_id" field.
@@ -19912,31 +19793,31 @@ func (m *OAuthConsentMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// ClearUser clears the "user" edge to the User entity.
-func (m *OAuthConsentMutation) ClearUser() {
-	m.cleareduser = true
-	m.clearedFields[oauthconsent.FieldUserID] = struct{}{}
+// ClearPrincipal clears the "principal" edge to the Principal entity.
+func (m *OAuthConsentMutation) ClearPrincipal() {
+	m.clearedprincipal = true
+	m.clearedFields[oauthconsent.FieldPrincipalID] = struct{}{}
 }
 
-// UserCleared reports if the "user" edge to the User entity was cleared.
-func (m *OAuthConsentMutation) UserCleared() bool {
-	return m.cleareduser
+// PrincipalCleared reports if the "principal" edge to the Principal entity was cleared.
+func (m *OAuthConsentMutation) PrincipalCleared() bool {
+	return m.clearedprincipal
 }
 
-// UserIDs returns the "user" edge IDs in the mutation.
+// PrincipalIDs returns the "principal" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// UserID instead. It exists only for internal usage by the builders.
-func (m *OAuthConsentMutation) UserIDs() (ids []uuid.UUID) {
-	if id := m.user; id != nil {
+// PrincipalID instead. It exists only for internal usage by the builders.
+func (m *OAuthConsentMutation) PrincipalIDs() (ids []uuid.UUID) {
+	if id := m.principal; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetUser resets all changes to the "user" edge.
-func (m *OAuthConsentMutation) ResetUser() {
-	m.user = nil
-	m.cleareduser = false
+// ResetPrincipal resets all changes to the "principal" edge.
+func (m *OAuthConsentMutation) ResetPrincipal() {
+	m.principal = nil
+	m.clearedprincipal = false
 }
 
 // ClearApp clears the "app" edge to the OAuthApp entity.
@@ -20001,8 +19882,8 @@ func (m *OAuthConsentMutation) Type() string {
 // AddedFields().
 func (m *OAuthConsentMutation) Fields() []string {
 	fields := make([]string, 0, 11)
-	if m.user != nil {
-		fields = append(fields, oauthconsent.FieldUserID)
+	if m.principal != nil {
+		fields = append(fields, oauthconsent.FieldPrincipalID)
 	}
 	if m.app != nil {
 		fields = append(fields, oauthconsent.FieldAppID)
@@ -20042,8 +19923,8 @@ func (m *OAuthConsentMutation) Fields() []string {
 // schema.
 func (m *OAuthConsentMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case oauthconsent.FieldUserID:
-		return m.UserID()
+	case oauthconsent.FieldPrincipalID:
+		return m.PrincipalID()
 	case oauthconsent.FieldAppID:
 		return m.AppID()
 	case oauthconsent.FieldScopes:
@@ -20073,8 +19954,8 @@ func (m *OAuthConsentMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *OAuthConsentMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case oauthconsent.FieldUserID:
-		return m.OldUserID(ctx)
+	case oauthconsent.FieldPrincipalID:
+		return m.OldPrincipalID(ctx)
 	case oauthconsent.FieldAppID:
 		return m.OldAppID(ctx)
 	case oauthconsent.FieldScopes:
@@ -20104,12 +19985,12 @@ func (m *OAuthConsentMutation) OldField(ctx context.Context, name string) (ent.V
 // type.
 func (m *OAuthConsentMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case oauthconsent.FieldUserID:
+	case oauthconsent.FieldPrincipalID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetUserID(v)
+		m.SetPrincipalID(v)
 		return nil
 	case oauthconsent.FieldAppID:
 		v, ok := value.(uuid.UUID)
@@ -20251,8 +20132,8 @@ func (m *OAuthConsentMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *OAuthConsentMutation) ResetField(name string) error {
 	switch name {
-	case oauthconsent.FieldUserID:
-		m.ResetUserID()
+	case oauthconsent.FieldPrincipalID:
+		m.ResetPrincipalID()
 		return nil
 	case oauthconsent.FieldAppID:
 		m.ResetAppID()
@@ -20291,8 +20172,8 @@ func (m *OAuthConsentMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *OAuthConsentMutation) AddedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.user != nil {
-		edges = append(edges, oauthconsent.EdgeUser)
+	if m.principal != nil {
+		edges = append(edges, oauthconsent.EdgePrincipal)
 	}
 	if m.app != nil {
 		edges = append(edges, oauthconsent.EdgeApp)
@@ -20304,8 +20185,8 @@ func (m *OAuthConsentMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *OAuthConsentMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case oauthconsent.EdgeUser:
-		if id := m.user; id != nil {
+	case oauthconsent.EdgePrincipal:
+		if id := m.principal; id != nil {
 			return []ent.Value{*id}
 		}
 	case oauthconsent.EdgeApp:
@@ -20331,8 +20212,8 @@ func (m *OAuthConsentMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *OAuthConsentMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.cleareduser {
-		edges = append(edges, oauthconsent.EdgeUser)
+	if m.clearedprincipal {
+		edges = append(edges, oauthconsent.EdgePrincipal)
 	}
 	if m.clearedapp {
 		edges = append(edges, oauthconsent.EdgeApp)
@@ -20344,8 +20225,8 @@ func (m *OAuthConsentMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *OAuthConsentMutation) EdgeCleared(name string) bool {
 	switch name {
-	case oauthconsent.EdgeUser:
-		return m.cleareduser
+	case oauthconsent.EdgePrincipal:
+		return m.clearedprincipal
 	case oauthconsent.EdgeApp:
 		return m.clearedapp
 	}
@@ -20356,8 +20237,8 @@ func (m *OAuthConsentMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *OAuthConsentMutation) ClearEdge(name string) error {
 	switch name {
-	case oauthconsent.EdgeUser:
-		m.ClearUser()
+	case oauthconsent.EdgePrincipal:
+		m.ClearPrincipal()
 		return nil
 	case oauthconsent.EdgeApp:
 		m.ClearApp()
@@ -20370,8 +20251,8 @@ func (m *OAuthConsentMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *OAuthConsentMutation) ResetEdge(name string) error {
 	switch name {
-	case oauthconsent.EdgeUser:
-		m.ResetUser()
+	case oauthconsent.EdgePrincipal:
+		m.ResetPrincipal()
 		return nil
 	case oauthconsent.EdgeApp:
 		m.ResetApp()
@@ -20409,8 +20290,6 @@ type OAuthTokenMutation struct {
 	clearedFields           map[string]struct{}
 	app                     *uuid.UUID
 	clearedapp              bool
-	user                    *uuid.UUID
-	cleareduser             bool
 	done                    bool
 	oldValue                func(context.Context) (*OAuthToken, error)
 	predicates              []predicate.OAuthToken
@@ -20554,55 +20433,6 @@ func (m *OAuthTokenMutation) OldAppID(ctx context.Context) (v uuid.UUID, err err
 // ResetAppID resets all changes to the "app_id" field.
 func (m *OAuthTokenMutation) ResetAppID() {
 	m.app = nil
-}
-
-// SetUserID sets the "user_id" field.
-func (m *OAuthTokenMutation) SetUserID(u uuid.UUID) {
-	m.user = &u
-}
-
-// UserID returns the value of the "user_id" field in the mutation.
-func (m *OAuthTokenMutation) UserID() (r uuid.UUID, exists bool) {
-	v := m.user
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUserID returns the old "user_id" field's value of the OAuthToken entity.
-// If the OAuthToken object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OAuthTokenMutation) OldUserID(ctx context.Context) (v *uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUserID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
-	}
-	return oldValue.UserID, nil
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (m *OAuthTokenMutation) ClearUserID() {
-	m.user = nil
-	m.clearedFields[oauthtoken.FieldUserID] = struct{}{}
-}
-
-// UserIDCleared returns if the "user_id" field was cleared in this mutation.
-func (m *OAuthTokenMutation) UserIDCleared() bool {
-	_, ok := m.clearedFields[oauthtoken.FieldUserID]
-	return ok
-}
-
-// ResetUserID resets all changes to the "user_id" field.
-func (m *OAuthTokenMutation) ResetUserID() {
-	m.user = nil
-	delete(m.clearedFields, oauthtoken.FieldUserID)
 }
 
 // SetSubject sets the "subject" field.
@@ -21453,33 +21283,6 @@ func (m *OAuthTokenMutation) ResetApp() {
 	m.clearedapp = false
 }
 
-// ClearUser clears the "user" edge to the User entity.
-func (m *OAuthTokenMutation) ClearUser() {
-	m.cleareduser = true
-	m.clearedFields[oauthtoken.FieldUserID] = struct{}{}
-}
-
-// UserCleared reports if the "user" edge to the User entity was cleared.
-func (m *OAuthTokenMutation) UserCleared() bool {
-	return m.UserIDCleared() || m.cleareduser
-}
-
-// UserIDs returns the "user" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// UserID instead. It exists only for internal usage by the builders.
-func (m *OAuthTokenMutation) UserIDs() (ids []uuid.UUID) {
-	if id := m.user; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetUser resets all changes to the "user" edge.
-func (m *OAuthTokenMutation) ResetUser() {
-	m.user = nil
-	m.cleareduser = false
-}
-
 // Where appends a list predicates to the OAuthTokenMutation builder.
 func (m *OAuthTokenMutation) Where(ps ...predicate.OAuthToken) {
 	m.predicates = append(m.predicates, ps...)
@@ -21514,12 +21317,9 @@ func (m *OAuthTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuthTokenMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 19)
 	if m.app != nil {
 		fields = append(fields, oauthtoken.FieldAppID)
-	}
-	if m.user != nil {
-		fields = append(fields, oauthtoken.FieldUserID)
 	}
 	if m.subject != nil {
 		fields = append(fields, oauthtoken.FieldSubject)
@@ -21585,8 +21385,6 @@ func (m *OAuthTokenMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case oauthtoken.FieldAppID:
 		return m.AppID()
-	case oauthtoken.FieldUserID:
-		return m.UserID()
 	case oauthtoken.FieldSubject:
 		return m.Subject()
 	case oauthtoken.FieldServiceAccountID:
@@ -21634,8 +21432,6 @@ func (m *OAuthTokenMutation) OldField(ctx context.Context, name string) (ent.Val
 	switch name {
 	case oauthtoken.FieldAppID:
 		return m.OldAppID(ctx)
-	case oauthtoken.FieldUserID:
-		return m.OldUserID(ctx)
 	case oauthtoken.FieldSubject:
 		return m.OldSubject(ctx)
 	case oauthtoken.FieldServiceAccountID:
@@ -21687,13 +21483,6 @@ func (m *OAuthTokenMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAppID(v)
-		return nil
-	case oauthtoken.FieldUserID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUserID(v)
 		return nil
 	case oauthtoken.FieldSubject:
 		v, ok := value.(string)
@@ -21851,9 +21640,6 @@ func (m *OAuthTokenMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *OAuthTokenMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(oauthtoken.FieldUserID) {
-		fields = append(fields, oauthtoken.FieldUserID)
-	}
 	if m.FieldCleared(oauthtoken.FieldSubject) {
 		fields = append(fields, oauthtoken.FieldSubject)
 	}
@@ -21901,9 +21687,6 @@ func (m *OAuthTokenMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *OAuthTokenMutation) ClearField(name string) error {
 	switch name {
-	case oauthtoken.FieldUserID:
-		m.ClearUserID()
-		return nil
 	case oauthtoken.FieldSubject:
 		m.ClearSubject()
 		return nil
@@ -21947,9 +21730,6 @@ func (m *OAuthTokenMutation) ResetField(name string) error {
 	switch name {
 	case oauthtoken.FieldAppID:
 		m.ResetAppID()
-		return nil
-	case oauthtoken.FieldUserID:
-		m.ResetUserID()
 		return nil
 	case oauthtoken.FieldSubject:
 		m.ResetSubject()
@@ -22011,12 +21791,9 @@ func (m *OAuthTokenMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *OAuthTokenMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 1)
 	if m.app != nil {
 		edges = append(edges, oauthtoken.EdgeApp)
-	}
-	if m.user != nil {
-		edges = append(edges, oauthtoken.EdgeUser)
 	}
 	return edges
 }
@@ -22029,17 +21806,13 @@ func (m *OAuthTokenMutation) AddedIDs(name string) []ent.Value {
 		if id := m.app; id != nil {
 			return []ent.Value{*id}
 		}
-	case oauthtoken.EdgeUser:
-		if id := m.user; id != nil {
-			return []ent.Value{*id}
-		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *OAuthTokenMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -22051,12 +21824,9 @@ func (m *OAuthTokenMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *OAuthTokenMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 1)
 	if m.clearedapp {
 		edges = append(edges, oauthtoken.EdgeApp)
-	}
-	if m.cleareduser {
-		edges = append(edges, oauthtoken.EdgeUser)
 	}
 	return edges
 }
@@ -22067,8 +21837,6 @@ func (m *OAuthTokenMutation) EdgeCleared(name string) bool {
 	switch name {
 	case oauthtoken.EdgeApp:
 		return m.clearedapp
-	case oauthtoken.EdgeUser:
-		return m.cleareduser
 	}
 	return false
 }
@@ -22080,9 +21848,6 @@ func (m *OAuthTokenMutation) ClearEdge(name string) error {
 	case oauthtoken.EdgeApp:
 		m.ClearApp()
 		return nil
-	case oauthtoken.EdgeUser:
-		m.ClearUser()
-		return nil
 	}
 	return fmt.Errorf("unknown OAuthToken unique edge %s", name)
 }
@@ -22093,9 +21858,6 @@ func (m *OAuthTokenMutation) ResetEdge(name string) error {
 	switch name {
 	case oauthtoken.EdgeApp:
 		m.ResetApp()
-		return nil
-	case oauthtoken.EdgeUser:
-		m.ResetUser()
 		return nil
 	}
 	return fmt.Errorf("unknown OAuthToken edge %s", name)
@@ -24045,6 +23807,9 @@ type PrincipalMutation struct {
 	owned_oauth_apps             map[uuid.UUID]struct{}
 	removedowned_oauth_apps      map[uuid.UUID]struct{}
 	clearedowned_oauth_apps      bool
+	oauth_consents               map[uuid.UUID]struct{}
+	removedoauth_consents        map[uuid.UUID]struct{}
+	clearedoauth_consents        bool
 	sent_invites                 map[uuid.UUID]struct{}
 	removedsent_invites          map[uuid.UUID]struct{}
 	clearedsent_invites          bool
@@ -25077,6 +24842,60 @@ func (m *PrincipalMutation) ResetOwnedOauthApps() {
 	m.removedowned_oauth_apps = nil
 }
 
+// AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by ids.
+func (m *PrincipalMutation) AddOauthConsentIDs(ids ...uuid.UUID) {
+	if m.oauth_consents == nil {
+		m.oauth_consents = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.oauth_consents[ids[i]] = struct{}{}
+	}
+}
+
+// ClearOauthConsents clears the "oauth_consents" edge to the OAuthConsent entity.
+func (m *PrincipalMutation) ClearOauthConsents() {
+	m.clearedoauth_consents = true
+}
+
+// OauthConsentsCleared reports if the "oauth_consents" edge to the OAuthConsent entity was cleared.
+func (m *PrincipalMutation) OauthConsentsCleared() bool {
+	return m.clearedoauth_consents
+}
+
+// RemoveOauthConsentIDs removes the "oauth_consents" edge to the OAuthConsent entity by IDs.
+func (m *PrincipalMutation) RemoveOauthConsentIDs(ids ...uuid.UUID) {
+	if m.removedoauth_consents == nil {
+		m.removedoauth_consents = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.oauth_consents, ids[i])
+		m.removedoauth_consents[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedOauthConsents returns the removed IDs of the "oauth_consents" edge to the OAuthConsent entity.
+func (m *PrincipalMutation) RemovedOauthConsentsIDs() (ids []uuid.UUID) {
+	for id := range m.removedoauth_consents {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// OauthConsentsIDs returns the "oauth_consents" edge IDs in the mutation.
+func (m *PrincipalMutation) OauthConsentsIDs() (ids []uuid.UUID) {
+	for id := range m.oauth_consents {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetOauthConsents resets all changes to the "oauth_consents" edge.
+func (m *PrincipalMutation) ResetOauthConsents() {
+	m.oauth_consents = nil
+	m.clearedoauth_consents = false
+	m.removedoauth_consents = nil
+}
+
 // AddSentInviteIDs adds the "sent_invites" edge to the Invite entity by ids.
 func (m *PrincipalMutation) AddSentInviteIDs(ids ...uuid.UUID) {
 	if m.sent_invites == nil {
@@ -25648,7 +25467,7 @@ func (m *PrincipalMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PrincipalMutation) AddedEdges() []string {
-	edges := make([]string, 0, 16)
+	edges := make([]string, 0, 17)
 	if m.organization != nil {
 		edges = append(edges, principal.EdgeOrganization)
 	}
@@ -25681,6 +25500,9 @@ func (m *PrincipalMutation) AddedEdges() []string {
 	}
 	if m.owned_oauth_apps != nil {
 		edges = append(edges, principal.EdgeOwnedOauthApps)
+	}
+	if m.oauth_consents != nil {
+		edges = append(edges, principal.EdgeOauthConsents)
 	}
 	if m.sent_invites != nil {
 		edges = append(edges, principal.EdgeSentInvites)
@@ -25760,6 +25582,12 @@ func (m *PrincipalMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case principal.EdgeOauthConsents:
+		ids := make([]ent.Value, 0, len(m.oauth_consents))
+		for id := range m.oauth_consents {
+			ids = append(ids, id)
+		}
+		return ids
 	case principal.EdgeSentInvites:
 		ids := make([]ent.Value, 0, len(m.sent_invites))
 		for id := range m.sent_invites {
@@ -25796,7 +25624,7 @@ func (m *PrincipalMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PrincipalMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 16)
+	edges := make([]string, 0, 17)
 	if m.removedcredentials != nil {
 		edges = append(edges, principal.EdgeCredentials)
 	}
@@ -25814,6 +25642,9 @@ func (m *PrincipalMutation) RemovedEdges() []string {
 	}
 	if m.removedowned_oauth_apps != nil {
 		edges = append(edges, principal.EdgeOwnedOauthApps)
+	}
+	if m.removedoauth_consents != nil {
+		edges = append(edges, principal.EdgeOauthConsents)
 	}
 	if m.removedsent_invites != nil {
 		edges = append(edges, principal.EdgeSentInvites)
@@ -25873,6 +25704,12 @@ func (m *PrincipalMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case principal.EdgeOauthConsents:
+		ids := make([]ent.Value, 0, len(m.removedoauth_consents))
+		for id := range m.removedoauth_consents {
+			ids = append(ids, id)
+		}
+		return ids
 	case principal.EdgeSentInvites:
 		ids := make([]ent.Value, 0, len(m.removedsent_invites))
 		for id := range m.removedsent_invites {
@@ -25909,7 +25746,7 @@ func (m *PrincipalMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PrincipalMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 16)
+	edges := make([]string, 0, 17)
 	if m.clearedorganization {
 		edges = append(edges, principal.EdgeOrganization)
 	}
@@ -25942,6 +25779,9 @@ func (m *PrincipalMutation) ClearedEdges() []string {
 	}
 	if m.clearedowned_oauth_apps {
 		edges = append(edges, principal.EdgeOwnedOauthApps)
+	}
+	if m.clearedoauth_consents {
+		edges = append(edges, principal.EdgeOauthConsents)
 	}
 	if m.clearedsent_invites {
 		edges = append(edges, principal.EdgeSentInvites)
@@ -25987,6 +25827,8 @@ func (m *PrincipalMutation) EdgeCleared(name string) bool {
 		return m.clearedowned_organizations
 	case principal.EdgeOwnedOauthApps:
 		return m.clearedowned_oauth_apps
+	case principal.EdgeOauthConsents:
+		return m.clearedoauth_consents
 	case principal.EdgeSentInvites:
 		return m.clearedsent_invites
 	case principal.EdgeOwnedListings:
@@ -26060,6 +25902,9 @@ func (m *PrincipalMutation) ResetEdge(name string) error {
 		return nil
 	case principal.EdgeOwnedOauthApps:
 		m.ResetOwnedOauthApps()
+		return nil
+	case principal.EdgeOauthConsents:
+		m.ResetOauthConsents()
 		return nil
 	case principal.EdgeSentInvites:
 		m.ResetSentInvites()
@@ -34317,15 +34162,6 @@ type UserMutation struct {
 	api_keys                        map[uuid.UUID]struct{}
 	removedapi_keys                 map[uuid.UUID]struct{}
 	clearedapi_keys                 bool
-	oauth_tokens                    map[uuid.UUID]struct{}
-	removedoauth_tokens             map[uuid.UUID]struct{}
-	clearedoauth_tokens             bool
-	oauth_auth_codes                map[uuid.UUID]struct{}
-	removedoauth_auth_codes         map[uuid.UUID]struct{}
-	clearedoauth_auth_codes         bool
-	oauth_consents                  map[uuid.UUID]struct{}
-	removedoauth_consents           map[uuid.UUID]struct{}
-	clearedoauth_consents           bool
 	created_service_accounts        map[uuid.UUID]struct{}
 	removedcreated_service_accounts map[uuid.UUID]struct{}
 	clearedcreated_service_accounts bool
@@ -35066,168 +34902,6 @@ func (m *UserMutation) ResetAPIKeys() {
 	m.removedapi_keys = nil
 }
 
-// AddOauthTokenIDs adds the "oauth_tokens" edge to the OAuthToken entity by ids.
-func (m *UserMutation) AddOauthTokenIDs(ids ...uuid.UUID) {
-	if m.oauth_tokens == nil {
-		m.oauth_tokens = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.oauth_tokens[ids[i]] = struct{}{}
-	}
-}
-
-// ClearOauthTokens clears the "oauth_tokens" edge to the OAuthToken entity.
-func (m *UserMutation) ClearOauthTokens() {
-	m.clearedoauth_tokens = true
-}
-
-// OauthTokensCleared reports if the "oauth_tokens" edge to the OAuthToken entity was cleared.
-func (m *UserMutation) OauthTokensCleared() bool {
-	return m.clearedoauth_tokens
-}
-
-// RemoveOauthTokenIDs removes the "oauth_tokens" edge to the OAuthToken entity by IDs.
-func (m *UserMutation) RemoveOauthTokenIDs(ids ...uuid.UUID) {
-	if m.removedoauth_tokens == nil {
-		m.removedoauth_tokens = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.oauth_tokens, ids[i])
-		m.removedoauth_tokens[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedOauthTokens returns the removed IDs of the "oauth_tokens" edge to the OAuthToken entity.
-func (m *UserMutation) RemovedOauthTokensIDs() (ids []uuid.UUID) {
-	for id := range m.removedoauth_tokens {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// OauthTokensIDs returns the "oauth_tokens" edge IDs in the mutation.
-func (m *UserMutation) OauthTokensIDs() (ids []uuid.UUID) {
-	for id := range m.oauth_tokens {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetOauthTokens resets all changes to the "oauth_tokens" edge.
-func (m *UserMutation) ResetOauthTokens() {
-	m.oauth_tokens = nil
-	m.clearedoauth_tokens = false
-	m.removedoauth_tokens = nil
-}
-
-// AddOauthAuthCodeIDs adds the "oauth_auth_codes" edge to the OAuthAuthCode entity by ids.
-func (m *UserMutation) AddOauthAuthCodeIDs(ids ...uuid.UUID) {
-	if m.oauth_auth_codes == nil {
-		m.oauth_auth_codes = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.oauth_auth_codes[ids[i]] = struct{}{}
-	}
-}
-
-// ClearOauthAuthCodes clears the "oauth_auth_codes" edge to the OAuthAuthCode entity.
-func (m *UserMutation) ClearOauthAuthCodes() {
-	m.clearedoauth_auth_codes = true
-}
-
-// OauthAuthCodesCleared reports if the "oauth_auth_codes" edge to the OAuthAuthCode entity was cleared.
-func (m *UserMutation) OauthAuthCodesCleared() bool {
-	return m.clearedoauth_auth_codes
-}
-
-// RemoveOauthAuthCodeIDs removes the "oauth_auth_codes" edge to the OAuthAuthCode entity by IDs.
-func (m *UserMutation) RemoveOauthAuthCodeIDs(ids ...uuid.UUID) {
-	if m.removedoauth_auth_codes == nil {
-		m.removedoauth_auth_codes = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.oauth_auth_codes, ids[i])
-		m.removedoauth_auth_codes[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedOauthAuthCodes returns the removed IDs of the "oauth_auth_codes" edge to the OAuthAuthCode entity.
-func (m *UserMutation) RemovedOauthAuthCodesIDs() (ids []uuid.UUID) {
-	for id := range m.removedoauth_auth_codes {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// OauthAuthCodesIDs returns the "oauth_auth_codes" edge IDs in the mutation.
-func (m *UserMutation) OauthAuthCodesIDs() (ids []uuid.UUID) {
-	for id := range m.oauth_auth_codes {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetOauthAuthCodes resets all changes to the "oauth_auth_codes" edge.
-func (m *UserMutation) ResetOauthAuthCodes() {
-	m.oauth_auth_codes = nil
-	m.clearedoauth_auth_codes = false
-	m.removedoauth_auth_codes = nil
-}
-
-// AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by ids.
-func (m *UserMutation) AddOauthConsentIDs(ids ...uuid.UUID) {
-	if m.oauth_consents == nil {
-		m.oauth_consents = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.oauth_consents[ids[i]] = struct{}{}
-	}
-}
-
-// ClearOauthConsents clears the "oauth_consents" edge to the OAuthConsent entity.
-func (m *UserMutation) ClearOauthConsents() {
-	m.clearedoauth_consents = true
-}
-
-// OauthConsentsCleared reports if the "oauth_consents" edge to the OAuthConsent entity was cleared.
-func (m *UserMutation) OauthConsentsCleared() bool {
-	return m.clearedoauth_consents
-}
-
-// RemoveOauthConsentIDs removes the "oauth_consents" edge to the OAuthConsent entity by IDs.
-func (m *UserMutation) RemoveOauthConsentIDs(ids ...uuid.UUID) {
-	if m.removedoauth_consents == nil {
-		m.removedoauth_consents = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.oauth_consents, ids[i])
-		m.removedoauth_consents[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedOauthConsents returns the removed IDs of the "oauth_consents" edge to the OAuthConsent entity.
-func (m *UserMutation) RemovedOauthConsentsIDs() (ids []uuid.UUID) {
-	for id := range m.removedoauth_consents {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// OauthConsentsIDs returns the "oauth_consents" edge IDs in the mutation.
-func (m *UserMutation) OauthConsentsIDs() (ids []uuid.UUID) {
-	for id := range m.oauth_consents {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetOauthConsents resets all changes to the "oauth_consents" edge.
-func (m *UserMutation) ResetOauthConsents() {
-	m.oauth_consents = nil
-	m.clearedoauth_consents = false
-	m.removedoauth_consents = nil
-}
-
 // AddCreatedServiceAccountIDs adds the "created_service_accounts" edge to the ServiceAccount entity by ids.
 func (m *UserMutation) AddCreatedServiceAccountIDs(ids ...uuid.UUID) {
 	if m.created_service_accounts == nil {
@@ -35595,7 +35269,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 5)
 	if m.memberships != nil {
 		edges = append(edges, user.EdgeMemberships)
 	}
@@ -35607,15 +35281,6 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.api_keys != nil {
 		edges = append(edges, user.EdgeAPIKeys)
-	}
-	if m.oauth_tokens != nil {
-		edges = append(edges, user.EdgeOauthTokens)
-	}
-	if m.oauth_auth_codes != nil {
-		edges = append(edges, user.EdgeOauthAuthCodes)
-	}
-	if m.oauth_consents != nil {
-		edges = append(edges, user.EdgeOauthConsents)
 	}
 	if m.created_service_accounts != nil {
 		edges = append(edges, user.EdgeCreatedServiceAccounts)
@@ -35651,24 +35316,6 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeOauthTokens:
-		ids := make([]ent.Value, 0, len(m.oauth_tokens))
-		for id := range m.oauth_tokens {
-			ids = append(ids, id)
-		}
-		return ids
-	case user.EdgeOauthAuthCodes:
-		ids := make([]ent.Value, 0, len(m.oauth_auth_codes))
-		for id := range m.oauth_auth_codes {
-			ids = append(ids, id)
-		}
-		return ids
-	case user.EdgeOauthConsents:
-		ids := make([]ent.Value, 0, len(m.oauth_consents))
-		for id := range m.oauth_consents {
-			ids = append(ids, id)
-		}
-		return ids
 	case user.EdgeCreatedServiceAccounts:
 		ids := make([]ent.Value, 0, len(m.created_service_accounts))
 		for id := range m.created_service_accounts {
@@ -35681,7 +35328,7 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 5)
 	if m.removedmemberships != nil {
 		edges = append(edges, user.EdgeMemberships)
 	}
@@ -35693,15 +35340,6 @@ func (m *UserMutation) RemovedEdges() []string {
 	}
 	if m.removedapi_keys != nil {
 		edges = append(edges, user.EdgeAPIKeys)
-	}
-	if m.removedoauth_tokens != nil {
-		edges = append(edges, user.EdgeOauthTokens)
-	}
-	if m.removedoauth_auth_codes != nil {
-		edges = append(edges, user.EdgeOauthAuthCodes)
-	}
-	if m.removedoauth_consents != nil {
-		edges = append(edges, user.EdgeOauthConsents)
 	}
 	if m.removedcreated_service_accounts != nil {
 		edges = append(edges, user.EdgeCreatedServiceAccounts)
@@ -35737,24 +35375,6 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeOauthTokens:
-		ids := make([]ent.Value, 0, len(m.removedoauth_tokens))
-		for id := range m.removedoauth_tokens {
-			ids = append(ids, id)
-		}
-		return ids
-	case user.EdgeOauthAuthCodes:
-		ids := make([]ent.Value, 0, len(m.removedoauth_auth_codes))
-		for id := range m.removedoauth_auth_codes {
-			ids = append(ids, id)
-		}
-		return ids
-	case user.EdgeOauthConsents:
-		ids := make([]ent.Value, 0, len(m.removedoauth_consents))
-		for id := range m.removedoauth_consents {
-			ids = append(ids, id)
-		}
-		return ids
 	case user.EdgeCreatedServiceAccounts:
 		ids := make([]ent.Value, 0, len(m.removedcreated_service_accounts))
 		for id := range m.removedcreated_service_accounts {
@@ -35767,7 +35387,7 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 5)
 	if m.clearedmemberships {
 		edges = append(edges, user.EdgeMemberships)
 	}
@@ -35779,15 +35399,6 @@ func (m *UserMutation) ClearedEdges() []string {
 	}
 	if m.clearedapi_keys {
 		edges = append(edges, user.EdgeAPIKeys)
-	}
-	if m.clearedoauth_tokens {
-		edges = append(edges, user.EdgeOauthTokens)
-	}
-	if m.clearedoauth_auth_codes {
-		edges = append(edges, user.EdgeOauthAuthCodes)
-	}
-	if m.clearedoauth_consents {
-		edges = append(edges, user.EdgeOauthConsents)
 	}
 	if m.clearedcreated_service_accounts {
 		edges = append(edges, user.EdgeCreatedServiceAccounts)
@@ -35807,12 +35418,6 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedrefresh_tokens
 	case user.EdgeAPIKeys:
 		return m.clearedapi_keys
-	case user.EdgeOauthTokens:
-		return m.clearedoauth_tokens
-	case user.EdgeOauthAuthCodes:
-		return m.clearedoauth_auth_codes
-	case user.EdgeOauthConsents:
-		return m.clearedoauth_consents
 	case user.EdgeCreatedServiceAccounts:
 		return m.clearedcreated_service_accounts
 	}
@@ -35842,15 +35447,6 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeAPIKeys:
 		m.ResetAPIKeys()
-		return nil
-	case user.EdgeOauthTokens:
-		m.ResetOauthTokens()
-		return nil
-	case user.EdgeOauthAuthCodes:
-		m.ResetOauthAuthCodes()
-		return nil
-	case user.EdgeOauthConsents:
-		m.ResetOauthConsents()
 		return nil
 	case user.EdgeCreatedServiceAccounts:
 		m.ResetCreatedServiceAccounts()

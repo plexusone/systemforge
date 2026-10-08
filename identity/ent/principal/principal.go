@@ -58,6 +58,8 @@ const (
 	EdgeOwnedOrganizations = "owned_organizations"
 	// EdgeOwnedOauthApps holds the string denoting the owned_oauth_apps edge name in mutations.
 	EdgeOwnedOauthApps = "owned_oauth_apps"
+	// EdgeOauthConsents holds the string denoting the oauth_consents edge name in mutations.
+	EdgeOauthConsents = "oauth_consents"
 	// EdgeSentInvites holds the string denoting the sent_invites edge name in mutations.
 	EdgeSentInvites = "sent_invites"
 	// EdgeOwnedListings holds the string denoting the owned_listings edge name in mutations.
@@ -147,6 +149,13 @@ const (
 	OwnedOauthAppsInverseTable = "sf_oauth_apps"
 	// OwnedOauthAppsColumn is the table column denoting the owned_oauth_apps relation/edge.
 	OwnedOauthAppsColumn = "owner_id"
+	// OauthConsentsTable is the table that holds the oauth_consents relation/edge.
+	OauthConsentsTable = "sf_oauth_consents"
+	// OauthConsentsInverseTable is the table name for the OAuthConsent entity.
+	// It exists in this package in order to avoid circular dependency with the "oauthconsent" package.
+	OauthConsentsInverseTable = "sf_oauth_consents"
+	// OauthConsentsColumn is the table column denoting the oauth_consents relation/edge.
+	OauthConsentsColumn = "principal_id"
 	// SentInvitesTable is the table that holds the sent_invites relation/edge.
 	SentInvitesTable = "sf_invites"
 	// SentInvitesInverseTable is the table name for the Invite entity.
@@ -417,6 +426,20 @@ func ByOwnedOauthApps(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByOauthConsentsCount orders the results by oauth_consents count.
+func ByOauthConsentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOauthConsentsStep(), opts...)
+	}
+}
+
+// ByOauthConsents orders the results by oauth_consents terms.
+func ByOauthConsents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOauthConsentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // BySentInvitesCount orders the results by sent_invites count.
 func BySentInvitesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -561,6 +584,13 @@ func newOwnedOauthAppsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OwnedOauthAppsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, OwnedOauthAppsTable, OwnedOauthAppsColumn),
+	)
+}
+func newOauthConsentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OauthConsentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OauthConsentsTable, OauthConsentsColumn),
 	)
 }
 func newSentInvitesStep() *sqlgraph.Step {

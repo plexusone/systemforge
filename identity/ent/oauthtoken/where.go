@@ -61,11 +61,6 @@ func AppID(v uuid.UUID) predicate.OAuthToken {
 	return predicate.OAuthToken(sql.FieldEQ(FieldAppID, v))
 }
 
-// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
-func UserID(v uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldEQ(FieldUserID, v))
-}
-
 // Subject applies equality check predicate on the "subject" field. It's identical to SubjectEQ.
 func Subject(v string) predicate.OAuthToken {
 	return predicate.OAuthToken(sql.FieldEQ(FieldSubject, v))
@@ -164,36 +159,6 @@ func AppIDIn(vs ...uuid.UUID) predicate.OAuthToken {
 // AppIDNotIn applies the NotIn predicate on the "app_id" field.
 func AppIDNotIn(vs ...uuid.UUID) predicate.OAuthToken {
 	return predicate.OAuthToken(sql.FieldNotIn(FieldAppID, vs...))
-}
-
-// UserIDEQ applies the EQ predicate on the "user_id" field.
-func UserIDEQ(v uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldEQ(FieldUserID, v))
-}
-
-// UserIDNEQ applies the NEQ predicate on the "user_id" field.
-func UserIDNEQ(v uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldNEQ(FieldUserID, v))
-}
-
-// UserIDIn applies the In predicate on the "user_id" field.
-func UserIDIn(vs ...uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldIn(FieldUserID, vs...))
-}
-
-// UserIDNotIn applies the NotIn predicate on the "user_id" field.
-func UserIDNotIn(vs ...uuid.UUID) predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldNotIn(FieldUserID, vs...))
-}
-
-// UserIDIsNil applies the IsNil predicate on the "user_id" field.
-func UserIDIsNil() predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldIsNull(FieldUserID))
-}
-
-// UserIDNotNil applies the NotNil predicate on the "user_id" field.
-func UserIDNotNil() predicate.OAuthToken {
-	return predicate.OAuthToken(sql.FieldNotNull(FieldUserID))
 }
 
 // SubjectEQ applies the EQ predicate on the "subject" field.
@@ -1131,29 +1096,6 @@ func HasApp() predicate.OAuthToken {
 func HasAppWith(preds ...predicate.OAuthApp) predicate.OAuthToken {
 	return predicate.OAuthToken(func(s *sql.Selector) {
 		step := newAppStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasUser applies the HasEdge predicate on the "user" edge.
-func HasUser() predicate.OAuthToken {
-	return predicate.OAuthToken(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
-func HasUserWith(preds ...predicate.User) predicate.OAuthToken {
-	return predicate.OAuthToken(func(s *sql.Selector) {
-		step := newUserStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

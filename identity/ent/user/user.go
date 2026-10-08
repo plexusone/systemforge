@@ -43,12 +43,6 @@ const (
 	EdgeRefreshTokens = "refresh_tokens"
 	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
 	EdgeAPIKeys = "api_keys"
-	// EdgeOauthTokens holds the string denoting the oauth_tokens edge name in mutations.
-	EdgeOauthTokens = "oauth_tokens"
-	// EdgeOauthAuthCodes holds the string denoting the oauth_auth_codes edge name in mutations.
-	EdgeOauthAuthCodes = "oauth_auth_codes"
-	// EdgeOauthConsents holds the string denoting the oauth_consents edge name in mutations.
-	EdgeOauthConsents = "oauth_consents"
 	// EdgeCreatedServiceAccounts holds the string denoting the created_service_accounts edge name in mutations.
 	EdgeCreatedServiceAccounts = "created_service_accounts"
 	// Table holds the table name of the user in the database.
@@ -81,27 +75,6 @@ const (
 	APIKeysInverseTable = "sf_api_keys"
 	// APIKeysColumn is the table column denoting the api_keys relation/edge.
 	APIKeysColumn = "user_api_keys"
-	// OauthTokensTable is the table that holds the oauth_tokens relation/edge.
-	OauthTokensTable = "sf_oauth_tokens"
-	// OauthTokensInverseTable is the table name for the OAuthToken entity.
-	// It exists in this package in order to avoid circular dependency with the "oauthtoken" package.
-	OauthTokensInverseTable = "sf_oauth_tokens"
-	// OauthTokensColumn is the table column denoting the oauth_tokens relation/edge.
-	OauthTokensColumn = "user_id"
-	// OauthAuthCodesTable is the table that holds the oauth_auth_codes relation/edge.
-	OauthAuthCodesTable = "sf_oauth_auth_codes"
-	// OauthAuthCodesInverseTable is the table name for the OAuthAuthCode entity.
-	// It exists in this package in order to avoid circular dependency with the "oauthauthcode" package.
-	OauthAuthCodesInverseTable = "sf_oauth_auth_codes"
-	// OauthAuthCodesColumn is the table column denoting the oauth_auth_codes relation/edge.
-	OauthAuthCodesColumn = "user_id"
-	// OauthConsentsTable is the table that holds the oauth_consents relation/edge.
-	OauthConsentsTable = "sf_oauth_consents"
-	// OauthConsentsInverseTable is the table name for the OAuthConsent entity.
-	// It exists in this package in order to avoid circular dependency with the "oauthconsent" package.
-	OauthConsentsInverseTable = "sf_oauth_consents"
-	// OauthConsentsColumn is the table column denoting the oauth_consents relation/edge.
-	OauthConsentsColumn = "user_id"
 	// CreatedServiceAccountsTable is the table that holds the created_service_accounts relation/edge.
 	CreatedServiceAccountsTable = "sf_service_accounts"
 	// CreatedServiceAccountsInverseTable is the table name for the ServiceAccount entity.
@@ -269,48 +242,6 @@ func ByAPIKeys(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByOauthTokensCount orders the results by oauth_tokens count.
-func ByOauthTokensCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newOauthTokensStep(), opts...)
-	}
-}
-
-// ByOauthTokens orders the results by oauth_tokens terms.
-func ByOauthTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newOauthTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// ByOauthAuthCodesCount orders the results by oauth_auth_codes count.
-func ByOauthAuthCodesCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newOauthAuthCodesStep(), opts...)
-	}
-}
-
-// ByOauthAuthCodes orders the results by oauth_auth_codes terms.
-func ByOauthAuthCodes(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newOauthAuthCodesStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// ByOauthConsentsCount orders the results by oauth_consents count.
-func ByOauthConsentsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newOauthConsentsStep(), opts...)
-	}
-}
-
-// ByOauthConsents orders the results by oauth_consents terms.
-func ByOauthConsents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newOauthConsentsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByCreatedServiceAccountsCount orders the results by created_service_accounts count.
 func ByCreatedServiceAccountsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -350,27 +281,6 @@ func newAPIKeysStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(APIKeysInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, APIKeysTable, APIKeysColumn),
-	)
-}
-func newOauthTokensStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(OauthTokensInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, OauthTokensTable, OauthTokensColumn),
-	)
-}
-func newOauthAuthCodesStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(OauthAuthCodesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, OauthAuthCodesTable, OauthAuthCodesColumn),
-	)
-}
-func newOauthConsentsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(OauthConsentsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, OauthConsentsTable, OauthConsentsColumn),
 	)
 }
 func newCreatedServiceAccountsStep() *sqlgraph.Step {

@@ -15,7 +15,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
-	"github.com/plexusone/systemforge/identity/ent/user"
 )
 
 // OAuthAuthCodeCreate is the builder for creating a OAuthAuthCode entity.
@@ -35,20 +34,6 @@ func (_c *OAuthAuthCodeCreate) SetCodeSignature(v string) *OAuthAuthCodeCreate {
 // SetAppID sets the "app_id" field.
 func (_c *OAuthAuthCodeCreate) SetAppID(v uuid.UUID) *OAuthAuthCodeCreate {
 	_c.mutation.SetAppID(v)
-	return _c
-}
-
-// SetUserID sets the "user_id" field.
-func (_c *OAuthAuthCodeCreate) SetUserID(v uuid.UUID) *OAuthAuthCodeCreate {
-	_c.mutation.SetUserID(v)
-	return _c
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (_c *OAuthAuthCodeCreate) SetNillableUserID(v *uuid.UUID) *OAuthAuthCodeCreate {
-	if v != nil {
-		_c.SetUserID(*v)
-	}
 	return _c
 }
 
@@ -241,11 +226,6 @@ func (_c *OAuthAuthCodeCreate) SetNillableID(v *uuid.UUID) *OAuthAuthCodeCreate 
 // SetApp sets the "app" edge to the OAuthApp entity.
 func (_c *OAuthAuthCodeCreate) SetApp(v *OAuthApp) *OAuthAuthCodeCreate {
 	return _c.SetAppID(v.ID)
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (_c *OAuthAuthCodeCreate) SetUser(v *User) *OAuthAuthCodeCreate {
-	return _c.SetUserID(v.ID)
 }
 
 // Mutation returns the OAuthAuthCodeMutation object of the builder.
@@ -444,23 +424,6 @@ func (_c *OAuthAuthCodeCreate) createSpec() (*OAuthAuthCode, *sqlgraph.CreateSpe
 		_node.AppID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   oauthauthcode.UserTable,
-			Columns: []string{oauthauthcode.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.UserID = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	return _node, _spec
 }
 
@@ -534,24 +497,6 @@ func (u *OAuthAuthCodeUpsert) SetAppID(v uuid.UUID) *OAuthAuthCodeUpsert {
 // UpdateAppID sets the "app_id" field to the value that was provided on create.
 func (u *OAuthAuthCodeUpsert) UpdateAppID() *OAuthAuthCodeUpsert {
 	u.SetExcluded(oauthauthcode.FieldAppID)
-	return u
-}
-
-// SetUserID sets the "user_id" field.
-func (u *OAuthAuthCodeUpsert) SetUserID(v uuid.UUID) *OAuthAuthCodeUpsert {
-	u.Set(oauthauthcode.FieldUserID, v)
-	return u
-}
-
-// UpdateUserID sets the "user_id" field to the value that was provided on create.
-func (u *OAuthAuthCodeUpsert) UpdateUserID() *OAuthAuthCodeUpsert {
-	u.SetExcluded(oauthauthcode.FieldUserID)
-	return u
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (u *OAuthAuthCodeUpsert) ClearUserID() *OAuthAuthCodeUpsert {
-	u.SetNull(oauthauthcode.FieldUserID)
 	return u
 }
 
@@ -841,27 +786,6 @@ func (u *OAuthAuthCodeUpsertOne) SetAppID(v uuid.UUID) *OAuthAuthCodeUpsertOne {
 func (u *OAuthAuthCodeUpsertOne) UpdateAppID() *OAuthAuthCodeUpsertOne {
 	return u.Update(func(s *OAuthAuthCodeUpsert) {
 		s.UpdateAppID()
-	})
-}
-
-// SetUserID sets the "user_id" field.
-func (u *OAuthAuthCodeUpsertOne) SetUserID(v uuid.UUID) *OAuthAuthCodeUpsertOne {
-	return u.Update(func(s *OAuthAuthCodeUpsert) {
-		s.SetUserID(v)
-	})
-}
-
-// UpdateUserID sets the "user_id" field to the value that was provided on create.
-func (u *OAuthAuthCodeUpsertOne) UpdateUserID() *OAuthAuthCodeUpsertOne {
-	return u.Update(func(s *OAuthAuthCodeUpsert) {
-		s.UpdateUserID()
-	})
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (u *OAuthAuthCodeUpsertOne) ClearUserID() *OAuthAuthCodeUpsertOne {
-	return u.Update(func(s *OAuthAuthCodeUpsert) {
-		s.ClearUserID()
 	})
 }
 
@@ -1353,27 +1277,6 @@ func (u *OAuthAuthCodeUpsertBulk) SetAppID(v uuid.UUID) *OAuthAuthCodeUpsertBulk
 func (u *OAuthAuthCodeUpsertBulk) UpdateAppID() *OAuthAuthCodeUpsertBulk {
 	return u.Update(func(s *OAuthAuthCodeUpsert) {
 		s.UpdateAppID()
-	})
-}
-
-// SetUserID sets the "user_id" field.
-func (u *OAuthAuthCodeUpsertBulk) SetUserID(v uuid.UUID) *OAuthAuthCodeUpsertBulk {
-	return u.Update(func(s *OAuthAuthCodeUpsert) {
-		s.SetUserID(v)
-	})
-}
-
-// UpdateUserID sets the "user_id" field to the value that was provided on create.
-func (u *OAuthAuthCodeUpsertBulk) UpdateUserID() *OAuthAuthCodeUpsertBulk {
-	return u.Update(func(s *OAuthAuthCodeUpsert) {
-		s.UpdateUserID()
-	})
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (u *OAuthAuthCodeUpsertBulk) ClearUserID() *OAuthAuthCodeUpsertBulk {
-	return u.Update(func(s *OAuthAuthCodeUpsert) {
-		s.ClearUserID()
 	})
 }
 

@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
-	"github.com/plexusone/systemforge/identity/ent/user"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 )
 
 // OAuthConsentCreate is the builder for creating a OAuthConsent entity.
@@ -26,9 +26,9 @@ type OAuthConsentCreate struct {
 	conflict []sql.ConflictOption
 }
 
-// SetUserID sets the "user_id" field.
-func (_c *OAuthConsentCreate) SetUserID(v uuid.UUID) *OAuthConsentCreate {
-	_c.mutation.SetUserID(v)
+// SetPrincipalID sets the "principal_id" field.
+func (_c *OAuthConsentCreate) SetPrincipalID(v uuid.UUID) *OAuthConsentCreate {
+	_c.mutation.SetPrincipalID(v)
 	return _c
 }
 
@@ -170,9 +170,9 @@ func (_c *OAuthConsentCreate) SetNillableID(v *uuid.UUID) *OAuthConsentCreate {
 	return _c
 }
 
-// SetUser sets the "user" edge to the User entity.
-func (_c *OAuthConsentCreate) SetUser(v *User) *OAuthConsentCreate {
-	return _c.SetUserID(v.ID)
+// SetPrincipal sets the "principal" edge to the Principal entity.
+func (_c *OAuthConsentCreate) SetPrincipal(v *Principal) *OAuthConsentCreate {
+	return _c.SetPrincipalID(v.ID)
 }
 
 // SetApp sets the "app" edge to the OAuthApp entity.
@@ -247,8 +247,8 @@ func (_c *OAuthConsentCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *OAuthConsentCreate) check() error {
-	if _, ok := _c.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "OAuthConsent.user_id"`)}
+	if _, ok := _c.mutation.PrincipalID(); !ok {
+		return &ValidationError{Name: "principal_id", err: errors.New(`ent: missing required field "OAuthConsent.principal_id"`)}
 	}
 	if _, ok := _c.mutation.AppID(); !ok {
 		return &ValidationError{Name: "app_id", err: errors.New(`ent: missing required field "OAuthConsent.app_id"`)}
@@ -271,8 +271,8 @@ func (_c *OAuthConsentCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "OAuthConsent.updated_at"`)}
 	}
-	if len(_c.mutation.UserIDs()) == 0 {
-		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "OAuthConsent.user"`)}
+	if len(_c.mutation.PrincipalIDs()) == 0 {
+		return &ValidationError{Name: "principal", err: errors.New(`ent: missing required edge "OAuthConsent.principal"`)}
 	}
 	if len(_c.mutation.AppIDs()) == 0 {
 		return &ValidationError{Name: "app", err: errors.New(`ent: missing required edge "OAuthConsent.app"`)}
@@ -349,21 +349,21 @@ func (_c *OAuthConsentCreate) createSpec() (*OAuthConsent, *sqlgraph.CreateSpec)
 		_spec.SetField(oauthconsent.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PrincipalIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   oauthconsent.UserTable,
-			Columns: []string{oauthconsent.UserColumn},
+			Table:   oauthconsent.PrincipalTable,
+			Columns: []string{oauthconsent.PrincipalColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(principal.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.UserID = nodes[0]
+		_node.PrincipalID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.AppIDs(); len(nodes) > 0 {
@@ -390,7 +390,7 @@ func (_c *OAuthConsentCreate) createSpec() (*OAuthConsent, *sqlgraph.CreateSpec)
 // of the `INSERT` statement. For example:
 //
 //	client.OAuthConsent.Create().
-//		SetUserID(v).
+//		SetPrincipalID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -399,7 +399,7 @@ func (_c *OAuthConsentCreate) createSpec() (*OAuthConsent, *sqlgraph.CreateSpec)
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.OAuthConsentUpsert) {
-//			SetUserID(v+v).
+//			SetPrincipalID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *OAuthConsentCreate) OnConflict(opts ...sql.ConflictOption) *OAuthConsentUpsertOne {
@@ -435,15 +435,15 @@ type (
 	}
 )
 
-// SetUserID sets the "user_id" field.
-func (u *OAuthConsentUpsert) SetUserID(v uuid.UUID) *OAuthConsentUpsert {
-	u.Set(oauthconsent.FieldUserID, v)
+// SetPrincipalID sets the "principal_id" field.
+func (u *OAuthConsentUpsert) SetPrincipalID(v uuid.UUID) *OAuthConsentUpsert {
+	u.Set(oauthconsent.FieldPrincipalID, v)
 	return u
 }
 
-// UpdateUserID sets the "user_id" field to the value that was provided on create.
-func (u *OAuthConsentUpsert) UpdateUserID() *OAuthConsentUpsert {
-	u.SetExcluded(oauthconsent.FieldUserID)
+// UpdatePrincipalID sets the "principal_id" field to the value that was provided on create.
+func (u *OAuthConsentUpsert) UpdatePrincipalID() *OAuthConsentUpsert {
+	u.SetExcluded(oauthconsent.FieldPrincipalID)
 	return u
 }
 
@@ -624,17 +624,17 @@ func (u *OAuthConsentUpsertOne) Update(set func(*OAuthConsentUpsert)) *OAuthCons
 	return u
 }
 
-// SetUserID sets the "user_id" field.
-func (u *OAuthConsentUpsertOne) SetUserID(v uuid.UUID) *OAuthConsentUpsertOne {
+// SetPrincipalID sets the "principal_id" field.
+func (u *OAuthConsentUpsertOne) SetPrincipalID(v uuid.UUID) *OAuthConsentUpsertOne {
 	return u.Update(func(s *OAuthConsentUpsert) {
-		s.SetUserID(v)
+		s.SetPrincipalID(v)
 	})
 }
 
-// UpdateUserID sets the "user_id" field to the value that was provided on create.
-func (u *OAuthConsentUpsertOne) UpdateUserID() *OAuthConsentUpsertOne {
+// UpdatePrincipalID sets the "principal_id" field to the value that was provided on create.
+func (u *OAuthConsentUpsertOne) UpdatePrincipalID() *OAuthConsentUpsertOne {
 	return u.Update(func(s *OAuthConsentUpsert) {
-		s.UpdateUserID()
+		s.UpdatePrincipalID()
 	})
 }
 
@@ -921,7 +921,7 @@ func (_c *OAuthConsentCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.OAuthConsentUpsert) {
-//			SetUserID(v+v).
+//			SetPrincipalID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *OAuthConsentCreateBulk) OnConflict(opts ...sql.ConflictOption) *OAuthConsentUpsertBulk {
@@ -1003,17 +1003,17 @@ func (u *OAuthConsentUpsertBulk) Update(set func(*OAuthConsentUpsert)) *OAuthCon
 	return u
 }
 
-// SetUserID sets the "user_id" field.
-func (u *OAuthConsentUpsertBulk) SetUserID(v uuid.UUID) *OAuthConsentUpsertBulk {
+// SetPrincipalID sets the "principal_id" field.
+func (u *OAuthConsentUpsertBulk) SetPrincipalID(v uuid.UUID) *OAuthConsentUpsertBulk {
 	return u.Update(func(s *OAuthConsentUpsert) {
-		s.SetUserID(v)
+		s.SetPrincipalID(v)
 	})
 }
 
-// UpdateUserID sets the "user_id" field to the value that was provided on create.
-func (u *OAuthConsentUpsertBulk) UpdateUserID() *OAuthConsentUpsertBulk {
+// UpdatePrincipalID sets the "principal_id" field to the value that was provided on create.
+func (u *OAuthConsentUpsertBulk) UpdatePrincipalID() *OAuthConsentUpsertBulk {
 	return u.Update(func(s *OAuthConsentUpsert) {
-		s.UpdateUserID()
+		s.UpdatePrincipalID()
 	})
 }
 

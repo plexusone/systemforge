@@ -15,18 +15,18 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
-	"github.com/plexusone/systemforge/identity/ent/user"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 )
 
 // OAuthConsentQuery is the builder for querying OAuthConsent entities.
 type OAuthConsentQuery struct {
 	config
-	ctx        *QueryContext
-	order      []oauthconsent.OrderOption
-	inters     []Interceptor
-	predicates []predicate.OAuthConsent
-	withUser   *UserQuery
-	withApp    *OAuthAppQuery
+	ctx           *QueryContext
+	order         []oauthconsent.OrderOption
+	inters        []Interceptor
+	predicates    []predicate.OAuthConsent
+	withPrincipal *PrincipalQuery
+	withApp       *OAuthAppQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,9 +63,9 @@ func (_q *OAuthConsentQuery) Order(o ...oauthconsent.OrderOption) *OAuthConsentQ
 	return _q
 }
 
-// QueryUser chains the current query on the "user" edge.
-func (_q *OAuthConsentQuery) QueryUser() *UserQuery {
-	query := (&UserClient{config: _q.config}).Query()
+// QueryPrincipal chains the current query on the "principal" edge.
+func (_q *OAuthConsentQuery) QueryPrincipal() *PrincipalQuery {
+	query := (&PrincipalClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -76,8 +76,8 @@ func (_q *OAuthConsentQuery) QueryUser() *UserQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(oauthconsent.Table, oauthconsent.FieldID, selector),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, oauthconsent.UserTable, oauthconsent.UserColumn),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, oauthconsent.PrincipalTable, oauthconsent.PrincipalColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -294,27 +294,27 @@ func (_q *OAuthConsentQuery) Clone() *OAuthConsentQuery {
 		return nil
 	}
 	return &OAuthConsentQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]oauthconsent.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.OAuthConsent{}, _q.predicates...),
-		withUser:   _q.withUser.Clone(),
-		withApp:    _q.withApp.Clone(),
+		config:        _q.config,
+		ctx:           _q.ctx.Clone(),
+		order:         append([]oauthconsent.OrderOption{}, _q.order...),
+		inters:        append([]Interceptor{}, _q.inters...),
+		predicates:    append([]predicate.OAuthConsent{}, _q.predicates...),
+		withPrincipal: _q.withPrincipal.Clone(),
+		withApp:       _q.withApp.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
 }
 
-// WithUser tells the query-builder to eager-load the nodes that are connected to
-// the "user" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *OAuthConsentQuery) WithUser(opts ...func(*UserQuery)) *OAuthConsentQuery {
-	query := (&UserClient{config: _q.config}).Query()
+// WithPrincipal tells the query-builder to eager-load the nodes that are connected to
+// the "principal" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *OAuthConsentQuery) WithPrincipal(opts ...func(*PrincipalQuery)) *OAuthConsentQuery {
+	query := (&PrincipalClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withUser = query
+	_q.withPrincipal = query
 	return _q
 }
 
@@ -335,12 +335,12 @@ func (_q *OAuthConsentQuery) WithApp(opts ...func(*OAuthAppQuery)) *OAuthConsent
 // Example:
 //
 //	var v []struct {
-//		UserID uuid.UUID `json:"user_id,omitempty"`
+//		PrincipalID uuid.UUID `json:"principal_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.OAuthConsent.Query().
-//		GroupBy(oauthconsent.FieldUserID).
+//		GroupBy(oauthconsent.FieldPrincipalID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *OAuthConsentQuery) GroupBy(field string, fields ...string) *OAuthConsentGroupBy {
@@ -358,11 +358,11 @@ func (_q *OAuthConsentQuery) GroupBy(field string, fields ...string) *OAuthConse
 // Example:
 //
 //	var v []struct {
-//		UserID uuid.UUID `json:"user_id,omitempty"`
+//		PrincipalID uuid.UUID `json:"principal_id,omitempty"`
 //	}
 //
 //	client.OAuthConsent.Query().
-//		Select(oauthconsent.FieldUserID).
+//		Select(oauthconsent.FieldPrincipalID).
 //		Scan(ctx, &v)
 func (_q *OAuthConsentQuery) Select(fields ...string) *OAuthConsentSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
@@ -408,7 +408,7 @@ func (_q *OAuthConsentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 		nodes       = []*OAuthConsent{}
 		_spec       = _q.querySpec()
 		loadedTypes = [2]bool{
-			_q.withUser != nil,
+			_q.withPrincipal != nil,
 			_q.withApp != nil,
 		}
 	)
@@ -430,9 +430,9 @@ func (_q *OAuthConsentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withUser; query != nil {
-		if err := _q.loadUser(ctx, query, nodes, nil,
-			func(n *OAuthConsent, e *User) { n.Edges.User = e }); err != nil {
+	if query := _q.withPrincipal; query != nil {
+		if err := _q.loadPrincipal(ctx, query, nodes, nil,
+			func(n *OAuthConsent, e *Principal) { n.Edges.Principal = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -445,11 +445,11 @@ func (_q *OAuthConsentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	return nodes, nil
 }
 
-func (_q *OAuthConsentQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*OAuthConsent, init func(*OAuthConsent), assign func(*OAuthConsent, *User)) error {
+func (_q *OAuthConsentQuery) loadPrincipal(ctx context.Context, query *PrincipalQuery, nodes []*OAuthConsent, init func(*OAuthConsent), assign func(*OAuthConsent, *Principal)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*OAuthConsent)
 	for i := range nodes {
-		fk := nodes[i].UserID
+		fk := nodes[i].PrincipalID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -458,7 +458,7 @@ func (_q *OAuthConsentQuery) loadUser(ctx context.Context, query *UserQuery, nod
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(user.IDIn(ids...))
+	query.Where(principal.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -466,7 +466,7 @@ func (_q *OAuthConsentQuery) loadUser(ctx context.Context, query *UserQuery, nod
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "principal_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -529,8 +529,8 @@ func (_q *OAuthConsentQuery) querySpec() *sqlgraph.QuerySpec {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
-		if _q.withUser != nil {
-			_spec.Node.AddColumnOnce(oauthconsent.FieldUserID)
+		if _q.withPrincipal != nil {
+			_spec.Node.AddColumnOnce(oauthconsent.FieldPrincipalID)
 		}
 		if _q.withApp != nil {
 			_spec.Node.AddColumnOnce(oauthconsent.FieldAppID)

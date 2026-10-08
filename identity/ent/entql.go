@@ -446,7 +446,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 		Fields: map[string]*sqlgraph.FieldSpec{
 			oauthauthcode.FieldCodeSignature:       {Type: field.TypeString, Column: oauthauthcode.FieldCodeSignature},
 			oauthauthcode.FieldAppID:               {Type: field.TypeUUID, Column: oauthauthcode.FieldAppID},
-			oauthauthcode.FieldUserID:              {Type: field.TypeUUID, Column: oauthauthcode.FieldUserID},
 			oauthauthcode.FieldSubject:             {Type: field.TypeString, Column: oauthauthcode.FieldSubject},
 			oauthauthcode.FieldCodeChallenge:       {Type: field.TypeString, Column: oauthauthcode.FieldCodeChallenge},
 			oauthauthcode.FieldCodeChallengeMethod: {Type: field.TypeString, Column: oauthauthcode.FieldCodeChallengeMethod},
@@ -474,7 +473,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		Type: "OAuthConsent",
 		Fields: map[string]*sqlgraph.FieldSpec{
-			oauthconsent.FieldUserID:        {Type: field.TypeUUID, Column: oauthconsent.FieldUserID},
+			oauthconsent.FieldPrincipalID:   {Type: field.TypeUUID, Column: oauthconsent.FieldPrincipalID},
 			oauthconsent.FieldAppID:         {Type: field.TypeUUID, Column: oauthconsent.FieldAppID},
 			oauthconsent.FieldScopes:        {Type: field.TypeJSON, Column: oauthconsent.FieldScopes},
 			oauthconsent.FieldGranted:       {Type: field.TypeBool, Column: oauthconsent.FieldGranted},
@@ -499,7 +498,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 		Type: "OAuthToken",
 		Fields: map[string]*sqlgraph.FieldSpec{
 			oauthtoken.FieldAppID:                 {Type: field.TypeUUID, Column: oauthtoken.FieldAppID},
-			oauthtoken.FieldUserID:                {Type: field.TypeUUID, Column: oauthtoken.FieldUserID},
 			oauthtoken.FieldSubject:               {Type: field.TypeString, Column: oauthtoken.FieldSubject},
 			oauthtoken.FieldServiceAccountID:      {Type: field.TypeUUID, Column: oauthtoken.FieldServiceAccountID},
 			oauthtoken.FieldAccessTokenSignature:  {Type: field.TypeString, Column: oauthtoken.FieldAccessTokenSignature},
@@ -1126,28 +1124,16 @@ var schemaGraph = func() *sqlgraph.Schema {
 		"OAuthApp",
 	)
 	graph.MustAddE(
-		"user",
+		"principal",
 		&sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   oauthauthcode.UserTable,
-			Columns: []string{oauthauthcode.UserColumn},
-			Bidi:    false,
-		},
-		"OAuthAuthCode",
-		"User",
-	)
-	graph.MustAddE(
-		"user",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   oauthconsent.UserTable,
-			Columns: []string{oauthconsent.UserColumn},
+			Table:   oauthconsent.PrincipalTable,
+			Columns: []string{oauthconsent.PrincipalColumn},
 			Bidi:    false,
 		},
 		"OAuthConsent",
-		"User",
+		"Principal",
 	)
 	graph.MustAddE(
 		"app",
@@ -1172,18 +1158,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		"OAuthToken",
 		"OAuthApp",
-	)
-	graph.MustAddE(
-		"user",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   oauthtoken.UserTable,
-			Columns: []string{oauthtoken.UserColumn},
-			Bidi:    false,
-		},
-		"OAuthToken",
-		"User",
 	)
 	graph.MustAddE(
 		"memberships",
@@ -1448,6 +1422,18 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		"Principal",
 		"OAuthApp",
+	)
+	graph.MustAddE(
+		"oauth_consents",
+		&sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OauthConsentsTable,
+			Columns: []string{principal.OauthConsentsColumn},
+			Bidi:    false,
+		},
+		"Principal",
+		"OAuthConsent",
 	)
 	graph.MustAddE(
 		"sent_invites",
@@ -1760,42 +1746,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		"User",
 		"APIKey",
-	)
-	graph.MustAddE(
-		"oauth_tokens",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthTokensTable,
-			Columns: []string{user.OauthTokensColumn},
-			Bidi:    false,
-		},
-		"User",
-		"OAuthToken",
-	)
-	graph.MustAddE(
-		"oauth_auth_codes",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthAuthCodesTable,
-			Columns: []string{user.OauthAuthCodesColumn},
-			Bidi:    false,
-		},
-		"User",
-		"OAuthAuthCode",
-	)
-	graph.MustAddE(
-		"oauth_consents",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthConsentsTable,
-			Columns: []string{user.OauthConsentsColumn},
-			Bidi:    false,
-		},
-		"User",
-		"OAuthConsent",
 	)
 	graph.MustAddE(
 		"created_service_accounts",
@@ -3805,11 +3755,6 @@ func (f *OAuthAuthCodeFilter) WhereAppID(p entql.ValueP) {
 	f.Where(p.Field(oauthauthcode.FieldAppID))
 }
 
-// WhereUserID applies the entql [16]byte predicate on the user_id field.
-func (f *OAuthAuthCodeFilter) WhereUserID(p entql.ValueP) {
-	f.Where(p.Field(oauthauthcode.FieldUserID))
-}
-
 // WhereSubject applies the entql string predicate on the subject field.
 func (f *OAuthAuthCodeFilter) WhereSubject(p entql.StringP) {
 	f.Where(p.Field(oauthauthcode.FieldSubject))
@@ -3894,20 +3839,6 @@ func (f *OAuthAuthCodeFilter) WhereHasAppWith(preds ...predicate.OAuthApp) {
 	})))
 }
 
-// WhereHasUser applies a predicate to check if query has an edge user.
-func (f *OAuthAuthCodeFilter) WhereHasUser() {
-	f.Where(entql.HasEdge("user"))
-}
-
-// WhereHasUserWith applies a predicate to check if query has an edge user with a given conditions (other predicates).
-func (f *OAuthAuthCodeFilter) WhereHasUserWith(preds ...predicate.User) {
-	f.Where(entql.HasEdgeWith("user", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
 // addPredicate implements the predicateAdder interface.
 func (_q *OAuthConsentQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
@@ -3948,9 +3879,9 @@ func (f *OAuthConsentFilter) WhereID(p entql.ValueP) {
 	f.Where(p.Field(oauthconsent.FieldID))
 }
 
-// WhereUserID applies the entql [16]byte predicate on the user_id field.
-func (f *OAuthConsentFilter) WhereUserID(p entql.ValueP) {
-	f.Where(p.Field(oauthconsent.FieldUserID))
+// WherePrincipalID applies the entql [16]byte predicate on the principal_id field.
+func (f *OAuthConsentFilter) WherePrincipalID(p entql.ValueP) {
+	f.Where(p.Field(oauthconsent.FieldPrincipalID))
 }
 
 // WhereAppID applies the entql [16]byte predicate on the app_id field.
@@ -4003,14 +3934,14 @@ func (f *OAuthConsentFilter) WhereUpdatedAt(p entql.TimeP) {
 	f.Where(p.Field(oauthconsent.FieldUpdatedAt))
 }
 
-// WhereHasUser applies a predicate to check if query has an edge user.
-func (f *OAuthConsentFilter) WhereHasUser() {
-	f.Where(entql.HasEdge("user"))
+// WhereHasPrincipal applies a predicate to check if query has an edge principal.
+func (f *OAuthConsentFilter) WhereHasPrincipal() {
+	f.Where(entql.HasEdge("principal"))
 }
 
-// WhereHasUserWith applies a predicate to check if query has an edge user with a given conditions (other predicates).
-func (f *OAuthConsentFilter) WhereHasUserWith(preds ...predicate.User) {
-	f.Where(entql.HasEdgeWith("user", sqlgraph.WrapFunc(func(s *sql.Selector) {
+// WhereHasPrincipalWith applies a predicate to check if query has an edge principal with a given conditions (other predicates).
+func (f *OAuthConsentFilter) WhereHasPrincipalWith(preds ...predicate.Principal) {
+	f.Where(entql.HasEdgeWith("principal", sqlgraph.WrapFunc(func(s *sql.Selector) {
 		for _, p := range preds {
 			p(s)
 		}
@@ -4074,11 +4005,6 @@ func (f *OAuthTokenFilter) WhereID(p entql.ValueP) {
 // WhereAppID applies the entql [16]byte predicate on the app_id field.
 func (f *OAuthTokenFilter) WhereAppID(p entql.ValueP) {
 	f.Where(p.Field(oauthtoken.FieldAppID))
-}
-
-// WhereUserID applies the entql [16]byte predicate on the user_id field.
-func (f *OAuthTokenFilter) WhereUserID(p entql.ValueP) {
-	f.Where(p.Field(oauthtoken.FieldUserID))
 }
 
 // WhereSubject applies the entql string predicate on the subject field.
@@ -4179,20 +4105,6 @@ func (f *OAuthTokenFilter) WhereHasApp() {
 // WhereHasAppWith applies a predicate to check if query has an edge app with a given conditions (other predicates).
 func (f *OAuthTokenFilter) WhereHasAppWith(preds ...predicate.OAuthApp) {
 	f.Where(entql.HasEdgeWith("app", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
-// WhereHasUser applies a predicate to check if query has an edge user.
-func (f *OAuthTokenFilter) WhereHasUser() {
-	f.Where(entql.HasEdge("user"))
-}
-
-// WhereHasUserWith applies a predicate to check if query has an edge user with a given conditions (other predicates).
-func (f *OAuthTokenFilter) WhereHasUserWith(preds ...predicate.User) {
-	f.Where(entql.HasEdgeWith("user", sqlgraph.WrapFunc(func(s *sql.Selector) {
 		for _, p := range preds {
 			p(s)
 		}
@@ -4691,6 +4603,20 @@ func (f *PrincipalFilter) WhereHasOwnedOauthApps() {
 // WhereHasOwnedOauthAppsWith applies a predicate to check if query has an edge owned_oauth_apps with a given conditions (other predicates).
 func (f *PrincipalFilter) WhereHasOwnedOauthAppsWith(preds ...predicate.OAuthApp) {
 	f.Where(entql.HasEdgeWith("owned_oauth_apps", sqlgraph.WrapFunc(func(s *sql.Selector) {
+		for _, p := range preds {
+			p(s)
+		}
+	})))
+}
+
+// WhereHasOauthConsents applies a predicate to check if query has an edge oauth_consents.
+func (f *PrincipalFilter) WhereHasOauthConsents() {
+	f.Where(entql.HasEdge("oauth_consents"))
+}
+
+// WhereHasOauthConsentsWith applies a predicate to check if query has an edge oauth_consents with a given conditions (other predicates).
+func (f *PrincipalFilter) WhereHasOauthConsentsWith(preds ...predicate.OAuthConsent) {
+	f.Where(entql.HasEdgeWith("oauth_consents", sqlgraph.WrapFunc(func(s *sql.Selector) {
 		for _, p := range preds {
 			p(s)
 		}
@@ -5875,48 +5801,6 @@ func (f *UserFilter) WhereHasAPIKeys() {
 // WhereHasAPIKeysWith applies a predicate to check if query has an edge api_keys with a given conditions (other predicates).
 func (f *UserFilter) WhereHasAPIKeysWith(preds ...predicate.APIKey) {
 	f.Where(entql.HasEdgeWith("api_keys", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
-// WhereHasOauthTokens applies a predicate to check if query has an edge oauth_tokens.
-func (f *UserFilter) WhereHasOauthTokens() {
-	f.Where(entql.HasEdge("oauth_tokens"))
-}
-
-// WhereHasOauthTokensWith applies a predicate to check if query has an edge oauth_tokens with a given conditions (other predicates).
-func (f *UserFilter) WhereHasOauthTokensWith(preds ...predicate.OAuthToken) {
-	f.Where(entql.HasEdgeWith("oauth_tokens", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
-// WhereHasOauthAuthCodes applies a predicate to check if query has an edge oauth_auth_codes.
-func (f *UserFilter) WhereHasOauthAuthCodes() {
-	f.Where(entql.HasEdge("oauth_auth_codes"))
-}
-
-// WhereHasOauthAuthCodesWith applies a predicate to check if query has an edge oauth_auth_codes with a given conditions (other predicates).
-func (f *UserFilter) WhereHasOauthAuthCodesWith(preds ...predicate.OAuthAuthCode) {
-	f.Where(entql.HasEdgeWith("oauth_auth_codes", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
-// WhereHasOauthConsents applies a predicate to check if query has an edge oauth_consents.
-func (f *UserFilter) WhereHasOauthConsents() {
-	f.Where(entql.HasEdge("oauth_consents"))
-}
-
-// WhereHasOauthConsentsWith applies a predicate to check if query has an edge oauth_consents with a given conditions (other predicates).
-func (f *UserFilter) WhereHasOauthConsentsWith(preds ...predicate.OAuthConsent) {
-	f.Where(entql.HasEdgeWith("oauth_consents", sqlgraph.WrapFunc(func(s *sql.Selector) {
 		for _, p := range preds {
 			p(s)
 		}

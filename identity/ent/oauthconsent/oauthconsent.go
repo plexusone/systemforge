@@ -15,8 +15,8 @@ const (
 	Label = "oauth_consent"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldUserID holds the string denoting the user_id field in the database.
-	FieldUserID = "user_id"
+	// FieldPrincipalID holds the string denoting the principal_id field in the database.
+	FieldPrincipalID = "principal_id"
 	// FieldAppID holds the string denoting the app_id field in the database.
 	FieldAppID = "app_id"
 	// FieldScopes holds the string denoting the scopes field in the database.
@@ -37,19 +37,19 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// EdgeUser holds the string denoting the user edge name in mutations.
-	EdgeUser = "user"
+	// EdgePrincipal holds the string denoting the principal edge name in mutations.
+	EdgePrincipal = "principal"
 	// EdgeApp holds the string denoting the app edge name in mutations.
 	EdgeApp = "app"
 	// Table holds the table name of the oauthconsent in the database.
 	Table = "sf_oauth_consents"
-	// UserTable is the table that holds the user relation/edge.
-	UserTable = "sf_oauth_consents"
-	// UserInverseTable is the table name for the User entity.
-	// It exists in this package in order to avoid circular dependency with the "user" package.
-	UserInverseTable = "sf_users"
-	// UserColumn is the table column denoting the user relation/edge.
-	UserColumn = "user_id"
+	// PrincipalTable is the table that holds the principal relation/edge.
+	PrincipalTable = "sf_oauth_consents"
+	// PrincipalInverseTable is the table name for the Principal entity.
+	// It exists in this package in order to avoid circular dependency with the "principal" package.
+	PrincipalInverseTable = "sf_principals"
+	// PrincipalColumn is the table column denoting the principal relation/edge.
+	PrincipalColumn = "principal_id"
 	// AppTable is the table that holds the app relation/edge.
 	AppTable = "sf_oauth_consents"
 	// AppInverseTable is the table name for the OAuthApp entity.
@@ -62,7 +62,7 @@ const (
 // Columns holds all SQL columns for oauthconsent fields.
 var Columns = []string{
 	FieldID,
-	FieldUserID,
+	FieldPrincipalID,
 	FieldAppID,
 	FieldScopes,
 	FieldGranted,
@@ -112,9 +112,9 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByUserID orders the results by the user_id field.
-func ByUserID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUserID, opts...).ToFunc()
+// ByPrincipalID orders the results by the principal_id field.
+func ByPrincipalID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPrincipalID, opts...).ToFunc()
 }
 
 // ByAppID orders the results by the app_id field.
@@ -162,10 +162,10 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// ByUserField orders the results by user field.
-func ByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByPrincipalField orders the results by principal field.
+func ByPrincipalField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newUserStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newPrincipalStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -175,11 +175,11 @@ func ByAppField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newAppStep(), sql.OrderByField(field, opts...))
 	}
 }
-func newUserStep() *sqlgraph.Step {
+func newPrincipalStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(UserInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+		sqlgraph.To(PrincipalInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, PrincipalTable, PrincipalColumn),
 	)
 }
 func newAppStep() *sqlgraph.Step {

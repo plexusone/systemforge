@@ -16,9 +16,6 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/membership"
 	"github.com/plexusone/systemforge/identity/ent/oauthaccount"
-	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
-	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
-	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
 	"github.com/plexusone/systemforge/identity/ent/refreshtoken"
 	"github.com/plexusone/systemforge/identity/ent/serviceaccount"
 	"github.com/plexusone/systemforge/identity/ent/user"
@@ -228,51 +225,6 @@ func (_c *UserCreate) AddAPIKeys(v ...*APIKey) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddAPIKeyIDs(ids...)
-}
-
-// AddOauthTokenIDs adds the "oauth_tokens" edge to the OAuthToken entity by IDs.
-func (_c *UserCreate) AddOauthTokenIDs(ids ...uuid.UUID) *UserCreate {
-	_c.mutation.AddOauthTokenIDs(ids...)
-	return _c
-}
-
-// AddOauthTokens adds the "oauth_tokens" edges to the OAuthToken entity.
-func (_c *UserCreate) AddOauthTokens(v ...*OAuthToken) *UserCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddOauthTokenIDs(ids...)
-}
-
-// AddOauthAuthCodeIDs adds the "oauth_auth_codes" edge to the OAuthAuthCode entity by IDs.
-func (_c *UserCreate) AddOauthAuthCodeIDs(ids ...uuid.UUID) *UserCreate {
-	_c.mutation.AddOauthAuthCodeIDs(ids...)
-	return _c
-}
-
-// AddOauthAuthCodes adds the "oauth_auth_codes" edges to the OAuthAuthCode entity.
-func (_c *UserCreate) AddOauthAuthCodes(v ...*OAuthAuthCode) *UserCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddOauthAuthCodeIDs(ids...)
-}
-
-// AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by IDs.
-func (_c *UserCreate) AddOauthConsentIDs(ids ...uuid.UUID) *UserCreate {
-	_c.mutation.AddOauthConsentIDs(ids...)
-	return _c
-}
-
-// AddOauthConsents adds the "oauth_consents" edges to the OAuthConsent entity.
-func (_c *UserCreate) AddOauthConsents(v ...*OAuthConsent) *UserCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddOauthConsentIDs(ids...)
 }
 
 // AddCreatedServiceAccountIDs adds the "created_service_accounts" edge to the ServiceAccount entity by IDs.
@@ -510,54 +462,6 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.OauthTokensIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthTokensTable,
-			Columns: []string{user.OauthTokensColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(oauthtoken.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.OauthAuthCodesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthAuthCodesTable,
-			Columns: []string{user.OauthAuthCodesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(oauthauthcode.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.OauthConsentsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthConsentsTable,
-			Columns: []string{user.OauthConsentsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(oauthconsent.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

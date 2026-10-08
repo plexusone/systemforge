@@ -15,7 +15,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
-	"github.com/plexusone/systemforge/identity/ent/user"
 )
 
 // OAuthTokenCreate is the builder for creating a OAuthToken entity.
@@ -29,20 +28,6 @@ type OAuthTokenCreate struct {
 // SetAppID sets the "app_id" field.
 func (_c *OAuthTokenCreate) SetAppID(v uuid.UUID) *OAuthTokenCreate {
 	_c.mutation.SetAppID(v)
-	return _c
-}
-
-// SetUserID sets the "user_id" field.
-func (_c *OAuthTokenCreate) SetUserID(v uuid.UUID) *OAuthTokenCreate {
-	_c.mutation.SetUserID(v)
-	return _c
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (_c *OAuthTokenCreate) SetNillableUserID(v *uuid.UUID) *OAuthTokenCreate {
-	if v != nil {
-		_c.SetUserID(*v)
-	}
 	return _c
 }
 
@@ -285,11 +270,6 @@ func (_c *OAuthTokenCreate) SetApp(v *OAuthApp) *OAuthTokenCreate {
 	return _c.SetAppID(v.ID)
 }
 
-// SetUser sets the "user" edge to the User entity.
-func (_c *OAuthTokenCreate) SetUser(v *User) *OAuthTokenCreate {
-	return _c.SetUserID(v.ID)
-}
-
 // Mutation returns the OAuthTokenMutation object of the builder.
 func (_c *OAuthTokenCreate) Mutation() *OAuthTokenMutation {
 	return _c.mutation
@@ -505,23 +485,6 @@ func (_c *OAuthTokenCreate) createSpec() (*OAuthToken, *sqlgraph.CreateSpec) {
 		_node.AppID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   oauthtoken.UserTable,
-			Columns: []string{oauthtoken.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.UserID = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	return _node, _spec
 }
 
@@ -583,24 +546,6 @@ func (u *OAuthTokenUpsert) SetAppID(v uuid.UUID) *OAuthTokenUpsert {
 // UpdateAppID sets the "app_id" field to the value that was provided on create.
 func (u *OAuthTokenUpsert) UpdateAppID() *OAuthTokenUpsert {
 	u.SetExcluded(oauthtoken.FieldAppID)
-	return u
-}
-
-// SetUserID sets the "user_id" field.
-func (u *OAuthTokenUpsert) SetUserID(v uuid.UUID) *OAuthTokenUpsert {
-	u.Set(oauthtoken.FieldUserID, v)
-	return u
-}
-
-// UpdateUserID sets the "user_id" field to the value that was provided on create.
-func (u *OAuthTokenUpsert) UpdateUserID() *OAuthTokenUpsert {
-	u.SetExcluded(oauthtoken.FieldUserID)
-	return u
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (u *OAuthTokenUpsert) ClearUserID() *OAuthTokenUpsert {
-	u.SetNull(oauthtoken.FieldUserID)
 	return u
 }
 
@@ -936,27 +881,6 @@ func (u *OAuthTokenUpsertOne) SetAppID(v uuid.UUID) *OAuthTokenUpsertOne {
 func (u *OAuthTokenUpsertOne) UpdateAppID() *OAuthTokenUpsertOne {
 	return u.Update(func(s *OAuthTokenUpsert) {
 		s.UpdateAppID()
-	})
-}
-
-// SetUserID sets the "user_id" field.
-func (u *OAuthTokenUpsertOne) SetUserID(v uuid.UUID) *OAuthTokenUpsertOne {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.SetUserID(v)
-	})
-}
-
-// UpdateUserID sets the "user_id" field to the value that was provided on create.
-func (u *OAuthTokenUpsertOne) UpdateUserID() *OAuthTokenUpsertOne {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.UpdateUserID()
-	})
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (u *OAuthTokenUpsertOne) ClearUserID() *OAuthTokenUpsertOne {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.ClearUserID()
 	})
 }
 
@@ -1504,27 +1428,6 @@ func (u *OAuthTokenUpsertBulk) SetAppID(v uuid.UUID) *OAuthTokenUpsertBulk {
 func (u *OAuthTokenUpsertBulk) UpdateAppID() *OAuthTokenUpsertBulk {
 	return u.Update(func(s *OAuthTokenUpsert) {
 		s.UpdateAppID()
-	})
-}
-
-// SetUserID sets the "user_id" field.
-func (u *OAuthTokenUpsertBulk) SetUserID(v uuid.UUID) *OAuthTokenUpsertBulk {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.SetUserID(v)
-	})
-}
-
-// UpdateUserID sets the "user_id" field to the value that was provided on create.
-func (u *OAuthTokenUpsertBulk) UpdateUserID() *OAuthTokenUpsertBulk {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.UpdateUserID()
-	})
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (u *OAuthTokenUpsertBulk) ClearUserID() *OAuthTokenUpsertBulk {
-	return u.Update(func(s *OAuthTokenUpsert) {
-		s.ClearUserID()
 	})
 }
 

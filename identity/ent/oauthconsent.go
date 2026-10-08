@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
-	"github.com/plexusone/systemforge/identity/ent/user"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 )
 
 // OAuthConsent is the model entity for the OAuthConsent schema.
@@ -21,8 +21,8 @@ type OAuthConsent struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// User who granted consent
-	UserID uuid.UUID `json:"user_id,omitempty"`
+	// Principal who granted consent
+	PrincipalID uuid.UUID `json:"principal_id,omitempty"`
 	// OAuth app that received consent
 	AppID uuid.UUID `json:"app_id,omitempty"`
 	// Scopes the user consented to
@@ -51,8 +51,8 @@ type OAuthConsent struct {
 
 // OAuthConsentEdges holds the relations/edges for other nodes in the graph.
 type OAuthConsentEdges struct {
-	// User holds the value of the user edge.
-	User *User `json:"user,omitempty"`
+	// Principal holds the value of the principal edge.
+	Principal *Principal `json:"principal,omitempty"`
 	// App holds the value of the app edge.
 	App *OAuthApp `json:"app,omitempty"`
 	// loadedTypes holds the information for reporting if a
@@ -60,15 +60,15 @@ type OAuthConsentEdges struct {
 	loadedTypes [2]bool
 }
 
-// UserOrErr returns the User value or an error if the edge
+// PrincipalOrErr returns the Principal value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e OAuthConsentEdges) UserOrErr() (*User, error) {
-	if e.User != nil {
-		return e.User, nil
+func (e OAuthConsentEdges) PrincipalOrErr() (*Principal, error) {
+	if e.Principal != nil {
+		return e.Principal, nil
 	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: user.Label}
+		return nil, &NotFoundError{label: principal.Label}
 	}
-	return nil, &NotLoadedError{edge: "user"}
+	return nil, &NotLoadedError{edge: "principal"}
 }
 
 // AppOrErr returns the App value or an error if the edge
@@ -95,7 +95,7 @@ func (*OAuthConsent) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case oauthconsent.FieldGrantedAt, oauthconsent.FieldLastUsedAt, oauthconsent.FieldRevokedAt, oauthconsent.FieldCreatedAt, oauthconsent.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case oauthconsent.FieldID, oauthconsent.FieldUserID, oauthconsent.FieldAppID:
+		case oauthconsent.FieldID, oauthconsent.FieldPrincipalID, oauthconsent.FieldAppID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -118,11 +118,11 @@ func (_m *OAuthConsent) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case oauthconsent.FieldUserID:
+		case oauthconsent.FieldPrincipalID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
+				return fmt.Errorf("unexpected type %T for field principal_id", values[i])
 			} else if value != nil {
-				_m.UserID = *value
+				_m.PrincipalID = *value
 			}
 		case oauthconsent.FieldAppID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
@@ -201,9 +201,9 @@ func (_m *OAuthConsent) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryUser queries the "user" edge of the OAuthConsent entity.
-func (_m *OAuthConsent) QueryUser() *UserQuery {
-	return NewOAuthConsentClient(_m.config).QueryUser(_m)
+// QueryPrincipal queries the "principal" edge of the OAuthConsent entity.
+func (_m *OAuthConsent) QueryPrincipal() *PrincipalQuery {
+	return NewOAuthConsentClient(_m.config).QueryPrincipal(_m)
 }
 
 // QueryApp queries the "app" edge of the OAuthConsent entity.
@@ -234,8 +234,8 @@ func (_m *OAuthConsent) String() string {
 	var builder strings.Builder
 	builder.WriteString("OAuthConsent(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("user_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.UserID))
+	builder.WriteString("principal_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PrincipalID))
 	builder.WriteString(", ")
 	builder.WriteString("app_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AppID))

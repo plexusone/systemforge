@@ -382,12 +382,6 @@ func (s *EntStorage) CreateAuthorizeCodeSession(ctx context.Context, code string
 		SetRequestData(requestData).
 		SetExpiresAt(codeExpiry(session))
 
-	userID, err := s.legacyUserID(ctx, subject)
-	if err != nil {
-		return fosite.ErrServerError.WithWrap(err)
-	}
-	builder.SetNillableUserID(userID)
-
 	// Store PKCE challenge if present
 	if challenge := request.GetRequestForm().Get("code_challenge"); challenge != "" {
 		builder.SetCodeChallenge(challenge)
@@ -513,35 +507,11 @@ func (s *EntStorage) tokenBuilder(ctx context.Context, request fosite.Requester)
 		SetAccessExpiresAt(session.GetExpiresAt(fosite.AccessToken)).
 		SetRequestData(requestData)
 
-	userID, err := s.legacyUserID(ctx, subject)
-	if err != nil {
-		return nil, fosite.ErrServerError.WithWrap(err)
-	}
-	builder.SetNillableUserID(userID)
-
 	// The Fosite request ID identifies the token family across rotations.
 	if familyID, err := uuid.Parse(request.GetID()); err == nil {
 		builder.SetFamilyID(familyID)
 	}
 	return builder, nil
-}
-
-// legacyUserID returns subject as a User ID when a legacy User row with that
-// ID exists, so the optional user edge is populated for User-based
-// deployments. Principal-based subjects return nil.
-func (s *EntStorage) legacyUserID(ctx context.Context, subject string) (*uuid.UUID, error) {
-	id, err := uuid.Parse(subject)
-	if err != nil {
-		return nil, nil
-	}
-	exists, err := s.db.User.Query().Where(userEnt.IDEQ(id)).Exist(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("checking user: %w", err)
-	}
-	if !exists {
-		return nil, nil
-	}
-	return &id, nil
 }
 
 // tokenRequest rebuilds the Fosite request stored with a token row.
@@ -909,7 +879,6 @@ func (s *EntStorage) SetClientAssertionJWT(ctx context.Context, jti string, exp 
 	_, err := s.db.OAuthAuthCode.Create().
 		SetCodeSignature("jti:" + jti).
 		SetAppID(uuid.Nil). // Placeholder
-		SetUserID(uuid.Nil).
 		SetRedirectURI("").
 		SetExpiresAt(exp).
 		Save(ctx)

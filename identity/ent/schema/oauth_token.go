@@ -36,11 +36,6 @@ func (OAuthToken) Fields() []ent.Field {
 			Comment("OAuth app that issued this token"),
 
 		// Who this token represents
-		field.UUID("user_id", uuid.UUID{}).
-			Optional().
-			Nillable().
-			Comment("User this token represents (nil for client_credentials)"),
-
 		field.String("subject").
 			Optional().
 			Comment("Authenticated subject (principal ID); empty for client_credentials"),
@@ -129,11 +124,6 @@ func (OAuthToken) Edges() []ent.Edge {
 			Field("app_id").
 			Required().
 			Unique(),
-
-		edge.From("user", User.Type).
-			Ref("oauth_tokens").
-			Field("user_id").
-			Unique(),
 	}
 }
 
@@ -143,7 +133,6 @@ func (OAuthToken) Indexes() []ent.Index {
 		index.Fields("access_token_signature").Unique(),
 		index.Fields("refresh_token_signature").Unique(),
 		index.Fields("app_id"),
-		index.Fields("user_id"),
 		index.Fields("subject"),
 		index.Fields("family_id"),
 		index.Fields("revoked"),
