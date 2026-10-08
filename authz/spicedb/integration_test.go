@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/authz/providertest"
 	"github.com/plexusone/systemforge/authz/spicedb"
 )
 
@@ -305,6 +306,52 @@ func TestIntegration_RoleHierarchy(t *testing.T) {
 			}
 			if can != tt.expected {
 				t.Errorf("expected %v, got %v", tt.expected, can)
+			}
+		})
+	}
+}
+
+// TestIntegration_ManagerRelations runs the manager relation conformance
+// case against SpiceDB with relations written by the syncer.
+func TestIntegration_ManagerRelations(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	for name, schema := range map[string]string{"spicedb.BaseSchema": spicedb.BaseSchema, "authz.BaseSpiceDBSchema": authz.BaseSpiceDBSchema} {
+		t.Run(name, func(t *testing.T) {
+			client, err := spicedb.NewClient(ctx, spicedb.DefaultConfig(), nil)
+			if err != nil {
+				t.Fatalf("failed to create SpiceDB client: %v", err)
+			}
+			t.Cleanup(func() {
+				if err := client.Close(); err != nil {
+					t.Errorf("close: %v", err)
+				}
+			})
+			if err := client.WriteSchema(ctx, schema); err != nil {
+				t.Fatalf("failed to write schema: %v", err)
+			}
+			syncer := spicedb.NewSyncer(client)
+
+			cfg := providertest.Config{
+				Provider: spicedb.NewProvider(client),
+				GrantManager: func(t *testing.T, managed, manager uuid.UUID, role string) {
+					if err := syncer.AddPrincipalManager(ctx, managed, manager, role); err != nil {
+						t.Fatalf("AddPrincipalManager: %v", err)
+					}
+				},
+			}
+			providertest.RunManagerRelationTests(t, cfg)
+
+			// Removing the relation revokes the permissions.
+			managed, educator := uuid.New(), uuid.New()
+			cfg.GrantManager(t, managed, educator, authz.ManagerRoleEducator)
+			if err := syncer.RemovePrincipalManager(ctx, managed, educator, authz.ManagerRoleEducator); err != nil {
+				t.Fatalf("RemovePrincipalManager: %v", err)
+			}
+			ok, err := cfg.Provider.Can(ctx, authz.NewUserPrincipal(educator), authz.PermManageCredentials, authz.NewPrincipalResource(managed))
+			if err != nil || ok {
+				t.Errorf("after removal Can = %v, %v; want false", ok, err)
 			}
 		})
 	}

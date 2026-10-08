@@ -57,6 +57,10 @@ type Config struct {
 	// TestResourceID is a UUID for test resources. Default: random UUID.
 	TestResourceID uuid.UUID
 
+	// GrantManager, when set, records that managerID manages managedID
+	// with a manager role, enabling the manager relation tests (ADR-005).
+	GrantManager func(t *testing.T, managedID, managerID uuid.UUID, role string)
+
 	// SetupFunc is called before each test to configure the provider.
 	// Use this to set up roles, permissions, etc.
 	SetupFunc func(t *testing.T)
@@ -168,6 +172,23 @@ func RunIntegrationTests(t *testing.T, cfg Config) {
 	if cfg.DecisionProvider != nil {
 		t.Run("Decide_Returns_Reason", func(t *testing.T) { testDecideReturnsReason(t, cfg) })
 	}
+
+	if cfg.GrantManager != nil {
+		RunManagerRelationTests(t, cfg)
+	}
+}
+
+// RunManagerRelationTests checks the guardian and educator permissions on
+// principal resources (ADR-005). It requires cfg.GrantManager and can run
+// on its own against providers, such as SpiceDB, whose other integration
+// cases need a matching schema.
+func RunManagerRelationTests(t *testing.T, cfg Config) {
+	t.Helper()
+	cfg = cfg.withDefaults()
+	if cfg.GrantManager == nil {
+		t.Fatal("providertest: RunManagerRelationTests requires Config.GrantManager")
+	}
+	t.Run("Manager_Relations", func(t *testing.T) { testManagerRelations(t, cfg) })
 }
 
 // Interface Tests
@@ -540,5 +561,57 @@ func testDecideReturnsReason(t *testing.T, cfg Config) {
 
 	if decision.Reason == "" {
 		t.Error("Decide() should return a reason for the decision")
+	}
+}
+
+func testManagerRelations(t *testing.T, cfg Config) {
+	t.Helper()
+	if cfg.SetupFunc != nil {
+		cfg.SetupFunc(t)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout)
+	defer cancel()
+
+	managed := uuid.New()
+	guardian := uuid.New()
+	educator := uuid.New()
+	stranger := uuid.New()
+	cfg.GrantManager(t, managed, guardian, authz.ManagerRoleGuardian)
+	cfg.GrantManager(t, managed, educator, authz.ManagerRoleEducator)
+
+	all := []authz.Action{authz.PermManageAccount, authz.PermManageCredentials, authz.PermViewProfile, authz.PermManageManagers}
+	for _, tc := range []struct {
+		name    string
+		subject uuid.UUID
+		allowed []authz.Action
+	}{
+		{"guardian", guardian, all},
+		{"educator", educator, []authz.Action{authz.PermManageCredentials, authz.PermViewProfile}},
+		{"stranger", stranger, nil},
+		{"self", managed, nil},
+	} {
+		for _, action := range all {
+			want := false
+			for _, a := range tc.allowed {
+				want = want || a == action
+			}
+			got, err := cfg.Provider.Can(ctx, authz.NewUserPrincipal(tc.subject), action, authz.NewPrincipalResource(managed))
+			if err != nil {
+				t.Fatalf("Can(%s, %s): %v", tc.name, action, err)
+			}
+			if got != want {
+				t.Errorf("Can(%s, %s) = %v, want %v", tc.name, action, got, want)
+			}
+		}
+	}
+
+	// A relation over one principal grants nothing over another.
+	got, err := cfg.Provider.Can(ctx, authz.NewUserPrincipal(guardian), authz.PermViewProfile, authz.NewPrincipalResource(uuid.New()))
+	if err != nil {
+		t.Fatalf("Can: %v", err)
+	}
+	if got {
+		t.Error("guardian of one principal can view another's profile")
 	}
 }

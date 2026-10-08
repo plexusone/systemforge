@@ -22,6 +22,7 @@ func TestConformance(t *testing.T) {
 		},
 	}
 	platformAdmins := map[string]bool{}
+	managers := map[[2]uuid.UUID][]string{} // {manager, managed} -> roles
 
 	provider := simple.New(
 		simple.WithRoleHierarchy(authz.DefaultRoleHierarchy),
@@ -35,6 +36,9 @@ func TestConformance(t *testing.T) {
 		simple.WithPlatformAdminChecker(func(ctx context.Context, pid uuid.UUID) (bool, error) {
 			return platformAdmins[pid.String()], nil
 		}),
+		simple.WithManagerRoleGetter(func(_ context.Context, manager, managed uuid.UUID) ([]string, error) {
+			return managers[[2]uuid.UUID{manager, managed}], nil
+		}),
 		simple.WithOwnerFullAccess(true),
 		simple.WithPlatformAdminBypass(true),
 	)
@@ -44,6 +48,10 @@ func TestConformance(t *testing.T) {
 		SkipIntegration: false,
 		TestPrincipalID: principalID,
 		TestOrgID:       orgID,
+		GrantManager: func(_ *testing.T, managed, manager uuid.UUID, role string) {
+			k := [2]uuid.UUID{manager, managed}
+			managers[k] = append(managers[k], role)
+		},
 	})
 }
 
@@ -232,5 +240,15 @@ func TestNonMemberDenied(t *testing.T) {
 	}
 	if allowed {
 		t.Error("Non-member should be denied access")
+	}
+}
+
+// TestManagerRolesWithoutGetter verifies that principal resources are
+// denied when no manager role getter is configured.
+func TestManagerRolesWithoutGetter(t *testing.T) {
+	provider := simple.New()
+	d, err := provider.Decide(context.Background(), authz.NewUserPrincipal(uuid.New()), authz.PermViewProfile, authz.NewPrincipalResource(uuid.New()))
+	if err != nil || d.Allowed || d.Reason == "" {
+		t.Errorf("Decide = %+v, %v; want denied with a reason", d, err)
 	}
 }
