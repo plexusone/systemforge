@@ -58,5 +58,15 @@ func (s *Syncer) SetPlatformAdmin(_ context.Context, _ uuid.UUID, _ bool) error 
 	return nil
 }
 
+// AddPrincipalManager is a no-op.
+func (s *Syncer) AddPrincipalManager(_ context.Context, _, _ uuid.UUID, _ string) error {
+	return nil
+}
+
+// RemovePrincipalManager is a no-op.
+func (s *Syncer) RemovePrincipalManager(_ context.Context, _, _ uuid.UUID, _ string) error {
+	return nil
+}
+
 // Verify interface compliance at compile time.
 var _ authz.RelationshipSyncer = (*Syncer)(nil)

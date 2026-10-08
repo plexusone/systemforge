@@ -192,7 +192,17 @@ var (
 // BaseSchema provides a minimal SpiceDB schema for SystemForge applications.
 // Applications can extend this with their own resource types.
 const BaseSchema = `
-definition principal {}
+definition principal {
+    // Manager relations (ADR-005): a guardian or educator manages this
+    // principal. Applications add domain permissions in their facets.
+    relation guardian: principal
+    relation educator: principal
+
+    permission manage_account     = guardian
+    permission manage_credentials = guardian + educator
+    permission view_profile       = guardian + educator
+    permission manage_managers    = guardian
+}
 
 definition organization {
     relation owner: principal

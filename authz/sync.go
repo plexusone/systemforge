@@ -40,6 +40,13 @@ type RelationshipSyncer interface {
 
 	// SetPlatformAdmin grants or revokes platform admin privileges for a principal.
 	SetPlatformAdmin(ctx context.Context, principalID uuid.UUID, isAdmin bool) error
+
+	// AddPrincipalManager records that managerID manages managedID with a
+	// manager role such as guardian or educator (ADR-005).
+	AddPrincipalManager(ctx context.Context, managedID, managerID uuid.UUID, role string) error
+
+	// RemovePrincipalManager removes a manager relation.
+	RemovePrincipalManager(ctx context.Context, managedID, managerID uuid.UUID, role string) error
 }
 
 // SyncMode determines how sync failures are handled.

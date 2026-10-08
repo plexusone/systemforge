@@ -185,5 +185,25 @@ func (s *Syncer) SetPlatformAdmin(ctx context.Context, principalID uuid.UUID, is
 	return s.client.DeleteRelationship(ctx, rel)
 }
 
+// AddPrincipalManager writes a manager relation on the managed principal.
+func (s *Syncer) AddPrincipalManager(ctx context.Context, managedID, managerID uuid.UUID, role string) error {
+	return s.client.WriteRelationship(ctx, managerRelationship(managedID, managerID, role))
+}
+
+// RemovePrincipalManager deletes a manager relation.
+func (s *Syncer) RemovePrincipalManager(ctx context.Context, managedID, managerID uuid.UUID, role string) error {
+	return s.client.DeleteRelationship(ctx, managerRelationship(managedID, managerID, role))
+}
+
+func managerRelationship(managedID, managerID uuid.UUID, role string) *Relationship {
+	return &Relationship{
+		ResourceType: TypePrincipal,
+		ResourceID:   managedID.String(),
+		Relation:     role,
+		SubjectType:  TypePrincipal,
+		SubjectID:    managerID.String(),
+	}
+}
+
 // Verify interface compliance at compile time.
 var _ authz.RelationshipSyncer = (*Syncer)(nil)
