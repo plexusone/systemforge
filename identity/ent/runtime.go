@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
+	"github.com/plexusone/systemforge/identity/ent/clientassertionjti"
 	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
@@ -134,6 +135,29 @@ func init() {
 	applicationDescID := applicationMixinFields0[0].Descriptor()
 	// application.DefaultID holds the default value on creation for the id field.
 	application.DefaultID = applicationDescID.Default.(func() uuid.UUID)
+	clientassertionjtiMixin := schema.ClientAssertionJTI{}.Mixin()
+	clientassertionjtiMixinFields0 := clientassertionjtiMixin[0].Fields()
+	_ = clientassertionjtiMixinFields0
+	clientassertionjtiFields := schema.ClientAssertionJTI{}.Fields()
+	_ = clientassertionjtiFields
+	// clientassertionjtiDescCreatedAt is the schema descriptor for created_at field.
+	clientassertionjtiDescCreatedAt := clientassertionjtiMixinFields0[1].Descriptor()
+	// clientassertionjti.DefaultCreatedAt holds the default value on creation for the created_at field.
+	clientassertionjti.DefaultCreatedAt = clientassertionjtiDescCreatedAt.Default.(func() time.Time)
+	// clientassertionjtiDescUpdatedAt is the schema descriptor for updated_at field.
+	clientassertionjtiDescUpdatedAt := clientassertionjtiMixinFields0[2].Descriptor()
+	// clientassertionjti.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	clientassertionjti.DefaultUpdatedAt = clientassertionjtiDescUpdatedAt.Default.(func() time.Time)
+	// clientassertionjti.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	clientassertionjti.UpdateDefaultUpdatedAt = clientassertionjtiDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// clientassertionjtiDescJti is the schema descriptor for jti field.
+	clientassertionjtiDescJti := clientassertionjtiFields[0].Descriptor()
+	// clientassertionjti.JtiValidator is a validator for the "jti" field. It is called by the builders before save.
+	clientassertionjti.JtiValidator = clientassertionjtiDescJti.Validators[0].(func(string) error)
+	// clientassertionjtiDescID is the schema descriptor for id field.
+	clientassertionjtiDescID := clientassertionjtiMixinFields0[0].Descriptor()
+	// clientassertionjti.DefaultID holds the default value on creation for the id field.
+	clientassertionjti.DefaultID = clientassertionjtiDescID.Default.(func() uuid.UUID)
 	consentgrantFields := schema.ConsentGrant{}.Fields()
 	_ = consentgrantFields
 	// consentgrantDescGrantedAt is the schema descriptor for granted_at field.

@@ -18,6 +18,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
+	"github.com/plexusone/systemforge/identity/ent/clientassertionjti"
 	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
@@ -50,6 +51,8 @@ type Client struct {
 	Agent *AgentClient
 	// Application is the client for interacting with the Application builders.
 	Application *ApplicationClient
+	// ClientAssertionJTI is the client for interacting with the ClientAssertionJTI builders.
+	ClientAssertionJTI *ClientAssertionJTIClient
 	// ConsentGrant is the client for interacting with the ConsentGrant builders.
 	ConsentGrant *ConsentGrantClient
 	// Credential is the client for interacting with the Credential builders.
@@ -105,6 +108,7 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Agent = NewAgentClient(c.config)
 	c.Application = NewApplicationClient(c.config)
+	c.ClientAssertionJTI = NewClientAssertionJTIClient(c.config)
 	c.ConsentGrant = NewConsentGrantClient(c.config)
 	c.Credential = NewCredentialClient(c.config)
 	c.ExternalIdentity = NewExternalIdentityClient(c.config)
@@ -220,6 +224,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:              cfg,
 		Agent:               NewAgentClient(cfg),
 		Application:         NewApplicationClient(cfg),
+		ClientAssertionJTI:  NewClientAssertionJTIClient(cfg),
 		ConsentGrant:        NewConsentGrantClient(cfg),
 		Credential:          NewCredentialClient(cfg),
 		ExternalIdentity:    NewExternalIdentityClient(cfg),
@@ -262,6 +267,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:              cfg,
 		Agent:               NewAgentClient(cfg),
 		Application:         NewApplicationClient(cfg),
+		ClientAssertionJTI:  NewClientAssertionJTIClient(cfg),
 		ConsentGrant:        NewConsentGrantClient(cfg),
 		Credential:          NewCredentialClient(cfg),
 		ExternalIdentity:    NewExternalIdentityClient(cfg),
@@ -312,11 +318,11 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Agent, c.Application, c.ConsentGrant, c.Credential, c.ExternalIdentity,
-		c.Human, c.Invite, c.License, c.Listing, c.LoginSession, c.LoginState,
-		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
-		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
-		c.SeatAssignment, c.ServicePrincipal, c.Subscription,
+		c.Agent, c.Application, c.ClientAssertionJTI, c.ConsentGrant, c.Credential,
+		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
+		c.LoginState, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent,
+		c.OAuthToken, c.Organization, c.Principal, c.PrincipalMembership,
+		c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal, c.Subscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -326,11 +332,11 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Agent, c.Application, c.ConsentGrant, c.Credential, c.ExternalIdentity,
-		c.Human, c.Invite, c.License, c.Listing, c.LoginSession, c.LoginState,
-		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
-		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
-		c.SeatAssignment, c.ServicePrincipal, c.Subscription,
+		c.Agent, c.Application, c.ClientAssertionJTI, c.ConsentGrant, c.Credential,
+		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
+		c.LoginState, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent,
+		c.OAuthToken, c.Organization, c.Principal, c.PrincipalMembership,
+		c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal, c.Subscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -343,6 +349,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Agent.mutate(ctx, m)
 	case *ApplicationMutation:
 		return c.Application.mutate(ctx, m)
+	case *ClientAssertionJTIMutation:
+		return c.ClientAssertionJTI.mutate(ctx, m)
 	case *ConsentGrantMutation:
 		return c.ConsentGrant.mutate(ctx, m)
 	case *CredentialMutation:
@@ -717,6 +725,139 @@ func (c *ApplicationClient) mutate(ctx context.Context, m *ApplicationMutation) 
 		return (&ApplicationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Application mutation op: %q", m.Op())
+	}
+}
+
+// ClientAssertionJTIClient is a client for the ClientAssertionJTI schema.
+type ClientAssertionJTIClient struct {
+	config
+}
+
+// NewClientAssertionJTIClient returns a client for the ClientAssertionJTI from the given config.
+func NewClientAssertionJTIClient(c config) *ClientAssertionJTIClient {
+	return &ClientAssertionJTIClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `clientassertionjti.Hooks(f(g(h())))`.
+func (c *ClientAssertionJTIClient) Use(hooks ...Hook) {
+	c.hooks.ClientAssertionJTI = append(c.hooks.ClientAssertionJTI, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `clientassertionjti.Intercept(f(g(h())))`.
+func (c *ClientAssertionJTIClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ClientAssertionJTI = append(c.inters.ClientAssertionJTI, interceptors...)
+}
+
+// Create returns a builder for creating a ClientAssertionJTI entity.
+func (c *ClientAssertionJTIClient) Create() *ClientAssertionJTICreate {
+	mutation := newClientAssertionJTIMutation(c.config, OpCreate)
+	return &ClientAssertionJTICreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ClientAssertionJTI entities.
+func (c *ClientAssertionJTIClient) CreateBulk(builders ...*ClientAssertionJTICreate) *ClientAssertionJTICreateBulk {
+	return &ClientAssertionJTICreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ClientAssertionJTIClient) MapCreateBulk(slice any, setFunc func(*ClientAssertionJTICreate, int)) *ClientAssertionJTICreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ClientAssertionJTICreateBulk{err: fmt.Errorf("calling to ClientAssertionJTIClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ClientAssertionJTICreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ClientAssertionJTICreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ClientAssertionJTI.
+func (c *ClientAssertionJTIClient) Update() *ClientAssertionJTIUpdate {
+	mutation := newClientAssertionJTIMutation(c.config, OpUpdate)
+	return &ClientAssertionJTIUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ClientAssertionJTIClient) UpdateOne(_m *ClientAssertionJTI) *ClientAssertionJTIUpdateOne {
+	mutation := newClientAssertionJTIMutation(c.config, OpUpdateOne, withClientAssertionJTI(_m))
+	return &ClientAssertionJTIUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ClientAssertionJTIClient) UpdateOneID(id uuid.UUID) *ClientAssertionJTIUpdateOne {
+	mutation := newClientAssertionJTIMutation(c.config, OpUpdateOne, withClientAssertionJTIID(id))
+	return &ClientAssertionJTIUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ClientAssertionJTI.
+func (c *ClientAssertionJTIClient) Delete() *ClientAssertionJTIDelete {
+	mutation := newClientAssertionJTIMutation(c.config, OpDelete)
+	return &ClientAssertionJTIDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ClientAssertionJTIClient) DeleteOne(_m *ClientAssertionJTI) *ClientAssertionJTIDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ClientAssertionJTIClient) DeleteOneID(id uuid.UUID) *ClientAssertionJTIDeleteOne {
+	builder := c.Delete().Where(clientassertionjti.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ClientAssertionJTIDeleteOne{builder}
+}
+
+// Query returns a query builder for ClientAssertionJTI.
+func (c *ClientAssertionJTIClient) Query() *ClientAssertionJTIQuery {
+	return &ClientAssertionJTIQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeClientAssertionJTI},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ClientAssertionJTI entity by its id.
+func (c *ClientAssertionJTIClient) Get(ctx context.Context, id uuid.UUID) (*ClientAssertionJTI, error) {
+	return c.Query().Where(clientassertionjti.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ClientAssertionJTIClient) GetX(ctx context.Context, id uuid.UUID) *ClientAssertionJTI {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ClientAssertionJTIClient) Hooks() []Hook {
+	return c.hooks.ClientAssertionJTI
+}
+
+// Interceptors returns the client interceptors.
+func (c *ClientAssertionJTIClient) Interceptors() []Interceptor {
+	return c.inters.ClientAssertionJTI
+}
+
+func (c *ClientAssertionJTIClient) mutate(ctx context.Context, m *ClientAssertionJTIMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ClientAssertionJTICreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ClientAssertionJTIUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ClientAssertionJTIUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ClientAssertionJTIDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ClientAssertionJTI mutation op: %q", m.Op())
 	}
 }
 
@@ -4476,17 +4617,17 @@ func (c *SubscriptionClient) mutate(ctx context.Context, m *SubscriptionMutation
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Agent, Application, ConsentGrant, Credential, ExternalIdentity, Human, Invite,
-		License, Listing, LoginSession, LoginState, OAuthApp, OAuthAppSecret,
-		OAuthAuthCode, OAuthConsent, OAuthToken, Organization, Principal,
-		PrincipalMembership, PrincipalToken, SeatAssignment, ServicePrincipal,
-		Subscription []ent.Hook
+		Agent, Application, ClientAssertionJTI, ConsentGrant, Credential,
+		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
+		OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken,
+		Organization, Principal, PrincipalMembership, PrincipalToken, SeatAssignment,
+		ServicePrincipal, Subscription []ent.Hook
 	}
 	inters struct {
-		Agent, Application, ConsentGrant, Credential, ExternalIdentity, Human, Invite,
-		License, Listing, LoginSession, LoginState, OAuthApp, OAuthAppSecret,
-		OAuthAuthCode, OAuthConsent, OAuthToken, Organization, Principal,
-		PrincipalMembership, PrincipalToken, SeatAssignment, ServicePrincipal,
-		Subscription []ent.Interceptor
+		Agent, Application, ClientAssertionJTI, ConsentGrant, Credential,
+		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
+		OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken,
+		Organization, Principal, PrincipalMembership, PrincipalToken, SeatAssignment,
+		ServicePrincipal, Subscription []ent.Interceptor
 	}
 )

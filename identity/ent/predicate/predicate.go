@@ -12,6 +12,9 @@ type Agent func(*sql.Selector)
 // Application is the predicate function for application builders.
 type Application func(*sql.Selector)
 
+// ClientAssertionJTI is the predicate function for clientassertionjti builders.
+type ClientAssertionJTI func(*sql.Selector)
+
 // ConsentGrant is the predicate function for consentgrant builders.
 type ConsentGrant func(*sql.Selector)
 

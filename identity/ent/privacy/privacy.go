@@ -159,6 +159,30 @@ func (f ApplicationMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mut
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ApplicationMutation", m)
 }
 
+// The ClientAssertionJTIQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type ClientAssertionJTIQueryRuleFunc func(context.Context, *ent.ClientAssertionJTIQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f ClientAssertionJTIQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ClientAssertionJTIQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ClientAssertionJTIQuery", q)
+}
+
+// The ClientAssertionJTIMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type ClientAssertionJTIMutationRuleFunc func(context.Context, *ent.ClientAssertionJTIMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f ClientAssertionJTIMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.ClientAssertionJTIMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ClientAssertionJTIMutation", m)
+}
+
 // The ConsentGrantQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type ConsentGrantQueryRuleFunc func(context.Context, *ent.ConsentGrantQuery) error
@@ -702,6 +726,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.ApplicationQuery:
 		return q.Filter(), nil
+	case *ent.ClientAssertionJTIQuery:
+		return q.Filter(), nil
 	case *ent.ConsentGrantQuery:
 		return q.Filter(), nil
 	case *ent.CredentialQuery:
@@ -754,6 +780,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.AgentMutation:
 		return m.Filter(), nil
 	case *ent.ApplicationMutation:
+		return m.Filter(), nil
+	case *ent.ClientAssertionJTIMutation:
 		return m.Filter(), nil
 	case *ent.ConsentGrantMutation:
 		return m.Filter(), nil

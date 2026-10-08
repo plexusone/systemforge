@@ -126,6 +126,27 @@ var (
 			},
 		},
 	}
+	// SfClientAssertionJtisColumns holds the columns for the "sf_client_assertion_jtis" table.
+	SfClientAssertionJtisColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "jti", Type: field.TypeString, Unique: true},
+		{Name: "expires_at", Type: field.TypeTime},
+	}
+	// SfClientAssertionJtisTable holds the schema information for the "sf_client_assertion_jtis" table.
+	SfClientAssertionJtisTable = &schema.Table{
+		Name:       "sf_client_assertion_jtis",
+		Columns:    SfClientAssertionJtisColumns,
+		PrimaryKey: []*schema.Column{SfClientAssertionJtisColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "clientassertionjti_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfClientAssertionJtisColumns[4]},
+			},
+		},
+	}
 	// SfConsentGrantsColumns holds the columns for the "sf_consent_grants" table.
 	SfConsentGrantsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1353,6 +1374,7 @@ var (
 	Tables = []*schema.Table{
 		SfAgentsTable,
 		SfApplicationsTable,
+		SfClientAssertionJtisTable,
 		SfConsentGrantsTable,
 		SfCredentialsTable,
 		SfExternalIdentitiesTable,
@@ -1386,6 +1408,9 @@ func init() {
 	SfApplicationsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfApplicationsTable.Annotation = &entsql.Annotation{
 		Table: "sf_applications",
+	}
+	SfClientAssertionJtisTable.Annotation = &entsql.Annotation{
+		Table: "sf_client_assertion_jtis",
 	}
 	SfConsentGrantsTable.Annotation = &entsql.Annotation{
 		Table: "sf_consent_grants",

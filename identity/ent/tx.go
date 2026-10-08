@@ -16,6 +16,8 @@ type Tx struct {
 	Agent *AgentClient
 	// Application is the client for interacting with the Application builders.
 	Application *ApplicationClient
+	// ClientAssertionJTI is the client for interacting with the ClientAssertionJTI builders.
+	ClientAssertionJTI *ClientAssertionJTIClient
 	// ConsentGrant is the client for interacting with the ConsentGrant builders.
 	ConsentGrant *ConsentGrantClient
 	// Credential is the client for interacting with the Credential builders.
@@ -191,6 +193,7 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.Agent = NewAgentClient(tx.config)
 	tx.Application = NewApplicationClient(tx.config)
+	tx.ClientAssertionJTI = NewClientAssertionJTIClient(tx.config)
 	tx.ConsentGrant = NewConsentGrantClient(tx.config)
 	tx.Credential = NewCredentialClient(tx.config)
 	tx.ExternalIdentity = NewExternalIdentityClient(tx.config)

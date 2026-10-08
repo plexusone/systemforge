@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
+	"github.com/plexusone/systemforge/identity/ent/clientassertionjti"
 	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
@@ -97,6 +98,7 @@ func checkColumn(t, c string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			agent.Table:               agent.ValidColumn,
 			application.Table:         application.ValidColumn,
+			clientassertionjti.Table:  clientassertionjti.ValidColumn,
 			consentgrant.Table:        consentgrant.ValidColumn,
 			credential.Table:          credential.ValidColumn,
 			externalidentity.Table:    externalidentity.ValidColumn,
