@@ -64,13 +64,15 @@ func (m *PrincipalUserMapper) ToSCIM(ctx context.Context, p *principal.Principal
 			Formatted:  p.DisplayName,
 		}
 
-		// Set primary email
-		scimUser.Emails = []scim.MultiValue{
-			{
-				Value:   p.Human.Email,
-				Type:    "work",
-				Primary: true,
-			},
+		// Set primary email; managed principals have none.
+		if p.Human.Email != "" {
+			scimUser.Emails = []scim.MultiValue{
+				{
+					Value:   p.Human.Email,
+					Type:    "work",
+					Primary: true,
+				},
+			}
 		}
 
 		// Set avatar URL as photo

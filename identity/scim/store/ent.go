@@ -66,11 +66,23 @@ func NewEntStore(client *ent.Client, config *Config) *EntStore {
 
 // User Operations
 
-// humanQuery returns a query over human principals with the Human edge loaded.
+// humanQuery returns a query over the human principals SCIM manages, with
+// the Human edge loaded.
 func (s *EntStore) humanQuery() *ent.PrincipalQuery {
 	return s.client.Principal.Query().
-		Where(principal.TypeEQ(principal.TypeHuman)).
+		Where(scimHuman()...).
 		WithHuman()
+}
+
+// scimHuman selects the humans SCIM manages: those with an email. Managed
+// principals (no email, ADR-005) are created and controlled by their
+// managers inside an application, not by an enterprise identity provider,
+// so SCIM neither lists nor changes them.
+func scimHuman() []predicate.Principal {
+	return []predicate.Principal{
+		principal.TypeEQ(principal.TypeHuman),
+		principal.HasHumanWith(human.EmailNotNil()),
+	}
 }
 
 func (s *EntStore) onlyUser(ctx context.Context, q *ent.PrincipalQuery) (*scim.User, error) {
@@ -278,7 +290,7 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 
 	err = s.withTx(ctx, func(tx *ent.Tx) error {
 		p, err := tx.Principal.Query().
-			Where(principal.IDEQ(uid), principal.TypeEQ(principal.TypeHuman)).
+			Where(append(scimHuman(), principal.IDEQ(uid))...).
 			WithHuman().
 			Only(ctx)
 		if err != nil {
@@ -349,7 +361,7 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 
 	err = s.withTx(ctx, func(tx *ent.Tx) error {
 		exists, err := tx.Principal.Query().
-			Where(principal.IDEQ(uid), principal.TypeEQ(principal.TypeHuman)).
+			Where(append(scimHuman(), principal.IDEQ(uid))...).
 			Exist(ctx)
 		if err != nil {
 			return err
@@ -607,7 +619,7 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 		Where(
 			principalmembership.OrganizationIDEQ(gid),
 			principalmembership.ActiveEQ(true),
-			principalmembership.HasPrincipalWith(principal.TypeEQ(principal.TypeHuman)),
+			principalmembership.HasPrincipalWith(scimHuman()...),
 		).
 		WithPrincipal().
 		All(ctx)
@@ -640,6 +652,13 @@ func (s *EntStore) AddMemberToGroup(ctx context.Context, groupID, userID string)
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return scim.ErrNotFound("invalid user ID")
+	}
+	known, err := s.client.Principal.Query().Where(append(scimHuman(), principal.IDEQ(uid))...).Exist(ctx)
+	if err != nil {
+		return scim.ErrInternal(err.Error())
+	}
+	if !known {
+		return scim.ErrNotFound("user not found")
 	}
 
 	existing, err := s.client.PrincipalMembership.Query().
