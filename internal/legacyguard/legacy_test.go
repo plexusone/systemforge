@@ -62,7 +62,17 @@ func isHistorical(rel string) bool {
 // documentation references the retired legacy identity model.
 func TestNoLegacyIdentityReferences(t *testing.T) {
 	root := repoRoot(t)
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	// Files are opened through an os.Root so reads cannot leave the repository.
+	repo, err := os.OpenRoot(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := repo.Close(); err != nil {
+			t.Errorf("closing repository root: %v", err)
+		}
+	}()
+	err = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -90,16 +100,16 @@ func TestNoLegacyIdentityReferences(t *testing.T) {
 		default:
 			return nil
 		}
-		return scan(t, path, rel, patterns)
+		return scan(t, repo, rel, patterns)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func scan(t *testing.T, path, rel string, patterns []*regexp.Regexp) (err error) {
+func scan(t *testing.T, repo *os.Root, rel string, patterns []*regexp.Regexp) (err error) {
 	t.Helper()
-	f, err := os.Open(path)
+	f, err := repo.Open(filepath.FromSlash(rel))
 	if err != nil {
 		return err
 	}
