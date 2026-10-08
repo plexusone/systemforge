@@ -386,3 +386,80 @@ func TestIntegration_OrgPermissions(t *testing.T) {
 		},
 	})
 }
+
+// TestIntegration_UnregisterRemovesEverything verifies that unregistering
+// removes every base relationship, including editors and manager
+// relations in both directions, and that failures are reported.
+func TestIntegration_UnregisterRemovesEverything(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	client, err := spicedb.NewClient(ctx, spicedb.DefaultConfig(), nil)
+	if err != nil {
+		t.Fatalf("failed to create SpiceDB client: %v", err)
+	}
+	if err := client.WriteSchema(ctx, authz.BaseSpiceDBSchema); err != nil {
+		t.Fatalf("failed to write schema: %v", err)
+	}
+	provider := spicedb.NewProvider(client)
+	syncer := spicedb.NewSyncer(client)
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	can := func(who uuid.UUID, action authz.Action, r authz.Resource) bool {
+		t.Helper()
+		ok, err := provider.Can(ctx, authz.NewUserPrincipal(who), action, r)
+		if err != nil {
+			t.Fatalf("Can: %v", err)
+		}
+		return ok
+	}
+
+	org, other := uuid.New(), uuid.New()
+	owner, editor, parent, learner := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	orgRes := authz.NewResourceWithID(authz.ResourceTypeOrganization, org)
+	otherRes := authz.NewResourceWithID(authz.ResourceTypeOrganization, other)
+	must(syncer.RegisterOrganization(ctx, org, owner))
+	must(syncer.AddOrgMembership(ctx, editor, org, spicedb.RelEditor))
+	must(syncer.AddOrgMembership(ctx, editor, other, spicedb.RelMember))
+	must(syncer.SetPlatformAdmin(ctx, editor, true))
+	must(syncer.AddPrincipalManager(ctx, learner, editor, authz.ManagerRoleEducator))
+	must(syncer.AddPrincipalManager(ctx, editor, parent, authz.ManagerRoleGuardian))
+
+	// The editor goes: memberships everywhere, platform admin, and manager
+	// relations it holds and that are held over it.
+	must(syncer.UnregisterPrincipal(ctx, editor))
+	if can(editor, authz.PermOrgEdit, orgRes) || can(editor, authz.PermOrgView, otherRes) {
+		t.Error("unregistered principal keeps organization access")
+	}
+	if admin, err := provider.IsPlatformAdmin(ctx, authz.NewUserPrincipal(editor)); err != nil || admin {
+		t.Errorf("unregistered principal is platform admin = %v, %v", admin, err)
+	}
+	if can(editor, authz.PermManageCredentials, authz.NewPrincipalResource(learner)) {
+		t.Error("unregistered principal still manages a learner")
+	}
+	if can(parent, authz.PermManageAccount, authz.NewPrincipalResource(editor)) {
+		t.Error("manager relation over the unregistered principal remains")
+	}
+	if !can(owner, authz.PermOrgManage, orgRes) {
+		t.Error("unregistering one principal affected another")
+	}
+
+	// The organization goes with all its relations.
+	must(syncer.UnregisterOrganization(ctx, org))
+	if can(owner, authz.PermOrgView, orgRes) {
+		t.Error("owner keeps access to an unregistered organization")
+	}
+
+	// Failures are reported, not swallowed.
+	must(client.Close())
+	if err := syncer.UnregisterPrincipal(ctx, owner); err == nil {
+		t.Error("UnregisterPrincipal on a closed client reported success")
+	}
+	if err := syncer.UnregisterOrganization(ctx, other); err == nil {
+		t.Error("UnregisterOrganization on a closed client reported success")
+	}
+}
