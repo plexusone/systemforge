@@ -37,6 +37,9 @@ type Config struct {
 	// SocialLogin enables "log in with GitHub/Google" on this server.
 	// If nil, no social login routes are mounted.
 	SocialLogin *SocialLoginConfig `json:"social_login,omitempty" yaml:"social_login,omitempty" jsonschema:"description=Upstream GitHub/Google social login configuration"`
+
+	// ManagedPrincipals configures managed principals; nil disables them.
+	ManagedPrincipals *ManagedPrincipalsConfig `json:"managed_principals,omitempty" yaml:"managed_principals,omitempty" jsonschema:"description=Managed principal configuration (humans without an email)"`
 }
 
 // SocialLoginConfig configures upstream social login (GitHub, Google).
@@ -256,6 +259,19 @@ type ClientConfig struct {
 
 	// RefreshTokenLifetime overrides the default for this client.
 	RefreshTokenLifetime *Duration `json:"refresh_token_lifetime,omitempty" yaml:"refresh_token_lifetime,omitempty" jsonschema:"description=Client-specific refresh token lifetime"`
+
+	// ManagedPrincipals allows this client to create and sign in managed
+	// principals (humans without an email, ADR-005). It takes effect only
+	// when the deployment's managed_principals.enabled is also set.
+	ManagedPrincipals bool `json:"managed_principals,omitempty" yaml:"managed_principals,omitempty" jsonschema:"description=Allow this client to create and sign in managed principals"`
+}
+
+// ManagedPrincipalsConfig configures managed principals: humans without an
+// email who always have a manager with one (ADR-005). They are disabled
+// unless Enabled is set here and on the requesting client.
+type ManagedPrincipalsConfig struct {
+	// Enabled allows managed principals in this deployment.
+	Enabled bool `json:"enabled" yaml:"enabled" jsonschema:"description=Allow managed principals in this deployment"`
 }
 
 // FederationConfig configures SystemAuth integration.

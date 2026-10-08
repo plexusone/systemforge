@@ -214,6 +214,10 @@
               "168h",
               "720h"
             ]
+          },
+          "managed_principals": {
+            "type": "boolean",
+            "description": "Allow this client to create and sign in managed principals"
           }
         },
         "additionalProperties": false,
@@ -384,6 +388,17 @@
       "additionalProperties": false,
       "type": "object",
       "description": "Upstream GitHub/Google social login configuration"
+    },
+    "managed_principals": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Allow managed principals in this deployment"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Managed principal configuration (humans without an email)"
     }
   },
   "additionalProperties": false,

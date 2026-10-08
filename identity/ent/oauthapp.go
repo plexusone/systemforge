@@ -49,6 +49,8 @@ type OAuthApp struct {
 	RefreshTokenTTL int `json:"refresh_token_ttl,omitempty"`
 	// Rotate refresh tokens on use
 	RefreshTokenRotation bool `json:"refresh_token_rotation,omitempty"`
+	// Whether this client may create and sign in managed principals; also requires the deployment setting (ADR-005)
+	ManagedPrincipalsEnabled bool `json:"managed_principals_enabled,omitempty"`
 	// First-party apps skip consent screen
 	FirstParty bool `json:"first_party,omitempty"`
 	// Public clients cannot keep secrets
@@ -155,7 +157,7 @@ func (*OAuthApp) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case oauthapp.FieldRedirectUris, oauthapp.FieldAllowedScopes, oauthapp.FieldAllowedGrants, oauthapp.FieldAllowedResponseTypes, oauthapp.FieldMetadata:
 			values[i] = new([]byte)
-		case oauthapp.FieldRefreshTokenRotation, oauthapp.FieldFirstParty, oauthapp.FieldPublic, oauthapp.FieldActive:
+		case oauthapp.FieldRefreshTokenRotation, oauthapp.FieldManagedPrincipalsEnabled, oauthapp.FieldFirstParty, oauthapp.FieldPublic, oauthapp.FieldActive:
 			values[i] = new(sql.NullBool)
 		case oauthapp.FieldAccessTokenTTL, oauthapp.FieldRefreshTokenTTL:
 			values[i] = new(sql.NullInt64)
@@ -278,6 +280,12 @@ func (_m *OAuthApp) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field refresh_token_rotation", values[i])
 			} else if value.Valid {
 				_m.RefreshTokenRotation = value.Bool
+			}
+		case oauthapp.FieldManagedPrincipalsEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field managed_principals_enabled", values[i])
+			} else if value.Valid {
+				_m.ManagedPrincipalsEnabled = value.Bool
 			}
 		case oauthapp.FieldFirstParty:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -433,6 +441,9 @@ func (_m *OAuthApp) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("refresh_token_rotation=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RefreshTokenRotation))
+	builder.WriteString(", ")
+	builder.WriteString("managed_principals_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ManagedPrincipalsEnabled))
 	builder.WriteString(", ")
 	builder.WriteString("first_party=")
 	builder.WriteString(fmt.Sprintf("%v", _m.FirstParty))

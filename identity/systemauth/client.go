@@ -62,6 +62,11 @@ type Client struct {
 	// Metadata holds arbitrary client metadata.
 	Metadata map[string]any `json:"metadata,omitempty"`
 
+	// ManagedPrincipalsEnabled allows this client to create and sign in
+	// managed principals. It takes effect only when the deployment also
+	// enables managed principals (see Server.ManagedPrincipalsAllowed).
+	ManagedPrincipalsEnabled bool `json:"managed_principals_enabled,omitempty"`
+
 	// CreatedAt is when the client was created.
 	CreatedAt time.Time `json:"created_at"`
 
@@ -134,7 +139,9 @@ func NewClientFromConfig(cfg ClientConfig) (*Client, error) {
 		Scopes:        cfg.Scopes,
 		Audience:      cfg.Audience,
 		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		// Managed principals are opt-in per client.
+		ManagedPrincipalsEnabled: cfg.ManagedPrincipals,
+		UpdatedAt:                time.Now(),
 	}
 
 	// Convert Duration pointers to time.Duration pointers

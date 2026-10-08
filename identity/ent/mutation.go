@@ -12500,6 +12500,7 @@ type OAuthAppMutation struct {
 	refresh_token_ttl            *int
 	addrefresh_token_ttl         *int
 	refresh_token_rotation       *bool
+	managed_principals_enabled   *bool
 	first_party                  *bool
 	public                       *bool
 	active                       *bool
@@ -13276,6 +13277,42 @@ func (m *OAuthAppMutation) ResetRefreshTokenRotation() {
 	m.refresh_token_rotation = nil
 }
 
+// SetManagedPrincipalsEnabled sets the "managed_principals_enabled" field.
+func (m *OAuthAppMutation) SetManagedPrincipalsEnabled(b bool) {
+	m.managed_principals_enabled = &b
+}
+
+// ManagedPrincipalsEnabled returns the value of the "managed_principals_enabled" field in the mutation.
+func (m *OAuthAppMutation) ManagedPrincipalsEnabled() (r bool, exists bool) {
+	v := m.managed_principals_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldManagedPrincipalsEnabled returns the old "managed_principals_enabled" field's value of the OAuthApp entity.
+// If the OAuthApp object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OAuthAppMutation) OldManagedPrincipalsEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldManagedPrincipalsEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldManagedPrincipalsEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldManagedPrincipalsEnabled: %w", err)
+	}
+	return oldValue.ManagedPrincipalsEnabled, nil
+}
+
+// ResetManagedPrincipalsEnabled resets all changes to the "managed_principals_enabled" field.
+func (m *OAuthAppMutation) ResetManagedPrincipalsEnabled() {
+	m.managed_principals_enabled = nil
+}
+
 // SetFirstParty sets the "first_party" field.
 func (m *OAuthAppMutation) SetFirstParty(b bool) {
 	m.first_party = &b
@@ -13858,7 +13895,7 @@ func (m *OAuthAppMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuthAppMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 22)
 	if m.client_id != nil {
 		fields = append(fields, oauthapp.FieldClientID)
 	}
@@ -13900,6 +13937,9 @@ func (m *OAuthAppMutation) Fields() []string {
 	}
 	if m.refresh_token_rotation != nil {
 		fields = append(fields, oauthapp.FieldRefreshTokenRotation)
+	}
+	if m.managed_principals_enabled != nil {
+		fields = append(fields, oauthapp.FieldManagedPrincipalsEnabled)
 	}
 	if m.first_party != nil {
 		fields = append(fields, oauthapp.FieldFirstParty)
@@ -13958,6 +13998,8 @@ func (m *OAuthAppMutation) Field(name string) (ent.Value, bool) {
 		return m.RefreshTokenTTL()
 	case oauthapp.FieldRefreshTokenRotation:
 		return m.RefreshTokenRotation()
+	case oauthapp.FieldManagedPrincipalsEnabled:
+		return m.ManagedPrincipalsEnabled()
 	case oauthapp.FieldFirstParty:
 		return m.FirstParty()
 	case oauthapp.FieldPublic:
@@ -14009,6 +14051,8 @@ func (m *OAuthAppMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldRefreshTokenTTL(ctx)
 	case oauthapp.FieldRefreshTokenRotation:
 		return m.OldRefreshTokenRotation(ctx)
+	case oauthapp.FieldManagedPrincipalsEnabled:
+		return m.OldManagedPrincipalsEnabled(ctx)
 	case oauthapp.FieldFirstParty:
 		return m.OldFirstParty(ctx)
 	case oauthapp.FieldPublic:
@@ -14129,6 +14173,13 @@ func (m *OAuthAppMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRefreshTokenRotation(v)
+		return nil
+	case oauthapp.FieldManagedPrincipalsEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetManagedPrincipalsEnabled(v)
 		return nil
 	case oauthapp.FieldFirstParty:
 		v, ok := value.(bool)
@@ -14329,6 +14380,9 @@ func (m *OAuthAppMutation) ResetField(name string) error {
 		return nil
 	case oauthapp.FieldRefreshTokenRotation:
 		m.ResetRefreshTokenRotation()
+		return nil
+	case oauthapp.FieldManagedPrincipalsEnabled:
+		m.ResetManagedPrincipalsEnabled()
 		return nil
 	case oauthapp.FieldFirstParty:
 		m.ResetFirstParty()

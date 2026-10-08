@@ -96,6 +96,10 @@ func (OAuthApp) Fields() []ent.Field {
 			Comment("Rotate refresh tokens on use"),
 
 		// Flags
+		field.Bool("managed_principals_enabled").
+			Default(false).
+			Comment("Whether this client may create and sign in managed principals; also requires the deployment setting (ADR-005)"),
+
 		field.Bool("first_party").
 			Default(false).
 			Comment("First-party apps skip consent screen"),

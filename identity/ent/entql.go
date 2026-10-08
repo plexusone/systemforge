@@ -332,27 +332,28 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		Type: "OAuthApp",
 		Fields: map[string]*sqlgraph.FieldSpec{
-			oauthapp.FieldClientID:             {Type: field.TypeString, Column: oauthapp.FieldClientID},
-			oauthapp.FieldName:                 {Type: field.TypeString, Column: oauthapp.FieldName},
-			oauthapp.FieldDescription:          {Type: field.TypeString, Column: oauthapp.FieldDescription},
-			oauthapp.FieldLogoURL:              {Type: field.TypeString, Column: oauthapp.FieldLogoURL},
-			oauthapp.FieldAppType:              {Type: field.TypeEnum, Column: oauthapp.FieldAppType},
-			oauthapp.FieldOwnerID:              {Type: field.TypeUUID, Column: oauthapp.FieldOwnerID},
-			oauthapp.FieldOrganizationID:       {Type: field.TypeUUID, Column: oauthapp.FieldOrganizationID},
-			oauthapp.FieldRedirectUris:         {Type: field.TypeJSON, Column: oauthapp.FieldRedirectUris},
-			oauthapp.FieldAllowedScopes:        {Type: field.TypeJSON, Column: oauthapp.FieldAllowedScopes},
-			oauthapp.FieldAllowedGrants:        {Type: field.TypeJSON, Column: oauthapp.FieldAllowedGrants},
-			oauthapp.FieldAllowedResponseTypes: {Type: field.TypeJSON, Column: oauthapp.FieldAllowedResponseTypes},
-			oauthapp.FieldAccessTokenTTL:       {Type: field.TypeInt, Column: oauthapp.FieldAccessTokenTTL},
-			oauthapp.FieldRefreshTokenTTL:      {Type: field.TypeInt, Column: oauthapp.FieldRefreshTokenTTL},
-			oauthapp.FieldRefreshTokenRotation: {Type: field.TypeBool, Column: oauthapp.FieldRefreshTokenRotation},
-			oauthapp.FieldFirstParty:           {Type: field.TypeBool, Column: oauthapp.FieldFirstParty},
-			oauthapp.FieldPublic:               {Type: field.TypeBool, Column: oauthapp.FieldPublic},
-			oauthapp.FieldActive:               {Type: field.TypeBool, Column: oauthapp.FieldActive},
-			oauthapp.FieldRevokedAt:            {Type: field.TypeTime, Column: oauthapp.FieldRevokedAt},
-			oauthapp.FieldMetadata:             {Type: field.TypeJSON, Column: oauthapp.FieldMetadata},
-			oauthapp.FieldCreatedAt:            {Type: field.TypeTime, Column: oauthapp.FieldCreatedAt},
-			oauthapp.FieldUpdatedAt:            {Type: field.TypeTime, Column: oauthapp.FieldUpdatedAt},
+			oauthapp.FieldClientID:                 {Type: field.TypeString, Column: oauthapp.FieldClientID},
+			oauthapp.FieldName:                     {Type: field.TypeString, Column: oauthapp.FieldName},
+			oauthapp.FieldDescription:              {Type: field.TypeString, Column: oauthapp.FieldDescription},
+			oauthapp.FieldLogoURL:                  {Type: field.TypeString, Column: oauthapp.FieldLogoURL},
+			oauthapp.FieldAppType:                  {Type: field.TypeEnum, Column: oauthapp.FieldAppType},
+			oauthapp.FieldOwnerID:                  {Type: field.TypeUUID, Column: oauthapp.FieldOwnerID},
+			oauthapp.FieldOrganizationID:           {Type: field.TypeUUID, Column: oauthapp.FieldOrganizationID},
+			oauthapp.FieldRedirectUris:             {Type: field.TypeJSON, Column: oauthapp.FieldRedirectUris},
+			oauthapp.FieldAllowedScopes:            {Type: field.TypeJSON, Column: oauthapp.FieldAllowedScopes},
+			oauthapp.FieldAllowedGrants:            {Type: field.TypeJSON, Column: oauthapp.FieldAllowedGrants},
+			oauthapp.FieldAllowedResponseTypes:     {Type: field.TypeJSON, Column: oauthapp.FieldAllowedResponseTypes},
+			oauthapp.FieldAccessTokenTTL:           {Type: field.TypeInt, Column: oauthapp.FieldAccessTokenTTL},
+			oauthapp.FieldRefreshTokenTTL:          {Type: field.TypeInt, Column: oauthapp.FieldRefreshTokenTTL},
+			oauthapp.FieldRefreshTokenRotation:     {Type: field.TypeBool, Column: oauthapp.FieldRefreshTokenRotation},
+			oauthapp.FieldManagedPrincipalsEnabled: {Type: field.TypeBool, Column: oauthapp.FieldManagedPrincipalsEnabled},
+			oauthapp.FieldFirstParty:               {Type: field.TypeBool, Column: oauthapp.FieldFirstParty},
+			oauthapp.FieldPublic:                   {Type: field.TypeBool, Column: oauthapp.FieldPublic},
+			oauthapp.FieldActive:                   {Type: field.TypeBool, Column: oauthapp.FieldActive},
+			oauthapp.FieldRevokedAt:                {Type: field.TypeTime, Column: oauthapp.FieldRevokedAt},
+			oauthapp.FieldMetadata:                 {Type: field.TypeJSON, Column: oauthapp.FieldMetadata},
+			oauthapp.FieldCreatedAt:                {Type: field.TypeTime, Column: oauthapp.FieldCreatedAt},
+			oauthapp.FieldUpdatedAt:                {Type: field.TypeTime, Column: oauthapp.FieldUpdatedAt},
 		},
 	}
 	graph.Nodes[13] = &sqlgraph.Node{
@@ -2849,6 +2850,11 @@ func (f *OAuthAppFilter) WhereRefreshTokenTTL(p entql.IntP) {
 // WhereRefreshTokenRotation applies the entql bool predicate on the refresh_token_rotation field.
 func (f *OAuthAppFilter) WhereRefreshTokenRotation(p entql.BoolP) {
 	f.Where(p.Field(oauthapp.FieldRefreshTokenRotation))
+}
+
+// WhereManagedPrincipalsEnabled applies the entql bool predicate on the managed_principals_enabled field.
+func (f *OAuthAppFilter) WhereManagedPrincipalsEnabled(p entql.BoolP) {
+	f.Where(p.Field(oauthapp.FieldManagedPrincipalsEnabled))
 }
 
 // WhereFirstParty applies the entql bool predicate on the first_party field.

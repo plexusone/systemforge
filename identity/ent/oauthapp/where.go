@@ -101,6 +101,11 @@ func RefreshTokenRotation(v bool) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldEQ(FieldRefreshTokenRotation, v))
 }
 
+// ManagedPrincipalsEnabled applies equality check predicate on the "managed_principals_enabled" field. It's identical to ManagedPrincipalsEnabledEQ.
+func ManagedPrincipalsEnabled(v bool) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldEQ(FieldManagedPrincipalsEnabled, v))
+}
+
 // FirstParty applies equality check predicate on the "first_party" field. It's identical to FirstPartyEQ.
 func FirstParty(v bool) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldEQ(FieldFirstParty, v))
@@ -569,6 +574,16 @@ func RefreshTokenRotationEQ(v bool) predicate.OAuthApp {
 // RefreshTokenRotationNEQ applies the NEQ predicate on the "refresh_token_rotation" field.
 func RefreshTokenRotationNEQ(v bool) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldNEQ(FieldRefreshTokenRotation, v))
+}
+
+// ManagedPrincipalsEnabledEQ applies the EQ predicate on the "managed_principals_enabled" field.
+func ManagedPrincipalsEnabledEQ(v bool) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldEQ(FieldManagedPrincipalsEnabled, v))
+}
+
+// ManagedPrincipalsEnabledNEQ applies the NEQ predicate on the "managed_principals_enabled" field.
+func ManagedPrincipalsEnabledNEQ(v bool) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldNEQ(FieldManagedPrincipalsEnabled, v))
 }
 
 // FirstPartyEQ applies the EQ predicate on the "first_party" field.

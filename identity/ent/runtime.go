@@ -453,24 +453,28 @@ func init() {
 	oauthappDescRefreshTokenRotation := oauthappFields[14].Descriptor()
 	// oauthapp.DefaultRefreshTokenRotation holds the default value on creation for the refresh_token_rotation field.
 	oauthapp.DefaultRefreshTokenRotation = oauthappDescRefreshTokenRotation.Default.(bool)
+	// oauthappDescManagedPrincipalsEnabled is the schema descriptor for managed_principals_enabled field.
+	oauthappDescManagedPrincipalsEnabled := oauthappFields[15].Descriptor()
+	// oauthapp.DefaultManagedPrincipalsEnabled holds the default value on creation for the managed_principals_enabled field.
+	oauthapp.DefaultManagedPrincipalsEnabled = oauthappDescManagedPrincipalsEnabled.Default.(bool)
 	// oauthappDescFirstParty is the schema descriptor for first_party field.
-	oauthappDescFirstParty := oauthappFields[15].Descriptor()
+	oauthappDescFirstParty := oauthappFields[16].Descriptor()
 	// oauthapp.DefaultFirstParty holds the default value on creation for the first_party field.
 	oauthapp.DefaultFirstParty = oauthappDescFirstParty.Default.(bool)
 	// oauthappDescPublic is the schema descriptor for public field.
-	oauthappDescPublic := oauthappFields[16].Descriptor()
+	oauthappDescPublic := oauthappFields[17].Descriptor()
 	// oauthapp.DefaultPublic holds the default value on creation for the public field.
 	oauthapp.DefaultPublic = oauthappDescPublic.Default.(bool)
 	// oauthappDescActive is the schema descriptor for active field.
-	oauthappDescActive := oauthappFields[17].Descriptor()
+	oauthappDescActive := oauthappFields[18].Descriptor()
 	// oauthapp.DefaultActive holds the default value on creation for the active field.
 	oauthapp.DefaultActive = oauthappDescActive.Default.(bool)
 	// oauthappDescCreatedAt is the schema descriptor for created_at field.
-	oauthappDescCreatedAt := oauthappFields[20].Descriptor()
+	oauthappDescCreatedAt := oauthappFields[21].Descriptor()
 	// oauthapp.DefaultCreatedAt holds the default value on creation for the created_at field.
 	oauthapp.DefaultCreatedAt = oauthappDescCreatedAt.Default.(func() time.Time)
 	// oauthappDescUpdatedAt is the schema descriptor for updated_at field.
-	oauthappDescUpdatedAt := oauthappFields[21].Descriptor()
+	oauthappDescUpdatedAt := oauthappFields[22].Descriptor()
 	// oauthapp.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	oauthapp.DefaultUpdatedAt = oauthappDescUpdatedAt.Default.(func() time.Time)
 	// oauthapp.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

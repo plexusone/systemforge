@@ -170,6 +170,20 @@ func (_c *OAuthAppCreate) SetNillableRefreshTokenRotation(v *bool) *OAuthAppCrea
 	return _c
 }
 
+// SetManagedPrincipalsEnabled sets the "managed_principals_enabled" field.
+func (_c *OAuthAppCreate) SetManagedPrincipalsEnabled(v bool) *OAuthAppCreate {
+	_c.mutation.SetManagedPrincipalsEnabled(v)
+	return _c
+}
+
+// SetNillableManagedPrincipalsEnabled sets the "managed_principals_enabled" field if the given value is not nil.
+func (_c *OAuthAppCreate) SetNillableManagedPrincipalsEnabled(v *bool) *OAuthAppCreate {
+	if v != nil {
+		_c.SetManagedPrincipalsEnabled(*v)
+	}
+	return _c
+}
+
 // SetFirstParty sets the "first_party" field.
 func (_c *OAuthAppCreate) SetFirstParty(v bool) *OAuthAppCreate {
 	_c.mutation.SetFirstParty(v)
@@ -411,6 +425,10 @@ func (_c *OAuthAppCreate) defaults() {
 		v := oauthapp.DefaultRefreshTokenRotation
 		_c.mutation.SetRefreshTokenRotation(v)
 	}
+	if _, ok := _c.mutation.ManagedPrincipalsEnabled(); !ok {
+		v := oauthapp.DefaultManagedPrincipalsEnabled
+		_c.mutation.SetManagedPrincipalsEnabled(v)
+	}
 	if _, ok := _c.mutation.FirstParty(); !ok {
 		v := oauthapp.DefaultFirstParty
 		_c.mutation.SetFirstParty(v)
@@ -491,6 +509,9 @@ func (_c *OAuthAppCreate) check() error {
 	}
 	if _, ok := _c.mutation.RefreshTokenRotation(); !ok {
 		return &ValidationError{Name: "refresh_token_rotation", err: errors.New(`ent: missing required field "OAuthApp.refresh_token_rotation"`)}
+	}
+	if _, ok := _c.mutation.ManagedPrincipalsEnabled(); !ok {
+		return &ValidationError{Name: "managed_principals_enabled", err: errors.New(`ent: missing required field "OAuthApp.managed_principals_enabled"`)}
 	}
 	if _, ok := _c.mutation.FirstParty(); !ok {
 		return &ValidationError{Name: "first_party", err: errors.New(`ent: missing required field "OAuthApp.first_party"`)}
@@ -593,6 +614,10 @@ func (_c *OAuthAppCreate) createSpec() (*OAuthApp, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.RefreshTokenRotation(); ok {
 		_spec.SetField(oauthapp.FieldRefreshTokenRotation, field.TypeBool, value)
 		_node.RefreshTokenRotation = value
+	}
+	if value, ok := _c.mutation.ManagedPrincipalsEnabled(); ok {
+		_spec.SetField(oauthapp.FieldManagedPrincipalsEnabled, field.TypeBool, value)
+		_node.ManagedPrincipalsEnabled = value
 	}
 	if value, ok := _c.mutation.FirstParty(); ok {
 		_spec.SetField(oauthapp.FieldFirstParty, field.TypeBool, value)
@@ -958,6 +983,18 @@ func (u *OAuthAppUpsert) UpdateRefreshTokenRotation() *OAuthAppUpsert {
 	return u
 }
 
+// SetManagedPrincipalsEnabled sets the "managed_principals_enabled" field.
+func (u *OAuthAppUpsert) SetManagedPrincipalsEnabled(v bool) *OAuthAppUpsert {
+	u.Set(oauthapp.FieldManagedPrincipalsEnabled, v)
+	return u
+}
+
+// UpdateManagedPrincipalsEnabled sets the "managed_principals_enabled" field to the value that was provided on create.
+func (u *OAuthAppUpsert) UpdateManagedPrincipalsEnabled() *OAuthAppUpsert {
+	u.SetExcluded(oauthapp.FieldManagedPrincipalsEnabled)
+	return u
+}
+
 // SetFirstParty sets the "first_party" field.
 func (u *OAuthAppUpsert) SetFirstParty(v bool) *OAuthAppUpsert {
 	u.Set(oauthapp.FieldFirstParty, v)
@@ -1310,6 +1347,20 @@ func (u *OAuthAppUpsertOne) SetRefreshTokenRotation(v bool) *OAuthAppUpsertOne {
 func (u *OAuthAppUpsertOne) UpdateRefreshTokenRotation() *OAuthAppUpsertOne {
 	return u.Update(func(s *OAuthAppUpsert) {
 		s.UpdateRefreshTokenRotation()
+	})
+}
+
+// SetManagedPrincipalsEnabled sets the "managed_principals_enabled" field.
+func (u *OAuthAppUpsertOne) SetManagedPrincipalsEnabled(v bool) *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.SetManagedPrincipalsEnabled(v)
+	})
+}
+
+// UpdateManagedPrincipalsEnabled sets the "managed_principals_enabled" field to the value that was provided on create.
+func (u *OAuthAppUpsertOne) UpdateManagedPrincipalsEnabled() *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.UpdateManagedPrincipalsEnabled()
 	})
 }
 
@@ -1846,6 +1897,20 @@ func (u *OAuthAppUpsertBulk) SetRefreshTokenRotation(v bool) *OAuthAppUpsertBulk
 func (u *OAuthAppUpsertBulk) UpdateRefreshTokenRotation() *OAuthAppUpsertBulk {
 	return u.Update(func(s *OAuthAppUpsert) {
 		s.UpdateRefreshTokenRotation()
+	})
+}
+
+// SetManagedPrincipalsEnabled sets the "managed_principals_enabled" field.
+func (u *OAuthAppUpsertBulk) SetManagedPrincipalsEnabled(v bool) *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.SetManagedPrincipalsEnabled(v)
+	})
+}
+
+// UpdateManagedPrincipalsEnabled sets the "managed_principals_enabled" field to the value that was provided on create.
+func (u *OAuthAppUpsertBulk) UpdateManagedPrincipalsEnabled() *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.UpdateManagedPrincipalsEnabled()
 	})
 }
 

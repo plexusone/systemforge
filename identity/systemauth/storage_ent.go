@@ -103,7 +103,8 @@ func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
 		SetAllowedScopes(client.Scopes).
 		SetAllowedGrants(client.GrantTypes).
 		SetAllowedResponseTypes(client.ResponseTypes).
-		SetPublic(client.IsPublic())
+		SetPublic(client.IsPublic()).
+		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled)
 
 	if client.Description != "" {
 		builder.SetDescription(client.Description)
@@ -190,7 +191,8 @@ func (s *EntStorage) UpdateClient(ctx context.Context, client *Client) error {
 		SetRedirectUris(client.RedirectURIs).
 		SetAllowedScopes(client.Scopes).
 		SetAllowedGrants(client.GrantTypes).
-		SetAllowedResponseTypes(client.ResponseTypes)
+		SetAllowedResponseTypes(client.ResponseTypes).
+		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled)
 
 	if client.Description != "" {
 		builder.SetDescription(client.Description)
@@ -790,7 +792,9 @@ func (s *EntStorage) entAppToClient(app *ent.OAuthApp) *Client {
 		ResponseTypes: app.AllowedResponseTypes,
 		Scopes:        app.AllowedScopes,
 		CreatedAt:     app.CreatedAt,
-		UpdatedAt:     app.UpdatedAt,
+		// Managed principals are opt-in per client.
+		ManagedPrincipalsEnabled: app.ManagedPrincipalsEnabled,
+		UpdatedAt:                app.UpdatedAt,
 	}
 
 	// Convert TTLs to durations

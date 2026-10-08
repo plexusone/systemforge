@@ -367,6 +367,24 @@ func (s *Server) GetClient(id string) (*Client, error) {
 	return s.storage.GetClientByID(context.Background(), id)
 }
 
+// ManagedPrincipalsAllowed reports whether clientID may create and sign in
+// managed principals: the deployment must enable managed principals and the
+// client must opt in. It is the single check every managed-principal path
+// uses, so neither switch can be enforced without the other (ADR-005).
+func (s *Server) ManagedPrincipalsAllowed(ctx context.Context, clientID string) (bool, error) {
+	if s.config.ManagedPrincipals == nil || !s.config.ManagedPrincipals.Enabled {
+		return false, nil
+	}
+	client, err := s.storage.GetClientByID(ctx, clientID)
+	if err != nil {
+		if errors.Is(err, ErrClientNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return client.ManagedPrincipalsEnabled, nil
+}
+
 // Middleware returns HTTP middleware that validates access tokens.
 // Use this to protect your API endpoints.
 //

@@ -242,6 +242,20 @@ func (_u *OAuthAppUpdate) SetNillableRefreshTokenRotation(v *bool) *OAuthAppUpda
 	return _u
 }
 
+// SetManagedPrincipalsEnabled sets the "managed_principals_enabled" field.
+func (_u *OAuthAppUpdate) SetManagedPrincipalsEnabled(v bool) *OAuthAppUpdate {
+	_u.mutation.SetManagedPrincipalsEnabled(v)
+	return _u
+}
+
+// SetNillableManagedPrincipalsEnabled sets the "managed_principals_enabled" field if the given value is not nil.
+func (_u *OAuthAppUpdate) SetNillableManagedPrincipalsEnabled(v *bool) *OAuthAppUpdate {
+	if v != nil {
+		_u.SetManagedPrincipalsEnabled(*v)
+	}
+	return _u
+}
+
 // SetFirstParty sets the "first_party" field.
 func (_u *OAuthAppUpdate) SetFirstParty(v bool) *OAuthAppUpdate {
 	_u.mutation.SetFirstParty(v)
@@ -628,6 +642,9 @@ func (_u *OAuthAppUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.RefreshTokenRotation(); ok {
 		_spec.SetField(oauthapp.FieldRefreshTokenRotation, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ManagedPrincipalsEnabled(); ok {
+		_spec.SetField(oauthapp.FieldManagedPrincipalsEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.FirstParty(); ok {
 		_spec.SetField(oauthapp.FieldFirstParty, field.TypeBool, value)
@@ -1117,6 +1134,20 @@ func (_u *OAuthAppUpdateOne) SetNillableRefreshTokenRotation(v *bool) *OAuthAppU
 	return _u
 }
 
+// SetManagedPrincipalsEnabled sets the "managed_principals_enabled" field.
+func (_u *OAuthAppUpdateOne) SetManagedPrincipalsEnabled(v bool) *OAuthAppUpdateOne {
+	_u.mutation.SetManagedPrincipalsEnabled(v)
+	return _u
+}
+
+// SetNillableManagedPrincipalsEnabled sets the "managed_principals_enabled" field if the given value is not nil.
+func (_u *OAuthAppUpdateOne) SetNillableManagedPrincipalsEnabled(v *bool) *OAuthAppUpdateOne {
+	if v != nil {
+		_u.SetManagedPrincipalsEnabled(*v)
+	}
+	return _u
+}
+
 // SetFirstParty sets the "first_party" field.
 func (_u *OAuthAppUpdateOne) SetFirstParty(v bool) *OAuthAppUpdateOne {
 	_u.mutation.SetFirstParty(v)
@@ -1533,6 +1564,9 @@ func (_u *OAuthAppUpdateOne) sqlSave(ctx context.Context) (_node *OAuthApp, err 
 	}
 	if value, ok := _u.mutation.RefreshTokenRotation(); ok {
 		_spec.SetField(oauthapp.FieldRefreshTokenRotation, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ManagedPrincipalsEnabled(); ok {
+		_spec.SetField(oauthapp.FieldManagedPrincipalsEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.FirstParty(); ok {
 		_spec.SetField(oauthapp.FieldFirstParty, field.TypeBool, value)

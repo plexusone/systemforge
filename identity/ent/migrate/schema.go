@@ -634,6 +634,7 @@ var (
 		{Name: "access_token_ttl", Type: field.TypeInt, Default: 900},
 		{Name: "refresh_token_ttl", Type: field.TypeInt, Default: 604800},
 		{Name: "refresh_token_rotation", Type: field.TypeBool, Default: true},
+		{Name: "managed_principals_enabled", Type: field.TypeBool, Default: false},
 		{Name: "first_party", Type: field.TypeBool, Default: false},
 		{Name: "public", Type: field.TypeBool, Default: false},
 		{Name: "active", Type: field.TypeBool, Default: true},
@@ -652,13 +653,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_oauth_apps_sf_organizations_oauth_apps",
-				Columns:    []*schema.Column{SfOauthAppsColumns[20]},
+				Columns:    []*schema.Column{SfOauthAppsColumns[21]},
 				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "sf_oauth_apps_sf_principals_owned_oauth_apps",
-				Columns:    []*schema.Column{SfOauthAppsColumns[21]},
+				Columns:    []*schema.Column{SfOauthAppsColumns[22]},
 				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -672,17 +673,17 @@ var (
 			{
 				Name:    "oauthapp_owner_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[21]},
+				Columns: []*schema.Column{SfOauthAppsColumns[22]},
 			},
 			{
 				Name:    "oauthapp_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[20]},
+				Columns: []*schema.Column{SfOauthAppsColumns[21]},
 			},
 			{
 				Name:    "oauthapp_active",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[15]},
+				Columns: []*schema.Column{SfOauthAppsColumns[16]},
 			},
 		},
 	}
