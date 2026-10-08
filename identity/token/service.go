@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,6 +19,29 @@ import (
 const (
 	// TokenBytes is the number of random bytes for token generation.
 	TokenBytes = 32
+	// DefaultAccessTTL is the access token lifetime when none is given.
+	DefaultAccessTTL = 15 * time.Minute
+
+	revokedRotated = "rotated"
+	revokedReuse   = "refresh token reuse"
+)
+
+var (
+	// ErrInvalidAccessToken is returned for an unknown, revoked, or
+	// expired access token.
+	ErrInvalidAccessToken = errors.New("token: invalid access token")
+	// ErrInvalidRefreshToken is returned for an unknown, spent, revoked,
+	// or expired refresh token.
+	ErrInvalidRefreshToken = errors.New("token: invalid refresh token")
+	// ErrRefreshTokenReused is returned when an already-rotated refresh
+	// token is presented again; the token family has been revoked.
+	ErrRefreshTokenReused = fmt.Errorf("%w: reused, token family revoked", ErrInvalidRefreshToken)
+	// ErrDPoPMismatch is returned when a DPoP-bound refresh token is
+	// presented without its key.
+	ErrDPoPMismatch = errors.New("token: DPoP binding mismatch")
+	// ErrScopeNotGranted is returned when a refresh asks for a scope the
+	// original grant did not include.
+	ErrScopeNotGranted = errors.New("token: scope not in original grant")
 )
 
 // DefaultService implements the Service interface.
@@ -30,42 +54,42 @@ func NewService(client *ent.Client) Service {
 	return &DefaultService{client: client}
 }
 
-// Issue issues a new token pair.
+// Issue issues a new token pair in a new token family.
 func (s *DefaultService) Issue(ctx context.Context, input IssueInput) (*IssuedToken, error) {
-	// Generate access token
+	var refreshExpiresAt *time.Time
+	if input.RefreshTTL > 0 {
+		t := time.Now().Add(input.RefreshTTL)
+		refreshExpiresAt = &t
+	}
+	return issue(ctx, s.client, input, uuid.New(), refreshExpiresAt)
+}
+
+// issue creates a token pair in family. A refresh token is issued when
+// refreshExpiresAt is set.
+func issue(ctx context.Context, client *ent.Client, input IssueInput, family uuid.UUID, refreshExpiresAt *time.Time) (*IssuedToken, error) {
 	accessToken, accessSig, err := generateToken()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
-
-	// Generate refresh token (if TTL > 0)
 	var refreshToken, refreshSig string
-	var refreshExpiresAt *time.Time
-	if input.RefreshTTL > 0 {
+	if refreshExpiresAt != nil {
 		refreshToken, refreshSig, err = generateToken()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 		}
-		t := time.Now().Add(input.RefreshTTL)
-		refreshExpiresAt = &t
 	}
 
-	// Set default access TTL
 	accessTTL := input.AccessTTL
-	if accessTTL == 0 {
-		accessTTL = 15 * time.Minute
+	if accessTTL <= 0 {
+		accessTTL = DefaultAccessTTL
 	}
 	accessExpiresAt := time.Now().Add(accessTTL)
 
-	// Generate family ID
-	familyID := uuid.New()
-
-	// Create token record
-	create := s.client.PrincipalToken.Create().
+	create := client.PrincipalToken.Create().
 		SetPrincipalID(input.PrincipalID).
 		SetPrincipalType(mapPrincipalType(input.PrincipalType)).
 		SetAccessTokenSignature(accessSig).
-		SetFamilyID(familyID).
+		SetFamilyID(family).
 		SetScopes(input.Scopes).
 		SetAudience(input.Audience).
 		SetCapabilities(input.Capabilities).
@@ -77,8 +101,6 @@ func (s *DefaultService) Issue(ctx context.Context, input IssueInput) (*IssuedTo
 	}
 	if refreshSig != "" {
 		create.SetRefreshTokenSignature(refreshSig)
-	}
-	if refreshExpiresAt != nil {
 		create.SetRefreshExpiresAt(*refreshExpiresAt)
 	}
 	if input.DPoPJKT != "" {
@@ -111,141 +133,118 @@ func (s *DefaultService) Issue(ctx context.Context, input IssueInput) (*IssuedTo
 	}, nil
 }
 
-// Refresh refreshes a token using the refresh token.
+// Refresh rotates a token pair: it spends the presented refresh token and
+// issues a new pair in the same family, atomically, so a refresh token
+// works once. The new refresh token expires when the family's first one
+// did; refreshing never extends a session. Presenting a refresh token that
+// was already rotated means it was copied, so the whole family is revoked
+// and ErrRefreshTokenReused is returned.
 func (s *DefaultService) Refresh(ctx context.Context, input RefreshInput) (*IssuedToken, error) {
-	// Hash the refresh token to find it
-	hash := sha256.Sum256([]byte(input.RefreshToken))
-	refreshSig := hex.EncodeToString(hash[:])
+	refreshSig := signature(input.RefreshToken)
+	var out *IssuedToken
+	var reusedFamily *uuid.UUID
 
-	// Find the token
-	oldToken, err := s.client.PrincipalToken.Query().
-		Where(
-			principaltoken.RefreshTokenSignatureEQ(refreshSig),
-			principaltoken.RevokedEQ(false),
-		).
-		Only(ctx)
-	if err != nil {
+	err := s.withTx(ctx, func(tx *ent.Tx) error {
+		old, err := tx.PrincipalToken.Query().
+			Where(principaltoken.RefreshTokenSignatureEQ(refreshSig)).
+			Only(ctx)
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("invalid refresh token")
+			return ErrInvalidRefreshToken
 		}
-		return nil, fmt.Errorf("failed to find token: %w", err)
-	}
-
-	// Check expiration
-	if oldToken.RefreshExpiresAt != nil && oldToken.RefreshExpiresAt.Before(time.Now()) {
-		return nil, fmt.Errorf("refresh token expired")
-	}
-
-	// Check DPoP binding
-	if oldToken.DpopJkt != "" && oldToken.DpopJkt != input.DPoPJKT {
-		return nil, fmt.Errorf("DPoP binding mismatch")
-	}
-
-	// Determine scopes (use narrowed scopes if provided, otherwise keep original)
-	scopes := oldToken.Scopes
-	if len(input.Scopes) > 0 {
-		// Verify narrowed scopes are subset of original
-		scopeSet := make(map[string]bool)
-		for _, s := range oldToken.Scopes {
-			scopeSet[s] = true
+		if err != nil {
+			return fmt.Errorf("failed to find token: %w", err)
 		}
-		for _, s := range input.Scopes {
-			if !scopeSet[s] {
-				return nil, fmt.Errorf("scope %q not in original grant", s)
+		if old.Revoked {
+			if old.RevokedReason == revokedRotated {
+				reusedFamily = &old.FamilyID
 			}
+			return ErrInvalidRefreshToken
 		}
-		scopes = input.Scopes
-	}
-
-	// Calculate new expiration times based on original TTLs
-	accessTTL := time.Until(oldToken.AccessExpiresAt)
-	if accessTTL < 5*time.Minute {
-		accessTTL = 15 * time.Minute // Default if very short
-	}
-	var refreshTTL time.Duration
-	if oldToken.RefreshExpiresAt != nil {
-		refreshTTL = time.Until(*oldToken.RefreshExpiresAt)
-		if refreshTTL < 5*time.Minute {
-			refreshTTL = 7 * 24 * time.Hour // Default if very short
+		if old.RefreshExpiresAt == nil || !old.RefreshExpiresAt.After(time.Now()) {
+			return ErrInvalidRefreshToken
 		}
-	}
+		if old.DpopJkt != "" && old.DpopJkt != input.DPoPJKT {
+			return ErrDPoPMismatch
+		}
 
-	// Issue new token pair
-	newToken, err := s.Issue(ctx, IssueInput{
-		PrincipalID:     oldToken.PrincipalID,
-		PrincipalType:   principal.Type(oldToken.PrincipalType.String()),
-		IssuedByAppID:   oldToken.IssuedByAppID,
-		Scopes:          scopes,
-		Audience:        oldToken.Audience,
-		Capabilities:    oldToken.Capabilities,
-		DelegationChain: oldToken.DelegationChain,
-		DPoPJKT:         input.DPoPJKT,
-		SessionID:       oldToken.SessionID,
-		AccessTTL:       accessTTL,
-		RefreshTTL:      refreshTTL,
-		ClientIP:        input.ClientIP,
-		UserAgent:       input.UserAgent,
-		ParentTokenID:   oldToken.ParentTokenID,
+		scopes := old.Scopes
+		if len(input.Scopes) > 0 {
+			granted := make(map[string]bool, len(old.Scopes))
+			for _, sc := range old.Scopes {
+				granted[sc] = true
+			}
+			for _, sc := range input.Scopes {
+				if !granted[sc] {
+					return fmt.Errorf("%w: %q", ErrScopeNotGranted, sc)
+				}
+			}
+			scopes = input.Scopes
+		}
+
+		// Spend the presented token; the condition makes concurrent
+		// refreshes with the same token succeed at most once.
+		n, err := tx.PrincipalToken.Update().
+			Where(principaltoken.ID(old.ID), principaltoken.RevokedEQ(false)).
+			SetRevoked(true).
+			SetRevokedAt(time.Now()).
+			SetRevokedReason(revokedRotated).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to spend refresh token: %w", err)
+		}
+		if n != 1 {
+			return ErrInvalidRefreshToken
+		}
+
+		out, err = issue(ctx, tx.Client(), IssueInput{
+			PrincipalID:     old.PrincipalID,
+			PrincipalType:   principal.Type(old.PrincipalType.String()),
+			IssuedByAppID:   old.IssuedByAppID,
+			Scopes:          scopes,
+			Audience:        old.Audience,
+			Capabilities:    old.Capabilities,
+			DelegationChain: old.DelegationChain,
+			DPoPJKT:         input.DPoPJKT,
+			SessionID:       old.SessionID,
+			AccessTTL:       old.AccessExpiresAt.Sub(old.CreatedAt),
+			ClientIP:        input.ClientIP,
+			UserAgent:       input.UserAgent,
+			ParentTokenID:   old.ParentTokenID,
+		}, old.FamilyID, old.RefreshExpiresAt)
+		return err
 	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to issue new token: %w", err)
+	if reusedFamily != nil {
+		if rerr := s.revokeFamily(ctx, *reusedFamily, revokedReuse); rerr != nil {
+			return nil, errors.Join(ErrRefreshTokenReused, rerr)
+		}
+		return nil, ErrRefreshTokenReused
 	}
-
-	// Update new token to use same family ID (for rotation tracking)
-	_, err = s.client.PrincipalToken.UpdateOneID(newToken.Token.ID).
-		SetFamilyID(oldToken.FamilyID).
-		Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update token family: %w", err)
+		return nil, err
 	}
-	newToken.Token.FamilyID = oldToken.FamilyID
-
-	// Revoke old token
-	now := time.Now()
-	_, err = s.client.PrincipalToken.UpdateOne(oldToken).
-		SetRevoked(true).
-		SetRevokedAt(now).
-		SetRevokedReason("rotated").
-		Save(ctx)
-	if err != nil {
-		// Log but don't fail
-		_ = err
-	}
-
-	return newToken, nil
+	return out, nil
 }
 
 // Validate validates an access token and returns the token record.
 func (s *DefaultService) Validate(ctx context.Context, accessToken string) (*Token, error) {
-	// Hash the access token to find it
-	hash := sha256.Sum256([]byte(accessToken))
-	accessSig := hex.EncodeToString(hash[:])
-
-	// Find the token
 	token, err := s.client.PrincipalToken.Query().
 		Where(
-			principaltoken.AccessTokenSignatureEQ(accessSig),
+			principaltoken.AccessTokenSignatureEQ(signature(accessToken)),
 			principaltoken.RevokedEQ(false),
 		).
 		Only(ctx)
+	if ent.IsNotFound(err) {
+		return nil, ErrInvalidAccessToken
+	}
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("invalid access token")
-		}
 		return nil, fmt.Errorf("failed to find token: %w", err)
 	}
-
-	// Check expiration
-	if token.AccessExpiresAt.Before(time.Now()) {
-		return nil, fmt.Errorf("access token expired")
+	if !token.AccessExpiresAt.After(time.Now()) {
+		return nil, ErrInvalidAccessToken
 	}
-
-	// Update last used
-	now := time.Now()
-	_, _ = s.client.PrincipalToken.UpdateOne(token).
-		SetLastUsedAt(now).
-		Save(ctx)
-
+	if err := s.client.PrincipalToken.UpdateOne(token).SetLastUsedAt(time.Now()).Exec(ctx); err != nil {
+		return nil, fmt.Errorf("failed to record token use: %w", err)
+	}
 	return entTokenToModel(token), nil
 }
 
@@ -355,15 +354,49 @@ func (s *DefaultService) RevokeAllForPrincipal(ctx context.Context, principalID 
 
 // Helper functions
 
-func generateToken() (plainToken, signature string, err error) {
+func (s *DefaultService) revokeFamily(ctx context.Context, family uuid.UUID, reason string) error {
+	_, err := s.client.PrincipalToken.Update().
+		Where(principaltoken.FamilyIDEQ(family), principaltoken.RevokedEQ(false)).
+		SetRevoked(true).
+		SetRevokedAt(time.Now()).
+		SetRevokedReason(reason).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to revoke token family: %w", err)
+	}
+	return nil
+}
+
+func (s *DefaultService) withTx(ctx context.Context, fn func(*ent.Tx) error) error {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	if err := fn(tx); err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			return errors.Join(err, fmt.Errorf("rollback: %w", rerr))
+		}
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
+	return nil
+}
+
+// signature is the stored form of a token: its hex SHA-256.
+func signature(plain string) string {
+	sum := sha256.Sum256([]byte(plain))
+	return hex.EncodeToString(sum[:])
+}
+
+func generateToken() (plainToken, sig string, err error) {
 	bytes := make([]byte, TokenBytes)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", "", err
 	}
 	plainToken = base64.RawURLEncoding.EncodeToString(bytes)
-	hash := sha256.Sum256([]byte(plainToken))
-	signature = hex.EncodeToString(hash[:])
-	return plainToken, signature, nil
+	return plainToken, signature(plainToken), nil
 }
 
 func entTokenToModel(t *ent.PrincipalToken) *Token {
