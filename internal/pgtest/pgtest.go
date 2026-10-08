@@ -22,12 +22,20 @@ import (
 // EnvDSN names the environment variable holding the admin DSN.
 const EnvDSN = "SF_TEST_PG_DSN"
 
+// EnvRequired, when set to any value, makes a missing EnvDSN fail the test
+// instead of skipping it, so a CI job meant to run PostgreSQL tests cannot
+// pass without running them.
+const EnvRequired = "SF_TEST_PG_REQUIRED"
+
 // DSN returns a DSN for a fresh scratch database that is dropped when the
 // test ends. It skips the test when EnvDSN is unset.
 func DSN(t testing.TB) string {
 	t.Helper()
 	admin := os.Getenv(EnvDSN)
 	if admin == "" {
+		if os.Getenv(EnvRequired) != "" {
+			t.Fatalf("%s is set but %s is not", EnvRequired, EnvDSN)
+		}
 		t.Skipf("%s not set; skipping PostgreSQL integration test", EnvDSN)
 	}
 	u, err := url.Parse(admin)
