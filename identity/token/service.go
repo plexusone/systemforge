@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent"
+	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/principal"
 )
@@ -22,8 +23,9 @@ const (
 	// DefaultAccessTTL is the access token lifetime when none is given.
 	DefaultAccessTTL = 15 * time.Minute
 
-	revokedRotated = "rotated"
-	revokedReuse   = "refresh token reuse"
+	revokedRotated  = "rotated"
+	revokedReuse    = "refresh token reuse"
+	revokedInactive = "principal inactive"
 )
 
 var (
@@ -142,7 +144,7 @@ func issue(ctx context.Context, client *ent.Client, input IssueInput, family uui
 func (s *DefaultService) Refresh(ctx context.Context, input RefreshInput) (*IssuedToken, error) {
 	refreshSig := signature(input.RefreshToken)
 	var out *IssuedToken
-	var reusedFamily *uuid.UUID
+	var reusedFamily, inactiveFamily *uuid.UUID
 
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		old, err := tx.PrincipalToken.Query().
@@ -165,6 +167,14 @@ func (s *DefaultService) Refresh(ctx context.Context, input RefreshInput) (*Issu
 		}
 		if old.DpopJkt != "" && old.DpopJkt != input.DPoPJKT {
 			return ErrDPoPMismatch
+		}
+		active, err := principalActive(ctx, tx.Client(), old.PrincipalID)
+		if err != nil {
+			return err
+		}
+		if !active {
+			inactiveFamily = &old.FamilyID
+			return ErrInvalidRefreshToken
 		}
 
 		scopes := old.Scopes
@@ -213,6 +223,12 @@ func (s *DefaultService) Refresh(ctx context.Context, input RefreshInput) (*Issu
 		}, old.FamilyID, old.RefreshExpiresAt)
 		return err
 	})
+	if inactiveFamily != nil {
+		if rerr := s.revokeFamily(ctx, *inactiveFamily, revokedInactive); rerr != nil {
+			return nil, errors.Join(ErrInvalidRefreshToken, rerr)
+		}
+		return nil, ErrInvalidRefreshToken
+	}
 	if reusedFamily != nil {
 		if rerr := s.revokeFamily(ctx, *reusedFamily, revokedReuse); rerr != nil {
 			return nil, errors.Join(ErrRefreshTokenReused, rerr)
@@ -240,6 +256,16 @@ func (s *DefaultService) Validate(ctx context.Context, accessToken string) (*Tok
 		return nil, fmt.Errorf("failed to find token: %w", err)
 	}
 	if !token.AccessExpiresAt.After(time.Now()) {
+		return nil, ErrInvalidAccessToken
+	}
+	active, err := principalActive(ctx, s.client, token.PrincipalID)
+	if err != nil {
+		return nil, err
+	}
+	if !active {
+		if err := s.revokeFamily(ctx, token.FamilyID, revokedInactive); err != nil {
+			return nil, errors.Join(ErrInvalidAccessToken, err)
+		}
 		return nil, ErrInvalidAccessToken
 	}
 	if err := s.client.PrincipalToken.UpdateOne(token).SetLastUsedAt(time.Now()).Exec(ctx); err != nil {
@@ -382,6 +408,16 @@ func (s *DefaultService) withTx(ctx context.Context, fn func(*ent.Tx) error) err
 		return fmt.Errorf("failed to commit: %w", err)
 	}
 	return nil
+}
+
+// principalActive reports whether a token's principal exists and is
+// active; tokens of a deactivated or deleted principal are not honored.
+func principalActive(ctx context.Context, client *ent.Client, id uuid.UUID) (bool, error) {
+	ok, err := client.Principal.Query().Where(entprincipal.ID(id), entprincipal.Active(true)).Exist(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to check principal: %w", err)
+	}
+	return ok, nil
 }
 
 // signature is the stored form of a token: its hex SHA-256.
