@@ -35,6 +35,14 @@ type Config struct {
 
 	// DefaultRole is the default role for new group members.
 	DefaultRole string
+
+	// TrustProvisionedEmail marks emails written through SCIM as verified.
+	// Enable it only when the identity provider is trusted to assert email
+	// ownership: a verified email lets a later social login with the same
+	// address link to the provisioned user automatically. When false (the
+	// default), provisioned and changed emails are unverified, and social
+	// login refuses to link rather than creating a second identity.
+	TrustProvisionedEmail bool
 }
 
 // DefaultConfig returns the default store configuration.
@@ -246,6 +254,9 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		hc := tx.Human.Create().
 			SetPrincipalID(id).
 			SetEmail(email)
+		if s.config.TrustProvisionedEmail {
+			hc.SetEmailVerifiedAt(time.Now())
+		}
 		if url, ok := primaryPhoto(scimUser.Photos); ok {
 			hc.SetAvatarURL(url)
 		}
@@ -294,6 +305,15 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 			}
 			pu.SetIdentifier(scimUser.UserName)
 			hu.SetEmail(scimUser.UserName)
+			// Verification belongs to an address, so a changed email does
+			// not inherit the previous address's verification.
+			if !strings.EqualFold(scimUser.UserName, p.Edges.Human.Email) {
+				if s.config.TrustProvisionedEmail {
+					hu.SetEmailVerifiedAt(time.Now())
+				} else {
+					hu.ClearEmailVerifiedAt()
+				}
+			}
 		}
 		if scimUser.DisplayName != "" {
 			pu.SetDisplayName(scimUser.DisplayName)
