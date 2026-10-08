@@ -26,8 +26,9 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 **Theme:** Provisioning and non-human identities on the same root
 
-- [ ] `RMI-SYSTEMFORGE-097` SCIM store on principals: pin wire behavior with filter, pagination, and membership tests, then rewrite the store over `Principal`, `Human`, and `PrincipalMembership`
+- [x] `RMI-SYSTEMFORGE-097` SCIM store on principals: pin wire behavior with filter, pagination, and membership tests, then rewrite the store over `Principal`, `Human`, and `PrincipalMembership`
   - Depends on: `RMI-SYSTEMFORGE-095`
+  - Delivered: the store had no tests; pinning them exposed a panic on every ascending list sort, fixed before the rewrite. The pinning suite passed unchanged against the rewrite. Intentional changes: `userName` is not case-exact (RFC 7643), deleting a group member works, and memberships honor the `active` flag. SCIM-provisioned emails are not marked verified, so social login refuses to auto-link them rather than duplicating.
 - [ ] `RMI-SYSTEMFORGE-098` Service accounts: confirm the RFC 7523 path runs on `ServicePrincipal` + keypair credentials; retire `sf_service_accounts` if so, otherwise repoint `creator` to `Principal`
   - Depends on: `RMI-SYSTEMFORGE-093`
 
