@@ -345,6 +345,42 @@ func (c *Client) DeleteRelationship(ctx context.Context, rel *Relationship) erro
 	return nil
 }
 
+// RelationshipFilter selects stored relationships. ResourceType is
+// required; empty fields match anything. SubjectID requires SubjectType.
+type RelationshipFilter struct {
+	ResourceType string
+	ResourceID   string
+	Relation     string
+	SubjectType  string
+	SubjectID    string
+}
+
+// DeleteRelationships deletes every stored relationship matching filter in
+// one atomic request. Deleting nothing is not an error.
+func (c *Client) DeleteRelationships(ctx context.Context, filter *RelationshipFilter) error {
+	if filter.ResourceType == "" {
+		return fmt.Errorf("delete relationships: filter requires a resource type")
+	}
+	if filter.SubjectID != "" && filter.SubjectType == "" {
+		return fmt.Errorf("delete relationships: a subject ID requires a subject type")
+	}
+	f := &pb.RelationshipFilter{
+		ResourceType:       filter.ResourceType,
+		OptionalResourceId: filter.ResourceID,
+		OptionalRelation:   filter.Relation,
+	}
+	if filter.SubjectType != "" {
+		f.OptionalSubjectFilter = &pb.SubjectFilter{
+			SubjectType:       filter.SubjectType,
+			OptionalSubjectId: filter.SubjectID,
+		}
+	}
+	if _, err := c.permClient.DeleteRelationships(ctx, &pb.DeleteRelationshipsRequest{RelationshipFilter: f}); err != nil {
+		return fmt.Errorf("failed to delete relationships: %w", err)
+	}
+	return nil
+}
+
 // LookupSubjects finds all subjects with a given permission on a resource.
 func (c *Client) LookupSubjects(ctx context.Context, req *LookupSubjectsRequest) ([]string, error) {
 	stream, err := c.permClient.LookupSubjects(ctx, &pb.LookupSubjectsRequest{
@@ -409,8 +445,9 @@ func findAvailablePort() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer func() { _ = listener.Close() }()
-
-	addr := listener.Addr().(*net.TCPAddr)
-	return addr.Port, nil
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := listener.Close(); err != nil {
+		return 0, fmt.Errorf("releasing port %d: %w", port, err)
+	}
+	return port, nil
 }

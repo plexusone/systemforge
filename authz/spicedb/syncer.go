@@ -2,6 +2,7 @@ package spicedb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -84,46 +85,20 @@ func (s *Syncer) RegisterPrincipal(_ context.Context, _ uuid.UUID) error {
 	return nil
 }
 
-// UnregisterPrincipal removes all relationships involving a principal.
+// UnregisterPrincipal removes every base-schema relationship involving a
+// principal: its organization memberships, its platform administration,
+// the managers of the principal, and the principals it manages.
+// Relationships an application's own definitions hold to the principal are
+// the application's to remove. Every deletion is attempted, and the
+// failures are returned together.
 func (s *Syncer) UnregisterPrincipal(ctx context.Context, principalID uuid.UUID) error {
-	principalIDStr := principalID.String()
-
-	// Find all organizations where this principal has membership
-	// and remove those relationships
-	for _, role := range orgRoles {
-		// Look up organizations where this principal has this role
-		orgs, err := s.client.LookupResources(ctx, &LookupResourcesRequest{
-			ResourceType: TypeOrganization,
-			Permission:   role,
-			SubjectType:  TypePrincipal,
-			SubjectID:    principalIDStr,
-		})
-		if err != nil {
-			// Log but continue - best effort cleanup
-			continue
-		}
-
-		for _, orgID := range orgs {
-			_ = s.client.DeleteRelationship(ctx, &Relationship{
-				ResourceType: TypeOrganization,
-				ResourceID:   orgID,
-				Relation:     role,
-				SubjectType:  TypePrincipal,
-				SubjectID:    principalIDStr,
-			})
-		}
-	}
-
-	// Remove platform admin if set
-	_ = s.client.DeleteRelationship(ctx, &Relationship{
-		ResourceType: "platform",
-		ResourceID:   "global",
-		Relation:     RelAdmin,
-		SubjectType:  TypePrincipal,
-		SubjectID:    principalIDStr,
+	id := principalID.String()
+	return s.deleteAll(ctx, "unregister principal "+id, []*RelationshipFilter{
+		{ResourceType: TypeOrganization, SubjectType: TypePrincipal, SubjectID: id},
+		{ResourceType: "platform", SubjectType: TypePrincipal, SubjectID: id},
+		{ResourceType: TypePrincipal, ResourceID: id},
+		{ResourceType: TypePrincipal, SubjectType: TypePrincipal, SubjectID: id},
 	})
-
-	return nil
 }
 
 // RegisterOrganization creates an organization with an initial owner.
@@ -137,35 +112,27 @@ func (s *Syncer) RegisterOrganization(ctx context.Context, orgID, ownerID uuid.U
 	})
 }
 
-// UnregisterOrganization removes an organization and all its membership relationships.
+// UnregisterOrganization removes every relationship stored on an
+// organization. Relationships an application's own definitions hold to the
+// organization are the application's to remove.
 func (s *Syncer) UnregisterOrganization(ctx context.Context, orgID uuid.UUID) error {
-	orgIDStr := orgID.String()
+	return s.deleteAll(ctx, "unregister organization "+orgID.String(), []*RelationshipFilter{
+		{ResourceType: TypeOrganization, ResourceID: orgID.String()},
+	})
+}
 
-	// Remove all membership relationships for this organization
-	for _, role := range orgRoles {
-		// Look up all principals with this role
-		principals, err := s.client.LookupSubjects(ctx, &LookupSubjectsRequest{
-			ResourceType: TypeOrganization,
-			ResourceID:   orgIDStr,
-			Permission:   role,
-			SubjectType:  TypePrincipal,
-		})
-		if err != nil {
-			// Log but continue - best effort cleanup
-			continue
-		}
-
-		for _, principalID := range principals {
-			_ = s.client.DeleteRelationship(ctx, &Relationship{
-				ResourceType: TypeOrganization,
-				ResourceID:   orgIDStr,
-				Relation:     role,
-				SubjectType:  TypePrincipal,
-				SubjectID:    principalID,
-			})
+// deleteAll deletes the relationships matching each filter, attempting
+// every filter and joining the failures.
+func (s *Syncer) deleteAll(ctx context.Context, op string, filters []*RelationshipFilter) error {
+	var errs []error
+	for _, f := range filters {
+		if err := s.client.DeleteRelationships(ctx, f); err != nil {
+			errs = append(errs, err)
 		}
 	}
-
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
 	return nil
 }
 
