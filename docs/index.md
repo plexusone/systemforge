@@ -65,7 +65,7 @@ func main() {
 
 | Module | Status | Description |
 |--------|--------|-------------|
-| Identity | ✅ Ready | User, Org, Membership, OAuthAccount |
+| Identity | ✅ Ready | Principal, Human, Org, Membership, Credential, ExternalIdentity |
 | OAuth 2.0 | ✅ Ready | Authorization Code, Client Credentials, Refresh Token |
 | API Keys | ✅ Ready | Server-to-server authentication |
 | Service Accounts | ✅ Ready | JWT Bearer authentication |

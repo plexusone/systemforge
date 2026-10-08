@@ -37,16 +37,17 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 
 ### Identity Module
 
-- 👤 **Users** - Email, password hash (Argon2id), platform admin flag
+- 👤 **Principals** - One identity root for humans, applications, agents, and services; humans carry email, names, and a platform admin flag
 - 🏢 **Organizations** - Multi-tenant with name, slug, plan, settings
-- 🔗 **Memberships** - User-org relationships with flexible roles
+- 🔗 **Memberships** - Principal-organization relationships with flexible roles
 - 👑 **Ownership Transfer** - Transaction-safe organization ownership transfers
-- 🔐 **OAuth Accounts** - External OAuth provider links (GitHub, Google)
+- 🔐 **Credentials** - Passwords (Argon2id), API keys, keypairs, and client secrets owned by a principal
+- 🔗 **External Identities** - Upstream logins (GitHub, Google, federation) linked to a principal by provider and subject
 - 🌐 **Social Login** - GitHub/Google login served centrally by SystemAuth (`__Host-sf_login` session, provider-subject account linking, logout, consent)
 - 🤝 **Relying Parties** - `identity/relyingparty`: apps federate to SystemAuth via OIDC (ID-token/JWKS verification, `sub` → `sf_principal_id` linking), mount the `/bff/*` cookie-session surface, and accept SystemAuth JWTs or API keys from programmatic clients
 - 🧩 **Embeddable SystemAuth** - `identity/systemauthsvc` builds a production-checked SystemAuth `http.Handler` a host binary can mount next to its own apps, with provider metadata for discovery-free in-process relying parties
 - 🤖 **AI Agent Requests** - `identity/requestprincipal`: one protocol-neutral request principal for people and agents; `aauthrs` verifies AAuth-signed agent requests (HTTP message signatures, person/auth tokens from trusted issuers, resource-token challenges) next to the relying-party human paths
-- 🔑 **API Keys** - Machine-to-machine authentication with scopes
+- 🔑 **API Keys** - Scoped machine-to-machine credentials on a principal
 
 ### OAuth 2.0 Server (Fosite)
 
@@ -54,8 +55,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 - 🤖 **Client Credentials** - Service-to-service auth
 - 🔄 **Refresh Token** - Rotation with reuse detection (family revocation) and absolute lifetime
 - 🪪 **OpenID Connect** - RS256 ID tokens, UserInfo, JWKS with key ID, optional JWT access tokens
-- 📝 **JWT Bearer (RFC 7523)** - Service account authentication
-- ⚙️ **Service Accounts** - Non-human identities with RSA/EC key pairs
+- ⚙️ **Service Principals** - Non-human identities with scoped credentials and keypairs (the RFC 7523 JWT Bearer grant is not yet implemented)
 - 🔍 **Token Introspection & Revocation** - RFC 7662/7009
 
 ### Session Module
@@ -119,7 +119,7 @@ go get github.com/plexusone/systemforge
 
 ### Using Identity Schemas
 
-SystemForge provides Ent schemas with `cf_` table prefix for side-by-side migration.
+SystemForge provides Ent schemas with the `sf_` table prefix for side-by-side migration.
 
 #### Direct Schema Usage
 
@@ -128,8 +128,10 @@ package main
 
 import (
     "context"
+    "log"
 
     "github.com/plexusone/systemforge/identity/ent"
+    "github.com/plexusone/systemforge/identity/principal"
     _ "github.com/lib/pq"
 )
 
@@ -145,11 +147,15 @@ func main() {
         panic(err)
     }
 
-    // Create a user
-    user, err := client.User.Create().
-        SetEmail("user@example.com").
-        SetName("Example User").
-        Save(context.Background())
+    // Create a human principal
+    person, err := principal.NewService(client).CreateHuman(context.Background(), principal.CreateHumanInput{
+        Email:       "user@example.com",
+        DisplayName: "Example User",
+    })
+    if err != nil {
+        panic(err)
+    }
+    log.Printf("created principal %s", person.ID) // the ID used everywhere else in SystemForge
 }
 ```
 
@@ -284,7 +290,7 @@ r.With(mw.RequireAction(authz.ResourceType("users"), authz.ActionRead)).Get("/us
 ```
 github.com/plexusone/systemforge/
 ├── identity/              # User, Organization, Membership, OAuth
-│   ├── ent/schema/        # Ent schemas with cf_ prefix
+│   ├── ent/schema/        # Ent schemas with sf_ prefix
 │   ├── apikey/            # API key service
 │   ├── oauth/             # OAuth 2.0 server (Fosite)
 │   ├── oauthclient/       # GitHub/Google/SystemAuth OAuth client primitives
@@ -351,23 +357,26 @@ SystemForge creates the following tables (all prefixed with `sf_`):
 
 | Table | Description |
 |-------|-------------|
-| `sf_users` | User accounts |
+| `sf_principals` | Identity root for humans, applications, agents, and services |
+| `sf_humans` | Human extension: email, names, avatar, verification |
+| `sf_applications` | Application extension for OAuth-client principals |
+| `sf_agents` | Agent extension for AI-agent principals |
+| `sf_service_principals` | Service extension for non-human service identities |
+| `sf_credentials` | Passwords, API keys, keypairs, and secrets owned by principals |
+| `sf_principal_tokens` | Tokens issued to principals |
 | `sf_organizations` | Multi-tenant organizations |
-| `sf_memberships` | User-organization relationships |
-| `sf_oauth_accounts` | External OAuth provider links |
-| `sf_external_identities` | Upstream login identities (GitHub/Google) linked to principals |
-| `sf_refresh_tokens` | JWT refresh token tracking |
-| `sf_api_keys` | Developer API keys |
+| `sf_principal_memberships` | Principal-organization relationships |
+| `sf_invites` | Organization invitations |
+| `sf_external_identities` | Upstream login identities (GitHub/Google/federation) linked to principals |
 | `sf_oauth_apps` | OAuth client applications |
 | `sf_oauth_app_secrets` | Client secrets (hashed) |
 | `sf_oauth_tokens` | Issued OAuth tokens |
 | `sf_oauth_auth_codes` | Authorization codes |
-| `sf_oauth_consents` | User consent records |
+| `sf_oauth_consents` | Principal consent records |
 | `sf_login_sessions` | SystemAuth login sessions (token hashes only) |
 | `sf_login_states` | In-flight upstream social logins (single-use) |
 | `sf_consent_grants` | Consent-page grants per principal, client and scope |
-| `sf_service_accounts` | Non-human identities |
-| `sf_service_account_key_pairs` | RSA/EC key pairs |
+| `sf_listings`, `sf_licenses`, `sf_subscriptions`, `sf_seat_assignments` | Marketplace catalog, entitlements, billing, and seats |
 
 Applications federating to SystemAuth create two more tables in their own
 database with `identity/relyingparty/pgstore.EnsureSchema`:

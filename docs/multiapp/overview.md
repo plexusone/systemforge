@@ -399,4 +399,4 @@ Apps can optionally integrate with SystemAuth for:
 - Centralized user management
 - Cross-app analytics
 
-This is enabled by setting a `federation_id` on users when they authenticate via SystemAuth.
+This works by linking each person's SystemAuth identity to their principal: relying parties store the SystemAuth `sub` as `sf_principal_id`, and federation sync records the hub identity as an external identity on the principal.

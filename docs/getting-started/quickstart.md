@@ -120,14 +120,32 @@ curl http://localhost:8080/api/me \
 
 ## Step 4: Add User Registration
 
+A person is a human principal; the password is a credential that belongs to it.
+
 ```go
-// Create a new user
-user, err := client.User.Create().
-    SetEmail("user@example.com").
-    SetName("John Doe").
-    SetPasswordHash(hashPassword("secure-password")).
-    Save(ctx)
+import (
+    "github.com/plexusone/systemforge/identity/credential"
+    "github.com/plexusone/systemforge/identity/principal"
+)
+
+person, err := principal.NewService(client).CreateHuman(ctx, principal.CreateHumanInput{
+    Email:       "user@example.com",
+    DisplayName: "John Doe",
+})
+if err != nil {
+    return err
+}
+
+err = credential.NewService(client).CreatePassword(ctx, credential.CreatePasswordInput{
+    PrincipalID: person.ID,
+    Password:    "secure-password",
+})
+if err != nil {
+    return err
+}
 ```
+
+`CreatePassword` hashes the password with Argon2id before storing it.
 
 ## Next Steps
 

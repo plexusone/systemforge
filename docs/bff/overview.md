@@ -169,36 +169,34 @@ func handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 ## Token Refresh Hook
 
-The `OnRefresh` hook handles token refresh using your app's token storage:
+The `OnRefresh` hook exchanges the session's refresh token for new tokens. With SystemAuth as the authorization server, the refresh token never needs to be stored by your application: SystemAuth keeps token state in its own database, rotates refresh tokens on every use, and revokes the whole token family if a used refresh token is replayed. The hook only calls the token endpoint:
 
 ```go
+import "golang.org/x/oauth2"
+
+oauthCfg := &oauth2.Config{
+    ClientID:     "my-app",
+    ClientSecret: clientSecret,
+    Endpoint:     oauth2.Endpoint{TokenURL: "https://auth.example.com/oauth/token"},
+}
+
 OnRefresh: func(ctx context.Context, session *bff.Session) (*bff.TokenRefreshResult, error) {
-    // 1. Validate refresh token in your database
-    token, err := db.RefreshToken.Query().
-        Where(refreshtoken.Token(session.RefreshToken)).
-        Where(refreshtoken.RevokedEQ(false)).
-        Only(ctx)
+    tok, err := oauthCfg.TokenSource(ctx, &oauth2.Token{
+        RefreshToken: session.RefreshToken,
+    }).Token()
     if err != nil {
         return nil, err
     }
-
-    // 2. Generate new tokens
-    newAccess, newRefresh := generateTokens(token.UserID)
-
-    // 3. Revoke old refresh token
-    db.RefreshToken.UpdateOne(token).SetRevoked(true).Save(ctx)
-
-    // 4. Store new refresh token
-    db.RefreshToken.Create().SetToken(newRefresh).Save(ctx)
-
     return &bff.TokenRefreshResult{
-        AccessToken:           newAccess,
-        RefreshToken:          newRefresh,
-        AccessTokenExpiresIn:  15 * time.Minute,
+        AccessToken:           tok.AccessToken,
+        RefreshToken:          tok.RefreshToken, // rotated by SystemAuth
+        AccessTokenExpiresIn:  time.Until(tok.Expiry),
         RefreshTokenExpiresIn: 7 * 24 * time.Hour,
     }, nil
 }
 ```
+
+The handler writes the new tokens back to the session store. For refresh in middleware rather than an endpoint, `bff.NewRefresher` performs the same exchange against `RefreshConfig.TokenEndpoint`, including DPoP key rotation.
 
 ## Security Features
 
