@@ -53,3 +53,34 @@ func TestSetupHelpersAgainstSchema(t *testing.T) {
 		}
 	}
 }
+
+// TestMigrateSystemForgeTables enables RLS on every table in
+// SystemForgeTables against the real identity schema, so the list cannot
+// name a table the schema no longer has. It needs PostgreSQL and is skipped
+// unless pgtest.EnvDSN is set.
+func TestMigrateSystemForgeTables(t *testing.T) {
+	db := pgtest.Open(t)
+	ctx := context.Background()
+	// The Ent client is not closed: closing it would close db, which pgtest owns.
+	client := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, db)))
+	if err := client.Schema.Create(ctx); err != nil {
+		t.Fatalf("creating schema: %v", err)
+	}
+
+	m := rls.NewMigrator(db, nil)
+	if err := m.MigrateSystemForge(ctx); err != nil {
+		t.Fatalf("MigrateSystemForge: %v", err)
+	}
+	statuses, err := m.VerifyRLS(ctx)
+	if err != nil {
+		t.Fatalf("VerifyRLS: %v", err)
+	}
+	if len(statuses) != len(rls.SystemForgeTables) {
+		t.Fatalf("statuses = %d, want %d", len(statuses), len(rls.SystemForgeTables))
+	}
+	for _, s := range statuses {
+		if !s.RLSEnabled || !s.RLSForced || !s.HasPolicies {
+			t.Errorf("%s: %+v, want RLS enabled, forced, and with policies", s.Table, s)
+		}
+	}
+}
