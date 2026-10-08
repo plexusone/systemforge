@@ -22,6 +22,7 @@ type Provider struct {
 	// Callbacks for looking up data
 	getRoleFn       func(ctx context.Context, principalID, orgID uuid.UUID) (string, error)
 	isPlatformAdmin func(ctx context.Context, principalID uuid.UUID) (bool, error)
+	managerRoles    authz.ManagerRoleGetter
 
 	// Options
 	allowOwnerFullAccess bool
@@ -56,6 +57,16 @@ func WithRoleGetter(fn func(ctx context.Context, principalID, orgID uuid.UUID) (
 func WithPlatformAdminChecker(fn func(ctx context.Context, principalID uuid.UUID) (bool, error)) Option {
 	return func(a *Provider) {
 		a.isPlatformAdmin = fn
+	}
+}
+
+// WithManagerRoleGetter sets the function that returns the manager roles
+// one principal holds over another. With it, permissions on
+// authz.ResourceTypePrincipal resources follow authz.ManagerRolePermissions,
+// matching the principal relations of the SpiceDB base schema.
+func WithManagerRoleGetter(fn authz.ManagerRoleGetter) Option {
+	return func(a *Provider) {
+		a.managerRoles = fn
 	}
 }
 
@@ -103,6 +114,11 @@ func (a *Provider) Can(ctx context.Context, principal authz.Principal, action au
 	// Check owner access
 	if a.allowOwnerFullAccess && resource.IsOwner(principal.ID) {
 		return true, nil
+	}
+
+	if resource.Type == authz.ResourceTypePrincipal && resource.ID != nil {
+		role, err := a.managerRoleFor(ctx, principal.ID, *resource.ID, action)
+		return role != "", err
 	}
 
 	// Get organization ID from resource
@@ -223,6 +239,21 @@ func (a *Provider) Decide(ctx context.Context, principal authz.Principal, action
 		return authz.Decision{Allowed: true, Reason: "resource owner"}, nil
 	}
 
+	if resource.Type == authz.ResourceTypePrincipal && resource.ID != nil {
+		role, err := a.managerRoleFor(ctx, principal.ID, *resource.ID, action)
+		if err != nil {
+			return authz.Decision{Allowed: false, Reason: "error getting manager roles"}, err
+		}
+		if role == "" {
+			return authz.Decision{Allowed: false, Reason: fmt.Sprintf("no manager role grants %s", action)}, nil
+		}
+		return authz.Decision{
+			Allowed:  true,
+			Reason:   fmt.Sprintf("manager role %s grants %s", role, action),
+			PolicyID: fmt.Sprintf("manager:%s:permission:%s", role, action),
+		}, nil
+	}
+
 	// Get organization ID from resource
 	if resource.OrgID == nil {
 		allowed, err := a.checkPermissionWithoutOrg(principal, action, resource)
@@ -261,6 +292,24 @@ func (a *Provider) Decide(ctx context.Context, principal authz.Principal, action
 		Allowed: false,
 		Reason:  fmt.Sprintf("role %s lacks permission %s", role, permission),
 	}, nil
+}
+
+// managerRoleFor returns a manager role managerID holds over managedID
+// that grants action, or "" when none does.
+func (a *Provider) managerRoleFor(ctx context.Context, managerID, managedID uuid.UUID, action authz.Action) (string, error) {
+	if a.managerRoles == nil {
+		return "", nil
+	}
+	roles, err := a.managerRoles(ctx, managerID, managedID)
+	if err != nil {
+		return "", fmt.Errorf("getting manager roles: %w", err)
+	}
+	for _, role := range roles {
+		if authz.ManagerRoleAllows(role, action) {
+			return role, nil
+		}
+	}
+	return "", nil
 }
 
 // checkPermissionWithoutOrg handles authorization when no org context is available.
