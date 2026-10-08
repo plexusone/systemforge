@@ -48,13 +48,18 @@ entitlements from a login either.
    organization role) and `apps`, a map from application identifier to the
    principal's application role there. An application absent from `apps`
    is one the principal may not open.
-2. **Owners and admins hold `admin` in every entitled application**,
-   implicitly, so an organization can always be administered. Members hold
+2. **Owners hold `admin` in every entitled application**, implicitly, so
+   no application can become unadministrable. **Admins do not:** an admin
+   manages the organization (members, invites, application roles,
+   settings) and holds only the application roles assigned to them, like a
+   member. An admin may assign application roles to themselves; the
+   assignment is explicit and audited, which is the point. Members hold
    only the application roles assigned to them. Collaborators hold none;
    their access is by resource grant.
-3. **Members get no application access by default.** Adding or inviting a
-   member requires choosing an application role for at least one entitled
-   application; applications left unselected stay closed to that member.
+3. **Members and admins get no application access by default.** Adding or
+   inviting one requires choosing an application role for at least one
+   entitled application; applications left unselected stay closed to that
+   person.
    Roles are changed per application without touching the membership, and
    removal from the organization removes every application role and grant.
 4. **Custom roles are not supported.** The roles available in an
