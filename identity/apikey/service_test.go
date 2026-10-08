@@ -2,6 +2,7 @@ package apikey
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -108,7 +109,8 @@ func TestNewService(t *testing.T) {
 func TestService_Create(t *testing.T) {
 	store := newMockStore()
 	svc := NewService(ServiceConfig{
-		Store: store,
+		AllowAnyScope: true,
+		Store:         store,
 	})
 
 	ownerID := uuid.New()
@@ -368,7 +370,7 @@ func TestService_Validate_RevokedKey(t *testing.T) {
 		OwnerID: uuid.New(),
 	})
 
-	_ = svc.Revoke(context.Background(), result.APIKey.ID, "test revocation")
+	_ = svc.Revoke(context.Background(), result.APIKey.OwnerID, result.APIKey.ID, "test revocation")
 
 	_, err := svc.Validate(context.Background(), result.Key)
 	if err != ErrKeyRevoked {
@@ -379,7 +381,8 @@ func TestService_Validate_RevokedKey(t *testing.T) {
 func TestService_ValidateWithScope(t *testing.T) {
 	store := newMockStore()
 	svc := NewService(ServiceConfig{
-		Store: store,
+		AllowAnyScope: true,
+		Store:         store,
 	})
 
 	result, _ := svc.Create(context.Background(), CreateKeyRequest{
@@ -415,13 +418,13 @@ func TestService_Revoke(t *testing.T) {
 		OwnerID: uuid.New(),
 	})
 
-	err := svc.Revoke(context.Background(), result.APIKey.ID, "security concern")
+	err := svc.Revoke(context.Background(), result.APIKey.OwnerID, result.APIKey.ID, "security concern")
 	if err != nil {
 		t.Fatalf("Revoke() error: %v", err)
 	}
 
 	// Verify revocation
-	apiKey, _ := svc.Get(context.Background(), result.APIKey.ID)
+	apiKey, _ := svc.Get(context.Background(), result.APIKey.OwnerID, result.APIKey.ID)
 	if !apiKey.Revoked {
 		t.Error("Revoked = false, want true")
 	}
@@ -444,13 +447,13 @@ func TestService_Delete(t *testing.T) {
 		OwnerID: uuid.New(),
 	})
 
-	err := svc.Delete(context.Background(), result.APIKey.ID)
+	err := svc.Delete(context.Background(), result.APIKey.OwnerID, result.APIKey.ID)
 	if err != nil {
 		t.Fatalf("Delete() error: %v", err)
 	}
 
 	// Verify deletion
-	_, err = svc.Get(context.Background(), result.APIKey.ID)
+	_, err = svc.Get(context.Background(), result.APIKey.OwnerID, result.APIKey.ID)
 	if err != ErrKeyNotFound {
 		t.Errorf("Get() after Delete() error = %v, want ErrKeyNotFound", err)
 	}
@@ -534,7 +537,7 @@ func TestService_RecordUsage(t *testing.T) {
 	}
 
 	// Verify usage was recorded
-	apiKey, _ := svc.Get(context.Background(), result.APIKey.ID)
+	apiKey, _ := svc.Get(context.Background(), result.APIKey.OwnerID, result.APIKey.ID)
 	if apiKey.LastUsedAt == nil {
 		t.Error("LastUsedAt should not be nil")
 	}
@@ -723,5 +726,125 @@ func TestService_DefaultExpiry(t *testing.T) {
 
 	if result.APIKey.ExpiresAt == nil {
 		t.Error("ExpiresAt should not be nil when DefaultExpiry is set")
+	}
+}
+
+func TestService_Create_NoScopesConfiguredGrantsNone(t *testing.T) {
+	svc := NewService(ServiceConfig{Store: newMockStore()})
+
+	for _, scope := range []string{"*", "read:users", "admin:*"} {
+		_, err := svc.Create(context.Background(), CreateKeyRequest{
+			Name: "k", OwnerID: uuid.New(), Scopes: []string{scope},
+		})
+		if !errors.Is(err, ErrScopeNotAllowed) {
+			t.Errorf("scope %q with no allow-list: error = %v, want ErrScopeNotAllowed", scope, err)
+		}
+	}
+
+	// A key with no scopes needs no allow-list.
+	if _, err := svc.Create(context.Background(), CreateKeyRequest{Name: "k", OwnerID: uuid.New()}); err != nil {
+		t.Errorf("scopeless key: %v", err)
+	}
+}
+
+func TestService_Create_WildcardOnlyWhenListed(t *testing.T) {
+	svc := NewService(ServiceConfig{Store: newMockStore(), AllowedScopes: []string{"read:*"}})
+
+	if _, err := svc.Create(context.Background(), CreateKeyRequest{
+		Name: "k", OwnerID: uuid.New(), Scopes: []string{"read:users"},
+	}); err != nil {
+		t.Errorf("read:users under read:*: %v", err)
+	}
+	if _, err := svc.Create(context.Background(), CreateKeyRequest{
+		Name: "k", OwnerID: uuid.New(), Scopes: []string{"*"},
+	}); !errors.Is(err, ErrScopeNotAllowed) {
+		t.Errorf("* under read:*: error = %v, want ErrScopeNotAllowed", err)
+	}
+}
+
+func TestService_MaxKeysPerUser(t *testing.T) {
+	svc := NewService(ServiceConfig{Store: newMockStore(), MaxKeysPerUser: 2})
+	owner, other := uuid.New(), uuid.New()
+	ctx := context.Background()
+
+	first, err := svc.Create(ctx, CreateKeyRequest{Name: "1", OwnerID: owner})
+	if err != nil {
+		t.Fatalf("first: %v", err)
+	}
+	if _, err := svc.Create(ctx, CreateKeyRequest{Name: "2", OwnerID: owner}); err != nil {
+		t.Fatalf("second: %v", err)
+	}
+	if _, err := svc.Create(ctx, CreateKeyRequest{Name: "3", OwnerID: owner}); !errors.Is(err, ErrTooManyKeys) {
+		t.Fatalf("third: error = %v, want ErrTooManyKeys", err)
+	}
+
+	// Another user is unaffected, and revoking frees a slot.
+	if _, err := svc.Create(ctx, CreateKeyRequest{Name: "o", OwnerID: other}); err != nil {
+		t.Errorf("other user: %v", err)
+	}
+	if err := svc.Revoke(ctx, owner, first.APIKey.ID, "rotate"); err != nil {
+		t.Fatalf("revoke: %v", err)
+	}
+	if _, err := svc.Create(ctx, CreateKeyRequest{Name: "3", OwnerID: owner}); err != nil {
+		t.Errorf("after revoke: %v", err)
+	}
+}
+
+func TestService_ManagementRequiresOwner(t *testing.T) {
+	svc := NewService(ServiceConfig{Store: newMockStore()})
+	ctx := context.Background()
+	owner, intruder := uuid.New(), uuid.New()
+
+	k, err := svc.Create(ctx, CreateKeyRequest{Name: "k", OwnerID: owner})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := k.APIKey.ID
+
+	if _, err := svc.Get(ctx, intruder, id); !errors.Is(err, ErrKeyNotFound) {
+		t.Errorf("Get by non-owner: error = %v, want ErrKeyNotFound", err)
+	}
+	if err := svc.Revoke(ctx, intruder, id, "x"); !errors.Is(err, ErrKeyNotFound) {
+		t.Errorf("Revoke by non-owner: error = %v, want ErrKeyNotFound", err)
+	}
+	if err := svc.Delete(ctx, intruder, id); !errors.Is(err, ErrKeyNotFound) {
+		t.Errorf("Delete by non-owner: error = %v, want ErrKeyNotFound", err)
+	}
+	if err := svc.Revoke(ctx, uuid.Nil, id, "x"); !errors.Is(err, ErrKeyNotFound) {
+		t.Errorf("Revoke with nil owner: error = %v, want ErrKeyNotFound", err)
+	}
+
+	// The key is untouched by the failed attempts.
+	got, err := svc.Get(ctx, owner, id)
+	if err != nil || got.Revoked {
+		t.Errorf("key changed by non-owner: revoked=%v err=%v", got != nil && got.Revoked, err)
+	}
+}
+
+func TestService_RevokeInOrganization(t *testing.T) {
+	svc := NewService(ServiceConfig{Store: newMockStore()})
+	ctx := context.Background()
+	org, otherOrg := uuid.New(), uuid.New()
+
+	inOrg, err := svc.Create(ctx, CreateKeyRequest{Name: "a", OwnerID: uuid.New(), OrganizationID: &org})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	personal, err := svc.Create(ctx, CreateKeyRequest{Name: "b", OwnerID: uuid.New()})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	if err := svc.RevokeInOrganization(ctx, otherOrg, inOrg.APIKey.ID, "x"); !errors.Is(err, ErrKeyNotFound) {
+		t.Errorf("other org: error = %v, want ErrKeyNotFound", err)
+	}
+	if err := svc.RevokeInOrganization(ctx, org, personal.APIKey.ID, "x"); !errors.Is(err, ErrKeyNotFound) {
+		t.Errorf("key with no org: error = %v, want ErrKeyNotFound", err)
+	}
+	if err := svc.RevokeInOrganization(ctx, org, inOrg.APIKey.ID, "offboarding"); err != nil {
+		t.Fatalf("own org: %v", err)
+	}
+	if _, err := svc.Validate(ctx, inOrg.Key); !errors.Is(err, ErrKeyRevoked) {
+		t.Errorf("revoked key validates: error = %v", err)
 	}
 }

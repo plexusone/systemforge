@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -29,6 +30,7 @@ var (
 	ErrKeyRevoked      = errors.New("API key revoked")
 	ErrInvalidScope    = errors.New("invalid scope")
 	ErrScopeNotAllowed = errors.New("scope not allowed")
+	ErrTooManyKeys     = errors.New("too many API keys")
 )
 
 // Environment represents the API key environment.
@@ -226,11 +228,25 @@ type ServiceConfig struct {
 	// Prefix is the key prefix (default: "sf").
 	Prefix string
 
-	// AllowedScopes restricts which scopes can be granted.
-	// If empty, any scope is allowed.
+	// AllowedScopes restricts which scopes can be granted. An entry ending in
+	// ":*" allows every scope with that prefix. A key requesting a scope that
+	// no entry allows is refused, including the wildcard scope "*" unless an
+	// entry lists it exactly.
+	//
+	// If empty, no scopes can be granted unless AllowAnyScope is set: the
+	// service cannot know what the caller is entitled to, so an unconfigured
+	// service does not hand out arbitrary privilege.
 	AllowedScopes []string
 
-	// MaxKeysPerUser limits keys per user (0 = unlimited).
+	// AllowAnyScope lets keys request any scope when AllowedScopes is empty.
+	// Set it only when the caller of Create has already limited the scopes to
+	// what its user may hold.
+	AllowAnyScope bool
+
+	// MaxKeysPerUser limits the active (unrevoked, unexpired) keys per user
+	// (0 = unlimited). The count and the insert are not one atomic step, so
+	// concurrent Create calls for one user can exceed the limit by the number
+	// in flight; stores that need a hard cap should enforce it themselves.
 	MaxKeysPerUser int
 
 	// DefaultExpiry is the default key lifetime.
@@ -272,12 +288,14 @@ func (s *Service) Create(ctx context.Context, req CreateKeyRequest) (*GeneratedK
 	}
 
 	// Validate scopes
-	if len(s.allowedScopes) > 0 {
-		for _, scope := range req.Scopes {
-			if !s.isAllowedScope(scope) {
-				return nil, fmt.Errorf("%w: %s", ErrScopeNotAllowed, scope)
-			}
+	for _, scope := range req.Scopes {
+		if !s.isAllowedScope(scope) {
+			return nil, fmt.Errorf("%w: %s", ErrScopeNotAllowed, scope)
 		}
+	}
+
+	if err := s.checkKeyLimit(ctx, req.OwnerID); err != nil {
+		return nil, err
 	}
 
 	// Set defaults
@@ -348,7 +366,7 @@ func (s *Service) Validate(ctx context.Context, key string) (*APIKey, error) {
 
 	// Verify the hash
 	keyHash := s.hashKey(key)
-	if keyHash != storedHash {
+	if subtle.ConstantTimeCompare([]byte(keyHash), []byte(storedHash)) != 1 {
 		return nil, ErrInvalidKey
 	}
 
@@ -379,9 +397,17 @@ func (s *Service) ValidateWithScope(ctx context.Context, key, scope string) (*AP
 	return apiKey, nil
 }
 
-// Get retrieves a key by ID.
-func (s *Service) Get(ctx context.Context, id uuid.UUID) (*APIKey, error) {
-	return s.config.Store.GetByID(ctx, id)
+// Get retrieves a key by ID. The key must belong to ownerID; a key owned by
+// anyone else is reported as ErrKeyNotFound so IDs cannot be probed.
+func (s *Service) Get(ctx context.Context, ownerID, id uuid.UUID) (*APIKey, error) {
+	apiKey, err := s.config.Store.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if ownerID == uuid.Nil || apiKey.OwnerID != ownerID {
+		return nil, ErrKeyNotFound
+	}
+	return apiKey, nil
 }
 
 // List retrieves all keys for a user.
@@ -394,13 +420,32 @@ func (s *Service) ListByOrganization(ctx context.Context, orgID uuid.UUID) ([]*A
 	return s.config.Store.ListByOrganization(ctx, orgID)
 }
 
-// Revoke revokes an API key.
-func (s *Service) Revoke(ctx context.Context, id uuid.UUID, reason string) error {
+// Revoke revokes an API key owned by ownerID. A key owned by anyone else is
+// reported as ErrKeyNotFound.
+func (s *Service) Revoke(ctx context.Context, ownerID, id uuid.UUID, reason string) error {
+	apiKey, err := s.Get(ctx, ownerID, id)
+	if err != nil {
+		return err
+	}
+	return s.revoke(ctx, apiKey, reason)
+}
+
+// RevokeInOrganization revokes an API key scoped to orgID, for an
+// organization administrator who does not own it. The caller must already have
+// authorized the administrator for orgID. A key scoped to another organization
+// or to none is reported as ErrKeyNotFound.
+func (s *Service) RevokeInOrganization(ctx context.Context, orgID, id uuid.UUID, reason string) error {
 	apiKey, err := s.config.Store.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
+	if orgID == uuid.Nil || apiKey.OrganizationID == nil || *apiKey.OrganizationID != orgID {
+		return ErrKeyNotFound
+	}
+	return s.revoke(ctx, apiKey, reason)
+}
 
+func (s *Service) revoke(ctx context.Context, apiKey *APIKey, reason string) error {
 	now := time.Now()
 	apiKey.Revoked = true
 	apiKey.RevokedAt = &now
@@ -410,9 +455,35 @@ func (s *Service) Revoke(ctx context.Context, id uuid.UUID, reason string) error
 	return s.config.Store.Update(ctx, apiKey)
 }
 
-// Delete permanently removes an API key.
-func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
+// Delete permanently removes an API key owned by ownerID. A key owned by
+// anyone else is reported as ErrKeyNotFound.
+func (s *Service) Delete(ctx context.Context, ownerID, id uuid.UUID) error {
+	if _, err := s.Get(ctx, ownerID, id); err != nil {
+		return err
+	}
 	return s.config.Store.Delete(ctx, id)
+}
+
+// checkKeyLimit refuses a new key when ownerID already holds MaxKeysPerUser
+// active keys.
+func (s *Service) checkKeyLimit(ctx context.Context, ownerID uuid.UUID) error {
+	if s.config.MaxKeysPerUser <= 0 {
+		return nil
+	}
+	keys, err := s.config.Store.ListByOwner(ctx, ownerID)
+	if err != nil {
+		return fmt.Errorf("count keys: %w", err)
+	}
+	active := 0
+	for _, k := range keys {
+		if k.IsValid() {
+			active++
+		}
+	}
+	if active >= s.config.MaxKeysPerUser {
+		return fmt.Errorf("%w: limit is %d", ErrTooManyKeys, s.config.MaxKeysPerUser)
+	}
+	return nil
 }
 
 // RecordUsage updates the last used timestamp and IP.
@@ -508,7 +579,7 @@ func (s *Service) parseKeyPrefix(key string) (string, error) {
 // isAllowedScope checks if a scope is in the allowed list.
 func (s *Service) isAllowedScope(scope string) bool {
 	if len(s.allowedScopes) == 0 {
-		return true
+		return s.config.AllowAnyScope
 	}
 
 	// Check exact match

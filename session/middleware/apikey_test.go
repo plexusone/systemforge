@@ -100,7 +100,8 @@ func (m *mockStore) UpdateLastUsed(ctx context.Context, id uuid.UUID, ip string)
 func createTestService() (*apikey.Service, *mockStore) {
 	store := newMockStore()
 	svc := apikey.NewService(apikey.ServiceConfig{
-		Store: store,
+		Store:         store,
+		AllowAnyScope: true, // the tests mint keys with arbitrary scopes
 	})
 	return svc, store
 }
@@ -207,7 +208,9 @@ func TestAPIKeyMiddleware_RevokedKey(t *testing.T) {
 		Name:    "Test Key",
 		OwnerID: uuid.New(),
 	})
-	_ = svc.Revoke(context.Background(), result.APIKey.ID, "test")
+	if err := svc.Revoke(context.Background(), result.APIKey.OwnerID, result.APIKey.ID, "test"); err != nil {
+		t.Fatalf("Revoke: %v", err)
+	}
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("Handler should not be called for revoked key")
