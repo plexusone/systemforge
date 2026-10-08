@@ -1272,6 +1272,18 @@
       {
         "description": "An existing PostgreSQL development database must run migrations/0002_drop_legacy_user_tables.sql before starting this version; fresh databases need no migration",
         "commit": "a4de9a8"
+      },
+      {
+        "description": "The default BFF session cookie is sf_session instead of the Core-era cf_session; browsers holding the old cookie sign in again. Applications that set CookieConfig.Name are unaffected",
+        "commit": "27b58f2"
+      },
+      {
+        "description": "organization.Service ListMembers and ListMemberships exclude inactive memberships unless IncludeInactive is passed, and take variadic ListOption arguments",
+        "commit": "5b05d5c"
+      },
+      {
+        "description": "mixin.UserBase and mixin.MembershipBase are removed",
+        "commit": "a083a0a"
       }
     ],
     "added": [
@@ -1294,6 +1306,22 @@
       {
         "description": "A repository-wide test fails on references to the retired legacy identity model in code or current documentation",
         "commit": "d82d1c2"
+      },
+      {
+        "description": "identity/clientassertion records used client-assertion JWT IDs in sf_client_assertion_jtis for replay protection",
+        "commit": "f81d670"
+      },
+      {
+        "description": "store.Config.TrustProvisionedEmail, off by default, marks emails written through SCIM as verified so social login can link to provisioned users",
+        "commit": "a5fdbe0"
+      },
+      {
+        "description": "identity/pgschema applies PostgreSQL-only schema objects; the migrate step adds a unique index on lower(email) in sf_humans",
+        "commit": "ded5411"
+      },
+      {
+        "description": "The members endpoint accepts includeInactive to list deactivated memberships",
+        "commit": "5b05d5c"
       }
     ],
     "changed": [
@@ -1338,6 +1366,22 @@
       {
         "description": "rls.SystemForgeTables named a table that no longer existed, so MigrateSystemForge failed; it now names sf_principal_memberships",
         "commit": "67fa61d"
+      },
+      {
+        "description": "identity/oauth.NewProvider panicked on construction because its storage no longer satisfied Fosite's interfaces; it now does, checked at compile time",
+        "commit": "691ad2d"
+      },
+      {
+        "description": "identity/oauth never recorded a token family, so revoking refresh and access tokens had no effect; tokens record their request as the family and rotation retires the exchanged refresh token",
+        "commit": "691ad2d"
+      },
+      {
+        "description": "SystemAuth failed to record client-assertion JWT IDs under foreign-key enforcement, breaking private_key_jwt client authentication and leaving assertions replayable",
+        "commit": "238f035"
+      },
+      {
+        "description": "Changing a user's email through SCIM no longer keeps the previous address's verification",
+        "commit": "a5fdbe0"
       }
     ],
     "documentation": [
@@ -1353,6 +1397,12 @@
       {
         "description": "Resource servers accepting AI agents via AAuth",
         "commit": "00b495f"
+      }
+    ],
+    "deprecated": [
+      {
+        "description": "mixin.HumanMixin, mixin.OAuthAccountMixin, and mixin.RefreshTokenMixin: applications should authenticate through SystemAuth and link local records by sf_principal_id",
+        "commit": "37776a2"
       }
     ]
   }
