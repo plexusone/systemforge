@@ -44,7 +44,7 @@ func NewProvider(config *Config, store Store, opts ...ProviderOption) (*Provider
 	p := &Provider{
 		config:         config,
 		store:          store,
-		auth:           DefaultAuthorizationHook{},
+		auth:           DenyAllAuthorizationHook{},
 		passwordHasher: DefaultPasswordHasher(),
 	}
 
@@ -175,6 +175,9 @@ func (s *providerService) GetUser(ctx context.Context, id string) (*User, error)
 //
 //nolint:dupl // Mirrors ListGroups - same pagination/filtering logic for different resource types
 func (s *providerService) ListUsers(ctx context.Context, opts ListOptions) (*ListResponse, error) {
+	if err := s.p.auth.CanRead(ctx, ResourceTypeUser, ""); err != nil {
+		return nil, err
+	}
 	// Apply config limits
 	if opts.Count > s.p.config.MaxResults {
 		opts.Count = s.p.config.MaxResults
@@ -374,6 +377,9 @@ func (s *providerService) GetGroup(ctx context.Context, id string) (*Group, erro
 //
 //nolint:dupl // Mirrors ListUsers - same pagination/filtering logic for different resource types
 func (s *providerService) ListGroups(ctx context.Context, opts ListOptions) (*ListResponse, error) {
+	if err := s.p.auth.CanRead(ctx, ResourceTypeGroup, ""); err != nil {
+		return nil, err
+	}
 	// Apply config limits
 	if opts.Count > s.p.config.MaxResults {
 		opts.Count = s.p.config.MaxResults

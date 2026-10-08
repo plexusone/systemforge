@@ -141,7 +141,37 @@ type AuthorizationHook interface {
 	CanDelete(ctx context.Context, resourceType, resourceID string) error
 }
 
-// DefaultAuthorizationHook is a no-op authorization hook that allows all operations.
+// DenyAllAuthorizationHook refuses every operation. It is the provider's
+// default, so a SCIM API mounted without an authorization hook exposes
+// nothing.
+type DenyAllAuthorizationHook struct{}
+
+// CanRead always refuses.
+func (DenyAllAuthorizationHook) CanRead(context.Context, string, string) error { return errDenyAll }
+
+// CanCreate always refuses.
+func (DenyAllAuthorizationHook) CanCreate(context.Context, string) error { return errDenyAll }
+
+// CanUpdate always refuses.
+func (DenyAllAuthorizationHook) CanUpdate(context.Context, string, string) error { return errDenyAll }
+
+// CanDelete always refuses.
+func (DenyAllAuthorizationHook) CanDelete(context.Context, string, string) error { return errDenyAll }
+
+var errDenyAll = ErrForbidden("no authorization hook is configured; see WithAuthorizationHook")
+
+// AllowAllAuthorizationHook allows every operation. Use it only when the
+// API is protected another way, such as authentication middleware that
+// admits only the identity provider; it is for tests and development
+// otherwise.
+type AllowAllAuthorizationHook = DefaultAuthorizationHook
+
+// DefaultAuthorizationHook is a no-op authorization hook that allows all
+// operations.
+//
+// Deprecated: despite the name it is not the provider's default any more
+// (that is DenyAllAuthorizationHook); use AllowAllAuthorizationHook to
+// allow everything explicitly.
 type DefaultAuthorizationHook struct{}
 
 // CanRead always allows read operations.
