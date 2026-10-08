@@ -23,6 +23,7 @@ theme:
         name: Switch to dark mode
   features:
     - navigation.sections
+    - navigation.indexes
     - navigation.expand
     - navigation.top
     - search.highlight
@@ -103,6 +104,16 @@ nav:
     - With Existing Apps: integration/existing-apps.md
     - Migration Guide: integration/migration.md
   - Design:
+    - Architecture Decisions:
+      - design/adrs/index.md
+      - "ADR-001: Core-era Naming Cleanup": design/adrs/ADR-001-core-era-naming-cleanup-systemauth.md
+      - "ADR-002: Centralized Social Login": design/adrs/ADR-002-centralized-social-login-systemauth.md
+      - "ADR-003: Verified Email via omnimail": design/adrs/ADR-003-verified-email-via-systemauth-and-omnimail.md
+      - "ADR-004: Retire the Legacy User Entity": design/adrs/ADR-004-retire-legacy-user-principal-sole-identity-root.md
+      - "ADR-005: Managed Principals and Manager Relationships": design/adrs/ADR-005-managed-principals-and-manager-relationships.md
+      - "ADR-006: Organization Lifecycle": design/adrs/ADR-006-organization-lifecycle-personal-team-slugs.md
+      - "ADR-007: Memberships and Entitlements as Claims": design/adrs/ADR-007-memberships-and-entitlements-as-claims.md
+      - "ADR-008: Resource-Scoped Collaborators": design/adrs/ADR-008-resource-scoped-collaborators.md
     - Authentication PRD: design/PRD_AUTHN.md
     - OAuth PRD: design/PRD_OAUTH.md
     - Authentication TRD: design/TRD_AUTHN.md
@@ -128,8 +139,6 @@ nav:
     - v0.3.0: releases/v0.3.0.md
     - v0.2.0: releases/v0.2.0.md
     - v0.1.0: releases/v0.1.0.md
-  - Design:
-    - Architecture Decisions: design/adrs/index.md
   - Reference:
     - Ent Schemas: reference/schemas.md
     - API Reference: reference/api.md
