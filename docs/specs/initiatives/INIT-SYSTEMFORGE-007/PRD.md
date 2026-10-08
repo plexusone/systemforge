@@ -64,7 +64,7 @@ should not get harder.
 - **F1.** `Human.email` is optional. A human without an email is a managed
   principal with `CanManageProfile = false` and `CanDelegate = false`.
 - **F2.** Managed principals can be created only when the deployment setting
-  and the requesting `Application`'s `managed_principals_enabled` flag are
+  and the requesting OAuth client's `managed_principals_enabled` flag are
   both on.
 - **F3.** Creating a managed principal requires at least one manager in the
   same transaction. Removing the last manager is refused; deactivation or

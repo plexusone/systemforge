@@ -75,9 +75,10 @@ knows:
 2. A manager is a `Principal(type=human)` that is **active and has an
    email**. Managed principals cannot manage other principals.
 3. Managed principals exist only when **both** the SystemAuth deployment
-   (`identity.managed_principals.enabled`, default `false`) **and** the
-   requesting `Application` (`managed_principals_enabled`, default `false`)
-   allow them. Every other application behaves exactly as today.
+   (`managed_principals.enabled`, default `false`) **and** the requesting
+   OAuth client (`managed_principals_enabled`, default `false`) allow them.
+   The client is the `OAuthApp` SystemAuth authenticates; the `Application`
+   principal extension is unrelated. Every other application behaves exactly as today.
 4. A managed principal may **later attach an email** (verified per
    INIT-SYSTEMFORGE-006), after which it is an ordinary human; manager
    relationships may remain, and only then may the last one be removed.

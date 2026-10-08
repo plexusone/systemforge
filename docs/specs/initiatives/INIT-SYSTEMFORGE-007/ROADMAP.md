@@ -12,9 +12,9 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 **Theme:** A human without an email is a managed principal with a manager
 
-- [ ] `RMI-SYSTEMFORGE-102` Optional `Human.email` and identifier rule: nullable unique email, `identifier` = email or `human:<id>`, `HumanPrincipal.Email` optional, null-uniqueness verified on the target database
+- [x] `RMI-SYSTEMFORGE-102` Optional `Human.email` and identifier rule: nullable unique email, `identifier` = email or `human:<id>`, `HumanPrincipal.Email` optional, null-uniqueness verified on the target database
   - Depends on: `RMI-SYSTEMFORGE-099`
-- [ ] `RMI-SYSTEMFORGE-103` Enablement switches: `Application.managed_principals_enabled` and the `identity.managed_principals.enabled` deployment setting, both default off
+- [x] `RMI-SYSTEMFORGE-103` Enablement switches: the OAuth client's `managed_principals_enabled` and the `managed_principals.enabled` deployment setting, both default off
   - Depends on: `RMI-SYSTEMFORGE-102`
 - [ ] `RMI-SYSTEMFORGE-104` `ManagerRelationship` schema and `identity/managedprincipal` service: transactional create with required manager, built-in `guardian`/`educator` roles, last-manager refusal, manager validation, audit
   - Depends on: `RMI-SYSTEMFORGE-103`

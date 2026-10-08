@@ -10,9 +10,11 @@ with `Human.email` declared `NotEmpty().Unique()` and `Principal.identifier`
 set to the email. Credentials live in `sf_credentials` with the type enum
 `password | api_key | keypair | webauthn | totp | client_secret`.
 `principal.Capabilities` already carries `CanManageProfile` and
-`CanDelegate`. The `Application` extension carries OAuth client settings
-(`client_id`, grants, TTLs, `first_party`, `public`) and has no feature
-flags. The base SpiceDB schema defines `principal {}` with no relations.
+`CanDelegate`. SystemAuth authenticates clients as `OAuthApp` rows
+(`client_id`, grants, TTLs, `first_party`, `public`) and static
+`ClientConfig` entries, with no feature flags. (The `Application`
+principal extension also has a `client_id` but is not what SystemAuth
+authenticates.) The base SpiceDB schema defines `principal {}` with no relations.
 
 Paths that assume an email exists (non-test code): `systemauth` social
 login (`FindByVerifiedEmail`, account creation requires a verified email),
@@ -37,7 +39,7 @@ claims; `invite` (email is required on the invite request); `signup`;
 - `identifier`: email when present, else `human:<principal-id>`, set by the
   service layer; documented as a lookup key.
 
-**`Application`**
+**`OAuthApp`** (and `ClientConfig.managed_principals` for static clients)
 
 - `managed_principals_enabled` `Bool`, default `false`.
 - `login_token_ttl` `Int` (seconds), `Optional().Nillable()`; null means
@@ -102,8 +104,8 @@ In `identity/credential`:
 Lifetime policy, resolved at issue time:
 
 1. An explicit `ExpiresAt` on the request, if present.
-2. Else the `Application`'s `login_token_ttl` (new nullable field on the
-   `Application` extension; a learning application sets a school year).
+2. Else the client's `login_token_ttl` (new nullable field on `OAuthApp`;
+   a learning application sets a school year).
 3. Else the platform default `identity.managed_principals.login_token_ttl`,
    default **30 days**.
 4. Never beyond the platform ceiling
@@ -122,7 +124,7 @@ issue codes that last a term or a school year.
 - New endpoint on SystemAuth: `POST /login-token` (name finalized in
   implementation) accepting the plain token and the requesting client. It
   verifies the token, confirms the principal is managed and active, confirms
-  the client's `Application` has `managed_principals_enabled`, and creates a
+  `Server.ManagedPrincipalsAllowed` for the client, and creates a
   SystemAuth session. Responses for unknown, expired, revoked, and
   disabled-application cases are identical, and the endpoint is rate-limited
   per client and per source address using the existing `session/ratelimit`.
