@@ -10,13 +10,18 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
+
 	"github.com/ory/fosite/handler/openid"
+	"github.com/plexusone/systemforge/identity/clientassertion"
 )
 
 // MemoryStorage implements the Storage interface using in-memory maps.
 // This is suitable for embedded mode and testing.
 type MemoryStorage struct {
 	mu sync.RWMutex
+
+	// jtis records used client-assertion JWT IDs.
+	jtis *clientassertion.MemoryJTIStore
 
 	// Client storage
 	clients map[string]*Client
@@ -59,6 +64,7 @@ type storedToken struct {
 // NewMemoryStorage creates a new in-memory storage.
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
+		jtis:          clientassertion.NewMemoryJTIStore(),
 		clients:       make(map[string]*Client),
 		authCodes:     make(map[string]*storedAuthCode),
 		accessTokens:  make(map[string]*storedToken),
@@ -457,18 +463,15 @@ func (s *MemoryStorage) DeleteOpenIDConnectSession(ctx context.Context, authoriz
 
 // --- Client Assertion JWT ---
 
-// ClientAssertionJWTValid returns an error if the JTI is known or the DB check failed.
+// ClientAssertionJWTValid returns fosite.ErrJTIKnown if the JTI was used
+// and has not expired, so a captured client assertion cannot be replayed.
 func (s *MemoryStorage) ClientAssertionJWTValid(ctx context.Context, jti string) error {
-	// For in-memory storage, we don't track JTIs
-	// In production, this would check if the JTI has been used
-	return nil
+	return s.jtis.Valid(ctx, jti)
 }
 
-// SetClientAssertionJWT marks a JTI as used.
+// SetClientAssertionJWT marks a JTI as used until exp.
 func (s *MemoryStorage) SetClientAssertionJWT(ctx context.Context, jti string, exp time.Time) error {
-	// For in-memory storage, we don't track JTIs
-	// In production, this would store the JTI with its expiration
-	return nil
+	return s.jtis.Mark(ctx, jti, exp)
 }
 
 // --- Cleanup ---
