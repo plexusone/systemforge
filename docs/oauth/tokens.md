@@ -12,7 +12,7 @@ This guide covers working with OAuth tokens in SystemForge.
 
 ## Token Schema
 
-The `cf_oauth_tokens` table:
+The `sf_oauth_tokens` table:
 
 | Field | Type | Description |
 |-------|------|-------------|

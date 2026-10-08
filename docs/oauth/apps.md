@@ -4,7 +4,7 @@ OAuth apps represent client applications that can request access to your API.
 
 ## Schema
 
-The `cf_oauth_apps` table contains:
+The `sf_oauth_apps` table contains:
 
 | Field | Type | Description |
 |-------|------|-------------|

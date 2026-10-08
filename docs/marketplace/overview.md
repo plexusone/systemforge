@@ -291,10 +291,10 @@ The marketplace creates these Ent entities (prefixed with `cf_`):
 
 | Table | Description |
 |-------|-------------|
-| `cf_listings` | Product listings |
-| `cf_licenses` | Organization licenses |
-| `cf_subscriptions` | Stripe subscription links |
-| `cf_seat_assignments` | User seat assignments |
+| `sf_listings` | Product listings |
+| `sf_licenses` | Organization licenses |
+| `sf_subscriptions` | Stripe subscription links |
+| `sf_seat_assignments` | User seat assignments |
 
 ## Example: Full Purchase Flow
 
