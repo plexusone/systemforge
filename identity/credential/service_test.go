@@ -170,8 +170,9 @@ func TestClientSecrets(t *testing.T) {
 		"wrong secret":   {"billing-service", "nope"},
 		"unknown client": {"other-service", second.PlainSecret},
 	} {
-		if _, err := svc.ValidateClientSecret(ctx, tc[0], tc[1]); err == nil {
-			t.Errorf("%s validated", name)
+		// Every failure is the same error, so client IDs cannot be probed.
+		if _, err := svc.ValidateClientSecret(ctx, tc[0], tc[1]); err != ErrInvalidClientCredentials { //nolint:errorlint // the exact sentinel is the contract
+			t.Errorf("%s: %v, want exactly ErrInvalidClientCredentials", name, err)
 		}
 	}
 
@@ -272,5 +273,47 @@ func TestCommonOperations(t *testing.T) {
 	}
 	if err := svc.UpdateLastUsed(ctx, uuid.New(), ""); err == nil {
 		t.Error("UpdateLastUsed of an unknown credential succeeded")
+	}
+}
+
+// TestMissingAccountsCostAsMuchAsWrongPasswords verifies that rejecting an
+// account that does not exist does the same hashing work as rejecting a
+// wrong password, so the two cannot be told apart by timing.
+func TestMissingAccountsCostAsMuchAsWrongPasswords(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	svc := NewService(db)
+	pid := addPrincipal(t, db)
+	app := addApplication(t, db, "svc")
+	if err := svc.CreatePassword(ctx, CreatePasswordInput{PrincipalID: pid, Password: "correct horse"}); err != nil {
+		t.Fatalf("CreatePassword: %v", err)
+	}
+	if _, err := svc.CreateClientSecret(ctx, CreateClientSecretInput{PrincipalID: app}); err != nil {
+		t.Fatalf("CreateClientSecret: %v", err)
+	}
+
+	elapsed := func(f func()) time.Duration {
+		start := time.Now()
+		f()
+		return time.Since(start)
+	}
+	wrong := elapsed(func() {
+		if ok, err := svc.VerifyPassword(ctx, pid, "wrong"); err != nil || ok {
+			t.Errorf("wrong password = %v, %v", ok, err)
+		}
+	})
+	missing := elapsed(func() {
+		if ok, err := svc.VerifyPassword(ctx, uuid.New(), "wrong"); err != nil || ok {
+			t.Errorf("missing account = %v, %v", ok, err)
+		}
+	})
+	wrongClient := elapsed(func() { _, _ = svc.ValidateClientSecret(ctx, "svc", "wrong") })     //nolint:errcheck // timing only
+	unknownClient := elapsed(func() { _, _ = svc.ValidateClientSecret(ctx, "ghost", "wrong") }) //nolint:errcheck // timing only
+
+	// Hashing dominates both paths; allow a generous factor for noise.
+	for name, pair := range map[string][2]time.Duration{"password": {wrong, missing}, "client secret": {wrongClient, unknownClient}} {
+		if pair[1] < pair[0]/4 {
+			t.Errorf("%s: rejecting a missing account took %v against %v for a wrong secret", name, pair[1], pair[0])
+		}
 	}
 }
