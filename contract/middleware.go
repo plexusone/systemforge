@@ -93,7 +93,7 @@ func (a *API) validateToken(tokenString string) (*SystemAuthClaims, error) {
 		default:
 			return nil, errors.New("unsupported key type")
 		}
-	})
+	}, jwt.WithExpirationRequired())
 	if err != nil {
 		return nil, err
 	}
@@ -108,22 +108,25 @@ func (a *API) validateToken(tokenString string) (*SystemAuthClaims, error) {
 		return nil, errors.New("invalid issuer")
 	}
 
-	// Validate audience (should be our app_id)
-	if config.AppID != "" {
-		found := false
-		for _, aud := range claims.Audience {
-			if aud == config.AppID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, errors.New("invalid audience")
+	// Validate audience: the token must be addressed to this app. Without
+	// an app ID there is nothing to compare, and accepting any audience
+	// would take tokens meant for other applications.
+	if config.AppID == "" {
+		return nil, errors.New("app_id is not configured, so the token's audience cannot be checked")
+	}
+	found := false
+	for _, aud := range claims.Audience {
+		if aud == config.AppID {
+			found = true
+			break
 		}
 	}
+	if !found {
+		return nil, errors.New("invalid audience")
+	}
 
-	// Validate expiration
-	if claims.ExpiresAt != nil && claims.ExpiresAt.Before(time.Now()) {
+	// Validate expiration (the parser already required one)
+	if claims.ExpiresAt == nil || !claims.ExpiresAt.After(time.Now()) {
 		return nil, errors.New("token expired")
 	}
 
