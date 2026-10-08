@@ -1325,6 +1325,14 @@
       {
         "description": "authz.RelationshipSyncer gains AddPrincipalManager and RemovePrincipalManager; credential.Service gains IssueLoginToken and VerifyLoginToken; managedprincipal.Gate implementers also provide LoginTokenPolicy",
         "commit": "a955205"
+      },
+      {
+        "description": "identity/token reports typed errors (ErrInvalidAccessToken, ErrInvalidRefreshToken, ErrRefreshTokenReused, ErrDPoPMismatch, ErrScopeNotGranted)",
+        "commit": "ba95d9d"
+      },
+      {
+        "description": "marketplace.LicenseService gains GetByStripeSubscriptionID; Stripe webhook endpoints should also subscribe to checkout.session.async_payment_succeeded",
+        "commit": "0ae6e2d"
       }
     ],
     "added": [
@@ -1431,6 +1439,10 @@
       {
         "description": "migrations/0003 converts stored invite tokens to hashes",
         "commit": "b52c9a0"
+      },
+      {
+        "description": "CI runs the PostgreSQL tests against a database service and the SpiceDB provider tests with the integration tag; SF_TEST_PG_REQUIRED makes a missing database fail rather than skip",
+        "commit": "13b5d57"
       }
     ],
     "changed": [
@@ -1539,6 +1551,10 @@
       {
         "description": "GetMembership reports a missing membership as organization.ErrMembershipNotFound",
         "commit": "87d623d"
+      },
+      {
+        "description": "identity/credential reports failures to record a credential's use and corrupt stored hashes (ErrCorruptCredential) instead of discarding them, and CreatePassword no longer creates a second password when its lookup fails",
+        "commit": "7aaf8cb"
       }
     ],
     "documentation": [
@@ -1594,6 +1610,14 @@
       {
         "description": "SpiceDB principal and organization cleanup ignored failures and missed editor and manager relations, leaving access behind while reporting success",
         "commit": "f9bd91c"
+      },
+      {
+        "description": "Refresh-token rotation was not atomic and its revocation error was discarded, so a refresh token could be used more than once; refreshing near expiry also reset a session to seven days, extending it indefinitely. Rotation is now atomic, a family keeps its first expiry, and reusing a rotated refresh token revokes the family",
+        "commit": "ba95d9d"
+      },
+      {
+        "description": "Stripe checkout granted licenses for sessions completed with an unpaid delayed payment, a malformed seat count produced an unlimited seat-based license, and cancelled subscriptions kept their licenses",
+        "commit": "0ae6e2d"
       }
     ]
   }
