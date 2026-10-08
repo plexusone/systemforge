@@ -80,3 +80,22 @@ func TestListExcludesInactiveMemberships(t *testing.T) {
 		t.Errorf("ListMemberships IncludeInactive = %+v, %v; want 1", ms, err)
 	}
 }
+
+// TestCreateDefaultsTypeAndPlan verifies that an organization created
+// without a type or plan takes the schema defaults.
+func TestCreateDefaultsTypeAndPlan(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	org, err := organization.NewService(db).Create(ctx, organization.CreateOrganizationInput{Name: "Plain", Slug: "plain"})
+	if err != nil {
+		t.Fatalf("Create without type or plan: %v", err)
+	}
+	if org.OrgType != organization.OrgTypeTeam || org.Plan != organization.PlanFree {
+		t.Errorf("type %q plan %q, want team and free", org.OrgType, org.Plan)
+	}
+}

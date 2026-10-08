@@ -153,9 +153,14 @@ func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInp
 	create := tx.Organization.Create().
 		SetName(input.Name).
 		SetSlug(input.Slug).
-		SetOrgType(organization.OrgType(input.OrgType)).
-		SetPlan(organization.Plan(input.Plan)).
 		SetActive(true)
+	// An empty type or plan takes the schema default (team, free).
+	if input.OrgType != "" {
+		create.SetOrgType(organization.OrgType(input.OrgType))
+	}
+	if input.Plan != "" {
+		create.SetPlan(organization.Plan(input.Plan))
+	}
 
 	if input.OwnerPrincipalID != nil {
 		create.SetOwnerPrincipalID(*input.OwnerPrincipalID)
