@@ -547,3 +547,46 @@ func TestProxy_Handler_MethodPreserved(t *testing.T) {
 		}
 	}
 }
+
+// A ProxyConfig built by hand has no HeadersToRemove; the browser's cookie and
+// any client-supplied Authorization or DPoP header must still not reach the
+// upstream.
+func TestProxy_Handler_StripsBrowserCredentialsWithoutConfig(t *testing.T) {
+	var got http.Header
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.Header.Clone()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer backend.Close()
+
+	proxy, err := NewProxy(ProxyConfig{TargetURL: backend.URL})
+	if err != nil {
+		t.Fatalf("NewProxy() error: %v", err)
+	}
+	session, err := NewSession(uuid.New(), "real-token", "refresh", time.Hour, time.Hour)
+	if err != nil {
+		t.Fatalf("NewSession() error: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/users", nil)
+	req.Header.Set("Cookie", "sf_session=secret")
+	req.Header.Set("Authorization", "Bearer attacker-token")
+	req.Header.Set("DPoP", "forged-proof")
+	req = req.WithContext(context.WithValue(req.Context(), ContextKeySession, session))
+
+	rr := httptest.NewRecorder()
+	proxy.Handler().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if c := got.Get("Cookie"); c != "" {
+		t.Errorf("Cookie forwarded upstream: %q", c)
+	}
+	if d := got.Get("DPoP"); d != "" {
+		t.Errorf("client DPoP header forwarded upstream: %q", d)
+	}
+	if a := got.Get("Authorization"); a != "Bearer real-token" {
+		t.Errorf("Authorization = %q, want the session's token", a)
+	}
+}

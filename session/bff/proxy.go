@@ -55,6 +55,10 @@ type ProxyConfig struct {
 	ResponseHeadersToRemove []string
 }
 
+// alwaysStripHeaders are removed from every proxied request regardless of
+// ProxyConfig.HeadersToRemove.
+var alwaysStripHeaders = []string{"Cookie", "Authorization", "DPoP"}
+
 // DefaultProxyConfig returns default proxy configuration.
 func DefaultProxyConfig() ProxyConfig {
 	return ProxyConfig{
@@ -171,6 +175,14 @@ func (p *Proxy) rewriteRequest(req *http.Request) {
 
 	// Set host header
 	req.Host = p.targetURL.Host
+
+	// Never forward the browser's credentials, whatever the configuration
+	// says: the session cookie would hand the upstream the user's BFF session,
+	// and a client-supplied Authorization or DPoP header must not stand in for
+	// the one injected below. OnRequestRewrite can add anything back.
+	for _, h := range alwaysStripHeaders {
+		req.Header.Del(h)
+	}
 
 	// Remove specified headers
 	for _, h := range p.config.HeadersToRemove {
