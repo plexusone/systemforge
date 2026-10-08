@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/grokify/goauth/dpop"
@@ -89,6 +90,46 @@ type TokenErrorResponse struct {
 type Refresher struct {
 	config RefreshConfig
 	client *http.Client
+	locks  keyedLocker
+}
+
+// keyedLocker serializes work per key and forgets a key once nobody holds or
+// awaits it.
+type keyedLocker struct {
+	mu      sync.Mutex
+	entries map[string]*lockEntry
+}
+
+type lockEntry struct {
+	mu   sync.Mutex
+	refs int
+}
+
+// lock blocks until the caller holds key, and returns the function that
+// releases it.
+func (k *keyedLocker) lock(key string) (unlock func()) {
+	k.mu.Lock()
+	if k.entries == nil {
+		k.entries = make(map[string]*lockEntry)
+	}
+	e, ok := k.entries[key]
+	if !ok {
+		e = &lockEntry{}
+		k.entries[key] = e
+	}
+	e.refs++
+	k.mu.Unlock()
+
+	e.mu.Lock()
+	return func() {
+		e.mu.Unlock()
+		k.mu.Lock()
+		e.refs--
+		if e.refs == 0 {
+			delete(k.entries, key)
+		}
+		k.mu.Unlock()
+	}
 }
 
 // ErrRefreshFailed is returned when token refresh fails.
@@ -149,7 +190,34 @@ func (r *Refresher) Middleware() func(http.Handler) http.Handler {
 }
 
 // RefreshSession refreshes the tokens for a session.
+//
+// Refreshes for one session are serialized within this process. Without that,
+// concurrent requests each spend the same refresh token; the token endpoint
+// rotates it on the first and then treats the rest as reuse of a stolen token
+// and revokes the session. The session is re-read once the lock is held, so a
+// request that waited adopts the tokens the first one obtained instead of
+// refreshing again. Across several instances the token endpoint's reuse
+// detection still applies, so keep a session's requests on one instance or
+// share a lock through the Store.
 func (r *Refresher) RefreshSession(ctx context.Context, session *Session) error {
+	if r.config.Store != nil && session.ID != "" {
+		unlock := r.locks.lock(session.ID)
+		defer unlock()
+
+		fresh, err := r.config.Store.Get(ctx, session.ID)
+		if err != nil {
+			return fmt.Errorf("reload session: %w", err)
+		}
+		// A different refresh token means another request already refreshed
+		// while this one waited: adopt its result rather than spend a token
+		// that has been rotated away.
+		rotated := fresh.RefreshToken != session.RefreshToken
+		*session = *fresh
+		if rotated {
+			return nil
+		}
+	}
+
 	// Check if refresh token is expired
 	if session.IsRefreshTokenExpired() {
 		return ErrRefreshTokenExpired

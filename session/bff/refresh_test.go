@@ -3,8 +3,11 @@ package bff
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -510,5 +513,74 @@ func TestParseDefaultTokenResponse_InvalidJSON(t *testing.T) {
 	_, err := parseDefaultTokenResponse(body)
 	if err == nil {
 		t.Error("parseDefaultTokenResponse() should error for invalid JSON")
+	}
+}
+
+// Concurrent requests for one session must spend its refresh token once: a
+// second use of a rotated token looks like theft and revokes the session.
+func TestRefresher_RefreshSession_ConcurrentRequestsRefreshOnce(t *testing.T) {
+	var calls atomic.Int64
+	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		time.Sleep(20 * time.Millisecond) // widen the window for the others to pile up
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:gosec // G117: Test mock OAuth token response
+		_ = json.NewEncoder(w).Encode(TokenResponse{
+			AccessToken:  fmt.Sprintf("access-%d", n),
+			TokenType:    "Bearer",
+			ExpiresIn:    3600,
+			RefreshToken: fmt.Sprintf("refresh-%d", n),
+		})
+	}))
+	defer tokenServer.Close()
+
+	store := NewMemoryStore(StoreConfig{})
+	defer func() { _ = store.Close() }()
+
+	config := DefaultRefreshConfig()
+	config.TokenEndpoint = tokenServer.URL
+	config.ClientID = "test-client"
+	config.Store = store
+	config.UseDPoP = false
+	refresher, err := NewRefresher(config)
+	if err != nil {
+		t.Fatalf("NewRefresher: %v", err)
+	}
+
+	stored, err := NewSession(uuid.New(), "old-access", "old-refresh", time.Minute, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+	if err := store.Create(context.Background(), stored); err != nil {
+		t.Fatalf("store.Create: %v", err)
+	}
+
+	const requests = 10
+	var wg sync.WaitGroup
+	results := make([]*Session, requests)
+	errs := make([]error, requests)
+	for i := range requests {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Each request works on its own copy, as loaded by the session middleware.
+			cp := *stored
+			results[i] = &cp
+			errs[i] = refresher.RefreshSession(context.Background(), &cp)
+		}()
+	}
+	wg.Wait()
+
+	if got := calls.Load(); got != 1 {
+		t.Errorf("token endpoint called %d times, want 1", got)
+	}
+	for i := range requests {
+		if errs[i] != nil {
+			t.Errorf("request %d: %v", i, errs[i])
+			continue
+		}
+		if results[i].RefreshToken != "refresh-1" {
+			t.Errorf("request %d holds refresh token %q, want refresh-1", i, results[i].RefreshToken)
+		}
 	}
 }
