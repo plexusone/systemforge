@@ -110,9 +110,10 @@ func WithRLSFromClaims(ctx context.Context) context.Context {
 	return ctx
 }
 
-// ValidateAppAccess validates that the authenticated user has access to the app.
-// This is a placeholder for future app-level access control.
-// Currently, it just checks that the app context is present.
+// ValidateAppAccess reports whether the request has an app context. It does
+// not check that the caller's token belongs to that app: the app context comes
+// from the X-App-ID header. Bind tokens to apps with
+// MiddlewareConfig.AppAudiences.
 func ValidateAppAccess(ctx context.Context) error {
 	if !HasAppContext(ctx) {
 		return ErrNoAppContext

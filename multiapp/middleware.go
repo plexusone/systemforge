@@ -20,6 +20,16 @@ type MiddlewareConfig struct {
 	// SetRLSContext automatically sets RLS context from JWT claims.
 	SetRLSContext bool
 
+	// AppAudiences binds a token to the app a request is routed to. When set
+	// and the request has an app context, the token must carry one of the
+	// audiences returned for that app, so a token minted for one app cannot be
+	// replayed against another by changing the X-App-ID header.
+	//
+	// Leave it nil only when each app verifies with its own signing key, which
+	// isolates the apps by itself. Apps that share a key and an issuer must set
+	// it, and mint tokens with the matching audience.
+	AppAudiences func(app *AppContext) []string
+
 	// OnError is called when authentication fails.
 	// If nil, a default error response is sent.
 	OnError func(w http.ResponseWriter, r *http.Request, err error)
@@ -56,7 +66,13 @@ func AuthMiddleware(cfg MiddlewareConfig) func(http.Handler) http.Handler {
 				return
 			}
 
-			claims, err := cfg.JWTService.ValidateAccessToken(token)
+			var claims *jwt.Claims
+			var err error
+			if appCtx := AppContextFromContext(ctx); appCtx != nil && cfg.AppAudiences != nil {
+				claims, err = cfg.JWTService.ValidateAccessTokenForAudience(token, cfg.AppAudiences(appCtx)...)
+			} else {
+				claims, err = cfg.JWTService.ValidateAccessToken(token)
+			}
 			if err != nil {
 				handleAuthError(w, r, cfg.OnError, err)
 				return
