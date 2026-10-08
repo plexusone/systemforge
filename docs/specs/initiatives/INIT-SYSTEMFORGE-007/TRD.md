@@ -214,6 +214,32 @@ Each becomes conditional on `Human.email != nil`:
 | `marketplace` | Purchase and subscription creation reject managed purchasers with a typed error; Stripe customer email is the purchaser's. |
 | `contract` identity types | `Email` optional. |
 
+As implemented, after a repository-wide audit (no path dereferenced a nil
+email; the defects were empty strings treated as values):
+
+- **SCIM** departs from the row above: managed principals are excluded
+  from SCIM entirely (not listed, read, updated, deleted, or grouped). SCIM
+  serves the humans an enterprise identity provider provisions; listing
+  application-created learners would invite the provider to deprovision
+  them, and a `userName` update would silently give one an email.
+- **Relying party:** `VerifiedIdentity.Managed` and `Principal.Managed`
+  come from the `managed` claim; a managed identity is created on first
+  sign-in without an email and never linked by email. Application
+  `PrincipalStore` implementations must accept an identity without an
+  email when `Managed` is set.
+- **Marketplace:** `marketplace.PurchaserChecker` (implemented by
+  `managedprincipal.Service`) with `stripe.WithPurchaserChecker` refuses
+  checkout with `ErrManagedPurchaser` (HTTP 403). Deployments that enable
+  managed principals must configure it.
+- **In-memory stores, password login, federation sync, signup:** an empty
+  email never matches or is adopted; signup requires a bare address, which
+  also keeps `human:<id>` from matching its identifier lookup.
+- **Left as is:** `invite` acceptance has no email assumption, so a managed
+  principal holding an invite token may accept it; SystemAuth
+  `Storage.UpdateHuman` requires an email, which is correct because
+  managed principals are changed through `identity/managedprincipal`, not
+  SystemAuth storage or federation sync.
+
 ### 7. Authorization
 
 Extend `authz.BaseSpiceDBSchema`:

@@ -37,7 +37,7 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 **Theme:** Every surface handles a missing email; release
 
-- [ ] `RMI-SYSTEMFORGE-109` Email-assuming path audit: social login, invite, signup, SCIM, relying-party views, `session/jwt`, `contract` types, marketplace purchaser check
+- [x] `RMI-SYSTEMFORGE-109` Email-assuming path audit: social login, invite, signup, SCIM, relying-party views, `session/jwt`, `contract` types, marketplace purchaser check
   - Depends on: `RMI-SYSTEMFORGE-102`
 - [x] `RMI-SYSTEMFORGE-110` Claim and attach-email flows: `educator`/`guardian`-issued single-use claim redeemed by an emailed human to become `guardian`; attach a verified email to a managed principal and restore default capabilities
   - Depends on: `RMI-SYSTEMFORGE-104`
