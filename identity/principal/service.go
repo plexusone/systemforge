@@ -112,7 +112,9 @@ func (s *DefaultService) CreateHuman(ctx context.Context, input CreateHumanInput
 	}
 	defer func() {
 		if err != nil {
-			_ = tx.Rollback()
+			if rerr := tx.Rollback(); rerr != nil {
+				s.logger.Error("principal: rolling back transaction", "error", rerr)
+			}
 		}
 	}()
 
@@ -229,7 +231,9 @@ func (s *DefaultService) CreateApplication(ctx context.Context, input CreateAppl
 	}
 	defer func() {
 		if err != nil {
-			_ = tx.Rollback()
+			if rerr := tx.Rollback(); rerr != nil {
+				s.logger.Error("principal: rolling back transaction", "error", rerr)
+			}
 		}
 	}()
 
@@ -342,13 +346,29 @@ func (s *DefaultService) CreateApplication(ctx context.Context, input CreateAppl
 
 // CreateAgent creates a new agent principal.
 func (s *DefaultService) CreateAgent(ctx context.Context, input CreateAgentInput) (*Principal, error) {
+	// An agent acts for its delegating principal, which must exist and be
+	// active.
+	if input.DelegatingPrincipalID != nil {
+		ok, err := s.client.Principal.Query().
+			Where(principal.ID(*input.DelegatingPrincipalID), principal.Active(true)).
+			Exist(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check delegating principal: %w", err)
+		}
+		if !ok {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidDelegator, *input.DelegatingPrincipalID)
+		}
+	}
+
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
-			_ = tx.Rollback()
+			if rerr := tx.Rollback(); rerr != nil {
+				s.logger.Error("principal: rolling back transaction", "error", rerr)
+			}
 		}
 	}()
 
@@ -457,7 +477,9 @@ func (s *DefaultService) CreateService(ctx context.Context, input CreateServiceI
 	}
 	defer func() {
 		if err != nil {
-			_ = tx.Rollback()
+			if rerr := tx.Rollback(); rerr != nil {
+				s.logger.Error("principal: rolling back transaction", "error", rerr)
+			}
 		}
 	}()
 
@@ -573,6 +595,11 @@ func (s *DefaultService) Update(ctx context.Context, id uuid.UUID, input UpdateI
 
 // UpdateHuman updates a human principal.
 func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input UpdateHumanInput) (*Principal, error) {
+	// Check the type first, so a mismatch changes nothing.
+	if err := s.requireType(ctx, id, principal.TypeHuman); err != nil {
+		return nil, err
+	}
+
 	// First update the base principal
 	if _, err := s.Update(ctx, id, input.UpdateInput); err != nil {
 		return nil, err
@@ -616,11 +643,27 @@ func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input Up
 		return nil, fmt.Errorf("failed to update human extension: %w", err)
 	}
 
+	// Platform administration lives in the authorization backend too;
+	// granting or revoking it must reach it.
+	if input.IsPlatformAdmin != nil {
+		if syncErr := s.syncer.SetPlatformAdmin(ctx, id, *input.IsPlatformAdmin); syncErr != nil {
+			if s.syncMode == authz.SyncModeStrict {
+				return nil, fmt.Errorf("failed to sync platform admin to authz: %w", syncErr)
+			}
+			s.logger.Warn("failed to sync platform admin to authz", "principal_id", id, "error", syncErr)
+		}
+	}
+
 	return s.GetByID(ctx, id)
 }
 
 // UpdateApplication updates an application principal.
 func (s *DefaultService) UpdateApplication(ctx context.Context, id uuid.UUID, input UpdateApplicationInput) (*Principal, error) {
+	// Check the type first, so a mismatch changes nothing.
+	if err := s.requireType(ctx, id, principal.TypeApplication); err != nil {
+		return nil, err
+	}
+
 	// First update the base principal
 	if _, err := s.Update(ctx, id, input.UpdateInput); err != nil {
 		return nil, err
@@ -678,6 +721,11 @@ func (s *DefaultService) UpdateApplication(ctx context.Context, id uuid.UUID, in
 
 // UpdateAgent updates an agent principal.
 func (s *DefaultService) UpdateAgent(ctx context.Context, id uuid.UUID, input UpdateAgentInput) (*Principal, error) {
+	// Check the type first, so a mismatch changes nothing.
+	if err := s.requireType(ctx, id, principal.TypeAgent); err != nil {
+		return nil, err
+	}
+
 	// First update the base principal
 	if _, err := s.Update(ctx, id, input.UpdateInput); err != nil {
 		return nil, err
@@ -723,6 +771,11 @@ func (s *DefaultService) UpdateAgent(ctx context.Context, id uuid.UUID, input Up
 
 // UpdateService updates a service principal.
 func (s *DefaultService) UpdateService(ctx context.Context, id uuid.UUID, input UpdateServiceInput) (*Principal, error) {
+	// Check the type first, so a mismatch changes nothing.
+	if err := s.requireType(ctx, id, principal.TypeService); err != nil {
+		return nil, err
+	}
+
 	// First update the base principal
 	if _, err := s.Update(ctx, id, input.UpdateInput); err != nil {
 		return nil, err
@@ -780,6 +833,22 @@ func (s *DefaultService) Reactivate(ctx context.Context, id uuid.UUID) error {
 }
 
 // Helper functions
+
+// requireType returns ErrNotFound for an unknown principal and
+// ErrWrongType for one of another type.
+func (s *DefaultService) requireType(ctx context.Context, id uuid.UUID, want principal.Type) error {
+	p, err := s.client.Principal.Get(ctx, id)
+	if ent.IsNotFound(err) {
+		return fmt.Errorf("%w: %s", ErrNotFound, id)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get principal: %w", err)
+	}
+	if p.Type != want {
+		return fmt.Errorf("%w: %s is %s, not %s", ErrWrongType, id, p.Type, want)
+	}
+	return nil
+}
 
 func entPrincipalToModel(p *ent.Principal) *Principal {
 	result := &Principal{

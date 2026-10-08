@@ -16,6 +16,17 @@ import (
 // email. Only managed principals may omit one (ADR-005).
 var ErrEmailRequired = errors.New("principal: email is required")
 
+// ErrNotFound is returned for an unknown principal.
+var ErrNotFound = errors.New("principal: not found")
+
+// ErrWrongType is returned when an operation for one principal type is
+// applied to a principal of another.
+var ErrWrongType = errors.New("principal: wrong principal type")
+
+// ErrInvalidDelegator is returned when an agent's delegating principal
+// does not exist or is not active.
+var ErrInvalidDelegator = errors.New("principal: delegating principal must exist and be active")
+
 // Type represents the type of principal.
 type Type string
 
