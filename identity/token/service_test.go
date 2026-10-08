@@ -337,3 +337,33 @@ func TestConcurrentRefresh(t *testing.T) {
 		}
 	}
 }
+
+// TestDeactivatedPrincipalLosesTokens verifies that a deactivated
+// principal's tokens neither validate nor refresh, and stay revoked.
+func TestDeactivatedPrincipalLosesTokens(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	svc := NewService(db)
+	pid := addPrincipal(t, db)
+	a := issueFor(t, svc, pid, nil)
+	b := issueFor(t, svc, pid, nil)
+
+	if err := db.Principal.UpdateOneID(pid).SetActive(false).Exec(ctx); err != nil {
+		t.Fatalf("deactivate: %v", err)
+	}
+	if _, err := svc.Validate(ctx, a.AccessToken); !errors.Is(err, ErrInvalidAccessToken) {
+		t.Errorf("Validate for a deactivated principal = %v", err)
+	}
+	if _, err := svc.Refresh(ctx, RefreshInput{RefreshToken: b.RefreshToken}); !errors.Is(err, ErrInvalidRefreshToken) {
+		t.Errorf("Refresh for a deactivated principal = %v", err)
+	}
+	if err := db.Principal.UpdateOneID(pid).SetActive(true).Exec(ctx); err != nil {
+		t.Fatalf("reactivate: %v", err)
+	}
+	if _, err := svc.Validate(ctx, a.AccessToken); !errors.Is(err, ErrInvalidAccessToken) {
+		t.Errorf("token revived by reactivation: %v", err)
+	}
+	if _, err := svc.Refresh(ctx, RefreshInput{RefreshToken: b.RefreshToken}); !errors.Is(err, ErrInvalidRefreshToken) {
+		t.Errorf("refresh token revived by reactivation: %v", err)
+	}
+}
