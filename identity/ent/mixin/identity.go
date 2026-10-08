@@ -160,6 +160,13 @@ func (PrincipalMixin) Indexes() []ent.Index {
 //	            Immutable(),
 //	    }
 //	}
+//
+// Deprecated: HumanMixin builds an application-local human table whose
+// fields have diverged from SystemForge's sf_humans (it carries name,
+// password_hash, and profile URLs that sf_humans does not). Applications
+// should authenticate through SystemAuth as a relying party and link local
+// records by sf_principal_id (PrincipalMixin) instead of keeping their own
+// human table; see ADR-004. It will be removed in a future release.
 type HumanMixin struct {
 	mixin.Schema
 }
@@ -276,6 +283,11 @@ func (HumanMixin) Indexes() []ent.Index {
 //	            Required(),
 //	    }
 //	}
+//
+// Deprecated: upstream logins are external identities owned by SystemAuth
+// (sf_external_identities). Applications should not store provider tokens
+// in their own tables; authenticate through SystemAuth instead. See
+// ADR-004. It will be removed in a future release.
 type OAuthAccountMixin struct {
 	mixin.Schema
 }
@@ -450,6 +462,11 @@ func (PrincipalMembershipMixin) Indexes() []ent.Index {
 //	            Required(),
 //	    }
 //	}
+//
+// Deprecated: refresh tokens are issued, rotated, and revoked by
+// SystemAuth. Applications should not keep their own refresh-token table;
+// use the BFF session or SystemAuth tokens instead. See ADR-004. It will be
+// removed in a future release.
 type RefreshTokenMixin struct {
 	mixin.Schema
 }
