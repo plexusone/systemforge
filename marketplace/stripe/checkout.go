@@ -3,7 +3,9 @@ package stripe
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -194,7 +196,7 @@ func (s *CheckoutService) ProcessWebhook(ctx context.Context, payload []byte, si
 	}
 
 	switch event.Type {
-	case "checkout.session.completed":
+	case "checkout.session.completed", "checkout.session.async_payment_succeeded":
 		return s.handleCheckoutCompleted(ctx, event)
 	case "customer.subscription.created":
 		return s.handleSubscriptionCreated(ctx, event)
@@ -212,11 +214,18 @@ func (s *CheckoutService) ProcessWebhook(ctx context.Context, payload []byte, si
 	}
 }
 
-// handleCheckoutCompleted grants a license after successful checkout.
+// handleCheckoutCompleted grants a license once a checkout is paid. A
+// checkout completed with a delayed payment method is still unpaid; its
+// license is granted on checkout.session.async_payment_succeeded.
 func (s *CheckoutService) handleCheckoutCompleted(ctx context.Context, event *stripe.Event) error {
 	sess, err := parseCheckoutSession(event)
 	if err != nil {
 		return err
+	}
+	switch sess.PaymentStatus {
+	case stripe.CheckoutSessionPaymentStatusPaid, stripe.CheckoutSessionPaymentStatusNoPaymentRequired:
+	default:
+		return nil
 	}
 
 	// Extract metadata
@@ -244,12 +253,12 @@ func (s *CheckoutService) handleCheckoutCompleted(ctx context.Context, event *st
 	var seats *int
 	if listing.PricingModel == marketplace.PricingPerSeat {
 		licenseType = marketplace.LicenseSeatBased
-		if seatsStr, ok := sess.Metadata["seats"]; ok {
-			var s int
-			if _, err := fmt.Sscanf(seatsStr, "%d", &s); err == nil {
-				seats = &s
-			}
+		// A seat-based license without a seat count would be unlimited.
+		n, err := strconv.Atoi(sess.Metadata["seats"])
+		if err != nil || n < 1 {
+			return fmt.Errorf("invalid seats in metadata: %q", sess.Metadata["seats"])
 		}
+		seats = &n
 	}
 
 	// Create the license
@@ -271,7 +280,7 @@ func (s *CheckoutService) handleCheckoutCompleted(ctx context.Context, event *st
 
 	if err := s.licenses.Grant(ctx, license); err != nil {
 		// Check if already licensed (idempotency)
-		if err == marketplace.ErrAlreadyLicensed {
+		if errors.Is(err, marketplace.ErrAlreadyLicensed) {
 			return nil
 		}
 		return fmt.Errorf("failed to grant license: %w", err)
@@ -300,16 +309,24 @@ func (s *CheckoutService) handleSubscriptionUpdated(_ context.Context, event *st
 	return nil
 }
 
-// handleSubscriptionDeleted handles subscription cancellation.
-func (s *CheckoutService) handleSubscriptionDeleted(_ context.Context, event *stripe.Event) error {
+// handleSubscriptionDeleted revokes the license an ended subscription paid
+// for. A subscription with no license, such as one already revoked, is
+// ignored, so redelivered events are harmless.
+func (s *CheckoutService) handleSubscriptionDeleted(ctx context.Context, event *stripe.Event) error {
 	sub, err := parseSubscription(event)
 	if err != nil {
 		return err
 	}
-
-	// Find and revoke the license
-	// This would require adding a method to find license by Stripe subscription ID
-	_ = sub // TODO: Implement license revocation
+	lic, err := s.licenses.GetByStripeSubscriptionID(ctx, sub.ID)
+	if errors.Is(err, marketplace.ErrLicenseNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := s.licenses.Revoke(ctx, lic.ID); err != nil && !errors.Is(err, marketplace.ErrLicenseNotFound) {
+		return fmt.Errorf("failed to revoke license for subscription %s: %w", sub.ID, err)
+	}
 	return nil
 }
 

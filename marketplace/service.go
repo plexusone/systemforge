@@ -71,6 +71,10 @@ type LicenseService interface {
 	// GetByListingAndOrg retrieves a license for a specific listing and organization.
 	GetByListingAndOrg(ctx context.Context, listingID, orgID uuid.UUID) (*License, error)
 
+	// GetByStripeSubscriptionID retrieves the license a Stripe
+	// subscription pays for, or ErrLicenseNotFound.
+	GetByStripeSubscriptionID(ctx context.Context, subscriptionID string) (*License, error)
+
 	// Update updates a license's details.
 	Update(ctx context.Context, license *License) error
 

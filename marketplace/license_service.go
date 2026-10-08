@@ -109,6 +109,21 @@ func (s *EntLicenseService) GetByListingAndOrg(ctx context.Context, listingID, o
 	return entLicenseToLicense(entLicense), nil
 }
 
+// GetByStripeSubscriptionID retrieves the license a Stripe subscription
+// pays for.
+func (s *EntLicenseService) GetByStripeSubscriptionID(ctx context.Context, subscriptionID string) (*License, error) {
+	entLicense, err := s.client.License.Query().
+		Where(license.StripeSubscriptionIDEQ(subscriptionID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, ErrLicenseNotFound
+		}
+		return nil, fmt.Errorf("failed to get license by subscription: %w", err)
+	}
+	return entLicenseToLicense(entLicense), nil
+}
+
 // Update updates a license's details.
 func (s *EntLicenseService) Update(ctx context.Context, l *License) error {
 	builder := s.client.License.UpdateOneID(l.ID).

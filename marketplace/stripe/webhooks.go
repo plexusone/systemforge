@@ -62,6 +62,7 @@ func parseAccount(event *stripe.Event) (*stripe.Account, error) {
 // WebhookEventTypes lists the Stripe event types we handle.
 var WebhookEventTypes = []string{
 	"checkout.session.completed",
+	"checkout.session.async_payment_succeeded",
 	"customer.subscription.created",
 	"customer.subscription.updated",
 	"customer.subscription.deleted",
