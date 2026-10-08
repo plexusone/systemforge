@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -43,6 +42,8 @@ var errLoginTokenRejected = errors.New("invalid login token")
 type loginTokenExchange struct {
 	credentials  credential.Service
 	allowed      func(ctx context.Context, clientID string) (bool, error)
+	knownClient  func(ctx context.Context, clientID string) bool
+	clientIP     func(r *http.Request) string
 	rates        ratelimit.Storage
 	addressLimit ratelimit.Limit
 	clientLimit  ratelimit.Limit
@@ -68,6 +69,16 @@ func WithLoginTokenRateLimit(storage ratelimit.Storage, perAddress, perClient ra
 	}
 }
 
+// WithLoginTokenClientIP sets how the login token endpoint finds the
+// client's address, for its per-address rate limit and the last-used
+// address recorded on the token. The default is the direct peer, which
+// behind a reverse proxy is the proxy: pass
+// ratelimit.ForwardedClientIP(proxyNetworks...) there. Never read
+// forwarding headers without naming the proxies that set them.
+func WithLoginTokenClientIP(clientIP func(r *http.Request) string) Option {
+	return func(s *Server) { s.socialOpts.loginTokenClientIP = clientIP }
+}
+
 // setupLoginTokens enables the exchange when managed principals are on and
 // a credential service is available.
 func (sl *socialLogin) setupLoginTokens(s *Server) {
@@ -85,11 +96,19 @@ func (sl *socialLogin) setupLoginTokens(s *Server) {
 		return
 	}
 	x := &loginTokenExchange{
-		credentials:  creds,
-		allowed:      s.ManagedPrincipalsAllowed,
+		credentials: creds,
+		allowed:     s.ManagedPrincipalsAllowed,
+		clientIP:    s.socialOpts.loginTokenClientIP,
+		knownClient: func(ctx context.Context, clientID string) bool {
+			_, err := s.storage.GetClientByID(ctx, clientID)
+			return err == nil
+		},
 		rates:        s.socialOpts.loginTokenRate,
 		addressLimit: s.socialOpts.loginTokenIP,
 		clientLimit:  s.socialOpts.loginTokenCli,
+	}
+	if x.clientIP == nil {
+		x.clientIP = ratelimit.PeerIP
 	}
 	if x.rates == nil {
 		s.logger.Warn("login token endpoint using in-memory rate limits; limits are not shared between instances")
@@ -125,15 +144,30 @@ func (sl *socialLogin) handleLoginToken(w http.ResponseWriter, r *http.Request) 
 	plain := r.PostForm.Get("token")
 	returnTo := r.PostForm.Get("return_to")
 
-	addressKey := ratelimit.IPKey()(r)
+	address := x.clientIP(r)
+	if address == "" {
+		address = "unknown"
+	}
+	// The client key is attacker-chosen, so only registered clients get
+	// their own bucket; everything else shares one rather than growing the
+	// limiter without bound.
+	clientBucket := "unknown"
+	if clientID != "" && len(clientID) <= 256 && x.knownClient(ctx, clientID) {
+		clientBucket = clientID
+	}
 	for _, check := range []struct {
 		key   string
 		limit ratelimit.Limit
 	}{
-		{"login_token:" + addressKey, x.addressLimit},
-		{"login_token:client:" + clientID, x.clientLimit},
+		{"login_token:ip:" + address, x.addressLimit},
+		{"login_token:client:" + clientBucket, x.clientLimit},
 	} {
 		res, err := x.rates.Allow(ctx, check.key, check.limit)
+		if errors.Is(err, ratelimit.ErrTooManyKeys) {
+			w.Header().Set("Retry-After", "60")
+			http.Error(w, "too many requests", http.StatusTooManyRequests)
+			return
+		}
 		if err != nil {
 			logger.Error("login token rate limit", "error", err)
 			http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
@@ -156,7 +190,7 @@ func (sl *socialLogin) handleLoginToken(w http.ResponseWriter, r *http.Request) 
 		target = t
 	}
 
-	principalID, err := sl.verifyLoginToken(ctx, x, clientID, plain, strings.TrimPrefix(addressKey, "ip:"))
+	principalID, err := sl.verifyLoginToken(ctx, x, clientID, plain, address)
 	if errors.Is(err, errLoginTokenRejected) {
 		logger.Info("login token rejected", "client_id", clientID)
 		http.Error(w, errLoginTokenRejected.Error(), http.StatusUnauthorized)

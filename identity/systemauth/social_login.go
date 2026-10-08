@@ -50,6 +50,8 @@ type socialOptions struct {
 	loginTokenRate ratelimit.Storage
 	loginTokenIP   ratelimit.Limit
 	loginTokenCli  ratelimit.Limit
+
+	loginTokenClientIP func(r *http.Request) string
 }
 
 // WithPrincipalDirectory sets the principal store used by social login.
