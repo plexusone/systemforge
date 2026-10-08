@@ -20,10 +20,15 @@ import (
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/internal/pgtest"
+	"github.com/plexusone/systemforge/marketplace"
 )
 
-// The SystemAuth server is the production gate.
-var _ Gate = (*systemauth.Server)(nil)
+// The SystemAuth server is the production gate, and the service checks
+// marketplace purchasers.
+var (
+	_ Gate                         = (*systemauth.Server)(nil)
+	_ marketplace.PurchaserChecker = (*Service)(nil)
+)
 
 type gate map[string]bool
 
