@@ -109,8 +109,19 @@ the application is paid.
 | `ListResources` over an organization's resources is a SQL query | Lookups span very large organizations or need SpiceDB's consistency tokens |
 | One deployment, one process | Several services or regions share one authorization graph |
 
-What `spicedb` adds beyond the contract is the application's schema
-fragment: relations and inheritance the `simple` provider cannot express.
+In terms of what each provider can answer:
+
+| Question | `simple` today | `simple` with this ADR | `spicedb` |
+|---|---|---|---|
+| Does the principal's organization or application role grant this action? | yes | yes | yes |
+| Does the principal own this resource? | yes | yes | yes |
+| Does the principal hold a direct grant on this specific resource? | no | yes, from the grants table | yes |
+| Does a permission reach the principal through relationships (team membership, a parent resource, a share with a group)? | no | no | yes, through the schema fragment |
+
+The grants this ADR adds to `simple` are one hop: principal, role,
+resource. That is enough for collaborators. What `spicedb` adds beyond the
+contract is the application's schema fragment: relations and inheritance
+the `simple` provider cannot express.
 An application that needs them declares its fragment and switches; until
 then it declares none and the contract is all it uses.
 
