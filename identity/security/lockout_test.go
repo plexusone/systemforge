@@ -276,3 +276,35 @@ func TestMemoryLockoutStore_Close(t *testing.T) {
 		t.Errorf("double close should not error: %v", err)
 	}
 }
+
+// TestLockoutTreatsEverySpellingAsOneAccount verifies that varying case or
+// whitespace does not restart the count of failed attempts.
+func TestLockoutTreatsEverySpellingAsOneAccount(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryLockoutStore()
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	l := NewLockout(store, WithMaxAttempts(3), WithLockoutDuration(time.Minute))
+
+	var last error
+	for _, spelling := range []string{"Bob@Example.com", "bob@example.com", " bob@example.com "} {
+		last = l.RecordFailure(ctx, spelling)
+	}
+	if !errors.Is(last, ErrAccountLocked) {
+		t.Fatalf("three failures under three spellings = %v, want the account locked", last)
+	}
+	for _, spelling := range []string{"bob@example.com", "BOB@EXAMPLE.COM", "\tbob@example.com\n"} {
+		if locked, err := l.IsLocked(ctx, spelling); err != nil || !locked {
+			t.Errorf("IsLocked(%q) = %v, %v", spelling, locked, err)
+		}
+	}
+	if err := l.Unlock(ctx, "BOB@example.com"); err != nil {
+		t.Fatalf("Unlock: %v", err)
+	}
+	if locked, err := l.IsLocked(ctx, "bob@example.com"); err != nil || locked {
+		t.Errorf("after Unlock under another spelling: %v, %v", locked, err)
+	}
+}
