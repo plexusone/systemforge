@@ -197,8 +197,14 @@ definition principal {
 ```
 
 `identity/managedprincipal` writes and deletes these relationships through
-the existing `authz.Sync` path when a `ManagerRelationship` row changes, so
-the simple provider and the SpiceDB provider agree. Applications add domain
+`RelationshipSyncer.AddPrincipalManager` and `RemovePrincipalManager` after
+a `ManagerRelationship` change commits, honoring the sync mode. The simple
+provider does not store relations; `simple.WithManagerRoleGetter` reads the
+active roles through `managedprincipal.Service.ManagerRoles` and applies
+`authz.ManagerRolePermissions`, which a test keeps equal to the schema, so
+both providers agree. Roles an application registers beyond the built-ins
+grant no platform permissions; they gain meaning only in the
+application's facets. Applications add domain
 permissions in their facets, for example `learning_org` granting
 `view_progress = org->view + principal->view_profile`.
 

@@ -27,7 +27,7 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
   - Depends on: `RMI-SYSTEMFORGE-104`
 - [ ] `RMI-SYSTEMFORGE-106` SystemAuth token exchange: endpoint with identical failure responses and rate limiting, `managed` claim, conditional `email` claims in ID token and `userinfo`
   - Depends on: `RMI-SYSTEMFORGE-105`
-- [ ] `RMI-SYSTEMFORGE-107` Base authorization relations: `guardian` and `educator` on `principal` with `manage_account`, `manage_credentials`, `view_profile`, `manage_managers`; synced from `ManagerRelationship` for both providers
+- [x] `RMI-SYSTEMFORGE-107` Base authorization relations: `guardian` and `educator` on `principal` with `manage_account`, `manage_credentials`, `view_profile`, `manage_managers`; synced from `ManagerRelationship` for both providers
   - Depends on: `RMI-SYSTEMFORGE-104`
 - [ ] `RMI-SYSTEMFORGE-108` Manager visibility: list and revoke a managed principal's login tokens and active sessions, authorized through `manage_credentials`
   - Depends on: `RMI-SYSTEMFORGE-106`
