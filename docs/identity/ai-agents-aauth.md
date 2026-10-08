@@ -13,7 +13,7 @@ Two packages make this work:
 | Package | What it does |
 |---------|--------------|
 | `identity/requestprincipal` | The protocol-neutral `RequestPrincipal`, the `Authenticator` interface, and a middleware that tries authenticators in order. No protocol dependencies. |
-| `identity/requestprincipal/aauthrs` | The AAuth resource-side authenticator, built on [`github.com/aauth-dev/auth-go`](https://github.com/aauth-dev/auth-go). The only package that imports it. |
+| `identity/requestprincipal/aauthrs` | The AAuth resource-side authenticator, built on [`github.com/aauth-dev/aauth-go`](https://github.com/aauth-dev/aauth-go). The only package that imports it. |
 
 Human credentials keep working through
 `relyingparty.NewRequestAuthenticator`, which wraps the same SystemAuth access
@@ -85,7 +85,7 @@ person token, exchanges the resource token at its Person Server, and retries.
 
 ```go
 import (
-    aauth "github.com/aauth-dev/auth-go"
+    aauth "github.com/aauth-dev/aauth-go"
 
     "github.com/plexusone/systemforge/identity/relyingparty"
     "github.com/plexusone/systemforge/identity/requestprincipal"
@@ -107,7 +107,7 @@ agents, err := aauthrs.New(aauthrs.Config{
         "things:write": "Create and change your things",
     },
     HTTPClient: egressClient, // no private addresses, bounded timeouts
-    Limiter:    ratelimit.Per(10, time.Minute), // optional, from auth-go/ratelimit
+    Limiter:    ratelimit.Per(10, time.Minute), // optional, from aauth-go/ratelimit
 })
 if err != nil {
     return err

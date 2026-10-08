@@ -23,7 +23,7 @@
 // automatically.
 //
 // This package is the only part of SystemForge that imports
-// github.com/aauth-dev/auth-go.
+// github.com/aauth-dev/aauth-go.
 package aauthrs
 
 import (
@@ -36,7 +36,7 @@ import (
 	"strings"
 	"time"
 
-	aauth "github.com/aauth-dev/auth-go"
+	aauth "github.com/aauth-dev/aauth-go"
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/plexusone/systemforge/identity/requestprincipal"

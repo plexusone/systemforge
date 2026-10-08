@@ -12,7 +12,7 @@ exclude github.com/authzed/cel-go v0.30.0
 
 require (
 	entgo.io/ent v0.14.6
-	github.com/aauth-dev/auth-go v0.2.0
+	github.com/aauth-dev/aauth-go v0.2.0
 	github.com/authzed/authzed-go v1.11.0
 	github.com/authzed/grpcutil v0.0.0-20260105210157-e237581949c2
 	github.com/authzed/spicedb v1.56.2
@@ -274,4 +274,4 @@ require (
 	resenje.org/singleflight v0.4.3 // indirect
 )
 
-replace github.com/aauth-dev/auth-go => ../../aauth-dev/auth-go
+replace github.com/aauth-dev/aauth-go => ../../aauth-dev/aauth-go
