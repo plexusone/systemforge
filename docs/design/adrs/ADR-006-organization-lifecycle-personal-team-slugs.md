@@ -74,8 +74,25 @@ same namespace.
      person can hand over their handle by renaming first, under 5);
    - a new personal organization is created for the person, with their
      handle.
-8. **Plans are independent of type.** A personal organization can hold any
-   plan, subscription or license a team organization can.
+8. **Plans are independent of type, and pricing and packaging are the
+   application's.** A personal organization can hold any plan,
+   subscription or license a team organization can. SystemForge provides
+   pricing and packaging through `marketplace` (listings with tiers,
+   subscriptions, licenses with seats, Stripe billing) and does not fix
+   the policy:
+   - plans move in either direction: free to paid, paid to free, and
+     between tiers, with downgrades and cancellations taking effect at the
+     period end where the application wants that;
+   - packaging is per product or bundle, so an organization may be on a
+     free tier of product A and a paid tier of A+B, as with Zoom's
+     products;
+   - freemium or not, and trials with a configurable length (30 days by
+     default) that convert or lapse, are the application's choices,
+     expressed as listings and tiers;
+   - an organization's entitlements (ADR-007 `apps`) derive from its
+     active subscriptions and licenses per listing, not from one
+     organization-wide plan. The `plan` column on `sf_organizations` is
+     informational and is not consulted for entitlement.
 
 ### Schema
 
@@ -104,5 +121,10 @@ same namespace.
   keyed by organization ID see no change; only the type and slug change.
 - **`AddMember` and `TransferOwnership` gain a type check**; existing tests
   that add members to personal organizations must use team organizations.
+- **Entitlement is per listing, not per organization.** Applications read
+  what an organization may use from its subscriptions and licenses; any
+  code that read `Organization.plan` for access decisions must move to
+  the marketplace, and the enum stays only as a display or reporting
+  value.
 - **Slug derivation lives in one place**, so every login provider and the
   managed-principal flow produce the same shape of handle.
