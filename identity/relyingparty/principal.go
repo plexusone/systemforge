@@ -25,6 +25,10 @@ type VerifiedIdentity struct {
 	Name string
 	// Picture is the avatar URL.
 	Picture string
+	// Managed reports a managed principal (the managed claim): a human
+	// without an email whose managers control the account (ADR-005).
+	// Managed identities have no email.
+	Managed bool
 }
 
 // Principal is the application's local principal, as the relying-party
@@ -47,6 +51,8 @@ type Principal struct {
 	AvatarURL string
 	// Active reports whether the principal may sign in.
 	Active bool
+	// Managed reports a managed principal, which has no email.
+	Managed bool
 	// CreatedAt and UpdatedAt are record timestamps.
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -81,9 +87,9 @@ type PrincipalStore interface {
 	LinkSubject(ctx context.Context, principalID, subject string) error
 
 	// CreatePrincipal creates an active human principal linked to
-	// identity.Subject, with a verified email. It returns ErrSubjectLinked
-	// if the subject was linked concurrently and ErrEmailConflict if the
-	// email is taken.
+	// identity.Subject, with a verified email or, when identity.Managed,
+	// without an email. It returns ErrSubjectLinked if the subject was
+	// linked concurrently and ErrEmailConflict if the email is taken.
 	CreatePrincipal(ctx context.Context, identity VerifiedIdentity) (*Principal, error)
 
 	// RecordLogin refreshes profile fields from identity after a sign-in.
@@ -109,7 +115,9 @@ type PrincipalStore interface {
 //  3. Otherwise a new principal is created, which requires a verified
 //     email.
 //
-// An unverified email never links to or creates a principal.
+// An unverified email never links to or creates a principal. A managed
+// identity has no email, so it never links by email: after the subject
+// lookup it is created directly, marked managed.
 func ResolvePrincipal(ctx context.Context, store PrincipalStore, id VerifiedIdentity, now time.Time) (*Principal, error) {
 	if id.Subject == "" {
 		return nil, errors.New("relyingparty: identity requires a subject")
@@ -125,6 +133,20 @@ func ResolvePrincipal(ctx context.Context, store PrincipalStore, id VerifiedIden
 			return finishLogin(ctx, store, p, id, now)
 		case !errors.Is(err, ErrPrincipalNotFound):
 			return nil, fmt.Errorf("relyingparty: finding principal by subject: %w", err)
+		}
+
+		if id.Managed {
+			if id.Email != "" {
+				return nil, fmt.Errorf("%w: managed identity has an email", ErrInvalidToken)
+			}
+			p, err = store.CreatePrincipal(ctx, id)
+			if errors.Is(err, ErrSubjectLinked) {
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+			return finishLogin(ctx, store, p, id, now)
 		}
 
 		if id.Email == "" || !id.EmailVerified {
@@ -265,7 +287,7 @@ func (s *MemoryPrincipalStore) FindByEmail(_ context.Context, email string) (*Pr
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	id, ok := s.byEmail[strings.ToLower(email)]
-	if !ok {
+	if !ok || email == "" {
 		return nil, ErrPrincipalNotFound
 	}
 	return s.copyOf(id)
@@ -296,8 +318,10 @@ func (s *MemoryPrincipalStore) CreatePrincipal(_ context.Context, id VerifiedIde
 		return nil, ErrSubjectLinked
 	}
 	key := strings.ToLower(id.Email)
-	if _, ok := s.byEmail[key]; ok {
-		return nil, ErrEmailConflict
+	if key != "" {
+		if _, ok := s.byEmail[key]; ok {
+			return nil, ErrEmailConflict
+		}
 	}
 	now := s.now()
 	name := id.Name
@@ -309,7 +333,8 @@ func (s *MemoryPrincipalStore) CreatePrincipal(_ context.Context, id VerifiedIde
 		Type:          "human",
 		SFPrincipalID: id.Subject,
 		Email:         id.Email,
-		EmailVerified: true,
+		EmailVerified: id.Email != "",
+		Managed:       id.Managed,
 		Name:          name,
 		AvatarURL:     id.Picture,
 		Active:        true,
@@ -318,7 +343,9 @@ func (s *MemoryPrincipalStore) CreatePrincipal(_ context.Context, id VerifiedIde
 	}
 	s.principals[p.ID] = p
 	s.bySubject[id.Subject] = p.ID
-	s.byEmail[key] = p.ID
+	if key != "" {
+		s.byEmail[key] = p.ID
+	}
 	cp := *p
 	return &cp, nil
 }

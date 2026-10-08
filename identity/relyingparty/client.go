@@ -367,6 +367,7 @@ func IdentityFromClaims(idt *IDTokenClaims, info *UserInfo) (VerifiedIdentity, e
 		EmailVerified: idt.EmailVerified,
 		Name:          idt.Name,
 		Picture:       idt.Picture,
+		Managed:       managedClaim(idt.Raw),
 	}
 	if info == nil {
 		return id, nil
@@ -384,7 +385,17 @@ func IdentityFromClaims(idt *IDTokenClaims, info *UserInfo) (VerifiedIdentity, e
 	if info.Picture != "" {
 		id.Picture = info.Picture
 	}
+	if managedClaim(info.Raw) {
+		id.Managed = true
+	}
 	return id, nil
+}
+
+// managedClaim reads SystemAuth's managed claim, true only for managed
+// principals.
+func managedClaim(claims map[string]any) bool {
+	managed, ok := claims["managed"].(bool)
+	return ok && managed
 }
 
 // sessionClaims merges verified ID token claims with UserInfo claims (the

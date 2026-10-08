@@ -185,7 +185,8 @@ type SessionStatus struct {
 // User is the frontend's user representation.
 type User struct {
 	ID          string           `json:"id"`
-	Email       string           `json:"email"`
+	Email       string           `json:"email,omitempty"`
+	Managed     bool             `json:"managed,omitempty"`
 	Name        string           `json:"name"`
 	AvatarURL   string           `json:"avatar_url,omitempty"`
 	Memberships []UserMembership `json:"memberships"`
@@ -227,6 +228,7 @@ func toUser(p *Principal, memberships []Membership) *User {
 	u := &User{
 		ID:          p.ID,
 		Email:       p.Email,
+		Managed:     p.Managed,
 		Name:        p.Name,
 		AvatarURL:   p.AvatarURL,
 		Memberships: make([]UserMembership, 0, len(memberships)),
