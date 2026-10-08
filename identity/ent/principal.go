@@ -78,6 +78,8 @@ type PrincipalEdges struct {
 	Managers []*ManagerRelationship `json:"managers,omitempty"`
 	// Relationships in which this principal manages another
 	Managing []*ManagerRelationship `json:"managing,omitempty"`
+	// Outstanding and redeemed guardian claims on this principal
+	ManagerClaims []*ManagerClaim `json:"manager_claims,omitempty"`
 	// OAuth consents granted by this principal
 	OauthConsents []*OAuthConsent `json:"oauth_consents,omitempty"`
 	// Invitations sent by this principal
@@ -92,7 +94,7 @@ type PrincipalEdges struct {
 	AssignedSeats []*SeatAssignment `json:"assigned_seats,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [19]bool
+	loadedTypes [20]bool
 }
 
 // OrganizationOrErr returns the Organization value or an error if the edge
@@ -222,10 +224,19 @@ func (e PrincipalEdges) ManagingOrErr() ([]*ManagerRelationship, error) {
 	return nil, &NotLoadedError{edge: "managing"}
 }
 
+// ManagerClaimsOrErr returns the ManagerClaims value or an error if the edge
+// was not loaded in eager-loading.
+func (e PrincipalEdges) ManagerClaimsOrErr() ([]*ManagerClaim, error) {
+	if e.loadedTypes[13] {
+		return e.ManagerClaims, nil
+	}
+	return nil, &NotLoadedError{edge: "manager_claims"}
+}
+
 // OauthConsentsOrErr returns the OauthConsents value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) OauthConsentsOrErr() ([]*OAuthConsent, error) {
-	if e.loadedTypes[13] {
+	if e.loadedTypes[14] {
 		return e.OauthConsents, nil
 	}
 	return nil, &NotLoadedError{edge: "oauth_consents"}
@@ -234,7 +245,7 @@ func (e PrincipalEdges) OauthConsentsOrErr() ([]*OAuthConsent, error) {
 // SentInvitesOrErr returns the SentInvites value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) SentInvitesOrErr() ([]*Invite, error) {
-	if e.loadedTypes[14] {
+	if e.loadedTypes[15] {
 		return e.SentInvites, nil
 	}
 	return nil, &NotLoadedError{edge: "sent_invites"}
@@ -243,7 +254,7 @@ func (e PrincipalEdges) SentInvitesOrErr() ([]*Invite, error) {
 // OwnedListingsOrErr returns the OwnedListings value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) OwnedListingsOrErr() ([]*Listing, error) {
-	if e.loadedTypes[15] {
+	if e.loadedTypes[16] {
 		return e.OwnedListings, nil
 	}
 	return nil, &NotLoadedError{edge: "owned_listings"}
@@ -252,7 +263,7 @@ func (e PrincipalEdges) OwnedListingsOrErr() ([]*Listing, error) {
 // PurchasedLicensesOrErr returns the PurchasedLicenses value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) PurchasedLicensesOrErr() ([]*License, error) {
-	if e.loadedTypes[16] {
+	if e.loadedTypes[17] {
 		return e.PurchasedLicenses, nil
 	}
 	return nil, &NotLoadedError{edge: "purchased_licenses"}
@@ -261,7 +272,7 @@ func (e PrincipalEdges) PurchasedLicensesOrErr() ([]*License, error) {
 // SeatAssignmentsOrErr returns the SeatAssignments value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) SeatAssignmentsOrErr() ([]*SeatAssignment, error) {
-	if e.loadedTypes[17] {
+	if e.loadedTypes[18] {
 		return e.SeatAssignments, nil
 	}
 	return nil, &NotLoadedError{edge: "seat_assignments"}
@@ -270,7 +281,7 @@ func (e PrincipalEdges) SeatAssignmentsOrErr() ([]*SeatAssignment, error) {
 // AssignedSeatsOrErr returns the AssignedSeats value or an error if the edge
 // was not loaded in eager-loading.
 func (e PrincipalEdges) AssignedSeatsOrErr() ([]*SeatAssignment, error) {
-	if e.loadedTypes[18] {
+	if e.loadedTypes[19] {
 		return e.AssignedSeats, nil
 	}
 	return nil, &NotLoadedError{edge: "assigned_seats"}
@@ -457,6 +468,11 @@ func (_m *Principal) QueryManagers() *ManagerRelationshipQuery {
 // QueryManaging queries the "managing" edge of the Principal entity.
 func (_m *Principal) QueryManaging() *ManagerRelationshipQuery {
 	return NewPrincipalClient(_m.config).QueryManaging(_m)
+}
+
+// QueryManagerClaims queries the "manager_claims" edge of the Principal entity.
+func (_m *Principal) QueryManagerClaims() *ManagerClaimQuery {
+	return NewPrincipalClient(_m.config).QueryManagerClaims(_m)
 }
 
 // QueryOauthConsents queries the "oauth_consents" edge of the Principal entity.

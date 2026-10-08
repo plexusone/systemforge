@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/managerclaim"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
@@ -345,6 +346,21 @@ func (_u *PrincipalUpdate) AddManaging(v ...*ManagerRelationship) *PrincipalUpda
 	return _u.AddManagingIDs(ids...)
 }
 
+// AddManagerClaimIDs adds the "manager_claims" edge to the ManagerClaim entity by IDs.
+func (_u *PrincipalUpdate) AddManagerClaimIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.AddManagerClaimIDs(ids...)
+	return _u
+}
+
+// AddManagerClaims adds the "manager_claims" edges to the ManagerClaim entity.
+func (_u *PrincipalUpdate) AddManagerClaims(v ...*ManagerClaim) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddManagerClaimIDs(ids...)
+}
+
 // AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by IDs.
 func (_u *PrincipalUpdate) AddOauthConsentIDs(ids ...uuid.UUID) *PrincipalUpdate {
 	_u.mutation.AddOauthConsentIDs(ids...)
@@ -636,6 +652,27 @@ func (_u *PrincipalUpdate) RemoveManaging(v ...*ManagerRelationship) *PrincipalU
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveManagingIDs(ids...)
+}
+
+// ClearManagerClaims clears all "manager_claims" edges to the ManagerClaim entity.
+func (_u *PrincipalUpdate) ClearManagerClaims() *PrincipalUpdate {
+	_u.mutation.ClearManagerClaims()
+	return _u
+}
+
+// RemoveManagerClaimIDs removes the "manager_claims" edge to ManagerClaim entities by IDs.
+func (_u *PrincipalUpdate) RemoveManagerClaimIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.RemoveManagerClaimIDs(ids...)
+	return _u
+}
+
+// RemoveManagerClaims removes "manager_claims" edges to ManagerClaim entities.
+func (_u *PrincipalUpdate) RemoveManagerClaims(v ...*ManagerClaim) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveManagerClaimIDs(ids...)
 }
 
 // ClearOauthConsents clears all "oauth_consents" edges to the OAuthConsent entity.
@@ -1361,6 +1398,51 @@ func (_u *PrincipalUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.ManagerClaimsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagerClaimsTable,
+			Columns: []string{principal.ManagerClaimsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerclaim.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedManagerClaimsIDs(); len(nodes) > 0 && !_u.mutation.ManagerClaimsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagerClaimsTable,
+			Columns: []string{principal.ManagerClaimsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerclaim.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ManagerClaimsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagerClaimsTable,
+			Columns: []string{principal.ManagerClaimsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerclaim.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.OauthConsentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1950,6 +2032,21 @@ func (_u *PrincipalUpdateOne) AddManaging(v ...*ManagerRelationship) *PrincipalU
 	return _u.AddManagingIDs(ids...)
 }
 
+// AddManagerClaimIDs adds the "manager_claims" edge to the ManagerClaim entity by IDs.
+func (_u *PrincipalUpdateOne) AddManagerClaimIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.AddManagerClaimIDs(ids...)
+	return _u
+}
+
+// AddManagerClaims adds the "manager_claims" edges to the ManagerClaim entity.
+func (_u *PrincipalUpdateOne) AddManagerClaims(v ...*ManagerClaim) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddManagerClaimIDs(ids...)
+}
+
 // AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by IDs.
 func (_u *PrincipalUpdateOne) AddOauthConsentIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
 	_u.mutation.AddOauthConsentIDs(ids...)
@@ -2241,6 +2338,27 @@ func (_u *PrincipalUpdateOne) RemoveManaging(v ...*ManagerRelationship) *Princip
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveManagingIDs(ids...)
+}
+
+// ClearManagerClaims clears all "manager_claims" edges to the ManagerClaim entity.
+func (_u *PrincipalUpdateOne) ClearManagerClaims() *PrincipalUpdateOne {
+	_u.mutation.ClearManagerClaims()
+	return _u
+}
+
+// RemoveManagerClaimIDs removes the "manager_claims" edge to ManagerClaim entities by IDs.
+func (_u *PrincipalUpdateOne) RemoveManagerClaimIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.RemoveManagerClaimIDs(ids...)
+	return _u
+}
+
+// RemoveManagerClaims removes "manager_claims" edges to ManagerClaim entities.
+func (_u *PrincipalUpdateOne) RemoveManagerClaims(v ...*ManagerClaim) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveManagerClaimIDs(ids...)
 }
 
 // ClearOauthConsents clears all "oauth_consents" edges to the OAuthConsent entity.
@@ -2989,6 +3107,51 @@ func (_u *PrincipalUpdateOne) sqlSave(ctx context.Context) (_node *Principal, er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ManagerClaimsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagerClaimsTable,
+			Columns: []string{principal.ManagerClaimsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerclaim.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedManagerClaimsIDs(); len(nodes) > 0 && !_u.mutation.ManagerClaimsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagerClaimsTable,
+			Columns: []string{principal.ManagerClaimsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerclaim.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ManagerClaimsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagerClaimsTable,
+			Columns: []string{principal.ManagerClaimsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerclaim.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -28,6 +28,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/listing"
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
+	"github.com/plexusone/systemforge/identity/ent/managerclaim"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
@@ -74,6 +75,8 @@ type Client struct {
 	LoginSession *LoginSessionClient
 	// LoginState is the client for interacting with the LoginState builders.
 	LoginState *LoginStateClient
+	// ManagerClaim is the client for interacting with the ManagerClaim builders.
+	ManagerClaim *ManagerClaimClient
 	// ManagerRelationship is the client for interacting with the ManagerRelationship builders.
 	ManagerRelationship *ManagerRelationshipClient
 	// OAuthApp is the client for interacting with the OAuthApp builders.
@@ -123,6 +126,7 @@ func (c *Client) init() {
 	c.Listing = NewListingClient(c.config)
 	c.LoginSession = NewLoginSessionClient(c.config)
 	c.LoginState = NewLoginStateClient(c.config)
+	c.ManagerClaim = NewManagerClaimClient(c.config)
 	c.ManagerRelationship = NewManagerRelationshipClient(c.config)
 	c.OAuthApp = NewOAuthAppClient(c.config)
 	c.OAuthAppSecret = NewOAuthAppSecretClient(c.config)
@@ -240,6 +244,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Listing:             NewListingClient(cfg),
 		LoginSession:        NewLoginSessionClient(cfg),
 		LoginState:          NewLoginStateClient(cfg),
+		ManagerClaim:        NewManagerClaimClient(cfg),
 		ManagerRelationship: NewManagerRelationshipClient(cfg),
 		OAuthApp:            NewOAuthAppClient(cfg),
 		OAuthAppSecret:      NewOAuthAppSecretClient(cfg),
@@ -284,6 +289,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Listing:             NewListingClient(cfg),
 		LoginSession:        NewLoginSessionClient(cfg),
 		LoginState:          NewLoginStateClient(cfg),
+		ManagerClaim:        NewManagerClaimClient(cfg),
 		ManagerRelationship: NewManagerRelationshipClient(cfg),
 		OAuthApp:            NewOAuthAppClient(cfg),
 		OAuthAppSecret:      NewOAuthAppSecretClient(cfg),
@@ -328,10 +334,10 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Agent, c.Application, c.ClientAssertionJTI, c.ConsentGrant, c.Credential,
 		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
-		c.LoginState, c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret,
-		c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
-		c.PrincipalMembership, c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal,
-		c.Subscription,
+		c.LoginState, c.ManagerClaim, c.ManagerRelationship, c.OAuthApp,
+		c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
+		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
+		c.SeatAssignment, c.ServicePrincipal, c.Subscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -343,10 +349,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Agent, c.Application, c.ClientAssertionJTI, c.ConsentGrant, c.Credential,
 		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
-		c.LoginState, c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret,
-		c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
-		c.PrincipalMembership, c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal,
-		c.Subscription,
+		c.LoginState, c.ManagerClaim, c.ManagerRelationship, c.OAuthApp,
+		c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
+		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
+		c.SeatAssignment, c.ServicePrincipal, c.Subscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -379,6 +385,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.LoginSession.mutate(ctx, m)
 	case *LoginStateMutation:
 		return c.LoginState.mutate(ctx, m)
+	case *ManagerClaimMutation:
+		return c.ManagerClaim.mutate(ctx, m)
 	case *ManagerRelationshipMutation:
 		return c.ManagerRelationship.mutate(ctx, m)
 	case *OAuthAppMutation:
@@ -2262,6 +2270,155 @@ func (c *LoginStateClient) mutate(ctx context.Context, m *LoginStateMutation) (V
 	}
 }
 
+// ManagerClaimClient is a client for the ManagerClaim schema.
+type ManagerClaimClient struct {
+	config
+}
+
+// NewManagerClaimClient returns a client for the ManagerClaim from the given config.
+func NewManagerClaimClient(c config) *ManagerClaimClient {
+	return &ManagerClaimClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `managerclaim.Hooks(f(g(h())))`.
+func (c *ManagerClaimClient) Use(hooks ...Hook) {
+	c.hooks.ManagerClaim = append(c.hooks.ManagerClaim, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `managerclaim.Intercept(f(g(h())))`.
+func (c *ManagerClaimClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ManagerClaim = append(c.inters.ManagerClaim, interceptors...)
+}
+
+// Create returns a builder for creating a ManagerClaim entity.
+func (c *ManagerClaimClient) Create() *ManagerClaimCreate {
+	mutation := newManagerClaimMutation(c.config, OpCreate)
+	return &ManagerClaimCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ManagerClaim entities.
+func (c *ManagerClaimClient) CreateBulk(builders ...*ManagerClaimCreate) *ManagerClaimCreateBulk {
+	return &ManagerClaimCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ManagerClaimClient) MapCreateBulk(slice any, setFunc func(*ManagerClaimCreate, int)) *ManagerClaimCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ManagerClaimCreateBulk{err: fmt.Errorf("calling to ManagerClaimClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ManagerClaimCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ManagerClaimCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ManagerClaim.
+func (c *ManagerClaimClient) Update() *ManagerClaimUpdate {
+	mutation := newManagerClaimMutation(c.config, OpUpdate)
+	return &ManagerClaimUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ManagerClaimClient) UpdateOne(_m *ManagerClaim) *ManagerClaimUpdateOne {
+	mutation := newManagerClaimMutation(c.config, OpUpdateOne, withManagerClaim(_m))
+	return &ManagerClaimUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ManagerClaimClient) UpdateOneID(id uuid.UUID) *ManagerClaimUpdateOne {
+	mutation := newManagerClaimMutation(c.config, OpUpdateOne, withManagerClaimID(id))
+	return &ManagerClaimUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ManagerClaim.
+func (c *ManagerClaimClient) Delete() *ManagerClaimDelete {
+	mutation := newManagerClaimMutation(c.config, OpDelete)
+	return &ManagerClaimDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ManagerClaimClient) DeleteOne(_m *ManagerClaim) *ManagerClaimDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ManagerClaimClient) DeleteOneID(id uuid.UUID) *ManagerClaimDeleteOne {
+	builder := c.Delete().Where(managerclaim.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ManagerClaimDeleteOne{builder}
+}
+
+// Query returns a query builder for ManagerClaim.
+func (c *ManagerClaimClient) Query() *ManagerClaimQuery {
+	return &ManagerClaimQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeManagerClaim},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ManagerClaim entity by its id.
+func (c *ManagerClaimClient) Get(ctx context.Context, id uuid.UUID) (*ManagerClaim, error) {
+	return c.Query().Where(managerclaim.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ManagerClaimClient) GetX(ctx context.Context, id uuid.UUID) *ManagerClaim {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryManaged queries the managed edge of a ManagerClaim.
+func (c *ManagerClaimClient) QueryManaged(_m *ManagerClaim) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(managerclaim.Table, managerclaim.FieldID, id),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, managerclaim.ManagedTable, managerclaim.ManagedColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ManagerClaimClient) Hooks() []Hook {
+	return c.hooks.ManagerClaim
+}
+
+// Interceptors returns the client interceptors.
+func (c *ManagerClaimClient) Interceptors() []Interceptor {
+	return c.inters.ManagerClaim
+}
+
+func (c *ManagerClaimClient) mutate(ctx context.Context, m *ManagerClaimMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ManagerClaimCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ManagerClaimUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ManagerClaimUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ManagerClaimDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ManagerClaim mutation op: %q", m.Op())
+	}
+}
+
 // ManagerRelationshipClient is a client for the ManagerRelationship schema.
 type ManagerRelationshipClient struct {
 	config
@@ -3845,6 +4002,22 @@ func (c *PrincipalClient) QueryManaging(_m *Principal) *ManagerRelationshipQuery
 	return query
 }
 
+// QueryManagerClaims queries the manager_claims edge of a Principal.
+func (c *PrincipalClient) QueryManagerClaims(_m *Principal) *ManagerClaimQuery {
+	query := (&ManagerClaimClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, id),
+			sqlgraph.To(managerclaim.Table, managerclaim.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.ManagerClaimsTable, principal.ManagerClaimsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryOauthConsents queries the oauth_consents edge of a Principal.
 func (c *PrincipalClient) QueryOauthConsents(_m *Principal) *OAuthConsentQuery {
 	query := (&OAuthConsentClient{config: c.config}).Query()
@@ -4828,16 +5001,17 @@ type (
 	hooks struct {
 		Agent, Application, ClientAssertionJTI, ConsentGrant, Credential,
 		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
-		ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent,
-		OAuthToken, Organization, Principal, PrincipalMembership, PrincipalToken,
-		SeatAssignment, ServicePrincipal, Subscription []ent.Hook
+		ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode,
+		OAuthConsent, OAuthToken, Organization, Principal, PrincipalMembership,
+		PrincipalToken, SeatAssignment, ServicePrincipal, Subscription []ent.Hook
 	}
 	inters struct {
 		Agent, Application, ClientAssertionJTI, ConsentGrant, Credential,
 		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
-		ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent,
-		OAuthToken, Organization, Principal, PrincipalMembership, PrincipalToken,
-		SeatAssignment, ServicePrincipal, Subscription []ent.Interceptor
+		ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode,
+		OAuthConsent, OAuthToken, Organization, Principal, PrincipalMembership,
+		PrincipalToken, SeatAssignment, ServicePrincipal,
+		Subscription []ent.Interceptor
 	}
 )
 

@@ -153,6 +153,18 @@ func (f LoginStateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LoginStateMutation", m)
 }
 
+// The ManagerClaimFunc type is an adapter to allow the use of ordinary
+// function as ManagerClaim mutator.
+type ManagerClaimFunc func(context.Context, *ent.ManagerClaimMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ManagerClaimFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ManagerClaimMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ManagerClaimMutation", m)
+}
+
 // The ManagerRelationshipFunc type is an adapter to allow the use of ordinary
 // function as ManagerRelationship mutator.
 type ManagerRelationshipFunc func(context.Context, *ent.ManagerRelationshipMutation) (ent.Value, error)

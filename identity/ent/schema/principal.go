@@ -140,6 +140,9 @@ func (Principal) Edges() []ent.Edge {
 		edge.To("managing", ManagerRelationship.Type).
 			Comment("Relationships in which this principal manages another"),
 
+		edge.To("manager_claims", ManagerClaim.Type).
+			Comment("Outstanding and redeemed guardian claims on this principal"),
+
 		// OAuth consents granted by this principal
 		edge.To("oauth_consents", OAuthConsent.Type).
 			Comment("OAuth consents granted by this principal"),

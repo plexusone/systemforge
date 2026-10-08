@@ -665,6 +665,29 @@ func HasManagingWith(preds ...predicate.ManagerRelationship) predicate.Principal
 	})
 }
 
+// HasManagerClaims applies the HasEdge predicate on the "manager_claims" edge.
+func HasManagerClaims() predicate.Principal {
+	return predicate.Principal(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ManagerClaimsTable, ManagerClaimsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasManagerClaimsWith applies the HasEdge predicate on the "manager_claims" edge with a given conditions (other predicates).
+func HasManagerClaimsWith(preds ...predicate.ManagerClaim) predicate.Principal {
+	return predicate.Principal(func(s *sql.Selector) {
+		step := newManagerClaimsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasOauthConsents applies the HasEdge predicate on the "oauth_consents" edge.
 func HasOauthConsents() predicate.Principal {
 	return predicate.Principal(func(s *sql.Selector) {

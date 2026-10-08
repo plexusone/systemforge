@@ -62,6 +62,8 @@ const (
 	EdgeManagers = "managers"
 	// EdgeManaging holds the string denoting the managing edge name in mutations.
 	EdgeManaging = "managing"
+	// EdgeManagerClaims holds the string denoting the manager_claims edge name in mutations.
+	EdgeManagerClaims = "manager_claims"
 	// EdgeOauthConsents holds the string denoting the oauth_consents edge name in mutations.
 	EdgeOauthConsents = "oauth_consents"
 	// EdgeSentInvites holds the string denoting the sent_invites edge name in mutations.
@@ -167,6 +169,13 @@ const (
 	ManagingInverseTable = "sf_manager_relationships"
 	// ManagingColumn is the table column denoting the managing relation/edge.
 	ManagingColumn = "manager_principal_id"
+	// ManagerClaimsTable is the table that holds the manager_claims relation/edge.
+	ManagerClaimsTable = "sf_manager_claims"
+	// ManagerClaimsInverseTable is the table name for the ManagerClaim entity.
+	// It exists in this package in order to avoid circular dependency with the "managerclaim" package.
+	ManagerClaimsInverseTable = "sf_manager_claims"
+	// ManagerClaimsColumn is the table column denoting the manager_claims relation/edge.
+	ManagerClaimsColumn = "managed_principal_id"
 	// OauthConsentsTable is the table that holds the oauth_consents relation/edge.
 	OauthConsentsTable = "sf_oauth_consents"
 	// OauthConsentsInverseTable is the table name for the OAuthConsent entity.
@@ -472,6 +481,20 @@ func ByManaging(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByManagerClaimsCount orders the results by manager_claims count.
+func ByManagerClaimsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newManagerClaimsStep(), opts...)
+	}
+}
+
+// ByManagerClaims orders the results by manager_claims terms.
+func ByManagerClaims(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newManagerClaimsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByOauthConsentsCount orders the results by oauth_consents count.
 func ByOauthConsentsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -644,6 +667,13 @@ func newManagingStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ManagingInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ManagingTable, ManagingColumn),
+	)
+}
+func newManagerClaimsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ManagerClaimsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ManagerClaimsTable, ManagerClaimsColumn),
 	)
 }
 func newOauthConsentsStep() *sqlgraph.Step {

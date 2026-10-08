@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/managerclaim"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
@@ -345,6 +346,21 @@ func (_c *PrincipalCreate) AddManaging(v ...*ManagerRelationship) *PrincipalCrea
 		ids[i] = v[i].ID
 	}
 	return _c.AddManagingIDs(ids...)
+}
+
+// AddManagerClaimIDs adds the "manager_claims" edge to the ManagerClaim entity by IDs.
+func (_c *PrincipalCreate) AddManagerClaimIDs(ids ...uuid.UUID) *PrincipalCreate {
+	_c.mutation.AddManagerClaimIDs(ids...)
+	return _c
+}
+
+// AddManagerClaims adds the "manager_claims" edges to the ManagerClaim entity.
+func (_c *PrincipalCreate) AddManagerClaims(v ...*ManagerClaim) *PrincipalCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddManagerClaimIDs(ids...)
 }
 
 // AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by IDs.
@@ -813,6 +829,22 @@ func (_c *PrincipalCreate) createSpec() (*Principal, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(managerrelationship.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ManagerClaimsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.ManagerClaimsTable,
+			Columns: []string{principal.ManagerClaimsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(managerclaim.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -24,6 +24,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/listing"
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
+	"github.com/plexusone/systemforge/identity/ent/managerclaim"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
@@ -61,6 +62,7 @@ const (
 	TypeListing             = "Listing"
 	TypeLoginSession        = "LoginSession"
 	TypeLoginState          = "LoginState"
+	TypeManagerClaim        = "ManagerClaim"
 	TypeManagerRelationship = "ManagerRelationship"
 	TypeOAuthApp            = "OAuthApp"
 	TypeOAuthAppSecret      = "OAuthAppSecret"
@@ -12478,6 +12480,824 @@ func (m *LoginStateMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown LoginState edge %s", name)
 }
 
+// ManagerClaimMutation represents an operation that mutates the ManagerClaim nodes in the graph.
+type ManagerClaimMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	code_prefix    *string
+	code_hash      *string
+	issued_by      *uuid.UUID
+	expires_at     *time.Time
+	redeemed_at    *time.Time
+	redeemed_by    *uuid.UUID
+	created_at     *time.Time
+	clearedFields  map[string]struct{}
+	managed        *uuid.UUID
+	clearedmanaged bool
+	done           bool
+	oldValue       func(context.Context) (*ManagerClaim, error)
+	predicates     []predicate.ManagerClaim
+}
+
+var _ ent.Mutation = (*ManagerClaimMutation)(nil)
+
+// managerclaimOption allows management of the mutation configuration using functional options.
+type managerclaimOption func(*ManagerClaimMutation)
+
+// newManagerClaimMutation creates new mutation for the ManagerClaim entity.
+func newManagerClaimMutation(c config, op Op, opts ...managerclaimOption) *ManagerClaimMutation {
+	m := &ManagerClaimMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeManagerClaim,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withManagerClaimID sets the ID field of the mutation.
+func withManagerClaimID(id uuid.UUID) managerclaimOption {
+	return func(m *ManagerClaimMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ManagerClaim
+		)
+		m.oldValue = func(ctx context.Context) (*ManagerClaim, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ManagerClaim.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withManagerClaim sets the old ManagerClaim of the mutation.
+func withManagerClaim(node *ManagerClaim) managerclaimOption {
+	return func(m *ManagerClaimMutation) {
+		m.oldValue = func(context.Context) (*ManagerClaim, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ManagerClaimMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ManagerClaimMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ManagerClaim entities.
+func (m *ManagerClaimMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ManagerClaimMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ManagerClaimMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ManagerClaim.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetManagedPrincipalID sets the "managed_principal_id" field.
+func (m *ManagerClaimMutation) SetManagedPrincipalID(u uuid.UUID) {
+	m.managed = &u
+}
+
+// ManagedPrincipalID returns the value of the "managed_principal_id" field in the mutation.
+func (m *ManagerClaimMutation) ManagedPrincipalID() (r uuid.UUID, exists bool) {
+	v := m.managed
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldManagedPrincipalID returns the old "managed_principal_id" field's value of the ManagerClaim entity.
+// If the ManagerClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerClaimMutation) OldManagedPrincipalID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldManagedPrincipalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldManagedPrincipalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldManagedPrincipalID: %w", err)
+	}
+	return oldValue.ManagedPrincipalID, nil
+}
+
+// ResetManagedPrincipalID resets all changes to the "managed_principal_id" field.
+func (m *ManagerClaimMutation) ResetManagedPrincipalID() {
+	m.managed = nil
+}
+
+// SetCodePrefix sets the "code_prefix" field.
+func (m *ManagerClaimMutation) SetCodePrefix(s string) {
+	m.code_prefix = &s
+}
+
+// CodePrefix returns the value of the "code_prefix" field in the mutation.
+func (m *ManagerClaimMutation) CodePrefix() (r string, exists bool) {
+	v := m.code_prefix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCodePrefix returns the old "code_prefix" field's value of the ManagerClaim entity.
+// If the ManagerClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerClaimMutation) OldCodePrefix(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCodePrefix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCodePrefix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCodePrefix: %w", err)
+	}
+	return oldValue.CodePrefix, nil
+}
+
+// ResetCodePrefix resets all changes to the "code_prefix" field.
+func (m *ManagerClaimMutation) ResetCodePrefix() {
+	m.code_prefix = nil
+}
+
+// SetCodeHash sets the "code_hash" field.
+func (m *ManagerClaimMutation) SetCodeHash(s string) {
+	m.code_hash = &s
+}
+
+// CodeHash returns the value of the "code_hash" field in the mutation.
+func (m *ManagerClaimMutation) CodeHash() (r string, exists bool) {
+	v := m.code_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCodeHash returns the old "code_hash" field's value of the ManagerClaim entity.
+// If the ManagerClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerClaimMutation) OldCodeHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCodeHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCodeHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCodeHash: %w", err)
+	}
+	return oldValue.CodeHash, nil
+}
+
+// ResetCodeHash resets all changes to the "code_hash" field.
+func (m *ManagerClaimMutation) ResetCodeHash() {
+	m.code_hash = nil
+}
+
+// SetIssuedBy sets the "issued_by" field.
+func (m *ManagerClaimMutation) SetIssuedBy(u uuid.UUID) {
+	m.issued_by = &u
+}
+
+// IssuedBy returns the value of the "issued_by" field in the mutation.
+func (m *ManagerClaimMutation) IssuedBy() (r uuid.UUID, exists bool) {
+	v := m.issued_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIssuedBy returns the old "issued_by" field's value of the ManagerClaim entity.
+// If the ManagerClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerClaimMutation) OldIssuedBy(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIssuedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIssuedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIssuedBy: %w", err)
+	}
+	return oldValue.IssuedBy, nil
+}
+
+// ResetIssuedBy resets all changes to the "issued_by" field.
+func (m *ManagerClaimMutation) ResetIssuedBy() {
+	m.issued_by = nil
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (m *ManagerClaimMutation) SetExpiresAt(t time.Time) {
+	m.expires_at = &t
+}
+
+// ExpiresAt returns the value of the "expires_at" field in the mutation.
+func (m *ManagerClaimMutation) ExpiresAt() (r time.Time, exists bool) {
+	v := m.expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresAt returns the old "expires_at" field's value of the ManagerClaim entity.
+// If the ManagerClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerClaimMutation) OldExpiresAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresAt: %w", err)
+	}
+	return oldValue.ExpiresAt, nil
+}
+
+// ResetExpiresAt resets all changes to the "expires_at" field.
+func (m *ManagerClaimMutation) ResetExpiresAt() {
+	m.expires_at = nil
+}
+
+// SetRedeemedAt sets the "redeemed_at" field.
+func (m *ManagerClaimMutation) SetRedeemedAt(t time.Time) {
+	m.redeemed_at = &t
+}
+
+// RedeemedAt returns the value of the "redeemed_at" field in the mutation.
+func (m *ManagerClaimMutation) RedeemedAt() (r time.Time, exists bool) {
+	v := m.redeemed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRedeemedAt returns the old "redeemed_at" field's value of the ManagerClaim entity.
+// If the ManagerClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerClaimMutation) OldRedeemedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRedeemedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRedeemedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRedeemedAt: %w", err)
+	}
+	return oldValue.RedeemedAt, nil
+}
+
+// ClearRedeemedAt clears the value of the "redeemed_at" field.
+func (m *ManagerClaimMutation) ClearRedeemedAt() {
+	m.redeemed_at = nil
+	m.clearedFields[managerclaim.FieldRedeemedAt] = struct{}{}
+}
+
+// RedeemedAtCleared returns if the "redeemed_at" field was cleared in this mutation.
+func (m *ManagerClaimMutation) RedeemedAtCleared() bool {
+	_, ok := m.clearedFields[managerclaim.FieldRedeemedAt]
+	return ok
+}
+
+// ResetRedeemedAt resets all changes to the "redeemed_at" field.
+func (m *ManagerClaimMutation) ResetRedeemedAt() {
+	m.redeemed_at = nil
+	delete(m.clearedFields, managerclaim.FieldRedeemedAt)
+}
+
+// SetRedeemedBy sets the "redeemed_by" field.
+func (m *ManagerClaimMutation) SetRedeemedBy(u uuid.UUID) {
+	m.redeemed_by = &u
+}
+
+// RedeemedBy returns the value of the "redeemed_by" field in the mutation.
+func (m *ManagerClaimMutation) RedeemedBy() (r uuid.UUID, exists bool) {
+	v := m.redeemed_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRedeemedBy returns the old "redeemed_by" field's value of the ManagerClaim entity.
+// If the ManagerClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerClaimMutation) OldRedeemedBy(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRedeemedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRedeemedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRedeemedBy: %w", err)
+	}
+	return oldValue.RedeemedBy, nil
+}
+
+// ClearRedeemedBy clears the value of the "redeemed_by" field.
+func (m *ManagerClaimMutation) ClearRedeemedBy() {
+	m.redeemed_by = nil
+	m.clearedFields[managerclaim.FieldRedeemedBy] = struct{}{}
+}
+
+// RedeemedByCleared returns if the "redeemed_by" field was cleared in this mutation.
+func (m *ManagerClaimMutation) RedeemedByCleared() bool {
+	_, ok := m.clearedFields[managerclaim.FieldRedeemedBy]
+	return ok
+}
+
+// ResetRedeemedBy resets all changes to the "redeemed_by" field.
+func (m *ManagerClaimMutation) ResetRedeemedBy() {
+	m.redeemed_by = nil
+	delete(m.clearedFields, managerclaim.FieldRedeemedBy)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ManagerClaimMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ManagerClaimMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ManagerClaim entity.
+// If the ManagerClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerClaimMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ManagerClaimMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetManagedID sets the "managed" edge to the Principal entity by id.
+func (m *ManagerClaimMutation) SetManagedID(id uuid.UUID) {
+	m.managed = &id
+}
+
+// ClearManaged clears the "managed" edge to the Principal entity.
+func (m *ManagerClaimMutation) ClearManaged() {
+	m.clearedmanaged = true
+	m.clearedFields[managerclaim.FieldManagedPrincipalID] = struct{}{}
+}
+
+// ManagedCleared reports if the "managed" edge to the Principal entity was cleared.
+func (m *ManagerClaimMutation) ManagedCleared() bool {
+	return m.clearedmanaged
+}
+
+// ManagedID returns the "managed" edge ID in the mutation.
+func (m *ManagerClaimMutation) ManagedID() (id uuid.UUID, exists bool) {
+	if m.managed != nil {
+		return *m.managed, true
+	}
+	return
+}
+
+// ManagedIDs returns the "managed" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ManagedID instead. It exists only for internal usage by the builders.
+func (m *ManagerClaimMutation) ManagedIDs() (ids []uuid.UUID) {
+	if id := m.managed; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetManaged resets all changes to the "managed" edge.
+func (m *ManagerClaimMutation) ResetManaged() {
+	m.managed = nil
+	m.clearedmanaged = false
+}
+
+// Where appends a list predicates to the ManagerClaimMutation builder.
+func (m *ManagerClaimMutation) Where(ps ...predicate.ManagerClaim) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ManagerClaimMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ManagerClaimMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ManagerClaim, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ManagerClaimMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ManagerClaimMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ManagerClaim).
+func (m *ManagerClaimMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ManagerClaimMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.managed != nil {
+		fields = append(fields, managerclaim.FieldManagedPrincipalID)
+	}
+	if m.code_prefix != nil {
+		fields = append(fields, managerclaim.FieldCodePrefix)
+	}
+	if m.code_hash != nil {
+		fields = append(fields, managerclaim.FieldCodeHash)
+	}
+	if m.issued_by != nil {
+		fields = append(fields, managerclaim.FieldIssuedBy)
+	}
+	if m.expires_at != nil {
+		fields = append(fields, managerclaim.FieldExpiresAt)
+	}
+	if m.redeemed_at != nil {
+		fields = append(fields, managerclaim.FieldRedeemedAt)
+	}
+	if m.redeemed_by != nil {
+		fields = append(fields, managerclaim.FieldRedeemedBy)
+	}
+	if m.created_at != nil {
+		fields = append(fields, managerclaim.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ManagerClaimMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case managerclaim.FieldManagedPrincipalID:
+		return m.ManagedPrincipalID()
+	case managerclaim.FieldCodePrefix:
+		return m.CodePrefix()
+	case managerclaim.FieldCodeHash:
+		return m.CodeHash()
+	case managerclaim.FieldIssuedBy:
+		return m.IssuedBy()
+	case managerclaim.FieldExpiresAt:
+		return m.ExpiresAt()
+	case managerclaim.FieldRedeemedAt:
+		return m.RedeemedAt()
+	case managerclaim.FieldRedeemedBy:
+		return m.RedeemedBy()
+	case managerclaim.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ManagerClaimMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case managerclaim.FieldManagedPrincipalID:
+		return m.OldManagedPrincipalID(ctx)
+	case managerclaim.FieldCodePrefix:
+		return m.OldCodePrefix(ctx)
+	case managerclaim.FieldCodeHash:
+		return m.OldCodeHash(ctx)
+	case managerclaim.FieldIssuedBy:
+		return m.OldIssuedBy(ctx)
+	case managerclaim.FieldExpiresAt:
+		return m.OldExpiresAt(ctx)
+	case managerclaim.FieldRedeemedAt:
+		return m.OldRedeemedAt(ctx)
+	case managerclaim.FieldRedeemedBy:
+		return m.OldRedeemedBy(ctx)
+	case managerclaim.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ManagerClaim field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ManagerClaimMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case managerclaim.FieldManagedPrincipalID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetManagedPrincipalID(v)
+		return nil
+	case managerclaim.FieldCodePrefix:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCodePrefix(v)
+		return nil
+	case managerclaim.FieldCodeHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCodeHash(v)
+		return nil
+	case managerclaim.FieldIssuedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIssuedBy(v)
+		return nil
+	case managerclaim.FieldExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresAt(v)
+		return nil
+	case managerclaim.FieldRedeemedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRedeemedAt(v)
+		return nil
+	case managerclaim.FieldRedeemedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRedeemedBy(v)
+		return nil
+	case managerclaim.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ManagerClaim field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ManagerClaimMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ManagerClaimMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ManagerClaimMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ManagerClaim numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ManagerClaimMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(managerclaim.FieldRedeemedAt) {
+		fields = append(fields, managerclaim.FieldRedeemedAt)
+	}
+	if m.FieldCleared(managerclaim.FieldRedeemedBy) {
+		fields = append(fields, managerclaim.FieldRedeemedBy)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ManagerClaimMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ManagerClaimMutation) ClearField(name string) error {
+	switch name {
+	case managerclaim.FieldRedeemedAt:
+		m.ClearRedeemedAt()
+		return nil
+	case managerclaim.FieldRedeemedBy:
+		m.ClearRedeemedBy()
+		return nil
+	}
+	return fmt.Errorf("unknown ManagerClaim nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ManagerClaimMutation) ResetField(name string) error {
+	switch name {
+	case managerclaim.FieldManagedPrincipalID:
+		m.ResetManagedPrincipalID()
+		return nil
+	case managerclaim.FieldCodePrefix:
+		m.ResetCodePrefix()
+		return nil
+	case managerclaim.FieldCodeHash:
+		m.ResetCodeHash()
+		return nil
+	case managerclaim.FieldIssuedBy:
+		m.ResetIssuedBy()
+		return nil
+	case managerclaim.FieldExpiresAt:
+		m.ResetExpiresAt()
+		return nil
+	case managerclaim.FieldRedeemedAt:
+		m.ResetRedeemedAt()
+		return nil
+	case managerclaim.FieldRedeemedBy:
+		m.ResetRedeemedBy()
+		return nil
+	case managerclaim.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ManagerClaim field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ManagerClaimMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.managed != nil {
+		edges = append(edges, managerclaim.EdgeManaged)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ManagerClaimMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case managerclaim.EdgeManaged:
+		if id := m.managed; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ManagerClaimMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ManagerClaimMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ManagerClaimMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedmanaged {
+		edges = append(edges, managerclaim.EdgeManaged)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ManagerClaimMutation) EdgeCleared(name string) bool {
+	switch name {
+	case managerclaim.EdgeManaged:
+		return m.clearedmanaged
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ManagerClaimMutation) ClearEdge(name string) error {
+	switch name {
+	case managerclaim.EdgeManaged:
+		m.ClearManaged()
+		return nil
+	}
+	return fmt.Errorf("unknown ManagerClaim unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ManagerClaimMutation) ResetEdge(name string) error {
+	switch name {
+	case managerclaim.EdgeManaged:
+		m.ResetManaged()
+		return nil
+	}
+	return fmt.Errorf("unknown ManagerClaim edge %s", name)
+}
+
 // ManagerRelationshipMutation represents an operation that mutates the ManagerRelationship nodes in the graph.
 type ManagerRelationshipMutation struct {
 	config
@@ -22008,6 +22828,9 @@ type PrincipalMutation struct {
 	managing                     map[uuid.UUID]struct{}
 	removedmanaging              map[uuid.UUID]struct{}
 	clearedmanaging              bool
+	manager_claims               map[uuid.UUID]struct{}
+	removedmanager_claims        map[uuid.UUID]struct{}
+	clearedmanager_claims        bool
 	oauth_consents               map[uuid.UUID]struct{}
 	removedoauth_consents        map[uuid.UUID]struct{}
 	clearedoauth_consents        bool
@@ -23151,6 +23974,60 @@ func (m *PrincipalMutation) ResetManaging() {
 	m.removedmanaging = nil
 }
 
+// AddManagerClaimIDs adds the "manager_claims" edge to the ManagerClaim entity by ids.
+func (m *PrincipalMutation) AddManagerClaimIDs(ids ...uuid.UUID) {
+	if m.manager_claims == nil {
+		m.manager_claims = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.manager_claims[ids[i]] = struct{}{}
+	}
+}
+
+// ClearManagerClaims clears the "manager_claims" edge to the ManagerClaim entity.
+func (m *PrincipalMutation) ClearManagerClaims() {
+	m.clearedmanager_claims = true
+}
+
+// ManagerClaimsCleared reports if the "manager_claims" edge to the ManagerClaim entity was cleared.
+func (m *PrincipalMutation) ManagerClaimsCleared() bool {
+	return m.clearedmanager_claims
+}
+
+// RemoveManagerClaimIDs removes the "manager_claims" edge to the ManagerClaim entity by IDs.
+func (m *PrincipalMutation) RemoveManagerClaimIDs(ids ...uuid.UUID) {
+	if m.removedmanager_claims == nil {
+		m.removedmanager_claims = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.manager_claims, ids[i])
+		m.removedmanager_claims[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedManagerClaims returns the removed IDs of the "manager_claims" edge to the ManagerClaim entity.
+func (m *PrincipalMutation) RemovedManagerClaimsIDs() (ids []uuid.UUID) {
+	for id := range m.removedmanager_claims {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ManagerClaimsIDs returns the "manager_claims" edge IDs in the mutation.
+func (m *PrincipalMutation) ManagerClaimsIDs() (ids []uuid.UUID) {
+	for id := range m.manager_claims {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetManagerClaims resets all changes to the "manager_claims" edge.
+func (m *PrincipalMutation) ResetManagerClaims() {
+	m.manager_claims = nil
+	m.clearedmanager_claims = false
+	m.removedmanager_claims = nil
+}
+
 // AddOauthConsentIDs adds the "oauth_consents" edge to the OAuthConsent entity by ids.
 func (m *PrincipalMutation) AddOauthConsentIDs(ids ...uuid.UUID) {
 	if m.oauth_consents == nil {
@@ -23776,7 +24653,7 @@ func (m *PrincipalMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PrincipalMutation) AddedEdges() []string {
-	edges := make([]string, 0, 19)
+	edges := make([]string, 0, 20)
 	if m.organization != nil {
 		edges = append(edges, principal.EdgeOrganization)
 	}
@@ -23815,6 +24692,9 @@ func (m *PrincipalMutation) AddedEdges() []string {
 	}
 	if m.managing != nil {
 		edges = append(edges, principal.EdgeManaging)
+	}
+	if m.manager_claims != nil {
+		edges = append(edges, principal.EdgeManagerClaims)
 	}
 	if m.oauth_consents != nil {
 		edges = append(edges, principal.EdgeOauthConsents)
@@ -23909,6 +24789,12 @@ func (m *PrincipalMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case principal.EdgeManagerClaims:
+		ids := make([]ent.Value, 0, len(m.manager_claims))
+		for id := range m.manager_claims {
+			ids = append(ids, id)
+		}
+		return ids
 	case principal.EdgeOauthConsents:
 		ids := make([]ent.Value, 0, len(m.oauth_consents))
 		for id := range m.oauth_consents {
@@ -23951,7 +24837,7 @@ func (m *PrincipalMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PrincipalMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 19)
+	edges := make([]string, 0, 20)
 	if m.removedcredentials != nil {
 		edges = append(edges, principal.EdgeCredentials)
 	}
@@ -23975,6 +24861,9 @@ func (m *PrincipalMutation) RemovedEdges() []string {
 	}
 	if m.removedmanaging != nil {
 		edges = append(edges, principal.EdgeManaging)
+	}
+	if m.removedmanager_claims != nil {
+		edges = append(edges, principal.EdgeManagerClaims)
 	}
 	if m.removedoauth_consents != nil {
 		edges = append(edges, principal.EdgeOauthConsents)
@@ -24049,6 +24938,12 @@ func (m *PrincipalMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case principal.EdgeManagerClaims:
+		ids := make([]ent.Value, 0, len(m.removedmanager_claims))
+		for id := range m.removedmanager_claims {
+			ids = append(ids, id)
+		}
+		return ids
 	case principal.EdgeOauthConsents:
 		ids := make([]ent.Value, 0, len(m.removedoauth_consents))
 		for id := range m.removedoauth_consents {
@@ -24091,7 +24986,7 @@ func (m *PrincipalMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PrincipalMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 19)
+	edges := make([]string, 0, 20)
 	if m.clearedorganization {
 		edges = append(edges, principal.EdgeOrganization)
 	}
@@ -24130,6 +25025,9 @@ func (m *PrincipalMutation) ClearedEdges() []string {
 	}
 	if m.clearedmanaging {
 		edges = append(edges, principal.EdgeManaging)
+	}
+	if m.clearedmanager_claims {
+		edges = append(edges, principal.EdgeManagerClaims)
 	}
 	if m.clearedoauth_consents {
 		edges = append(edges, principal.EdgeOauthConsents)
@@ -24182,6 +25080,8 @@ func (m *PrincipalMutation) EdgeCleared(name string) bool {
 		return m.clearedmanagers
 	case principal.EdgeManaging:
 		return m.clearedmanaging
+	case principal.EdgeManagerClaims:
+		return m.clearedmanager_claims
 	case principal.EdgeOauthConsents:
 		return m.clearedoauth_consents
 	case principal.EdgeSentInvites:
@@ -24263,6 +25163,9 @@ func (m *PrincipalMutation) ResetEdge(name string) error {
 		return nil
 	case principal.EdgeManaging:
 		m.ResetManaging()
+		return nil
+	case principal.EdgeManagerClaims:
+		m.ResetManagerClaims()
 		return nil
 	case principal.EdgeOauthConsents:
 		m.ResetOauthConsents()

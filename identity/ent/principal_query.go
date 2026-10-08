@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/managerclaim"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
@@ -53,6 +54,7 @@ type PrincipalQuery struct {
 	withOwnedOauthApps       *OAuthAppQuery
 	withManagers             *ManagerRelationshipQuery
 	withManaging             *ManagerRelationshipQuery
+	withManagerClaims        *ManagerClaimQuery
 	withOauthConsents        *OAuthConsentQuery
 	withSentInvites          *InviteQuery
 	withOwnedListings        *ListingQuery
@@ -374,6 +376,28 @@ func (_q *PrincipalQuery) QueryManaging() *ManagerRelationshipQuery {
 			sqlgraph.From(principal.Table, principal.FieldID, selector),
 			sqlgraph.To(managerrelationship.Table, managerrelationship.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, principal.ManagingTable, principal.ManagingColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryManagerClaims chains the current query on the "manager_claims" edge.
+func (_q *PrincipalQuery) QueryManagerClaims() *ManagerClaimQuery {
+	query := (&ManagerClaimClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, selector),
+			sqlgraph.To(managerclaim.Table, managerclaim.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.ManagerClaimsTable, principal.ManagerClaimsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -718,6 +742,7 @@ func (_q *PrincipalQuery) Clone() *PrincipalQuery {
 		withOwnedOauthApps:       _q.withOwnedOauthApps.Clone(),
 		withManagers:             _q.withManagers.Clone(),
 		withManaging:             _q.withManaging.Clone(),
+		withManagerClaims:        _q.withManagerClaims.Clone(),
 		withOauthConsents:        _q.withOauthConsents.Clone(),
 		withSentInvites:          _q.withSentInvites.Clone(),
 		withOwnedListings:        _q.withOwnedListings.Clone(),
@@ -873,6 +898,17 @@ func (_q *PrincipalQuery) WithManaging(opts ...func(*ManagerRelationshipQuery)) 
 	return _q
 }
 
+// WithManagerClaims tells the query-builder to eager-load the nodes that are connected to
+// the "manager_claims" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PrincipalQuery) WithManagerClaims(opts ...func(*ManagerClaimQuery)) *PrincipalQuery {
+	query := (&ManagerClaimClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withManagerClaims = query
+	return _q
+}
+
 // WithOauthConsents tells the query-builder to eager-load the nodes that are connected to
 // the "oauth_consents" edge. The optional arguments are used to configure the query builder of the edge.
 func (_q *PrincipalQuery) WithOauthConsents(opts ...func(*OAuthConsentQuery)) *PrincipalQuery {
@@ -1017,7 +1053,7 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 	var (
 		nodes       = []*Principal{}
 		_spec       = _q.querySpec()
-		loadedTypes = [19]bool{
+		loadedTypes = [20]bool{
 			_q.withOrganization != nil,
 			_q.withHuman != nil,
 			_q.withApplication != nil,
@@ -1031,6 +1067,7 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 			_q.withOwnedOauthApps != nil,
 			_q.withManagers != nil,
 			_q.withManaging != nil,
+			_q.withManagerClaims != nil,
 			_q.withOauthConsents != nil,
 			_q.withSentInvites != nil,
 			_q.withOwnedListings != nil,
@@ -1146,6 +1183,13 @@ func (_q *PrincipalQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pr
 		if err := _q.loadManaging(ctx, query, nodes,
 			func(n *Principal) { n.Edges.Managing = []*ManagerRelationship{} },
 			func(n *Principal, e *ManagerRelationship) { n.Edges.Managing = append(n.Edges.Managing, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withManagerClaims; query != nil {
+		if err := _q.loadManagerClaims(ctx, query, nodes,
+			func(n *Principal) { n.Edges.ManagerClaims = []*ManagerClaim{} },
+			func(n *Principal, e *ManagerClaim) { n.Edges.ManagerClaims = append(n.Edges.ManagerClaims, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1572,6 +1616,36 @@ func (_q *PrincipalQuery) loadManaging(ctx context.Context, query *ManagerRelati
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "manager_principal_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PrincipalQuery) loadManagerClaims(ctx context.Context, query *ManagerClaimQuery, nodes []*Principal, init func(*Principal), assign func(*Principal, *ManagerClaim)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Principal)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(managerclaim.FieldManagedPrincipalID)
+	}
+	query.Where(predicate.ManagerClaim(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(principal.ManagerClaimsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ManagedPrincipalID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "managed_principal_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

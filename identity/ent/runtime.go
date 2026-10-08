@@ -18,6 +18,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/listing"
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
+	"github.com/plexusone/systemforge/identity/ent/managerclaim"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
@@ -398,6 +399,16 @@ func init() {
 	loginstateDescID := loginstateFields[0].Descriptor()
 	// loginstate.DefaultID holds the default value on creation for the id field.
 	loginstate.DefaultID = loginstateDescID.Default.(func() uuid.UUID)
+	managerclaimFields := schema.ManagerClaim{}.Fields()
+	_ = managerclaimFields
+	// managerclaimDescCreatedAt is the schema descriptor for created_at field.
+	managerclaimDescCreatedAt := managerclaimFields[8].Descriptor()
+	// managerclaim.DefaultCreatedAt holds the default value on creation for the created_at field.
+	managerclaim.DefaultCreatedAt = managerclaimDescCreatedAt.Default.(func() time.Time)
+	// managerclaimDescID is the schema descriptor for id field.
+	managerclaimDescID := managerclaimFields[0].Descriptor()
+	// managerclaim.DefaultID holds the default value on creation for the id field.
+	managerclaim.DefaultID = managerclaimDescID.Default.(func() uuid.UUID)
 	managerrelationshipMixin := schema.ManagerRelationship{}.Mixin()
 	managerrelationshipMixinFields0 := managerrelationshipMixin[0].Fields()
 	_ = managerrelationshipMixinFields0
