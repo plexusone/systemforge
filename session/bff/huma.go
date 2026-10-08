@@ -233,7 +233,7 @@ const (
 // AddBFFSecurityScheme adds the BFF cookie-based security scheme to the OpenAPI spec.
 func AddBFFSecurityScheme(api huma.API, cookieName string) {
 	if cookieName == "" {
-		cookieName = "cf_session"
+		cookieName = DefaultCookieName
 	}
 
 	api.OpenAPI().Components.SecuritySchemes["bff-session"] = &huma.SecurityScheme{

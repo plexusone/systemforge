@@ -5,9 +5,12 @@ import (
 	"time"
 )
 
+// DefaultCookieName is the session cookie name used when none is configured.
+const DefaultCookieName = "sf_session"
+
 // CookieConfig contains configuration for session cookies.
 type CookieConfig struct {
-	// Name is the cookie name. Default: "cf_session".
+	// Name is the cookie name. Default: DefaultCookieName ("sf_session").
 	Name string
 
 	// Domain is the cookie domain. If empty, uses the request host.
@@ -36,7 +39,7 @@ type CookieConfig struct {
 // DefaultCookieConfig returns secure default cookie configuration.
 func DefaultCookieConfig() CookieConfig {
 	return CookieConfig{
-		Name:     "cf_session",
+		Name:     DefaultCookieName,
 		Path:     "/",
 		Secure:   true,
 		HTTPOnly: true,
@@ -53,7 +56,7 @@ type CookieManager struct {
 func NewCookieManager(config CookieConfig) *CookieManager {
 	// Apply defaults for zero values
 	if config.Name == "" {
-		config.Name = "cf_session"
+		config.Name = DefaultCookieName
 	}
 	if config.Path == "" {
 		config.Path = "/"

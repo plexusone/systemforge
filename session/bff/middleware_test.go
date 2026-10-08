@@ -42,7 +42,7 @@ func TestSessionMiddleware_WithSession(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "cf_session",
+		Name:  "sf_session",
 		Value: session.ID,
 	})
 
@@ -127,7 +127,7 @@ func TestSessionMiddleware_SessionNotFound(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "cf_session",
+		Name:  "sf_session",
 		Value: "non-existent-session",
 	})
 
@@ -138,7 +138,7 @@ func TestSessionMiddleware_SessionNotFound(t *testing.T) {
 	cookies := rr.Result().Cookies()
 	var sessionCookie *http.Cookie
 	for _, c := range cookies {
-		if c.Name == "cf_session" {
+		if c.Name == "sf_session" {
 			sessionCookie = c
 			break
 		}
@@ -176,7 +176,7 @@ func TestSessionMiddleware_SessionExpired(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "cf_session",
+		Name:  "sf_session",
 		Value: session.ID,
 	})
 
@@ -213,7 +213,7 @@ func TestSessionMiddleware_TouchOnAccess(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "cf_session",
+		Name:  "sf_session",
 		Value: session.ID,
 	})
 
@@ -256,7 +256,7 @@ func TestSessionMiddleware_OnSessionLoad(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "cf_session",
+		Name:  "sf_session",
 		Value: session.ID,
 	})
 
@@ -292,7 +292,7 @@ func TestSessionMiddleware_OnSessionLoad_Error(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "cf_session",
+		Name:  "sf_session",
 		Value: session.ID,
 	})
 

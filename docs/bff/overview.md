@@ -106,7 +106,7 @@ type HandlerConfig struct {
 ```go
 // Secure defaults
 cookieConfig := bff.DefaultCookieConfig()
-// Name:     "cf_session"
+// Name:     "sf_session"
 // Path:     "/"
 // Secure:   true        // HTTPS only
 // HTTPOnly: true        // No JavaScript access
