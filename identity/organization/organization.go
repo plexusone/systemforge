@@ -2,6 +2,7 @@
 package organization
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -84,8 +85,11 @@ type ListOrganizationsInput struct {
 	OrgType *OrgType
 	Plan    *Plan
 	Active  *bool
-	Limit   int
-	Offset  int
+	// MemberPrincipalID limits the list to organizations the principal is
+	// an active member of.
+	MemberPrincipalID *uuid.UUID
+	Limit             int
+	Offset            int
 }
 
 // Membership represents a principal's membership in an organization.
@@ -129,3 +133,7 @@ type TransferOwnershipInput struct {
 	ToPrincipal    uuid.UUID // New owner
 	NewRoleForOld  string    // Role for the previous owner (default: "admin")
 }
+
+// ErrMembershipNotFound is returned when a principal has no membership,
+// active or not, in an organization.
+var ErrMembershipNotFound = errors.New("membership not found")

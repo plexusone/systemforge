@@ -178,8 +178,9 @@ func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInp
 		return nil, fmt.Errorf("failed to create organization: %w", err)
 	}
 
-	// If personal org, create owner membership automatically
-	if input.OrgType == OrgTypePersonal && input.OwnerPrincipalID != nil {
+	// The owner is a member with the owner role, so membership-based
+	// authorization recognizes it.
+	if input.OwnerPrincipalID != nil {
 		_, err = tx.PrincipalMembership.Create().
 			SetPrincipalID(*input.OwnerPrincipalID).
 			SetOrganizationID(org.ID).
@@ -333,6 +334,12 @@ func (s *DefaultService) List(ctx context.Context, input ListOrganizationsInput)
 	if input.Active != nil {
 		query.Where(organization.Active(*input.Active))
 	}
+	if input.MemberPrincipalID != nil {
+		query.Where(organization.HasPrincipalMembershipsWith(
+			principalmembership.PrincipalIDEQ(*input.MemberPrincipalID),
+			principalmembership.ActiveEQ(true),
+		))
+	}
 
 	if input.Limit > 0 {
 		query.Limit(input.Limit)
@@ -484,7 +491,7 @@ func (s *DefaultService) GetMembership(ctx context.Context, organizationID, prin
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("membership not found")
+			return nil, ErrMembershipNotFound
 		}
 		return nil, fmt.Errorf("failed to get membership: %w", err)
 	}
