@@ -5,6 +5,7 @@ package credential
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -138,3 +139,7 @@ type Service interface {
 	Revoke(ctx context.Context, id uuid.UUID, reason string) error
 	UpdateLastUsed(ctx context.Context, id uuid.UUID, ip string) error
 }
+
+// ErrCorruptCredential is returned when a stored credential cannot be
+// read, such as a secret hash in an unknown format.
+var ErrCorruptCredential = errors.New("credential: stored credential is corrupt")

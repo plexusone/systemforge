@@ -183,7 +183,7 @@ func (s *DefaultService) VerifyLoginToken(ctx context.Context, plainToken, ip st
 
 	want, err := hex.DecodeString(cred.SecretHash)
 	if err != nil {
-		return nil, fmt.Errorf("corrupt login token hash for credential %s: %w", cred.ID, err)
+		return nil, fmt.Errorf("%w: login token %s: %w", ErrCorruptCredential, cred.ID, err)
 	}
 	got := sha256.Sum256([]byte(plain))
 	if subtle.ConstantTimeCompare(got[:], want) != 1 {

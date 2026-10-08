@@ -51,6 +51,11 @@ func (s *DefaultService) CreatePassword(ctx context.Context, input CreatePasswor
 			credential.RevokedEQ(false),
 		).
 		First(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		// Creating a second password here would make VerifyPassword,
+		// which expects one, fail every sign-in for the principal.
+		return fmt.Errorf("failed to check existing password: %w", err)
+	}
 
 	if err == nil && existing != nil {
 		// Update existing password
@@ -104,11 +109,9 @@ func (s *DefaultService) VerifyPassword(ctx context.Context, principalID uuid.UU
 	}
 
 	if valid {
-		// Update last used
-		now := time.Now()
-		_, _ = s.client.Credential.UpdateOne(cred).
-			SetLastUsedAt(now).
-			Save(ctx)
+		if err := s.client.Credential.UpdateOne(cred).SetLastUsedAt(time.Now()).Exec(ctx); err != nil {
+			return false, fmt.Errorf("failed to record password use: %w", err)
+		}
 	}
 
 	return valid, nil
@@ -201,11 +204,9 @@ func (s *DefaultService) ValidateAPIKey(ctx context.Context, plainKey string) (*
 		return nil, fmt.Errorf("API key expired")
 	}
 
-	// Update last used
-	now := time.Now()
-	_, _ = s.client.Credential.UpdateOne(cred).
-		SetLastUsedAt(now).
-		Save(ctx)
+	if err := s.client.Credential.UpdateOne(cred).SetLastUsedAt(time.Now()).Exec(ctx); err != nil {
+		return nil, fmt.Errorf("failed to record API key use: %w", err)
+	}
 
 	return entCredentialToModel(cred), nil
 }
@@ -316,14 +317,12 @@ func (s *DefaultService) ValidateClientSecret(ctx context.Context, clientID, pla
 
 		valid, err := identity.VerifyPassword(plainSecret, cred.SecretHash)
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("%w: client secret %s: %w", ErrCorruptCredential, cred.ID, err)
 		}
 		if valid {
-			// Update last used
-			now := time.Now()
-			_, _ = s.client.Credential.UpdateOne(cred).
-				SetLastUsedAt(now).
-				Save(ctx)
+			if err := s.client.Credential.UpdateOne(cred).SetLastUsedAt(time.Now()).Exec(ctx); err != nil {
+				return nil, fmt.Errorf("failed to record client secret use: %w", err)
+			}
 			return entCredentialToModel(cred), nil
 		}
 	}
