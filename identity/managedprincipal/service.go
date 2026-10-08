@@ -40,6 +40,7 @@ type Service struct {
 	syncer   authz.RelationshipSyncer
 	syncMode authz.SyncMode
 	authz    authz.Authorizer
+	claimTTL time.Duration
 	logger   *slog.Logger
 	roles    []string
 }
@@ -96,6 +97,7 @@ func NewService(client *ent.Client, gate Gate, opts ...Option) *Service {
 		client:   client,
 		creds:    credential.NewService(client),
 		now:      time.Now,
+		claimTTL: DefaultClaimTTL,
 		gate:     gate,
 		syncer:   noop.NewSyncer(),
 		syncMode: authz.SyncModeEventual,
