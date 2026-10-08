@@ -4,16 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/ory/fosite"
 )
 
 // registerFositeEndpoints registers OAuth endpoints that use Fosite directly.
 // We register Huma operations for OpenAPI documentation, then use middleware
 // to intercept requests and delegate to Fosite before Huma processes them.
 func (a *API) registerFositeEndpoints() {
-	// Add middleware to intercept OAuth paths and delegate to Fosite
-	a.router.Use(a.fositeInterceptor)
+	// The Fosite interceptor is installed in NewAPI: chi requires every
+	// middleware to be added before any route.
 
 	// Register Huma operations for OpenAPI documentation
 	a.registerFositeOpenAPI()
@@ -148,27 +151,48 @@ func (a *API) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	logger.Debug("authorize request", "client_id", ar.GetClient().GetID(), "scopes", ar.GetRequestedScopes())
 
-	// For this example, we assume the user is already authenticated
-	// In a real implementation, you would:
-	// 1. Check if user is logged in
-	// 2. If not, redirect to login page
-	// 3. If logged in, check for existing consent
-	// 4. If no consent, show consent screen
-	// 5. After consent, continue here
-
-	// Get user ID from session/context (you need to implement this)
-	userID := getUserIDFromSession(r)
-	if userID == "" {
-		// Redirect to login
-		//nolint:gosec // G710: Redirect target is hardcoded /login path, query param is for return navigation
-		http.Redirect(w, r, "/login?redirect="+r.URL.String(), http.StatusFound)
+	// Who is the user? Without an authenticator the server cannot tell,
+	// and must not guess.
+	if a.authenticate == nil {
+		logger.Error("authorize request refused: no user authenticator configured (see WithUserAuthenticator)")
+		oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrServerError.WithHint("The server has no way to authenticate users."))
 		return
+	}
+	userID := a.authenticate(r)
+	if userID == "" {
+		if a.loginURL == "" {
+			oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrLoginRequired)
+			return
+		}
+		//nolint:gosec // G710: the target is the configured login URL; the return address is query-escaped
+		http.Redirect(w, r, appendQueryParam(a.loginURL, "redirect", r.URL.RequestURI()), http.StatusFound)
+		return
+	}
+
+	// Consent: first-party clients act for the user by design; any other
+	// client needs the user's recorded consent.
+	if !isFirstParty(ar.GetClient()) {
+		if a.consent == nil {
+			oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrAccessDenied.WithHint("Consent is required and the server has no way to record it."))
+			return
+		}
+		ok, err := a.consent(ctx, userID, ar.GetClient(), ar.GetRequestedScopes())
+		if err != nil {
+			logger.Error("checking consent", "client_id", ar.GetClient().GetID(), "error", err)
+			oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrServerError.WithWrap(err))
+			return
+		}
+		if !ok {
+			oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrConsentRequired)
+			return
+		}
 	}
 
 	// Create session for the user
 	session := a.provider.Session(userID)
 
-	// Grant the requested scopes (in production, filter based on user consent)
+	// Grant the requested scopes; Fosite already limited them to the
+	// client's registered scopes.
 	for _, scope := range ar.GetRequestedScopes() {
 		ar.GrantScope(scope)
 	}
@@ -264,18 +288,18 @@ func (a *API) revocationEndpoint(w http.ResponseWriter, r *http.Request) {
 	oauth2.WriteRevocationResponse(ctx, w, nil)
 }
 
-// getUserIDFromSession extracts the user ID from the request session.
-// This is a placeholder - implement based on your session management.
-func getUserIDFromSession(r *http.Request) string {
-	// In a real implementation, you would:
-	// 1. Check for session cookie
-	// 2. Validate the session
-	// 3. Return the user ID from the session
+// isFirstParty reports whether the client is one the operator runs.
+func isFirstParty(c fosite.Client) bool {
+	client, ok := c.(*Client)
+	return ok && client.app.FirstParty
+}
 
-	// For now, check for a header (used in BFF pattern)
-	if userID := r.Header.Get("X-User-ID"); userID != "" {
-		return userID
+// appendQueryParam appends key=value, query-escaped, to base, which may
+// already carry a query string.
+func appendQueryParam(base, key, value string) string {
+	sep := "?"
+	if strings.Contains(base, "?") {
+		sep = "&"
 	}
-
-	return ""
+	return base + sep + url.QueryEscape(key) + "=" + url.QueryEscape(value)
 }
