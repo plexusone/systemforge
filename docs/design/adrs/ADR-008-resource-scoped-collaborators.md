@@ -67,15 +67,15 @@ vocabularies, lookups), so the pattern should be defined once.
    the same thing by them.
 3. **Grants are a substrate operation, supported by both providers.**
    `authz` gains `GrantResourceRole(ctx, principal, resource, role)`,
-   `RevokeResourceRole` and `ListResourceGrants`. The `spicedb` provider
-   writes relationships; the `simple` provider stores grants in a new
+   `RevokeResourceRole` and `ListResourceGrants`. The `rebac` engine
+   writes relationships; the `rbac` provider stores grants in a new
    `sf_resource_grants` table (principal, organization, resource type,
    resource ID, role) and consults it in its checks. Granting to a principal
    who is not a member of the resource's organization adds a `collaborator`
    membership; revoking the last grant removes it.
 4. **Applications filter by lookup, not by trust.** `Authorizer` gains
    `ListResources(ctx, principal, resourceType, permission)` (SpiceDB
-   `LookupResources`; a table scan in `simple`). An application uses the
+   `LookupResources`; an indexed query in `rbac`). An application uses the
    result to constrain queries and row-level security to the resources a
    collaborator may see, in addition to checking each request. The scope
    gate still applies: a collaborator's credential must carry the
@@ -134,7 +134,7 @@ In terms of what each provider can answer:
 | Does the principal hold a direct grant on this specific resource? | no | yes, from the grants table | yes |
 | Does a permission reach the principal through relationships (team membership, a parent resource, a share with a group)? | no | no | yes, through the schema fragment |
 
-The grants this ADR adds to `simple` are one hop: principal, role,
+The grants this ADR adds to `rbac` are one hop: principal, role,
 resource. That is enough for collaborators. What `rebac` adds beyond the
 contract is the application's schema fragment: relations and inheritance
 `rbac` cannot express.
@@ -153,8 +153,8 @@ then it declares none and the contract is all it uses.
 - **The schema parity test and `authz-conventions.md` change**: the base
   schema gains `collaborator` and `list`, and the resource-role ladder is
   added to the conventions.
-- **The `simple` provider grows a table and indexed queries over it**;
-  `providertest` keeps it in step with `spicedb` on the contract, so
+- **The `rbac` provider grows a table and indexed queries over it**;
+  `providertest` keeps it in step with `rebac` on the contract, so
   choosing it is not a dead end.
 - **Moving a resource between organizations**, if an application supports
   it, must move its grants and the collaborator memberships they imply.
