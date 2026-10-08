@@ -58,59 +58,6 @@ func (BaseMixin) Fields() []ent.Field {
 	return fields
 }
 
-// UserBase provides the core user fields for composition into app schemas.
-// Apps can use this mixin to get SystemForge-compatible user fields while
-// adding their own custom fields.
-//
-// Example usage:
-//
-//	type User struct {
-//	    ent.Schema
-//	}
-//
-//	func (User) Mixin() []ent.Mixin {
-//	    return []ent.Mixin{
-//	        mixin.UserBase{},
-//	    }
-//	}
-//
-//	func (User) Fields() []ent.Field {
-//	    return []ent.Field{
-//	        // App-specific fields
-//	        field.String("username").Unique(),
-//	    }
-//	}
-type UserBase struct {
-	mixin.Schema
-}
-
-// Fields returns the core user fields.
-func (UserBase) Fields() []ent.Field {
-	baseFields := BaseMixin{}.Fields()
-	userFields := []ent.Field{
-		field.String("email").
-			NotEmpty().
-			Unique(),
-		field.String("name").
-			NotEmpty(),
-		field.String("avatar_url").
-			Optional().
-			Nillable(),
-		field.String("password_hash").
-			Optional().
-			Sensitive(),
-		field.Bool("is_platform_admin").
-			Default(false).
-			Comment("Cross-organization admin access"),
-		field.Bool("active").
-			Default(true),
-		field.Time("last_login_at").
-			Optional().
-			Nillable(),
-	}
-	return append(baseFields, userFields...)
-}
-
 // OrganizationBase provides the core organization fields for composition.
 // Apps can use this mixin to get SystemForge-compatible organization fields
 // while adding their own custom fields or renaming to match their domain
@@ -162,27 +109,4 @@ func (OrganizationBase) Fields() []ent.Field {
 			Comment("Whether org appears in public directory"),
 	}
 	return append(baseFields, orgFields...)
-}
-
-// MembershipBase provides the core membership fields for composition.
-// Apps can use this mixin to get SystemForge-compatible membership fields
-// while customizing role values for their domain.
-type MembershipBase struct {
-	mixin.Schema
-}
-
-// Fields returns the core membership fields.
-func (MembershipBase) Fields() []ent.Field {
-	baseFields := BaseMixin{}.Fields()
-	membershipFields := []ent.Field{
-		field.UUID("user_id", uuid.UUID{}),
-		field.UUID("organization_id", uuid.UUID{}),
-		field.String("role").
-			NotEmpty().
-			Comment("App-defined role (e.g., owner, admin, member, student, instructor)"),
-		field.JSON("permissions", []string{}).
-			Optional().
-			Comment("Optional fine-grained permissions"),
-	}
-	return append(baseFields, membershipFields...)
 }
