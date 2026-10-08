@@ -132,13 +132,13 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 				return nil, err
 			}
 		}
-		ownerID, created, err := ensureSystemUser(ctx, s.client)
+		ownerID, created, err := ensureSystemPrincipal(ctx, s.client)
 		if err != nil {
 			s.closeQuietly()
-			return nil, fmt.Errorf("creating system user: %w", err)
+			return nil, fmt.Errorf("creating system principal: %w", err)
 		}
 		if created {
-			logger.Info("created the system user that owns statically configured clients")
+			logger.Info("created the system principal that owns statically configured clients")
 		}
 		serverOpts = append(serverOpts,
 			systemauth.WithStorage(systemauth.NewEntStorage(s.client, systemauth.WithDefaultOwner(ownerID))),
@@ -202,7 +202,7 @@ func (s *Service) ping(ctx context.Context) error {
 	if s.db != nil {
 		return s.db.PingContext(ctx)
 	}
-	_, err := s.client.User.Query().Limit(1).IDs(ctx)
+	_, err := s.client.Principal.Query().Limit(1).IDs(ctx)
 	return err
 }
 

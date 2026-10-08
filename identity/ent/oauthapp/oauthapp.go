@@ -74,9 +74,9 @@ const (
 	Table = "sf_oauth_apps"
 	// OwnerTable is the table that holds the owner relation/edge.
 	OwnerTable = "sf_oauth_apps"
-	// OwnerInverseTable is the table name for the User entity.
-	// It exists in this package in order to avoid circular dependency with the "user" package.
-	OwnerInverseTable = "sf_users"
+	// OwnerInverseTable is the table name for the Principal entity.
+	// It exists in this package in order to avoid circular dependency with the "principal" package.
+	OwnerInverseTable = "sf_principals"
 	// OwnerColumn is the table column denoting the owner relation/edge.
 	OwnerColumn = "owner_id"
 	// OrganizationTable is the table that holds the organization relation/edge.

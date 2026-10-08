@@ -16,7 +16,6 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/membership"
 	"github.com/plexusone/systemforge/identity/ent/oauthaccount"
-	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
@@ -229,21 +228,6 @@ func (_c *UserCreate) AddAPIKeys(v ...*APIKey) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddAPIKeyIDs(ids...)
-}
-
-// AddOauthAppIDs adds the "oauth_apps" edge to the OAuthApp entity by IDs.
-func (_c *UserCreate) AddOauthAppIDs(ids ...uuid.UUID) *UserCreate {
-	_c.mutation.AddOauthAppIDs(ids...)
-	return _c
-}
-
-// AddOauthApps adds the "oauth_apps" edges to the OAuthApp entity.
-func (_c *UserCreate) AddOauthApps(v ...*OAuthApp) *UserCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddOauthAppIDs(ids...)
 }
 
 // AddOauthTokenIDs adds the "oauth_tokens" edge to the OAuthToken entity by IDs.
@@ -526,22 +510,6 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.OauthAppsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthAppsTable,
-			Columns: []string{user.OauthAppsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

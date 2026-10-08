@@ -19,7 +19,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
 	"github.com/plexusone/systemforge/identity/ent/organization"
-	"github.com/plexusone/systemforge/identity/ent/user"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 )
 
 // OAuthAppCreate is the builder for creating a OAuthApp entity.
@@ -274,8 +274,8 @@ func (_c *OAuthAppCreate) SetNillableID(v *uuid.UUID) *OAuthAppCreate {
 	return _c
 }
 
-// SetOwner sets the "owner" edge to the User entity.
-func (_c *OAuthAppCreate) SetOwner(v *User) *OAuthAppCreate {
+// SetOwner sets the "owner" edge to the Principal entity.
+func (_c *OAuthAppCreate) SetOwner(v *Principal) *OAuthAppCreate {
 	return _c.SetOwnerID(v.ID)
 }
 
@@ -630,7 +630,7 @@ func (_c *OAuthAppCreate) createSpec() (*OAuthApp, *sqlgraph.CreateSpec) {
 			Columns: []string{oauthapp.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(principal.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

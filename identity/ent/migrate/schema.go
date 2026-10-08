@@ -799,9 +799,9 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "sf_oauth_apps_sf_users_oauth_apps",
+				Symbol:     "sf_oauth_apps_sf_principals_owned_oauth_apps",
 				Columns:    []*schema.Column{SfOauthAppsColumns[21]},
-				RefColumns: []*schema.Column{SfUsersColumns[0]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 		},
@@ -1827,7 +1827,7 @@ func init() {
 		Table: "sf_oauth_accounts",
 	}
 	SfOauthAppsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
-	SfOauthAppsTable.ForeignKeys[1].RefTable = SfUsersTable
+	SfOauthAppsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfOauthAppsTable.Annotation = &entsql.Annotation{
 		Table: "sf_oauth_apps",
 	}

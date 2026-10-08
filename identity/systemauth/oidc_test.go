@@ -87,7 +87,7 @@ func TestIDTokenIssuedEnt(t *testing.T) {
 			t.Errorf("close: %v", err)
 		}
 	})
-	owner := createTestUser(t, client)
+	owner := createTestOwner(t, client)
 	f := newFakeGitHub(t)
 	s, err := NewEmbedded(Config{
 		Issuer: testIssuer,

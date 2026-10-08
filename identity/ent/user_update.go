@@ -15,7 +15,6 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/membership"
 	"github.com/plexusone/systemforge/identity/ent/oauthaccount"
-	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
@@ -240,21 +239,6 @@ func (_u *UserUpdate) AddAPIKeys(v ...*APIKey) *UserUpdate {
 	return _u.AddAPIKeyIDs(ids...)
 }
 
-// AddOauthAppIDs adds the "oauth_apps" edge to the OAuthApp entity by IDs.
-func (_u *UserUpdate) AddOauthAppIDs(ids ...uuid.UUID) *UserUpdate {
-	_u.mutation.AddOauthAppIDs(ids...)
-	return _u
-}
-
-// AddOauthApps adds the "oauth_apps" edges to the OAuthApp entity.
-func (_u *UserUpdate) AddOauthApps(v ...*OAuthApp) *UserUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddOauthAppIDs(ids...)
-}
-
 // AddOauthTokenIDs adds the "oauth_tokens" edge to the OAuthToken entity by IDs.
 func (_u *UserUpdate) AddOauthTokenIDs(ids ...uuid.UUID) *UserUpdate {
 	_u.mutation.AddOauthTokenIDs(ids...)
@@ -402,27 +386,6 @@ func (_u *UserUpdate) RemoveAPIKeys(v ...*APIKey) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAPIKeyIDs(ids...)
-}
-
-// ClearOauthApps clears all "oauth_apps" edges to the OAuthApp entity.
-func (_u *UserUpdate) ClearOauthApps() *UserUpdate {
-	_u.mutation.ClearOauthApps()
-	return _u
-}
-
-// RemoveOauthAppIDs removes the "oauth_apps" edge to OAuthApp entities by IDs.
-func (_u *UserUpdate) RemoveOauthAppIDs(ids ...uuid.UUID) *UserUpdate {
-	_u.mutation.RemoveOauthAppIDs(ids...)
-	return _u
-}
-
-// RemoveOauthApps removes "oauth_apps" edges to OAuthApp entities.
-func (_u *UserUpdate) RemoveOauthApps(v ...*OAuthApp) *UserUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveOauthAppIDs(ids...)
 }
 
 // ClearOauthTokens clears all "oauth_tokens" edges to the OAuthToken entity.
@@ -784,51 +747,6 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.OauthAppsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthAppsTable,
-			Columns: []string{user.OauthAppsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedOauthAppsIDs(); len(nodes) > 0 && !_u.mutation.OauthAppsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthAppsTable,
-			Columns: []string{user.OauthAppsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.OauthAppsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthAppsTable,
-			Columns: []string{user.OauthAppsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1238,21 +1156,6 @@ func (_u *UserUpdateOne) AddAPIKeys(v ...*APIKey) *UserUpdateOne {
 	return _u.AddAPIKeyIDs(ids...)
 }
 
-// AddOauthAppIDs adds the "oauth_apps" edge to the OAuthApp entity by IDs.
-func (_u *UserUpdateOne) AddOauthAppIDs(ids ...uuid.UUID) *UserUpdateOne {
-	_u.mutation.AddOauthAppIDs(ids...)
-	return _u
-}
-
-// AddOauthApps adds the "oauth_apps" edges to the OAuthApp entity.
-func (_u *UserUpdateOne) AddOauthApps(v ...*OAuthApp) *UserUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddOauthAppIDs(ids...)
-}
-
 // AddOauthTokenIDs adds the "oauth_tokens" edge to the OAuthToken entity by IDs.
 func (_u *UserUpdateOne) AddOauthTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
 	_u.mutation.AddOauthTokenIDs(ids...)
@@ -1400,27 +1303,6 @@ func (_u *UserUpdateOne) RemoveAPIKeys(v ...*APIKey) *UserUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAPIKeyIDs(ids...)
-}
-
-// ClearOauthApps clears all "oauth_apps" edges to the OAuthApp entity.
-func (_u *UserUpdateOne) ClearOauthApps() *UserUpdateOne {
-	_u.mutation.ClearOauthApps()
-	return _u
-}
-
-// RemoveOauthAppIDs removes the "oauth_apps" edge to OAuthApp entities by IDs.
-func (_u *UserUpdateOne) RemoveOauthAppIDs(ids ...uuid.UUID) *UserUpdateOne {
-	_u.mutation.RemoveOauthAppIDs(ids...)
-	return _u
-}
-
-// RemoveOauthApps removes "oauth_apps" edges to OAuthApp entities.
-func (_u *UserUpdateOne) RemoveOauthApps(v ...*OAuthApp) *UserUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveOauthAppIDs(ids...)
 }
 
 // ClearOauthTokens clears all "oauth_tokens" edges to the OAuthToken entity.
@@ -1812,51 +1694,6 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.OauthAppsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthAppsTable,
-			Columns: []string{user.OauthAppsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedOauthAppsIDs(); len(nodes) > 0 && !_u.mutation.OauthAppsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthAppsTable,
-			Columns: []string{user.OauthAppsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.OauthAppsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthAppsTable,
-			Columns: []string{user.OauthAppsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

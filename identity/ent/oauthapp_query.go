@@ -20,7 +20,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
-	"github.com/plexusone/systemforge/identity/ent/user"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 )
 
 // OAuthAppQuery is the builder for querying OAuthApp entities.
@@ -30,7 +30,7 @@ type OAuthAppQuery struct {
 	order            []oauthapp.OrderOption
 	inters           []Interceptor
 	predicates       []predicate.OAuthApp
-	withOwner        *UserQuery
+	withOwner        *PrincipalQuery
 	withOrganization *OrganizationQuery
 	withSecrets      *OAuthAppSecretQuery
 	withTokens       *OAuthTokenQuery
@@ -73,8 +73,8 @@ func (_q *OAuthAppQuery) Order(o ...oauthapp.OrderOption) *OAuthAppQuery {
 }
 
 // QueryOwner chains the current query on the "owner" edge.
-func (_q *OAuthAppQuery) QueryOwner() *UserQuery {
-	query := (&UserClient{config: _q.config}).Query()
+func (_q *OAuthAppQuery) QueryOwner() *PrincipalQuery {
+	query := (&PrincipalClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -85,7 +85,7 @@ func (_q *OAuthAppQuery) QueryOwner() *UserQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(oauthapp.Table, oauthapp.FieldID, selector),
-			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.To(principal.Table, principal.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, oauthapp.OwnerTable, oauthapp.OwnerColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
@@ -410,8 +410,8 @@ func (_q *OAuthAppQuery) Clone() *OAuthAppQuery {
 
 // WithOwner tells the query-builder to eager-load the nodes that are connected to
 // the "owner" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *OAuthAppQuery) WithOwner(opts ...func(*UserQuery)) *OAuthAppQuery {
-	query := (&UserClient{config: _q.config}).Query()
+func (_q *OAuthAppQuery) WithOwner(opts ...func(*PrincipalQuery)) *OAuthAppQuery {
+	query := (&PrincipalClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -581,7 +581,7 @@ func (_q *OAuthAppQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*OAu
 	}
 	if query := _q.withOwner; query != nil {
 		if err := _q.loadOwner(ctx, query, nodes, nil,
-			func(n *OAuthApp, e *User) { n.Edges.Owner = e }); err != nil {
+			func(n *OAuthApp, e *Principal) { n.Edges.Owner = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -622,7 +622,7 @@ func (_q *OAuthAppQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*OAu
 	return nodes, nil
 }
 
-func (_q *OAuthAppQuery) loadOwner(ctx context.Context, query *UserQuery, nodes []*OAuthApp, init func(*OAuthApp), assign func(*OAuthApp, *User)) error {
+func (_q *OAuthAppQuery) loadOwner(ctx context.Context, query *PrincipalQuery, nodes []*OAuthApp, init func(*OAuthApp), assign func(*OAuthApp, *Principal)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*OAuthApp)
 	for i := range nodes {
@@ -635,7 +635,7 @@ func (_q *OAuthAppQuery) loadOwner(ctx context.Context, query *UserQuery, nodes 
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(user.IDIn(ids...))
+	query.Where(principal.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err

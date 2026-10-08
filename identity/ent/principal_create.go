@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
@@ -297,6 +298,21 @@ func (_c *PrincipalCreate) AddOwnedOrganizations(v ...*Organization) *PrincipalC
 		ids[i] = v[i].ID
 	}
 	return _c.AddOwnedOrganizationIDs(ids...)
+}
+
+// AddOwnedOauthAppIDs adds the "owned_oauth_apps" edge to the OAuthApp entity by IDs.
+func (_c *PrincipalCreate) AddOwnedOauthAppIDs(ids ...uuid.UUID) *PrincipalCreate {
+	_c.mutation.AddOwnedOauthAppIDs(ids...)
+	return _c
+}
+
+// AddOwnedOauthApps adds the "owned_oauth_apps" edges to the OAuthApp entity.
+func (_c *PrincipalCreate) AddOwnedOauthApps(v ...*OAuthApp) *PrincipalCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddOwnedOauthAppIDs(ids...)
 }
 
 // AddSentInviteIDs adds the "sent_invites" edge to the Invite entity by IDs.
@@ -702,6 +718,22 @@ func (_c *PrincipalCreate) createSpec() (*Principal, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(organization.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OwnedOauthAppsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OwnedOauthAppsTable,
+			Columns: []string{principal.OwnedOauthAppsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

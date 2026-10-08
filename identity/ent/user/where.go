@@ -678,29 +678,6 @@ func HasAPIKeysWith(preds ...predicate.APIKey) predicate.User {
 	})
 }
 
-// HasOauthApps applies the HasEdge predicate on the "oauth_apps" edge.
-func HasOauthApps() predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, OauthAppsTable, OauthAppsColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasOauthAppsWith applies the HasEdge predicate on the "oauth_apps" edge with a given conditions (other predicates).
-func HasOauthAppsWith(preds ...predicate.OAuthApp) predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := newOauthAppsStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasOauthTokens applies the HasEdge predicate on the "oauth_tokens" edge.
 func HasOauthTokens() predicate.User {
 	return predicate.User(func(s *sql.Selector) {

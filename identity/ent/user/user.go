@@ -43,8 +43,6 @@ const (
 	EdgeRefreshTokens = "refresh_tokens"
 	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
 	EdgeAPIKeys = "api_keys"
-	// EdgeOauthApps holds the string denoting the oauth_apps edge name in mutations.
-	EdgeOauthApps = "oauth_apps"
 	// EdgeOauthTokens holds the string denoting the oauth_tokens edge name in mutations.
 	EdgeOauthTokens = "oauth_tokens"
 	// EdgeOauthAuthCodes holds the string denoting the oauth_auth_codes edge name in mutations.
@@ -83,13 +81,6 @@ const (
 	APIKeysInverseTable = "sf_api_keys"
 	// APIKeysColumn is the table column denoting the api_keys relation/edge.
 	APIKeysColumn = "user_api_keys"
-	// OauthAppsTable is the table that holds the oauth_apps relation/edge.
-	OauthAppsTable = "sf_oauth_apps"
-	// OauthAppsInverseTable is the table name for the OAuthApp entity.
-	// It exists in this package in order to avoid circular dependency with the "oauthapp" package.
-	OauthAppsInverseTable = "sf_oauth_apps"
-	// OauthAppsColumn is the table column denoting the oauth_apps relation/edge.
-	OauthAppsColumn = "owner_id"
 	// OauthTokensTable is the table that holds the oauth_tokens relation/edge.
 	OauthTokensTable = "sf_oauth_tokens"
 	// OauthTokensInverseTable is the table name for the OAuthToken entity.
@@ -278,20 +269,6 @@ func ByAPIKeys(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByOauthAppsCount orders the results by oauth_apps count.
-func ByOauthAppsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newOauthAppsStep(), opts...)
-	}
-}
-
-// ByOauthApps orders the results by oauth_apps terms.
-func ByOauthApps(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newOauthAppsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByOauthTokensCount orders the results by oauth_tokens count.
 func ByOauthTokensCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -373,13 +350,6 @@ func newAPIKeysStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(APIKeysInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, APIKeysTable, APIKeysColumn),
-	)
-}
-func newOauthAppsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(OauthAppsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, OauthAppsTable, OauthAppsColumn),
 	)
 }
 func newOauthTokensStep() *sqlgraph.Step {

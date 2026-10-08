@@ -753,7 +753,7 @@ func HasOwner() predicate.OAuthApp {
 }
 
 // HasOwnerWith applies the HasEdge predicate on the "owner" edge with a given conditions (other predicates).
-func HasOwnerWith(preds ...predicate.User) predicate.OAuthApp {
+func HasOwnerWith(preds ...predicate.Principal) predicate.OAuthApp {
 	return predicate.OAuthApp(func(s *sql.Selector) {
 		step := newOwnerStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {

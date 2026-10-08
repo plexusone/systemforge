@@ -117,7 +117,7 @@ func TestSocialLoginEntDefaultsSurviveRestart(t *testing.T) {
 			t.Errorf("close: %v", err)
 		}
 	})
-	owner := createTestUser(t, client)
+	owner := createTestOwner(t, client)
 	f := newFakeGitHub(t)
 
 	s1 := newEntSocialServer(t, client, owner, f)

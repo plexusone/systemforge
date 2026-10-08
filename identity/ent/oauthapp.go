@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/organization"
-	"github.com/plexusone/systemforge/identity/ent/user"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 )
 
 // OAuthApp is the model entity for the OAuthApp schema.
@@ -31,7 +31,7 @@ type OAuthApp struct {
 	LogoURL string `json:"logo_url,omitempty"`
 	// web=confidential, spa/native=public+PKCE, service/machine=client_credentials
 	AppType oauthapp.AppType `json:"app_type,omitempty"`
-	// User who created this app
+	// Principal that owns this app
 	OwnerID uuid.UUID `json:"owner_id,omitempty"`
 	// Organization scope (optional)
 	OrganizationID *uuid.UUID `json:"organization_id,omitempty"`
@@ -72,7 +72,7 @@ type OAuthApp struct {
 // OAuthAppEdges holds the relations/edges for other nodes in the graph.
 type OAuthAppEdges struct {
 	// Owner holds the value of the owner edge.
-	Owner *User `json:"owner,omitempty"`
+	Owner *Principal `json:"owner,omitempty"`
 	// Organization holds the value of the organization edge.
 	Organization *Organization `json:"organization,omitempty"`
 	// Secrets holds the value of the secrets edge.
@@ -90,11 +90,11 @@ type OAuthAppEdges struct {
 
 // OwnerOrErr returns the Owner value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e OAuthAppEdges) OwnerOrErr() (*User, error) {
+func (e OAuthAppEdges) OwnerOrErr() (*Principal, error) {
 	if e.Owner != nil {
 		return e.Owner, nil
 	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: user.Label}
+		return nil, &NotFoundError{label: principal.Label}
 	}
 	return nil, &NotLoadedError{edge: "owner"}
 }
@@ -338,7 +338,7 @@ func (_m *OAuthApp) Value(name string) (ent.Value, error) {
 }
 
 // QueryOwner queries the "owner" edge of the OAuthApp entity.
-func (_m *OAuthApp) QueryOwner() *UserQuery {
+func (_m *OAuthApp) QueryOwner() *PrincipalQuery {
 	return NewOAuthAppClient(_m.config).QueryOwner(_m)
 }
 

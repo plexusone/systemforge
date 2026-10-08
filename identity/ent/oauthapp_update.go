@@ -20,7 +20,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
-	"github.com/plexusone/systemforge/identity/ent/user"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 )
 
 // OAuthAppUpdate is the builder for updating OAuthApp entities.
@@ -322,8 +322,8 @@ func (_u *OAuthAppUpdate) SetUpdatedAt(v time.Time) *OAuthAppUpdate {
 	return _u
 }
 
-// SetOwner sets the "owner" edge to the User entity.
-func (_u *OAuthAppUpdate) SetOwner(v *User) *OAuthAppUpdate {
+// SetOwner sets the "owner" edge to the Principal entity.
+func (_u *OAuthAppUpdate) SetOwner(v *Principal) *OAuthAppUpdate {
 	return _u.SetOwnerID(v.ID)
 }
 
@@ -397,7 +397,7 @@ func (_u *OAuthAppUpdate) Mutation() *OAuthAppMutation {
 	return _u.mutation
 }
 
-// ClearOwner clears the "owner" edge to the User entity.
+// ClearOwner clears the "owner" edge to the Principal entity.
 func (_u *OAuthAppUpdate) ClearOwner() *OAuthAppUpdate {
 	_u.mutation.ClearOwner()
 	return _u
@@ -661,7 +661,7 @@ func (_u *OAuthAppUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{oauthapp.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(principal.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -674,7 +674,7 @@ func (_u *OAuthAppUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{oauthapp.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(principal.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1197,8 +1197,8 @@ func (_u *OAuthAppUpdateOne) SetUpdatedAt(v time.Time) *OAuthAppUpdateOne {
 	return _u
 }
 
-// SetOwner sets the "owner" edge to the User entity.
-func (_u *OAuthAppUpdateOne) SetOwner(v *User) *OAuthAppUpdateOne {
+// SetOwner sets the "owner" edge to the Principal entity.
+func (_u *OAuthAppUpdateOne) SetOwner(v *Principal) *OAuthAppUpdateOne {
 	return _u.SetOwnerID(v.ID)
 }
 
@@ -1272,7 +1272,7 @@ func (_u *OAuthAppUpdateOne) Mutation() *OAuthAppMutation {
 	return _u.mutation
 }
 
-// ClearOwner clears the "owner" edge to the User entity.
+// ClearOwner clears the "owner" edge to the Principal entity.
 func (_u *OAuthAppUpdateOne) ClearOwner() *OAuthAppUpdateOne {
 	_u.mutation.ClearOwner()
 	return _u
@@ -1566,7 +1566,7 @@ func (_u *OAuthAppUpdateOne) sqlSave(ctx context.Context) (_node *OAuthApp, err 
 			Columns: []string{oauthapp.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(principal.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1579,7 +1579,7 @@ func (_u *OAuthAppUpdateOne) sqlSave(ctx context.Context) (_node *OAuthApp, err 
 			Columns: []string{oauthapp.OwnerColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(principal.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

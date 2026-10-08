@@ -2757,13 +2757,13 @@ func (c *OAuthAppClient) GetX(ctx context.Context, id uuid.UUID) *OAuthApp {
 }
 
 // QueryOwner queries the owner edge of a OAuthApp.
-func (c *OAuthAppClient) QueryOwner(_m *OAuthApp) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
+func (c *OAuthAppClient) QueryOwner(_m *OAuthApp) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(oauthapp.Table, oauthapp.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.To(principal.Table, principal.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, oauthapp.OwnerTable, oauthapp.OwnerColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
@@ -4091,6 +4091,22 @@ func (c *PrincipalClient) QueryOwnedOrganizations(_m *Principal) *OrganizationQu
 			sqlgraph.From(principal.Table, principal.FieldID, id),
 			sqlgraph.To(organization.Table, organization.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, principal.OwnedOrganizationsTable, principal.OwnedOrganizationsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOwnedOauthApps queries the owned_oauth_apps edge of a Principal.
+func (c *PrincipalClient) QueryOwnedOauthApps(_m *Principal) *OAuthAppQuery {
+	query := (&OAuthAppClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(principal.Table, principal.FieldID, id),
+			sqlgraph.To(oauthapp.Table, oauthapp.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, principal.OwnedOauthAppsTable, principal.OwnedOauthAppsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -5704,22 +5720,6 @@ func (c *UserClient) QueryAPIKeys(_m *User) *APIKeyQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(apikey.Table, apikey.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.APIKeysTable, user.APIKeysColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryOauthApps queries the oauth_apps edge of a User.
-func (c *UserClient) QueryOauthApps(_m *User) *OAuthAppQuery {
-	query := (&OAuthAppClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(oauthapp.Table, oauthapp.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.OauthAppsTable, user.OauthAppsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

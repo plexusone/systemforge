@@ -58,7 +58,7 @@ func (OAuthApp) Fields() []ent.Field {
 
 		// Ownership
 		field.UUID("owner_id", uuid.UUID{}).
-			Comment("User who created this app"),
+			Comment("Principal that owns this app"),
 
 		field.UUID("organization_id", uuid.UUID{}).
 			Optional().
@@ -130,8 +130,8 @@ func (OAuthApp) Fields() []ent.Field {
 // Edges of the OAuthApp.
 func (OAuthApp) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("owner", User.Type).
-			Ref("oauth_apps").
+		edge.From("owner", Principal.Type).
+			Ref("owned_oauth_apps").
 			Field("owner_id").
 			Required().
 			Unique(),

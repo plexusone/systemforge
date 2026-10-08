@@ -1039,7 +1039,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			Bidi:    false,
 		},
 		"OAuthApp",
-		"User",
+		"Principal",
 	)
 	graph.MustAddE(
 		"organization",
@@ -1438,6 +1438,18 @@ var schemaGraph = func() *sqlgraph.Schema {
 		"Organization",
 	)
 	graph.MustAddE(
+		"owned_oauth_apps",
+		&sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OwnedOauthAppsTable,
+			Columns: []string{principal.OwnedOauthAppsColumn},
+			Bidi:    false,
+		},
+		"Principal",
+		"OAuthApp",
+	)
+	graph.MustAddE(
 		"sent_invites",
 		&sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1748,18 +1760,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		"User",
 		"APIKey",
-	)
-	graph.MustAddE(
-		"oauth_apps",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.OauthAppsTable,
-			Columns: []string{user.OauthAppsColumn},
-			Bidi:    false,
-		},
-		"User",
-		"OAuthApp",
 	)
 	graph.MustAddE(
 		"oauth_tokens",
@@ -3583,7 +3583,7 @@ func (f *OAuthAppFilter) WhereHasOwner() {
 }
 
 // WhereHasOwnerWith applies a predicate to check if query has an edge owner with a given conditions (other predicates).
-func (f *OAuthAppFilter) WhereHasOwnerWith(preds ...predicate.User) {
+func (f *OAuthAppFilter) WhereHasOwnerWith(preds ...predicate.Principal) {
 	f.Where(entql.HasEdgeWith("owner", sqlgraph.WrapFunc(func(s *sql.Selector) {
 		for _, p := range preds {
 			p(s)
@@ -4677,6 +4677,20 @@ func (f *PrincipalFilter) WhereHasOwnedOrganizations() {
 // WhereHasOwnedOrganizationsWith applies a predicate to check if query has an edge owned_organizations with a given conditions (other predicates).
 func (f *PrincipalFilter) WhereHasOwnedOrganizationsWith(preds ...predicate.Organization) {
 	f.Where(entql.HasEdgeWith("owned_organizations", sqlgraph.WrapFunc(func(s *sql.Selector) {
+		for _, p := range preds {
+			p(s)
+		}
+	})))
+}
+
+// WhereHasOwnedOauthApps applies a predicate to check if query has an edge owned_oauth_apps.
+func (f *PrincipalFilter) WhereHasOwnedOauthApps() {
+	f.Where(entql.HasEdge("owned_oauth_apps"))
+}
+
+// WhereHasOwnedOauthAppsWith applies a predicate to check if query has an edge owned_oauth_apps with a given conditions (other predicates).
+func (f *PrincipalFilter) WhereHasOwnedOauthAppsWith(preds ...predicate.OAuthApp) {
+	f.Where(entql.HasEdgeWith("owned_oauth_apps", sqlgraph.WrapFunc(func(s *sql.Selector) {
 		for _, p := range preds {
 			p(s)
 		}
@@ -5861,20 +5875,6 @@ func (f *UserFilter) WhereHasAPIKeys() {
 // WhereHasAPIKeysWith applies a predicate to check if query has an edge api_keys with a given conditions (other predicates).
 func (f *UserFilter) WhereHasAPIKeysWith(preds ...predicate.APIKey) {
 	f.Where(entql.HasEdgeWith("api_keys", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
-// WhereHasOauthApps applies a predicate to check if query has an edge oauth_apps.
-func (f *UserFilter) WhereHasOauthApps() {
-	f.Where(entql.HasEdge("oauth_apps"))
-}
-
-// WhereHasOauthAppsWith applies a predicate to check if query has an edge oauth_apps with a given conditions (other predicates).
-func (f *UserFilter) WhereHasOauthAppsWith(preds ...predicate.OAuthApp) {
-	f.Where(entql.HasEdgeWith("oauth_apps", sqlgraph.WrapFunc(func(s *sql.Selector) {
 		for _, p := range preds {
 			p(s)
 		}

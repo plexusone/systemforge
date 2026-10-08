@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/ent"
-	"github.com/plexusone/systemforge/identity/ent/user"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/systemauth"
 
 	// Database drivers: "pgx" (PostgreSQL) and "sqlite3".
@@ -97,45 +97,89 @@ func migrate(ctx context.Context, client *ent.Client) error {
 	return nil
 }
 
-// System user that owns statically configured OAuth clients.
-const systemUserEmail = "system@systemauth.local"
+// System service principal that owns statically configured OAuth clients.
+const (
+	systemPrincipalIdentifier  = "system@systemauth.local"
+	systemPrincipalName        = "SystemAuth System"
+	systemPrincipalServiceType = "systemauth"
+)
 
-var systemUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+// systemPrincipalID is fixed so every instance resolves the same owner and
+// owner_id values written by earlier versions remain valid.
+var systemPrincipalID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
-// ensureSystemUser creates or retrieves the system user that owns
-// statically configured OAuth clients.
-func ensureSystemUser(ctx context.Context, client *ent.Client) (uuid.UUID, bool, error) {
-	existing, err := client.User.Get(ctx, systemUserID)
-	if err == nil {
-		return existing.ID, false, nil
+// ensureSystemPrincipal creates or retrieves the service principal that owns
+// statically configured OAuth clients. It reports whether it created one.
+func ensureSystemPrincipal(ctx context.Context, client *ent.Client) (uuid.UUID, bool, error) {
+	id, found, err := findSystemPrincipal(ctx, client)
+	if err != nil || found {
+		return id, false, err
 	}
-	if !ent.IsNotFound(err) {
-		return uuid.Nil, false, err
-	}
-	existing, err = client.User.Query().Where(user.EmailEQ(systemUserEmail)).First(ctx)
-	if err == nil {
-		return existing.ID, false, nil
-	}
-	if !ent.IsNotFound(err) {
-		return uuid.Nil, false, err
-	}
-
-	created, err := client.User.Create().
-		SetID(systemUserID).
-		SetEmail(systemUserEmail).
-		SetName("SystemAuth System").
-		SetIsPlatformAdmin(true).
-		SetActive(true).
-		Save(ctx)
-	if err != nil {
+	if err := createSystemPrincipal(ctx, client); err != nil {
 		if ent.IsConstraintError(err) {
 			// Another instance created it concurrently.
-			existing, getErr := client.User.Get(ctx, systemUserID)
-			if getErr == nil {
-				return existing.ID, false, nil
+			id, found, getErr := findSystemPrincipal(ctx, client)
+			if getErr == nil && found {
+				return id, false, nil
 			}
 		}
 		return uuid.Nil, false, err
 	}
-	return created.ID, true, nil
+	return systemPrincipalID, true, nil
+}
+
+// findSystemPrincipal looks the system principal up by its fixed ID, then by
+// its identifier.
+func findSystemPrincipal(ctx context.Context, client *ent.Client) (uuid.UUID, bool, error) {
+	existing, err := client.Principal.Get(ctx, systemPrincipalID)
+	if err == nil {
+		return existing.ID, true, nil
+	}
+	if !ent.IsNotFound(err) {
+		return uuid.Nil, false, err
+	}
+	existing, err = client.Principal.Query().
+		Where(principal.IdentifierEQ(systemPrincipalIdentifier)).
+		First(ctx)
+	if err == nil {
+		return existing.ID, true, nil
+	}
+	if !ent.IsNotFound(err) {
+		return uuid.Nil, false, err
+	}
+	return uuid.Nil, false, nil
+}
+
+// createSystemPrincipal inserts the principal and its service extension in
+// one transaction.
+func createSystemPrincipal(ctx context.Context, client *ent.Client) (err error) {
+	tx, err := client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			if rerr := tx.Rollback(); rerr != nil {
+				err = errors.Join(err, fmt.Errorf("rolling back: %w", rerr))
+			}
+		}
+	}()
+
+	if _, err = tx.Principal.Create().
+		SetID(systemPrincipalID).
+		SetType(principal.TypeService).
+		SetIdentifier(systemPrincipalIdentifier).
+		SetDisplayName(systemPrincipalName).
+		SetActive(true).
+		Save(ctx); err != nil {
+		return err
+	}
+	if _, err = tx.ServicePrincipal.Create().
+		SetPrincipalID(systemPrincipalID).
+		SetServiceType(systemPrincipalServiceType).
+		SetDescription("Owns OAuth clients defined in SystemAuth configuration").
+		Save(ctx); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

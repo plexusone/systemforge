@@ -127,6 +127,10 @@ func (Principal) Edges() []ent.Edge {
 		edge.To("owned_organizations", Organization.Type).
 			Comment("Personal organizations owned by this principal"),
 
+		// OAuth applications owned by this principal
+		edge.To("owned_oauth_apps", OAuthApp.Type).
+			Comment("OAuth applications owned by this principal"),
+
 		// Invites sent by this principal
 		edge.To("sent_invites", Invite.Type).
 			Comment("Invitations sent by this principal"),

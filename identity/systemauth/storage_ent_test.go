@@ -11,21 +11,24 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// createTestUser creates a test user and returns its ID.
-func createTestUser(t *testing.T, client *ent.Client) uuid.UUID {
+// createTestOwner creates a service principal to own test OAuth clients and
+// returns its ID.
+func createTestOwner(t *testing.T, client *ent.Client) uuid.UUID {
 	t.Helper()
-	user, err := client.User.Create().
-		SetEmail("test-" + uuid.New().String()[:8] + "@example.com").
-		SetName("Test User").
+	p, err := client.Principal.Create().
+		SetType(principal.TypeService).
+		SetIdentifier("test-owner-" + uuid.New().String()[:8]).
+		SetDisplayName("Test Owner").
 		Save(context.Background())
 	if err != nil {
-		t.Fatalf("Failed to create test user: %v", err)
+		t.Fatalf("Failed to create test owner: %v", err)
 	}
-	return user.ID
+	return p.ID
 }
 
 func TestEntStorageClient(t *testing.T) {
@@ -34,7 +37,7 @@ func TestEntStorageClient(t *testing.T) {
 	defer func() { _ = client.Close() }()
 
 	// Create a test user for owner_id
-	ownerID := createTestUser(t, client)
+	ownerID := createTestOwner(t, client)
 	storage := NewEntStorage(client, WithDefaultOwner(ownerID))
 	ctx := context.Background()
 
@@ -120,7 +123,7 @@ func TestEntStoragePublicClient(t *testing.T) {
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer func() { _ = client.Close() }()
 
-	ownerID := createTestUser(t, client)
+	ownerID := createTestOwner(t, client)
 	storage := NewEntStorage(client, WithDefaultOwner(ownerID))
 	ctx := context.Background()
 
@@ -175,7 +178,7 @@ func TestEntStorageAccessToken(t *testing.T) {
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer func() { _ = client.Close() }()
 
-	ownerID := createTestUser(t, client)
+	ownerID := createTestOwner(t, client)
 	storage := NewEntStorage(client, WithDefaultOwner(ownerID))
 	ctx := context.Background()
 
@@ -257,7 +260,7 @@ func TestEntStorageRefreshToken(t *testing.T) {
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer func() { _ = client.Close() }()
 
-	ownerID := createTestUser(t, client)
+	ownerID := createTestOwner(t, client)
 	storage := NewEntStorage(client, WithDefaultOwner(ownerID))
 	ctx := context.Background()
 

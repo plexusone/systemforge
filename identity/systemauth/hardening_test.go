@@ -186,7 +186,7 @@ func TestRefreshRotationReuseDetectionEnt(t *testing.T) {
 			t.Errorf("close: %v", err)
 		}
 	})
-	owner := createTestUser(t, client)
+	owner := createTestOwner(t, client)
 	// The subject is a principal ID with no legacy User row.
 	checkRefreshRotation(t, newRefreshTestServer(t, WithStorage(NewEntStorage(client, WithDefaultOwner(owner)))))
 }

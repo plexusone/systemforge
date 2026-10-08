@@ -16,7 +16,6 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/apikey"
 	"github.com/plexusone/systemforge/identity/ent/membership"
 	"github.com/plexusone/systemforge/identity/ent/oauthaccount"
-	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
 	"github.com/plexusone/systemforge/identity/ent/oauthconsent"
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
@@ -37,7 +36,6 @@ type UserQuery struct {
 	withOauthAccounts          *OAuthAccountQuery
 	withRefreshTokens          *RefreshTokenQuery
 	withAPIKeys                *APIKeyQuery
-	withOauthApps              *OAuthAppQuery
 	withOauthTokens            *OAuthTokenQuery
 	withOauthAuthCodes         *OAuthAuthCodeQuery
 	withOauthConsents          *OAuthConsentQuery
@@ -159,28 +157,6 @@ func (_q *UserQuery) QueryAPIKeys() *APIKeyQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(apikey.Table, apikey.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.APIKeysTable, user.APIKeysColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryOauthApps chains the current query on the "oauth_apps" edge.
-func (_q *UserQuery) QueryOauthApps() *OAuthAppQuery {
-	query := (&OAuthAppClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(oauthapp.Table, oauthapp.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.OauthAppsTable, user.OauthAppsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -472,7 +448,6 @@ func (_q *UserQuery) Clone() *UserQuery {
 		withOauthAccounts:          _q.withOauthAccounts.Clone(),
 		withRefreshTokens:          _q.withRefreshTokens.Clone(),
 		withAPIKeys:                _q.withAPIKeys.Clone(),
-		withOauthApps:              _q.withOauthApps.Clone(),
 		withOauthTokens:            _q.withOauthTokens.Clone(),
 		withOauthAuthCodes:         _q.withOauthAuthCodes.Clone(),
 		withOauthConsents:          _q.withOauthConsents.Clone(),
@@ -524,17 +499,6 @@ func (_q *UserQuery) WithAPIKeys(opts ...func(*APIKeyQuery)) *UserQuery {
 		opt(query)
 	}
 	_q.withAPIKeys = query
-	return _q
-}
-
-// WithOauthApps tells the query-builder to eager-load the nodes that are connected to
-// the "oauth_apps" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithOauthApps(opts ...func(*OAuthAppQuery)) *UserQuery {
-	query := (&OAuthAppClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withOauthApps = query
 	return _q
 }
 
@@ -660,12 +624,11 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [9]bool{
+		loadedTypes = [8]bool{
 			_q.withMemberships != nil,
 			_q.withOauthAccounts != nil,
 			_q.withRefreshTokens != nil,
 			_q.withAPIKeys != nil,
-			_q.withOauthApps != nil,
 			_q.withOauthTokens != nil,
 			_q.withOauthAuthCodes != nil,
 			_q.withOauthConsents != nil,
@@ -715,13 +678,6 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadAPIKeys(ctx, query, nodes,
 			func(n *User) { n.Edges.APIKeys = []*APIKey{} },
 			func(n *User, e *APIKey) { n.Edges.APIKeys = append(n.Edges.APIKeys, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withOauthApps; query != nil {
-		if err := _q.loadOauthApps(ctx, query, nodes,
-			func(n *User) { n.Edges.OauthApps = []*OAuthApp{} },
-			func(n *User, e *OAuthApp) { n.Edges.OauthApps = append(n.Edges.OauthApps, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -874,36 +830,6 @@ func (_q *UserQuery) loadAPIKeys(ctx context.Context, query *APIKeyQuery, nodes 
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_api_keys" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
-func (_q *UserQuery) loadOauthApps(ctx context.Context, query *OAuthAppQuery, nodes []*User, init func(*User), assign func(*User, *OAuthApp)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*User)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(oauthapp.FieldOwnerID)
-	}
-	query.Where(predicate.OAuthApp(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(user.OauthAppsColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.OwnerID
-		node, ok := nodeids[fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "owner_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

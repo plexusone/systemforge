@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/listing"
+	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principal"
@@ -297,6 +298,21 @@ func (_u *PrincipalUpdate) AddOwnedOrganizations(v ...*Organization) *PrincipalU
 	return _u.AddOwnedOrganizationIDs(ids...)
 }
 
+// AddOwnedOauthAppIDs adds the "owned_oauth_apps" edge to the OAuthApp entity by IDs.
+func (_u *PrincipalUpdate) AddOwnedOauthAppIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.AddOwnedOauthAppIDs(ids...)
+	return _u
+}
+
+// AddOwnedOauthApps adds the "owned_oauth_apps" edges to the OAuthApp entity.
+func (_u *PrincipalUpdate) AddOwnedOauthApps(v ...*OAuthApp) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOwnedOauthAppIDs(ids...)
+}
+
 // AddSentInviteIDs adds the "sent_invites" edge to the Invite entity by IDs.
 func (_u *PrincipalUpdate) AddSentInviteIDs(ids ...uuid.UUID) *PrincipalUpdate {
 	_u.mutation.AddSentInviteIDs(ids...)
@@ -510,6 +526,27 @@ func (_u *PrincipalUpdate) RemoveOwnedOrganizations(v ...*Organization) *Princip
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOwnedOrganizationIDs(ids...)
+}
+
+// ClearOwnedOauthApps clears all "owned_oauth_apps" edges to the OAuthApp entity.
+func (_u *PrincipalUpdate) ClearOwnedOauthApps() *PrincipalUpdate {
+	_u.mutation.ClearOwnedOauthApps()
+	return _u
+}
+
+// RemoveOwnedOauthAppIDs removes the "owned_oauth_apps" edge to OAuthApp entities by IDs.
+func (_u *PrincipalUpdate) RemoveOwnedOauthAppIDs(ids ...uuid.UUID) *PrincipalUpdate {
+	_u.mutation.RemoveOwnedOauthAppIDs(ids...)
+	return _u
+}
+
+// RemoveOwnedOauthApps removes "owned_oauth_apps" edges to OAuthApp entities.
+func (_u *PrincipalUpdate) RemoveOwnedOauthApps(v ...*OAuthApp) *PrincipalUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOwnedOauthAppIDs(ids...)
 }
 
 // ClearSentInvites clears all "sent_invites" edges to the Invite entity.
@@ -1079,6 +1116,51 @@ func (_u *PrincipalUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.OwnedOauthAppsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OwnedOauthAppsTable,
+			Columns: []string{principal.OwnedOauthAppsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOwnedOauthAppsIDs(); len(nodes) > 0 && !_u.mutation.OwnedOauthAppsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OwnedOauthAppsTable,
+			Columns: []string{principal.OwnedOauthAppsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnedOauthAppsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OwnedOauthAppsTable,
+			Columns: []string{principal.OwnedOauthAppsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.SentInvitesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1578,6 +1660,21 @@ func (_u *PrincipalUpdateOne) AddOwnedOrganizations(v ...*Organization) *Princip
 	return _u.AddOwnedOrganizationIDs(ids...)
 }
 
+// AddOwnedOauthAppIDs adds the "owned_oauth_apps" edge to the OAuthApp entity by IDs.
+func (_u *PrincipalUpdateOne) AddOwnedOauthAppIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.AddOwnedOauthAppIDs(ids...)
+	return _u
+}
+
+// AddOwnedOauthApps adds the "owned_oauth_apps" edges to the OAuthApp entity.
+func (_u *PrincipalUpdateOne) AddOwnedOauthApps(v ...*OAuthApp) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOwnedOauthAppIDs(ids...)
+}
+
 // AddSentInviteIDs adds the "sent_invites" edge to the Invite entity by IDs.
 func (_u *PrincipalUpdateOne) AddSentInviteIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
 	_u.mutation.AddSentInviteIDs(ids...)
@@ -1791,6 +1888,27 @@ func (_u *PrincipalUpdateOne) RemoveOwnedOrganizations(v ...*Organization) *Prin
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOwnedOrganizationIDs(ids...)
+}
+
+// ClearOwnedOauthApps clears all "owned_oauth_apps" edges to the OAuthApp entity.
+func (_u *PrincipalUpdateOne) ClearOwnedOauthApps() *PrincipalUpdateOne {
+	_u.mutation.ClearOwnedOauthApps()
+	return _u
+}
+
+// RemoveOwnedOauthAppIDs removes the "owned_oauth_apps" edge to OAuthApp entities by IDs.
+func (_u *PrincipalUpdateOne) RemoveOwnedOauthAppIDs(ids ...uuid.UUID) *PrincipalUpdateOne {
+	_u.mutation.RemoveOwnedOauthAppIDs(ids...)
+	return _u
+}
+
+// RemoveOwnedOauthApps removes "owned_oauth_apps" edges to OAuthApp entities.
+func (_u *PrincipalUpdateOne) RemoveOwnedOauthApps(v ...*OAuthApp) *PrincipalUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOwnedOauthAppIDs(ids...)
 }
 
 // ClearSentInvites clears all "sent_invites" edges to the Invite entity.
@@ -2383,6 +2501,51 @@ func (_u *PrincipalUpdateOne) sqlSave(ctx context.Context) (_node *Principal, er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(organization.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OwnedOauthAppsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OwnedOauthAppsTable,
+			Columns: []string{principal.OwnedOauthAppsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOwnedOauthAppsIDs(); len(nodes) > 0 && !_u.mutation.OwnedOauthAppsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OwnedOauthAppsTable,
+			Columns: []string{principal.OwnedOauthAppsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnedOauthAppsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   principal.OwnedOauthAppsTable,
+			Columns: []string{principal.OwnedOauthAppsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthapp.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
