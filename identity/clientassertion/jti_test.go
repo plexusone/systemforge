@@ -73,3 +73,35 @@ func TestJTIExpiry(t *testing.T) {
 		t.Errorf("rows after prune and re-mark = %d, want 1", n)
 	}
 }
+
+func TestMemoryJTIStore(t *testing.T) {
+	ctx := context.Background()
+	s := NewMemoryJTIStore()
+	now := time.Now()
+	s.now = func() time.Time { return now }
+
+	if err := s.Valid(ctx, "a"); err != nil {
+		t.Fatalf("unused JTI: %v", err)
+	}
+	if err := s.Mark(ctx, "a", now.Add(time.Minute)); err != nil {
+		t.Fatalf("Mark: %v", err)
+	}
+	if err := s.Valid(ctx, "a"); !errors.Is(err, fosite.ErrJTIKnown) {
+		t.Errorf("replayed JTI = %v, want ErrJTIKnown", err)
+	}
+	if err := s.Mark(ctx, "a", now.Add(time.Minute)); !errors.Is(err, fosite.ErrJTIKnown) {
+		t.Errorf("marking a live JTI again = %v, want ErrJTIKnown", err)
+	}
+	// After the assertion's own expiry it is forgotten, and the store does
+	// not keep growing.
+	now = now.Add(2 * time.Minute)
+	if err := s.Valid(ctx, "a"); err != nil {
+		t.Errorf("expired JTI = %v", err)
+	}
+	if err := s.Mark(ctx, "b", now.Add(time.Minute)); err != nil {
+		t.Fatalf("Mark: %v", err)
+	}
+	if len(s.used) != 1 {
+		t.Errorf("tracked %d JTIs, want only the live one", len(s.used))
+	}
+}
