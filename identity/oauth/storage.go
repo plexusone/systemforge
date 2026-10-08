@@ -8,7 +8,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
+	"github.com/ory/fosite/handler/oauth2"
+	"github.com/ory/fosite/handler/pkce"
 
+	"github.com/plexusone/systemforge/identity/clientassertion"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
@@ -47,6 +50,20 @@ func (s *Storage) GetClient(ctx context.Context, clientID string) (fosite.Client
 	}
 
 	return &Client{app: app, storage: s}, nil
+}
+
+// --- ClientManager Interface ---
+
+// ClientAssertionJWTValid implements fosite.ClientManager: it reports
+// fosite.ErrJTIKnown for a client-assertion JWT ID that is already used.
+func (s *Storage) ClientAssertionJWTValid(ctx context.Context, jti string) error {
+	return clientassertion.NewJTIStore(s.db).Valid(ctx, jti)
+}
+
+// SetClientAssertionJWT implements fosite.ClientManager: it records a
+// client-assertion JWT ID as used until exp.
+func (s *Storage) SetClientAssertionJWT(ctx context.Context, jti string, exp time.Time) error {
+	return clientassertion.NewJTIStore(s.db).Mark(ctx, jti, exp)
 }
 
 // --- AuthorizeCodeStorage Interface ---
@@ -146,6 +163,7 @@ func (s *Storage) CreateAccessTokenSession(ctx context.Context, signature string
 		SetAppID(client.app.ID).
 		SetScopes(scopesToStrings(request.GetGrantedScopes())).
 		SetAccessExpiresAt(session.GetExpiresAt(fosite.AccessToken))
+	setFamily(builder, request)
 
 	// Record the subject when present (empty for client_credentials).
 	if subject := session.GetSubject(); subject != "" {
@@ -204,11 +222,30 @@ func (s *Storage) DeleteAccessTokenSession(ctx context.Context, signature string
 // --- RefreshTokenStorage Interface ---
 
 // CreateRefreshTokenSession stores a refresh token session.
-func (s *Storage) CreateRefreshTokenSession(ctx context.Context, signature string, request fosite.Requester) error {
+//
+// When accessSignature names the access token issued alongside it, the
+// refresh token is recorded on that token's row; otherwise a new row is
+// created for it.
+func (s *Storage) CreateRefreshTokenSession(ctx context.Context, signature string, accessSignature string, request fosite.Requester) error {
 	client := request.GetClient().(*Client)
 	session := request.GetSession()
 
-	// Generate a unique access token signature for this token pair
+	if accessSignature != "" {
+		n, err := s.db.OAuthToken.Update().
+			Where(oauthtoken.AccessTokenSignatureEQ(hashToken(accessSignature))).
+			SetRefreshTokenSignature(hashToken(signature)).
+			SetRefreshExpiresAt(session.GetExpiresAt(fosite.RefreshToken)).
+			Save(ctx)
+		if err != nil {
+			return fosite.ErrServerError.WithWrap(err)
+		}
+		if n > 0 {
+			return nil
+		}
+	}
+
+	// No paired access token row: generate a unique access token signature
+	// for this token pair.
 	accessSig := hashToken(uuid.New().String())
 
 	builder := s.db.OAuthToken.Create().
@@ -218,6 +255,7 @@ func (s *Storage) CreateRefreshTokenSession(ctx context.Context, signature strin
 		SetScopes(scopesToStrings(request.GetGrantedScopes())).
 		SetAccessExpiresAt(session.GetExpiresAt(fosite.AccessToken)).
 		SetRefreshExpiresAt(session.GetExpiresAt(fosite.RefreshToken))
+	setFamily(builder, request)
 
 	if subject := session.GetSubject(); subject != "" {
 		builder.SetSubject(subject)
@@ -275,6 +313,33 @@ func (s *Storage) DeleteRefreshTokenSession(ctx context.Context, signature strin
 	return nil
 }
 
+// RotateRefreshToken retires the refresh token that was just exchanged, so
+// it cannot be used again after rotation.
+func (s *Storage) RotateRefreshToken(ctx context.Context, requestID string, refreshTokenSignature string) error {
+	_, err := s.db.OAuthToken.Update().
+		Where(
+			oauthtoken.RefreshTokenSignatureEQ(hashToken(refreshTokenSignature)),
+			oauthtoken.RevokedEQ(false),
+		).
+		SetRevoked(true).
+		SetRevokedAt(time.Now()).
+		SetRevokedReason("rotated").
+		Save(ctx)
+	if err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	}
+	return nil
+}
+
+// setFamily records the Fosite request ID as the token family, which
+// identifies the tokens of one grant across refreshes and is what
+// RevokeRefreshToken and RevokeAccessToken revoke.
+func setFamily(builder *ent.OAuthTokenCreate, request fosite.Requester) {
+	if familyID, err := uuid.Parse(request.GetID()); err == nil {
+		builder.SetFamilyID(familyID)
+	}
+}
+
 // RevokeRefreshToken revokes a refresh token.
 func (s *Storage) RevokeRefreshToken(ctx context.Context, requestID string) error {
 	// Revoke by family ID to handle rotation
@@ -326,3 +391,13 @@ func scopesToStrings(scopes fosite.Arguments) []string {
 	copy(result, scopes)
 	return result
 }
+
+// Compile-time checks that Storage satisfies the Fosite storage interfaces
+// the provider composes; a mismatch otherwise surfaces as a panic in
+// compose.Compose.
+var (
+	_ fosite.Storage                = (*Storage)(nil)
+	_ oauth2.CoreStorage            = (*Storage)(nil)
+	_ oauth2.TokenRevocationStorage = (*Storage)(nil)
+	_ pkce.PKCERequestStorage       = (*Storage)(nil)
+)

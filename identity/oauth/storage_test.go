@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -80,7 +81,7 @@ func TestStorageRecordsSubject(t *testing.T) {
 		t.Errorf("access token subject = %q, want %q", tok.Subject, subject)
 	}
 
-	if err := s.CreateRefreshTokenSession(ctx, "refresh-sig", newRequest(client, subject)); err != nil {
+	if err := s.CreateRefreshTokenSession(ctx, "refresh-sig", "", newRequest(client, subject)); err != nil {
 		t.Fatalf("CreateRefreshTokenSession: %v", err)
 	}
 	rt, err := db.OAuthToken.Query().Where(oauthtoken.RefreshTokenSignatureEQ(hashToken("refresh-sig"))).Only(ctx)
@@ -112,5 +113,63 @@ func TestStorageRecordsSubject(t *testing.T) {
 	}
 	if cc.Subject != "" {
 		t.Errorf("client-credentials subject = %q, want empty", cc.Subject)
+	}
+}
+
+// TestStorageRevocationAndRotation verifies that tokens record their
+// request as the family, that revoking by request ID makes them inactive,
+// and that rotation retires the exchanged refresh token.
+func TestStorageRevocationAndRotation(t *testing.T) {
+	_, s, client := newStorageClient(t)
+	ctx := context.Background()
+
+	req := newRequest(client, "user-1")
+	if err := s.CreateAccessTokenSession(ctx, "acc-1", req); err != nil {
+		t.Fatalf("CreateAccessTokenSession: %v", err)
+	}
+	if err := s.CreateRefreshTokenSession(ctx, "ref-1", "acc-1", req); err != nil {
+		t.Fatalf("CreateRefreshTokenSession: %v", err)
+	}
+	if _, err := s.GetRefreshTokenSession(ctx, "ref-1", &fosite.DefaultSession{}); err != nil {
+		t.Fatalf("refresh token before revocation: %v", err)
+	}
+
+	if err := s.RevokeRefreshToken(ctx, req.GetID()); err != nil {
+		t.Fatalf("RevokeRefreshToken: %v", err)
+	}
+	if _, err := s.GetRefreshTokenSession(ctx, "ref-1", &fosite.DefaultSession{}); !errors.Is(err, fosite.ErrInactiveToken) {
+		t.Errorf("refresh token after revoking its family error = %v, want ErrInactiveToken", err)
+	}
+
+	other := newRequest(client, "user-2")
+	if err := s.CreateRefreshTokenSession(ctx, "ref-2", "", other); err != nil {
+		t.Fatalf("CreateRefreshTokenSession: %v", err)
+	}
+	if err := s.RotateRefreshToken(ctx, other.GetID(), "ref-2"); err != nil {
+		t.Fatalf("RotateRefreshToken: %v", err)
+	}
+	if _, err := s.GetRefreshTokenSession(ctx, "ref-2", &fosite.DefaultSession{}); !errors.Is(err, fosite.ErrInactiveToken) {
+		t.Errorf("rotated refresh token error = %v, want ErrInactiveToken", err)
+	}
+}
+
+// TestStorageRefreshAttachesToAccessToken verifies that a refresh token
+// issued with its access token is recorded on that token's row.
+func TestStorageRefreshAttachesToAccessToken(t *testing.T) {
+	db, s, client := newStorageClient(t)
+	ctx := context.Background()
+	req := newRequest(client, "user-1")
+	if err := s.CreateAccessTokenSession(ctx, "acc-1", req); err != nil {
+		t.Fatalf("CreateAccessTokenSession: %v", err)
+	}
+	if err := s.CreateRefreshTokenSession(ctx, "ref-1", "acc-1", req); err != nil {
+		t.Fatalf("CreateRefreshTokenSession: %v", err)
+	}
+	n, err := db.OAuthToken.Query().Count(ctx)
+	if err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("token rows = %d, want 1 row holding both tokens", n)
 	}
 }
