@@ -83,7 +83,40 @@ func (s *EntStorage) GetClient(ctx context.Context, clientID string) (fosite.Cli
 		return nil, fosite.ErrServerError.WithWrap(err)
 	}
 
-	return s.entAppToClient(app), nil
+	client := s.entAppToClient(app)
+	if err := s.loadSecrets(ctx, app, client); err != nil {
+		return nil, fosite.ErrServerError.WithWrap(err)
+	}
+	return client, nil
+}
+
+// loadSecrets sets the client's secret hashes from its active secrets
+// (not revoked, not expired): the newest is SecretHash, which new client
+// authentication is checked against first, and the others are accepted as
+// rotated secrets. A public client has none.
+func (s *EntStorage) loadSecrets(ctx context.Context, app *ent.OAuthApp, client *Client) error {
+	if app.Public {
+		return nil
+	}
+	secrets, err := s.db.OAuthAppSecret.Query().
+		Where(
+			oauthappsecret.AppIDEQ(app.ID),
+			oauthappsecret.RevokedEQ(false),
+			oauthappsecret.Or(oauthappsecret.ExpiresAtIsNil(), oauthappsecret.ExpiresAtGT(time.Now())),
+		).
+		Order(ent.Desc(oauthappsecret.FieldCreatedAt)).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("load client secrets: %w", err)
+	}
+	for i, sec := range secrets {
+		if i == 0 {
+			client.SecretHash = sec.SecretHash
+			continue
+		}
+		client.RotatedSecretHashes = append(client.RotatedSecretHashes, sec.SecretHash)
+	}
+	return nil
 }
 
 // CreateClient creates a new OAuth client.
@@ -174,7 +207,11 @@ func (s *EntStorage) GetClientByID(ctx context.Context, id string) (*Client, err
 		return nil, fmt.Errorf("failed to get client: %w", err)
 	}
 
-	return s.entAppToClient(app), nil
+	client := s.entAppToClient(app)
+	if err := s.loadSecrets(ctx, app, client); err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
 // UpdateClient updates an existing client.

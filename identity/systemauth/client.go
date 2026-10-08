@@ -29,6 +29,10 @@ type Client struct {
 	// SecretHash is the bcrypt hash of the secret.
 	SecretHash string `json:"secret_hash,omitempty"`
 
+	// RotatedSecretHashes are the bcrypt hashes of other secrets that are
+	// still active, accepted during a secret rotation.
+	RotatedSecretHashes []string `json:"-"`
+
 	// Type is "public" or "confidential".
 	Type ClientType `json:"type"`
 
@@ -89,6 +93,16 @@ func (c *Client) GetID() string {
 // GetHashedSecret returns the hashed client secret.
 func (c *Client) GetHashedSecret() []byte {
 	return []byte(c.SecretHash)
+}
+
+// GetRotatedHashes returns the hashes of the other active secrets
+// (fosite.ClientWithSecretRotation), accepted alongside SecretHash.
+func (c *Client) GetRotatedHashes() [][]byte {
+	out := make([][]byte, 0, len(c.RotatedSecretHashes))
+	for _, h := range c.RotatedSecretHashes {
+		out = append(out, []byte(h))
+	}
+	return out
 }
 
 // GetRedirectURIs returns the allowed redirect URIs.
@@ -196,12 +210,16 @@ func hashSecret(secret string) (string, error) {
 	return string(hash), nil
 }
 
-// ValidateSecret checks if the provided secret matches the stored hash.
+// ValidateSecret checks if the provided secret matches the stored hash or,
+// during a rotation, one of the other active secrets.
 func (c *Client) ValidateSecret(secret string) bool {
 	if c.IsPublic() {
 		return true // Public clients don't have secrets
 	}
-
-	err := bcrypt.CompareHashAndPassword([]byte(c.SecretHash), []byte(secret))
-	return err == nil
+	for _, h := range append([]string{c.SecretHash}, c.RotatedSecretHashes...) {
+		if h != "" && bcrypt.CompareHashAndPassword([]byte(h), []byte(secret)) == nil {
+			return true
+		}
+	}
+	return false
 }
