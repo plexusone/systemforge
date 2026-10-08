@@ -8,6 +8,7 @@ package ratelimit
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"sync"
@@ -139,6 +140,8 @@ type Limiter struct {
 	resolver      LimitResolver
 	keyFunc       KeyFunc
 	observability *observability.Observability
+	failOpen      bool
+	logger        *slog.Logger
 }
 
 // New creates a new Limiter with the given storage and options.
@@ -146,9 +149,8 @@ func New(storage Storage, opts ...Option) *Limiter {
 	l := &Limiter{
 		storage:  storage,
 		resolver: &StaticResolver{Limit: DefaultLimit()},
-		keyFunc: func(r *http.Request) string {
-			return r.RemoteAddr // Default to IP-based limiting
-		},
+		keyFunc:  IPKey(),
+		logger:   slog.Default(),
 	}
 
 	for _, opt := range opts {
@@ -182,6 +184,23 @@ func WithKeyFunc(keyFunc KeyFunc) Option {
 	}
 }
 
+// WithFailOpen lets requests through when the storage fails. By default
+// the middleware fails closed, answering 503, because a storage outage
+// otherwise switches off the limits that protect authentication endpoints
+// at the moment an attacker may be causing it.
+func WithFailOpen() Option {
+	return func(l *Limiter) {
+		l.failOpen = true
+	}
+}
+
+// WithLogger sets the logger for storage failures.
+func WithLogger(logger *slog.Logger) Option {
+	return func(l *Limiter) {
+		l.logger = logger
+	}
+}
+
 // WithObservability sets the observability provider for metrics and tracing.
 func WithObservability(obs *observability.Observability) Option {
 	return func(l *Limiter) {
@@ -206,9 +225,12 @@ func (l *Limiter) Middleware() func(http.Handler) http.Handler {
 
 			result, err := l.Allow(r)
 			if err != nil {
-				// Log error but don't block request on storage failure
-				// In production, you might want different behavior
-				next.ServeHTTP(w, r)
+				l.logger.ErrorContext(ctx, "rate limit storage failed", "error", err, "fail_open", l.failOpen)
+				if l.failOpen {
+					next.ServeHTTP(w, r)
+					return
+				}
+				http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 				return
 			}
 

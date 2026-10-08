@@ -2,6 +2,7 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 )
@@ -16,12 +17,46 @@ type MemoryStorage struct {
 	// cleanupInterval controls how often expired windows are cleaned up.
 	cleanupInterval time.Duration
 	stopCleanup     chan struct{}
+
+	// maxKeys bounds the number of tracked keys.
+	maxKeys int
 }
 
 type slidingWindow struct {
 	count     int
 	startTime time.Time
+	period    time.Duration
 	mu        sync.Mutex
+}
+
+// expired reports whether the window has ended, so a new request would
+// start a fresh one and the old count no longer matters.
+func (w *slidingWindow) expired(now time.Time) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return now.After(w.startTime.Add(w.period))
+}
+
+// DefaultMaxKeys is the number of keys MemoryStorage tracks by default.
+const DefaultMaxKeys = 100_000
+
+// ErrClosed is returned by a closed storage.
+var ErrClosed = errors.New("ratelimit: storage closed")
+
+// ErrTooManyKeys is returned when a new key arrives while the storage is
+// tracking its maximum number of live keys. Callers should treat it as a
+// refusal: keys are attacker-influenced on pre-authentication endpoints,
+// and admitting them without bound would exhaust memory.
+var ErrTooManyKeys = errors.New("ratelimit: too many tracked keys")
+
+// WithMaxKeys sets the number of keys the storage tracks at once (default
+// DefaultMaxKeys). Expired windows are discarded to make room first.
+func WithMaxKeys(n int) MemoryOption {
+	return func(m *MemoryStorage) {
+		if n > 0 {
+			m.maxKeys = n
+		}
+	}
 }
 
 // MemoryOption configures MemoryStorage.
@@ -40,6 +75,7 @@ func NewMemoryStorage(opts ...MemoryOption) *MemoryStorage {
 		windows:         make(map[string]*slidingWindow),
 		cleanupInterval: 5 * time.Minute,
 		stopCleanup:     make(chan struct{}),
+		maxKeys:         DefaultMaxKeys,
 	}
 
 	for _, opt := range opts {
@@ -55,10 +91,22 @@ func NewMemoryStorage(opts ...MemoryOption) *MemoryStorage {
 // Allow implements Storage.Allow using a sliding window algorithm.
 func (m *MemoryStorage) Allow(ctx context.Context, key string, limit Limit) (Result, error) {
 	m.mu.Lock()
+	if m.closed {
+		m.mu.Unlock()
+		return Result{}, ErrClosed
+	}
 	window, exists := m.windows[key]
 	if !exists {
+		if len(m.windows) >= m.maxKeys {
+			m.evictExpiredLocked(time.Now())
+		}
+		if len(m.windows) >= m.maxKeys {
+			m.mu.Unlock()
+			return Result{}, ErrTooManyKeys
+		}
 		window = &slidingWindow{
 			startTime: time.Now(),
+			period:    limit.Period,
 		}
 		m.windows[key] = window
 	}
@@ -68,6 +116,7 @@ func (m *MemoryStorage) Allow(ctx context.Context, key string, limit Limit) (Res
 	defer window.mu.Unlock()
 
 	now := time.Now()
+	window.period = limit.Period
 	windowEnd := window.startTime.Add(limit.Period)
 
 	// Check if we're in a new window
@@ -151,17 +200,15 @@ func (m *MemoryStorage) cleanupExpired() {
 	if m.closed {
 		return
 	}
+	m.evictExpiredLocked(time.Now())
+}
 
-	// We'll use a generous expiration time (10x the cleanup interval)
-	// since we don't know the period for each window
-	expirationThreshold := max(10*m.cleanupInterval, time.Hour)
-	now := time.Now()
-
+// evictExpiredLocked drops windows whose period has ended; a request after
+// that would start a fresh window anyway. The caller holds m.mu.
+func (m *MemoryStorage) evictExpiredLocked(now time.Time) {
 	for key, window := range m.windows {
-		window.mu.Lock()
-		if now.Sub(window.startTime) > expirationThreshold {
+		if window.expired(now) {
 			delete(m.windows, key)
 		}
-		window.mu.Unlock()
 	}
 }

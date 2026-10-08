@@ -80,42 +80,36 @@ func ClientEndpointKey() KeyFunc {
 	return EndpointKey(ClientKey())
 }
 
-// IPKey returns a KeyFunc that uses the client's IP address.
+// IPKey returns a KeyFunc that keys on the IP address of the direct peer
+// (see PeerIP). Behind a reverse proxy every client would share the
+// proxy's address; use ForwardedIPKey there. Forwarding headers are never
+// believed unless a trusted proxy is configured, because any client can
+// send them.
 func IPKey() KeyFunc {
 	return func(r *http.Request) string {
 		return "ip:" + extractIP(r)
 	}
 }
 
-// extractIP extracts the client IP from a request, considering X-Forwarded-For.
+// ForwardedIPKey is IPKey for a server behind reverse proxies: it takes the
+// client address from X-Forwarded-For when the request arrives from one
+// of the trusted proxy networks (see ForwardedClientIP).
+func ForwardedIPKey(trustedProxies ...string) (KeyFunc, error) {
+	clientIP, err := ForwardedClientIP(trustedProxies...)
+	if err != nil {
+		return nil, err
+	}
+	return func(r *http.Request) string {
+		return "ip:" + clientIP(r)
+	}, nil
+}
+
+// extractIP is the address requests are limited by when no trusted proxy
+// is configured: the direct peer's. An unparseable peer address shares one
+// bucket rather than escaping limiting.
 func extractIP(r *http.Request) string {
-	// Check X-Forwarded-For header (set by proxies/load balancers)
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// First IP in the list is the original client
-		for i := 0; i < len(xff); i++ {
-			if xff[i] == ',' {
-				return xff[:i]
-			}
-		}
-		return xff
+	if ip := PeerIP(r); ip != "" {
+		return ip
 	}
-
-	// Check X-Real-IP header
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-
-	// Fall back to RemoteAddr
-	// Remove port if present
-	addr := r.RemoteAddr
-	for i := len(addr) - 1; i >= 0; i-- {
-		if addr[i] == ':' {
-			return addr[:i]
-		}
-		if addr[i] == ']' {
-			// IPv6 with brackets
-			return addr
-		}
-	}
-	return addr
+	return "unknown"
 }
