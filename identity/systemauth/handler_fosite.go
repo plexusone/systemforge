@@ -256,6 +256,15 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	clientID := ar.GetClient().GetID()
 
+	// Tokens are not issued or refreshed for a principal that is no longer
+	// active, and its token family is revoked.
+	if err := s.requireActiveSubject(ctx, ar); err != nil {
+		logger.Info("token request rejected", "grant_type", grantType, "client_id", clientID, "error", err)
+		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrInvalidGrant.WithHint("The principal is no longer active."))
+		return
+	}
+
 	// Bound refresh-token rotation by the family's absolute lifetime.
 	if err := s.applyTokenFamilyLifetime(ctx, ar); err != nil {
 		logger.Info("token request rejected", "grant_type", grantType, "client_id", clientID, "error", err)
@@ -387,15 +396,21 @@ func (s *Server) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 	session := s.Session("")
 
 	ir, err := s.oauth2.NewIntrospectionRequest(ctx, r, session)
+	if err == nil && ir.IsActive() {
+		// A token of a principal that is no longer active is inactive.
+		err = s.requireActiveSubject(ctx, ir.GetAccessRequester())
+	}
 	if err != nil {
 		// Introspection MUST return 200 even for invalid tokens
 		if s.observability != nil {
 			s.observability.RecordTokenValidation(ctx, observability.ResultInvalid)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"active": false,
-		})
+		}); err != nil {
+			LoggerFromContext(ctx).ErrorContext(ctx, "writing introspection response", "error", err)
+		}
 		return
 	}
 

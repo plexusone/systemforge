@@ -453,7 +453,7 @@ func (s *Server) Middleware() func(http.Handler) http.Handler {
 			session := s.Session("")
 
 			// Validate the token
-			_, ar, err := s.oauth2.IntrospectToken(ctx, token, fosite.AccessToken, session)
+			ar, err := s.introspect(ctx, token, fosite.AccessToken, session)
 			if err != nil {
 				logger.Debug("invalid access token", "path", r.URL.Path, "error", err)
 				http.Error(w, "invalid access token", http.StatusUnauthorized)

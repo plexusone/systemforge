@@ -119,7 +119,7 @@ func (s *Server) userinfoEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, ar, err := s.oauth2.IntrospectToken(ctx, token, fosite.AccessToken, s.Session(""))
+	ar, err := s.introspect(ctx, token, fosite.AccessToken, s.Session(""))
 	if err != nil {
 		logger.Debug("userinfo: invalid access token", "error", err)
 		writeBearerError(w, http.StatusUnauthorized, "invalid_token", "The access token is invalid, expired or revoked.", "")

@@ -64,7 +64,7 @@ func (p *EmbeddedOAuthProvider) Introspect(ctx context.Context, token string, to
 		tokenType = fosite.RefreshToken
 	}
 
-	_, ar, err := p.server.oauth2.IntrospectToken(ctx, token, tokenType, session)
+	ar, err := p.server.introspect(ctx, token, tokenType, session)
 	if err != nil {
 		// Token is not active
 		return &OAuthIntrospection{Active: false}, nil
@@ -99,7 +99,7 @@ func (p *EmbeddedOAuthProvider) Revoke(ctx context.Context, token string, tokenT
 func (p *EmbeddedOAuthProvider) UserInfo(ctx context.Context, accessToken string) (*OAuthUserInfo, error) {
 	session := p.server.Session("")
 
-	_, ar, err := p.server.oauth2.IntrospectToken(ctx, accessToken, fosite.AccessToken, session)
+	ar, err := p.server.introspect(ctx, accessToken, fosite.AccessToken, session)
 	if err != nil {
 		return nil, errors.New("invalid access token")
 	}
