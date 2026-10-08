@@ -49,23 +49,11 @@ PRD hold.
 
 - INIT-SYSTEMFORGE-007: optional `Human.email` under application
   configuration, QR login credential type, guardian/educator relationships.
-- Enforce case-insensitive email uniqueness in the database with a
-  PostgreSQL `lower(email)` unique index on `sf_humans`, created by the
-  migrate step on PostgreSQL. Writes already check case-insensitively
-  inside their transaction, but only an index closes the race between
-  concurrent creates. It needs the dialect passed into the migrate step.
-- Fix `identity/oauth.NewProvider`, which panics on construction because
-  its `Storage` does not implement `fosite.Storage`
-  (`ClientAssertionJWTValid` is missing). This predates the initiative;
-  the documentation now points to SystemAuth instead of this package.
-- Retire or realign the legacy-shaped mixins in `identity/ent/mixin`
-  (`UserBase`, `MembershipBase`, `OAuthAccountMixin`, `RefreshTokenMixin`,
-  and the `HumanMixin` fields that `sf_humans` does not have), so
-  applications cannot compose a diverging user model.
-- Decide whether `organization.Service.ListMembers` and `ListMemberships`
-  should exclude inactive memberships, as the SCIM store now does.
-- Rename the Core-era default BFF session cookie `cf_session`, with a
-  migration note, since renaming it signs existing sessions out.
+- The follow-ups found during execution (the `identity/oauth` provider
+  panic, the `sf_session` cookie name, active-only membership listing, an
+  opt-in for trusted SCIM email, the PostgreSQL case-insensitive email
+  index, and the legacy-shaped mixins) are delivered by
+  INIT-SYSTEMFORGE-009.
 - Implement the RFC 7523 JWT-bearer grant on `ServicePrincipal` plus
   `keypair` credentials. It was documented but never wired into Fosite;
   the service-account tables it described are removed by this initiative.
