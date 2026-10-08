@@ -9,6 +9,9 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
+
+	"github.com/plexusone/systemforge/authz"
 )
 
 // APIConfig configures the Organization API.
@@ -17,6 +20,14 @@ type APIConfig struct {
 	BasePath string
 	// Logger is the logger to use (default: slog.Default()).
 	Logger *slog.Logger
+	// Authorizer checks the caller's organization permissions
+	// (authz.PermOrgView, PermOrgSettings, PermOrgInviteMember, and so
+	// on). Until it is set, every endpoint except creating an
+	// organization and checking a slug answers 501.
+	Authorizer authz.Authorizer
+	// Caller identifies the authenticated principal (default:
+	// requestprincipal.PrincipalUUID, set by requestprincipal.Middleware).
+	Caller func(ctx context.Context) (uuid.UUID, error)
 }
 
 // DefaultAPIConfig returns the default API configuration.

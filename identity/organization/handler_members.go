@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/google/uuid"
+	"github.com/plexusone/systemforge/authz"
 )
 
 // MemberResponse is the API representation of a membership.
@@ -185,9 +187,9 @@ func (a *API) registerMemberEndpoints() {
 }
 
 func (a *API) listMembers(ctx context.Context, input *ListMembersInput) (*ListMembersOutput, error) {
-	org, err := a.service.GetBySlug(ctx, input.Slug)
+	org, _, err := a.orgFor(ctx, input.Slug, authz.PermOrgView)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
 
 	var opts []ListOption
@@ -211,9 +213,9 @@ func (a *API) listMembers(ctx context.Context, input *ListMembersInput) (*ListMe
 }
 
 func (a *API) getMember(ctx context.Context, input *GetMemberInput) (*GetMemberOutput, error) {
-	org, err := a.service.GetBySlug(ctx, input.Slug)
+	org, _, err := a.orgFor(ctx, input.Slug, authz.PermOrgView)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
 
 	principalID, err := uuid.Parse(input.PrincipalID)
@@ -230,14 +232,19 @@ func (a *API) getMember(ctx context.Context, input *GetMemberInput) (*GetMemberO
 }
 
 func (a *API) addMember(ctx context.Context, input *AddMemberRequest) (*AddMemberResponse, error) {
-	org, err := a.service.GetBySlug(ctx, input.Slug)
+	org, caller, err := a.orgFor(ctx, input.Slug, authz.PermOrgInviteMember)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
 
 	principalID, err := uuid.Parse(input.Body.PrincipalID)
 	if err != nil {
 		return nil, huma.Error400BadRequest("invalid principal_id")
+	}
+	if input.Body.Role == RoleOwner {
+		if err := a.requireOwnerRights(ctx, caller, org.ID); err != nil {
+			return nil, err
+		}
 	}
 
 	member, err := a.service.AddMember(ctx, AddMemberInput{
@@ -254,9 +261,9 @@ func (a *API) addMember(ctx context.Context, input *AddMemberRequest) (*AddMembe
 }
 
 func (a *API) updateMember(ctx context.Context, input *UpdateMemberRequest) (*UpdateMemberResponse, error) {
-	org, err := a.service.GetBySlug(ctx, input.Slug)
+	org, caller, err := a.orgFor(ctx, input.Slug, authz.PermOrgChangeRole)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
 
 	principalID, err := uuid.Parse(input.PrincipalID)
@@ -267,6 +274,20 @@ func (a *API) updateMember(ctx context.Context, input *UpdateMemberRequest) (*Up
 	membership, err := a.service.GetMembership(ctx, org.ID, principalID)
 	if err != nil {
 		return nil, huma.Error404NotFound(err.Error())
+	}
+	if membership.Role == RoleOwner || (input.Body.Role != nil && *input.Body.Role == RoleOwner) {
+		if err := a.requireOwnerRights(ctx, caller, org.ID); err != nil {
+			return nil, err
+		}
+	}
+	if input.Body.Active != nil {
+		ok, err := a.can(ctx, caller, org.ID, authz.PermOrgRemoveMember)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, huma.Error403Forbidden("not allowed to deactivate members")
+		}
 	}
 
 	updated, err := a.service.UpdateMember(ctx, membership.ID, UpdateMemberInput{
@@ -282,14 +303,33 @@ func (a *API) updateMember(ctx context.Context, input *UpdateMemberRequest) (*Up
 }
 
 func (a *API) removeMember(ctx context.Context, input *RemoveMemberInput) (*struct{}, error) {
-	org, err := a.service.GetBySlug(ctx, input.Slug)
+	// Members may leave; removing someone else needs remove_member.
+	org, caller, err := a.orgFor(ctx, input.Slug, authz.PermOrgView)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
 
 	principalID, err := uuid.Parse(input.PrincipalID)
 	if err != nil {
 		return nil, huma.Error400BadRequest("invalid principal_id")
+	}
+	if principalID != caller {
+		ok, err := a.can(ctx, caller, org.ID, authz.PermOrgRemoveMember)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, huma.Error403Forbidden("not allowed to remove members")
+		}
+		membership, err := a.service.GetMembership(ctx, org.ID, principalID)
+		if err != nil {
+			return nil, huma.Error404NotFound("member not found")
+		}
+		if membership.Role == RoleOwner {
+			if err := a.requireOwnerRights(ctx, caller, org.ID); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	if err := a.service.RemoveMember(ctx, org.ID, principalID); err != nil {
@@ -300,9 +340,9 @@ func (a *API) removeMember(ctx context.Context, input *RemoveMemberInput) (*stru
 }
 
 func (a *API) transferOwnership(ctx context.Context, input *TransferOwnershipRequest) (*TransferOwnershipResponse, error) {
-	org, err := a.service.GetBySlug(ctx, input.Slug)
+	org, caller, err := a.orgFor(ctx, input.Slug, authz.PermOrgDelete)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
 
 	newOwnerID, err := uuid.Parse(input.Body.NewOwnerPrincipalID)
@@ -315,8 +355,10 @@ func (a *API) transferOwnership(ctx context.Context, input *TransferOwnershipReq
 		return nil, huma.Error400BadRequest("organization has no owner set")
 	}
 
-	// TODO: In production, verify the requesting user is the current owner
-	// This would come from authentication context
+	// Only the current owner hands over ownership.
+	if *org.OwnerPrincipalID != caller {
+		return nil, huma.Error403Forbidden("only the current owner may transfer ownership")
+	}
 
 	if err := a.service.TransferOwnership(ctx, TransferOwnershipInput{
 		OrganizationID: org.ID,

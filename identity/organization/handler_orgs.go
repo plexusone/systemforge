@@ -6,6 +6,9 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
+
+	"github.com/plexusone/systemforge/authz"
 )
 
 // Organization API request/response types
@@ -103,11 +106,13 @@ type DeleteOrgInput struct {
 
 // ListOrgsInput is the request for listing organizations.
 type ListOrgsInput struct {
-	OrgType *string `query:"org_type" enum:"personal,team,enterprise"`
-	Plan    *string `query:"plan" enum:"free,starter,pro,enterprise"`
-	Active  *bool   `query:"active"`
-	Limit   int     `query:"limit" default:"20" minimum:"1" maximum:"100"`
-	Offset  int     `query:"offset" default:"0" minimum:"0"`
+	// Huma does not support pointer parameters; an empty value means
+	// the filter is not applied.
+	OrgType string `query:"org_type" enum:"personal,team,enterprise"`
+	Plan    string `query:"plan" enum:"free,starter,pro,enterprise"`
+	Active  string `query:"active" enum:"true,false"`
+	Limit   int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
+	Offset  int    `query:"offset" default:"0" minimum:"0"`
 }
 
 // ListOrgsOutput is the response for listing organizations.
@@ -205,6 +210,12 @@ func (a *API) registerOrgEndpoints() {
 }
 
 func (a *API) createOrg(ctx context.Context, input *CreateOrgInput) (*CreateOrgOutput, error) {
+	// Any authenticated principal may create an organization, and owns
+	// what it creates.
+	owner, err := a.callerID(ctx)
+	if err != nil {
+		return nil, err
+	}
 	orgType := OrgTypeTeam
 	if input.Body.OrgType != "" {
 		orgType = OrgType(input.Body.OrgType)
@@ -216,14 +227,15 @@ func (a *API) createOrg(ctx context.Context, input *CreateOrgInput) (*CreateOrgO
 	}
 
 	org, err := a.service.Create(ctx, CreateOrganizationInput{
-		Name:        input.Body.Name,
-		Slug:        input.Body.Slug,
-		OrgType:     orgType,
-		LogoURL:     input.Body.LogoURL,
-		Description: input.Body.Description,
-		WebsiteURL:  input.Body.WebsiteURL,
-		Plan:        plan,
-		Settings:    input.Body.Settings,
+		Name:             input.Body.Name,
+		Slug:             input.Body.Slug,
+		OrgType:          orgType,
+		OwnerPrincipalID: &owner,
+		LogoURL:          input.Body.LogoURL,
+		Description:      input.Body.Description,
+		WebsiteURL:       input.Body.WebsiteURL,
+		Plan:             plan,
+		Settings:         input.Body.Settings,
 	})
 	if err != nil {
 		return nil, huma.Error400BadRequest(err.Error())
@@ -233,18 +245,18 @@ func (a *API) createOrg(ctx context.Context, input *CreateOrgInput) (*CreateOrgO
 }
 
 func (a *API) getOrg(ctx context.Context, input *GetOrgInput) (*GetOrgOutput, error) {
-	org, err := a.service.GetBySlug(ctx, input.Slug)
+	org, _, err := a.orgFor(ctx, input.Slug, authz.PermOrgView)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
 
 	return &GetOrgOutput{Body: orgToResponse(org)}, nil
 }
 
 func (a *API) updateOrg(ctx context.Context, input *UpdateOrgInput) (*UpdateOrgOutput, error) {
-	org, err := a.service.GetBySlug(ctx, input.Slug)
+	org, _, err := a.orgFor(ctx, input.Slug, authz.PermOrgSettings)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
 
 	var plan *Plan
@@ -269,9 +281,9 @@ func (a *API) updateOrg(ctx context.Context, input *UpdateOrgInput) (*UpdateOrgO
 }
 
 func (a *API) deleteOrg(ctx context.Context, input *DeleteOrgInput) (*struct{}, error) {
-	org, err := a.service.GetBySlug(ctx, input.Slug)
+	org, _, err := a.orgFor(ctx, input.Slug, authz.PermOrgDelete)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, err
 	}
 
 	if err := a.service.Delete(ctx, org.ID); err != nil {
@@ -282,24 +294,49 @@ func (a *API) deleteOrg(ctx context.Context, input *DeleteOrgInput) (*struct{}, 
 }
 
 func (a *API) listOrgs(ctx context.Context, input *ListOrgsInput) (*ListOrgsOutput, error) {
+	if a.config.Authorizer == nil {
+		return nil, huma.Error501NotImplemented("organization authorization not configured")
+	}
+	caller, err := a.callerID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Platform administrators see every organization; everyone else sees
+	// the organizations they belong to.
+	admin, err := a.isPlatformAdmin(ctx, caller)
+	if err != nil {
+		return nil, err
+	}
+	var member *uuid.UUID
+	if !admin {
+		member = &caller
+	}
+
 	var orgType *OrgType
-	if input.OrgType != nil {
-		t := OrgType(*input.OrgType)
+	if input.OrgType != "" {
+		t := OrgType(input.OrgType)
 		orgType = &t
 	}
 
 	var plan *Plan
-	if input.Plan != nil {
-		p := Plan(*input.Plan)
+	if input.Plan != "" {
+		p := Plan(input.Plan)
 		plan = &p
 	}
 
+	var active *bool
+	if input.Active != "" {
+		v := input.Active == "true"
+		active = &v
+	}
+
 	orgs, err := a.service.List(ctx, ListOrganizationsInput{
-		OrgType: orgType,
-		Plan:    plan,
-		Active:  input.Active,
-		Limit:   input.Limit,
-		Offset:  input.Offset,
+		OrgType:           orgType,
+		Plan:              plan,
+		Active:            active,
+		MemberPrincipalID: member,
+		Limit:             input.Limit,
+		Offset:            input.Offset,
 	})
 	if err != nil {
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -318,6 +355,9 @@ func (a *API) listOrgs(ctx context.Context, input *ListOrgsInput) (*ListOrgsOutp
 }
 
 func (a *API) checkSlug(ctx context.Context, input *CheckSlugInput) (*CheckSlugOutput, error) {
+	if _, err := a.callerID(ctx); err != nil {
+		return nil, err
+	}
 	available, err := a.service.SlugAvailable(ctx, input.Slug)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(err.Error())
