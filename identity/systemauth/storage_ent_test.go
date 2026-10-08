@@ -410,3 +410,23 @@ func TestEntStorageCreateClientConstraintErrors(t *testing.T) {
 		t.Errorf("nonexistent owner reported as ErrClientExists: %v", err)
 	}
 }
+
+// TestEntStorageClientAssertionReplay verifies that a used client-assertion
+// JWT ID is recorded and then rejected, which private_key_jwt client
+// authentication relies on.
+func TestEntStorageClientAssertionReplay(t *testing.T) {
+	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	s := NewEntStorage(db)
+	ctx := context.Background()
+	if err := s.SetClientAssertionJWT(ctx, "jti-1", time.Now().Add(time.Hour)); err != nil {
+		t.Fatalf("SetClientAssertionJWT: %v", err)
+	}
+	if err := s.ClientAssertionJWTValid(ctx, "jti-1"); !errors.Is(err, fosite.ErrJTIKnown) {
+		t.Errorf("replayed JTI error = %v, want ErrJTIKnown", err)
+	}
+}

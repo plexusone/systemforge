@@ -17,6 +17,7 @@ import (
 	"github.com/ory/fosite/handler/openid"
 	"golang.org/x/crypto/argon2"
 
+	"github.com/plexusone/systemforge/identity/clientassertion"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
@@ -758,36 +759,16 @@ func (s *EntStorage) DeleteOpenIDConnectSession(ctx context.Context, authorizeCo
 
 // --- Client Assertion JWT Tracking ---
 
-// ClientAssertionJWTValid checks if a JWT ID has been used.
+// ClientAssertionJWTValid implements fosite.ClientManager: it reports
+// fosite.ErrJTIKnown for a client-assertion JWT ID that is already used.
 func (s *EntStorage) ClientAssertionJWTValid(ctx context.Context, jti string) error {
-	// Check if JTI exists and is not expired
-	// For simplicity, we use the auth code table to track JTIs
-	// In production, you might want a dedicated table
-	exists, err := s.db.OAuthAuthCode.Query().
-		Where(oauthauthcode.CodeSignatureEQ("jti:" + jti)).
-		Where(oauthauthcode.ExpiresAtGT(time.Now())).
-		Exist(ctx)
-	if err != nil {
-		return fosite.ErrServerError.WithWrap(err)
-	}
-	if exists {
-		return fosite.ErrJTIKnown
-	}
-	return nil
+	return clientassertion.NewJTIStore(s.db).Valid(ctx, jti)
 }
 
-// SetClientAssertionJWT marks a JWT ID as used.
+// SetClientAssertionJWT implements fosite.ClientManager: it records a
+// client-assertion JWT ID as used until exp.
 func (s *EntStorage) SetClientAssertionJWT(ctx context.Context, jti string, exp time.Time) error {
-	_, err := s.db.OAuthAuthCode.Create().
-		SetCodeSignature("jti:" + jti).
-		SetAppID(uuid.Nil). // Placeholder
-		SetRedirectURI("").
-		SetExpiresAt(exp).
-		Save(ctx)
-	if err != nil {
-		return fosite.ErrServerError.WithWrap(err)
-	}
-	return nil
+	return clientassertion.NewJTIStore(s.db).Mark(ctx, jti, exp)
 }
 
 // --- Helper Functions ---
