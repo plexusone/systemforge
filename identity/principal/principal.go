@@ -6,10 +6,15 @@ package principal
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// ErrEmailRequired is returned when creating a human principal without an
+// email. Only managed principals may omit one (ADR-005).
+var ErrEmailRequired = errors.New("principal: email is required")
 
 // Type represents the type of principal.
 type Type string

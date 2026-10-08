@@ -48,6 +48,12 @@ func (_u *HumanUpdate) SetNillableEmail(v *string) *HumanUpdate {
 	return _u
 }
 
+// ClearEmail clears the value of the "email" field.
+func (_u *HumanUpdate) ClearEmail() *HumanUpdate {
+	_u.mutation.ClearEmail()
+	return _u
+}
+
 // SetGivenName sets the "given_name" field.
 func (_u *HumanUpdate) SetGivenName(v string) *HumanUpdate {
 	_u.mutation.SetGivenName(v)
@@ -274,6 +280,9 @@ func (_u *HumanUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Email(); ok {
 		_spec.SetField(human.FieldEmail, field.TypeString, value)
 	}
+	if _u.mutation.EmailCleared() {
+		_spec.ClearField(human.FieldEmail, field.TypeString)
+	}
 	if value, ok := _u.mutation.GivenName(); ok {
 		_spec.SetField(human.FieldGivenName, field.TypeString, value)
 	}
@@ -356,6 +365,12 @@ func (_u *HumanUpdateOne) SetNillableEmail(v *string) *HumanUpdateOne {
 	if v != nil {
 		_u.SetEmail(*v)
 	}
+	return _u
+}
+
+// ClearEmail clears the value of the "email" field.
+func (_u *HumanUpdateOne) ClearEmail() *HumanUpdateOne {
+	_u.mutation.ClearEmail()
 	return _u
 }
 
@@ -614,6 +629,9 @@ func (_u *HumanUpdateOne) sqlSave(ctx context.Context) (_node *Human, err error)
 	}
 	if value, ok := _u.mutation.Email(); ok {
 		_spec.SetField(human.FieldEmail, field.TypeString, value)
+	}
+	if _u.mutation.EmailCleared() {
+		_spec.ClearField(human.FieldEmail, field.TypeString)
 	}
 	if value, ok := _u.mutation.GivenName(); ok {
 		_spec.SetField(human.FieldGivenName, field.TypeString, value)

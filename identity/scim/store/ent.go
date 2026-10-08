@@ -307,7 +307,7 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 			hu.SetEmail(scimUser.UserName)
 			// Verification belongs to an address, so a changed email does
 			// not inherit the previous address's verification.
-			if !strings.EqualFold(scimUser.UserName, p.Edges.Human.Email) {
+			if p.Edges.Human.Email == nil || !strings.EqualFold(scimUser.UserName, *p.Edges.Human.Email) {
 				if s.config.TrustProvisionedEmail {
 					hu.SetEmailVerifiedAt(time.Now())
 				} else {
@@ -706,7 +706,9 @@ func (s *EntStore) principalToSCIMUser(p *ent.Principal) *scim.User {
 	var email string
 	var avatar *string
 	if h := p.Edges.Human; h != nil {
-		email = h.Email
+		if h.Email != nil {
+			email = *h.Email
+		}
 		avatar = h.AvatarURL
 	}
 	scimUser := &scim.User{

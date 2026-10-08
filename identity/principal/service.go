@@ -101,6 +101,11 @@ func (s *DefaultService) GetByIdentifier(ctx context.Context, identifier string)
 
 // CreateHuman creates a new human principal.
 func (s *DefaultService) CreateHuman(ctx context.Context, input CreateHumanInput) (*Principal, error) {
+	if input.Email == "" {
+		// Only managed principals may omit an email (ADR-005); they are
+		// created through identity/managedprincipal, not here.
+		return nil, ErrEmailRequired
+	}
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
@@ -198,7 +203,7 @@ func (s *DefaultService) CreateHuman(ctx context.Context, input CreateHumanInput
 		CreatedAt:     p.CreatedAt,
 		UpdatedAt:     p.UpdatedAt,
 		Human: &Human{
-			Email:           h.Email,
+			Email:           derefString(h.Email),
 			GivenName:       h.GivenName,
 			FamilyName:      h.FamilyName,
 			AvatarURL:       h.AvatarURL,
@@ -795,7 +800,7 @@ func entPrincipalToModel(p *ent.Principal) *Principal {
 	if p.Edges.Human != nil {
 		h := p.Edges.Human
 		result.Human = &Human{
-			Email:           h.Email,
+			Email:           derefString(h.Email),
 			GivenName:       h.GivenName,
 			FamilyName:      h.FamilyName,
 			AvatarURL:       h.AvatarURL,
@@ -948,4 +953,12 @@ func (s *DefaultService) MarkEmailVerified(ctx context.Context, id uuid.UUID) er
 	}
 
 	return nil
+}
+
+// derefString returns the value of s, or "" when s is nil.
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

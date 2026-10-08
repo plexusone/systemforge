@@ -25,8 +25,8 @@ type Human struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Reference to parent Principal
 	PrincipalID uuid.UUID `json:"principal_id,omitempty"`
-	// Primary email address
-	Email string `json:"email,omitempty"`
+	// Primary email address; null only for a managed principal (ADR-005)
+	Email *string `json:"email,omitempty"`
 	// First/given name
 	GivenName string `json:"given_name,omitempty"`
 	// Last/family name
@@ -125,7 +125,8 @@ func (_m *Human) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field email", values[i])
 			} else if value.Valid {
-				_m.Email = value.String
+				_m.Email = new(string)
+				*_m.Email = value.String
 			}
 		case human.FieldGivenName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -228,8 +229,10 @@ func (_m *Human) String() string {
 	builder.WriteString("principal_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.PrincipalID))
 	builder.WriteString(", ")
-	builder.WriteString("email=")
-	builder.WriteString(_m.Email)
+	if v := _m.Email; v != nil {
+		builder.WriteString("email=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("given_name=")
 	builder.WriteString(_m.GivenName)

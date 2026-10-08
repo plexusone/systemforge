@@ -6540,7 +6540,7 @@ func (m *HumanMutation) Email() (r string, exists bool) {
 // OldEmail returns the old "email" field's value of the Human entity.
 // If the Human object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HumanMutation) OldEmail(ctx context.Context) (v string, err error) {
+func (m *HumanMutation) OldEmail(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldEmail is only allowed on UpdateOne operations")
 	}
@@ -6554,9 +6554,22 @@ func (m *HumanMutation) OldEmail(ctx context.Context) (v string, err error) {
 	return oldValue.Email, nil
 }
 
+// ClearEmail clears the value of the "email" field.
+func (m *HumanMutation) ClearEmail() {
+	m.email = nil
+	m.clearedFields[human.FieldEmail] = struct{}{}
+}
+
+// EmailCleared returns if the "email" field was cleared in this mutation.
+func (m *HumanMutation) EmailCleared() bool {
+	_, ok := m.clearedFields[human.FieldEmail]
+	return ok
+}
+
 // ResetEmail resets all changes to the "email" field.
 func (m *HumanMutation) ResetEmail() {
 	m.email = nil
+	delete(m.clearedFields, human.FieldEmail)
 }
 
 // SetGivenName sets the "given_name" field.
@@ -7224,6 +7237,9 @@ func (m *HumanMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *HumanMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(human.FieldEmail) {
+		fields = append(fields, human.FieldEmail)
+	}
 	if m.FieldCleared(human.FieldGivenName) {
 		fields = append(fields, human.FieldGivenName)
 	}
@@ -7259,6 +7275,9 @@ func (m *HumanMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *HumanMutation) ClearField(name string) error {
 	switch name {
+	case human.FieldEmail:
+		m.ClearEmail()
+		return nil
 	case human.FieldGivenName:
 		m.ClearGivenName()
 		return nil

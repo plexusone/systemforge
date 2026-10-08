@@ -41,7 +41,8 @@ func (Principal) Fields() []ent.Field {
 			Comment("Type of principal: human, application, agent, service"),
 
 		// Unique identifier for this principal
-		// For humans: email address
+		// For humans: email address, or "human:<principal-id>" for a
+		// managed principal without one (ADR-005)
 		// For applications: client_id
 		// For agents: agent identifier
 		// For services: service@org identifier

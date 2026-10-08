@@ -319,9 +319,11 @@ func entPrincipalToContract(p *ent.Principal) ContractPrincipal {
 	if p.Edges.Human != nil {
 		h := p.Edges.Human
 		cp.Human = &ContractHuman{
-			Email:      h.Email,
 			GivenName:  h.GivenName,
 			FamilyName: h.FamilyName,
+		}
+		if h.Email != nil {
+			cp.Human.Email = *h.Email
 		}
 	}
 

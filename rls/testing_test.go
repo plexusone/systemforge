@@ -36,7 +36,7 @@ func TestSetupHelpersAgainstSchema(t *testing.T) {
 		t.Errorf("membership = %+v", m)
 	}
 	h, err := client.Human.Query().Only(ctx)
-	if err != nil || h.PrincipalID != userID || h.Email != "ada@example.com" {
+	if err != nil || h.PrincipalID != userID || h.Email == nil || *h.Email != "ada@example.com" {
 		t.Errorf("human = %+v, %v", h, err)
 	}
 

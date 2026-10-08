@@ -41,9 +41,11 @@ func (Human) Fields() []ent.Field {
 
 		// Core identity fields
 		field.String("email").
+			Optional().
+			Nillable().
 			NotEmpty().
 			Unique().
-			Comment("Primary email address"),
+			Comment("Primary email address; null only for a managed principal (ADR-005)"),
 
 		field.String("given_name").
 			Optional().

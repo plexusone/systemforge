@@ -79,6 +79,10 @@ var (
 	// ErrPrincipalExists is returned when creating a human principal whose ID
 	// or email is already taken.
 	ErrPrincipalExists = errors.New("systemauth: principal already exists")
+
+	// ErrEmailRequired is returned when creating or updating a human
+	// without an email. Only managed principals may omit one (ADR-005).
+	ErrEmailRequired = errors.New("systemauth: email is required")
 )
 
 // Social login errors.

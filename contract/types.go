@@ -50,7 +50,7 @@ type ContractPrincipal struct {
 
 // ContractHuman represents human-specific data in contract responses.
 type ContractHuman struct {
-	Email      string `json:"email" doc:"Email address" format:"email" example:"user@example.com"`
+	Email      string `json:"email,omitempty" doc:"Email address; absent for a managed principal" format:"email" example:"user@example.com"`
 	GivenName  string `json:"given_name,omitempty" doc:"Given/first name" example:"John"`
 	FamilyName string `json:"family_name,omitempty" doc:"Family/last name" example:"Doe"`
 }

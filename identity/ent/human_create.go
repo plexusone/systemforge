@@ -65,6 +65,14 @@ func (_c *HumanCreate) SetEmail(v string) *HumanCreate {
 	return _c
 }
 
+// SetNillableEmail sets the "email" field if the given value is not nil.
+func (_c *HumanCreate) SetNillableEmail(v *string) *HumanCreate {
+	if v != nil {
+		_c.SetEmail(*v)
+	}
+	return _c
+}
+
 // SetGivenName sets the "given_name" field.
 func (_c *HumanCreate) SetGivenName(v string) *HumanCreate {
 	_c.mutation.SetGivenName(v)
@@ -268,9 +276,6 @@ func (_c *HumanCreate) check() error {
 	if _, ok := _c.mutation.PrincipalID(); !ok {
 		return &ValidationError{Name: "principal_id", err: errors.New(`ent: missing required field "Human.principal_id"`)}
 	}
-	if _, ok := _c.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "Human.email"`)}
-	}
 	if v, ok := _c.mutation.Email(); ok {
 		if err := human.EmailValidator(v); err != nil {
 			return &ValidationError{Name: "email", err: fmt.Errorf(`ent: validator failed for field "Human.email": %w`, err)}
@@ -328,7 +333,7 @@ func (_c *HumanCreate) createSpec() (*Human, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := _c.mutation.Email(); ok {
 		_spec.SetField(human.FieldEmail, field.TypeString, value)
-		_node.Email = value
+		_node.Email = &value
 	}
 	if value, ok := _c.mutation.GivenName(); ok {
 		_spec.SetField(human.FieldGivenName, field.TypeString, value)
@@ -452,6 +457,12 @@ func (u *HumanUpsert) SetEmail(v string) *HumanUpsert {
 // UpdateEmail sets the "email" field to the value that was provided on create.
 func (u *HumanUpsert) UpdateEmail() *HumanUpsert {
 	u.SetExcluded(human.FieldEmail)
+	return u
+}
+
+// ClearEmail clears the value of the "email" field.
+func (u *HumanUpsert) ClearEmail() *HumanUpsert {
+	u.SetNull(human.FieldEmail)
 	return u
 }
 
@@ -672,6 +683,13 @@ func (u *HumanUpsertOne) SetEmail(v string) *HumanUpsertOne {
 func (u *HumanUpsertOne) UpdateEmail() *HumanUpsertOne {
 	return u.Update(func(s *HumanUpsert) {
 		s.UpdateEmail()
+	})
+}
+
+// ClearEmail clears the value of the "email" field.
+func (u *HumanUpsertOne) ClearEmail() *HumanUpsertOne {
+	return u.Update(func(s *HumanUpsert) {
+		s.ClearEmail()
 	})
 }
 
@@ -1082,6 +1100,13 @@ func (u *HumanUpsertBulk) SetEmail(v string) *HumanUpsertBulk {
 func (u *HumanUpsertBulk) UpdateEmail() *HumanUpsertBulk {
 	return u.Update(func(s *HumanUpsert) {
 		s.UpdateEmail()
+	})
+}
+
+// ClearEmail clears the value of the "email" field.
+func (u *HumanUpsertBulk) ClearEmail() *HumanUpsertBulk {
+	return u.Update(func(s *HumanUpsert) {
+		s.ClearEmail()
 	})
 }
 

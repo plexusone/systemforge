@@ -63,7 +63,7 @@ func TestUsersArePrincipals(t *testing.T) {
 	if err != nil {
 		t.Fatalf("principal for SCIM user: %v", err)
 	}
-	if p.Type != principal.TypeHuman || p.Edges.Human == nil || p.Edges.Human.Email != "lin@example.com" || p.DisplayName != "Lin" {
+	if p.Type != principal.TypeHuman || p.Edges.Human == nil || p.Edges.Human.Email == nil || *p.Edges.Human.Email != "lin@example.com" || p.DisplayName != "Lin" {
 		t.Errorf("principal = %+v, human = %+v", p, p.Edges.Human)
 	}
 

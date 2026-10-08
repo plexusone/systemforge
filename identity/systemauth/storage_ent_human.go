@@ -26,7 +26,9 @@ func toHumanPrincipal(p *ent.Principal) *HumanPrincipal {
 		UpdatedAt:   p.UpdatedAt,
 	}
 	if h := p.Edges.Human; h != nil {
-		hp.Email = h.Email
+		if h.Email != nil {
+			hp.Email = *h.Email
+		}
 		hp.EmailVerified = h.EmailVerifiedAt != nil
 		hp.GivenName = h.GivenName
 		hp.FamilyName = h.FamilyName
@@ -51,6 +53,9 @@ func humanDisplayName(h *HumanPrincipal) string {
 // tx. verifiedAt, when non-nil, marks the email verified at that time
 // regardless of h.EmailVerified. It assigns h.ID when it is uuid.Nil.
 func createHumanRows(ctx context.Context, tx *ent.Tx, h *HumanPrincipal, verifiedAt, lastLoginAt *time.Time) error {
+	if h.Email == "" {
+		return ErrEmailRequired
+	}
 	if h.ID == uuid.Nil {
 		h.ID = uuid.New()
 	}
@@ -134,7 +139,7 @@ func (s *EntStorage) CreateHuman(ctx context.Context, h *HumanPrincipal) error {
 		return createHumanRows(ctx, tx, h, nil, nil)
 	})
 	if err != nil {
-		if errors.Is(err, ErrPrincipalExists) {
+		if errors.Is(err, ErrPrincipalExists) || errors.Is(err, ErrEmailRequired) {
 			return err
 		}
 		if ent.IsConstraintError(err) {
@@ -225,6 +230,9 @@ func (s *EntStorage) UpdateHuman(ctx context.Context, h *HumanPrincipal) error {
 			}
 			return err
 		}
+		if h.Email == "" {
+			return ErrEmailRequired
+		}
 		taken, err := emailTakenInTx(ctx, tx, h.Email, h.ID)
 		if err != nil {
 			return err
@@ -269,7 +277,7 @@ func (s *EntStorage) UpdateHuman(ctx context.Context, h *HumanPrincipal) error {
 		return err
 	})
 	if err != nil {
-		if errors.Is(err, ErrPrincipalNotFound) || errors.Is(err, ErrPrincipalExists) {
+		if errors.Is(err, ErrPrincipalNotFound) || errors.Is(err, ErrPrincipalExists) || errors.Is(err, ErrEmailRequired) {
 			return err
 		}
 		if ent.IsConstraintError(err) {
