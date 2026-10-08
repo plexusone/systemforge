@@ -91,6 +91,29 @@ vocabularies, lookups), so the pattern should be defined once.
    agent-facing scopes (for example per-resource AAuth scopes) are checked
    against the same relationships.
 
+### Choosing a provider
+
+Both providers implement the same platform contract — organization roles,
+application roles (ADR-007), resource grants, `ListResources` — with the
+same semantics, verified by the shared `providertest` suite. An application
+written to the contract switches from `simple` to `spicedb` by
+configuration; its relationships are rebuilt from the membership, role and
+grant tables. The cost of `spicedb` is operational (a service with its own
+datastore, schema management, relationship sync), not a function of whether
+the application is paid.
+
+| Use `simple` while | Switch to `spicedb` when |
+|---|---|
+| Access is organization roles, application roles and direct grants on resources | Permissions flow through relationships: nested groups or teams, folder-style hierarchies, "shared with me" graphs |
+| One level of inheritance (organization → resource) is enough | Resources inherit from parents more than one level deep |
+| `ListResources` over an organization's resources is a SQL query | Lookups span very large organizations or need SpiceDB's consistency tokens |
+| One deployment, one process | Several services or regions share one authorization graph |
+
+What `spicedb` adds beyond the contract is the application's schema
+fragment: relations and inheritance the `simple` provider cannot express.
+An application that needs them declares its fragment and switches; until
+then it declares none and the contract is all it uses.
+
 ## Consequences
 
 - **One collaborator model for every application**, administrable in the
@@ -103,7 +126,8 @@ vocabularies, lookups), so the pattern should be defined once.
 - **The schema parity test and `authz-conventions.md` change**: the base
   schema gains `collaborator` and `list`, and the resource-role ladder is
   added to the conventions.
-- **The `simple` provider grows a table and a scan**, which is acceptable for
-  the deployments it serves; large deployments use `spicedb`.
+- **The `simple` provider grows a table and indexed queries over it**;
+  `providertest` keeps it in step with `spicedb` on the contract, so
+  choosing it is not a dead end.
 - **Moving a resource between organizations**, if an application supports
   it, must move its grants and the collaborator memberships they imply.
