@@ -143,3 +143,8 @@ type Service interface {
 // ErrCorruptCredential is returned when a stored credential cannot be
 // read, such as a secret hash in an unknown format.
 var ErrCorruptCredential = errors.New("credential: stored credential is corrupt")
+
+// ErrInvalidClientCredentials is returned by ValidateClientSecret for an
+// unknown client, a client with no usable secret, and a wrong secret
+// alike, so a caller cannot learn which client IDs exist.
+var ErrInvalidClientCredentials = errors.New("credential: invalid client credentials")

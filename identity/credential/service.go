@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,6 +33,28 @@ type DefaultService struct {
 // NewService creates a new CredentialService.
 func NewService(client *ent.Client) Service {
 	return &DefaultService{client: client}
+}
+
+var (
+	dummyHashOnce sync.Once
+	dummyHash     string
+)
+
+// burnVerification spends the time of checking a password against a real
+// hash, so that rejecting a missing account takes as long as rejecting a
+// wrong password and the difference cannot be timed.
+func burnVerification(password string) {
+	dummyHashOnce.Do(func() {
+		h, err := identity.HashPassword("burn-verification", nil)
+		if err != nil {
+			panic(fmt.Errorf("credential: hashing the verification placeholder: %w", err))
+		}
+		dummyHash = h
+	})
+	// The result is meaningless; only the elapsed time matters.
+	if _, err := identity.VerifyPassword(password, dummyHash); err != nil {
+		panic(fmt.Errorf("credential: verifying against the placeholder: %w", err))
+	}
 }
 
 // CreatePassword creates a password credential for a principal.
@@ -94,12 +117,14 @@ func (s *DefaultService) VerifyPassword(ctx context.Context, principalID uuid.UU
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
+			burnVerification(password)
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to get password credential: %w", err)
 	}
 
 	if cred.SecretHash == "" {
+		burnVerification(password)
 		return false, nil
 	}
 
@@ -290,7 +315,8 @@ func (s *DefaultService) ValidateClientSecret(ctx context.Context, clientID, pla
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("invalid client ID")
+			burnVerification(plainSecret)
+			return nil, ErrInvalidClientCredentials
 		}
 		return nil, fmt.Errorf("failed to get principal: %w", err)
 	}
@@ -306,6 +332,11 @@ func (s *DefaultService) ValidateClientSecret(ctx context.Context, clientID, pla
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get client secrets: %w", err)
+	}
+
+	if len(creds) == 0 {
+		burnVerification(plainSecret)
+		return nil, ErrInvalidClientCredentials
 	}
 
 	// Try each secret
@@ -327,7 +358,7 @@ func (s *DefaultService) ValidateClientSecret(ctx context.Context, clientID, pla
 		}
 	}
 
-	return nil, fmt.Errorf("invalid client secret")
+	return nil, ErrInvalidClientCredentials
 }
 
 // CreateKeypair creates a keypair credential for a principal.
