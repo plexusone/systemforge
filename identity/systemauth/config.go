@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/invopop/jsonschema"
+
+	"github.com/plexusone/systemforge/identity/credential"
 )
 
 // Config holds SystemAuth server configuration.
@@ -264,6 +266,11 @@ type ClientConfig struct {
 	// principals (humans without an email, ADR-005). It takes effect only
 	// when the deployment's managed_principals.enabled is also set.
 	ManagedPrincipals bool `json:"managed_principals,omitempty" yaml:"managed_principals,omitempty" jsonschema:"description=Allow this client to create and sign in managed principals"`
+
+	// LoginTokenTTL overrides the deployment's default lifetime of reusable
+	// login tokens issued for this client's managed principals, for example
+	// a school year. It never exceeds managed_principals.login_token_max_ttl.
+	LoginTokenTTL *Duration `json:"login_token_ttl,omitempty" yaml:"login_token_ttl,omitempty" jsonschema:"description=Client-specific default lifetime of reusable login tokens (e.g. 7200h)"`
 }
 
 // ManagedPrincipalsConfig configures managed principals: humans without an
@@ -272,6 +279,17 @@ type ClientConfig struct {
 type ManagedPrincipalsConfig struct {
 	// Enabled allows managed principals in this deployment.
 	Enabled bool `json:"enabled" yaml:"enabled" jsonschema:"description=Allow managed principals in this deployment"`
+
+	// LoginTokenTTL is the default lifetime of a reusable login token when
+	// neither the request nor the client sets one.
+	LoginTokenTTL Duration `json:"login_token_ttl,omitempty" yaml:"login_token_ttl,omitempty" jsonschema:"default=720h,description=Default lifetime of reusable login tokens"`
+
+	// LoginTokenMaxTTL caps the lifetime of every login token; longer
+	// requests are clamped.
+	LoginTokenMaxTTL Duration `json:"login_token_max_ttl,omitempty" yaml:"login_token_max_ttl,omitempty" jsonschema:"default=9600h,description=Maximum lifetime of any login token"`
+
+	// SingleUseTokenTTL is the default lifetime of a single-use login token.
+	SingleUseTokenTTL Duration `json:"single_use_token_ttl,omitempty" yaml:"single_use_token_ttl,omitempty" jsonschema:"default=20m,description=Default lifetime of single-use login tokens"`
 }
 
 // FederationConfig configures SystemAuth integration.
@@ -390,6 +408,18 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.Tokens.AuthCodeLifetime == 0 {
 		c.Tokens.AuthCodeLifetime = defaults.Tokens.AuthCodeLifetime
+	}
+
+	if mp := c.ManagedPrincipals; mp != nil {
+		if mp.LoginTokenTTL == 0 {
+			mp.LoginTokenTTL = Duration(credential.DefaultLoginTokenTTL)
+		}
+		if mp.LoginTokenMaxTTL == 0 {
+			mp.LoginTokenMaxTTL = Duration(credential.DefaultLoginTokenMaxTTL)
+		}
+		if mp.SingleUseTokenTTL == 0 {
+			mp.SingleUseTokenTTL = Duration(credential.DefaultSingleUseLoginTokenTTL)
+		}
 	}
 
 	if c.SocialLogin != nil {

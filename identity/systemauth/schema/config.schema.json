@@ -218,6 +218,17 @@
           "managed_principals": {
             "type": "boolean",
             "description": "Allow this client to create and sign in managed principals"
+          },
+          "login_token_ttl": {
+            "type": "string",
+            "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+            "description": "Client-specific default lifetime of reusable login tokens (e.g. 7200h)",
+            "examples": [
+              "15m",
+              "1h",
+              "168h",
+              "720h"
+            ]
           }
         },
         "additionalProperties": false,
@@ -394,6 +405,42 @@
         "enabled": {
           "type": "boolean",
           "description": "Allow managed principals in this deployment"
+        },
+        "login_token_ttl": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "Default lifetime of reusable login tokens",
+          "default": "720h",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
+        "login_token_max_ttl": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "Maximum lifetime of any login token",
+          "default": "9600h",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
+        "single_use_token_ttl": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "Default lifetime of single-use login tokens",
+          "default": "20m",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
         }
       },
       "additionalProperties": false,

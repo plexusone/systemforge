@@ -117,6 +117,9 @@ func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
 	if client.RefreshTokenLifetime != nil {
 		builder.SetRefreshTokenTTL(int(client.RefreshTokenLifetime.Seconds()))
 	}
+	if client.LoginTokenTTL != nil {
+		builder.SetLoginTokenTTL(int(client.LoginTokenTTL.Seconds()))
+	}
 
 	// Set owner ID - use default if configured, otherwise use nil UUID
 	ownerID := s.defaultOwnerID
@@ -203,6 +206,11 @@ func (s *EntStorage) UpdateClient(ctx context.Context, client *Client) error {
 	}
 	if client.RefreshTokenLifetime != nil {
 		builder.SetRefreshTokenTTL(int(client.RefreshTokenLifetime.Seconds()))
+	}
+	if client.LoginTokenTTL != nil {
+		builder.SetLoginTokenTTL(int(client.LoginTokenTTL.Seconds()))
+	} else {
+		builder.ClearLoginTokenTTL()
 	}
 
 	_, err = builder.Save(ctx)
@@ -805,6 +813,10 @@ func (s *EntStorage) entAppToClient(app *ent.OAuthApp) *Client {
 	if app.RefreshTokenTTL > 0 {
 		d := time.Duration(app.RefreshTokenTTL) * time.Second
 		client.RefreshTokenLifetime = &d
+	}
+	if app.LoginTokenTTL != nil {
+		d := time.Duration(*app.LoginTokenTTL) * time.Second
+		client.LoginTokenTTL = &d
 	}
 
 	return client

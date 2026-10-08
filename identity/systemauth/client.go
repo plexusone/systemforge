@@ -67,6 +67,10 @@ type Client struct {
 	// enables managed principals (see Server.ManagedPrincipalsAllowed).
 	ManagedPrincipalsEnabled bool `json:"managed_principals_enabled,omitempty"`
 
+	// LoginTokenTTL overrides the deployment's default lifetime of reusable
+	// login tokens for this client's managed principals; nil uses it.
+	LoginTokenTTL *time.Duration `json:"login_token_ttl,omitempty"`
+
 	// CreatedAt is when the client was created.
 	CreatedAt time.Time `json:"created_at"`
 
@@ -152,6 +156,10 @@ func NewClientFromConfig(cfg ClientConfig) (*Client, error) {
 	if cfg.RefreshTokenLifetime != nil {
 		d := cfg.RefreshTokenLifetime.Duration()
 		client.RefreshTokenLifetime = &d
+	}
+	if cfg.LoginTokenTTL != nil {
+		d := cfg.LoginTokenTTL.Duration()
+		client.LoginTokenTTL = &d
 	}
 
 	// Hash the secret if provided

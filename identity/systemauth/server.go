@@ -18,6 +18,7 @@ import (
 	"github.com/ory/fosite/handler/oauth2"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
+	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/observability"
 )
 
@@ -383,6 +384,29 @@ func (s *Server) ManagedPrincipalsAllowed(ctx context.Context, clientID string) 
 		return false, err
 	}
 	return client.ManagedPrincipalsEnabled, nil
+}
+
+// LoginTokenPolicy returns the lifetime policy for login tokens issued for
+// clientID's managed principals: the deployment's settings, with the
+// client's own default lifetime when it sets one. Callers check
+// ManagedPrincipalsAllowed first.
+func (s *Server) LoginTokenPolicy(ctx context.Context, clientID string) (credential.LoginTokenPolicy, error) {
+	var p credential.LoginTokenPolicy
+	if mp := s.config.ManagedPrincipals; mp != nil {
+		p = credential.LoginTokenPolicy{
+			DefaultTTL:   mp.LoginTokenTTL.Duration(),
+			MaxTTL:       mp.LoginTokenMaxTTL.Duration(),
+			SingleUseTTL: mp.SingleUseTokenTTL.Duration(),
+		}
+	}
+	client, err := s.storage.GetClientByID(ctx, clientID)
+	if err != nil {
+		return credential.LoginTokenPolicy{}, err
+	}
+	if client.LoginTokenTTL != nil {
+		p.DefaultTTL = *client.LoginTokenTTL
+	}
+	return p, nil
 }
 
 // Middleware returns HTTP middleware that validates access tokens.
