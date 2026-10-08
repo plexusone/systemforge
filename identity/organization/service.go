@@ -53,11 +53,13 @@ type Service interface {
 	// GetMembership retrieves a specific membership.
 	GetMembership(ctx context.Context, organizationID, principalID uuid.UUID) (*Membership, error)
 
-	// ListMembers lists all members of an organization.
-	ListMembers(ctx context.Context, organizationID uuid.UUID) ([]*Membership, error)
+	// ListMembers lists the active members of an organization. Pass
+	// IncludeInactive to also list deactivated memberships.
+	ListMembers(ctx context.Context, organizationID uuid.UUID, opts ...ListOption) ([]*Membership, error)
 
-	// ListMemberships lists all organizations a principal belongs to.
-	ListMemberships(ctx context.Context, principalID uuid.UUID) ([]*Membership, error)
+	// ListMemberships lists the organizations a principal is an active
+	// member of. Pass IncludeInactive to also list deactivated memberships.
+	ListMemberships(ctx context.Context, principalID uuid.UUID, opts ...ListOption) ([]*Membership, error)
 
 	// SlugAvailable checks if a slug is available.
 	SlugAvailable(ctx context.Context, slug string) (bool, error)
@@ -490,10 +492,35 @@ func (s *DefaultService) GetMembership(ctx context.Context, organizationID, prin
 	return entMembershipToModel(membership), nil
 }
 
-// ListMembers lists all members of an organization.
-func (s *DefaultService) ListMembers(ctx context.Context, organizationID uuid.UUID) ([]*Membership, error) {
-	memberships, err := s.client.PrincipalMembership.Query().
-		Where(principalmembership.OrganizationID(organizationID)).
+// ListOption adjusts membership listing.
+type ListOption func(*listOptions)
+
+type listOptions struct {
+	includeInactive bool
+}
+
+// IncludeInactive makes a membership listing include deactivated
+// memberships, which are excluded by default.
+func IncludeInactive() ListOption {
+	return func(o *listOptions) { o.includeInactive = true }
+}
+
+// membershipQuery applies the list options to a membership query.
+func membershipQuery(q *ent.PrincipalMembershipQuery, opts []ListOption) *ent.PrincipalMembershipQuery {
+	var o listOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	if !o.includeInactive {
+		q = q.Where(principalmembership.ActiveEQ(true))
+	}
+	return q
+}
+
+// ListMembers lists the active members of an organization.
+func (s *DefaultService) ListMembers(ctx context.Context, organizationID uuid.UUID, opts ...ListOption) ([]*Membership, error) {
+	memberships, err := membershipQuery(s.client.PrincipalMembership.Query().
+		Where(principalmembership.OrganizationID(organizationID)), opts).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list members: %w", err)
@@ -507,10 +534,10 @@ func (s *DefaultService) ListMembers(ctx context.Context, organizationID uuid.UU
 	return result, nil
 }
 
-// ListMemberships lists all organizations a principal belongs to.
-func (s *DefaultService) ListMemberships(ctx context.Context, principalID uuid.UUID) ([]*Membership, error) {
-	memberships, err := s.client.PrincipalMembership.Query().
-		Where(principalmembership.PrincipalID(principalID)).
+// ListMemberships lists the organizations a principal is an active member of.
+func (s *DefaultService) ListMemberships(ctx context.Context, principalID uuid.UUID, opts ...ListOption) ([]*Membership, error) {
+	memberships, err := membershipQuery(s.client.PrincipalMembership.Query().
+		Where(principalmembership.PrincipalID(principalID)), opts).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list memberships: %w", err)

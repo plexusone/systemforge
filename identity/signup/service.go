@@ -188,7 +188,9 @@ func (s *DefaultService) SignupOrGetExisting(ctx context.Context, input SignupIn
 		}
 
 		// Get the owner membership
-		memberships, err := s.orgSvc.ListMembers(ctx, personalOrg.ID)
+		// Include inactive memberships: the result reports the stored owner
+		// membership whatever its status.
+		memberships, err := s.orgSvc.ListMembers(ctx, personalOrg.ID, organization.IncludeInactive())
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to get memberships: %w", err)
 		}

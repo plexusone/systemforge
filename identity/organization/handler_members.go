@@ -73,7 +73,8 @@ type RemoveMemberInput struct {
 
 // ListMembersInput is the request for listing members.
 type ListMembersInput struct {
-	Slug string `path:"slug"`
+	Slug            string `path:"slug"`
+	IncludeInactive bool   `query:"includeInactive" doc:"Also list deactivated memberships"`
 }
 
 // ListMembersOutput is the response for listing members.
@@ -189,7 +190,11 @@ func (a *API) listMembers(ctx context.Context, input *ListMembersInput) (*ListMe
 		return nil, huma.Error404NotFound(err.Error())
 	}
 
-	members, err := a.service.ListMembers(ctx, org.ID)
+	var opts []ListOption
+	if input.IncludeInactive {
+		opts = append(opts, IncludeInactive())
+	}
+	members, err := a.service.ListMembers(ctx, org.ID, opts...)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
