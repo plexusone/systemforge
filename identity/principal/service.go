@@ -73,7 +73,7 @@ func (s *DefaultService) GetByID(ctx context.Context, id uuid.UUID) (*Principal,
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("principal not found: %s", id)
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get principal: %w", err)
 	}
@@ -92,7 +92,7 @@ func (s *DefaultService) GetByIdentifier(ctx context.Context, identifier string)
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("principal not found: %s", identifier)
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, identifier)
 		}
 		return nil, fmt.Errorf("failed to get principal: %w", err)
 	}
