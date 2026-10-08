@@ -3,7 +3,9 @@ package middleware
 
 import (
 	"context"
+	"net"
 	"net/http"
+	"net/netip"
 	"strings"
 
 	"github.com/google/uuid"
@@ -251,41 +253,23 @@ func extractAPIKey(r *http.Request, config APIKeyMiddlewareConfig) string {
 	return ""
 }
 
-// extractIP extracts the client IP from the request.
+// extractIP returns the address recorded for an API key use: the
+// configured IPExtractor's, or the direct peer's. Forwarding headers are
+// never read here, since any caller can set them and they would otherwise
+// forge the usage record; behind a proxy supply an IPExtractor such as
+// ratelimit.ForwardedClientIP.
 func extractIP(r *http.Request, config APIKeyMiddlewareConfig) string {
 	if config.IPExtractor != nil {
 		return config.IPExtractor(r)
 	}
-
-	// Check X-Forwarded-For header
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// Take the first IP (client IP)
-		if idx := strings.Index(xff, ","); idx > 0 {
-			return strings.TrimSpace(xff[:idx])
-		}
-		return strings.TrimSpace(xff)
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
 	}
-
-	// Check X-Real-IP header
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
+	if addr, err := netip.ParseAddr(strings.TrimSpace(host)); err == nil {
+		return addr.Unmap().String()
 	}
-
-	// Fall back to RemoteAddr
-	// Remove port if present
-	addr := r.RemoteAddr
-	if idx := strings.LastIndex(addr, ":"); idx > 0 {
-		// Check if this is IPv6 with brackets
-		if strings.Contains(addr, "[") {
-			if bracketIdx := strings.LastIndex(addr, "]"); bracketIdx > idx {
-				// IPv6 without port
-				return addr
-			}
-		}
-		return addr[:idx]
-	}
-
-	return addr
+	return ""
 }
 
 // handleAPIKeyError handles API key authentication errors.
