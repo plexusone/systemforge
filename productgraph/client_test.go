@@ -93,14 +93,7 @@ func TestClient_Track(t *testing.T) {
 }
 
 func TestClient_TrackWithContext(t *testing.T) {
-	var lastPayload Payload
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := json.NewDecoder(r.Body).Decode(&lastPayload)
-		require.NoError(t, err)
-		w.WriteHeader(http.StatusAccepted)
-	}))
-	defer server.Close()
+	server, delivered := captureServer(t)
 
 	client, err := New(Config{
 		ProjectID:     "test-project",
@@ -119,23 +112,14 @@ func TestClient_TrackWithContext(t *testing.T) {
 	err = client.Track(ctx, NewEvent(EventTypePageView))
 	require.NoError(t, err)
 
-	// Wait for batch to be sent
-	time.Sleep(100 * time.Millisecond)
-
+	lastPayload := next(t, delivered).payload
 	require.Len(t, lastPayload.Events, 1)
 	assert.Equal(t, "sess-123", lastPayload.Events[0].SessionID)
 	assert.Equal(t, "user-456", lastPayload.Events[0].UserID)
 }
 
 func TestClient_TrackAPICall(t *testing.T) {
-	var lastPayload Payload
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := json.NewDecoder(r.Body).Decode(&lastPayload)
-		require.NoError(t, err)
-		w.WriteHeader(http.StatusAccepted)
-	}))
-	defer server.Close()
+	server, delivered := captureServer(t)
 
 	client, err := New(Config{
 		ProjectID:     "test-project",
@@ -150,8 +134,7 @@ func TestClient_TrackAPICall(t *testing.T) {
 	err = client.TrackAPICall(ctx, "POST", "/api/checkout", 200, 150*time.Millisecond)
 	require.NoError(t, err)
 
-	time.Sleep(100 * time.Millisecond)
-
+	lastPayload := next(t, delivered).payload
 	require.Len(t, lastPayload.Events, 1)
 	event := lastPayload.Events[0]
 	assert.Equal(t, EventTypeAPIResponse, event.EventType)
@@ -163,14 +146,7 @@ func TestClient_TrackAPICall(t *testing.T) {
 }
 
 func TestClient_TrackJourneyStep(t *testing.T) {
-	var lastPayload Payload
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := json.NewDecoder(r.Body).Decode(&lastPayload)
-		require.NoError(t, err)
-		w.WriteHeader(http.StatusAccepted)
-	}))
-	defer server.Close()
+	server, delivered := captureServer(t)
 
 	client, err := New(Config{
 		ProjectID:     "test-project",
@@ -185,8 +161,7 @@ func TestClient_TrackJourneyStep(t *testing.T) {
 	err = client.TrackJourneyStep(ctx, "checkout_flow", "payment", "Enter Payment Details")
 	require.NoError(t, err)
 
-	time.Sleep(100 * time.Millisecond)
-
+	lastPayload := next(t, delivered).payload
 	require.Len(t, lastPayload.Events, 1)
 	event := lastPayload.Events[0]
 	assert.Equal(t, EventTypeJourneyStep, event.EventType)
@@ -266,13 +241,7 @@ func TestClient_Close(t *testing.T) {
 }
 
 func TestClient_APIKeyHeader(t *testing.T) {
-	var receivedAPIKey string
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		receivedAPIKey = r.Header.Get("X-PG-API-Key")
-		w.WriteHeader(http.StatusAccepted)
-	}))
-	defer server.Close()
+	server, delivered := captureServer(t)
 
 	client, err := New(Config{
 		ProjectID:     "test-project",
@@ -286,7 +255,5 @@ func TestClient_APIKeyHeader(t *testing.T) {
 
 	err = client.Track(context.Background(), NewEvent(EventTypePageView))
 	require.NoError(t, err)
-	time.Sleep(100 * time.Millisecond)
-
-	assert.Equal(t, "pk_test_secret", receivedAPIKey)
+	assert.Equal(t, "pk_test_secret", next(t, delivered).apiKey)
 }

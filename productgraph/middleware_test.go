@@ -1,7 +1,6 @@
 package productgraph
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,14 +11,7 @@ import (
 )
 
 func TestRequestTrackerMiddleware(t *testing.T) {
-	var lastPayload Payload
-
-	pgServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := json.NewDecoder(r.Body).Decode(&lastPayload)
-		require.NoError(t, err)
-		w.WriteHeader(http.StatusAccepted)
-	}))
-	defer pgServer.Close()
+	pgServer, delivered := captureServer(t)
 
 	client, err := New(Config{
 		ProjectID:     "test-project",
@@ -43,9 +35,7 @@ func TestRequestTrackerMiddleware(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, rec.Code)
 
-	// Wait for event to be sent
-	time.Sleep(100 * time.Millisecond)
-
+	lastPayload := next(t, delivered).payload
 	require.Len(t, lastPayload.Events, 1)
 	event := lastPayload.Events[0]
 	assert.Equal(t, EventTypeAPIResponse, event.EventType)
@@ -56,14 +46,7 @@ func TestRequestTrackerMiddleware(t *testing.T) {
 }
 
 func TestRequestTrackerMiddleware_WithCorrelation(t *testing.T) {
-	var lastPayload Payload
-
-	pgServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := json.NewDecoder(r.Body).Decode(&lastPayload)
-		require.NoError(t, err)
-		w.WriteHeader(http.StatusAccepted)
-	}))
-	defer pgServer.Close()
+	pgServer, delivered := captureServer(t)
 
 	client, err := New(Config{
 		ProjectID:     "test-project",
@@ -86,9 +69,7 @@ func TestRequestTrackerMiddleware_WithCorrelation(t *testing.T) {
 
 	handler.ServeHTTP(rec, req)
 
-	// Wait for event to be sent
-	time.Sleep(100 * time.Millisecond)
-
+	lastPayload := next(t, delivered).payload
 	require.Len(t, lastPayload.Events, 1)
 	event := lastPayload.Events[0]
 	assert.Equal(t, "sess-frontend-123", event.SessionID)
