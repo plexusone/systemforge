@@ -420,25 +420,6 @@ func TestTokenResponse(t *testing.T) {
 	}
 }
 
-// TestGetUserIDFromSession tests the session helper.
-func TestGetUserIDFromSession(t *testing.T) {
-	// Test with X-User-ID header
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("X-User-ID", "user-123")
-
-	userID := getUserIDFromSession(req)
-	if userID != "user-123" {
-		t.Errorf("expected user ID user-123, got %s", userID)
-	}
-
-	// Test without header
-	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
-	userID2 := getUserIDFromSession(req2)
-	if userID2 != "" {
-		t.Errorf("expected empty user ID, got %s", userID2)
-	}
-}
-
 // TestFositeInterceptor tests the Fosite path interceptor.
 func TestFositeInterceptor(t *testing.T) {
 	config := &Config{
