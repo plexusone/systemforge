@@ -11,7 +11,7 @@ which provides the whole browser and API surface:
 | `BFF` | `http.Handler` for the `/bff/*` cookie-session surface the shared frontend auth package expects |
 | `BearerMiddleware` | Authenticates programmatic clients (CLI, MCP, services) with SystemAuth JWT access tokens or API keys |
 
-See ADR-002 (`docs/specs/adrs/ADR-002-centralized-social-login-systemauth.md`)
+See ADR-002 (`docs/design/adrs/ADR-002-centralized-social-login-systemauth.md`)
 for the design.
 
 ## SystemAuth setup

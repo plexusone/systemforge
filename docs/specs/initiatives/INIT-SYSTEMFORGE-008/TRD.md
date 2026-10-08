@@ -1,7 +1,7 @@
 # TRD — Retire Legacy User — Principal as the Sole Identity Root
 
 **Initiative:** `INIT-SYSTEMFORGE-008`
-**Design of record:** [ADR-004](../../adrs/ADR-004-retire-legacy-user-principal-sole-identity-root.md)
+**Design of record:** [ADR-004](../../../design/adrs/ADR-004-retire-legacy-user-principal-sole-identity-root.md)
 
 ## Current State
 

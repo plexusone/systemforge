@@ -3,7 +3,7 @@
 **Initiative:** `INIT-SYSTEMFORGE-008`
 **Status:** Draft
 **Home repo:** `github.com/plexusone/systemforge`
-**Design of record:** [ADR-004](../../adrs/ADR-004-retire-legacy-user-principal-sole-identity-root.md)
+**Design of record:** [ADR-004](../../../design/adrs/ADR-004-retire-legacy-user-principal-sole-identity-root.md)
 
 ## Problem
 

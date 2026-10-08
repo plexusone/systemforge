@@ -6,7 +6,7 @@ Relying-party applications do not implement social login themselves: they send
 users to SystemAuth's `/oauth/authorize` as OIDC clients, and SystemAuth signs
 the user in upstream when needed.
 
-See ADR-002 (`docs/specs/adrs/ADR-002-centralized-social-login-systemauth.md`)
+See ADR-002 (`docs/design/adrs/ADR-002-centralized-social-login-systemauth.md`)
 for the design rationale.
 
 ## Routes

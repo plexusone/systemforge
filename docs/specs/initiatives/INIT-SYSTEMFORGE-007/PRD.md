@@ -3,7 +3,7 @@
 **Initiative:** `INIT-SYSTEMFORGE-007`
 **Status:** Draft
 **Home repo:** `github.com/plexusone/systemforge`
-**Design of record:** [ADR-005](../../adrs/ADR-005-managed-principals-and-manager-relationships.md)
+**Design of record:** [ADR-005](../../../design/adrs/ADR-005-managed-principals-and-manager-relationships.md)
 **Depends on:** INIT-SYSTEMFORGE-008 (single `Principal` root; this initiative
 touches one human model, not two)
 

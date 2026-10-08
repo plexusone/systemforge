@@ -1,7 +1,7 @@
 # TRD — SystemForge Learner Accounts — Optional Email, QR Login, Guardian and Educator Relationships
 
 **Initiative:** `INIT-SYSTEMFORGE-007`
-**Design of record:** [ADR-005](../../adrs/ADR-005-managed-principals-and-manager-relationships.md)
+**Design of record:** [ADR-005](../../../design/adrs/ADR-005-managed-principals-and-manager-relationships.md)
 
 ## Current State
 

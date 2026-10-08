@@ -3,7 +3,7 @@
 **Initiative:** `INIT-SYSTEMFORGE-007`
 **Repository:** `github.com/plexusone/systemforge`
 
-Design of record: [ADR-005](../../adrs/ADR-005-managed-principals-and-manager-relationships.md).
+Design of record: [ADR-005](../../../design/adrs/ADR-005-managed-principals-and-manager-relationships.md).
 Email stays required by default; managed principals are an opt-in state that
 always has a manager with an email. Builds on INIT-SYSTEMFORGE-008. Commits
 implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.

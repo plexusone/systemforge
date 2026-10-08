@@ -3,7 +3,7 @@
 **Initiative:** `INIT-SYSTEMFORGE-006`
 **Repository:** `github.com/plexusone/systemforge`
 
-Design of record: [ADR-003](../../adrs/ADR-003-verified-email-via-systemauth-and-omnimail.md).
+Design of record: [ADR-003](../../../design/adrs/ADR-003-verified-email-via-systemauth-and-omnimail.md).
 SystemAuth verifies that a user controls an email address (unverified provider
 email at social login; email change) and delivers mail through the vendor-free
 omnimail core, with AWS SES as the first production provider. Email links

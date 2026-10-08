@@ -9,7 +9,7 @@ organization provisioning an account a person claims later.
 
 Email stays required by default. Managed principals exist only where a
 deployment and an OAuth client both opt in, and the design of record is
-[ADR-005](../specs/adrs/ADR-005-managed-principals-and-manager-relationships.md).
+[ADR-005](../design/adrs/ADR-005-managed-principals-and-manager-relationships.md).
 
 ## The Primitive
 

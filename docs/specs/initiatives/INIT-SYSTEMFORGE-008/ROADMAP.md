@@ -3,7 +3,7 @@
 **Initiative:** `INIT-SYSTEMFORGE-008`
 **Repository:** `github.com/plexusone/systemforge`
 
-Design of record: [ADR-004](../../adrs/ADR-004-retire-legacy-user-principal-sole-identity-root.md).
+Design of record: [ADR-004](../../../design/adrs/ADR-004-retire-legacy-user-principal-sole-identity-root.md).
 Hard cutover, no compatibility window; tagged as breaking v0.14.0. Commits
 implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
