@@ -5,8 +5,8 @@
 ## Entry Gate
 
 - ADR-005 accepted.
-- INIT-SYSTEMFORGE-008 released (v0.14.0): one human model, `HumanPrincipal`
-  DTO, legacy tables gone.
+- INIT-SYSTEMFORGE-008 complete: one human model, `HumanPrincipal` DTO,
+  legacy tables gone. The two initiatives ship together in v0.14.0.
 - Null-uniqueness behavior of `Human.email` confirmed on the deployment
   database.
 
@@ -36,7 +36,8 @@ with a token, visible to and revocable by its manager, authorized through
 
 Audit and adjust every email-assuming path; implement the `educator` →
 `guardian` claim flow and the attach-email flow; write the documentation;
-tag v0.15.0 after CI passes and record the release. Exit: PRD success
+tag v0.14.0, the release INIT-SYSTEMFORGE-008 also ships in, after CI
+passes, and record the release. Exit: PRD success
 criteria hold.
 
 ## Risks and Mitigations

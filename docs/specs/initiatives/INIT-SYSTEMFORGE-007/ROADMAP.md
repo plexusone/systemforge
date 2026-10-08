@@ -42,7 +42,7 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 - [x] `RMI-SYSTEMFORGE-110` Claim and attach-email flows: `educator`/`guardian`-issued single-use claim redeemed by an emailed human to become `guardian`; attach a verified email to a managed principal and restore default capabilities
   - Depends on: `RMI-SYSTEMFORGE-104`
   - Depends on: `RMI-SYSTEMFORGE-105`
-- [ ] `RMI-SYSTEMFORGE-111` Documentation and release: `docs/identity/managed-principals.md`, updates to users, security, and authorization conventions docs; changelog; tag v0.15.0; record the release
+- [ ] `RMI-SYSTEMFORGE-111` Documentation and release: `docs/identity/managed-principals.md`, updates to users, security, and authorization conventions docs; changelog; tag v0.14.0, released together with INIT-SYSTEMFORGE-008; record the release
   - Depends on: `RMI-SYSTEMFORGE-108`
   - Depends on: `RMI-SYSTEMFORGE-109`
   - Depends on: `RMI-SYSTEMFORGE-110`

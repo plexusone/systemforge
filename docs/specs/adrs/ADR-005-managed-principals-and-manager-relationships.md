@@ -142,8 +142,10 @@ cross-Forge conventions already prescribe.
 - `Account` was deliberately **not** used anywhere in this vocabulary: in a
   multi-tenant platform with marketplace billing it reads as the tenant or
   the paying relationship, not the person.
-- Released as a minor version (v0.15.0) after INIT-SYSTEMFORGE-008's
-  v0.14.0; the Go-level change to `Email` is noted in the release notes.
+- Released in v0.14.0 together with INIT-SYSTEMFORGE-008, rather than as
+  a separate v0.15.0: nothing was released between them, and the local
+  `auth-go` replace directive left no earlier commit that could be tagged.
+  The Go-level change to `Email` is noted in the release notes.
 
 ## References
 
