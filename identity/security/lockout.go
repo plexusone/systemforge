@@ -5,6 +5,7 @@ package security
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 )
@@ -129,9 +130,18 @@ func WithLockoutDuration(d time.Duration) LockoutOption {
 	}
 }
 
+// normalizeIdentifier makes every spelling of an account's identifier count
+// against the same lockout: case and surrounding space are not part of who
+// someone is, and treating them as such lets an attacker restart the count
+// by varying them.
+func normalizeIdentifier(identifier string) string {
+	return strings.ToLower(strings.TrimSpace(identifier))
+}
+
 // RecordFailure records a failed login attempt.
 // Returns ErrAccountLocked if the account becomes locked.
 func (l *Lockout) RecordFailure(ctx context.Context, identifier string) error {
+	identifier = normalizeIdentifier(identifier)
 	if err := l.store.RecordAttempt(ctx, identifier, false); err != nil {
 		return err
 	}
@@ -154,6 +164,7 @@ func (l *Lockout) RecordFailure(ctx context.Context, identifier string) error {
 
 // RecordSuccess records a successful login and resets the attempt counter.
 func (l *Lockout) RecordSuccess(ctx context.Context, identifier string) error {
+	identifier = normalizeIdentifier(identifier)
 	if err := l.store.RecordAttempt(ctx, identifier, true); err != nil {
 		return err
 	}
@@ -162,6 +173,7 @@ func (l *Lockout) RecordSuccess(ctx context.Context, identifier string) error {
 
 // IsLocked checks if an account is currently locked.
 func (l *Lockout) IsLocked(ctx context.Context, identifier string) (bool, error) {
+	identifier = normalizeIdentifier(identifier)
 	status, err := l.store.GetStatus(ctx, identifier, l.config)
 	if err != nil {
 		return false, err
@@ -171,13 +183,20 @@ func (l *Lockout) IsLocked(ctx context.Context, identifier string) (bool, error)
 
 // GetStatus returns the current lockout status.
 func (l *Lockout) GetStatus(ctx context.Context, identifier string) (LockoutStatus, error) {
+	identifier = normalizeIdentifier(identifier)
 	return l.store.GetStatus(ctx, identifier, l.config)
 }
 
 // CheckAndRecord checks if locked, then records the attempt.
 // This is the recommended method for login flows.
 // Returns ErrAccountLocked if the account is locked (before or after the attempt).
+//
+// The check and the record are separate steps: concurrent logins all pass
+// the check before any failure is recorded, so a burst of N parallel guesses
+// gets up to N tries beyond MaxAttempts. Bound that with a rate limit per
+// source address (see session/ratelimit) in front of the login.
 func (l *Lockout) CheckAndRecord(ctx context.Context, identifier string, success bool) error {
+	identifier = normalizeIdentifier(identifier)
 	// Check if already locked
 	locked, err := l.IsLocked(ctx, identifier)
 	if err != nil {
@@ -196,11 +215,13 @@ func (l *Lockout) CheckAndRecord(ctx context.Context, identifier string, success
 
 // Unlock manually unlocks an account.
 func (l *Lockout) Unlock(ctx context.Context, identifier string) error {
+	identifier = normalizeIdentifier(identifier)
 	return l.store.Unlock(ctx, identifier)
 }
 
 // Reset clears all lockout state for an identifier.
 func (l *Lockout) Reset(ctx context.Context, identifier string) error {
+	identifier = normalizeIdentifier(identifier)
 	return l.store.Reset(ctx, identifier)
 }
 
