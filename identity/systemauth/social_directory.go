@@ -159,14 +159,19 @@ func (d *MemoryPrincipalDirectory) AddPrincipal(p HumanPrincipal) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	key := strings.ToLower(p.Email)
-	if _, ok := d.byEmail[key]; ok {
-		return ErrEmailConflict
+	if key != "" {
+		if _, ok := d.byEmail[key]; ok {
+			return ErrEmailConflict
+		}
 	}
 	if p.ID == uuid.Nil {
 		p.ID = uuid.New()
 	}
 	d.principals[p.ID] = &p
-	d.byEmail[key] = p.ID
+	// A managed principal has no email to find it by.
+	if key != "" {
+		d.byEmail[key] = p.ID
+	}
 	return nil
 }
 
@@ -203,7 +208,7 @@ func (d *MemoryPrincipalDirectory) FindByVerifiedEmail(_ context.Context, email 
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	id, ok := d.byEmail[strings.ToLower(email)]
-	if !ok || !d.principals[id].EmailVerified {
+	if !ok || email == "" || !d.principals[id].EmailVerified {
 		return nil, ErrPrincipalNotFound
 	}
 	return d.copyOf(id)

@@ -192,6 +192,11 @@ func syncFailed(err error) *IdentitySyncResponse {
 // adopts an existing one with the same email, and links the federation
 // identity to it so later updates and deletes resolve to the same principal.
 func (h *DefaultIdentitySyncHandler) syncCreate(ctx context.Context, fi *GlobalIdentity) *IdentitySyncResponse {
+	if fi.Email == "" {
+		// Federated identities are adopted by email; never adopt a
+		// human without one.
+		return syncFailed(ErrEmailRequired)
+	}
 	hp, err := h.storage.GetHumanByEmail(ctx, fi.Email)
 	switch {
 	case errors.Is(err, ErrPrincipalNotFound):

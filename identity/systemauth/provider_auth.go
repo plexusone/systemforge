@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,7 +77,11 @@ func NewEmbeddedAuthProvider(identityProvider IdentityProvider, opts ...Embedded
 
 // Authenticate implements AuthenticationProvider.
 func (p *EmbeddedAuthProvider) Authenticate(ctx context.Context, req *AuthenticateRequest) (*AuthSession, error) {
-	// Look up identity by identifier (email)
+	// Look up identity by identifier (email). Managed principals have no
+	// email and no password, so an empty identifier never signs in.
+	if strings.TrimSpace(req.Identifier) == "" {
+		return nil, ErrInvalidCredentials
+	}
 	identity, err := p.identityProvider.GetIdentityByEmail(ctx, req.Identifier)
 	if err != nil {
 		return nil, ErrInvalidCredentials

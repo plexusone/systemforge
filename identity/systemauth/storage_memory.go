@@ -528,8 +528,13 @@ func copyHuman(h *HumanPrincipal) *HumanPrincipal {
 // humanByEmailLocked returns the human with the given email, ignoring case.
 // The caller must hold s.mu.
 func (s *MemoryStorage) humanByEmailLocked(email string) (*HumanPrincipal, bool) {
+	if email == "" {
+		// A human without an email (a managed principal) is never found
+		// by email.
+		return nil, false
+	}
 	for _, h := range s.humans {
-		if strings.EqualFold(h.Email, email) {
+		if h.Email != "" && strings.EqualFold(h.Email, email) {
 			return h, true
 		}
 	}
@@ -541,6 +546,9 @@ func (s *MemoryStorage) CreateHuman(_ context.Context, h *HumanPrincipal) error 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if h.Email == "" {
+		return ErrEmailRequired
+	}
 	if h.ID == uuid.Nil {
 		h.ID = uuid.New()
 	}
