@@ -3,6 +3,8 @@ package security
 import (
 	"context"
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -306,5 +308,93 @@ func TestLockoutTreatsEverySpellingAsOneAccount(t *testing.T) {
 	}
 	if locked, err := l.IsLocked(ctx, "bob@example.com"); err != nil || locked {
 		t.Errorf("after Unlock under another spelling: %v, %v", locked, err)
+	}
+}
+
+func TestLockout_Begin_AllowsMaxAttemptsThenLocks(t *testing.T) {
+	store := NewMemoryLockoutStore()
+	t.Cleanup(func() { _ = store.Close() }) // in-memory store: Close cannot fail before the first call
+	l := NewLockout(store, WithMaxAttempts(3))
+	ctx := context.Background()
+
+	for i := 1; i <= 3; i++ {
+		a, err := l.Begin(ctx, "user@example.com")
+		if err != nil {
+			t.Fatalf("attempt %d: Begin error %v", i, err)
+		}
+		err = a.Failure(ctx)
+		if i < 3 && err != nil {
+			t.Fatalf("attempt %d: Failure error %v", i, err)
+		}
+		if i == 3 && !errors.Is(err, ErrAccountLocked) {
+			t.Fatalf("attempt 3: Failure error %v, want ErrAccountLocked", err)
+		}
+	}
+	if _, err := l.Begin(ctx, "USER@example.com "); !errors.Is(err, ErrAccountLocked) {
+		t.Fatalf("after limit: Begin error %v, want ErrAccountLocked", err)
+	}
+}
+
+func TestLockout_Begin_SuccessClearsCountAndLock(t *testing.T) {
+	store := NewMemoryLockoutStore()
+	t.Cleanup(func() { _ = store.Close() }) // in-memory store: Close cannot fail before the first call
+	l := NewLockout(store, WithMaxAttempts(2))
+	ctx := context.Background()
+
+	a, err := l.Begin(ctx, "u")
+	if err != nil {
+		t.Fatalf("Begin: %v", err)
+	}
+	_ = a.Failure(ctx)
+
+	// The last allowed guess locks the account while it is checked; being right
+	// must unlock it.
+	a, err = l.Begin(ctx, "u")
+	if err != nil {
+		t.Fatalf("Begin: %v", err)
+	}
+	if err := a.Success(ctx); err != nil {
+		t.Fatalf("Success: %v", err)
+	}
+	locked, err := l.IsLocked(ctx, "u")
+	if err != nil || locked {
+		t.Fatalf("IsLocked = %v, %v; want unlocked", locked, err)
+	}
+	status, err := l.GetStatus(ctx, "u")
+	if err != nil || status.FailedAttempts != 0 {
+		t.Fatalf("status = %+v, %v; want no failures", status, err)
+	}
+}
+
+// However many guesses arrive at once, no more than MaxAttempts are allowed to
+// reach credential verification.
+func TestLockout_Begin_ParallelGuessesAreBounded(t *testing.T) {
+	const maxAttempts, guesses = 5, 200
+	store := NewMemoryLockoutStore()
+	t.Cleanup(func() { _ = store.Close() }) // in-memory store: Close cannot fail before the first call
+	l := NewLockout(store, WithMaxAttempts(maxAttempts))
+	ctx := context.Background()
+
+	var verified atomic.Int64
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for range guesses {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			a, err := l.Begin(ctx, "victim@example.com")
+			if err != nil {
+				return
+			}
+			verified.Add(1) // the password check would run here
+			_ = a.Failure(ctx)
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	if got := verified.Load(); got > maxAttempts {
+		t.Fatalf("%d guesses reached verification, want at most %d", got, maxAttempts)
 	}
 }

@@ -187,14 +187,85 @@ func (l *Lockout) GetStatus(ctx context.Context, identifier string) (LockoutStat
 	return l.store.GetStatus(ctx, identifier, l.config)
 }
 
+// Attempt is a reserved login attempt. Report the outcome of the credential
+// check with Success or Failure; a reserved attempt that is never reported
+// stays counted as a failure.
+type Attempt struct {
+	lockout    *Lockout
+	identifier string
+	lastChance bool
+}
+
+// Begin reserves a login attempt before the credential is verified. It
+// returns ErrAccountLocked, without verifying anything, when the account is
+// locked or the attempt would exceed MaxAttempts.
+//
+// The attempt is recorded as a failure first and only cleared by Success, so
+// concurrent guesses are counted before any of them is checked: at most
+// MaxAttempts of them are allowed to verify, however many arrive at once.
+// Recording after the check, as CheckAndRecord does, lets a burst of parallel
+// guesses all pass the check.
+func (l *Lockout) Begin(ctx context.Context, identifier string) (*Attempt, error) {
+	identifier = normalizeIdentifier(identifier)
+
+	locked, err := l.IsLocked(ctx, identifier)
+	if err != nil {
+		return nil, err
+	}
+	if locked {
+		return nil, ErrAccountLocked
+	}
+
+	if err := l.store.RecordAttempt(ctx, identifier, false); err != nil {
+		return nil, err
+	}
+	status, err := l.store.GetStatus(ctx, identifier, l.config)
+	if err != nil {
+		return nil, err
+	}
+	// Each reservation was recorded before this count was read, so the count
+	// is at least the caller's rank among the recorded attempts: no more than
+	// MaxAttempts callers can see a count within the limit.
+	if status.FailedAttempts > l.config.MaxAttempts {
+		return nil, ErrAccountLocked
+	}
+
+	a := &Attempt{lockout: l, identifier: identifier}
+	if status.FailedAttempts == l.config.MaxAttempts {
+		// The last allowed guess: lock now so nothing else gets in while it
+		// is checked. Success unlocks.
+		if err := l.store.Lock(ctx, identifier, time.Now().Add(l.config.LockoutDuration)); err != nil {
+			return nil, err
+		}
+		a.lastChance = true
+	}
+	return a, nil
+}
+
+// Success reports that the credential was correct. It clears the account's
+// failed attempts and any lock.
+func (a *Attempt) Success(ctx context.Context) error {
+	return a.lockout.store.Reset(ctx, a.identifier)
+}
+
+// Failure reports that the credential was wrong. The attempt is already
+// counted; Failure returns ErrAccountLocked when it was the one that locked
+// the account, so the caller can say so.
+func (a *Attempt) Failure(_ context.Context) error {
+	if a.lastChance {
+		return ErrAccountLocked
+	}
+	return nil
+}
+
 // CheckAndRecord checks if locked, then records the attempt.
-// This is the recommended method for login flows.
 // Returns ErrAccountLocked if the account is locked (before or after the attempt).
 //
-// The check and the record are separate steps: concurrent logins all pass
-// the check before any failure is recorded, so a burst of N parallel guesses
-// gets up to N tries beyond MaxAttempts. Bound that with a rate limit per
-// source address (see session/ratelimit) in front of the login.
+// Deprecated: the check and the record are separate steps, and the outcome is
+// supplied after the credential was verified, so concurrent logins all pass the
+// check before any failure is recorded and a burst of N parallel guesses gets
+// up to N tries beyond MaxAttempts. Use Begin, which reserves the attempt
+// before verification.
 func (l *Lockout) CheckAndRecord(ctx context.Context, identifier string, success bool) error {
 	identifier = normalizeIdentifier(identifier)
 	// Check if already locked
