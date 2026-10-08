@@ -62,3 +62,41 @@ func TestPostgresHumanEmailIsCaseInsensitivelyUnique(t *testing.T) {
 		t.Errorf("error = %v, want a unique constraint violation", err)
 	}
 }
+
+// TestPostgresHumansWithoutEmailCoexist verifies that the email unique
+// constraint and the lower(email) index both admit several humans without
+// an email, which managed principals require (ADR-005).
+func TestPostgresHumansWithoutEmailCoexist(t *testing.T) {
+	dbCfg := &systemauth.DatabaseConfig{Driver: "postgres", DSN: pgtest.DSN(t)}
+	if err := systemauthsvc.Migrate(t.Context(), &systemauthsvc.Config{Issuer: "https://auth.example.com", Database: dbCfg}); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	db, err := systemauthsvc.OpenDatabase(dbCfg)
+	if err != nil {
+		t.Fatalf("OpenDatabase: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	for i := range 2 {
+		if err := createHumanWithoutEmail(t.Context(), db.Client); err != nil {
+			t.Fatalf("human without email %d: %v", i+1, err)
+		}
+	}
+}
+
+func createHumanWithoutEmail(ctx context.Context, db *ent.Client) error {
+	id := uuid.New()
+	if _, err := db.Principal.Create().
+		SetID(id).
+		SetType(principal.TypeHuman).
+		SetIdentifier("human:" + id.String()).
+		SetDisplayName("Learner").
+		Save(ctx); err != nil {
+		return err
+	}
+	_, err := db.Human.Create().SetPrincipalID(id).Save(ctx)
+	return err
+}
