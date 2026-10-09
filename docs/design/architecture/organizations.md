@@ -38,7 +38,7 @@ organization of type `personal`.
 | `active` | bool | `Delete` sets it to `false` (soft delete) |
 
 Edges: `principal_memberships`, `invites`, `oauth_apps`, marketplace
-`listings`, `licenses` and a single `subscription`.
+`listings`, `licenses` and `subscriptions`.
 
 ### Types
 
@@ -336,10 +336,13 @@ need nothing.
 What an organization may use is its `entitlements`, a list returned in
 every `OrgResponse` and derived from the marketplace (next section).
 `APIConfig.Entitlements` supplies the source;
-`marketplace.EntitlementSource(subscriptions, licenses)` builds one from an
-active subscription (source `subscription`, tier = `plan_tier`, valid until
-the period end) and each valid license (source `license`, the listing ID,
-tier = license type, valid until). Without a source the list is empty.
+`marketplace.EntitlementSource(subscriptions, licenses, listings, opts...)`
+builds one from each active subscription (source `subscription`, tier =
+`plan_tier`, valid until the period end), each valid license (source
+`license`, the listing ID, tier = license type, valid until, and `seats`
+for a seat-based license) and the deployment's default entitlements (source
+`default`). An entitlement that comes from a listing naming an application
+carries that `application`. Without a source the list is empty.
 
 ## Entitlements via the marketplace
 
@@ -348,19 +351,21 @@ organization:
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `sf_listings` | A product offered by a creator organization | `creator_org_id`, `owner_id`, `product_type`, `product_id`, `pricing_model` (`free`, `one_time`, `subscription`, `per_seat`), `price_cents`, `currency`, `status` (`draft`, `pending_review`, `published`, `archived`) |
+| `sf_listings` | A product offered by a creator organization | `creator_org_id`, `owner_id`, `product_type`, `product_id`, `application` (optional), `pricing_model` (`free`, `one_time`, `subscription`, `per_seat`), `price_cents`, `currency`, `status` (`draft`, `pending_review`, `published`, `archived`) |
 | `sf_licenses` | An organization's right to a listing | `listing_id`, `organization_id`, `license_type` (`seat_based`, `team`, `unlimited`), `seats`, `used_seats`, `valid_from`, `valid_until`, `stripe_subscription_id`, `purchased_by` |
 | `sf_seat_assignments` | A seat of a license given to a principal | `license_id`, `principal_id`, `assigned_by`, `assigned_at` |
-| `sf_subscriptions` | One platform subscription per organization (unique edge) | `organization_id`, `plan_tier` (`free`, `starter`, `pro`, `enterprise`), `status` (`active`, `trialing`, `past_due`, `canceled`, `unpaid`), `current_period_start/end`, `cancel_at_period_end`, Stripe IDs |
+| `sf_subscriptions` | A subscription of an organization: at most one platform-wide (no `listing_id`) plus one per listing | `organization_id`, `listing_id` (optional), `plan_tier` (`free`, `starter`, `pro`, `enterprise`), `status` (`active`, `trialing`, `past_due`, `canceled`, `unpaid`), `current_period_start/end`, `cancel_at_period_end`, Stripe IDs |
 
 Services: `marketplace.ListingService` (create, publish, archive, list),
 `LicenseService` (`Grant`, `Revoke`, `Check(listingID, orgID)` for a valid
 license, `CheckPrincipal(listingID, principalID)` which passes any valid
 `unlimited` license outright and otherwise requires a seat assignment,
-`AssignSeat`/`UnassignSeat`), `SubscriptionService` (`GetByOrg`,
-`IsActive`, `GetPlanTier`, `ChangePlan`, `Cancel`, `CancelImmediately`,
-`Reactivate`) and `CheckoutService` (Stripe). Tiers are a property of the
-organization's subscription, not of a listing. The
+`AssignSeat`/`UnassignSeat`), `SubscriptionService` (`GetByOrg`, which returns the platform
+subscription, `IsActive`, `GetPlanTier`, `ChangePlan`, `Cancel`, `CancelImmediately`,
+`Reactivate`) and `CheckoutService` (Stripe). A `SubscriptionService` that
+also implements the optional `SubscriptionLister` (`ListByOrg`) contributes
+every subscription of an organization to entitlements. Tiers are a property
+of a subscription, not of a listing. The
 `marketplace.PurchaserChecker` (implemented by
 `managedprincipal.Service.IsManaged`) refuses checkout for managed
 principals. `marketplace.SpiceDBSyncer` writes listing, license, seat and
@@ -368,9 +373,34 @@ subscription relationships for the relationship-based provider
 (`creator_org`, `owner`, `licensed_org`, `listing`, `purchased_by`,
 `seat_holder`, `subscriber`).
 
-Nothing today turns subscriptions and licenses into a per-application
-entitlement list, and `authz.FeatureAuthorizer` is an interface with no
-implementation in the repository.
+A listing's optional `application` is the registered application identifier
+(an `authz.AppVocabulary` application) that an active subscription or a
+valid license on it entitles the organization to. It is not settable through
+the listing HTTP API, only through the service, so that a listing creator
+cannot entitle buyers to an application they do not control. An
+organization's entitled applications are therefore:
+
+- the `application` of each listing it holds an active (`active` or
+  `trialing`) subscription or a currently valid license for, and
+- the deployment's default entitlements,
+  `marketplace.WithDefaultEntitlements(apps...)` (configuration
+  `marketplace.default_entitlements`), for applications free to everyone.
+
+Seat accounting: the seat limit of an application is the sum of the seats of
+its valid `seat_based` licenses, and there is none when any entitlement for
+the application is not seat-limited (a subscription, an unlimited license, a
+default). `approle` counts `sf_app_roles` rows for (organization,
+application) against it and refuses with `ErrNoSeats`; owners' implicit
+roles hold no seat. `marketplace.WarnIfNoEntitlements` logs a warning at
+startup when applications are registered but there is no default entitlement
+and no listing names an application, in which case every organization is
+refused every application role. `authz.FeatureAuthorizer` remains an
+interface with no implementation in the repository.
+
+Existing PostgreSQL databases run
+`migrations/0005_subscriptions_per_listing.sql`, which adds the two nullable
+columns and relaxes the one-subscription-per-organization constraint;
+existing subscriptions become platform subscriptions.
 
 ## Application roles (`identity/approle`)
 
@@ -404,8 +434,11 @@ migration; no SQL migration is needed.
 
 Rules enforced by `Assign` and `Change`: the application is registered, the
 role is one the application declares, the organization is entitled to the
-application (when `WithEntitlements` is set; without it every registered
-application counts as entitled), and the principal has an active `owner`,
+application and has a free seat if the application is seat-limited
+(`WithEntitlementGrants`, built from the marketplace by
+`marketplace.ApproleOptions(marketplace.EntitlementSource(...))`; without an
+entitlement option no organization is entitled to anything, and
+`approle.EntitleAll` is for development and tests), and the principal has an active `owner`,
 `admin` or `member` membership. Collaborators, non-members and deactivated
 members cannot hold roles. Each assignment is logged with who made it and
 whether it was to themself.
@@ -428,8 +461,7 @@ HTTP endpoints, on the organization API when `APIConfig.AppRoles` is set
 | `PUT /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role`; body `{"role": "..."}`; assigns or changes |
 | `DELETE /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role` |
 
-Not yet built: deriving entitled applications from the marketplace, seat
-counting against licenses, the `orgs` claim, invites carrying roles, and the
+Not yet built: the `orgs` claim, invites carrying roles, and the
 relationship-sync calls (`AddAppRole`/`RemoveAppRole`); see
 [Planned changes](#planned-changes).
 
@@ -503,11 +535,10 @@ decides it.
   generated one such as two words and a number, ADR-006 decision 2). The
   GitHub and Google rules and the numeric suffix on collision are implemented
   (see [Signup on first social login](#signup-on-first-social-login)).
-- The `entitlements` summary is built, but ADR-006 speaks of listings with
-  tiers, while today tiers (`plan_tier`) live on the single
-  per-organization subscription and listings have none; the mapping from
-  subscriptions and licenses to per-application entitlements is still to
-  do.
+- ADR-006 speaks of listings with tiers; tiers (`plan_tier`) live on
+  subscriptions and listings have none. Listings map to applications and
+  subscriptions may be per listing instead (see
+  [Entitlements via the marketplace](#entitlements-via-the-marketplace)).
 
 ### Planned, not yet decided by an ADR
 
@@ -530,11 +561,8 @@ decides it.
 - Organization roles are `owner`, `admin`, `member` and `collaborator`
   (ADR-008). Application roles are stored in `sf_app_roles` (see
   [Application roles](#application-roles-identityapprole)); still to do is
-  making them replace seat assignments as the record of who may use what,
-  with seat-licensed applications counting rows against the license.
-- Entitlements are derived from active subscriptions and licenses mapped to
-  application identifiers registered through `authz.AppVocabulary`, with
-  deployment-level default entitlements.
+  making them replace seat assignments as the record of who may use what
+  (seat-licensed applications already count rows against the license).
 - Invites carry the application roles to grant; removal from the
   organization removes every application role (built) and grant.
 
