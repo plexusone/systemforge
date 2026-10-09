@@ -3,19 +3,15 @@ package systemauth
 import (
 	"context"
 	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
-	"golang.org/x/crypto/argon2"
 
 	"github.com/plexusone/systemforge/identity/clientassertion"
 	"github.com/plexusone/systemforge/identity/ent"
@@ -942,122 +938,4 @@ func scopesToStrings(scopes fosite.Arguments) []string {
 	result := make([]string, len(scopes))
 	copy(result, scopes)
 	return result
-}
-
-// --- Argon2id Secret Validation ---
-
-// ValidateSecretArgon2id validates a client secret using Argon2id.
-func (s *EntStorage) ValidateSecretArgon2id(ctx context.Context, clientID, secret string) error {
-	// Get the app
-	app, err := s.db.OAuthApp.Query().
-		Where(oauthapp.ClientIDEQ(clientID)).
-		Where(oauthapp.ActiveEQ(true)).
-		First(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return fosite.ErrInvalidClient
-		}
-		return fosite.ErrServerError.WithWrap(err)
-	}
-
-	// Public clients don't have secrets
-	if app.Public {
-		return nil
-	}
-
-	// Find active secrets for this app
-	secrets, err := s.db.OAuthAppSecret.Query().
-		Where(
-			oauthappsecret.AppIDEQ(app.ID),
-			oauthappsecret.RevokedEQ(false),
-		).
-		All(ctx)
-	if err != nil {
-		return fosite.ErrInvalidClient.WithWrap(err)
-	}
-
-	// Try each secret
-	for _, sec := range secrets {
-		if verifyArgon2id(secret, sec.SecretHash) {
-			// Update last used timestamp
-			_, _ = s.db.OAuthAppSecret.UpdateOneID(sec.ID).
-				SetLastUsedAt(time.Now()).
-				Save(ctx)
-			return nil
-		}
-	}
-
-	return fosite.ErrInvalidClient.WithDescription("invalid client secret")
-}
-
-// verifyArgon2id verifies a password against an Argon2id hash.
-// The hash format is: $argon2id$v=19$m=65536,t=3,p=4$<salt>$<hash>
-func verifyArgon2id(password, encodedHash string) bool {
-	params, salt, hash, err := decodeArgon2idHash(encodedHash)
-	if err != nil {
-		return false
-	}
-
-	computed := argon2.IDKey(
-		[]byte(password),
-		salt,
-		params.time,
-		params.memory,
-		params.parallelism,
-		uint32(len(hash)), //nolint:gosec // G115: hash length is bounded
-	)
-
-	return subtle.ConstantTimeCompare(computed, hash) == 1
-}
-
-// argon2idParams holds Argon2id parameters.
-type argon2idParams struct {
-	memory      uint32
-	time        uint32
-	parallelism uint8
-}
-
-// decodeArgon2idHash decodes an Argon2id encoded hash string.
-// Format: $argon2id$v=19$m=65536,t=3,p=4$<base64_salt>$<base64_hash>
-func decodeArgon2idHash(encodedHash string) (*argon2idParams, []byte, []byte, error) {
-	parts := strings.Split(encodedHash, "$")
-	if len(parts) != 6 {
-		return nil, nil, nil, errors.New("invalid hash format")
-	}
-
-	if parts[1] != "argon2id" {
-		return nil, nil, nil, errors.New("not an argon2id hash")
-	}
-
-	var version int
-	_, err := fmt.Sscanf(parts[2], "v=%d", &version)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if version != 19 {
-		return nil, nil, nil, errors.New("unsupported argon2id version")
-	}
-
-	var memory, time uint32
-	var parallelism uint8
-	_, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &time, &parallelism)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	hash, err := base64.RawStdEncoding.DecodeString(parts[5])
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return &argon2idParams{
-		memory:      memory,
-		time:        time,
-		parallelism: parallelism,
-	}, salt, hash, nil
 }

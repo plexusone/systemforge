@@ -326,51 +326,6 @@ func TestEntStorageRefreshToken(t *testing.T) {
 	}
 }
 
-func TestArgon2idDecoding(t *testing.T) {
-	// Test hash decoding with a valid Argon2id hash
-	// Format: $argon2id$v=19$m=65536,t=3,p=4$<base64_salt>$<base64_hash>
-	validHash := "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$cmFuZG9taGFzaHZhbHVl"
-
-	params, salt, hash, err := decodeArgon2idHash(validHash)
-	if err != nil {
-		t.Fatalf("decodeArgon2idHash failed: %v", err)
-	}
-
-	if params.memory != 65536 {
-		t.Errorf("Expected memory 65536, got %d", params.memory)
-	}
-	if params.time != 3 {
-		t.Errorf("Expected time 3, got %d", params.time)
-	}
-	if params.parallelism != 4 {
-		t.Errorf("Expected parallelism 4, got %d", params.parallelism)
-	}
-	if len(salt) == 0 {
-		t.Error("Expected non-empty salt")
-	}
-	if len(hash) == 0 {
-		t.Error("Expected non-empty hash")
-	}
-
-	// Test invalid formats
-	invalidFormats := []string{
-		"not-a-hash",
-		"$argon2i$v=19$m=65536,t=3,p=4$salt$hash",  // wrong algorithm
-		"$argon2id$v=18$m=65536,t=3,p=4$salt$hash", // wrong version
-		"$argon2id$v=19$m=65536,t=3,p=4",           // missing parts
-		"$argon2id$v=19$m=65536,t=3,p=4$!!!$hash",  // invalid base64
-		"$argon2id$v=19$m=65536,t=3,p=4$salt$!!!",  // invalid base64
-		"$argon2id$v=19$invalid$salt$hash",         // invalid params
-	}
-
-	for _, invalid := range invalidFormats {
-		_, _, _, err := decodeArgon2idHash(invalid)
-		if err == nil {
-			t.Errorf("Expected error for invalid hash: %s", invalid)
-		}
-	}
-}
-
 // TestEntStorageCreateClientConstraintErrors verifies that only a genuine
 // duplicate client ID is reported as ErrClientExists; other constraint
 // failures, such as an owner that does not exist, surface as themselves.
