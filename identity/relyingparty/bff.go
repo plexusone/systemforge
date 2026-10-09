@@ -45,6 +45,13 @@ type BFFConfig struct {
 	// SystemAuth claims). Default: ClaimsMemberships.
 	Memberships MembershipSource
 
+	// Revocation, when set, makes the BFF refresh a session's tokens and
+	// claims from SystemAuth when a change to the principal's access was
+	// recorded after the claims were obtained (ADR-010). The session is not
+	// ended: the person stays signed in with reduced claims. If SystemAuth
+	// refuses the refresh (deactivation, revocation) the session ends.
+	Revocation *RevocationCache
+
 	// Sessions stores browser sessions. Default: in-memory (single
 	// instance); use pgstore.NewSessionStore in production.
 	Sessions SessionStore
@@ -260,6 +267,9 @@ func (b *BFF) CurrentSession(r *http.Request) (*Session, *Principal, []Membershi
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if sess, err = b.freshSession(ctx, token, sess); err != nil {
+		return nil, nil, nil, err
+	}
 	p, err := b.cfg.Principals.GetPrincipal(ctx, sess.PrincipalID)
 	if errors.Is(err, ErrPrincipalNotFound) {
 		return nil, nil, nil, ErrSessionNotFound
@@ -332,11 +342,22 @@ func (b *BFF) AccessToken(r *http.Request) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if sess.AccessToken != "" && b.now().Add(refreshSkew).Before(sess.AccessTokenExpiresAt) {
-		return sess.AccessToken, nil
+	sess, err = b.accessToken(ctx, token, sess, false)
+	if err != nil {
+		return "", err
+	}
+	return sess.AccessToken, nil
+}
+
+// accessToken returns sess with a valid access token, refreshing when it is
+// about to expire or when force is set. A refresh SystemAuth rejects ends
+// the session and returns ErrSessionNotFound.
+func (b *BFF) accessToken(ctx context.Context, token string, sess Session, force bool) (Session, error) {
+	if !force && sess.AccessToken != "" && b.now().Add(refreshSkew).Before(sess.AccessTokenExpiresAt) {
+		return sess, nil
 	}
 	if sess.RefreshToken == "" {
-		return "", ErrSessionNotFound
+		return sess, ErrSessionNotFound
 	}
 	tok, err := b.cfg.Client.Refresh(ctx, sess.RefreshToken)
 	if err != nil {
@@ -344,11 +365,11 @@ func (b *BFF) AccessToken(r *http.Request) (string, error) {
 		if errors.As(err, &re) {
 			// invalid_grant: revoked, reused or past its absolute lifetime.
 			if derr := b.cfg.Sessions.Delete(ctx, token); derr != nil {
-				return "", fmt.Errorf("ending session after rejected refresh: %w", derr)
+				return sess, fmt.Errorf("ending session after rejected refresh: %w", derr)
 			}
-			return "", ErrSessionNotFound
+			return sess, ErrSessionNotFound
 		}
-		return "", err
+		return sess, err
 	}
 	sess.AccessToken = tok.AccessToken
 	sess.AccessTokenExpiresAt = tok.Expiry
@@ -359,9 +380,62 @@ func (b *BFF) AccessToken(r *http.Request) (string, error) {
 		sess.IDToken = idt
 	}
 	if err := b.cfg.Sessions.Update(ctx, token, sess); err != nil {
-		return "", err
+		return sess, err
 	}
-	return sess.AccessToken, nil
+	return sess, nil
+}
+
+// freshSession returns sess, first refreshing its tokens and claims from
+// SystemAuth when the RevocationCache holds an access change recorded after
+// the claims were obtained. After the refresh the claims are SystemAuth's
+// answer as of now, so the session is stamped valid from the latest change
+// plus the margin, which keeps one change from forcing a refresh on every
+// request until the margin has passed.
+func (b *BFF) freshSession(ctx context.Context, token string, sess Session) (Session, error) {
+	cache := b.cfg.Revocation
+	if cache == nil {
+		return sess, nil
+	}
+	issued := sess.ClaimsIssuedAt
+	if issued.IsZero() {
+		issued = sess.CreatedAt
+	}
+	if cache.Accept(sess.Subject, "", issued) {
+		return sess, nil
+	}
+	sess, err := b.accessToken(ctx, token, sess, true)
+	if err != nil {
+		return sess, err
+	}
+	info, err := b.cfg.Client.UserInfo(ctx, sess.AccessToken)
+	if err != nil {
+		return sess, fmt.Errorf("refreshing claims after an access change: %w", err)
+	}
+	if info.Subject != sess.Subject {
+		return sess, fmt.Errorf("%w: userinfo sub %q does not match the session", ErrInvalidToken, info.Subject)
+	}
+	claims := make(map[string]any, len(sess.Claims)+len(info.Raw))
+	for k, v := range sess.Claims {
+		claims[k] = v
+	}
+	for k, v := range info.Raw {
+		claims[k] = v
+	}
+	// A claim SystemAuth no longer sends is gone, not unchanged.
+	for _, k := range []string{"orgs", "orgs_truncated"} {
+		if _, ok := info.Raw[k]; !ok {
+			delete(claims, k)
+		}
+	}
+	sess.Claims = claims
+	sess.ClaimsIssuedAt = b.now()
+	if v := cache.ValidFrom(sess.Subject, ""); v.After(sess.ClaimsIssuedAt) {
+		sess.ClaimsIssuedAt = v
+	}
+	if err := b.cfg.Sessions.Update(ctx, token, sess); err != nil {
+		return sess, err
+	}
+	return sess, nil
 }
 
 // --- handlers ---
@@ -567,6 +641,7 @@ func (b *BFF) establishSession(ctx context.Context, w http.ResponseWriter, r *ht
 		RefreshToken:         tok.RefreshToken,
 		IDToken:              idToken,
 		AccessTokenExpiresAt: tok.Expiry,
+		ClaimsIssuedAt:       now,
 		CreatedAt:            now,
 		ExpiresAt:            now.Add(b.cfg.SessionLifetime),
 	}); err != nil {

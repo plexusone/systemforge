@@ -90,6 +90,9 @@ type sessionSecrets struct {
 	RefreshToken string         `json:"refreshToken,omitempty"`
 	IDToken      string         `json:"idToken,omitempty"`
 	Claims       map[string]any `json:"claims,omitempty"`
+	// ClaimsIssuedAt is kept with the secrets, which are sealed as one
+	// JSON document, so the table needs no new column.
+	ClaimsIssuedAt time.Time `json:"claimsIssuedAt,omitempty"`
 }
 
 // SessionStore is a relyingparty.SessionStore on PostgreSQL (table
@@ -117,6 +120,8 @@ func (s *SessionStore) sealSecrets(tokenHash string, sess relyingparty.Session) 
 		RefreshToken: sess.RefreshToken,
 		IDToken:      sess.IDToken,
 		Claims:       sess.Claims,
+
+		ClaimsIssuedAt: sess.ClaimsIssuedAt,
 	})
 	if err != nil {
 		return "", nil, fmt.Errorf("pgstore: encoding session secrets: %w", err)
@@ -182,6 +187,7 @@ func (s *SessionStore) Get(ctx context.Context, token string) (relyingparty.Sess
 		return relyingparty.Session{}, fmt.Errorf("pgstore: decoding session secrets: %w", err)
 	}
 	sess.AccessToken, sess.RefreshToken, sess.IDToken, sess.Claims = sec.AccessToken, sec.RefreshToken, sec.IDToken, sec.Claims
+	sess.ClaimsIssuedAt = sec.ClaimsIssuedAt
 	if atExpires.Valid {
 		sess.AccessTokenExpiresAt = atExpires.Time
 	}

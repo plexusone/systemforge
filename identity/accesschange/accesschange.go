@@ -105,6 +105,27 @@ type SinkFunc func(Change)
 // AccessChange implements Sink.
 func (f SinkFunc) AccessChange(c Change) { f(c) }
 
+// ChangeRecorder takes a change as its parts. relyingparty.RevocationCache
+// implements it, which keeps the relying-party package free of the identity
+// store that this one depends on.
+type ChangeRecorder interface {
+	RecordChange(principalID, organizationID string, changedAt time.Time, reason string)
+}
+
+// ToSink adapts a ChangeRecorder, such as a relyingparty.RevocationCache,
+// to a Sink, so one cache can be passed to every service's
+// WithAccessChangeSink option and read by the relying parties of the same
+// process.
+func ToSink(r ChangeRecorder) Sink {
+	return SinkFunc(func(c Change) {
+		org := ""
+		if c.OrganizationID != nil {
+			org = c.OrganizationID.String()
+		}
+		r.RecordChange(c.PrincipalID.String(), org, c.ChangedAt, string(c.Reason))
+	})
+}
+
 // Record writes c to sf_access_changes inside tx and returns it with
 // ChangedAt set. Call it in the transaction that makes the change, so the
 // record exists if and only if the change does, then hand the result to

@@ -25,6 +25,11 @@ type Session struct {
 	// claims, captured at sign-in.
 	// A MembershipSource can read SystemAuth-issued memberships from them.
 	Claims map[string]any
+	// ClaimsIssuedAt is when Claims were obtained from SystemAuth, or, after
+	// a refresh forced by an access change, the earliest time a
+	// RevocationCache accepts (ADR-010). Zero for a session created before
+	// the field existed: CreatedAt stands in.
+	ClaimsIssuedAt time.Time
 	// AccessToken, RefreshToken and IDToken are the SystemAuth tokens.
 	AccessToken  string
 	RefreshToken string

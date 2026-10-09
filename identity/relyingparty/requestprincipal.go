@@ -42,10 +42,7 @@ func (a *RequestAuthenticator) Authenticate(r *http.Request) (*requestprincipal.
 		if !errors.As(err, &authErr) {
 			return nil, err
 		}
-		challenge := bearerChallenge
-		if authErr.code != "" {
-			challenge += `, error="` + authErr.code + `"`
-		}
+		challenge := bearerChallenge + authErr.challengeParams()
 		return nil, &requestprincipal.Error{
 			Status:  http.StatusUnauthorized,
 			Header:  http.Header{"Www-Authenticate": {challenge}},

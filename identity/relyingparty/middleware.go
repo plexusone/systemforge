@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/plexusone/systemforge/identity/apikey"
 )
@@ -105,6 +106,17 @@ type BearerConfig struct {
 	// equal to the client ID, no local principal) as a "client" principal.
 	AllowClientTokens bool
 
+	// Revocation, when set, refuses a JWT access token issued before a
+	// recorded change to its principal's access (ADR-010). The refusal is
+	// a 401 invalid_token "token expired", which makes the client refresh
+	// and obtain claims that reflect the change.
+	Revocation *RevocationCache
+
+	// Organization names the organization a request addresses, so that a
+	// change to the principal's access in another organization does not
+	// refuse it. Without it every change to the principal applies.
+	Organization func(r *http.Request) string
+
 	// Logger receives storage errors. Default: slog.Default().
 	Logger *slog.Logger
 }
@@ -140,9 +152,7 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 					return
 				}
 				challenge := bearerChallenge
-				if authErr.code != "" {
-					challenge += `, error="` + authErr.code + `"`
-				}
+				challenge += authErr.challengeParams()
 				if authErr.status == http.StatusForbidden {
 					writeAuthError(w, http.StatusForbidden, "CSRF_REJECTED", authErr.message)
 					return
@@ -160,11 +170,26 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 type bearerError struct {
 	code    string
 	message string
+	// description is sent as error_description in the challenge, when set.
+	description string
 	// status overrides the 401 the client is sent.
 	status int
 }
 
 func (e *bearerError) Error() string { return e.message }
+
+// challengeParams is the error and error_description parameters of the
+// WWW-Authenticate challenge (RFC 6750 section 3).
+func (e *bearerError) challengeParams() string {
+	var out string
+	if e.code != "" {
+		out += `, error="` + e.code + `"`
+	}
+	if e.description != "" {
+		out += `, error_description="` + e.description + `"`
+	}
+	return out
+}
 
 // errNoCredentials is the failure for a request that carries no
 // credentials at all (as opposed to invalid ones).
@@ -185,6 +210,10 @@ func (cfg BearerConfig) authenticate(r *http.Request) (*AuthenticatedPrincipal, 
 		token = strings.TrimSpace(value)
 	} else if key := r.Header.Get("X-API-Key"); key != "" {
 		return cfg.authenticateAPIKey(ctx, key)
+	}
+	org := ""
+	if cfg.Organization != nil {
+		org = cfg.Organization(r)
 	}
 
 	if token == "" {
@@ -207,18 +236,27 @@ func (cfg BearerConfig) authenticate(r *http.Request) (*AuthenticatedPrincipal, 
 	}
 
 	if strings.Count(token, ".") == 2 {
-		return cfg.authenticateJWT(ctx, token)
+		return cfg.authenticateJWT(ctx, token, org)
 	}
 	return cfg.authenticateAPIKey(ctx, token)
 }
 
-func (cfg BearerConfig) authenticateJWT(ctx context.Context, token string) (*AuthenticatedPrincipal, error) {
+func (cfg BearerConfig) authenticateJWT(ctx context.Context, token, org string) (*AuthenticatedPrincipal, error) {
 	if cfg.Tokens == nil {
 		return nil, errUnauthenticated("invalid_token", "access tokens are not accepted")
 	}
 	claims, err := cfg.Tokens.VerifyAccessToken(ctx, token)
 	if err != nil {
 		return nil, errUnauthenticated("invalid_token", "invalid access token")
+	}
+	if cfg.Revocation != nil {
+		var iat time.Time
+		if claims.IssuedAt != nil {
+			iat = claims.IssuedAt.Time
+		}
+		if !cfg.Revocation.Accept(claims.Subject, org, iat) {
+			return nil, &bearerError{code: "invalid_token", message: "token expired", description: "token expired"}
+		}
 	}
 	p, err := cfg.Principals.FindBySubject(ctx, claims.Subject)
 	if errors.Is(err, ErrPrincipalNotFound) {
