@@ -126,6 +126,21 @@ team organizations in every direction.
   and takes the next numeric suffix.
 - There is no HTTP endpoint for renaming yet; `Rename` is a service method.
 
+#### Converting a personal organization to a team
+
+`ConvertToTeam(ctx, orgID, teamSlug, actor)` returns a `ConvertResult{Team,
+Personal}`. In one transaction it checks that the organization is personal
+(`ErrNotPersonal`) and that `actor` is its owner (`ErrNotOwner`), renames it
+to `teamSlug` with the rules above (which reserves the person's handle for
+`actor`), sets its type to `team`, and creates a new personal organization
+for `actor` under the handle, spending that reservation. The converted
+organization keeps its ID, data, settings and every membership, so its owner
+membership is the team's first owner and collaborators stay; it now accepts
+members like any team. The new personal organization is named after the
+owner's display name, has the owner as its only member, and is registered
+with the authorization syncer after commit. Any failure rolls everything
+back. There is no HTTP endpoint for the conversion yet.
+
 ### Service (`identity/organization`)
 
 `organization.Service` is implemented by `DefaultService` over Ent, with an
@@ -480,9 +495,6 @@ decides it.
   generated one such as two words and a number, ADR-006 decision 2). The
   GitHub and Google rules and the numeric suffix on collision are implemented
   (see [Signup on first social login](#signup-on-first-social-login)).
-- `ConvertToTeam` keeps the organization's ID, data and memberships, sets
-  the type to `team`, gives it the chosen free slug, and creates a new
-  personal organization for the owner under their handle.
 - The `entitlements` summary is built, but ADR-006 speaks of listings with
   tiers, while today tiers (`plan_tier`) live on the single
   per-organization subscription and listings have none; the mapping from
