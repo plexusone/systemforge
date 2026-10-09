@@ -74,6 +74,55 @@ var (
 			},
 		},
 	}
+	// SfAppRolesColumns holds the columns for the "sf_app_roles" table.
+	SfAppRolesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "application", Type: field.TypeString},
+		{Name: "role", Type: field.TypeString},
+		{Name: "principal_id", Type: field.TypeUUID},
+		{Name: "organization_id", Type: field.TypeUUID},
+		{Name: "assigned_by", Type: field.TypeUUID, Nullable: true},
+	}
+	// SfAppRolesTable holds the schema information for the "sf_app_roles" table.
+	SfAppRolesTable = &schema.Table{
+		Name:       "sf_app_roles",
+		Columns:    SfAppRolesColumns,
+		PrimaryKey: []*schema.Column{SfAppRolesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "sf_app_roles_sf_principals_principal",
+				Columns:    []*schema.Column{SfAppRolesColumns[5]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "sf_app_roles_sf_organizations_organization",
+				Columns:    []*schema.Column{SfAppRolesColumns[6]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "sf_app_roles_sf_principals_assigner",
+				Columns:    []*schema.Column{SfAppRolesColumns[7]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "approle_principal_id_organization_id_application",
+				Unique:  true,
+				Columns: []*schema.Column{SfAppRolesColumns[5], SfAppRolesColumns[6], SfAppRolesColumns[3]},
+			},
+			{
+				Name:    "approle_organization_id_application",
+				Unique:  false,
+				Columns: []*schema.Column{SfAppRolesColumns[6], SfAppRolesColumns[3]},
+			},
+		},
+	}
 	// SfApplicationsColumns holds the columns for the "sf_applications" table.
 	SfApplicationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1453,6 +1502,7 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		SfAgentsTable,
+		SfAppRolesTable,
 		SfApplicationsTable,
 		SfClientAssertionJtisTable,
 		SfConsentGrantsTable,
@@ -1486,6 +1536,12 @@ func init() {
 	SfAgentsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfAgentsTable.Annotation = &entsql.Annotation{
 		Table: "sf_agents",
+	}
+	SfAppRolesTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfAppRolesTable.ForeignKeys[1].RefTable = SfOrganizationsTable
+	SfAppRolesTable.ForeignKeys[2].RefTable = SfPrincipalsTable
+	SfAppRolesTable.Annotation = &entsql.Annotation{
+		Table: "sf_app_roles",
 	}
 	SfApplicationsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfApplicationsTable.Annotation = &entsql.Annotation{

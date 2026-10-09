@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
+	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/clientassertionjti"
 	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
@@ -86,6 +87,33 @@ func init() {
 	agentDescID := agentMixinFields0[0].Descriptor()
 	// agent.DefaultID holds the default value on creation for the id field.
 	agent.DefaultID = agentDescID.Default.(func() uuid.UUID)
+	approleMixin := schema.AppRole{}.Mixin()
+	approleMixinFields0 := approleMixin[0].Fields()
+	_ = approleMixinFields0
+	approleFields := schema.AppRole{}.Fields()
+	_ = approleFields
+	// approleDescCreatedAt is the schema descriptor for created_at field.
+	approleDescCreatedAt := approleMixinFields0[1].Descriptor()
+	// approle.DefaultCreatedAt holds the default value on creation for the created_at field.
+	approle.DefaultCreatedAt = approleDescCreatedAt.Default.(func() time.Time)
+	// approleDescUpdatedAt is the schema descriptor for updated_at field.
+	approleDescUpdatedAt := approleMixinFields0[2].Descriptor()
+	// approle.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	approle.DefaultUpdatedAt = approleDescUpdatedAt.Default.(func() time.Time)
+	// approle.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	approle.UpdateDefaultUpdatedAt = approleDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// approleDescApplication is the schema descriptor for application field.
+	approleDescApplication := approleFields[2].Descriptor()
+	// approle.ApplicationValidator is a validator for the "application" field. It is called by the builders before save.
+	approle.ApplicationValidator = approleDescApplication.Validators[0].(func(string) error)
+	// approleDescRole is the schema descriptor for role field.
+	approleDescRole := approleFields[3].Descriptor()
+	// approle.RoleValidator is a validator for the "role" field. It is called by the builders before save.
+	approle.RoleValidator = approleDescRole.Validators[0].(func(string) error)
+	// approleDescID is the schema descriptor for id field.
+	approleDescID := approleMixinFields0[0].Descriptor()
+	// approle.DefaultID holds the default value on creation for the id field.
+	approle.DefaultID = approleDescID.Default.(func() uuid.UUID)
 	applicationMixin := schema.Application{}.Mixin()
 	applicationMixinFields0 := applicationMixin[0].Fields()
 	_ = applicationMixinFields0

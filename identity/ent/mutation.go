@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
+	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/clientassertionjti"
 	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
@@ -51,6 +52,7 @@ const (
 
 	// Node types.
 	TypeAgent               = "Agent"
+	TypeAppRole             = "AppRole"
 	TypeApplication         = "Application"
 	TypeClientAssertionJTI  = "ClientAssertionJTI"
 	TypeConsentGrant        = "ConsentGrant"
@@ -1389,6 +1391,843 @@ func (m *AgentMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Agent edge %s", name)
+}
+
+// AppRoleMutation represents an operation that mutates the AppRole nodes in the graph.
+type AppRoleMutation struct {
+	config
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	created_at          *time.Time
+	updated_at          *time.Time
+	application         *string
+	role                *string
+	clearedFields       map[string]struct{}
+	principal           *uuid.UUID
+	clearedprincipal    bool
+	organization        *uuid.UUID
+	clearedorganization bool
+	assigner            *uuid.UUID
+	clearedassigner     bool
+	done                bool
+	oldValue            func(context.Context) (*AppRole, error)
+	predicates          []predicate.AppRole
+}
+
+var _ ent.Mutation = (*AppRoleMutation)(nil)
+
+// approleOption allows management of the mutation configuration using functional options.
+type approleOption func(*AppRoleMutation)
+
+// newAppRoleMutation creates new mutation for the AppRole entity.
+func newAppRoleMutation(c config, op Op, opts ...approleOption) *AppRoleMutation {
+	m := &AppRoleMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAppRole,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAppRoleID sets the ID field of the mutation.
+func withAppRoleID(id uuid.UUID) approleOption {
+	return func(m *AppRoleMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AppRole
+		)
+		m.oldValue = func(ctx context.Context) (*AppRole, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AppRole.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAppRole sets the old AppRole of the mutation.
+func withAppRole(node *AppRole) approleOption {
+	return func(m *AppRoleMutation) {
+		m.oldValue = func(context.Context) (*AppRole, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AppRoleMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AppRoleMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AppRole entities.
+func (m *AppRoleMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AppRoleMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AppRoleMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AppRole.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AppRoleMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AppRoleMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AppRole entity.
+// If the AppRole object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppRoleMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AppRoleMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AppRoleMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AppRoleMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AppRole entity.
+// If the AppRole object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppRoleMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AppRoleMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetPrincipalID sets the "principal_id" field.
+func (m *AppRoleMutation) SetPrincipalID(u uuid.UUID) {
+	m.principal = &u
+}
+
+// PrincipalID returns the value of the "principal_id" field in the mutation.
+func (m *AppRoleMutation) PrincipalID() (r uuid.UUID, exists bool) {
+	v := m.principal
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrincipalID returns the old "principal_id" field's value of the AppRole entity.
+// If the AppRole object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppRoleMutation) OldPrincipalID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrincipalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrincipalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrincipalID: %w", err)
+	}
+	return oldValue.PrincipalID, nil
+}
+
+// ResetPrincipalID resets all changes to the "principal_id" field.
+func (m *AppRoleMutation) ResetPrincipalID() {
+	m.principal = nil
+}
+
+// SetOrganizationID sets the "organization_id" field.
+func (m *AppRoleMutation) SetOrganizationID(u uuid.UUID) {
+	m.organization = &u
+}
+
+// OrganizationID returns the value of the "organization_id" field in the mutation.
+func (m *AppRoleMutation) OrganizationID() (r uuid.UUID, exists bool) {
+	v := m.organization
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrganizationID returns the old "organization_id" field's value of the AppRole entity.
+// If the AppRole object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppRoleMutation) OldOrganizationID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrganizationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrganizationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrganizationID: %w", err)
+	}
+	return oldValue.OrganizationID, nil
+}
+
+// ResetOrganizationID resets all changes to the "organization_id" field.
+func (m *AppRoleMutation) ResetOrganizationID() {
+	m.organization = nil
+}
+
+// SetApplication sets the "application" field.
+func (m *AppRoleMutation) SetApplication(s string) {
+	m.application = &s
+}
+
+// Application returns the value of the "application" field in the mutation.
+func (m *AppRoleMutation) Application() (r string, exists bool) {
+	v := m.application
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApplication returns the old "application" field's value of the AppRole entity.
+// If the AppRole object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppRoleMutation) OldApplication(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApplication is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApplication requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApplication: %w", err)
+	}
+	return oldValue.Application, nil
+}
+
+// ResetApplication resets all changes to the "application" field.
+func (m *AppRoleMutation) ResetApplication() {
+	m.application = nil
+}
+
+// SetRole sets the "role" field.
+func (m *AppRoleMutation) SetRole(s string) {
+	m.role = &s
+}
+
+// Role returns the value of the "role" field in the mutation.
+func (m *AppRoleMutation) Role() (r string, exists bool) {
+	v := m.role
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRole returns the old "role" field's value of the AppRole entity.
+// If the AppRole object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppRoleMutation) OldRole(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRole is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRole requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRole: %w", err)
+	}
+	return oldValue.Role, nil
+}
+
+// ResetRole resets all changes to the "role" field.
+func (m *AppRoleMutation) ResetRole() {
+	m.role = nil
+}
+
+// SetAssignedBy sets the "assigned_by" field.
+func (m *AppRoleMutation) SetAssignedBy(u uuid.UUID) {
+	m.assigner = &u
+}
+
+// AssignedBy returns the value of the "assigned_by" field in the mutation.
+func (m *AppRoleMutation) AssignedBy() (r uuid.UUID, exists bool) {
+	v := m.assigner
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAssignedBy returns the old "assigned_by" field's value of the AppRole entity.
+// If the AppRole object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppRoleMutation) OldAssignedBy(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAssignedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAssignedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAssignedBy: %w", err)
+	}
+	return oldValue.AssignedBy, nil
+}
+
+// ClearAssignedBy clears the value of the "assigned_by" field.
+func (m *AppRoleMutation) ClearAssignedBy() {
+	m.assigner = nil
+	m.clearedFields[approle.FieldAssignedBy] = struct{}{}
+}
+
+// AssignedByCleared returns if the "assigned_by" field was cleared in this mutation.
+func (m *AppRoleMutation) AssignedByCleared() bool {
+	_, ok := m.clearedFields[approle.FieldAssignedBy]
+	return ok
+}
+
+// ResetAssignedBy resets all changes to the "assigned_by" field.
+func (m *AppRoleMutation) ResetAssignedBy() {
+	m.assigner = nil
+	delete(m.clearedFields, approle.FieldAssignedBy)
+}
+
+// ClearPrincipal clears the "principal" edge to the Principal entity.
+func (m *AppRoleMutation) ClearPrincipal() {
+	m.clearedprincipal = true
+	m.clearedFields[approle.FieldPrincipalID] = struct{}{}
+}
+
+// PrincipalCleared reports if the "principal" edge to the Principal entity was cleared.
+func (m *AppRoleMutation) PrincipalCleared() bool {
+	return m.clearedprincipal
+}
+
+// PrincipalIDs returns the "principal" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PrincipalID instead. It exists only for internal usage by the builders.
+func (m *AppRoleMutation) PrincipalIDs() (ids []uuid.UUID) {
+	if id := m.principal; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPrincipal resets all changes to the "principal" edge.
+func (m *AppRoleMutation) ResetPrincipal() {
+	m.principal = nil
+	m.clearedprincipal = false
+}
+
+// ClearOrganization clears the "organization" edge to the Organization entity.
+func (m *AppRoleMutation) ClearOrganization() {
+	m.clearedorganization = true
+	m.clearedFields[approle.FieldOrganizationID] = struct{}{}
+}
+
+// OrganizationCleared reports if the "organization" edge to the Organization entity was cleared.
+func (m *AppRoleMutation) OrganizationCleared() bool {
+	return m.clearedorganization
+}
+
+// OrganizationIDs returns the "organization" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// OrganizationID instead. It exists only for internal usage by the builders.
+func (m *AppRoleMutation) OrganizationIDs() (ids []uuid.UUID) {
+	if id := m.organization; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetOrganization resets all changes to the "organization" edge.
+func (m *AppRoleMutation) ResetOrganization() {
+	m.organization = nil
+	m.clearedorganization = false
+}
+
+// SetAssignerID sets the "assigner" edge to the Principal entity by id.
+func (m *AppRoleMutation) SetAssignerID(id uuid.UUID) {
+	m.assigner = &id
+}
+
+// ClearAssigner clears the "assigner" edge to the Principal entity.
+func (m *AppRoleMutation) ClearAssigner() {
+	m.clearedassigner = true
+	m.clearedFields[approle.FieldAssignedBy] = struct{}{}
+}
+
+// AssignerCleared reports if the "assigner" edge to the Principal entity was cleared.
+func (m *AppRoleMutation) AssignerCleared() bool {
+	return m.AssignedByCleared() || m.clearedassigner
+}
+
+// AssignerID returns the "assigner" edge ID in the mutation.
+func (m *AppRoleMutation) AssignerID() (id uuid.UUID, exists bool) {
+	if m.assigner != nil {
+		return *m.assigner, true
+	}
+	return
+}
+
+// AssignerIDs returns the "assigner" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AssignerID instead. It exists only for internal usage by the builders.
+func (m *AppRoleMutation) AssignerIDs() (ids []uuid.UUID) {
+	if id := m.assigner; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAssigner resets all changes to the "assigner" edge.
+func (m *AppRoleMutation) ResetAssigner() {
+	m.assigner = nil
+	m.clearedassigner = false
+}
+
+// Where appends a list predicates to the AppRoleMutation builder.
+func (m *AppRoleMutation) Where(ps ...predicate.AppRole) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AppRoleMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AppRoleMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AppRole, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AppRoleMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AppRoleMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AppRole).
+func (m *AppRoleMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AppRoleMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.created_at != nil {
+		fields = append(fields, approle.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, approle.FieldUpdatedAt)
+	}
+	if m.principal != nil {
+		fields = append(fields, approle.FieldPrincipalID)
+	}
+	if m.organization != nil {
+		fields = append(fields, approle.FieldOrganizationID)
+	}
+	if m.application != nil {
+		fields = append(fields, approle.FieldApplication)
+	}
+	if m.role != nil {
+		fields = append(fields, approle.FieldRole)
+	}
+	if m.assigner != nil {
+		fields = append(fields, approle.FieldAssignedBy)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AppRoleMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case approle.FieldCreatedAt:
+		return m.CreatedAt()
+	case approle.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case approle.FieldPrincipalID:
+		return m.PrincipalID()
+	case approle.FieldOrganizationID:
+		return m.OrganizationID()
+	case approle.FieldApplication:
+		return m.Application()
+	case approle.FieldRole:
+		return m.Role()
+	case approle.FieldAssignedBy:
+		return m.AssignedBy()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AppRoleMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case approle.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case approle.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case approle.FieldPrincipalID:
+		return m.OldPrincipalID(ctx)
+	case approle.FieldOrganizationID:
+		return m.OldOrganizationID(ctx)
+	case approle.FieldApplication:
+		return m.OldApplication(ctx)
+	case approle.FieldRole:
+		return m.OldRole(ctx)
+	case approle.FieldAssignedBy:
+		return m.OldAssignedBy(ctx)
+	}
+	return nil, fmt.Errorf("unknown AppRole field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AppRoleMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case approle.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case approle.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case approle.FieldPrincipalID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrincipalID(v)
+		return nil
+	case approle.FieldOrganizationID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrganizationID(v)
+		return nil
+	case approle.FieldApplication:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApplication(v)
+		return nil
+	case approle.FieldRole:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRole(v)
+		return nil
+	case approle.FieldAssignedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAssignedBy(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AppRole field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AppRoleMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AppRoleMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AppRoleMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown AppRole numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AppRoleMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(approle.FieldAssignedBy) {
+		fields = append(fields, approle.FieldAssignedBy)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AppRoleMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AppRoleMutation) ClearField(name string) error {
+	switch name {
+	case approle.FieldAssignedBy:
+		m.ClearAssignedBy()
+		return nil
+	}
+	return fmt.Errorf("unknown AppRole nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AppRoleMutation) ResetField(name string) error {
+	switch name {
+	case approle.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case approle.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case approle.FieldPrincipalID:
+		m.ResetPrincipalID()
+		return nil
+	case approle.FieldOrganizationID:
+		m.ResetOrganizationID()
+		return nil
+	case approle.FieldApplication:
+		m.ResetApplication()
+		return nil
+	case approle.FieldRole:
+		m.ResetRole()
+		return nil
+	case approle.FieldAssignedBy:
+		m.ResetAssignedBy()
+		return nil
+	}
+	return fmt.Errorf("unknown AppRole field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AppRoleMutation) AddedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.principal != nil {
+		edges = append(edges, approle.EdgePrincipal)
+	}
+	if m.organization != nil {
+		edges = append(edges, approle.EdgeOrganization)
+	}
+	if m.assigner != nil {
+		edges = append(edges, approle.EdgeAssigner)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AppRoleMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case approle.EdgePrincipal:
+		if id := m.principal; id != nil {
+			return []ent.Value{*id}
+		}
+	case approle.EdgeOrganization:
+		if id := m.organization; id != nil {
+			return []ent.Value{*id}
+		}
+	case approle.EdgeAssigner:
+		if id := m.assigner; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AppRoleMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 3)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AppRoleMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AppRoleMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.clearedprincipal {
+		edges = append(edges, approle.EdgePrincipal)
+	}
+	if m.clearedorganization {
+		edges = append(edges, approle.EdgeOrganization)
+	}
+	if m.clearedassigner {
+		edges = append(edges, approle.EdgeAssigner)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AppRoleMutation) EdgeCleared(name string) bool {
+	switch name {
+	case approle.EdgePrincipal:
+		return m.clearedprincipal
+	case approle.EdgeOrganization:
+		return m.clearedorganization
+	case approle.EdgeAssigner:
+		return m.clearedassigner
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AppRoleMutation) ClearEdge(name string) error {
+	switch name {
+	case approle.EdgePrincipal:
+		m.ClearPrincipal()
+		return nil
+	case approle.EdgeOrganization:
+		m.ClearOrganization()
+		return nil
+	case approle.EdgeAssigner:
+		m.ClearAssigner()
+		return nil
+	}
+	return fmt.Errorf("unknown AppRole unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AppRoleMutation) ResetEdge(name string) error {
+	switch name {
+	case approle.EdgePrincipal:
+		m.ResetPrincipal()
+		return nil
+	case approle.EdgeOrganization:
+		m.ResetOrganization()
+		return nil
+	case approle.EdgeAssigner:
+		m.ResetAssigner()
+		return nil
+	}
+	return fmt.Errorf("unknown AppRole edge %s", name)
 }
 
 // ApplicationMutation represents an operation that mutates the Application nodes in the graph.

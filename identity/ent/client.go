@@ -18,6 +18,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
+	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/clientassertionjti"
 	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
@@ -53,6 +54,8 @@ type Client struct {
 	Schema *migrate.Schema
 	// Agent is the client for interacting with the Agent builders.
 	Agent *AgentClient
+	// AppRole is the client for interacting with the AppRole builders.
+	AppRole *AppRoleClient
 	// Application is the client for interacting with the Application builders.
 	Application *ApplicationClient
 	// ClientAssertionJTI is the client for interacting with the ClientAssertionJTI builders.
@@ -115,6 +118,7 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Agent = NewAgentClient(c.config)
+	c.AppRole = NewAppRoleClient(c.config)
 	c.Application = NewApplicationClient(c.config)
 	c.ClientAssertionJTI = NewClientAssertionJTIClient(c.config)
 	c.ConsentGrant = NewConsentGrantClient(c.config)
@@ -233,6 +237,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ctx:                 ctx,
 		config:              cfg,
 		Agent:               NewAgentClient(cfg),
+		AppRole:             NewAppRoleClient(cfg),
 		Application:         NewApplicationClient(cfg),
 		ClientAssertionJTI:  NewClientAssertionJTIClient(cfg),
 		ConsentGrant:        NewConsentGrantClient(cfg),
@@ -278,6 +283,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ctx:                 ctx,
 		config:              cfg,
 		Agent:               NewAgentClient(cfg),
+		AppRole:             NewAppRoleClient(cfg),
 		Application:         NewApplicationClient(cfg),
 		ClientAssertionJTI:  NewClientAssertionJTIClient(cfg),
 		ConsentGrant:        NewConsentGrantClient(cfg),
@@ -332,10 +338,10 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Agent, c.Application, c.ClientAssertionJTI, c.ConsentGrant, c.Credential,
-		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
-		c.LoginState, c.ManagerClaim, c.ManagerRelationship, c.OAuthApp,
-		c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
+		c.Agent, c.AppRole, c.Application, c.ClientAssertionJTI, c.ConsentGrant,
+		c.Credential, c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing,
+		c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerRelationship,
+		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
 		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
 		c.SeatAssignment, c.ServicePrincipal, c.Subscription,
 	} {
@@ -347,10 +353,10 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Agent, c.Application, c.ClientAssertionJTI, c.ConsentGrant, c.Credential,
-		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
-		c.LoginState, c.ManagerClaim, c.ManagerRelationship, c.OAuthApp,
-		c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
+		c.Agent, c.AppRole, c.Application, c.ClientAssertionJTI, c.ConsentGrant,
+		c.Credential, c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing,
+		c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerRelationship,
+		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
 		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
 		c.SeatAssignment, c.ServicePrincipal, c.Subscription,
 	} {
@@ -363,6 +369,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *AgentMutation:
 		return c.Agent.mutate(ctx, m)
+	case *AppRoleMutation:
+		return c.AppRole.mutate(ctx, m)
 	case *ApplicationMutation:
 		return c.Application.mutate(ctx, m)
 	case *ClientAssertionJTIMutation:
@@ -580,6 +588,187 @@ func (c *AgentClient) mutate(ctx context.Context, m *AgentMutation) (Value, erro
 		return (&AgentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Agent mutation op: %q", m.Op())
+	}
+}
+
+// AppRoleClient is a client for the AppRole schema.
+type AppRoleClient struct {
+	config
+}
+
+// NewAppRoleClient returns a client for the AppRole from the given config.
+func NewAppRoleClient(c config) *AppRoleClient {
+	return &AppRoleClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `approle.Hooks(f(g(h())))`.
+func (c *AppRoleClient) Use(hooks ...Hook) {
+	c.hooks.AppRole = append(c.hooks.AppRole, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `approle.Intercept(f(g(h())))`.
+func (c *AppRoleClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AppRole = append(c.inters.AppRole, interceptors...)
+}
+
+// Create returns a builder for creating a AppRole entity.
+func (c *AppRoleClient) Create() *AppRoleCreate {
+	mutation := newAppRoleMutation(c.config, OpCreate)
+	return &AppRoleCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AppRole entities.
+func (c *AppRoleClient) CreateBulk(builders ...*AppRoleCreate) *AppRoleCreateBulk {
+	return &AppRoleCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AppRoleClient) MapCreateBulk(slice any, setFunc func(*AppRoleCreate, int)) *AppRoleCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AppRoleCreateBulk{err: fmt.Errorf("calling to AppRoleClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AppRoleCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AppRoleCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AppRole.
+func (c *AppRoleClient) Update() *AppRoleUpdate {
+	mutation := newAppRoleMutation(c.config, OpUpdate)
+	return &AppRoleUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AppRoleClient) UpdateOne(_m *AppRole) *AppRoleUpdateOne {
+	mutation := newAppRoleMutation(c.config, OpUpdateOne, withAppRole(_m))
+	return &AppRoleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AppRoleClient) UpdateOneID(id uuid.UUID) *AppRoleUpdateOne {
+	mutation := newAppRoleMutation(c.config, OpUpdateOne, withAppRoleID(id))
+	return &AppRoleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AppRole.
+func (c *AppRoleClient) Delete() *AppRoleDelete {
+	mutation := newAppRoleMutation(c.config, OpDelete)
+	return &AppRoleDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AppRoleClient) DeleteOne(_m *AppRole) *AppRoleDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AppRoleClient) DeleteOneID(id uuid.UUID) *AppRoleDeleteOne {
+	builder := c.Delete().Where(approle.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AppRoleDeleteOne{builder}
+}
+
+// Query returns a query builder for AppRole.
+func (c *AppRoleClient) Query() *AppRoleQuery {
+	return &AppRoleQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAppRole},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AppRole entity by its id.
+func (c *AppRoleClient) Get(ctx context.Context, id uuid.UUID) (*AppRole, error) {
+	return c.Query().Where(approle.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AppRoleClient) GetX(ctx context.Context, id uuid.UUID) *AppRole {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPrincipal queries the principal edge of a AppRole.
+func (c *AppRoleClient) QueryPrincipal(_m *AppRole) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(approle.Table, approle.FieldID, id),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, approle.PrincipalTable, approle.PrincipalColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOrganization queries the organization edge of a AppRole.
+func (c *AppRoleClient) QueryOrganization(_m *AppRole) *OrganizationQuery {
+	query := (&OrganizationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(approle.Table, approle.FieldID, id),
+			sqlgraph.To(organization.Table, organization.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, approle.OrganizationTable, approle.OrganizationColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAssigner queries the assigner edge of a AppRole.
+func (c *AppRoleClient) QueryAssigner(_m *AppRole) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(approle.Table, approle.FieldID, id),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, approle.AssignerTable, approle.AssignerColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AppRoleClient) Hooks() []Hook {
+	return c.hooks.AppRole
+}
+
+// Interceptors returns the client interceptors.
+func (c *AppRoleClient) Interceptors() []Interceptor {
+	return c.inters.AppRole
+}
+
+func (c *AppRoleClient) mutate(ctx context.Context, m *AppRoleMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AppRoleCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AppRoleUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AppRoleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AppRoleDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AppRole mutation op: %q", m.Op())
 	}
 }
 
@@ -4999,14 +5188,14 @@ func (c *SubscriptionClient) mutate(ctx context.Context, m *SubscriptionMutation
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Agent, Application, ClientAssertionJTI, ConsentGrant, Credential,
+		Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant, Credential,
 		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
 		ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode,
 		OAuthConsent, OAuthToken, Organization, Principal, PrincipalMembership,
 		PrincipalToken, SeatAssignment, ServicePrincipal, Subscription []ent.Hook
 	}
 	inters struct {
-		Agent, Application, ClientAssertionJTI, ConsentGrant, Credential,
+		Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant, Credential,
 		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
 		ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode,
 		OAuthConsent, OAuthToken, Organization, Principal, PrincipalMembership,

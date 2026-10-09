@@ -135,6 +135,30 @@ func (f AgentMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation)
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.AgentMutation", m)
 }
 
+// The AppRoleQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type AppRoleQueryRuleFunc func(context.Context, *ent.AppRoleQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f AppRoleQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.AppRoleQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.AppRoleQuery", q)
+}
+
+// The AppRoleMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type AppRoleMutationRuleFunc func(context.Context, *ent.AppRoleMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f AppRoleMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.AppRoleMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.AppRoleMutation", m)
+}
+
 // The ApplicationQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type ApplicationQueryRuleFunc func(context.Context, *ent.ApplicationQuery) error
@@ -772,6 +796,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 	switch q := q.(type) {
 	case *ent.AgentQuery:
 		return q.Filter(), nil
+	case *ent.AppRoleQuery:
+		return q.Filter(), nil
 	case *ent.ApplicationQuery:
 		return q.Filter(), nil
 	case *ent.ClientAssertionJTIQuery:
@@ -830,6 +856,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 func mutationFilter(m ent.Mutation) (Filter, error) {
 	switch m := m.(type) {
 	case *ent.AgentMutation:
+		return m.Filter(), nil
+	case *ent.AppRoleMutation:
 		return m.Filter(), nil
 	case *ent.ApplicationMutation:
 		return m.Filter(), nil
