@@ -390,7 +390,10 @@ Seat accounting: the seat limit of an application is the sum of the seats of
 its valid `seat_based` licenses, and there is none when any entitlement for
 the application is not seat-limited (a subscription, an unlimited license, a
 default). `approle` counts `sf_app_roles` rows for (organization,
-application) against it and refuses with `ErrNoSeats`; owners' implicit
+application) against it and refuses with `ErrNoSeats`; the count and the
+insert run in one transaction under a PostgreSQL advisory lock keyed by
+(organization, application), so concurrent assignments cannot exceed the
+limit (SQLite is serialized in process); owners' implicit
 roles hold no seat. `marketplace.WarnIfNoEntitlements` logs a warning at
 startup when applications are registered but there is no default entitlement
 and no listing names an application, in which case every organization is

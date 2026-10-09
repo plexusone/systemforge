@@ -50,6 +50,7 @@ INIT-SYSTEMFORGE-008.
   - Depends on: `RMI-SYSTEMFORGE-130`
 - [ ] `RMI-SYSTEMFORGE-150` Authz graph sync for application roles: `AddAppRole`/`RemoveAppRole` on the relationship syncer, as an optional interface so existing implementers keep working
 - [ ] `RMI-SYSTEMFORGE-151` Fix: `invite.Accept` never syncs the new membership to the authorization graph
+- [ ] `RMI-SYSTEMFORGE-153` Fix: race-free seat-limit check in `approle.Assign`: count the seats and insert the role under a PostgreSQL advisory lock inside the assigning transaction so concurrent assignments cannot exceed the limit; concurrency test on PostgreSQL
 
 ## Phase 3 — Real-time invalidation of access (ADR-010)
 
