@@ -35,7 +35,6 @@ organization of type `personal`.
 | `owner_principal_id` | UUID, nullable | The owning principal; required for `personal`, set by the API for every organization it creates |
 | `logo_url`, `description`, `website_url` | string, nullable | Cosmetic |
 | `settings` | JSON object | Application-specific configuration |
-| `plan` | enum `free`, `starter`, `pro`, `enterprise` | Default `free`; see [The `plan` column](#the-plan-column) |
 | `active` | bool | `Delete` sets it to `false` (soft delete) |
 
 Edges: `principal_memberships`, `invites`, `oauth_apps`, marketplace
@@ -65,12 +64,32 @@ personal and team organizations share one namespace.
 
 Today the slug is set once at creation and cannot be changed:
 `UpdateOrganizationInput` has no slug field and `PATCH /organizations/{slug}`
-accepts only `name`, `logo_url`, `description`, `website_url`, `plan` and
+accepts only `name`, `logo_url`, `description`, `website_url` and
 `settings`. `SlugAvailable(slug)` is an existence check on
-`sf_organizations.slug`; `GenerateSlug(name)` slugifies the name
+`sf_organizations.slug` that also refuses reserved slugs; `GenerateSlug(name)` slugifies the name
 (lowercase, spaces and underscores to hyphens, other characters dropped,
 `-org` appended below three characters) and appends `-1` to `-100`, then an
 eight-character UUID fragment, until one is free.
+
+**Reserved slugs.** `organization.ReservedSlugs` lists names no organization
+may take because they would collide with a route or a protocol path
+(`admin`, `api`, `login`, `logout`, `oauth`, `scim`, `invites`,
+`organizations`, `well-known`, `www`, `support`, `help`, `about`, `settings`,
+`new`, `o`). A deployment adds its own product names with
+`WithReservedSlugs(...)`. `SlugAvailable` answers `false` with
+`ErrSlugReserved` for a reserved slug, `Create` and `CreatePersonalOrg`
+fail with it, `GenerateSlug` steps past a reserved base to its numeric
+suffix, and SCIM group creation refuses a reserved slug. Personal slugs
+derived at signup go through `uniqueSlugInTx`, which skips reserved names
+the same way (`PersonalOrgParams.ReservedSlugs` carries the deployment's
+additions). `signup.SlugForLogin` derives a login's base slug and
+`signup.SlugForManaged` returns a manager-entered slug or a generated one
+(two words and a number, never derived from an email address).
+
+Slug freezing after a rename (the seven-day cooling-off reservation) is a
+separate rule, specified in ADR-006 decisions 5 and 6 and not yet
+implemented; when it lands, `SlugAvailable` and `uniqueSlugInTx` consult
+the reservation table as well.
 
 ### Service (`identity/organization`)
 
@@ -82,9 +101,9 @@ eight-character UUID fragment, until one is free.
 | Method | Behavior |
 |---|---|
 | `Create(input)` | Validates and reserves the slug; creates the organization and, when an owner is given, an `owner` membership in one transaction; then `syncer.RegisterOrganization(orgID, ownerID)` |
-| `CreatePersonalOrg(input)` | `Create` with `org_type = personal`, the owner, and `plan = free` |
+| `CreatePersonalOrg(input)` | `Create` with `org_type = personal`, and the owner |
 | `GetByID`, `GetBySlug`, `GetPersonalOrg` | Lookups |
-| `Update(id, input)` | Name, logo, description, website, settings, plan; never the slug or type |
+| `Update(id, input)` | Name, logo, description, website, settings; never the slug or type |
 | `Delete(id)` | Sets `active = false`; `syncer.UnregisterOrganization` |
 | `List(input)` | Filters: `OrgType`, `Plan`, `Active`, `MemberPrincipalID` (active memberships only), limit and offset |
 | `TransferOwnership(input)` | See [Ownership transfer](#ownership-transfer) |
@@ -102,7 +121,7 @@ its existence is not confirmed to outsiders.
 
 | Operation | Route | Permission (`authz`) |
 |---|---|---|
-| `createOrganization` | `POST /organizations` | Any authenticated principal; the caller becomes the owner. Default `org_type = team`, default `plan = free` |
+| `createOrganization` | `POST /organizations` | Any authenticated principal; the caller becomes the owner. Default `org_type = team` |
 | `getOrganization` | `GET /organizations/{slug}` | `view` |
 | `updateOrganization` | `PATCH /organizations/{slug}` | `settings` |
 | `deleteOrganization` | `DELETE /organizations/{slug}` | `delete` (owner only) |
@@ -242,15 +261,24 @@ principal.
 - `signup.SignupOrGetExisting` is unchanged and still resolves by email only;
   social login does not use it.
 
-## The `plan` column
+## No plan on the organization
 
-`sf_organizations.plan` is set at creation (`free` by default from the API,
-`CreatePersonalOrg` and SCIM group provisioning), changed by
-`PATCH /organizations/{slug}`, used as a `List` filter, and returned as
-`plan` in `OrgResponse`. No code reads it to decide what an organization may
-use. ADR-006 removes it, together with the `organization.Plan*` constants
-and the `plan` field in the API; see
-[Planned changes](#planned-changes).
+An organization has no `plan`. The column was a placeholder from before the
+marketplace: set at creation and never consulted, and one value cannot
+describe an organization holding several subscriptions or licenses
+(ADR-006). It is gone from `sf_organizations`, from `organization` service
+inputs and the list filter, from the API, and from SCIM group provisioning;
+the `organization.Plan*` constants are removed. Existing PostgreSQL
+databases run `migrations/0004_drop_organization_plan.sql`; fresh databases
+need nothing.
+
+What an organization may use is its `entitlements`, a list returned in
+every `OrgResponse` and derived from the marketplace (next section).
+`APIConfig.Entitlements` supplies the source;
+`marketplace.EntitlementSource(subscriptions, licenses)` builds one from an
+active subscription (source `subscription`, tier = `plan_tier`, valid until
+the period end) and each valid license (source `license`, the listing ID,
+tier = license type, valid until). Without a source the list is empty.
 
 ## Entitlements via the marketplace
 
@@ -368,13 +396,11 @@ decides it.
 - `ConvertToTeam` keeps the organization's ID, data and memberships, sets
   the type to `team`, gives it the chosen free slug, and creates a new
   personal organization for the owner under their handle.
-- The `plan` column, `organization.Plan*`, and the `plan` field in create,
-  update, list filter and responses (and SCIM's default) are removed;
-  entitlements are derived from the marketplace and exposed as an
-  `entitlements` summary. Note that ADR-006 speaks of listings with tiers,
-  while today tiers (`plan_tier`) live on the single per-organization
-  subscription and listings have none; the mapping from subscriptions and
-  licenses to per-application entitlements is part of this change.
+- The `entitlements` summary is built, but ADR-006 speaks of listings with
+  tiers, while today tiers (`plan_tier`) live on the single
+  per-organization subscription and listings have none; the mapping from
+  subscriptions and licenses to per-application entitlements is still to
+  do.
 
 ### Planned, not yet decided by an ADR
 
