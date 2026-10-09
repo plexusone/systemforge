@@ -299,6 +299,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			listing.FieldOwnerID:      {Type: field.TypeUUID, Column: listing.FieldOwnerID},
 			listing.FieldProductType:  {Type: field.TypeString, Column: listing.FieldProductType},
 			listing.FieldProductID:    {Type: field.TypeUUID, Column: listing.FieldProductID},
+			listing.FieldApplication:  {Type: field.TypeString, Column: listing.FieldApplication},
 			listing.FieldTitle:        {Type: field.TypeString, Column: listing.FieldTitle},
 			listing.FieldDescription:  {Type: field.TypeString, Column: listing.FieldDescription},
 			listing.FieldPricingModel: {Type: field.TypeEnum, Column: listing.FieldPricingModel},
@@ -703,6 +704,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 		Type: "Subscription",
 		Fields: map[string]*sqlgraph.FieldSpec{
 			subscription.FieldOrganizationID:       {Type: field.TypeUUID, Column: subscription.FieldOrganizationID},
+			subscription.FieldListingID:            {Type: field.TypeUUID, Column: subscription.FieldListingID},
 			subscription.FieldPlanTier:             {Type: field.TypeString, Column: subscription.FieldPlanTier},
 			subscription.FieldStatus:               {Type: field.TypeEnum, Column: subscription.FieldStatus},
 			subscription.FieldCurrentPeriodStart:   {Type: field.TypeTime, Column: subscription.FieldCurrentPeriodStart},
@@ -1195,12 +1197,12 @@ var schemaGraph = func() *sqlgraph.Schema {
 		"License",
 	)
 	graph.MustAddE(
-		"subscription",
+		"subscriptions",
 		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   organization.SubscriptionTable,
-			Columns: []string{organization.SubscriptionColumn},
+			Table:   organization.SubscriptionsTable,
+			Columns: []string{organization.SubscriptionsColumn},
 			Bidi:    false,
 		},
 		"Organization",
@@ -1605,7 +1607,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 	graph.MustAddE(
 		"organization",
 		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   subscription.OrganizationTable,
 			Columns: []string{subscription.OrganizationColumn},
@@ -2865,6 +2867,11 @@ func (f *ListingFilter) WhereProductType(p entql.StringP) {
 // WhereProductID applies the entql [16]byte predicate on the product_id field.
 func (f *ListingFilter) WhereProductID(p entql.ValueP) {
 	f.Where(p.Field(listing.FieldProductID))
+}
+
+// WhereApplication applies the entql string predicate on the application field.
+func (f *ListingFilter) WhereApplication(p entql.StringP) {
+	f.Where(p.Field(listing.FieldApplication))
 }
 
 // WhereTitle applies the entql string predicate on the title field.
@@ -4218,14 +4225,14 @@ func (f *OrganizationFilter) WhereHasLicensesWith(preds ...predicate.License) {
 	})))
 }
 
-// WhereHasSubscription applies a predicate to check if query has an edge subscription.
-func (f *OrganizationFilter) WhereHasSubscription() {
-	f.Where(entql.HasEdge("subscription"))
+// WhereHasSubscriptions applies a predicate to check if query has an edge subscriptions.
+func (f *OrganizationFilter) WhereHasSubscriptions() {
+	f.Where(entql.HasEdge("subscriptions"))
 }
 
-// WhereHasSubscriptionWith applies a predicate to check if query has an edge subscription with a given conditions (other predicates).
-func (f *OrganizationFilter) WhereHasSubscriptionWith(preds ...predicate.Subscription) {
-	f.Where(entql.HasEdgeWith("subscription", sqlgraph.WrapFunc(func(s *sql.Selector) {
+// WhereHasSubscriptionsWith applies a predicate to check if query has an edge subscriptions with a given conditions (other predicates).
+func (f *OrganizationFilter) WhereHasSubscriptionsWith(preds ...predicate.Subscription) {
+	f.Where(entql.HasEdgeWith("subscriptions", sqlgraph.WrapFunc(func(s *sql.Selector) {
 		for _, p := range preds {
 			p(s)
 		}
@@ -5272,6 +5279,11 @@ func (f *SubscriptionFilter) WhereID(p entql.ValueP) {
 // WhereOrganizationID applies the entql [16]byte predicate on the organization_id field.
 func (f *SubscriptionFilter) WhereOrganizationID(p entql.ValueP) {
 	f.Where(p.Field(subscription.FieldOrganizationID))
+}
+
+// WhereListingID applies the entql [16]byte predicate on the listing_id field.
+func (f *SubscriptionFilter) WhereListingID(p entql.ValueP) {
+	f.Where(p.Field(subscription.FieldListingID))
 }
 
 // WherePlanTier applies the entql string predicate on the plan_tier field.

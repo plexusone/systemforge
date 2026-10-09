@@ -21,6 +21,8 @@ type Subscription struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// The subscribing organization
 	OrganizationID uuid.UUID `json:"organization_id,omitempty"`
+	// Listing this subscription is for; null for the platform subscription
+	ListingID *uuid.UUID `json:"listing_id,omitempty"`
 	// Plan name: free, starter, pro, enterprise
 	PlanTier string `json:"plan_tier,omitempty"`
 	// Status holds the value of the "status" field.
@@ -70,6 +72,8 @@ func (*Subscription) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case subscription.FieldListingID:
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case subscription.FieldCancelAtPeriodEnd:
 			values[i] = new(sql.NullBool)
 		case subscription.FieldPlanTier, subscription.FieldStatus, subscription.FieldStripeSubscriptionID, subscription.FieldStripeCustomerID:
@@ -104,6 +108,13 @@ func (_m *Subscription) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field organization_id", values[i])
 			} else if value != nil {
 				_m.OrganizationID = *value
+			}
+		case subscription.FieldListingID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field listing_id", values[i])
+			} else if value.Valid {
+				_m.ListingID = new(uuid.UUID)
+				*_m.ListingID = *value.S.(*uuid.UUID)
 			}
 		case subscription.FieldPlanTier:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -204,6 +215,11 @@ func (_m *Subscription) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("organization_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.OrganizationID))
+	builder.WriteString(", ")
+	if v := _m.ListingID; v != nil {
+		builder.WriteString("listing_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("plan_tier=")
 	builder.WriteString(_m.PlanTier)

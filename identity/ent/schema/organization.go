@@ -99,10 +99,10 @@ func (Organization) Edges() []ent.Edge {
 		edge.To("licenses", License.Type).
 			Comment("Marketplace licenses held by this organization"),
 
-		// Marketplace: Platform subscription for this organization
-		edge.To("subscription", Subscription.Type).
-			Unique().
-			Comment("Platform subscription for this organization"),
+		// Marketplace: subscriptions of this organization, at most one
+		// platform-wide (no listing) plus one per listing
+		edge.To("subscriptions", Subscription.Type).
+			Comment("Subscriptions of this organization"),
 	}
 }
 

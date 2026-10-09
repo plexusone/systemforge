@@ -10976,6 +10976,7 @@ type ListingMutation struct {
 	id                 *uuid.UUID
 	product_type       *string
 	product_id         *uuid.UUID
+	application        *string
 	title              *string
 	description        *string
 	pricing_model      *listing.PricingModel
@@ -11259,6 +11260,55 @@ func (m *ListingMutation) ProductIDCleared() bool {
 func (m *ListingMutation) ResetProductID() {
 	m.product_id = nil
 	delete(m.clearedFields, listing.FieldProductID)
+}
+
+// SetApplication sets the "application" field.
+func (m *ListingMutation) SetApplication(s string) {
+	m.application = &s
+}
+
+// Application returns the value of the "application" field in the mutation.
+func (m *ListingMutation) Application() (r string, exists bool) {
+	v := m.application
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApplication returns the old "application" field's value of the Listing entity.
+// If the Listing object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ListingMutation) OldApplication(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApplication is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApplication requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApplication: %w", err)
+	}
+	return oldValue.Application, nil
+}
+
+// ClearApplication clears the value of the "application" field.
+func (m *ListingMutation) ClearApplication() {
+	m.application = nil
+	m.clearedFields[listing.FieldApplication] = struct{}{}
+}
+
+// ApplicationCleared returns if the "application" field was cleared in this mutation.
+func (m *ListingMutation) ApplicationCleared() bool {
+	_, ok := m.clearedFields[listing.FieldApplication]
+	return ok
+}
+
+// ResetApplication resets all changes to the "application" field.
+func (m *ListingMutation) ResetApplication() {
+	m.application = nil
+	delete(m.clearedFields, listing.FieldApplication)
 }
 
 // SetTitle sets the "title" field.
@@ -11822,7 +11872,7 @@ func (m *ListingMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ListingMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
 	if m.creator_org != nil {
 		fields = append(fields, listing.FieldCreatorOrgID)
 	}
@@ -11834,6 +11884,9 @@ func (m *ListingMutation) Fields() []string {
 	}
 	if m.product_id != nil {
 		fields = append(fields, listing.FieldProductID)
+	}
+	if m.application != nil {
+		fields = append(fields, listing.FieldApplication)
 	}
 	if m.title != nil {
 		fields = append(fields, listing.FieldTitle)
@@ -11881,6 +11934,8 @@ func (m *ListingMutation) Field(name string) (ent.Value, bool) {
 		return m.ProductType()
 	case listing.FieldProductID:
 		return m.ProductID()
+	case listing.FieldApplication:
+		return m.Application()
 	case listing.FieldTitle:
 		return m.Title()
 	case listing.FieldDescription:
@@ -11918,6 +11973,8 @@ func (m *ListingMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldProductType(ctx)
 	case listing.FieldProductID:
 		return m.OldProductID(ctx)
+	case listing.FieldApplication:
+		return m.OldApplication(ctx)
 	case listing.FieldTitle:
 		return m.OldTitle(ctx)
 	case listing.FieldDescription:
@@ -11974,6 +12031,13 @@ func (m *ListingMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetProductID(v)
+		return nil
+	case listing.FieldApplication:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApplication(v)
 		return nil
 	case listing.FieldTitle:
 		v, ok := value.(string)
@@ -12093,6 +12157,9 @@ func (m *ListingMutation) ClearedFields() []string {
 	if m.FieldCleared(listing.FieldProductID) {
 		fields = append(fields, listing.FieldProductID)
 	}
+	if m.FieldCleared(listing.FieldApplication) {
+		fields = append(fields, listing.FieldApplication)
+	}
 	if m.FieldCleared(listing.FieldDescription) {
 		fields = append(fields, listing.FieldDescription)
 	}
@@ -12118,6 +12185,9 @@ func (m *ListingMutation) ClearField(name string) error {
 	switch name {
 	case listing.FieldProductID:
 		m.ClearProductID()
+		return nil
+	case listing.FieldApplication:
+		m.ClearApplication()
 		return nil
 	case listing.FieldDescription:
 		m.ClearDescription()
@@ -12147,6 +12217,9 @@ func (m *ListingMutation) ResetField(name string) error {
 		return nil
 	case listing.FieldProductID:
 		m.ResetProductID()
+		return nil
+	case listing.FieldApplication:
+		m.ResetApplication()
 		return nil
 	case listing.FieldTitle:
 		m.ResetTitle()
@@ -22218,8 +22291,9 @@ type OrganizationMutation struct {
 	licenses                     map[uuid.UUID]struct{}
 	removedlicenses              map[uuid.UUID]struct{}
 	clearedlicenses              bool
-	subscription                 *uuid.UUID
-	clearedsubscription          bool
+	subscriptions                map[uuid.UUID]struct{}
+	removedsubscriptions         map[uuid.UUID]struct{}
+	clearedsubscriptions         bool
 	done                         bool
 	oldValue                     func(context.Context) (*Organization, error)
 	predicates                   []predicate.Organization
@@ -23154,43 +23228,58 @@ func (m *OrganizationMutation) ResetLicenses() {
 	m.removedlicenses = nil
 }
 
-// SetSubscriptionID sets the "subscription" edge to the Subscription entity by id.
-func (m *OrganizationMutation) SetSubscriptionID(id uuid.UUID) {
-	m.subscription = &id
+// AddSubscriptionIDs adds the "subscriptions" edge to the Subscription entity by ids.
+func (m *OrganizationMutation) AddSubscriptionIDs(ids ...uuid.UUID) {
+	if m.subscriptions == nil {
+		m.subscriptions = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.subscriptions[ids[i]] = struct{}{}
+	}
 }
 
-// ClearSubscription clears the "subscription" edge to the Subscription entity.
-func (m *OrganizationMutation) ClearSubscription() {
-	m.clearedsubscription = true
+// ClearSubscriptions clears the "subscriptions" edge to the Subscription entity.
+func (m *OrganizationMutation) ClearSubscriptions() {
+	m.clearedsubscriptions = true
 }
 
-// SubscriptionCleared reports if the "subscription" edge to the Subscription entity was cleared.
-func (m *OrganizationMutation) SubscriptionCleared() bool {
-	return m.clearedsubscription
+// SubscriptionsCleared reports if the "subscriptions" edge to the Subscription entity was cleared.
+func (m *OrganizationMutation) SubscriptionsCleared() bool {
+	return m.clearedsubscriptions
 }
 
-// SubscriptionID returns the "subscription" edge ID in the mutation.
-func (m *OrganizationMutation) SubscriptionID() (id uuid.UUID, exists bool) {
-	if m.subscription != nil {
-		return *m.subscription, true
+// RemoveSubscriptionIDs removes the "subscriptions" edge to the Subscription entity by IDs.
+func (m *OrganizationMutation) RemoveSubscriptionIDs(ids ...uuid.UUID) {
+	if m.removedsubscriptions == nil {
+		m.removedsubscriptions = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.subscriptions, ids[i])
+		m.removedsubscriptions[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedSubscriptions returns the removed IDs of the "subscriptions" edge to the Subscription entity.
+func (m *OrganizationMutation) RemovedSubscriptionsIDs() (ids []uuid.UUID) {
+	for id := range m.removedsubscriptions {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// SubscriptionIDs returns the "subscription" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// SubscriptionID instead. It exists only for internal usage by the builders.
-func (m *OrganizationMutation) SubscriptionIDs() (ids []uuid.UUID) {
-	if id := m.subscription; id != nil {
-		ids = append(ids, *id)
+// SubscriptionsIDs returns the "subscriptions" edge IDs in the mutation.
+func (m *OrganizationMutation) SubscriptionsIDs() (ids []uuid.UUID) {
+	for id := range m.subscriptions {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetSubscription resets all changes to the "subscription" edge.
-func (m *OrganizationMutation) ResetSubscription() {
-	m.subscription = nil
-	m.clearedsubscription = false
+// ResetSubscriptions resets all changes to the "subscriptions" edge.
+func (m *OrganizationMutation) ResetSubscriptions() {
+	m.subscriptions = nil
+	m.clearedsubscriptions = false
+	m.removedsubscriptions = nil
 }
 
 // Where appends a list predicates to the OrganizationMutation builder.
@@ -23551,8 +23640,8 @@ func (m *OrganizationMutation) AddedEdges() []string {
 	if m.licenses != nil {
 		edges = append(edges, organization.EdgeLicenses)
 	}
-	if m.subscription != nil {
-		edges = append(edges, organization.EdgeSubscription)
+	if m.subscriptions != nil {
+		edges = append(edges, organization.EdgeSubscriptions)
 	}
 	return edges
 }
@@ -23601,10 +23690,12 @@ func (m *OrganizationMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case organization.EdgeSubscription:
-		if id := m.subscription; id != nil {
-			return []ent.Value{*id}
+	case organization.EdgeSubscriptions:
+		ids := make([]ent.Value, 0, len(m.subscriptions))
+		for id := range m.subscriptions {
+			ids = append(ids, id)
 		}
+		return ids
 	}
 	return nil
 }
@@ -23629,6 +23720,9 @@ func (m *OrganizationMutation) RemovedEdges() []string {
 	}
 	if m.removedlicenses != nil {
 		edges = append(edges, organization.EdgeLicenses)
+	}
+	if m.removedsubscriptions != nil {
+		edges = append(edges, organization.EdgeSubscriptions)
 	}
 	return edges
 }
@@ -23673,6 +23767,12 @@ func (m *OrganizationMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case organization.EdgeSubscriptions:
+		ids := make([]ent.Value, 0, len(m.removedsubscriptions))
+		for id := range m.removedsubscriptions {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
@@ -23701,8 +23801,8 @@ func (m *OrganizationMutation) ClearedEdges() []string {
 	if m.clearedlicenses {
 		edges = append(edges, organization.EdgeLicenses)
 	}
-	if m.clearedsubscription {
-		edges = append(edges, organization.EdgeSubscription)
+	if m.clearedsubscriptions {
+		edges = append(edges, organization.EdgeSubscriptions)
 	}
 	return edges
 }
@@ -23725,8 +23825,8 @@ func (m *OrganizationMutation) EdgeCleared(name string) bool {
 		return m.clearedlistings
 	case organization.EdgeLicenses:
 		return m.clearedlicenses
-	case organization.EdgeSubscription:
-		return m.clearedsubscription
+	case organization.EdgeSubscriptions:
+		return m.clearedsubscriptions
 	}
 	return false
 }
@@ -23737,9 +23837,6 @@ func (m *OrganizationMutation) ClearEdge(name string) error {
 	switch name {
 	case organization.EdgeOwner:
 		m.ClearOwner()
-		return nil
-	case organization.EdgeSubscription:
-		m.ClearSubscription()
 		return nil
 	}
 	return fmt.Errorf("unknown Organization unique edge %s", name)
@@ -23770,8 +23867,8 @@ func (m *OrganizationMutation) ResetEdge(name string) error {
 	case organization.EdgeLicenses:
 		m.ResetLicenses()
 		return nil
-	case organization.EdgeSubscription:
-		m.ResetSubscription()
+	case organization.EdgeSubscriptions:
+		m.ResetSubscriptions()
 		return nil
 	}
 	return fmt.Errorf("unknown Organization edge %s", name)
@@ -31376,6 +31473,7 @@ type SubscriptionMutation struct {
 	op                     Op
 	typ                    string
 	id                     *uuid.UUID
+	listing_id             *uuid.UUID
 	plan_tier              *string
 	status                 *subscription.Status
 	current_period_start   *time.Time
@@ -31531,6 +31629,55 @@ func (m *SubscriptionMutation) OldOrganizationID(ctx context.Context) (v uuid.UU
 // ResetOrganizationID resets all changes to the "organization_id" field.
 func (m *SubscriptionMutation) ResetOrganizationID() {
 	m.organization = nil
+}
+
+// SetListingID sets the "listing_id" field.
+func (m *SubscriptionMutation) SetListingID(u uuid.UUID) {
+	m.listing_id = &u
+}
+
+// ListingID returns the value of the "listing_id" field in the mutation.
+func (m *SubscriptionMutation) ListingID() (r uuid.UUID, exists bool) {
+	v := m.listing_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldListingID returns the old "listing_id" field's value of the Subscription entity.
+// If the Subscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionMutation) OldListingID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldListingID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldListingID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldListingID: %w", err)
+	}
+	return oldValue.ListingID, nil
+}
+
+// ClearListingID clears the value of the "listing_id" field.
+func (m *SubscriptionMutation) ClearListingID() {
+	m.listing_id = nil
+	m.clearedFields[subscription.FieldListingID] = struct{}{}
+}
+
+// ListingIDCleared returns if the "listing_id" field was cleared in this mutation.
+func (m *SubscriptionMutation) ListingIDCleared() bool {
+	_, ok := m.clearedFields[subscription.FieldListingID]
+	return ok
+}
+
+// ResetListingID resets all changes to the "listing_id" field.
+func (m *SubscriptionMutation) ResetListingID() {
+	m.listing_id = nil
+	delete(m.clearedFields, subscription.FieldListingID)
 }
 
 // SetPlanTier sets the "plan_tier" field.
@@ -31944,9 +32091,12 @@ func (m *SubscriptionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SubscriptionMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.organization != nil {
 		fields = append(fields, subscription.FieldOrganizationID)
+	}
+	if m.listing_id != nil {
+		fields = append(fields, subscription.FieldListingID)
 	}
 	if m.plan_tier != nil {
 		fields = append(fields, subscription.FieldPlanTier)
@@ -31985,6 +32135,8 @@ func (m *SubscriptionMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case subscription.FieldOrganizationID:
 		return m.OrganizationID()
+	case subscription.FieldListingID:
+		return m.ListingID()
 	case subscription.FieldPlanTier:
 		return m.PlanTier()
 	case subscription.FieldStatus:
@@ -32014,6 +32166,8 @@ func (m *SubscriptionMutation) OldField(ctx context.Context, name string) (ent.V
 	switch name {
 	case subscription.FieldOrganizationID:
 		return m.OldOrganizationID(ctx)
+	case subscription.FieldListingID:
+		return m.OldListingID(ctx)
 	case subscription.FieldPlanTier:
 		return m.OldPlanTier(ctx)
 	case subscription.FieldStatus:
@@ -32047,6 +32201,13 @@ func (m *SubscriptionMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetOrganizationID(v)
+		return nil
+	case subscription.FieldListingID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetListingID(v)
 		return nil
 	case subscription.FieldPlanTier:
 		v, ok := value.(string)
@@ -32141,6 +32302,9 @@ func (m *SubscriptionMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *SubscriptionMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(subscription.FieldListingID) {
+		fields = append(fields, subscription.FieldListingID)
+	}
 	if m.FieldCleared(subscription.FieldStripeSubscriptionID) {
 		fields = append(fields, subscription.FieldStripeSubscriptionID)
 	}
@@ -32161,6 +32325,9 @@ func (m *SubscriptionMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *SubscriptionMutation) ClearField(name string) error {
 	switch name {
+	case subscription.FieldListingID:
+		m.ClearListingID()
+		return nil
 	case subscription.FieldStripeSubscriptionID:
 		m.ClearStripeSubscriptionID()
 		return nil
@@ -32177,6 +32344,9 @@ func (m *SubscriptionMutation) ResetField(name string) error {
 	switch name {
 	case subscription.FieldOrganizationID:
 		m.ResetOrganizationID()
+		return nil
+	case subscription.FieldListingID:
+		m.ResetListingID()
 		return nil
 	case subscription.FieldPlanTier:
 		m.ResetPlanTier()

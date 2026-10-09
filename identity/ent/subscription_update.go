@@ -44,6 +44,26 @@ func (_u *SubscriptionUpdate) SetNillableOrganizationID(v *uuid.UUID) *Subscript
 	return _u
 }
 
+// SetListingID sets the "listing_id" field.
+func (_u *SubscriptionUpdate) SetListingID(v uuid.UUID) *SubscriptionUpdate {
+	_u.mutation.SetListingID(v)
+	return _u
+}
+
+// SetNillableListingID sets the "listing_id" field if the given value is not nil.
+func (_u *SubscriptionUpdate) SetNillableListingID(v *uuid.UUID) *SubscriptionUpdate {
+	if v != nil {
+		_u.SetListingID(*v)
+	}
+	return _u
+}
+
+// ClearListingID clears the value of the "listing_id" field.
+func (_u *SubscriptionUpdate) ClearListingID() *SubscriptionUpdate {
+	_u.mutation.ClearListingID()
+	return _u
+}
+
 // SetPlanTier sets the "plan_tier" field.
 func (_u *SubscriptionUpdate) SetPlanTier(v string) *SubscriptionUpdate {
 	_u.mutation.SetPlanTier(v)
@@ -242,6 +262,12 @@ func (_u *SubscriptionUpdate) sqlSave(ctx context.Context) (_node int, err error
 			}
 		}
 	}
+	if value, ok := _u.mutation.ListingID(); ok {
+		_spec.SetField(subscription.FieldListingID, field.TypeUUID, value)
+	}
+	if _u.mutation.ListingIDCleared() {
+		_spec.ClearField(subscription.FieldListingID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.PlanTier(); ok {
 		_spec.SetField(subscription.FieldPlanTier, field.TypeString, value)
 	}
@@ -274,7 +300,7 @@ func (_u *SubscriptionUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   subscription.OrganizationTable,
 			Columns: []string{subscription.OrganizationColumn},
@@ -287,7 +313,7 @@ func (_u *SubscriptionUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if nodes := _u.mutation.OrganizationIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   subscription.OrganizationTable,
 			Columns: []string{subscription.OrganizationColumn},
@@ -332,6 +358,26 @@ func (_u *SubscriptionUpdateOne) SetNillableOrganizationID(v *uuid.UUID) *Subscr
 	if v != nil {
 		_u.SetOrganizationID(*v)
 	}
+	return _u
+}
+
+// SetListingID sets the "listing_id" field.
+func (_u *SubscriptionUpdateOne) SetListingID(v uuid.UUID) *SubscriptionUpdateOne {
+	_u.mutation.SetListingID(v)
+	return _u
+}
+
+// SetNillableListingID sets the "listing_id" field if the given value is not nil.
+func (_u *SubscriptionUpdateOne) SetNillableListingID(v *uuid.UUID) *SubscriptionUpdateOne {
+	if v != nil {
+		_u.SetListingID(*v)
+	}
+	return _u
+}
+
+// ClearListingID clears the value of the "listing_id" field.
+func (_u *SubscriptionUpdateOne) ClearListingID() *SubscriptionUpdateOne {
+	_u.mutation.ClearListingID()
 	return _u
 }
 
@@ -563,6 +609,12 @@ func (_u *SubscriptionUpdateOne) sqlSave(ctx context.Context) (_node *Subscripti
 			}
 		}
 	}
+	if value, ok := _u.mutation.ListingID(); ok {
+		_spec.SetField(subscription.FieldListingID, field.TypeUUID, value)
+	}
+	if _u.mutation.ListingIDCleared() {
+		_spec.ClearField(subscription.FieldListingID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.PlanTier(); ok {
 		_spec.SetField(subscription.FieldPlanTier, field.TypeString, value)
 	}
@@ -595,7 +647,7 @@ func (_u *SubscriptionUpdateOne) sqlSave(ctx context.Context) (_node *Subscripti
 	}
 	if _u.mutation.OrganizationCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   subscription.OrganizationTable,
 			Columns: []string{subscription.OrganizationColumn},
@@ -608,7 +660,7 @@ func (_u *SubscriptionUpdateOne) sqlSave(ctx context.Context) (_node *Subscripti
 	}
 	if nodes := _u.mutation.OrganizationIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   subscription.OrganizationTable,
 			Columns: []string{subscription.OrganizationColumn},

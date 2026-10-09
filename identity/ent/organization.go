@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/principal"
-	"github.com/plexusone/systemforge/identity/ent/subscription"
 )
 
 // Organization is the model entity for the Organization schema.
@@ -65,8 +64,8 @@ type OrganizationEdges struct {
 	Listings []*Listing `json:"listings,omitempty"`
 	// Marketplace licenses held by this organization
 	Licenses []*License `json:"licenses,omitempty"`
-	// Platform subscription for this organization
-	Subscription *Subscription `json:"subscription,omitempty"`
+	// Subscriptions of this organization
+	Subscriptions []*Subscription `json:"subscriptions,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [8]bool
@@ -137,15 +136,13 @@ func (e OrganizationEdges) LicensesOrErr() ([]*License, error) {
 	return nil, &NotLoadedError{edge: "licenses"}
 }
 
-// SubscriptionOrErr returns the Subscription value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e OrganizationEdges) SubscriptionOrErr() (*Subscription, error) {
-	if e.Subscription != nil {
-		return e.Subscription, nil
-	} else if e.loadedTypes[7] {
-		return nil, &NotFoundError{label: subscription.Label}
+// SubscriptionsOrErr returns the Subscriptions value or an error if the edge
+// was not loaded in eager-loading.
+func (e OrganizationEdges) SubscriptionsOrErr() ([]*Subscription, error) {
+	if e.loadedTypes[7] {
+		return e.Subscriptions, nil
 	}
-	return nil, &NotLoadedError{edge: "subscription"}
+	return nil, &NotLoadedError{edge: "subscriptions"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -306,9 +303,9 @@ func (_m *Organization) QueryLicenses() *LicenseQuery {
 	return NewOrganizationClient(_m.config).QueryLicenses(_m)
 }
 
-// QuerySubscription queries the "subscription" edge of the Organization entity.
-func (_m *Organization) QuerySubscription() *SubscriptionQuery {
-	return NewOrganizationClient(_m.config).QuerySubscription(_m)
+// QuerySubscriptions queries the "subscriptions" edge of the Organization entity.
+func (_m *Organization) QuerySubscriptions() *SubscriptionQuery {
+	return NewOrganizationClient(_m.config).QuerySubscriptions(_m)
 }
 
 // Update returns a builder for updating this Organization.

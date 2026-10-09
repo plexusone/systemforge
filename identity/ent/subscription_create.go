@@ -31,6 +31,20 @@ func (_c *SubscriptionCreate) SetOrganizationID(v uuid.UUID) *SubscriptionCreate
 	return _c
 }
 
+// SetListingID sets the "listing_id" field.
+func (_c *SubscriptionCreate) SetListingID(v uuid.UUID) *SubscriptionCreate {
+	_c.mutation.SetListingID(v)
+	return _c
+}
+
+// SetNillableListingID sets the "listing_id" field if the given value is not nil.
+func (_c *SubscriptionCreate) SetNillableListingID(v *uuid.UUID) *SubscriptionCreate {
+	if v != nil {
+		_c.SetListingID(*v)
+	}
+	return _c
+}
+
 // SetPlanTier sets the "plan_tier" field.
 func (_c *SubscriptionCreate) SetPlanTier(v string) *SubscriptionCreate {
 	_c.mutation.SetPlanTier(v)
@@ -308,6 +322,10 @@ func (_c *SubscriptionCreate) createSpec() (*Subscription, *sqlgraph.CreateSpec)
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
+	if value, ok := _c.mutation.ListingID(); ok {
+		_spec.SetField(subscription.FieldListingID, field.TypeUUID, value)
+		_node.ListingID = &value
+	}
 	if value, ok := _c.mutation.PlanTier(); ok {
 		_spec.SetField(subscription.FieldPlanTier, field.TypeString, value)
 		_node.PlanTier = value
@@ -346,7 +364,7 @@ func (_c *SubscriptionCreate) createSpec() (*Subscription, *sqlgraph.CreateSpec)
 	}
 	if nodes := _c.mutation.OrganizationIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   subscription.OrganizationTable,
 			Columns: []string{subscription.OrganizationColumn},
@@ -422,6 +440,24 @@ func (u *SubscriptionUpsert) SetOrganizationID(v uuid.UUID) *SubscriptionUpsert 
 // UpdateOrganizationID sets the "organization_id" field to the value that was provided on create.
 func (u *SubscriptionUpsert) UpdateOrganizationID() *SubscriptionUpsert {
 	u.SetExcluded(subscription.FieldOrganizationID)
+	return u
+}
+
+// SetListingID sets the "listing_id" field.
+func (u *SubscriptionUpsert) SetListingID(v uuid.UUID) *SubscriptionUpsert {
+	u.Set(subscription.FieldListingID, v)
+	return u
+}
+
+// UpdateListingID sets the "listing_id" field to the value that was provided on create.
+func (u *SubscriptionUpsert) UpdateListingID() *SubscriptionUpsert {
+	u.SetExcluded(subscription.FieldListingID)
+	return u
+}
+
+// ClearListingID clears the value of the "listing_id" field.
+func (u *SubscriptionUpsert) ClearListingID() *SubscriptionUpsert {
+	u.SetNull(subscription.FieldListingID)
 	return u
 }
 
@@ -595,6 +631,27 @@ func (u *SubscriptionUpsertOne) SetOrganizationID(v uuid.UUID) *SubscriptionUpse
 func (u *SubscriptionUpsertOne) UpdateOrganizationID() *SubscriptionUpsertOne {
 	return u.Update(func(s *SubscriptionUpsert) {
 		s.UpdateOrganizationID()
+	})
+}
+
+// SetListingID sets the "listing_id" field.
+func (u *SubscriptionUpsertOne) SetListingID(v uuid.UUID) *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.SetListingID(v)
+	})
+}
+
+// UpdateListingID sets the "listing_id" field to the value that was provided on create.
+func (u *SubscriptionUpsertOne) UpdateListingID() *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.UpdateListingID()
+	})
+}
+
+// ClearListingID clears the value of the "listing_id" field.
+func (u *SubscriptionUpsertOne) ClearListingID() *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.ClearListingID()
 	})
 }
 
@@ -953,6 +1010,27 @@ func (u *SubscriptionUpsertBulk) SetOrganizationID(v uuid.UUID) *SubscriptionUps
 func (u *SubscriptionUpsertBulk) UpdateOrganizationID() *SubscriptionUpsertBulk {
 	return u.Update(func(s *SubscriptionUpsert) {
 		s.UpdateOrganizationID()
+	})
+}
+
+// SetListingID sets the "listing_id" field.
+func (u *SubscriptionUpsertBulk) SetListingID(v uuid.UUID) *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.SetListingID(v)
+	})
+}
+
+// UpdateListingID sets the "listing_id" field to the value that was provided on create.
+func (u *SubscriptionUpsertBulk) UpdateListingID() *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.UpdateListingID()
+	})
+}
+
+// ClearListingID clears the value of the "listing_id" field.
+func (u *SubscriptionUpsertBulk) ClearListingID() *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.ClearListingID()
 	})
 }
 

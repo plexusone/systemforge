@@ -134,6 +134,12 @@ type Listing struct {
 	// ProductID references the actual product in the app's domain.
 	ProductID uuid.UUID `json:"productId"`
 
+	// Application is the registered application identifier (an
+	// authz.AppVocabulary application) that an active subscription or valid
+	// license on this listing entitles its organization to. Empty when the
+	// listing does not grant an application.
+	Application string `json:"application,omitempty"`
+
 	// Title is the display name for the listing.
 	Title string `json:"title"`
 
@@ -268,6 +274,11 @@ type Subscription struct {
 
 	// OrganizationID is the subscribing organization.
 	OrganizationID uuid.UUID `json:"organizationId"`
+
+	// ListingID is the listing this subscription is for. It is nil for the
+	// organization-wide platform subscription, of which an organization
+	// has at most one; it may hold one subscription per listing.
+	ListingID *uuid.UUID `json:"listingId,omitempty"`
 
 	// PlanTier is the subscription plan name.
 	PlanTier string `json:"planTier"`

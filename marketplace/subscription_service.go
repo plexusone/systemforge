@@ -33,6 +33,9 @@ func (s *EntSubscriptionService) Create(ctx context.Context, sub *Subscription) 
 		SetCurrentPeriodStart(sub.CurrentPeriodStart).
 		SetCurrentPeriodEnd(sub.CurrentPeriodEnd)
 
+	if sub.ListingID != nil {
+		builder.SetListingID(*sub.ListingID)
+	}
 	if sub.StripeSubscriptionID != "" {
 		builder.SetStripeSubscriptionID(sub.StripeSubscriptionID)
 	}
@@ -64,10 +67,12 @@ func (s *EntSubscriptionService) Get(ctx context.Context, id uuid.UUID) (*Subscr
 	return entSubscriptionToSubscription(entSub), nil
 }
 
-// GetByOrg retrieves the subscription for an organization.
+// GetByOrg retrieves the organization-wide platform subscription of an
+// organization, the one with no listing. Use ListByOrg for the
+// per-listing subscriptions.
 func (s *EntSubscriptionService) GetByOrg(ctx context.Context, orgID uuid.UUID) (*Subscription, error) {
 	entSub, err := s.client.Subscription.Query().
-		Where(subscription.OrganizationIDEQ(orgID)).
+		Where(subscription.OrganizationIDEQ(orgID), subscription.ListingIDIsNil()).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -76,6 +81,23 @@ func (s *EntSubscriptionService) GetByOrg(ctx context.Context, orgID uuid.UUID) 
 		return nil, fmt.Errorf("failed to get subscription: %w", err)
 	}
 	return entSubscriptionToSubscription(entSub), nil
+}
+
+// ListByOrg lists every subscription of an organization: the platform
+// subscription and those for individual listings.
+func (s *EntSubscriptionService) ListByOrg(ctx context.Context, orgID uuid.UUID) ([]*Subscription, error) {
+	rows, err := s.client.Subscription.Query().
+		Where(subscription.OrganizationIDEQ(orgID)).
+		Order(ent.Asc(subscription.FieldCreatedAt)).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list subscriptions: %w", err)
+	}
+	out := make([]*Subscription, len(rows))
+	for i, r := range rows {
+		out[i] = entSubscriptionToSubscription(r)
+	}
+	return out, nil
 }
 
 // Update updates a subscription's details.
@@ -200,6 +222,7 @@ func entSubscriptionToSubscription(es *ent.Subscription) *Subscription {
 		UpdatedAt:          es.UpdatedAt,
 	}
 
+	sub.ListingID = es.ListingID
 	if es.StripeSubscriptionID != nil {
 		sub.StripeSubscriptionID = *es.StripeSubscriptionID
 	}

@@ -52,8 +52,8 @@ const (
 	EdgeListings = "listings"
 	// EdgeLicenses holds the string denoting the licenses edge name in mutations.
 	EdgeLicenses = "licenses"
-	// EdgeSubscription holds the string denoting the subscription edge name in mutations.
-	EdgeSubscription = "subscription"
+	// EdgeSubscriptions holds the string denoting the subscriptions edge name in mutations.
+	EdgeSubscriptions = "subscriptions"
 	// Table holds the table name of the organization in the database.
 	Table = "sf_organizations"
 	// OauthAppsTable is the table that holds the oauth_apps relation/edge.
@@ -105,13 +105,13 @@ const (
 	LicensesInverseTable = "sf_licenses"
 	// LicensesColumn is the table column denoting the licenses relation/edge.
 	LicensesColumn = "organization_id"
-	// SubscriptionTable is the table that holds the subscription relation/edge.
-	SubscriptionTable = "sf_subscriptions"
-	// SubscriptionInverseTable is the table name for the Subscription entity.
+	// SubscriptionsTable is the table that holds the subscriptions relation/edge.
+	SubscriptionsTable = "sf_subscriptions"
+	// SubscriptionsInverseTable is the table name for the Subscription entity.
 	// It exists in this package in order to avoid circular dependency with the "subscription" package.
-	SubscriptionInverseTable = "sf_subscriptions"
-	// SubscriptionColumn is the table column denoting the subscription relation/edge.
-	SubscriptionColumn = "organization_id"
+	SubscriptionsInverseTable = "sf_subscriptions"
+	// SubscriptionsColumn is the table column denoting the subscriptions relation/edge.
+	SubscriptionsColumn = "organization_id"
 )
 
 // Columns holds all SQL columns for organization fields.
@@ -333,10 +333,17 @@ func ByLicenses(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// BySubscriptionField orders the results by subscription field.
-func BySubscriptionField(field string, opts ...sql.OrderTermOption) OrderOption {
+// BySubscriptionsCount orders the results by subscriptions count.
+func BySubscriptionsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newSubscriptionStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborsCount(s, newSubscriptionsStep(), opts...)
+	}
+}
+
+// BySubscriptions orders the results by subscriptions terms.
+func BySubscriptions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSubscriptionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newOauthAppsStep() *sqlgraph.Step {
@@ -388,10 +395,10 @@ func newLicensesStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, LicensesTable, LicensesColumn),
 	)
 }
-func newSubscriptionStep() *sqlgraph.Step {
+func newSubscriptionsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(SubscriptionInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, false, SubscriptionTable, SubscriptionColumn),
+		sqlgraph.To(SubscriptionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SubscriptionsTable, SubscriptionsColumn),
 	)
 }

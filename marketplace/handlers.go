@@ -67,6 +67,7 @@ type ListingResponse struct {
 	OwnerID      string         `json:"owner_id"`
 	ProductType  string         `json:"product_type"`
 	ProductID    *string        `json:"product_id,omitempty"`
+	Application  string         `json:"application,omitempty"`
 	Title        string         `json:"title"`
 	Description  string         `json:"description,omitempty"`
 	PricingModel string         `json:"pricing_model"`
@@ -85,6 +86,7 @@ func listingToResponse(l *Listing) *ListingResponse {
 		CreatorOrgID: l.CreatorOrgID.String(),
 		OwnerID:      l.OwnerID.String(),
 		ProductType:  l.ProductType,
+		Application:  l.Application,
 		Title:        l.Title,
 		Description:  l.Description,
 		PricingModel: string(l.PricingModel),

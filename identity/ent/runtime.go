@@ -383,7 +383,7 @@ func init() {
 	// listing.ProductTypeValidator is a validator for the "product_type" field. It is called by the builders before save.
 	listing.ProductTypeValidator = listingDescProductType.Validators[0].(func(string) error)
 	// listingDescTitle is the schema descriptor for title field.
-	listingDescTitle := listingMixinFields0[5].Descriptor()
+	listingDescTitle := listingMixinFields0[6].Descriptor()
 	// listing.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	listing.TitleValidator = func() func(string) error {
 		validators := listingDescTitle.Validators
@@ -401,21 +401,21 @@ func init() {
 		}
 	}()
 	// listingDescPriceCents is the schema descriptor for price_cents field.
-	listingDescPriceCents := listingMixinFields0[8].Descriptor()
+	listingDescPriceCents := listingMixinFields0[9].Descriptor()
 	// listing.DefaultPriceCents holds the default value on creation for the price_cents field.
 	listing.DefaultPriceCents = listingDescPriceCents.Default.(int64)
 	// listingDescCurrency is the schema descriptor for currency field.
-	listingDescCurrency := listingMixinFields0[9].Descriptor()
+	listingDescCurrency := listingMixinFields0[10].Descriptor()
 	// listing.DefaultCurrency holds the default value on creation for the currency field.
 	listing.DefaultCurrency = listingDescCurrency.Default.(string)
 	// listing.CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
 	listing.CurrencyValidator = listingDescCurrency.Validators[0].(func(string) error)
 	// listingDescCreatedAt is the schema descriptor for created_at field.
-	listingDescCreatedAt := listingMixinFields0[12].Descriptor()
+	listingDescCreatedAt := listingMixinFields0[13].Descriptor()
 	// listing.DefaultCreatedAt holds the default value on creation for the created_at field.
 	listing.DefaultCreatedAt = listingDescCreatedAt.Default.(func() time.Time)
 	// listingDescUpdatedAt is the schema descriptor for updated_at field.
-	listingDescUpdatedAt := listingMixinFields0[13].Descriptor()
+	listingDescUpdatedAt := listingMixinFields0[14].Descriptor()
 	// listing.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	listing.DefaultUpdatedAt = listingDescUpdatedAt.Default.(func() time.Time)
 	// listing.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -873,25 +873,25 @@ func init() {
 	subscriptionFields := schema.Subscription{}.Fields()
 	_ = subscriptionFields
 	// subscriptionDescPlanTier is the schema descriptor for plan_tier field.
-	subscriptionDescPlanTier := subscriptionMixinFields0[2].Descriptor()
+	subscriptionDescPlanTier := subscriptionMixinFields0[3].Descriptor()
 	// subscription.DefaultPlanTier holds the default value on creation for the plan_tier field.
 	subscription.DefaultPlanTier = subscriptionDescPlanTier.Default.(string)
 	// subscription.PlanTierValidator is a validator for the "plan_tier" field. It is called by the builders before save.
 	subscription.PlanTierValidator = subscriptionDescPlanTier.Validators[0].(func(string) error)
 	// subscriptionDescCurrentPeriodStart is the schema descriptor for current_period_start field.
-	subscriptionDescCurrentPeriodStart := subscriptionMixinFields0[4].Descriptor()
+	subscriptionDescCurrentPeriodStart := subscriptionMixinFields0[5].Descriptor()
 	// subscription.DefaultCurrentPeriodStart holds the default value on creation for the current_period_start field.
 	subscription.DefaultCurrentPeriodStart = subscriptionDescCurrentPeriodStart.Default.(func() time.Time)
 	// subscriptionDescCancelAtPeriodEnd is the schema descriptor for cancel_at_period_end field.
-	subscriptionDescCancelAtPeriodEnd := subscriptionMixinFields0[8].Descriptor()
+	subscriptionDescCancelAtPeriodEnd := subscriptionMixinFields0[9].Descriptor()
 	// subscription.DefaultCancelAtPeriodEnd holds the default value on creation for the cancel_at_period_end field.
 	subscription.DefaultCancelAtPeriodEnd = subscriptionDescCancelAtPeriodEnd.Default.(bool)
 	// subscriptionDescCreatedAt is the schema descriptor for created_at field.
-	subscriptionDescCreatedAt := subscriptionMixinFields0[9].Descriptor()
+	subscriptionDescCreatedAt := subscriptionMixinFields0[10].Descriptor()
 	// subscription.DefaultCreatedAt holds the default value on creation for the created_at field.
 	subscription.DefaultCreatedAt = subscriptionDescCreatedAt.Default.(func() time.Time)
 	// subscriptionDescUpdatedAt is the schema descriptor for updated_at field.
-	subscriptionDescUpdatedAt := subscriptionMixinFields0[10].Descriptor()
+	subscriptionDescUpdatedAt := subscriptionMixinFields0[11].Descriptor()
 	// subscription.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	subscription.DefaultUpdatedAt = subscriptionDescUpdatedAt.Default.(func() time.Time)
 	// subscription.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

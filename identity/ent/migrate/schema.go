@@ -551,6 +551,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "product_type", Type: field.TypeString},
 		{Name: "product_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "application", Type: field.TypeString, Nullable: true},
 		{Name: "title", Type: field.TypeString, Size: 200},
 		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "pricing_model", Type: field.TypeEnum, Enums: []string{"free", "one_time", "subscription", "per_seat"}, Default: "free"},
@@ -572,13 +573,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_listings_sf_organizations_listings",
-				Columns:    []*schema.Column{SfListingsColumns[13]},
+				Columns:    []*schema.Column{SfListingsColumns[14]},
 				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "sf_listings_sf_principals_owned_listings",
-				Columns:    []*schema.Column{SfListingsColumns[14]},
+				Columns:    []*schema.Column{SfListingsColumns[15]},
 				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -587,22 +588,22 @@ var (
 			{
 				Name:    "listing_creator_org_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfListingsColumns[13]},
+				Columns: []*schema.Column{SfListingsColumns[14]},
 			},
 			{
 				Name:    "listing_owner_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfListingsColumns[14]},
+				Columns: []*schema.Column{SfListingsColumns[15]},
 			},
 			{
 				Name:    "listing_status",
 				Unique:  false,
-				Columns: []*schema.Column{SfListingsColumns[8]},
+				Columns: []*schema.Column{SfListingsColumns[9]},
 			},
 			{
 				Name:    "listing_pricing_model",
 				Unique:  false,
-				Columns: []*schema.Column{SfListingsColumns[5]},
+				Columns: []*schema.Column{SfListingsColumns[6]},
 			},
 			{
 				Name:    "listing_product_type",
@@ -615,9 +616,14 @@ var (
 				Columns: []*schema.Column{SfListingsColumns[1], SfListingsColumns[2]},
 			},
 			{
+				Name:    "listing_application",
+				Unique:  false,
+				Columns: []*schema.Column{SfListingsColumns[3]},
+			},
+			{
 				Name:    "listing_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{SfListingsColumns[8], SfListingsColumns[10]},
+				Columns: []*schema.Column{SfListingsColumns[9], SfListingsColumns[11]},
 			},
 		},
 	}
@@ -1475,6 +1481,7 @@ var (
 	// SfSubscriptionsColumns holds the columns for the "sf_subscriptions" table.
 	SfSubscriptionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "listing_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "plan_tier", Type: field.TypeString, Default: "free"},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "trialing", "past_due", "canceled", "unpaid"}, Default: "active"},
 		{Name: "current_period_start", Type: field.TypeTime},
@@ -1484,7 +1491,7 @@ var (
 		{Name: "cancel_at_period_end", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "organization_id", Type: field.TypeUUID, Unique: true},
+		{Name: "organization_id", Type: field.TypeUUID},
 	}
 	// SfSubscriptionsTable holds the schema information for the "sf_subscriptions" table.
 	SfSubscriptionsTable = &schema.Table{
@@ -1493,8 +1500,8 @@ var (
 		PrimaryKey: []*schema.Column{SfSubscriptionsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "sf_subscriptions_sf_organizations_subscription",
-				Columns:    []*schema.Column{SfSubscriptionsColumns[10]},
+				Symbol:     "sf_subscriptions_sf_organizations_subscriptions",
+				Columns:    []*schema.Column{SfSubscriptionsColumns[11]},
 				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1502,38 +1509,56 @@ var (
 		Indexes: []*schema.Index{
 			{
 				Name:    "subscription_organization_id",
-				Unique:  true,
-				Columns: []*schema.Column{SfSubscriptionsColumns[10]},
-			},
-			{
-				Name:    "subscription_status",
 				Unique:  false,
-				Columns: []*schema.Column{SfSubscriptionsColumns[2]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[11]},
 			},
 			{
-				Name:    "subscription_plan_tier",
+				Name:    "subscription_organization_id_listing_id",
+				Unique:  true,
+				Columns: []*schema.Column{SfSubscriptionsColumns[11], SfSubscriptionsColumns[1]},
+			},
+			{
+				Name:    "subscription_platform_per_org",
+				Unique:  true,
+				Columns: []*schema.Column{SfSubscriptionsColumns[11]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "listing_id IS NULL",
+				},
+			},
+			{
+				Name:    "subscription_listing_id",
 				Unique:  false,
 				Columns: []*schema.Column{SfSubscriptionsColumns[1]},
 			},
 			{
-				Name:    "subscription_stripe_subscription_id",
+				Name:    "subscription_status",
 				Unique:  false,
-				Columns: []*schema.Column{SfSubscriptionsColumns[5]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[3]},
 			},
 			{
-				Name:    "subscription_stripe_customer_id",
+				Name:    "subscription_plan_tier",
+				Unique:  false,
+				Columns: []*schema.Column{SfSubscriptionsColumns[2]},
+			},
+			{
+				Name:    "subscription_stripe_subscription_id",
 				Unique:  false,
 				Columns: []*schema.Column{SfSubscriptionsColumns[6]},
 			},
 			{
+				Name:    "subscription_stripe_customer_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfSubscriptionsColumns[7]},
+			},
+			{
 				Name:    "subscription_current_period_end",
 				Unique:  false,
-				Columns: []*schema.Column{SfSubscriptionsColumns[4]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[5]},
 			},
 			{
 				Name:    "subscription_status_current_period_end",
 				Unique:  false,
-				Columns: []*schema.Column{SfSubscriptionsColumns[2], SfSubscriptionsColumns[4]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[3], SfSubscriptionsColumns[5]},
 			},
 		},
 	}

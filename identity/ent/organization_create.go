@@ -284,23 +284,19 @@ func (_c *OrganizationCreate) AddLicenses(v ...*License) *OrganizationCreate {
 	return _c.AddLicenseIDs(ids...)
 }
 
-// SetSubscriptionID sets the "subscription" edge to the Subscription entity by ID.
-func (_c *OrganizationCreate) SetSubscriptionID(id uuid.UUID) *OrganizationCreate {
-	_c.mutation.SetSubscriptionID(id)
+// AddSubscriptionIDs adds the "subscriptions" edge to the Subscription entity by IDs.
+func (_c *OrganizationCreate) AddSubscriptionIDs(ids ...uuid.UUID) *OrganizationCreate {
+	_c.mutation.AddSubscriptionIDs(ids...)
 	return _c
 }
 
-// SetNillableSubscriptionID sets the "subscription" edge to the Subscription entity by ID if the given value is not nil.
-func (_c *OrganizationCreate) SetNillableSubscriptionID(id *uuid.UUID) *OrganizationCreate {
-	if id != nil {
-		_c = _c.SetSubscriptionID(*id)
+// AddSubscriptions adds the "subscriptions" edges to the Subscription entity.
+func (_c *OrganizationCreate) AddSubscriptions(v ...*Subscription) *OrganizationCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _c
-}
-
-// SetSubscription sets the "subscription" edge to the Subscription entity.
-func (_c *OrganizationCreate) SetSubscription(v *Subscription) *OrganizationCreate {
-	return _c.SetSubscriptionID(v.ID)
+	return _c.AddSubscriptionIDs(ids...)
 }
 
 // Mutation returns the OrganizationMutation object of the builder.
@@ -584,12 +580,12 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.SubscriptionIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.SubscriptionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   organization.SubscriptionTable,
-			Columns: []string{organization.SubscriptionColumn},
+			Table:   organization.SubscriptionsTable,
+			Columns: []string{organization.SubscriptionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(subscription.FieldID, field.TypeUUID),

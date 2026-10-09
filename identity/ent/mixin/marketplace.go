@@ -57,6 +57,10 @@ func (ListingMixin) Fields() []ent.Field {
 			Optional().
 			Nillable().
 			Comment("Reference to the actual product (optional for drafts)"),
+		field.String("application").
+			Optional().
+			Nillable().
+			Comment("Application identifier, as registered in the authz vocabulary registry, that holding this listing entitles an organization to"),
 
 		// Display
 		field.String("title").
@@ -204,8 +208,15 @@ func (SubscriptionMixin) Fields() []ent.Field {
 
 		// Organization reference
 		field.UUID("organization_id", uuid.UUID{}).
-			Unique().
 			Comment("The subscribing organization"),
+
+		// The listing this subscription is for. A subscription without one
+		// is the organization-wide platform subscription, of which an
+		// organization has at most one.
+		field.UUID("listing_id", uuid.UUID{}).
+			Optional().
+			Nillable().
+			Comment("Listing this subscription is for; null for the platform subscription"),
 
 		// Plan
 		field.String("plan_tier").

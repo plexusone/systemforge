@@ -76,6 +76,11 @@ func ProductID(v uuid.UUID) predicate.Listing {
 	return predicate.Listing(sql.FieldEQ(FieldProductID, v))
 }
 
+// Application applies equality check predicate on the "application" field. It's identical to ApplicationEQ.
+func Application(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldEQ(FieldApplication, v))
+}
+
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
 func Title(v string) predicate.Listing {
 	return predicate.Listing(sql.FieldEQ(FieldTitle, v))
@@ -264,6 +269,81 @@ func ProductIDIsNil() predicate.Listing {
 // ProductIDNotNil applies the NotNil predicate on the "product_id" field.
 func ProductIDNotNil() predicate.Listing {
 	return predicate.Listing(sql.FieldNotNull(FieldProductID))
+}
+
+// ApplicationEQ applies the EQ predicate on the "application" field.
+func ApplicationEQ(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldEQ(FieldApplication, v))
+}
+
+// ApplicationNEQ applies the NEQ predicate on the "application" field.
+func ApplicationNEQ(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldNEQ(FieldApplication, v))
+}
+
+// ApplicationIn applies the In predicate on the "application" field.
+func ApplicationIn(vs ...string) predicate.Listing {
+	return predicate.Listing(sql.FieldIn(FieldApplication, vs...))
+}
+
+// ApplicationNotIn applies the NotIn predicate on the "application" field.
+func ApplicationNotIn(vs ...string) predicate.Listing {
+	return predicate.Listing(sql.FieldNotIn(FieldApplication, vs...))
+}
+
+// ApplicationGT applies the GT predicate on the "application" field.
+func ApplicationGT(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldGT(FieldApplication, v))
+}
+
+// ApplicationGTE applies the GTE predicate on the "application" field.
+func ApplicationGTE(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldGTE(FieldApplication, v))
+}
+
+// ApplicationLT applies the LT predicate on the "application" field.
+func ApplicationLT(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldLT(FieldApplication, v))
+}
+
+// ApplicationLTE applies the LTE predicate on the "application" field.
+func ApplicationLTE(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldLTE(FieldApplication, v))
+}
+
+// ApplicationContains applies the Contains predicate on the "application" field.
+func ApplicationContains(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldContains(FieldApplication, v))
+}
+
+// ApplicationHasPrefix applies the HasPrefix predicate on the "application" field.
+func ApplicationHasPrefix(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldHasPrefix(FieldApplication, v))
+}
+
+// ApplicationHasSuffix applies the HasSuffix predicate on the "application" field.
+func ApplicationHasSuffix(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldHasSuffix(FieldApplication, v))
+}
+
+// ApplicationIsNil applies the IsNil predicate on the "application" field.
+func ApplicationIsNil() predicate.Listing {
+	return predicate.Listing(sql.FieldIsNull(FieldApplication))
+}
+
+// ApplicationNotNil applies the NotNil predicate on the "application" field.
+func ApplicationNotNil() predicate.Listing {
+	return predicate.Listing(sql.FieldNotNull(FieldApplication))
+}
+
+// ApplicationEqualFold applies the EqualFold predicate on the "application" field.
+func ApplicationEqualFold(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldEqualFold(FieldApplication, v))
+}
+
+// ApplicationContainsFold applies the ContainsFold predicate on the "application" field.
+func ApplicationContainsFold(v string) predicate.Listing {
+	return predicate.Listing(sql.FieldContainsFold(FieldApplication, v))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.

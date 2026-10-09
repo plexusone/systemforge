@@ -3842,15 +3842,15 @@ func (c *OrganizationClient) QueryLicenses(_m *Organization) *LicenseQuery {
 	return query
 }
 
-// QuerySubscription queries the subscription edge of a Organization.
-func (c *OrganizationClient) QuerySubscription(_m *Organization) *SubscriptionQuery {
+// QuerySubscriptions queries the subscriptions edge of a Organization.
+func (c *OrganizationClient) QuerySubscriptions(_m *Organization) *SubscriptionQuery {
 	query := (&SubscriptionClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(organization.Table, organization.FieldID, id),
 			sqlgraph.To(subscription.Table, subscription.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, organization.SubscriptionTable, organization.SubscriptionColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, organization.SubscriptionsTable, organization.SubscriptionsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -5325,7 +5325,7 @@ func (c *SubscriptionClient) QueryOrganization(_m *Subscription) *OrganizationQu
 		step := sqlgraph.NewStep(
 			sqlgraph.From(subscription.Table, subscription.FieldID, id),
 			sqlgraph.To(organization.Table, organization.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, subscription.OrganizationTable, subscription.OrganizationColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, subscription.OrganizationTable, subscription.OrganizationColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

@@ -75,7 +75,7 @@ func (_q *SubscriptionQuery) QueryOrganization() *OrganizationQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(subscription.Table, subscription.FieldID, selector),
 			sqlgraph.To(organization.Table, organization.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, subscription.OrganizationTable, subscription.OrganizationColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, subscription.OrganizationTable, subscription.OrganizationColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil

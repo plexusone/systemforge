@@ -69,6 +69,7 @@ func (Listing) Indexes() []ent.Index {
 		index.Fields("pricing_model"),
 		index.Fields("product_type"),
 		index.Fields("product_type", "product_id"),
+		index.Fields("application"),
 		index.Fields("status", "created_at"),
 	}
 }

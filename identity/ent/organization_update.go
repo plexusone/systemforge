@@ -299,23 +299,19 @@ func (_u *OrganizationUpdate) AddLicenses(v ...*License) *OrganizationUpdate {
 	return _u.AddLicenseIDs(ids...)
 }
 
-// SetSubscriptionID sets the "subscription" edge to the Subscription entity by ID.
-func (_u *OrganizationUpdate) SetSubscriptionID(id uuid.UUID) *OrganizationUpdate {
-	_u.mutation.SetSubscriptionID(id)
+// AddSubscriptionIDs adds the "subscriptions" edge to the Subscription entity by IDs.
+func (_u *OrganizationUpdate) AddSubscriptionIDs(ids ...uuid.UUID) *OrganizationUpdate {
+	_u.mutation.AddSubscriptionIDs(ids...)
 	return _u
 }
 
-// SetNillableSubscriptionID sets the "subscription" edge to the Subscription entity by ID if the given value is not nil.
-func (_u *OrganizationUpdate) SetNillableSubscriptionID(id *uuid.UUID) *OrganizationUpdate {
-	if id != nil {
-		_u = _u.SetSubscriptionID(*id)
+// AddSubscriptions adds the "subscriptions" edges to the Subscription entity.
+func (_u *OrganizationUpdate) AddSubscriptions(v ...*Subscription) *OrganizationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _u
-}
-
-// SetSubscription sets the "subscription" edge to the Subscription entity.
-func (_u *OrganizationUpdate) SetSubscription(v *Subscription) *OrganizationUpdate {
-	return _u.SetSubscriptionID(v.ID)
+	return _u.AddSubscriptionIDs(ids...)
 }
 
 // Mutation returns the OrganizationMutation object of the builder.
@@ -455,10 +451,25 @@ func (_u *OrganizationUpdate) RemoveLicenses(v ...*License) *OrganizationUpdate 
 	return _u.RemoveLicenseIDs(ids...)
 }
 
-// ClearSubscription clears the "subscription" edge to the Subscription entity.
-func (_u *OrganizationUpdate) ClearSubscription() *OrganizationUpdate {
-	_u.mutation.ClearSubscription()
+// ClearSubscriptions clears all "subscriptions" edges to the Subscription entity.
+func (_u *OrganizationUpdate) ClearSubscriptions() *OrganizationUpdate {
+	_u.mutation.ClearSubscriptions()
 	return _u
+}
+
+// RemoveSubscriptionIDs removes the "subscriptions" edge to Subscription entities by IDs.
+func (_u *OrganizationUpdate) RemoveSubscriptionIDs(ids ...uuid.UUID) *OrganizationUpdate {
+	_u.mutation.RemoveSubscriptionIDs(ids...)
+	return _u
+}
+
+// RemoveSubscriptions removes "subscriptions" edges to Subscription entities.
+func (_u *OrganizationUpdate) RemoveSubscriptions(v ...*Subscription) *OrganizationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSubscriptionIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -867,12 +878,12 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.SubscriptionCleared() {
+	if _u.mutation.SubscriptionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   organization.SubscriptionTable,
-			Columns: []string{organization.SubscriptionColumn},
+			Table:   organization.SubscriptionsTable,
+			Columns: []string{organization.SubscriptionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(subscription.FieldID, field.TypeUUID),
@@ -880,12 +891,28 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.SubscriptionIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RemovedSubscriptionsIDs(); len(nodes) > 0 && !_u.mutation.SubscriptionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   organization.SubscriptionTable,
-			Columns: []string{organization.SubscriptionColumn},
+			Table:   organization.SubscriptionsTable,
+			Columns: []string{organization.SubscriptionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(subscription.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SubscriptionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.SubscriptionsTable,
+			Columns: []string{organization.SubscriptionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(subscription.FieldID, field.TypeUUID),
@@ -1179,23 +1206,19 @@ func (_u *OrganizationUpdateOne) AddLicenses(v ...*License) *OrganizationUpdateO
 	return _u.AddLicenseIDs(ids...)
 }
 
-// SetSubscriptionID sets the "subscription" edge to the Subscription entity by ID.
-func (_u *OrganizationUpdateOne) SetSubscriptionID(id uuid.UUID) *OrganizationUpdateOne {
-	_u.mutation.SetSubscriptionID(id)
+// AddSubscriptionIDs adds the "subscriptions" edge to the Subscription entity by IDs.
+func (_u *OrganizationUpdateOne) AddSubscriptionIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
+	_u.mutation.AddSubscriptionIDs(ids...)
 	return _u
 }
 
-// SetNillableSubscriptionID sets the "subscription" edge to the Subscription entity by ID if the given value is not nil.
-func (_u *OrganizationUpdateOne) SetNillableSubscriptionID(id *uuid.UUID) *OrganizationUpdateOne {
-	if id != nil {
-		_u = _u.SetSubscriptionID(*id)
+// AddSubscriptions adds the "subscriptions" edges to the Subscription entity.
+func (_u *OrganizationUpdateOne) AddSubscriptions(v ...*Subscription) *OrganizationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _u
-}
-
-// SetSubscription sets the "subscription" edge to the Subscription entity.
-func (_u *OrganizationUpdateOne) SetSubscription(v *Subscription) *OrganizationUpdateOne {
-	return _u.SetSubscriptionID(v.ID)
+	return _u.AddSubscriptionIDs(ids...)
 }
 
 // Mutation returns the OrganizationMutation object of the builder.
@@ -1335,10 +1358,25 @@ func (_u *OrganizationUpdateOne) RemoveLicenses(v ...*License) *OrganizationUpda
 	return _u.RemoveLicenseIDs(ids...)
 }
 
-// ClearSubscription clears the "subscription" edge to the Subscription entity.
-func (_u *OrganizationUpdateOne) ClearSubscription() *OrganizationUpdateOne {
-	_u.mutation.ClearSubscription()
+// ClearSubscriptions clears all "subscriptions" edges to the Subscription entity.
+func (_u *OrganizationUpdateOne) ClearSubscriptions() *OrganizationUpdateOne {
+	_u.mutation.ClearSubscriptions()
 	return _u
+}
+
+// RemoveSubscriptionIDs removes the "subscriptions" edge to Subscription entities by IDs.
+func (_u *OrganizationUpdateOne) RemoveSubscriptionIDs(ids ...uuid.UUID) *OrganizationUpdateOne {
+	_u.mutation.RemoveSubscriptionIDs(ids...)
+	return _u
+}
+
+// RemoveSubscriptions removes "subscriptions" edges to Subscription entities.
+func (_u *OrganizationUpdateOne) RemoveSubscriptions(v ...*Subscription) *OrganizationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSubscriptionIDs(ids...)
 }
 
 // Where appends a list predicates to the OrganizationUpdate builder.
@@ -1777,12 +1815,12 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.SubscriptionCleared() {
+	if _u.mutation.SubscriptionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   organization.SubscriptionTable,
-			Columns: []string{organization.SubscriptionColumn},
+			Table:   organization.SubscriptionsTable,
+			Columns: []string{organization.SubscriptionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(subscription.FieldID, field.TypeUUID),
@@ -1790,12 +1828,28 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.SubscriptionIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RemovedSubscriptionsIDs(); len(nodes) > 0 && !_u.mutation.SubscriptionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   organization.SubscriptionTable,
-			Columns: []string{organization.SubscriptionColumn},
+			Table:   organization.SubscriptionsTable,
+			Columns: []string{organization.SubscriptionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(subscription.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SubscriptionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   organization.SubscriptionsTable,
+			Columns: []string{organization.SubscriptionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(subscription.FieldID, field.TypeUUID),

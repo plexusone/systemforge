@@ -61,6 +61,11 @@ func OrganizationID(v uuid.UUID) predicate.Subscription {
 	return predicate.Subscription(sql.FieldEQ(FieldOrganizationID, v))
 }
 
+// ListingID applies equality check predicate on the "listing_id" field. It's identical to ListingIDEQ.
+func ListingID(v uuid.UUID) predicate.Subscription {
+	return predicate.Subscription(sql.FieldEQ(FieldListingID, v))
+}
+
 // PlanTier applies equality check predicate on the "plan_tier" field. It's identical to PlanTierEQ.
 func PlanTier(v string) predicate.Subscription {
 	return predicate.Subscription(sql.FieldEQ(FieldPlanTier, v))
@@ -119,6 +124,56 @@ func OrganizationIDIn(vs ...uuid.UUID) predicate.Subscription {
 // OrganizationIDNotIn applies the NotIn predicate on the "organization_id" field.
 func OrganizationIDNotIn(vs ...uuid.UUID) predicate.Subscription {
 	return predicate.Subscription(sql.FieldNotIn(FieldOrganizationID, vs...))
+}
+
+// ListingIDEQ applies the EQ predicate on the "listing_id" field.
+func ListingIDEQ(v uuid.UUID) predicate.Subscription {
+	return predicate.Subscription(sql.FieldEQ(FieldListingID, v))
+}
+
+// ListingIDNEQ applies the NEQ predicate on the "listing_id" field.
+func ListingIDNEQ(v uuid.UUID) predicate.Subscription {
+	return predicate.Subscription(sql.FieldNEQ(FieldListingID, v))
+}
+
+// ListingIDIn applies the In predicate on the "listing_id" field.
+func ListingIDIn(vs ...uuid.UUID) predicate.Subscription {
+	return predicate.Subscription(sql.FieldIn(FieldListingID, vs...))
+}
+
+// ListingIDNotIn applies the NotIn predicate on the "listing_id" field.
+func ListingIDNotIn(vs ...uuid.UUID) predicate.Subscription {
+	return predicate.Subscription(sql.FieldNotIn(FieldListingID, vs...))
+}
+
+// ListingIDGT applies the GT predicate on the "listing_id" field.
+func ListingIDGT(v uuid.UUID) predicate.Subscription {
+	return predicate.Subscription(sql.FieldGT(FieldListingID, v))
+}
+
+// ListingIDGTE applies the GTE predicate on the "listing_id" field.
+func ListingIDGTE(v uuid.UUID) predicate.Subscription {
+	return predicate.Subscription(sql.FieldGTE(FieldListingID, v))
+}
+
+// ListingIDLT applies the LT predicate on the "listing_id" field.
+func ListingIDLT(v uuid.UUID) predicate.Subscription {
+	return predicate.Subscription(sql.FieldLT(FieldListingID, v))
+}
+
+// ListingIDLTE applies the LTE predicate on the "listing_id" field.
+func ListingIDLTE(v uuid.UUID) predicate.Subscription {
+	return predicate.Subscription(sql.FieldLTE(FieldListingID, v))
+}
+
+// ListingIDIsNil applies the IsNil predicate on the "listing_id" field.
+func ListingIDIsNil() predicate.Subscription {
+	return predicate.Subscription(sql.FieldIsNull(FieldListingID))
+}
+
+// ListingIDNotNil applies the NotNil predicate on the "listing_id" field.
+func ListingIDNotNil() predicate.Subscription {
+	return predicate.Subscription(sql.FieldNotNull(FieldListingID))
 }
 
 // PlanTierEQ applies the EQ predicate on the "plan_tier" field.
@@ -531,7 +586,7 @@ func HasOrganization() predicate.Subscription {
 	return predicate.Subscription(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, OrganizationTable, OrganizationColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, OrganizationTable, OrganizationColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})

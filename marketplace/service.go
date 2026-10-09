@@ -136,6 +136,15 @@ type SubscriptionService interface {
 	GetPlanTier(ctx context.Context, orgID uuid.UUID) (string, error)
 }
 
+// SubscriptionLister is implemented by a SubscriptionService that can
+// list every subscription of an organization, the platform subscription
+// and those for individual listings. It is a separate interface so
+// existing SubscriptionService implementers keep compiling; without it,
+// only the platform subscription from GetByOrg is considered.
+type SubscriptionLister interface {
+	ListByOrg(ctx context.Context, orgID uuid.UUID) ([]*Subscription, error)
+}
+
 // CheckoutService provides operations for purchasing licenses.
 type CheckoutService interface {
 	// CreateCheckoutSession creates a Stripe checkout session for a listing.

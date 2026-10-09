@@ -40,7 +40,7 @@ func (Subscription) Edges() []ent.Edge {
 	return []ent.Edge{
 		// Organization this subscription belongs to
 		edge.From("organization", Organization.Type).
-			Ref("subscription").
+			Ref("subscriptions").
 			Field("organization_id").
 			Required().
 			Unique().
@@ -51,8 +51,16 @@ func (Subscription) Edges() []ent.Edge {
 // Indexes of the Subscription.
 func (Subscription) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("organization_id").
+		index.Fields("organization_id"),
+		// One subscription per listing, and one platform-wide
+		// subscription (null listing), per organization.
+		index.Fields("organization_id", "listing_id").
 			Unique(),
+		index.Fields("organization_id").
+			Unique().
+			Annotations(entsql.IndexAnnotation{Where: "listing_id IS NULL"}).
+			StorageKey("subscription_platform_per_org"),
+		index.Fields("listing_id"),
 		index.Fields("status"),
 		index.Fields("plan_tier"),
 		index.Fields("stripe_subscription_id"),

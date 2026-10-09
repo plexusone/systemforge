@@ -29,6 +29,8 @@ type Listing struct {
 	ProductType string `json:"product_type,omitempty"`
 	// Reference to the actual product (optional for drafts)
 	ProductID *uuid.UUID `json:"product_id,omitempty"`
+	// Application identifier, as registered in the authz vocabulary registry, that holding this listing entitles an organization to
+	Application *string `json:"application,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Description holds the value of the "description" field.
@@ -110,7 +112,7 @@ func (*Listing) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case listing.FieldPriceCents:
 			values[i] = new(sql.NullInt64)
-		case listing.FieldProductType, listing.FieldTitle, listing.FieldDescription, listing.FieldPricingModel, listing.FieldCurrency, listing.FieldStatus:
+		case listing.FieldProductType, listing.FieldApplication, listing.FieldTitle, listing.FieldDescription, listing.FieldPricingModel, listing.FieldCurrency, listing.FieldStatus:
 			values[i] = new(sql.NullString)
 		case listing.FieldCreatedAt, listing.FieldUpdatedAt, listing.FieldPublishedAt:
 			values[i] = new(sql.NullTime)
@@ -161,6 +163,13 @@ func (_m *Listing) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ProductID = new(uuid.UUID)
 				*_m.ProductID = *value.S.(*uuid.UUID)
+			}
+		case listing.FieldApplication:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field application", values[i])
+			} else if value.Valid {
+				_m.Application = new(string)
+				*_m.Application = value.String
 			}
 		case listing.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -288,6 +297,11 @@ func (_m *Listing) String() string {
 	if v := _m.ProductID; v != nil {
 		builder.WriteString("product_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.Application; v != nil {
+		builder.WriteString("application=")
+		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
 	builder.WriteString("title=")

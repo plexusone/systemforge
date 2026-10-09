@@ -94,6 +94,26 @@ func (_u *ListingUpdate) ClearProductID() *ListingUpdate {
 	return _u
 }
 
+// SetApplication sets the "application" field.
+func (_u *ListingUpdate) SetApplication(v string) *ListingUpdate {
+	_u.mutation.SetApplication(v)
+	return _u
+}
+
+// SetNillableApplication sets the "application" field if the given value is not nil.
+func (_u *ListingUpdate) SetNillableApplication(v *string) *ListingUpdate {
+	if v != nil {
+		_u.SetApplication(*v)
+	}
+	return _u
+}
+
+// ClearApplication clears the value of the "application" field.
+func (_u *ListingUpdate) ClearApplication() *ListingUpdate {
+	_u.mutation.ClearApplication()
+	return _u
+}
+
 // SetTitle sets the "title" field.
 func (_u *ListingUpdate) SetTitle(v string) *ListingUpdate {
 	_u.mutation.SetTitle(v)
@@ -385,6 +405,12 @@ func (_u *ListingUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ProductIDCleared() {
 		_spec.ClearField(listing.FieldProductID, field.TypeUUID)
 	}
+	if value, ok := _u.mutation.Application(); ok {
+		_spec.SetField(listing.FieldApplication, field.TypeString, value)
+	}
+	if _u.mutation.ApplicationCleared() {
+		_spec.ClearField(listing.FieldApplication, field.TypeString)
+	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(listing.FieldTitle, field.TypeString, value)
 	}
@@ -606,6 +632,26 @@ func (_u *ListingUpdateOne) SetNillableProductID(v *uuid.UUID) *ListingUpdateOne
 // ClearProductID clears the value of the "product_id" field.
 func (_u *ListingUpdateOne) ClearProductID() *ListingUpdateOne {
 	_u.mutation.ClearProductID()
+	return _u
+}
+
+// SetApplication sets the "application" field.
+func (_u *ListingUpdateOne) SetApplication(v string) *ListingUpdateOne {
+	_u.mutation.SetApplication(v)
+	return _u
+}
+
+// SetNillableApplication sets the "application" field if the given value is not nil.
+func (_u *ListingUpdateOne) SetNillableApplication(v *string) *ListingUpdateOne {
+	if v != nil {
+		_u.SetApplication(*v)
+	}
+	return _u
+}
+
+// ClearApplication clears the value of the "application" field.
+func (_u *ListingUpdateOne) ClearApplication() *ListingUpdateOne {
+	_u.mutation.ClearApplication()
 	return _u
 }
 
@@ -929,6 +975,12 @@ func (_u *ListingUpdateOne) sqlSave(ctx context.Context) (_node *Listing, err er
 	}
 	if _u.mutation.ProductIDCleared() {
 		_spec.ClearField(listing.FieldProductID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.Application(); ok {
+		_spec.SetField(listing.FieldApplication, field.TypeString, value)
+	}
+	if _u.mutation.ApplicationCleared() {
+		_spec.ClearField(listing.FieldApplication, field.TypeString)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(listing.FieldTitle, field.TypeString, value)

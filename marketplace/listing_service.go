@@ -44,6 +44,9 @@ func (s *EntListingService) Create(ctx context.Context, l *Listing) error {
 	if l.Description != "" {
 		builder.SetDescription(l.Description)
 	}
+	if l.Application != "" {
+		builder.SetApplication(l.Application)
+	}
 	if l.Metadata != nil {
 		builder.SetMetadata(l.Metadata)
 	}
@@ -106,6 +109,11 @@ func (s *EntListingService) Update(ctx context.Context, l *Listing) error {
 		builder.SetDescription(l.Description)
 	} else {
 		builder.ClearDescription()
+	}
+	if l.Application != "" {
+		builder.SetApplication(l.Application)
+	} else {
+		builder.ClearApplication()
 	}
 	if l.Metadata != nil {
 		builder.SetMetadata(l.Metadata)
@@ -252,6 +260,9 @@ func entListingToListing(el *ent.Listing) *Listing {
 
 	if el.ProductID != nil {
 		l.ProductID = *el.ProductID
+	}
+	if el.Application != nil {
+		l.Application = *el.Application
 	}
 	if el.Metadata != nil {
 		l.Metadata = el.Metadata

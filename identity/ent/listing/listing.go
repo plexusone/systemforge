@@ -24,6 +24,8 @@ const (
 	FieldProductType = "product_type"
 	// FieldProductID holds the string denoting the product_id field in the database.
 	FieldProductID = "product_id"
+	// FieldApplication holds the string denoting the application field in the database.
+	FieldApplication = "application"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
 	// FieldDescription holds the string denoting the description field in the database.
@@ -82,6 +84,7 @@ var Columns = []string{
 	FieldOwnerID,
 	FieldProductType,
 	FieldProductID,
+	FieldApplication,
 	FieldTitle,
 	FieldDescription,
 	FieldPricingModel,
@@ -207,6 +210,11 @@ func ByProductType(opts ...sql.OrderTermOption) OrderOption {
 // ByProductID orders the results by the product_id field.
 func ByProductID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProductID, opts...).ToFunc()
+}
+
+// ByApplication orders the results by the application field.
+func ByApplication(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldApplication, opts...).ToFunc()
 }
 
 // ByTitle orders the results by the title field.

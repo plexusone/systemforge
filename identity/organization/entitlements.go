@@ -11,14 +11,24 @@ import (
 const (
 	EntitlementSourceSubscription = "subscription"
 	EntitlementSourceLicense      = "license"
+	// EntitlementSourceDefault marks an application every organization of
+	// the deployment is entitled to, by configuration.
+	EntitlementSourceDefault = "default"
 )
 
 // Entitlement summarizes one thing an organization may use, derived from
 // its marketplace subscriptions and licenses. An organization has no
 // single plan: what it may use is the set of its entitlements.
 type Entitlement struct {
-	// Source is EntitlementSourceSubscription or EntitlementSourceLicense.
+	// Source is EntitlementSourceSubscription, EntitlementSourceLicense or
+	// EntitlementSourceDefault.
 	Source string `json:"source"`
+	// Application is the registered application identifier the entitlement
+	// grants, when it grants one. A platform-wide subscription has none.
+	Application string `json:"application,omitempty"`
+	// Seats caps the principals who may hold a role in Application, for a
+	// seat-licensed entitlement. Nil means unlimited.
+	Seats *int `json:"seats,omitempty"`
 	// ListingID is the marketplace listing a license is for. It is empty
 	// for a subscription, which is organization-wide.
 	ListingID string `json:"listing_id,omitempty"`

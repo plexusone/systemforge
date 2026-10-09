@@ -59,6 +59,20 @@ func (_c *ListingCreate) SetNillableProductID(v *uuid.UUID) *ListingCreate {
 	return _c
 }
 
+// SetApplication sets the "application" field.
+func (_c *ListingCreate) SetApplication(v string) *ListingCreate {
+	_c.mutation.SetApplication(v)
+	return _c
+}
+
+// SetNillableApplication sets the "application" field if the given value is not nil.
+func (_c *ListingCreate) SetNillableApplication(v *string) *ListingCreate {
+	if v != nil {
+		_c.SetApplication(*v)
+	}
+	return _c
+}
+
 // SetTitle sets the "title" field.
 func (_c *ListingCreate) SetTitle(v string) *ListingCreate {
 	_c.mutation.SetTitle(v)
@@ -394,6 +408,10 @@ func (_c *ListingCreate) createSpec() (*Listing, *sqlgraph.CreateSpec) {
 		_spec.SetField(listing.FieldProductID, field.TypeUUID, value)
 		_node.ProductID = &value
 	}
+	if value, ok := _c.mutation.Application(); ok {
+		_spec.SetField(listing.FieldApplication, field.TypeString, value)
+		_node.Application = &value
+	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(listing.FieldTitle, field.TypeString, value)
 		_node.Title = value
@@ -587,6 +605,24 @@ func (u *ListingUpsert) UpdateProductID() *ListingUpsert {
 // ClearProductID clears the value of the "product_id" field.
 func (u *ListingUpsert) ClearProductID() *ListingUpsert {
 	u.SetNull(listing.FieldProductID)
+	return u
+}
+
+// SetApplication sets the "application" field.
+func (u *ListingUpsert) SetApplication(v string) *ListingUpsert {
+	u.Set(listing.FieldApplication, v)
+	return u
+}
+
+// UpdateApplication sets the "application" field to the value that was provided on create.
+func (u *ListingUpsert) UpdateApplication() *ListingUpsert {
+	u.SetExcluded(listing.FieldApplication)
+	return u
+}
+
+// ClearApplication clears the value of the "application" field.
+func (u *ListingUpsert) ClearApplication() *ListingUpsert {
+	u.SetNull(listing.FieldApplication)
 	return u
 }
 
@@ -833,6 +869,27 @@ func (u *ListingUpsertOne) UpdateProductID() *ListingUpsertOne {
 func (u *ListingUpsertOne) ClearProductID() *ListingUpsertOne {
 	return u.Update(func(s *ListingUpsert) {
 		s.ClearProductID()
+	})
+}
+
+// SetApplication sets the "application" field.
+func (u *ListingUpsertOne) SetApplication(v string) *ListingUpsertOne {
+	return u.Update(func(s *ListingUpsert) {
+		s.SetApplication(v)
+	})
+}
+
+// UpdateApplication sets the "application" field to the value that was provided on create.
+func (u *ListingUpsertOne) UpdateApplication() *ListingUpsertOne {
+	return u.Update(func(s *ListingUpsert) {
+		s.UpdateApplication()
+	})
+}
+
+// ClearApplication clears the value of the "application" field.
+func (u *ListingUpsertOne) ClearApplication() *ListingUpsertOne {
+	return u.Update(func(s *ListingUpsert) {
+		s.ClearApplication()
 	})
 }
 
@@ -1268,6 +1325,27 @@ func (u *ListingUpsertBulk) UpdateProductID() *ListingUpsertBulk {
 func (u *ListingUpsertBulk) ClearProductID() *ListingUpsertBulk {
 	return u.Update(func(s *ListingUpsert) {
 		s.ClearProductID()
+	})
+}
+
+// SetApplication sets the "application" field.
+func (u *ListingUpsertBulk) SetApplication(v string) *ListingUpsertBulk {
+	return u.Update(func(s *ListingUpsert) {
+		s.SetApplication(v)
+	})
+}
+
+// UpdateApplication sets the "application" field to the value that was provided on create.
+func (u *ListingUpsertBulk) UpdateApplication() *ListingUpsertBulk {
+	return u.Update(func(s *ListingUpsert) {
+		s.UpdateApplication()
+	})
+}
+
+// ClearApplication clears the value of the "application" field.
+func (u *ListingUpsertBulk) ClearApplication() *ListingUpsertBulk {
+	return u.Update(func(s *ListingUpsert) {
+		s.ClearApplication()
 	})
 }
 

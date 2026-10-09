@@ -8,7 +8,11 @@
 //   - Owners hold the application's top role (admin on the standard
 //     ladder) in every entitled application, implicitly, without a stored
 //     row. Admins and members hold only what is assigned to them.
-//   - Nobody holds an application role by default.
+//   - Nobody holds an application role by default, and an organization is
+//     entitled to no application unless the Service is given an
+//     entitlement source (WithEntitlementGrants, normally built from the
+//     marketplace by marketplace.ApproleOptions). A seat-licensed
+//     application caps how many principals may hold a role in it.
 //   - Only active owners, admins and members can hold a role;
 //     collaborators and non-members cannot.
 //   - Removing a member deletes their roles (organization.Service
@@ -45,6 +49,9 @@ var (
 	// ErrNotMember means the principal has no active owner, admin or
 	// member membership in the organization.
 	ErrNotMember = errors.New("approle: principal is not an active owner, admin or member")
+	// ErrNoSeats means every seat licensed for the application is already
+	// held by a principal with a role in it.
+	ErrNoSeats = errors.New("approle: no seats available for the application")
 	// ErrAlreadyAssigned means the principal already has a role in the
 	// application; use Change.
 	ErrAlreadyAssigned = errors.New("approle: role already assigned")
@@ -71,22 +78,56 @@ type AppRole struct {
 // application.
 type EntitlementFunc func(ctx context.Context, organizationID uuid.UUID, application string) (bool, error)
 
+// Grant describes an organization's entitlement to one application.
+type Grant struct {
+	// SeatLimit caps the number of principals holding a role in the
+	// application. Nil means unlimited.
+	SeatLimit *int
+}
+
+// GrantsFunc returns the applications an organization is entitled to,
+// keyed by application identifier. One call answers for every
+// application, so it is cheaper than an EntitlementFunc per application.
+type GrantsFunc func(ctx context.Context, organizationID uuid.UUID) (map[string]Grant, error)
+
 // Service manages application roles.
 type Service struct {
 	client   *ent.Client
 	registry *authz.VocabularyRegistry
 	entitled EntitlementFunc
+	grants   GrantsFunc
 	logger   *slog.Logger
 }
 
 // Option configures a Service.
 type Option func(*Service)
 
-// WithEntitlements restricts roles to the applications the organization
-// is entitled to. Without it every registered application counts as
-// entitled.
+// WithEntitlements restricts roles to the applications f reports the
+// organization is entitled to. It carries no seat limits; prefer
+// WithEntitlementGrants, which takes precedence when both are set.
 func WithEntitlements(f EntitlementFunc) Option {
 	return func(s *Service) { s.entitled = f }
+}
+
+// WithEntitlementGrants sets the source of an organization's entitled
+// applications and their seat limits. marketplace.ApproleOptions builds
+// one from active subscriptions, licenses and the deployment's default
+// entitlements.
+func WithEntitlementGrants(f GrantsFunc) Option {
+	return func(s *Service) { s.grants = f }
+}
+
+// EntitleAll treats every registered application as entitled to every
+// organization, with unlimited seats. It is for development and tests;
+// without any entitlement option no organization is entitled to anything.
+func EntitleAll(registry *authz.VocabularyRegistry) Option {
+	return WithEntitlementGrants(func(context.Context, uuid.UUID) (map[string]Grant, error) {
+		out := map[string]Grant{}
+		for _, app := range registry.Apps() {
+			out[app] = Grant{}
+		}
+		return out, nil
+	})
 }
 
 // WithLogger sets the logger that records assignments.
@@ -123,31 +164,98 @@ func (s *Service) vocabulary(application string) (authz.AppVocabulary, error) {
 	return v, nil
 }
 
-// validate checks the application, role, entitlement and membership of in.
-func (s *Service) validate(ctx context.Context, in AssignInput) error {
+// validate checks the application, role, entitlement and membership of in
+// and returns the organization's grant for the application.
+func (s *Service) validate(ctx context.Context, in AssignInput) (Grant, error) {
 	v, err := s.vocabulary(in.Application)
 	if err != nil {
-		return err
+		return Grant{}, err
 	}
 	if _, ok := v.Roles()[in.Role]; !ok {
-		return fmt.Errorf("%w: %q in %q", ErrUnknownRole, in.Role, in.Application)
+		return Grant{}, fmt.Errorf("%w: %q in %q", ErrUnknownRole, in.Role, in.Application)
 	}
-	ok, err := s.isEntitled(ctx, in.OrganizationID, in.Application)
+	g, ok, err := s.grantFor(ctx, in.OrganizationID, in.Application)
 	if err != nil {
-		return err
+		return Grant{}, err
 	}
 	if !ok {
-		return fmt.Errorf("%w: %q", ErrNotEntitled, in.Application)
+		return Grant{}, fmt.Errorf("%w: %q", ErrNotEntitled, in.Application)
 	}
-	_, err = s.membershipRole(ctx, in.OrganizationID, in.PrincipalID)
-	return err
+	if _, err = s.membershipRole(ctx, in.OrganizationID, in.PrincipalID); err != nil {
+		return Grant{}, err
+	}
+	return g, nil
 }
 
-func (s *Service) isEntitled(ctx context.Context, organizationID uuid.UUID, application string) (bool, error) {
-	if s.entitled == nil {
-		return true, nil
+// checkSeat refuses an assignment that would exceed the application's
+// seat limit. Each stored role holds one seat; owners' implicit roles
+// hold none.
+func (s *Service) checkSeat(ctx context.Context, in AssignInput, g Grant) error {
+	if g.SeatLimit == nil {
+		return nil
 	}
-	return s.entitled(ctx, organizationID, application)
+	held, err := s.client.AppRole.Query().
+		Where(approle.OrganizationID(in.OrganizationID), approle.PrincipalID(in.PrincipalID), approle.Application(in.Application)).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("approle: reading role: %w", err)
+	}
+	if held {
+		return nil // Assign reports ErrAlreadyAssigned
+	}
+	used, err := s.client.AppRole.Query().
+		Where(approle.OrganizationID(in.OrganizationID), approle.Application(in.Application)).
+		Count(ctx)
+	if err != nil {
+		return fmt.Errorf("approle: counting seats: %w", err)
+	}
+	if used >= *g.SeatLimit {
+		return fmt.Errorf("%w: %q has %d of %d", ErrNoSeats, in.Application, used, *g.SeatLimit)
+	}
+	return nil
+}
+
+// grantFor returns the organization's grant for one application.
+func (s *Service) grantFor(ctx context.Context, organizationID uuid.UUID, application string) (Grant, bool, error) {
+	grants, err := s.entitledGrants(ctx, organizationID)
+	if err != nil {
+		return Grant{}, false, err
+	}
+	g, ok := grants[application]
+	return g, ok, nil
+}
+
+// entitledGrants returns the registered applications the organization is
+// entitled to. Applications a source reports that are not registered are
+// ignored.
+func (s *Service) entitledGrants(ctx context.Context, organizationID uuid.UUID) (map[string]Grant, error) {
+	switch {
+	case s.grants != nil:
+		all, err := s.grants(ctx, organizationID)
+		if err != nil {
+			return nil, fmt.Errorf("approle: reading entitlements: %w", err)
+		}
+		out := make(map[string]Grant, len(all))
+		for app, g := range all {
+			if _, ok := s.registry.Get(app); ok {
+				out[app] = g
+			}
+		}
+		return out, nil
+	case s.entitled != nil:
+		out := map[string]Grant{}
+		for _, app := range s.registry.Apps() {
+			ok, err := s.entitled(ctx, organizationID, app)
+			if err != nil {
+				return nil, fmt.Errorf("approle: reading entitlements: %w", err)
+			}
+			if ok {
+				out[app] = Grant{}
+			}
+		}
+		return out, nil
+	}
+	return map[string]Grant{}, nil
 }
 
 // membershipRole returns the principal's role from an active membership
@@ -173,7 +281,11 @@ func (s *Service) membershipRole(ctx context.Context, organizationID, principalI
 // Assign gives the principal a role in an application. It fails with
 // ErrAlreadyAssigned if the principal already has one.
 func (s *Service) Assign(ctx context.Context, in AssignInput) (*AppRole, error) {
-	if err := s.validate(ctx, in); err != nil {
+	g, err := s.validate(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.checkSeat(ctx, in, g); err != nil {
 		return nil, err
 	}
 	row, err := s.client.AppRole.Create().
@@ -196,7 +308,7 @@ func (s *Service) Assign(ctx context.Context, in AssignInput) (*AppRole, error) 
 // Change sets a different role for a principal who already has one. It
 // fails with ErrNotAssigned if there is none.
 func (s *Service) Change(ctx context.Context, in AssignInput) (*AppRole, error) {
-	if err := s.validate(ctx, in); err != nil {
+	if _, err := s.validate(ctx, in); err != nil {
 		return nil, err
 	}
 	row, err := s.find(ctx, in.OrganizationID, in.PrincipalID, in.Application)
@@ -317,12 +429,12 @@ func (s *Service) EffectiveRoles(ctx context.Context, principalID, organizationI
 	for _, r := range stored {
 		byApp[r.Application] = r.Role
 	}
+	grants, err := s.entitledGrants(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
 	for _, app := range s.registry.Apps() {
-		ok, err := s.isEntitled(ctx, organizationID, app)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
+		if _, ok := grants[app]; !ok {
 			continue
 		}
 		v, _ := s.registry.Get(app)

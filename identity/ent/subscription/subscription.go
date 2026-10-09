@@ -18,6 +18,8 @@ const (
 	FieldID = "id"
 	// FieldOrganizationID holds the string denoting the organization_id field in the database.
 	FieldOrganizationID = "organization_id"
+	// FieldListingID holds the string denoting the listing_id field in the database.
+	FieldListingID = "listing_id"
 	// FieldPlanTier holds the string denoting the plan_tier field in the database.
 	FieldPlanTier = "plan_tier"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -53,6 +55,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldOrganizationID,
+	FieldListingID,
 	FieldPlanTier,
 	FieldStatus,
 	FieldCurrentPeriodStart,
@@ -135,6 +138,11 @@ func ByOrganizationID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOrganizationID, opts...).ToFunc()
 }
 
+// ByListingID orders the results by the listing_id field.
+func ByListingID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldListingID, opts...).ToFunc()
+}
+
 // ByPlanTier orders the results by the plan_tier field.
 func ByPlanTier(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPlanTier, opts...).ToFunc()
@@ -190,6 +198,6 @@ func newOrganizationStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OrganizationInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, true, OrganizationTable, OrganizationColumn),
+		sqlgraph.Edge(sqlgraph.M2O, true, OrganizationTable, OrganizationColumn),
 	)
 }
