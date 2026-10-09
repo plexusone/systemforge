@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 
@@ -99,6 +101,13 @@ type Service struct {
 	syncer   authz.AppRoleSyncer
 	syncMode authz.SyncMode
 	logger   *slog.Logger
+
+	// seatMu serializes seat-limited assignments in this process;
+	// PostgreSQL additionally takes an advisory lock so that other
+	// processes are serialized too. dialectMu guards the cached probe.
+	seatMu    sync.Mutex
+	dialectMu sync.Mutex
+	dialect   string // "", "sqlite" or "postgres"
 }
 
 // Option configures a Service.
@@ -204,11 +213,11 @@ func (s *Service) validate(ctx context.Context, in AssignInput) (Grant, error) {
 // checkSeat refuses an assignment that would exceed the application's
 // seat limit. Each stored role holds one seat; owners' implicit roles
 // hold none.
-func (s *Service) checkSeat(ctx context.Context, in AssignInput, g Grant) error {
+func (s *Service) checkSeat(ctx context.Context, roles *ent.AppRoleClient, in AssignInput, g Grant) error {
 	if g.SeatLimit == nil {
 		return nil
 	}
-	held, err := s.client.AppRole.Query().
+	held, err := roles.Query().
 		Where(approle.OrganizationID(in.OrganizationID), approle.PrincipalID(in.PrincipalID), approle.Application(in.Application)).
 		Exist(ctx)
 	if err != nil {
@@ -217,7 +226,7 @@ func (s *Service) checkSeat(ctx context.Context, in AssignInput, g Grant) error 
 	if held {
 		return nil // Assign reports ErrAlreadyAssigned
 	}
-	used, err := s.client.AppRole.Query().
+	used, err := roles.Query().
 		Where(approle.OrganizationID(in.OrganizationID), approle.Application(in.Application)).
 		Count(ctx)
 	if err != nil {
@@ -293,16 +302,32 @@ func (s *Service) membershipRole(ctx context.Context, organizationID, principalI
 }
 
 // Assign gives the principal a role in an application. It fails with
-// ErrAlreadyAssigned if the principal already has one.
+// ErrAlreadyAssigned if the principal already has one. When the
+// application has a seat limit, counting the seats and inserting the role
+// happen under a lock, so concurrent assignments cannot exceed the limit.
 func (s *Service) Assign(ctx context.Context, in AssignInput) (*AppRole, error) {
 	g, err := s.validate(ctx, in)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.checkSeat(ctx, in, g); err != nil {
+	var row *ent.AppRole
+	if g.SeatLimit == nil {
+		row, err = s.insert(ctx, s.client.AppRole, in)
+	} else {
+		row, err = s.assignSeated(ctx, in, g)
+	}
+	if err != nil {
 		return nil, err
 	}
-	row, err := s.client.AppRole.Create().
+	s.audit(ctx, "assigned", in, "")
+	if err := s.syncAdd(ctx, in.PrincipalID, in.OrganizationID, in.Application, in.Role); err != nil {
+		return nil, err
+	}
+	return toAppRole(row), nil
+}
+
+func (s *Service) insert(ctx context.Context, roles *ent.AppRoleClient, in AssignInput) (*ent.AppRole, error) {
+	row, err := roles.Create().
 		SetPrincipalID(in.PrincipalID).
 		SetOrganizationID(in.OrganizationID).
 		SetApplication(in.Application).
@@ -315,11 +340,64 @@ func (s *Service) Assign(ctx context.Context, in AssignInput) (*AppRole, error) 
 	if err != nil {
 		return nil, fmt.Errorf("approle: assigning: %w", err)
 	}
-	s.audit(ctx, "assigned", in, "")
-	if err := s.syncAdd(ctx, in.PrincipalID, in.OrganizationID, in.Application, in.Role); err != nil {
+	return row, nil
+}
+
+// assignSeated checks the seat limit and inserts the role in one
+// transaction holding the seat lock for the organization and application.
+func (s *Service) assignSeated(ctx context.Context, in AssignInput, g Grant) (*ent.AppRole, error) {
+	postgres, err := s.isPostgres(ctx)
+	if err != nil {
 		return nil, err
 	}
-	return toAppRole(row), nil
+	// The process-wide mutex serializes SQLite, whose single writer needs
+	// it, and saves PostgreSQL round trips between local callers.
+	s.seatMu.Lock()
+	defer s.seatMu.Unlock()
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("approle: starting transaction: %w", err)
+	}
+	if postgres {
+		// Released when the transaction ends.
+		key := in.OrganizationID.String() + ":" + in.Application
+		if _, err = tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", key); err != nil {
+			_ = tx.Rollback()
+			return nil, fmt.Errorf("approle: locking seats: %w", err)
+		}
+	}
+	if err = s.checkSeat(ctx, tx.AppRole, in, g); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	row, err := s.insert(ctx, tx.AppRole, in)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("approle: committing assignment: %w", err)
+	}
+	return row, nil
+}
+
+// isPostgres reports whether the client talks to PostgreSQL, probing once
+// with a function only SQLite defines.
+func (s *Service) isPostgres(ctx context.Context) (bool, error) {
+	s.dialectMu.Lock()
+	defer s.dialectMu.Unlock()
+	if s.dialect == "" {
+		_, err := s.client.ExecContext(ctx, "SELECT sqlite_version()")
+		switch {
+		case err == nil:
+			s.dialect = "sqlite"
+		case strings.Contains(err.Error(), "does not exist"):
+			s.dialect = "postgres"
+		default:
+			return false, fmt.Errorf("approle: detecting database dialect: %w", err)
+		}
+	}
+	return s.dialect == "postgres", nil
 }
 
 // Change sets a different role for a principal who already has one. It

@@ -41,6 +41,7 @@ type fixture struct {
 	db     *ent.Client
 	orgs   organization.Service
 	svc    *approle.Service
+	reg    *authz.VocabularyRegistry
 	org    *organization.Organization
 	owner  uuid.UUID
 	admin  uuid.UUID
@@ -49,13 +50,18 @@ type fixture struct {
 
 func newFixture(t *testing.T, opts ...approle.Option) *fixture {
 	t.Helper()
-	ctx := context.Background()
 	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
 	t.Cleanup(func() {
 		if err := db.Close(); err != nil {
 			t.Errorf("close: %v", err)
 		}
 	})
+	return newFixtureOn(t, db, opts...)
+}
+
+func newFixtureOn(t *testing.T, db *ent.Client, opts ...approle.Option) *fixture {
+	t.Helper()
+	ctx := context.Background()
 	reg := authz.NewVocabularyRegistry()
 	for _, app := range []string{"alpha", "beta"} {
 		if err := reg.Register(ladderVocab{app: app}); err != nil {
@@ -65,7 +71,7 @@ func newFixture(t *testing.T, opts ...approle.Option) *fixture {
 	if len(opts) == 0 {
 		opts = []approle.Option{approle.EntitleAll(reg)}
 	}
-	f := &fixture{t: t, db: db, orgs: organization.NewService(db), svc: approle.NewService(db, reg, opts...)}
+	f := &fixture{t: t, db: db, reg: reg, orgs: organization.NewService(db), svc: approle.NewService(db, reg, opts...)}
 	f.owner = f.human("owner@example.com")
 	f.admin = f.human("admin@example.com")
 	f.member = f.human("member@example.com")
