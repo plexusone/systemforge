@@ -25,6 +25,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/accesschange"
+	"github.com/plexusone/systemforge/identity/relyingparty"
 )
 
 // Access-token lifetimes (ADR-010 decision 1). Lifetime is the fallback
@@ -205,4 +206,51 @@ const Retention = MaxAccessTokenLifetime + time.Minute + time.Hour
 // PruneExpired deletes the changes older than Retention.
 func PruneExpired(ctx context.Context, client *ent.Client) (int, error) {
 	return Prune(ctx, client, time.Now().Add(-Retention))
+}
+
+// Source reads changes through an Ent client, for replicas of a monolith
+// that share SystemAuth's database and already hold a client. It
+// implements relyingparty.AccessChangeSource. relyingparty/pgstore offers
+// the same over plain database/sql.
+type Source struct {
+	client *ent.Client
+}
+
+// NewSource returns a Source reading client.
+func NewSource(client *ent.Client) *Source { return &Source{client: client} }
+
+// AccessChangesSince implements relyingparty.AccessChangeSource.
+func (s *Source) AccessChangesSince(ctx context.Context, since time.Time) ([]relyingparty.AccessChange, error) {
+	var out []relyingparty.AccessChange
+	for {
+		page, err := Since(ctx, s.client, since, 1000)
+		if err != nil {
+			return nil, err
+		}
+		for _, c := range page {
+			org := ""
+			if c.OrganizationID != nil {
+				org = c.OrganizationID.String()
+			}
+			out = append(out, relyingparty.AccessChange{PrincipalID: c.PrincipalID.String(), OrganizationID: org, ChangedAt: c.ChangedAt, Reason: string(c.Reason)})
+		}
+		if len(page) < 1000 {
+			return out, nil
+		}
+		// Rows with the newest timestamp may continue on the next page;
+		// recording a change twice is harmless.
+		next := page[len(page)-1].ChangedAt.Add(-time.Nanosecond)
+		if !next.After(since) {
+			// A full page of changes sharing one timestamp cannot be
+			// advanced past; the poller re-reads that moment next time.
+			return out, nil
+		}
+		since = next
+	}
+}
+
+// List implements the reader systemauth serves GET /access-changes from:
+// up to limit changes after since, oldest first.
+func (s *Source) List(ctx context.Context, since time.Time, limit int) ([]Change, error) {
+	return Since(ctx, s.client, since, limit)
 }

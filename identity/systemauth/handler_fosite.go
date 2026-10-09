@@ -42,6 +42,11 @@ func (s *Server) fositeInterceptor(next http.Handler) http.Handler {
 				s.userinfoEndpoint(w, r)
 				return
 			}
+		case AccessChangesPath:
+			if r.Method == http.MethodGet {
+				s.accessChangesEndpoint(w, r)
+				return
+			}
 		case MembershipsPath:
 			if r.Method == http.MethodGet {
 				s.membershipsEndpoint(w, r)

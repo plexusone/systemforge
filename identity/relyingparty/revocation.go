@@ -64,6 +64,12 @@ type RevocationCache struct {
 	mu       sync.RWMutex
 	entries  map[string]*revocation
 	lastSwep time.Time
+
+	// suspect mode (ADR-010 decision 6): changes made while this cache was
+	// not listening are unknown, so no token issued before suspectSince is
+	// trusted until a replay succeeds.
+	suspect      bool
+	suspectSince time.Time
 }
 
 // revocation is what the cache knows about one principal.
@@ -97,6 +103,15 @@ func WithClock(now func() time.Time) CacheOption {
 	return func(c *RevocationCache) { c.now = now }
 }
 
+// WithSuspectStart starts the cache in suspect mode, for a relying party
+// that restarts or runs in a separate process: until Replay (or a first
+// poll) succeeds, only tokens issued at least one margin after the cache
+// was created are accepted, so a restart never widens the window in which a
+// revoked token is honored.
+func WithSuspectStart() CacheOption {
+	return func(c *RevocationCache) { c.suspect = true }
+}
+
 // NewRevocationCache returns an empty cache.
 func NewRevocationCache(opts ...CacheOption) *RevocationCache {
 	c := &RevocationCache{
@@ -108,7 +123,33 @@ func NewRevocationCache(opts ...CacheOption) *RevocationCache {
 	for _, o := range opts {
 		o(c)
 	}
+	if c.suspect {
+		c.suspectSince = c.now()
+	}
 	return c
+}
+
+// MarkSuspect puts the cache in suspect mode from now: tokens issued
+// before now plus the margin are refused until ClearSuspect, which Replay
+// and a successful first poll call.
+func (c *RevocationCache) MarkSuspect() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.suspect, c.suspectSince = true, c.now()
+}
+
+// ClearSuspect ends suspect mode.
+func (c *RevocationCache) ClearSuspect() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.suspect, c.suspectSince = false, time.Time{}
+}
+
+// Suspect reports whether the cache is in suspect mode.
+func (c *RevocationCache) Suspect() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.suspect
 }
 
 // Margin returns the clock-skew margin in effect.
@@ -175,24 +216,28 @@ func (c *RevocationCache) Accept(principalID, orgID string, iat time.Time) bool 
 
 // ChangedAt returns the latest unexpired change recorded for the principal
 // (in the organization, or in any when orgID is empty), or the zero time.
+// In suspect mode it is no earlier than the moment suspect mode began.
 func (c *RevocationCache) ChangedAt(principalID, orgID string) time.Time {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	e := c.entries[principalID]
-	if e == nil {
-		return time.Time{}
-	}
 	var changed time.Time
-	if orgID == "" {
-		changed = e.max
-	} else {
-		changed = e.all
-		if t := e.orgs[orgID]; t.After(changed) {
-			changed = t
+	if e := c.entries[principalID]; e != nil {
+		if orgID == "" {
+			changed = e.max
+		} else {
+			changed = e.all
+			if t := e.orgs[orgID]; t.After(changed) {
+				changed = t
+			}
+		}
+		if !changed.IsZero() && c.expired(changed, c.now()) {
+			changed = time.Time{}
 		}
 	}
-	if changed.IsZero() || c.expired(changed, c.now()) {
-		return time.Time{}
+	// In suspect mode an unknown change may have happened at any time
+	// before the cache started listening.
+	if c.suspect && c.suspectSince.After(changed) {
+		changed = c.suspectSince
 	}
 	return changed
 }

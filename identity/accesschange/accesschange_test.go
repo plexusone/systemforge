@@ -99,3 +99,40 @@ func TestPublish(t *testing.T) {
 		t.Errorf("published = %+v", got)
 	}
 }
+
+func TestSourceReadsChangesForRelyingParties(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	p, org := uuid.New(), uuid.New()
+	tx, err := db.Tx(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: p, OrganizationID: &org, Reason: accesschange.AppRoleChanged})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: p, Reason: accesschange.Deactivated}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	src := accesschange.NewSource(db)
+	got, err := src.AccessChangesSince(ctx, first.ChangedAt.Add(-time.Hour))
+	if err != nil || len(got) != 2 {
+		t.Fatalf("AccessChangesSince = %+v, %v", got, err)
+	}
+	if got[0].PrincipalID != p.String() || got[0].OrganizationID != org.String() || got[0].Reason != "app_role_changed" || got[1].OrganizationID != "" {
+		t.Errorf("changes = %+v", got)
+	}
+	if listed, err := src.List(ctx, first.ChangedAt.Add(-time.Hour), 1); err != nil || len(listed) != 1 {
+		t.Errorf("List with limit 1 = %+v, %v", listed, err)
+	}
+}
