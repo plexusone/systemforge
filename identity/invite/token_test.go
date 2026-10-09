@@ -37,7 +37,7 @@ func seedInviteOrg(t *testing.T, db *ent.Client) (orgID, inviter uuid.UUID) {
 	if err != nil {
 		t.Fatalf("principal: %v", err)
 	}
-	org, err := organization.NewService(db).Create(ctx, organization.CreateOrganizationInput{Name: "Acme", Slug: "acme-" + uuid.NewString()[:8], OrgType: organization.OrgTypeTeam, Plan: organization.PlanFree, OwnerPrincipalID: &p.ID})
+	org, err := organization.NewService(db).Create(ctx, organization.CreateOrganizationInput{Name: "Acme", Slug: "acme-" + uuid.NewString()[:8], OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &p.ID})
 	if err != nil {
 		t.Fatalf("organization: %v", err)
 	}

@@ -17,16 +17,6 @@ const (
 	OrgTypeEnterprise OrgType = "enterprise" // Enterprise organization
 )
 
-// Plan represents the organization's subscription plan.
-type Plan string
-
-const (
-	PlanFree       Plan = "free"
-	PlanStarter    Plan = "starter"
-	PlanPro        Plan = "pro"
-	PlanEnterprise Plan = "enterprise"
-)
-
 // Organization represents an organization in the system.
 type Organization struct {
 	ID               uuid.UUID
@@ -38,7 +28,6 @@ type Organization struct {
 	Description      *string
 	WebsiteURL       *string
 	Settings         map[string]any
-	Plan             Plan
 	Active           bool
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
@@ -59,7 +48,6 @@ type CreateOrganizationInput struct {
 	Description      *string
 	WebsiteURL       *string
 	Settings         map[string]any
-	Plan             Plan
 }
 
 // CreatePersonalOrgInput contains input for creating a personal organization.
@@ -77,13 +65,11 @@ type UpdateOrganizationInput struct {
 	Description *string
 	WebsiteURL  *string
 	Settings    map[string]any
-	Plan        *Plan
 }
 
 // ListOrganizationsInput contains filters for listing organizations.
 type ListOrganizationsInput struct {
 	OrgType *OrgType
-	Plan    *Plan
 	Active  *bool
 	// MemberPrincipalID limits the list to organizations the principal is
 	// an active member of.

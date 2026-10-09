@@ -22,7 +22,6 @@ type OrganizationInfo struct {
 	Name     string
 	Slug     string
 	LogoURL  *string
-	Plan     string
 	Settings map[string]any
 	Active   bool
 }
@@ -107,7 +106,6 @@ type CreateOrganizationInput struct {
 	Name     string
 	Slug     string
 	LogoURL  *string
-	Plan     string
 	Settings map[string]any
 }
 
@@ -116,7 +114,6 @@ type UpdateOrganizationInput struct {
 	Name     *string
 	Slug     *string
 	LogoURL  *string
-	Plan     *string
 	Settings map[string]any
 	Active   *bool
 }

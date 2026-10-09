@@ -36,8 +36,6 @@ const (
 	FieldWebsiteURL = "website_url"
 	// FieldSettings holds the string denoting the settings field in the database.
 	FieldSettings = "settings"
-	// FieldPlan holds the string denoting the plan field in the database.
-	FieldPlan = "plan"
 	// FieldActive holds the string denoting the active field in the database.
 	FieldActive = "active"
 	// EdgeOauthApps holds the string denoting the oauth_apps edge name in mutations.
@@ -129,7 +127,6 @@ var Columns = []string{
 	FieldDescription,
 	FieldWebsiteURL,
 	FieldSettings,
-	FieldPlan,
 	FieldActive,
 }
 
@@ -187,34 +184,6 @@ func OrgTypeValidator(ot OrgType) error {
 	}
 }
 
-// Plan defines the type for the "plan" enum field.
-type Plan string
-
-// PlanFree is the default value of the Plan enum.
-const DefaultPlan = PlanFree
-
-// Plan values.
-const (
-	PlanFree       Plan = "free"
-	PlanStarter    Plan = "starter"
-	PlanPro        Plan = "pro"
-	PlanEnterprise Plan = "enterprise"
-)
-
-func (pl Plan) String() string {
-	return string(pl)
-}
-
-// PlanValidator is a validator for the "plan" field enum values. It is called by the builders before save.
-func PlanValidator(pl Plan) error {
-	switch pl {
-	case PlanFree, PlanStarter, PlanPro, PlanEnterprise:
-		return nil
-	default:
-		return fmt.Errorf("organization: invalid enum value for plan field: %q", pl)
-	}
-}
-
 // OrderOption defines the ordering options for the Organization queries.
 type OrderOption func(*sql.Selector)
 
@@ -266,11 +235,6 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 // ByWebsiteURL orders the results by the website_url field.
 func ByWebsiteURL(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWebsiteURL, opts...).ToFunc()
-}
-
-// ByPlan orders the results by the plan field.
-func ByPlan(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldPlan, opts...).ToFunc()
 }
 
 // ByActive orders the results by the active field.

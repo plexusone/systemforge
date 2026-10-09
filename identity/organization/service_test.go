@@ -40,7 +40,7 @@ func TestListExcludesInactiveMemberships(t *testing.T) {
 	})
 	svc := organization.NewService(db)
 
-	org, err := svc.Create(ctx, organization.CreateOrganizationInput{Name: "Acme", Slug: "acme", OrgType: organization.OrgTypeTeam, Plan: organization.PlanFree})
+	org, err := svc.Create(ctx, organization.CreateOrganizationInput{Name: "Acme", Slug: "acme", OrgType: organization.OrgTypeTeam})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -81,9 +81,9 @@ func TestListExcludesInactiveMemberships(t *testing.T) {
 	}
 }
 
-// TestCreateDefaultsTypeAndPlan verifies that an organization created
-// without a type or plan takes the schema defaults.
-func TestCreateDefaultsTypeAndPlan(t *testing.T) {
+// TestCreateDefaultsType verifies that an organization created
+// without a type takes the schema default.
+func TestCreateDefaultsType(t *testing.T) {
 	ctx := context.Background()
 	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
 	t.Cleanup(func() {
@@ -93,9 +93,9 @@ func TestCreateDefaultsTypeAndPlan(t *testing.T) {
 	})
 	org, err := organization.NewService(db).Create(ctx, organization.CreateOrganizationInput{Name: "Plain", Slug: "plain"})
 	if err != nil {
-		t.Fatalf("Create without type or plan: %v", err)
+		t.Fatalf("Create without type: %v", err)
 	}
-	if org.OrgType != organization.OrgTypeTeam || org.Plan != organization.PlanFree {
-		t.Errorf("type %q plan %q, want team and free", org.OrgType, org.Plan)
+	if org.OrgType != organization.OrgTypeTeam {
+		t.Errorf("type %q, want team", org.OrgType)
 	}
 }

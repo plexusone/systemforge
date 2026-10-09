@@ -660,7 +660,7 @@ func init() {
 	// organization.SlugValidator is a validator for the "slug" field. It is called by the builders before save.
 	organization.SlugValidator = organizationDescSlug.Validators[0].(func(string) error)
 	// organizationDescActive is the schema descriptor for active field.
-	organizationDescActive := organizationFields[9].Descriptor()
+	organizationDescActive := organizationFields[8].Descriptor()
 	// organization.DefaultActive holds the default value on creation for the active field.
 	organization.DefaultActive = organizationDescActive.Default.(bool)
 	// organizationDescID is the schema descriptor for id field.

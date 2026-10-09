@@ -141,7 +141,7 @@ func TestOrganizationAPIAuthorization(t *testing.T) {
 	}
 
 	// Listing shows the caller's organizations only.
-	if _, err := api.svc.Create(ctx, organization.CreateOrganizationInput{Name: "Other", Slug: "other", OrgType: organization.OrgTypeTeam, Plan: organization.PlanFree, OwnerPrincipalID: &outsider}); err != nil {
+	if _, err := api.svc.Create(ctx, organization.CreateOrganizationInput{Name: "Other", Slug: "other", OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &outsider}); err != nil {
 		t.Fatalf("Create other: %v", err)
 	}
 	listed := func(as uuid.UUID) []string {
@@ -178,7 +178,7 @@ func TestPlatformAdminListsAllOrganizations(t *testing.T) {
 	admin := uuid.New()
 	api := newOrgAPI(t, admin)
 	for _, slug := range []string{"one", "two"} {
-		if _, err := api.svc.Create(ctx, organization.CreateOrganizationInput{Name: slug, Slug: slug, OrgType: organization.OrgTypeTeam, Plan: organization.PlanFree}); err != nil {
+		if _, err := api.svc.Create(ctx, organization.CreateOrganizationInput{Name: slug, Slug: slug, OrgType: organization.OrgTypeTeam}); err != nil {
 			t.Fatalf("Create: %v", err)
 		}
 	}
@@ -213,7 +213,7 @@ func TestMembershipRoleGetterIgnoresInactive(t *testing.T) {
 	ctx := context.Background()
 	api := newOrgAPI(t)
 	owner := newHuman(t, api.db, "o@example.com")
-	org, err := api.svc.Create(ctx, organization.CreateOrganizationInput{Name: "A", Slug: "a-org", OrgType: organization.OrgTypeTeam, Plan: organization.PlanFree, OwnerPrincipalID: &owner})
+	org, err := api.svc.Create(ctx, organization.CreateOrganizationInput{Name: "A", Slug: "a-org", OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &owner})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}

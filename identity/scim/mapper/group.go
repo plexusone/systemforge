@@ -94,7 +94,6 @@ func (m *GroupMapper) FromSCIM(ctx context.Context, scimGroup *scim.Group) (*ide
 	input := &identity.CreateOrganizationInput{
 		Name: scimGroup.DisplayName,
 		Slug: generateSlug(scimGroup.DisplayName),
-		Plan: "free", // Default plan
 	}
 
 	// Use externalId as slug if provided

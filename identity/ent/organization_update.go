@@ -176,20 +176,6 @@ func (_u *OrganizationUpdate) ClearSettings() *OrganizationUpdate {
 	return _u
 }
 
-// SetPlan sets the "plan" field.
-func (_u *OrganizationUpdate) SetPlan(v organization.Plan) *OrganizationUpdate {
-	_u.mutation.SetPlan(v)
-	return _u
-}
-
-// SetNillablePlan sets the "plan" field if the given value is not nil.
-func (_u *OrganizationUpdate) SetNillablePlan(v *organization.Plan) *OrganizationUpdate {
-	if v != nil {
-		_u.SetPlan(*v)
-	}
-	return _u
-}
-
 // SetActive sets the "active" field.
 func (_u *OrganizationUpdate) SetActive(v bool) *OrganizationUpdate {
 	_u.mutation.SetActive(v)
@@ -528,11 +514,6 @@ func (_u *OrganizationUpdate) check() error {
 			return &ValidationError{Name: "org_type", err: fmt.Errorf(`ent: validator failed for field "Organization.org_type": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Plan(); ok {
-		if err := organization.PlanValidator(v); err != nil {
-			return &ValidationError{Name: "plan", err: fmt.Errorf(`ent: validator failed for field "Organization.plan": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -583,9 +564,6 @@ func (_u *OrganizationUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.SettingsCleared() {
 		_spec.ClearField(organization.FieldSettings, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.Plan(); ok {
-		_spec.SetField(organization.FieldPlan, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Active(); ok {
 		_spec.SetField(organization.FieldActive, field.TypeBool, value)
@@ -1078,20 +1056,6 @@ func (_u *OrganizationUpdateOne) ClearSettings() *OrganizationUpdateOne {
 	return _u
 }
 
-// SetPlan sets the "plan" field.
-func (_u *OrganizationUpdateOne) SetPlan(v organization.Plan) *OrganizationUpdateOne {
-	_u.mutation.SetPlan(v)
-	return _u
-}
-
-// SetNillablePlan sets the "plan" field if the given value is not nil.
-func (_u *OrganizationUpdateOne) SetNillablePlan(v *organization.Plan) *OrganizationUpdateOne {
-	if v != nil {
-		_u.SetPlan(*v)
-	}
-	return _u
-}
-
 // SetActive sets the "active" field.
 func (_u *OrganizationUpdateOne) SetActive(v bool) *OrganizationUpdateOne {
 	_u.mutation.SetActive(v)
@@ -1443,11 +1407,6 @@ func (_u *OrganizationUpdateOne) check() error {
 			return &ValidationError{Name: "org_type", err: fmt.Errorf(`ent: validator failed for field "Organization.org_type": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Plan(); ok {
-		if err := organization.PlanValidator(v); err != nil {
-			return &ValidationError{Name: "plan", err: fmt.Errorf(`ent: validator failed for field "Organization.plan": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -1515,9 +1474,6 @@ func (_u *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organizati
 	}
 	if _u.mutation.SettingsCleared() {
 		_spec.ClearField(organization.FieldSettings, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.Plan(); ok {
-		_spec.SetField(organization.FieldPlan, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Active(); ok {
 		_spec.SetField(organization.FieldActive, field.TypeBool, value)

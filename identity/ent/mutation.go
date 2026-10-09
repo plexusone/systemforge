@@ -21355,7 +21355,6 @@ type OrganizationMutation struct {
 	description                  *string
 	website_url                  *string
 	settings                     *map[string]interface{}
-	plan                         *organization.Plan
 	active                       *bool
 	clearedFields                map[string]struct{}
 	oauth_apps                   map[uuid.UUID]struct{}
@@ -21914,42 +21913,6 @@ func (m *OrganizationMutation) ResetSettings() {
 	delete(m.clearedFields, organization.FieldSettings)
 }
 
-// SetPlan sets the "plan" field.
-func (m *OrganizationMutation) SetPlan(o organization.Plan) {
-	m.plan = &o
-}
-
-// Plan returns the value of the "plan" field in the mutation.
-func (m *OrganizationMutation) Plan() (r organization.Plan, exists bool) {
-	v := m.plan
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPlan returns the old "plan" field's value of the Organization entity.
-// If the Organization object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *OrganizationMutation) OldPlan(ctx context.Context) (v organization.Plan, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPlan is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPlan requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPlan: %w", err)
-	}
-	return oldValue.Plan, nil
-}
-
-// ResetPlan resets all changes to the "plan" field.
-func (m *OrganizationMutation) ResetPlan() {
-	m.plan = nil
-}
-
 // SetActive sets the "active" field.
 func (m *OrganizationMutation) SetActive(b bool) {
 	m.active = &b
@@ -22423,7 +22386,7 @@ func (m *OrganizationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OrganizationMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, organization.FieldCreatedAt)
 	}
@@ -22453,9 +22416,6 @@ func (m *OrganizationMutation) Fields() []string {
 	}
 	if m.settings != nil {
 		fields = append(fields, organization.FieldSettings)
-	}
-	if m.plan != nil {
-		fields = append(fields, organization.FieldPlan)
 	}
 	if m.active != nil {
 		fields = append(fields, organization.FieldActive)
@@ -22488,8 +22448,6 @@ func (m *OrganizationMutation) Field(name string) (ent.Value, bool) {
 		return m.WebsiteURL()
 	case organization.FieldSettings:
 		return m.Settings()
-	case organization.FieldPlan:
-		return m.Plan()
 	case organization.FieldActive:
 		return m.Active()
 	}
@@ -22521,8 +22479,6 @@ func (m *OrganizationMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldWebsiteURL(ctx)
 	case organization.FieldSettings:
 		return m.OldSettings(ctx)
-	case organization.FieldPlan:
-		return m.OldPlan(ctx)
 	case organization.FieldActive:
 		return m.OldActive(ctx)
 	}
@@ -22603,13 +22559,6 @@ func (m *OrganizationMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSettings(v)
-		return nil
-	case organization.FieldPlan:
-		v, ok := value.(organization.Plan)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPlan(v)
 		return nil
 	case organization.FieldActive:
 		v, ok := value.(bool)
@@ -22729,9 +22678,6 @@ func (m *OrganizationMutation) ResetField(name string) error {
 		return nil
 	case organization.FieldSettings:
 		m.ResetSettings()
-		return nil
-	case organization.FieldPlan:
-		m.ResetPlan()
 		return nil
 	case organization.FieldActive:
 		m.ResetActive()

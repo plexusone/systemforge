@@ -147,20 +147,6 @@ func (_c *OrganizationCreate) SetSettings(v map[string]interface{}) *Organizatio
 	return _c
 }
 
-// SetPlan sets the "plan" field.
-func (_c *OrganizationCreate) SetPlan(v organization.Plan) *OrganizationCreate {
-	_c.mutation.SetPlan(v)
-	return _c
-}
-
-// SetNillablePlan sets the "plan" field if the given value is not nil.
-func (_c *OrganizationCreate) SetNillablePlan(v *organization.Plan) *OrganizationCreate {
-	if v != nil {
-		_c.SetPlan(*v)
-	}
-	return _c
-}
-
 // SetActive sets the "active" field.
 func (_c *OrganizationCreate) SetActive(v bool) *OrganizationCreate {
 	_c.mutation.SetActive(v)
@@ -364,10 +350,6 @@ func (_c *OrganizationCreate) defaults() {
 		v := organization.DefaultOrgType
 		_c.mutation.SetOrgType(v)
 	}
-	if _, ok := _c.mutation.Plan(); !ok {
-		v := organization.DefaultPlan
-		_c.mutation.SetPlan(v)
-	}
 	if _, ok := _c.mutation.Active(); !ok {
 		v := organization.DefaultActive
 		_c.mutation.SetActive(v)
@@ -408,14 +390,6 @@ func (_c *OrganizationCreate) check() error {
 	if v, ok := _c.mutation.OrgType(); ok {
 		if err := organization.OrgTypeValidator(v); err != nil {
 			return &ValidationError{Name: "org_type", err: fmt.Errorf(`ent: validator failed for field "Organization.org_type": %w`, err)}
-		}
-	}
-	if _, ok := _c.mutation.Plan(); !ok {
-		return &ValidationError{Name: "plan", err: errors.New(`ent: missing required field "Organization.plan"`)}
-	}
-	if v, ok := _c.mutation.Plan(); ok {
-		if err := organization.PlanValidator(v); err != nil {
-			return &ValidationError{Name: "plan", err: fmt.Errorf(`ent: validator failed for field "Organization.plan": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Active(); !ok {
@@ -492,10 +466,6 @@ func (_c *OrganizationCreate) createSpec() (*Organization, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.Settings(); ok {
 		_spec.SetField(organization.FieldSettings, field.TypeJSON, value)
 		_node.Settings = value
-	}
-	if value, ok := _c.mutation.Plan(); ok {
-		_spec.SetField(organization.FieldPlan, field.TypeEnum, value)
-		_node.Plan = value
 	}
 	if value, ok := _c.mutation.Active(); ok {
 		_spec.SetField(organization.FieldActive, field.TypeBool, value)
@@ -820,18 +790,6 @@ func (u *OrganizationUpsert) ClearSettings() *OrganizationUpsert {
 	return u
 }
 
-// SetPlan sets the "plan" field.
-func (u *OrganizationUpsert) SetPlan(v organization.Plan) *OrganizationUpsert {
-	u.Set(organization.FieldPlan, v)
-	return u
-}
-
-// UpdatePlan sets the "plan" field to the value that was provided on create.
-func (u *OrganizationUpsert) UpdatePlan() *OrganizationUpsert {
-	u.SetExcluded(organization.FieldPlan)
-	return u
-}
-
 // SetActive sets the "active" field.
 func (u *OrganizationUpsert) SetActive(v bool) *OrganizationUpsert {
 	u.Set(organization.FieldActive, v)
@@ -1053,20 +1011,6 @@ func (u *OrganizationUpsertOne) UpdateSettings() *OrganizationUpsertOne {
 func (u *OrganizationUpsertOne) ClearSettings() *OrganizationUpsertOne {
 	return u.Update(func(s *OrganizationUpsert) {
 		s.ClearSettings()
-	})
-}
-
-// SetPlan sets the "plan" field.
-func (u *OrganizationUpsertOne) SetPlan(v organization.Plan) *OrganizationUpsertOne {
-	return u.Update(func(s *OrganizationUpsert) {
-		s.SetPlan(v)
-	})
-}
-
-// UpdatePlan sets the "plan" field to the value that was provided on create.
-func (u *OrganizationUpsertOne) UpdatePlan() *OrganizationUpsertOne {
-	return u.Update(func(s *OrganizationUpsert) {
-		s.UpdatePlan()
 	})
 }
 
@@ -1460,20 +1404,6 @@ func (u *OrganizationUpsertBulk) UpdateSettings() *OrganizationUpsertBulk {
 func (u *OrganizationUpsertBulk) ClearSettings() *OrganizationUpsertBulk {
 	return u.Update(func(s *OrganizationUpsert) {
 		s.ClearSettings()
-	})
-}
-
-// SetPlan sets the "plan" field.
-func (u *OrganizationUpsertBulk) SetPlan(v organization.Plan) *OrganizationUpsertBulk {
-	return u.Update(func(s *OrganizationUpsert) {
-		s.SetPlan(v)
-	})
-}
-
-// UpdatePlan sets the "plan" field to the value that was provided on create.
-func (u *OrganizationUpsertBulk) UpdatePlan() *OrganizationUpsertBulk {
-	return u.Update(func(s *OrganizationUpsert) {
-		s.UpdatePlan()
 	})
 }
 

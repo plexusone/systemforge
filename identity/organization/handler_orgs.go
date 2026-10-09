@@ -24,11 +24,13 @@ type OrgResponse struct {
 	LogoURL          *string        `json:"logo_url,omitempty"`
 	Description      *string        `json:"description,omitempty"`
 	WebsiteURL       *string        `json:"website_url,omitempty"`
-	Plan             string         `json:"plan"`
 	Active           bool           `json:"active"`
 	Settings         map[string]any `json:"settings,omitempty"`
-	CreatedAt        time.Time      `json:"created_at"`
-	UpdatedAt        time.Time      `json:"updated_at"`
+	// Entitlements summarizes what the organization may use, derived from
+	// its marketplace subscriptions and licenses.
+	Entitlements []Entitlement `json:"entitlements"`
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
 }
 
 func orgToResponse(org *Organization) *OrgResponse {
@@ -40,7 +42,6 @@ func orgToResponse(org *Organization) *OrgResponse {
 		LogoURL:     org.LogoURL,
 		Description: org.Description,
 		WebsiteURL:  org.WebsiteURL,
-		Plan:        string(org.Plan),
 		Active:      org.Active,
 		Settings:    org.Settings,
 		CreatedAt:   org.CreatedAt,
@@ -58,11 +59,10 @@ type CreateOrgInput struct {
 	Body struct {
 		Name        string         `json:"name" required:"true" minLength:"1" maxLength:"100"`
 		Slug        string         `json:"slug" required:"true" minLength:"3" maxLength:"63" pattern:"^[a-z][a-z0-9-]*[a-z0-9]$"`
-		OrgType     string         `json:"org_type,omitempty" enum:"personal,team,enterprise" default:"team"`
+		OrgType     string         `json:"org_type,omitempty" enum:"team,enterprise" default:"team"`
 		LogoURL     *string        `json:"logo_url,omitempty"`
 		Description *string        `json:"description,omitempty"`
 		WebsiteURL  *string        `json:"website_url,omitempty"`
-		Plan        string         `json:"plan,omitempty" enum:"free,starter,pro,enterprise" default:"free"`
 		Settings    map[string]any `json:"settings,omitempty"`
 	}
 }
@@ -90,7 +90,6 @@ type UpdateOrgInput struct {
 		LogoURL     *string        `json:"logo_url,omitempty"`
 		Description *string        `json:"description,omitempty"`
 		WebsiteURL  *string        `json:"website_url,omitempty"`
-		Plan        *string        `json:"plan,omitempty" enum:"free,starter,pro,enterprise"`
 		Settings    map[string]any `json:"settings,omitempty"`
 	}
 }
@@ -110,7 +109,6 @@ type ListOrgsInput struct {
 	// Huma does not support pointer parameters; an empty value means
 	// the filter is not applied.
 	OrgType string `query:"org_type" enum:"personal,team,enterprise"`
-	Plan    string `query:"plan" enum:"free,starter,pro,enterprise"`
 	Active  string `query:"active" enum:"true,false"`
 	Limit   int    `query:"limit" default:"20" minimum:"1" maximum:"100"`
 	Offset  int    `query:"offset" default:"0" minimum:"0"`
@@ -222,11 +220,6 @@ func (a *API) createOrg(ctx context.Context, input *CreateOrgInput) (*CreateOrgO
 		orgType = OrgType(input.Body.OrgType)
 	}
 
-	plan := PlanFree
-	if input.Body.Plan != "" {
-		plan = Plan(input.Body.Plan)
-	}
-
 	org, err := a.service.Create(ctx, CreateOrganizationInput{
 		Name:             input.Body.Name,
 		Slug:             input.Body.Slug,
@@ -235,14 +228,17 @@ func (a *API) createOrg(ctx context.Context, input *CreateOrgInput) (*CreateOrgO
 		LogoURL:          input.Body.LogoURL,
 		Description:      input.Body.Description,
 		WebsiteURL:       input.Body.WebsiteURL,
-		Plan:             plan,
 		Settings:         input.Body.Settings,
 	})
 	if err != nil {
 		return nil, huma.Error400BadRequest(err.Error())
 	}
 
-	return &CreateOrgOutput{Body: orgToResponse(org)}, nil
+	resp, err := a.orgResponse(ctx, org)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(err.Error())
+	}
+	return &CreateOrgOutput{Body: resp}, nil
 }
 
 func (a *API) getOrg(ctx context.Context, input *GetOrgInput) (*GetOrgOutput, error) {
@@ -251,7 +247,11 @@ func (a *API) getOrg(ctx context.Context, input *GetOrgInput) (*GetOrgOutput, er
 		return nil, err
 	}
 
-	return &GetOrgOutput{Body: orgToResponse(org)}, nil
+	resp, err := a.orgResponse(ctx, org)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(err.Error())
+	}
+	return &GetOrgOutput{Body: resp}, nil
 }
 
 func (a *API) updateOrg(ctx context.Context, input *UpdateOrgInput) (*UpdateOrgOutput, error) {
@@ -260,25 +260,22 @@ func (a *API) updateOrg(ctx context.Context, input *UpdateOrgInput) (*UpdateOrgO
 		return nil, err
 	}
 
-	var plan *Plan
-	if input.Body.Plan != nil {
-		p := Plan(*input.Body.Plan)
-		plan = &p
-	}
-
 	updated, err := a.service.Update(ctx, org.ID, UpdateOrganizationInput{
 		Name:        input.Body.Name,
 		LogoURL:     input.Body.LogoURL,
 		Description: input.Body.Description,
 		WebsiteURL:  input.Body.WebsiteURL,
-		Plan:        plan,
 		Settings:    input.Body.Settings,
 	})
 	if err != nil {
 		return nil, huma.Error400BadRequest(err.Error())
 	}
 
-	return &UpdateOrgOutput{Body: orgToResponse(updated)}, nil
+	resp, err := a.orgResponse(ctx, updated)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(err.Error())
+	}
+	return &UpdateOrgOutput{Body: resp}, nil
 }
 
 func (a *API) deleteOrg(ctx context.Context, input *DeleteOrgInput) (*struct{}, error) {
@@ -319,12 +316,6 @@ func (a *API) listOrgs(ctx context.Context, input *ListOrgsInput) (*ListOrgsOutp
 		orgType = &t
 	}
 
-	var plan *Plan
-	if input.Plan != "" {
-		p := Plan(input.Plan)
-		plan = &p
-	}
-
 	var active *bool
 	if input.Active != "" {
 		v := input.Active == "true"
@@ -333,7 +324,6 @@ func (a *API) listOrgs(ctx context.Context, input *ListOrgsInput) (*ListOrgsOutp
 
 	orgs, err := a.service.List(ctx, ListOrganizationsInput{
 		OrgType:           orgType,
-		Plan:              plan,
 		Active:            active,
 		MemberPrincipalID: member,
 		Limit:             input.Limit,
@@ -345,7 +335,11 @@ func (a *API) listOrgs(ctx context.Context, input *ListOrgsInput) (*ListOrgsOutp
 
 	responses := make([]*OrgResponse, len(orgs))
 	for i, org := range orgs {
-		responses[i] = orgToResponse(org)
+		resp, err := a.orgResponse(ctx, org)
+		if err != nil {
+			return nil, huma.Error500InternalServerError(err.Error())
+		}
+		responses[i] = resp
 	}
 
 	output := &ListOrgsOutput{}

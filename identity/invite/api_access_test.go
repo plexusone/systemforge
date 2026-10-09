@@ -53,7 +53,7 @@ func newInviteAPI(t *testing.T) *inviteAPI {
 		a.people[name] = p.ID
 	}
 	owner := a.people["owner"]
-	org, err := orgs.Create(ctx, organization.CreateOrganizationInput{Name: "Acme", Slug: "acme", OrgType: organization.OrgTypeTeam, Plan: organization.PlanFree, OwnerPrincipalID: &owner})
+	org, err := orgs.Create(ctx, organization.CreateOrganizationInput{Name: "Acme", Slug: "acme", OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &owner})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestInviteManagementAuthorization(t *testing.T) {
 
 	// An invite of one organization cannot be managed through another.
 	other := a.people["other"]
-	if _, err := a.orgs.Create(context.Background(), organization.CreateOrganizationInput{Name: "Other", Slug: "other", OrgType: organization.OrgTypeTeam, Plan: organization.PlanFree, OwnerPrincipalID: &other}); err != nil {
+	if _, err := a.orgs.Create(context.Background(), organization.CreateOrganizationInput{Name: "Other", Slug: "other", OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &other}); err != nil {
 		t.Fatalf("Create other: %v", err)
 	}
 	if code, _ := a.do(http.MethodDelete, "/organizations/other/invites/"+id, "other", nil); code != http.StatusNotFound {

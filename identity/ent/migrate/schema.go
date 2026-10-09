@@ -1013,7 +1013,6 @@ var (
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "website_url", Type: field.TypeString, Nullable: true},
 		{Name: "settings", Type: field.TypeJSON, Nullable: true},
-		{Name: "plan", Type: field.TypeEnum, Enums: []string{"free", "starter", "pro", "enterprise"}, Default: "free"},
 		{Name: "active", Type: field.TypeBool, Default: true},
 		{Name: "owner_principal_id", Type: field.TypeUUID, Nullable: true},
 	}
@@ -1025,7 +1024,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_organizations_sf_principals_owned_organizations",
-				Columns:    []*schema.Column{SfOrganizationsColumns[12]},
+				Columns:    []*schema.Column{SfOrganizationsColumns[11]},
 				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -1039,7 +1038,7 @@ var (
 			{
 				Name:    "organization_active",
 				Unique:  false,
-				Columns: []*schema.Column{SfOrganizationsColumns[11]},
+				Columns: []*schema.Column{SfOrganizationsColumns[10]},
 			},
 			{
 				Name:    "organization_org_type",
@@ -1049,12 +1048,12 @@ var (
 			{
 				Name:    "organization_owner_principal_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOrganizationsColumns[12]},
+				Columns: []*schema.Column{SfOrganizationsColumns[11]},
 			},
 			{
 				Name:    "organization_org_type_active",
 				Unique:  false,
-				Columns: []*schema.Column{SfOrganizationsColumns[5], SfOrganizationsColumns[11]},
+				Columns: []*schema.Column{SfOrganizationsColumns[5], SfOrganizationsColumns[10]},
 			},
 		},
 	}

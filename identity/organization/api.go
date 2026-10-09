@@ -28,6 +28,11 @@ type APIConfig struct {
 	// Caller identifies the authenticated principal (default:
 	// requestprincipal.PrincipalUUID, set by requestprincipal.Middleware).
 	Caller func(ctx context.Context) (uuid.UUID, error)
+	// Entitlements lists what an organization may use, derived from its
+	// marketplace subscriptions and licenses (see
+	// marketplace.EntitlementSource). Without it, responses carry an
+	// empty entitlements list.
+	Entitlements EntitlementSource
 }
 
 // DefaultAPIConfig returns the default API configuration.

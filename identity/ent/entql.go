@@ -529,7 +529,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 			organization.FieldDescription:      {Type: field.TypeString, Column: organization.FieldDescription},
 			organization.FieldWebsiteURL:       {Type: field.TypeString, Column: organization.FieldWebsiteURL},
 			organization.FieldSettings:         {Type: field.TypeJSON, Column: organization.FieldSettings},
-			organization.FieldPlan:             {Type: field.TypeEnum, Column: organization.FieldPlan},
 			organization.FieldActive:           {Type: field.TypeBool, Column: organization.FieldActive},
 		},
 	}
@@ -3895,11 +3894,6 @@ func (f *OrganizationFilter) WhereWebsiteURL(p entql.StringP) {
 // WhereSettings applies the entql json.RawMessage predicate on the settings field.
 func (f *OrganizationFilter) WhereSettings(p entql.BytesP) {
 	f.Where(p.Field(organization.FieldSettings))
-}
-
-// WherePlan applies the entql string predicate on the plan field.
-func (f *OrganizationFilter) WherePlan(p entql.StringP) {
-	f.Where(p.Field(organization.FieldPlan))
 }
 
 // WhereActive applies the entql bool predicate on the active field.

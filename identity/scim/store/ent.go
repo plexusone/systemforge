@@ -519,7 +519,6 @@ func (s *EntStore) CreateGroup(ctx context.Context, scimGroup *scim.Group) (*sci
 	org, err := s.client.Organization.Create().
 		SetName(scimGroup.DisplayName).
 		SetSlug(slug).
-		SetPlan(organization.PlanFree).
 		SetActive(true).
 		Save(ctx)
 	if err != nil {
@@ -664,6 +663,13 @@ func (s *EntStore) AddMemberToGroup(ctx context.Context, groupID, userID string)
 	}
 	if !known {
 		return scim.ErrNotFound("user not found")
+	}
+
+	if err := orgsvc.RequireMembersAllowed(ctx, s.client, gid, s.config.DefaultRole); err != nil {
+		if errors.Is(err, orgsvc.ErrPersonalOrganization) {
+			return scim.ErrInvalidValue("a personal organization cannot have group members")
+		}
+		return scim.ErrInternal(err.Error())
 	}
 
 	existing, err := s.client.PrincipalMembership.Query().

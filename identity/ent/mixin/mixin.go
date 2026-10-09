@@ -82,9 +82,6 @@ func (OrganizationBase) Fields() []ent.Field {
 		field.JSON("settings", map[string]any{}).
 			Optional().
 			Comment("App-specific configuration"),
-		field.Enum("plan").
-			Values("free", "starter", "pro", "enterprise").
-			Default("free"),
 		field.Bool("active").
 			Default(true),
 		// Public profile fields

@@ -596,26 +596,6 @@ func SettingsNotNil() predicate.Organization {
 	return predicate.Organization(sql.FieldNotNull(FieldSettings))
 }
 
-// PlanEQ applies the EQ predicate on the "plan" field.
-func PlanEQ(v Plan) predicate.Organization {
-	return predicate.Organization(sql.FieldEQ(FieldPlan, v))
-}
-
-// PlanNEQ applies the NEQ predicate on the "plan" field.
-func PlanNEQ(v Plan) predicate.Organization {
-	return predicate.Organization(sql.FieldNEQ(FieldPlan, v))
-}
-
-// PlanIn applies the In predicate on the "plan" field.
-func PlanIn(vs ...Plan) predicate.Organization {
-	return predicate.Organization(sql.FieldIn(FieldPlan, vs...))
-}
-
-// PlanNotIn applies the NotIn predicate on the "plan" field.
-func PlanNotIn(vs ...Plan) predicate.Organization {
-	return predicate.Organization(sql.FieldNotIn(FieldPlan, vs...))
-}
-
 // ActiveEQ applies the EQ predicate on the "active" field.
 func ActiveEQ(v bool) predicate.Organization {
 	return predicate.Organization(sql.FieldEQ(FieldActive, v))

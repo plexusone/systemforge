@@ -157,12 +157,9 @@ func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInp
 		SetName(input.Name).
 		SetSlug(input.Slug).
 		SetActive(true)
-	// An empty type or plan takes the schema default (team, free).
+	// An empty type takes the schema default (team).
 	if input.OrgType != "" {
 		create.SetOrgType(organization.OrgType(input.OrgType))
-	}
-	if input.Plan != "" {
-		create.SetPlan(organization.Plan(input.Plan))
 	}
 
 	if input.OwnerPrincipalID != nil {
@@ -225,7 +222,6 @@ func (s *DefaultService) CreatePersonalOrg(ctx context.Context, input CreatePers
 		OrgType:          OrgTypePersonal,
 		OwnerPrincipalID: &input.OwnerPrincipalID,
 		LogoURL:          input.LogoURL,
-		Plan:             PlanFree,
 	})
 }
 
@@ -291,9 +287,6 @@ func (s *DefaultService) Update(ctx context.Context, id uuid.UUID, input UpdateO
 	if input.Settings != nil {
 		update.SetSettings(input.Settings)
 	}
-	if input.Plan != nil {
-		update.SetPlan(organization.Plan(*input.Plan))
-	}
 
 	org, err := update.Save(ctx)
 	if err != nil {
@@ -336,9 +329,6 @@ func (s *DefaultService) List(ctx context.Context, input ListOrganizationsInput)
 	if input.OrgType != nil {
 		query.Where(organization.OrgTypeEQ(organization.OrgType(*input.OrgType)))
 	}
-	if input.Plan != nil {
-		query.Where(organization.PlanEQ(organization.Plan(*input.Plan)))
-	}
 	if input.Active != nil {
 		query.Where(organization.Active(*input.Active))
 	}
@@ -371,6 +361,10 @@ func (s *DefaultService) List(ctx context.Context, input ListOrganizationsInput)
 
 // AddMember adds a principal as a member of an organization.
 func (s *DefaultService) AddMember(ctx context.Context, input AddMemberInput) (*Membership, error) {
+	if err := RequireMembersAllowed(ctx, s.client, input.OrganizationID, input.Role); err != nil {
+		return nil, err
+	}
+
 	// Check if membership already exists
 	existing, err := s.GetMembership(ctx, input.OrganizationID, input.PrincipalID)
 	if err == nil && existing != nil {
@@ -405,17 +399,21 @@ func (s *DefaultService) AddMember(ctx context.Context, input AddMemberInput) (*
 
 // UpdateMember updates a membership.
 func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUID, input UpdateMemberInput) (*Membership, error) {
-	// Get current membership for role change detection
-	var oldRole string
-	if input.Role != nil {
-		current, err := s.client.PrincipalMembership.Get(ctx, membershipID)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				return nil, fmt.Errorf("membership not found: %s", membershipID)
-			}
-			return nil, fmt.Errorf("failed to get membership: %w", err)
+	// Get current membership for role change detection and the type check
+	current, err := s.client.PrincipalMembership.Get(ctx, membershipID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("membership not found: %s", membershipID)
 		}
-		oldRole = current.Role
+		return nil, fmt.Errorf("failed to get membership: %w", err)
+	}
+	oldRole := current.Role
+	newRole := oldRole
+	if input.Role != nil {
+		newRole = *input.Role
+	}
+	if err := RequireMembersAllowed(ctx, s.client, current.OrganizationID, newRole); err != nil {
+		return nil, err
 	}
 
 	update := s.client.PrincipalMembership.UpdateOneID(membershipID)
@@ -582,6 +580,14 @@ func (s *DefaultService) SlugAvailable(ctx context.Context, slug string) (bool, 
 
 // TransferOwnership transfers ownership of an organization to another principal.
 func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOwnershipInput) error {
+	personal, err := isPersonal(ctx, s.client, input.OrganizationID)
+	if err != nil {
+		return err
+	}
+	if personal {
+		return fmt.Errorf("%w: it belongs to its owner", ErrPersonalOrganization)
+	}
+
 	// Validate the current owner
 	currentMembership, err := s.GetMembership(ctx, input.OrganizationID, input.FromPrincipal)
 	if err != nil {
@@ -773,7 +779,6 @@ func entOrgToModel(org *ent.Organization) *Organization {
 		OrgType:   OrgType(org.OrgType),
 		LogoURL:   org.LogoURL,
 		Settings:  org.Settings,
-		Plan:      Plan(org.Plan),
 		Active:    org.Active,
 		CreatedAt: org.CreatedAt,
 		UpdatedAt: org.UpdatedAt,

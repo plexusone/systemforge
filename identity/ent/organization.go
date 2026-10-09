@@ -41,8 +41,6 @@ type Organization struct {
 	WebsiteURL *string `json:"website_url,omitempty"`
 	// App-specific configuration
 	Settings map[string]interface{} `json:"settings,omitempty"`
-	// Plan holds the value of the "plan" field.
-	Plan organization.Plan `json:"plan,omitempty"`
 	// Active holds the value of the "active" field.
 	Active bool `json:"active,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -161,7 +159,7 @@ func (*Organization) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case organization.FieldActive:
 			values[i] = new(sql.NullBool)
-		case organization.FieldName, organization.FieldSlug, organization.FieldOrgType, organization.FieldLogoURL, organization.FieldDescription, organization.FieldWebsiteURL, organization.FieldPlan:
+		case organization.FieldName, organization.FieldSlug, organization.FieldOrgType, organization.FieldLogoURL, organization.FieldDescription, organization.FieldWebsiteURL:
 			values[i] = new(sql.NullString)
 		case organization.FieldCreatedAt, organization.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -253,12 +251,6 @@ func (_m *Organization) assignValues(columns []string, values []any) error {
 				if err := json.Unmarshal(*value, &_m.Settings); err != nil {
 					return fmt.Errorf("unmarshal field settings: %w", err)
 				}
-			}
-		case organization.FieldPlan:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field plan", values[i])
-			} else if value.Valid {
-				_m.Plan = organization.Plan(value.String)
 			}
 		case organization.FieldActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -379,9 +371,6 @@ func (_m *Organization) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("settings=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Settings))
-	builder.WriteString(", ")
-	builder.WriteString("plan=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Plan))
 	builder.WriteString(", ")
 	builder.WriteString("active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Active))

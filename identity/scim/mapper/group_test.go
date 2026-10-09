@@ -184,10 +184,6 @@ func TestGroupMapperFromSCIM(t *testing.T) {
 	if input.Slug != "engineering-team" {
 		t.Errorf("Slug = %q, want %q", input.Slug, "engineering-team")
 	}
-
-	if input.Plan != "free" {
-		t.Errorf("Plan = %q, want %q", input.Plan, "free")
-	}
 }
 
 func TestGroupMapperFromSCIMNil(t *testing.T) {
