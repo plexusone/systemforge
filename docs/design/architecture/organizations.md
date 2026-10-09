@@ -73,11 +73,12 @@ and `GetBySlug` is the lookup the API uses. The display name is cosmetic and
 carries no identity. The slug is unique across every organization type, so
 personal and team organizations share one namespace.
 
-Today the slug is set once at creation and cannot be changed:
+The slug changes only through `Rename` (see
+[Renaming and the cooling-off period](#renaming-and-the-cooling-off-period)):
 `UpdateOrganizationInput` has no slug field and `PATCH /organizations/{slug}`
 accepts only `name`, `logo_url`, `description`, `website_url` and
-`settings`. `SlugAvailable(slug)` is an existence check on
-`sf_organizations.slug` that also refuses reserved slugs; `GenerateSlug(name)` slugifies the name
+`settings`. `SlugAvailable(slug)` checks `sf_organizations.slug`, the reserved
+list and live cooling-off reservations; `GenerateSlug(name)` slugifies the name
 (lowercase, spaces and underscores to hyphens, other characters dropped,
 `-org` appended below three characters) and appends `-1` to `-100`, then an
 eight-character UUID fragment, until one is free.
@@ -97,10 +98,33 @@ additions). `signup.SlugForLogin` derives a login's base slug and
 `signup.SlugForManaged` returns a manager-entered slug or a generated one
 (two words and a number, never derived from an email address).
 
-Slug freezing after a rename (the seven-day cooling-off reservation) is a
-separate rule, specified in ADR-006 decisions 5 and 6 and not yet
-implemented; when it lands, `SlugAvailable` and `uniqueSlugInTx` consult
-the reservation table as well.
+#### Renaming and the cooling-off period
+
+`Rename(ctx, orgID, slug, actor)` changes an organization's slug in one
+transaction. `actor` must be an active owner of the organization
+(`ErrNotOwner`); the new slug must be well formed (`ErrInvalidSlug`), not
+reserved (`ErrSlugReserved`), not used by an organization (`ErrSlugTaken`)
+and not held by someone else's reservation (`ErrSlugCoolingOff`). The old
+slug is written to `sf_slug_reservations` (`slug` unique,
+`released_by_principal_id`, `released_from_organization_id`, `released_at`,
+`expires_at`) and held for `organization.SlugCoolingOff` (7 days;
+`WithSlugCoolingOff` overrides it). The rule is the same for personal and
+team organizations in every direction.
+
+- **Who may take a held slug.** The principal who released it, or an owner
+  of the organization that released it. `Create` passes its owner as the
+  acting principal, so that owner may create an organization under the held
+  slug, which spends the reservation; `Rename` does the same for its actor.
+  `SlugAvailable` has no actor and answers `false` with `ErrSlugCoolingOff`.
+- **Aliases.** `ResolveSlug(ctx, slug)` returns the organization using the
+  slug, else, while a reservation is live, the organization that released it
+  with `alias = true`. The organization and invite handlers resolve `{slug}`
+  through it, so old links keep working and responses carry the current slug.
+  `GetBySlug` stays an exact match.
+- **Expiry.** An expired reservation is ignored everywhere and deleted when
+  next read. Signup's `uniqueSlugInTx` skips a slug under a live reservation
+  and takes the next numeric suffix.
+- There is no HTTP endpoint for renaming yet; `Rename` is a service method.
 
 ### Service (`identity/organization`)
 
@@ -118,6 +142,7 @@ the reservation table as well.
 | `Delete(id)` | Sets `active = false`; `syncer.UnregisterOrganization` |
 | `List(input)` | Filters: `OrgType`, `Plan`, `Active`, `MemberPrincipalID` (active memberships only), limit and offset |
 | `TransferOwnership(input)` | See [Ownership transfer](#ownership-transfer) |
+| `Rename(orgID, slug, actor)`, `ResolveSlug(slug)` | See [Renaming and the cooling-off period](#renaming-and-the-cooling-off-period) |
 | `SlugAvailable`, `GenerateSlug` | See above |
 
 ### HTTP API (`identity/organization` handlers, huma over chi)
@@ -455,14 +480,6 @@ decides it.
   generated one such as two words and a number, ADR-006 decision 2). The
   GitHub and Google rules and the numeric suffix on collision are implemented
   (see [Signup on first social login](#signup-on-first-social-login)).
-- `organization.Service.Rename(ctx, orgID, slug)`,
-  `ConvertToTeam(ctx, orgID, teamSlug)` and `ResolveSlug(ctx, slug)`, backed
-  by a new `sf_slug_reservations` table (slug, `released_by_principal_id`,
-  `released_from_organization_id`, `released_at`, `expires_at`): a freed
-  slug is reserved for 7 days for the principal that gave it up (or an
-  organization it owns), resolves to its previous organization as an alias
-  meanwhile, and then becomes free. `SlugAvailable` and `GetBySlug` consult
-  the table.
 - `ConvertToTeam` keeps the organization's ID, data and memberships, sets
   the type to `team`, gives it the chosen free slug, and creates a new
   personal organization for the owner under their handle.
