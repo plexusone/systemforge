@@ -702,6 +702,16 @@ var slugRegex = regexp.MustCompile(`^[a-z][a-z0-9-]*[a-z0-9]$`)
 var slugMinLen = 3
 var slugMaxLen = 63
 
+// IsValidSlug reports whether slug satisfies the organization slug rules:
+// 3 to 63 characters matching ^[a-z][a-z0-9-]*[a-z0-9]$.
+func IsValidSlug(slug string) bool { return isValidSlug(slug) }
+
+// Slugify converts a name to slug form (lowercase, spaces and underscores
+// to hyphens, other characters dropped, "-org" appended below three
+// characters, truncated to 63). The result is not guaranteed to be valid:
+// a name starting with a digit yields a slug that IsValidSlug refuses.
+func Slugify(name string) string { return slugify(name) }
+
 func isValidSlug(slug string) bool {
 	if len(slug) < slugMinLen || len(slug) > slugMaxLen {
 		return false
