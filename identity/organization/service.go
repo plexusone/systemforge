@@ -74,6 +74,11 @@ type Service interface {
 	// own it. The old slug is held for actor for the cooling-off period.
 	Rename(ctx context.Context, orgID uuid.UUID, slug string, actor uuid.UUID) error
 
+	// ConvertToTeam turns a personal organization into a team organization
+	// under teamSlug and gives its owner a new personal organization with
+	// the old handle, in one transaction.
+	ConvertToTeam(ctx context.Context, orgID uuid.UUID, teamSlug string, actor uuid.UUID) (*ConvertResult, error)
+
 	// SlugAvailable checks if a slug is available. A reserved slug is
 	// refused with ErrSlugReserved, and one in its cooling-off period with
 	// ErrSlugCoolingOff (both with false).
