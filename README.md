@@ -38,7 +38,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 ### Identity Module
 
 - 👤 **Principals** - One identity root for humans, applications, agents, and services; humans carry email, names, and a platform admin flag
-- 🏢 **Organizations** - Multi-tenant with name, slug, plan, settings
+- 🏢 **Organizations** - Multi-tenant with name, slug, settings, marketplace-derived entitlements
 - 🔗 **Memberships** - Principal-organization relationships with flexible roles
 - 👑 **Ownership Transfer** - Transaction-safe organization ownership transfers
 - 🔐 **Credentials** - Passwords (Argon2id), API keys, keypairs, and client secrets owned by a principal
