@@ -58,13 +58,17 @@ is a function call.
 3. **Relying parties keep a revocation cache keyed by principal.** On an
    announcement they store `principal_id → changed_at` (per organization
    when the change is organization-scoped). On every request they accept a
-   token only if its `iat` is at or after the latest `changed_at` recorded
-   for its principal (and organization); otherwise they answer 401 with the
-   standard "token expired" error, which makes the client refresh. Entries
-   are dropped once `changed_at` plus the maximum access-token lifetime has
-   passed, because no token issued before the change can still be valid.
-   The cache is therefore bounded by the number of changes within one
-   lifetime.
+   token only if its `iat` is at or after `changed_at` plus a clock-skew
+   margin for its principal (and organization); a token stamped within the
+   margin is treated as issued before the change. Otherwise they answer 401
+   with the standard "token expired" error, which makes the client refresh.
+   Entries are dropped once `changed_at` plus the maximum access-token
+   lifetime plus the margin has passed: after that, no token issued before
+   the change can be accepted by any verifier, however its clock drifts.
+   The margin defaults to 30 seconds and is configurable; 15 seconds is the
+   floor, enough where clocks are NTP-disciplined, and the margin is moot
+   in-process, where both timestamps come from one clock. The cache is
+   therefore bounded by the number of changes within one lifetime.
 4. **The cache is shared memory in the monolith; delivery exists only at
    process boundaries.**
    - **Same process:** in a modular monolith (pbhq-cloud) SystemAuth and
