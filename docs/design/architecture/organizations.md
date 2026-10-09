@@ -236,6 +236,7 @@ organization is refused with `ErrPersonalOrganization`.
 | `email` | The invitee; the invite is bound to this address |
 | `role` | Role granted on acceptance; default `member`; the API accepts `owner`, `admin`, `member` |
 | `token` | Hex SHA-256 of the URL token (32 random bytes, base64url); the token itself is never stored |
+| `app_roles` | Optional JSON object, application identifier to role, granted on acceptance (ADR-007); migration `migrations/0006_invite_app_roles.sql` adds the column to an existing database |
 | `status` | `pending`, `accepted`, `declined`, `expired`, `revoked` |
 | `message`, `expires_at`, `accepted_at`, `accepted_by_principal_id`, `resend_count`, `last_sent_at` | Lifecycle |
 
@@ -243,9 +244,9 @@ organization is refused with `ErrPersonalOrganization`.
 
 | Method | Behavior |
 |---|---|
-| `Create(input)` | Refuses when a pending, unexpired invite exists for the same organization and email; default expiry `invite.DefaultInviteExpiry` (7 days); returns the one-time `InviteURL` (`{baseURL}/invites/{token}`) |
+| `Create(input)` | Refuses when a pending, unexpired invite exists for the same organization and email; default expiry `invite.DefaultInviteExpiry` (7 days); returns the one-time `InviteURL` (`{baseURL}/invites/{token}`). With `invite.WithAppRoles(approleService)`, `AppRoles` (none preselected) are validated against the registered vocabularies and the organization's entitlements, collaborators may carry none, and an admin or member invitation to an organization entitled to any application must choose at least one (`ErrAppRoleRequired`); owners hold every role implicitly. Without that option, `AppRoles` are refused and nothing is required |
 | `GetByToken`, `GetByID`, `List`, `ListPendingForEmail`, `HasPendingInvite` | Lookups; email matching is case-insensitive |
-| `Accept(input)` | Requires `pending` and unexpired (an expired one is marked `expired`); in one transaction refuses an existing membership, creates the membership with the invite's role, and marks the invite accepted. It writes the membership directly rather than through the organization service, so after commit it calls `syncer.AddOrgMembership` itself (options `invite.WithAuthzSyncer`, `WithSyncMode`, `WithLogger`; default `noop` and eventual, like the organization service) |
+| `Accept(input)` | Requires `pending` and unexpired (an expired one is marked `expired`); in one transaction refuses an existing membership, creates the membership with the invite's role, grants the invite's application roles (`approle.Service.AssignInTx`, seat limits enforced under the same lock as `Assign`; an invitation that cannot grant a role, for example because no seat is left, is refused and stays pending), and marks the invite accepted. It writes the membership directly rather than through the organization service, so after commit it calls `syncer.AddOrgMembership` itself (options `invite.WithAuthzSyncer`, `WithSyncMode`, `WithLogger`; default `noop` and eventual, like the organization service) |
 | `Decline(token)`, `Revoke(id)` | Status changes |
 | `Resend(id)` | New token, `resend_count + 1`, expiry reset to 7 days |
 | `ExpireOld()` | Batch status update |
@@ -255,7 +256,10 @@ organization is refused with `ErrPersonalOrganization`.
 Organization-side routes (`POST`/`GET /organizations/{slug}/invites`,
 `DELETE .../{invite_id}`, `POST .../{invite_id}/resend`) need
 `invite_member`; inviting an `owner` needs the owner-only permission, and
-`inviter_principal_id` must be the caller. Invitee-side routes
+`inviter_principal_id` must be the caller. The create body takes `app_roles`
+and invites in responses carry them. A member's roles are changed later, per
+application and without touching the membership, through the application role
+endpoints (`PUT`/`DELETE /organizations/{slug}/members/{principal_id}/app-roles/{application}`). Invitee-side routes
 (`GET /invites/{token}`, `POST /invites/{token}/accept`, `POST
 /invites/{token}/decline`, `GET /invites`) require the caller to have an
 email that matches the invite's address; a principal without an email (a
@@ -468,7 +472,7 @@ With `approle.WithAuthzSyncer`, assign, change and remove also write to the
 authorization graph through the optional `authz.AppRoleSyncer` (see
 [Keeping providers in step with identity](authorization.md#keeping-providers-in-step-with-identity)).
 
-Not yet built: invites carrying roles; see [Planned changes](#planned-changes).
+Invites carry application roles (see [Invites](#invites)).
 
 ## How relying parties get memberships
 
@@ -597,7 +601,10 @@ decides it.
   [Application roles](#application-roles-identityapprole)); still to do is
   making them replace seat assignments as the record of who may use what
   (seat-licensed applications already count rows against the license).
-- Invites carry the application roles to grant; removal from the
+- Built: invites carry the application roles to grant (see [Invites](#invites)).
+  Still to do: `addMember` (adding without an invite) takes no application
+  roles; the administration pages for choosing them are the application's to
+  build, as this repository ships no UI. Removal from the
   organization removes every application role (built) and grant.
 
 ### Real-time invalidation (ADR-010)
