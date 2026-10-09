@@ -470,7 +470,7 @@ authorization graph through the optional `authz.AppRoleSyncer` (see
 
 Not yet built: invites carrying roles; see [Planned changes](#planned-changes).
 
-## How relying parties get memberships today
+## How relying parties get memberships
 
 A relying party (`identity/relyingparty`) authenticates a SystemAuth session,
 access token or API key and attaches memberships to the request through a
@@ -484,14 +484,22 @@ type MembershipSource interface {
 
 `MembershipQuery` carries the app-local `Principal`, the SystemAuth
 `Subject` and, for sessions and JWT access tokens, the verified `Claims`.
-The default (`defaultMembershipSource`) is `LocalMemberships` over the
-application's `PrincipalStore` when it also implements `MembershipLister`,
-otherwise `NoMemberships`. `relyingparty.Membership` is `{ID,
-OrganizationID, OrganizationName, OrganizationSlug, Role, JoinedAt}`;
-`BearerMiddleware`, `RequestAuthenticator` and the BFF's `CurrentSession`
+The default is `ClaimsMemberships`, which decodes the `orgs` claim (see
+[The `orgs` claim](#the-orgs-claim)); `RemoteMemberships` reads
+`GET /oauth/userinfo/memberships`, `ClaimsOrRemoteMemberships` combines them
+(endpoint used when `orgs_truncated` is set or the claim is absent, claims
+served if it fails), `ProvisioningMemberships` runs an idempotent per-organization
+hook on first use by a principal holding a role in the application, and
+`LocalMemberships` over a `MembershipLister` remains for development and
+tests only. `relyingparty.Membership` is `{ID,
+OrganizationID, OrganizationName, OrganizationSlug, OrganizationType, Role,
+JoinedAt, Applications}`; `MembershipQuery.AccessToken` lazily supplies the
+request's access token (the presented JWT, or a session's, refreshed when
+needed) for remote sources. `BearerMiddleware`, `RequestAuthenticator` and the BFF's `CurrentSession`
 all go through the source, and the BFF's `GET /bff/api/v1/users/me`
-returns the result as `memberships`. In short: memberships are an app-local table per relying
-party, keyed by the application's own organization IDs.
+returns the result as `memberships`. Requests without claims (API keys) get no
+memberships from the default source. A BFF session's claims are those of the
+sign-in; a source that must be fresher uses `RemoteMemberships`.
 
 ## The claims model
 
@@ -584,9 +592,6 @@ decides it.
 
 - Built: the `orgs` claim and `GET /oauth/userinfo/memberships` (see
   [The `orgs` claim](#the-orgs-claim)).
-- `relyingparty` gains `ClaimsMemberships` (default) and
-  `RemoteMemberships`; `LocalMemberships` remains for development and tests
-  and is documented as not for production.
 - Organization roles are `owner`, `admin`, `member` and `collaborator`
   (ADR-008). Application roles are stored in `sf_app_roles` (see
   [Application roles](#application-roles-identityapprole)); still to do is

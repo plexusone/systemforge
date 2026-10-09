@@ -155,23 +155,35 @@ Organization memberships (in `/bff/session`, `/bff/api/v1/users/me` and
 `AuthenticatedPrincipal.Memberships`) come from a `MembershipSource`, which
 receives the principal, its SystemAuth subject, and the verified SystemAuth
 claims of the request (the ID token + UserInfo claims stored with the BFF
-session, or the JWT access token's claims). SystemAuth is intended to be the
-source of truth for memberships and roles; a claims-reading source keeps
-relying parties from holding divergent copies:
+session, or the JWT access token's claims). SystemAuth is the source of
+truth for memberships, application roles and entitlements (ADR-007), so
+relying parties do not keep tables of their own. The sources:
+
+| Source | Reads | Use |
+|---|---|---|
+| `ClaimsMemberships` (default) | The `orgs` claim: organization `id`, `role` and `apps` (application identifier to role); the ID token and userinfo form also has `slug`, `name` and `type`. Needs no network call | Production |
+| `RemoteMemberships(client)` | `GET /oauth/userinfo/memberships`, all pages, with the request's access token | Production, when the claims cannot answer |
+| `ClaimsOrRemoteMemberships(remote, logger)` | Claims, then the endpoint when `orgs_truncated` is set or the claim is absent; if the endpoint fails it serves the claims | Production, for users in more than 50 organizations |
+| `LocalMemberships(lister)` | An app-local table (`MemoryPrincipalStore` implements `MembershipLister`) | Development and tests only; it diverges from SystemAuth |
 
 ```go
 bff, err := relyingparty.NewBFF(relyingparty.BFFConfig{
     Client:      client,
     Principals:  principals,
-    Memberships: relyingparty.MembershipSourceFunc(func(ctx context.Context, q relyingparty.MembershipQuery) ([]relyingparty.Membership, error) {
-        return membershipsFromClaims(q.Claims) // e.g. a SystemAuth-issued claim
-    }),
+    Memberships: relyingparty.ClaimsOrRemoteMemberships(relyingparty.RemoteMemberships(client), logger),
 })
 ```
 
-When `Memberships` is unset, a `PrincipalStore` that also implements
-`MembershipLister` (an app-local table, as `MemoryPrincipalStore` does) is
-used; otherwise no memberships are reported.
+When `Memberships` is unset, `ClaimsMemberships` is used. A request without
+claims, such as one authenticated by an API key, then has no memberships;
+an application that accepts API keys supplies a source for them.
+`Membership.Applications` carries the principal's role in each application;
+an application absent from it is one the principal may not open.
+
+An application provisions itself for an organization on first use, keyed by
+the SystemAuth organization ID, with `ProvisioningMemberships(source,
+application, hook)`: the hook runs once per organization per process for a
+principal who holds a role in `application` and must be idempotent.
 
 ## Sessions and back-channel logout
 
