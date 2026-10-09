@@ -60,6 +60,9 @@ func newFixture(t *testing.T, opts ...approle.Option) *fixture {
 			t.Fatalf("register %s: %v", app, err)
 		}
 	}
+	if len(opts) == 0 {
+		opts = []approle.Option{approle.EntitleAll(reg)}
+	}
 	f := &fixture{t: t, db: db, orgs: organization.NewService(db), svc: approle.NewService(db, reg, opts...)}
 	f.owner = f.human("owner@example.com")
 	f.admin = f.human("admin@example.com")
@@ -277,5 +280,57 @@ func TestRolesLowestFirst(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("Roles = %v, want %v", got, want)
 		}
+	}
+}
+
+func TestNoEntitlementSourceMeansNoEntitlements(t *testing.T) {
+	ctx := context.Background()
+	reg := authz.NewVocabularyRegistry()
+	if err := reg.Register(ladderVocab{app: "alpha"}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	// newFixture would add EntitleAll for no options, so build by hand.
+	f := newFixture(t)
+	svc := approle.NewService(f.db, reg)
+	if _, err := svc.Assign(ctx, f.in(f.member, "alpha", "viewer")); !errors.Is(err, approle.ErrNotEntitled) {
+		t.Errorf("Assign without a source = %v, want ErrNotEntitled", err)
+	}
+	got, err := svc.EffectiveRoles(ctx, f.owner, f.org.ID)
+	if err != nil || len(got) != 0 {
+		t.Errorf("owner roles without a source = %v, %v; want none", got, err)
+	}
+}
+
+func TestSeatLimit(t *testing.T) {
+	ctx := context.Background()
+	one := 1
+	f := newFixture(t, approle.WithEntitlementGrants(func(context.Context, uuid.UUID) (map[string]approle.Grant, error) {
+		return map[string]approle.Grant{"alpha": {SeatLimit: &one}, "beta": {}}, nil
+	}))
+	if _, err := f.svc.Assign(ctx, f.in(f.member, "alpha", "viewer")); err != nil {
+		t.Fatalf("first seat: %v", err)
+	}
+	if _, err := f.svc.Assign(ctx, f.in(f.admin, "alpha", "viewer")); !errors.Is(err, approle.ErrNoSeats) {
+		t.Errorf("second seat = %v, want ErrNoSeats", err)
+	}
+	if _, err := f.svc.Assign(ctx, f.in(f.member, "alpha", "viewer")); !errors.Is(err, approle.ErrAlreadyAssigned) {
+		t.Errorf("reassign at the limit = %v, want ErrAlreadyAssigned", err)
+	}
+	if _, err := f.svc.Change(ctx, f.in(f.member, "alpha", "admin")); err != nil {
+		t.Errorf("change at the limit: %v", err)
+	}
+	if _, err := f.svc.Assign(ctx, f.in(f.admin, "beta", "viewer")); err != nil {
+		t.Errorf("unlimited application: %v", err)
+	}
+	// Owners hold their implicit role without a seat.
+	got, err := f.svc.EffectiveRoles(ctx, f.owner, f.org.ID)
+	if err != nil || got["alpha"] != "admin" {
+		t.Errorf("owner roles = %v, %v", got, err)
+	}
+	if err := f.svc.Remove(ctx, f.org.ID, f.member, "alpha", f.owner); err != nil {
+		t.Fatalf("remove: %v", err)
+	}
+	if _, err := f.svc.Assign(ctx, f.in(f.admin, "alpha", "viewer")); err != nil {
+		t.Errorf("seat freed by Remove: %v", err)
 	}
 }

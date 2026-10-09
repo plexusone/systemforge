@@ -57,7 +57,7 @@ func TestAppRoleEndpoints(t *testing.T) {
 	}
 	cfg := organization.DefaultAPIConfig()
 	cfg.Authorizer = memberAuthorizer(api.svc)
-	cfg.AppRoles = approle.NewService(api.db, reg)
+	cfg.AppRoles = approle.NewService(api.db, reg, approle.EntitleAll(reg))
 	api.h = organization.NewAPI(api.svc, cfg)
 
 	// A member may not assign roles.
