@@ -37,6 +37,7 @@ type Server struct {
 	socialOpts      socialOptions
 	social          *socialLogin
 	readiness       []readinessCheck
+	orgs            OrgsSource
 }
 
 // Option configures a Server.

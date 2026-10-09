@@ -132,7 +132,13 @@ func (s *Server) userinfoEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	claims := UserInfoClaims(subject, s.sessionProvider.GetUserClaims(ctx, subject, granted), granted)
+	userClaims, err := s.addOrgsClaims(ctx, subject, s.sessionProvider.GetUserClaims(ctx, subject, granted), false)
+	if err != nil {
+		logger.Error("userinfo: reading organizations", "error", err)
+		http.Error(w, "could not read organizations", http.StatusInternalServerError)
+		return
+	}
+	claims := UserInfoClaims(subject, userClaims, granted)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")

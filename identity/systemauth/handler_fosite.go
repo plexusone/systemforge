@@ -42,6 +42,11 @@ func (s *Server) fositeInterceptor(next http.Handler) http.Handler {
 				s.userinfoEndpoint(w, r)
 				return
 			}
+		case MembershipsPath:
+			if r.Method == http.MethodGet {
+				s.membershipsEndpoint(w, r)
+				return
+			}
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -105,6 +110,7 @@ func (s *Server) registerOpenAPIOperations() {
 	}, s.revokeOpenAPI)
 
 	s.registerUserInfoOperation()
+	s.registerMembershipsOperation()
 }
 
 // OpenAPI handler stubs - these are never called due to middleware interception,
@@ -184,7 +190,13 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Step 3: Get user claims for the ID token
-	claims := s.sessionProvider.GetUserClaims(ctx, userID, requestedScopes)
+	claims, err := s.addOrgsClaims(ctx, userID, s.sessionProvider.GetUserClaims(ctx, userID, requestedScopes), false)
+	if err != nil {
+		logger.Error("reading organizations for the ID token", "user_id", userID, "error", err)
+		s.recordAuthMetrics(ctx, "authorize", clientID, observability.StatusError, start)
+		s.oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrServerError.WithWrap(err))
+		return
+	}
 
 	// Create session for the user with claims
 	session := s.OIDCSession(userID, claims)
@@ -277,7 +289,12 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	for _, scope := range ar.GetRequestedScopes() {
 		ar.GrantScope(scope)
 	}
-	s.prepareAccessClaims(ar)
+	if err := s.prepareAccessClaims(ctx, ar); err != nil {
+		logger.Error("reading organizations for the access token", "grant_type", grantType, "client_id", clientID, "error", err)
+		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrServerError.WithWrap(err))
+		return
+	}
 
 	// Create the token response
 	response, err := s.oauth2.NewAccessResponse(ctx, ar)
@@ -355,11 +372,14 @@ func (s *Server) authTime(r *http.Request) time.Time {
 
 // prepareAccessClaims sets the per-issuance claims of JWT access tokens:
 // a subject (the client itself for client_credentials), client_id, and a
-// fresh issued-at time.
-func (s *Server) prepareAccessClaims(ar fosite.AccessRequester) {
+// fresh issued-at time. For a principal it also sets the compact orgs claim
+// and, so that a refresh carries current organizations and roles rather
+// than those of the original login, refreshes the orgs claim of the ID
+// token the session will issue.
+func (s *Server) prepareAccessClaims(ctx context.Context, ar fosite.AccessRequester) error {
 	sess, ok := ar.GetSession().(*Session)
 	if !ok || sess.DefaultSession == nil {
-		return
+		return nil
 	}
 	clientID := ar.GetClient().GetID()
 	claims := sess.AccessClaims
@@ -378,6 +398,37 @@ func (s *Server) prepareAccessClaims(ar fosite.AccessRequester) {
 	if sess.AccessHeader == nil {
 		sess.AccessHeader = s.jwtHeaders()
 	}
+	return s.setOrgsClaims(ctx, sess, claims)
+}
+
+// setOrgsClaims puts the orgs claim into the access-token claims (compact)
+// and the ID-token claims (full) of a principal's session.
+func (s *Server) setOrgsClaims(ctx context.Context, sess *Session, access *jwt.JWTClaims) error {
+	if s.orgs == nil {
+		return nil
+	}
+	id, ok := principalSubject(access.Subject)
+	if !ok {
+		return nil
+	}
+	compact, err := s.OrgsClaim(ctx, id, true)
+	if err != nil {
+		return err
+	}
+	access.Add(OrgsClaim, compact.Orgs)
+	access.Add(OrgsTruncatedClaim, compact.Truncated)
+	if idc := sess.IDTokenClaims(); idc != nil {
+		full, err := s.OrgsClaim(ctx, id, false)
+		if err != nil {
+			return err
+		}
+		if idc.Extra == nil {
+			idc.Extra = map[string]interface{}{}
+		}
+		idc.Extra[OrgsClaim] = full.Orgs
+		idc.Extra[OrgsTruncatedClaim] = full.Truncated
+	}
+	return nil
 }
 
 // introspectionEndpoint handles POST /oauth/introspect.
