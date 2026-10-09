@@ -245,7 +245,7 @@ organization is refused with `ErrPersonalOrganization`.
 |---|---|
 | `Create(input)` | Refuses when a pending, unexpired invite exists for the same organization and email; default expiry `invite.DefaultInviteExpiry` (7 days); returns the one-time `InviteURL` (`{baseURL}/invites/{token}`) |
 | `GetByToken`, `GetByID`, `List`, `ListPendingForEmail`, `HasPendingInvite` | Lookups; email matching is case-insensitive |
-| `Accept(input)` | Requires `pending` and unexpired (an expired one is marked `expired`); in one transaction refuses an existing membership, creates the membership with the invite's role, and marks the invite accepted. It writes the membership directly and does not call the organization service, so no `RelationshipSyncer` call is made for memberships created by acceptance |
+| `Accept(input)` | Requires `pending` and unexpired (an expired one is marked `expired`); in one transaction refuses an existing membership, creates the membership with the invite's role, and marks the invite accepted. It writes the membership directly rather than through the organization service, so after commit it calls `syncer.AddOrgMembership` itself (options `invite.WithAuthzSyncer`, `WithSyncMode`, `WithLogger`; default `noop` and eventual, like the organization service) |
 | `Decline(token)`, `Revoke(id)` | Status changes |
 | `Resend(id)` | New token, `resend_count + 1`, expiry reset to 7 days |
 | `ExpireOld()` | Batch status update |
