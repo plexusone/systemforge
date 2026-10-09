@@ -1,6 +1,6 @@
 # ADR-007: Organization Memberships and Entitlements as Claims
 
-**Status:** Accepted
+**Status:** Accepted. Amended by ADR-010: decision 9 (freshness and revocation) is superseded by real-time invalidation.
 **Deciders:** @grokify
 **Relates to:** ADR-002 (relying parties federate to SystemAuth), ADR-006
 (organization lifecycle), ADR-008 (resource-scoped collaborators),
