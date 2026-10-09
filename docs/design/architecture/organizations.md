@@ -269,7 +269,7 @@ through an invite (`signup.SignupWithInvite`) applies the same match
 
 | Method | Behavior |
 |---|---|
-| `Signup(input)` | Requires a plain email, a display name and `PersonalOrgSlug`; refuses a taken email (`ErrEmailTaken`) or slug; creates the human principal with `AllowedScopes` `openid profile email`, then the personal organization (name defaults to the display name, logo to the avatar). The two writes are separate transactions; a failure after the principal exists deletes it again |
+| `Signup(input)` | Requires a plain email, a display name and `PersonalOrgSlug`; refuses a taken email (`ErrEmailTaken`) or slug; creates the human principal with `AllowedScopes` `openid profile email`, then the personal organization (name defaults to the display name, logo to the avatar). With the default services the principal, organization and owner membership are written in one transaction (`principal.HumanTxCreator.CreateHumanInTx` and `organization.PersonalOrgTxCreator.CreatePersonalOrgInTx`), so a failure leaves nothing behind; the syncer registrations (`RegisterPrincipal`, then `RegisterOrganization`) run after the commit and, in strict sync mode, a failed one is returned with the rows kept. Services that do not implement those interfaces fall back to separate commits, and a failure after the principal exists deletes it again |
 | `SignupWithInvite(input)` | `Signup`, then `invite.Accept` for the invite (email must match) |
 | `SignupOrGetExisting(input)` | Returns the existing principal and personal organization for an email only when `EmailVerified` is set (`ErrEmailNotVerified` otherwise); creates them otherwise |
 
@@ -281,8 +281,10 @@ link by a verified email to an existing principal whose own email is
 verified, and otherwise create one. An unverified email never links to or
 creates an account (`ErrEmailNotVerified`, nothing written).
 
-The create step does not call `signup.Service`, whose principal and
-organization services each commit their own transaction. Instead
+The create step does not call `signup.Service` (neither `Signup` nor
+`SignupOrGetExisting`); it writes with the same in-transaction helpers
+rather than the services' syncer-aware `*InTx` variants, because it also
+creates the external identity row in that transaction. Instead
 `EntPrincipalDirectory.CreateFromExternal` opens one Ent transaction and
 writes the principal, its `sf_humans` row, the `sf_external_identities` link,
 and, through `signup.CreatePersonalOrgInTx`, a personal organization (type
