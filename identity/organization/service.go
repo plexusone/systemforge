@@ -12,6 +12,7 @@ import (
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 )
@@ -462,13 +463,28 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 		return fmt.Errorf("membership not found: %w", err)
 	}
 
-	_, err = s.client.PrincipalMembership.Delete().
+	// The member's application roles go with the membership.
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	if _, err = tx.AppRole.Delete().
+		Where(
+			approle.OrganizationID(organizationID),
+			approle.PrincipalID(principalID),
+		).
+		Exec(ctx); err != nil {
+		return errors.Join(fmt.Errorf("failed to remove application roles: %w", err), tx.Rollback())
+	}
+	if _, err = tx.PrincipalMembership.Delete().
 		Where(
 			principalmembership.OrganizationID(organizationID),
 			principalmembership.PrincipalID(principalID),
 		).
-		Exec(ctx)
-	if err != nil {
+		Exec(ctx); err != nil {
+		return errors.Join(fmt.Errorf("failed to remove membership: %w", err), tx.Rollback())
+	}
+	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to remove membership: %w", err)
 	}
 

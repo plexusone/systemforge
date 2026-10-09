@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/identity/approle"
 )
 
 // APIConfig configures the Organization API.
@@ -33,6 +34,9 @@ type APIConfig struct {
 	// marketplace.EntitlementSource). Without it, responses carry an
 	// empty entitlements list.
 	Entitlements EntitlementSource
+	// AppRoles manages application roles. Until it is set, the
+	// application role endpoints answer 501.
+	AppRoles *approle.Service
 }
 
 // DefaultAPIConfig returns the default API configuration.
@@ -107,4 +111,5 @@ type loggerKey struct{}
 func (a *API) registerEndpoints() {
 	a.registerOrgEndpoints()
 	a.registerMemberEndpoints()
+	a.registerAppRoleEndpoints()
 }

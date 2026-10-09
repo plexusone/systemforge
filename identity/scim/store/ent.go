@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
@@ -714,12 +715,21 @@ func (s *EntStore) RemoveMemberFromGroup(ctx context.Context, groupID, userID st
 		return scim.ErrNotFound("invalid user ID")
 	}
 
-	_, err = s.client.PrincipalMembership.Delete().
-		Where(
-			principalmembership.PrincipalIDEQ(uid),
-			principalmembership.OrganizationIDEQ(gid),
-		).
-		Exec(ctx)
+	// The member's application roles go with the membership.
+	err = s.withTx(ctx, func(tx *ent.Tx) error {
+		if _, err := tx.AppRole.Delete().
+			Where(approle.PrincipalID(uid), approle.OrganizationID(gid)).
+			Exec(ctx); err != nil {
+			return err
+		}
+		_, err := tx.PrincipalMembership.Delete().
+			Where(
+				principalmembership.PrincipalIDEQ(uid),
+				principalmembership.OrganizationIDEQ(gid),
+			).
+			Exec(ctx)
+		return err
+	})
 	if err != nil {
 		return scim.ErrInternal(err.Error())
 	}
