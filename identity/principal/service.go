@@ -2,6 +2,7 @@ package principal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/principal"
@@ -21,6 +23,8 @@ type DefaultService struct {
 	syncer   authz.RelationshipSyncer
 	syncMode authz.SyncMode
 	logger   *slog.Logger
+
+	accessSink accesschange.Sink
 }
 
 // ServiceOption configures a DefaultService.
@@ -38,6 +42,13 @@ func WithSyncMode(mode authz.SyncMode) ServiceOption {
 	return func(s *DefaultService) {
 		s.syncMode = mode
 	}
+}
+
+// WithAccessChangeSink announces deactivations to sink after they commit
+// (ADR-010). The access-change record is written whether or not a sink is
+// set.
+func WithAccessChangeSink(sink accesschange.Sink) ServiceOption {
+	return func(s *DefaultService) { s.accessSink = sink }
 }
 
 // WithLogger sets the logger for the service.
@@ -867,12 +878,22 @@ func (s *DefaultService) UpdateService(ctx context.Context, id uuid.UUID, input 
 
 // Deactivate deactivates a principal.
 func (s *DefaultService) Deactivate(ctx context.Context, id uuid.UUID) error {
-	_, err := s.client.Principal.UpdateOneID(id).
-		SetActive(false).
-		Save(ctx)
+	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to deactivate principal: %w", err)
 	}
+	if _, err = tx.Principal.UpdateOneID(id).SetActive(false).Save(ctx); err != nil {
+		return errors.Join(fmt.Errorf("failed to deactivate principal: %w", err), tx.Rollback())
+	}
+	// Existing tokens stop being honored at once, not at expiry (ADR-010).
+	change, err := accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: id, Reason: accesschange.Deactivated})
+	if err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to deactivate principal: %w", err)
+	}
+	accesschange.Publish(s.accessSink, change)
 	return nil
 }
 

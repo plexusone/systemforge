@@ -14,6 +14,7 @@ import (
 	"github.com/plexusone/systemforge/authz/noop"
 	"github.com/plexusone/systemforge/authz/rbac"
 	"github.com/plexusone/systemforge/contract/audit"
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/human"
@@ -43,6 +44,8 @@ type Service struct {
 	claimTTL time.Duration
 	logger   *slog.Logger
 	roles    []string
+
+	accessSink accesschange.Sink
 }
 
 // Option configures a Service.
@@ -70,6 +73,13 @@ func WithAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) Optio
 // ManagerRoles.
 func WithAuthorizer(a authz.Authorizer) Option {
 	return func(s *Service) { s.authz = a }
+}
+
+// WithAccessChangeSink announces session revocations (RevokeSession and
+// RevokeAll) to sink after they commit (ADR-010). The access-change record
+// is written whether or not a sink is set.
+func WithAccessChangeSink(sink accesschange.Sink) Option {
+	return func(s *Service) { s.accessSink = sink }
 }
 
 // WithLogger sets the logger used for failures that cannot be returned,

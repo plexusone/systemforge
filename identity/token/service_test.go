@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
@@ -365,5 +366,26 @@ func TestDeactivatedPrincipalLosesTokens(t *testing.T) {
 	}
 	if _, err := svc.Refresh(ctx, RefreshInput{RefreshToken: b.RefreshToken}); !errors.Is(err, ErrInvalidRefreshToken) {
 		t.Errorf("refresh token revived by reactivation: %v", err)
+	}
+}
+
+// TestRevokeAllForPrincipalRecordsAccessChange verifies that revoking a
+// principal's tokens records and announces an access change (ADR-010).
+func TestRevokeAllForPrincipalRecordsAccessChange(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	var announced []accesschange.Change
+	svc := NewService(db, WithAccessChangeSink(accesschange.SinkFunc(func(c accesschange.Change) { announced = append(announced, c) })))
+	pid := addPrincipal(t, db)
+	issueFor(t, svc, pid, nil)
+	if err := svc.RevokeAllForPrincipal(ctx, pid, "test"); err != nil {
+		t.Fatal(err)
+	}
+	if len(announced) != 1 || announced[0].PrincipalID != pid || announced[0].OrganizationID != nil || announced[0].Reason != accesschange.SessionsRevoked {
+		t.Fatalf("announced = %+v", announced)
+	}
+	stored, err := accesschange.Since(ctx, db, time.Time{}, 0)
+	if err != nil || len(stored) != 1 {
+		t.Errorf("stored = %+v, %v", stored, err)
 	}
 }

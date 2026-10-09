@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
 
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 	"github.com/plexusone/systemforge/identity/ent/principal"
@@ -383,5 +384,38 @@ func TestEntStorageClientAssertionReplay(t *testing.T) {
 	}
 	if err := s.ClientAssertionJWTValid(ctx, "jti-1"); !errors.Is(err, fosite.ErrJTIKnown) {
 		t.Errorf("replayed JTI error = %v, want ErrJTIKnown", err)
+	}
+}
+
+// TestRevokeSubjectTokensRecordsAccessChange verifies that revoking a
+// principal's tokens records and announces an access change, and that a
+// subject that is not a principal (a client) records none (ADR-010).
+func TestRevokeSubjectTokensRecordsAccessChange(t *testing.T) {
+	ctx := context.Background()
+	client := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
+	defer func() { _ = client.Close() }()
+	var announced []accesschange.Change
+	storage := NewEntStorage(client, WithEntAccessChangeSink(accesschange.SinkFunc(func(c accesschange.Change) {
+		announced = append(announced, c)
+	})))
+	pid := createTestOwner(t, client)
+
+	if err := storage.RevokeSubjectTokens(ctx, "some-client-id"); err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.RevokeSubjectTokens(ctx, ""); err != nil {
+		t.Fatal(err)
+	}
+	if len(announced) != 0 {
+		t.Fatalf("non-principal subjects announced %+v", announced)
+	}
+	if err := storage.RevokeSubjectTokens(ctx, pid.String()); err != nil {
+		t.Fatal(err)
+	}
+	if len(announced) != 1 || announced[0].PrincipalID != pid || announced[0].Reason != accesschange.SessionsRevoked {
+		t.Fatalf("announced = %+v", announced)
+	}
+	if stored, err := accesschange.Since(ctx, client, time.Time{}, 0); err != nil || len(stored) != 1 {
+		t.Errorf("stored = %+v, %v", stored, err)
 	}
 }

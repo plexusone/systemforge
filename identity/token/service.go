@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
@@ -48,12 +49,27 @@ var (
 
 // DefaultService implements the Service interface.
 type DefaultService struct {
-	client *ent.Client
+	client     *ent.Client
+	accessSink accesschange.Sink
+}
+
+// Option configures a DefaultService.
+type Option func(*DefaultService)
+
+// WithAccessChangeSink announces RevokeAllForPrincipal to sink after it
+// commits (ADR-010). The access-change record is written whether or not a
+// sink is set.
+func WithAccessChangeSink(sink accesschange.Sink) Option {
+	return func(s *DefaultService) { s.accessSink = sink }
 }
 
 // NewService creates a new TokenService.
-func NewService(client *ent.Client) Service {
-	return &DefaultService{client: client}
+func NewService(client *ent.Client, opts ...Option) Service {
+	s := &DefaultService{client: client}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // Issue issues a new token pair in a new token family.
@@ -363,18 +379,28 @@ func (s *DefaultService) ListForPrincipal(ctx context.Context, principalID uuid.
 // RevokeAllForPrincipal revokes all tokens for a principal.
 func (s *DefaultService) RevokeAllForPrincipal(ctx context.Context, principalID uuid.UUID, reason string) error {
 	now := time.Now()
-	_, err := s.client.PrincipalToken.Update().
-		Where(
-			principaltoken.PrincipalIDEQ(principalID),
-			principaltoken.RevokedEQ(false),
-		).
-		SetRevoked(true).
-		SetRevokedAt(now).
-		SetRevokedReason(reason).
-		Save(ctx)
+	var change accesschange.Change
+	err := s.withTx(ctx, func(tx *ent.Tx) error {
+		if _, err := tx.PrincipalToken.Update().
+			Where(
+				principaltoken.PrincipalIDEQ(principalID),
+				principaltoken.RevokedEQ(false),
+			).
+			SetRevoked(true).
+			SetRevokedAt(now).
+			SetRevokedReason(reason).
+			Save(ctx); err != nil {
+			return fmt.Errorf("failed to revoke tokens: %w", err)
+		}
+		// Access tokens already issued stop being honored at once (ADR-010).
+		var err error
+		change, err = accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: principalID, Reason: accesschange.SessionsRevoked})
+		return err
+	})
 	if err != nil {
-		return fmt.Errorf("failed to revoke tokens: %w", err)
+		return err
 	}
+	accesschange.Publish(s.accessSink, change)
 	return nil
 }
 

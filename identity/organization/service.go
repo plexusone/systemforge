@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/organization"
@@ -100,6 +101,8 @@ type DefaultService struct {
 	reserved map[string]struct{} // deployment-configured reserved slugs
 
 	coolingOff time.Duration // slug cooling-off period (default SlugCoolingOff)
+
+	accessSink accesschange.Sink // announces access changes after commit
 }
 
 // ServiceOption configures a DefaultService.
@@ -117,6 +120,14 @@ func WithSyncMode(mode authz.SyncMode) ServiceOption {
 	return func(s *DefaultService) {
 		s.syncMode = mode
 	}
+}
+
+// WithAccessChangeSink announces the access changes the service records
+// (member removal, role change, ownership transfer) to sink after their
+// transaction commits (ADR-010). The records are written whether or not a
+// sink is set.
+func WithAccessChangeSink(sink accesschange.Sink) ServiceOption {
+	return func(s *DefaultService) { s.accessSink = sink }
 }
 
 // WithLogger sets the logger for the service.
@@ -507,7 +518,11 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 		return nil, err
 	}
 
-	update := s.client.PrincipalMembership.UpdateOneID(membershipID)
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	update := tx.PrincipalMembership.UpdateOneID(membershipID)
 
 	if input.Role != nil {
 		update.SetRole(*input.Role)
@@ -521,11 +536,33 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 
 	membership, err := update.Save(ctx)
 	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = errors.Join(err, rerr)
+		}
 		if ent.IsNotFound(err) {
 			return nil, fmt.Errorf("membership not found: %s", membershipID)
 		}
 		return nil, fmt.Errorf("failed to update membership: %w", err)
 	}
+
+	// A role change or a deactivation reduces what existing tokens may
+	// claim; record it with the change (ADR-010).
+	var changes []accesschange.Change
+	orgID := membership.OrganizationID
+	if input.Role != nil && oldRole != *input.Role {
+		changes = append(changes, accesschange.Change{PrincipalID: membership.PrincipalID, OrganizationID: &orgID, Reason: accesschange.OrgRoleChanged})
+	}
+	if input.Active != nil && !*input.Active && current.Active {
+		changes = append(changes, accesschange.Change{PrincipalID: membership.PrincipalID, OrganizationID: &orgID, Reason: accesschange.MembershipRemoved})
+	}
+	changes, err = recordChanges(ctx, tx, changes)
+	if err != nil {
+		return nil, errors.Join(err, tx.Rollback())
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to update membership: %w", err)
+	}
+	accesschange.Publish(s.accessSink, changes...)
 
 	// Sync role change to authorization backend
 	if input.Role != nil && oldRole != *input.Role {
@@ -580,9 +617,14 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 		Exec(ctx); err != nil {
 		return errors.Join(fmt.Errorf("failed to remove membership: %w", err), tx.Rollback())
 	}
+	changes, err := recordChanges(ctx, tx, []accesschange.Change{{PrincipalID: principalID, OrganizationID: &organizationID, Reason: accesschange.MembershipRemoved}})
+	if err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to remove membership: %w", err)
 	}
+	accesschange.Publish(s.accessSink, changes...)
 
 	// Sync to authorization backend
 	if syncErr := s.syncer.RemoveOrgMembership(ctx, principalID, organizationID, membership.Role); syncErr != nil {
@@ -777,9 +819,18 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 		return fmt.Errorf("failed to update organization owner: %w", err)
 	}
 
+	changes, err := recordChanges(ctx, tx, []accesschange.Change{
+		{PrincipalID: input.FromPrincipal, OrganizationID: &input.OrganizationID, Reason: accesschange.OrgRoleChanged},
+		{PrincipalID: input.ToPrincipal, OrganizationID: &input.OrganizationID, Reason: accesschange.OrgRoleChanged},
+	})
+	if err != nil {
+		return err
+	}
+
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
+	accesschange.Publish(s.accessSink, changes...)
 
 	// Sync role changes to authorization backend
 	// Update old owner's role
@@ -938,4 +989,17 @@ func entMembershipToModel(m *ent.PrincipalMembership) *Membership {
 		CreatedAt:      m.CreatedAt,
 		UpdatedAt:      m.UpdatedAt,
 	}
+}
+
+// recordChanges writes changes in tx and returns them with their times.
+func recordChanges(ctx context.Context, tx *ent.Tx, changes []accesschange.Change) ([]accesschange.Change, error) {
+	out := make([]accesschange.Change, len(changes))
+	for i, c := range changes {
+		rec, err := accesschange.Record(ctx, tx, c)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = rec
+	}
+	return out, nil
 }

@@ -33,6 +33,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
@@ -102,6 +103,8 @@ type Service struct {
 	syncMode authz.SyncMode
 	logger   *slog.Logger
 
+	accessSink accesschange.Sink
+
 	// seatMu serializes seat-limited assignments in this process;
 	// PostgreSQL additionally takes an advisory lock so that other
 	// processes are serialized too. dialectMu guards the cached probe.
@@ -151,6 +154,14 @@ func WithAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) Optio
 		s.syncer, _ = syncer.(authz.AppRoleSyncer)
 		s.syncMode = mode
 	}
+}
+
+// WithAccessChangeSink announces the access changes the service records,
+// a changed or removed application role, to sink after the transaction
+// that recorded them commits (ADR-010). The records are written whether or
+// not a sink is set.
+func WithAccessChangeSink(sink accesschange.Sink) Option {
+	return func(s *Service) { s.accessSink = sink }
 }
 
 // WithLogger sets the logger that records assignments.
@@ -492,12 +503,21 @@ func (s *Service) Change(ctx context.Context, in AssignInput) (*AppRole, error) 
 		return nil, err
 	}
 	previous := row.Role
-	row, err = row.Update().
-		SetRole(in.Role).
-		SetNillableAssignedBy(nilIfZero(in.AssignedBy)).
-		Save(ctx)
+	row, err = s.writeRecorded(ctx, func(tx *ent.Tx) (*ent.AppRole, []accesschange.Change, error) {
+		updated, err := tx.AppRole.UpdateOne(row).
+			SetRole(in.Role).
+			SetNillableAssignedBy(nilIfZero(in.AssignedBy)).
+			Save(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("approle: changing: %w", err)
+		}
+		if previous != in.Role {
+			return updated, s.roleChange(in.PrincipalID, in.OrganizationID), nil
+		}
+		return updated, nil, nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("approle: changing: %w", err)
+		return nil, err
 	}
 	s.audit(ctx, "changed", in, previous)
 	if previous != in.Role {
@@ -520,8 +540,13 @@ func (s *Service) Remove(ctx context.Context, organizationID, principalID uuid.U
 	if err != nil {
 		return err
 	}
-	if err := s.client.AppRole.DeleteOne(row).Exec(ctx); err != nil {
-		return fmt.Errorf("approle: removing: %w", err)
+	if _, err = s.writeRecorded(ctx, func(tx *ent.Tx) (*ent.AppRole, []accesschange.Change, error) {
+		if err := tx.AppRole.DeleteOne(row).Exec(ctx); err != nil {
+			return nil, nil, fmt.Errorf("approle: removing: %w", err)
+		}
+		return row, s.roleChange(principalID, organizationID), nil
+	}); err != nil {
+		return err
 	}
 	s.audit(ctx, "removed", AssignInput{
 		OrganizationID: organizationID, PrincipalID: principalID,
@@ -539,11 +564,21 @@ func (s *Service) RemoveForMember(ctx context.Context, organizationID, principal
 	if err != nil {
 		return 0, err
 	}
-	n, err := s.client.AppRole.Delete().
-		Where(approle.OrganizationID(organizationID), approle.PrincipalID(principalID)).
-		Exec(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("approle: removing member roles: %w", err)
+	var n int
+	if _, err = s.writeRecorded(ctx, func(tx *ent.Tx) (*ent.AppRole, []accesschange.Change, error) {
+		deleted, err := tx.AppRole.Delete().
+			Where(approle.OrganizationID(organizationID), approle.PrincipalID(principalID)).
+			Exec(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("approle: removing member roles: %w", err)
+		}
+		n = deleted
+		if deleted == 0 {
+			return nil, nil, nil
+		}
+		return nil, s.roleChange(principalID, organizationID), nil
+	}); err != nil {
+		return 0, err
 	}
 	var errs []error
 	for _, r := range held {
@@ -552,6 +587,36 @@ func (s *Service) RemoveForMember(ctx context.Context, organizationID, principal
 		}
 	}
 	return n, errors.Join(errs...)
+}
+
+// roleChange is the access change an application role change or removal
+// records.
+func (s *Service) roleChange(principalID, organizationID uuid.UUID) []accesschange.Change {
+	return []accesschange.Change{{PrincipalID: principalID, OrganizationID: &organizationID, Reason: accesschange.AppRoleChanged}}
+}
+
+// writeRecorded runs fn in a transaction, records the access changes it
+// returns before committing, and announces them after.
+func (s *Service) writeRecorded(ctx context.Context, fn func(tx *ent.Tx) (*ent.AppRole, []accesschange.Change, error)) (*ent.AppRole, error) {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("approle: starting transaction: %w", err)
+	}
+	row, changes, err := fn(tx)
+	if err != nil {
+		return nil, errors.Join(err, tx.Rollback())
+	}
+	recorded := make([]accesschange.Change, len(changes))
+	for i, c := range changes {
+		if recorded[i], err = accesschange.Record(ctx, tx, c); err != nil {
+			return nil, errors.Join(err, tx.Rollback())
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("approle: committing: %w", err)
+	}
+	accesschange.Publish(s.accessSink, recorded...)
+	return row, nil
 }
 
 // syncAdd writes a role to the authorization graph, honoring the sync mode.

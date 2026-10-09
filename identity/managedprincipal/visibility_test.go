@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz/rbac"
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
@@ -281,5 +282,42 @@ func TestHandler(t *testing.T) {
 		if w := do(tc.method, tc.path, tc.actor); w.Code != tc.want {
 			t.Errorf("%s: status %d, want %d (%s)", tc.name, w.Code, tc.want, w.Body)
 		}
+	}
+}
+
+// TestSessionRevocationsRecordAccessChanges verifies that ending one
+// session, or all of them, records and announces an access change for the
+// managed principal (ADR-010), and that a refused call records nothing.
+func TestSessionRevocationsRecordAccessChanges(t *testing.T) {
+	ctx := context.Background()
+	f := newVisibilityFixture(t)
+	var announced []accesschange.Change
+	f.svc.accessSink = accesschange.SinkFunc(func(c accesschange.Change) { announced = append(announced, c) })
+
+	if err := f.svc.RevokeSession(ctx, f.stranger, f.learner, SessionKindLogin, f.loginSess); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("RevokeSession by stranger = %v", err)
+	}
+	if err := f.svc.RevokeSession(ctx, f.parent, f.learner, SessionKindLogin, uuid.New()); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("RevokeSession of nothing = %v", err)
+	}
+	if len(announced) != 0 {
+		t.Fatalf("refused calls announced %+v", announced)
+	}
+	if err := f.svc.RevokeSession(ctx, f.parent, f.learner, SessionKindLogin, f.loginSess); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.RevokeAll(ctx, f.parent, f.learner); err != nil {
+		t.Fatal(err)
+	}
+	if len(announced) != 2 {
+		t.Fatalf("announced %d changes, want 2: %+v", len(announced), announced)
+	}
+	for _, c := range announced {
+		if c.PrincipalID != f.learner || c.OrganizationID != nil || c.Reason != accesschange.SessionsRevoked {
+			t.Errorf("announced %+v", c)
+		}
+	}
+	if stored, err := accesschange.Since(ctx, f.db, time.Time{}, 0); err != nil || len(stored) != 2 {
+		t.Errorf("stored = %+v, %v; want 2", stored, err)
 	}
 }

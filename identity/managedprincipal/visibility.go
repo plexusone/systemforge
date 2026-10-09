@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
 	entcredential "github.com/plexusone/systemforge/identity/ent/credential"
@@ -207,39 +208,52 @@ func (s *Service) RevokeSession(ctx context.Context, actorID, managedID uuid.UUI
 	}
 	now := s.now()
 	var n int
-	var err error
-	switch kind {
-	case SessionKindLogin:
-		n, err = s.client.LoginSession.Delete().
-			Where(loginsession.ID(sessionID), loginsession.PrincipalID(managedID)).
-			Exec(ctx)
-	case SessionKindOAuth:
-		n, err = s.client.OAuthToken.Update().
-			Where(
-				oauthtoken.SubjectEQ(managedID.String()),
-				oauthtoken.Revoked(false),
-				oauthtoken.Or(oauthtoken.FamilyID(sessionID), oauthtoken.ID(sessionID)),
-			).
-			SetRevoked(true).SetRevokedAt(now).SetRevokedReason(revokedByManager).
-			Save(ctx)
-	case SessionKindToken:
-		n, err = s.client.PrincipalToken.Update().
-			Where(
-				principaltoken.PrincipalID(managedID),
-				principaltoken.Revoked(false),
-				principaltoken.Or(principaltoken.FamilyID(sessionID), principaltoken.ID(sessionID)),
-			).
-			SetRevoked(true).SetRevokedAt(now).SetRevokedReason(revokedByManager).
-			Save(ctx)
-	default:
-		return fmt.Errorf("%w: session kind %q", ErrNotFound, kind)
-	}
+	var change accesschange.Change
+	err := s.withTx(ctx, func(tx *ent.Tx) error {
+		var err error
+		switch kind {
+		case SessionKindLogin:
+			n, err = tx.LoginSession.Delete().
+				Where(loginsession.ID(sessionID), loginsession.PrincipalID(managedID)).
+				Exec(ctx)
+		case SessionKindOAuth:
+			n, err = tx.OAuthToken.Update().
+				Where(
+					oauthtoken.SubjectEQ(managedID.String()),
+					oauthtoken.Revoked(false),
+					oauthtoken.Or(oauthtoken.FamilyID(sessionID), oauthtoken.ID(sessionID)),
+				).
+				SetRevoked(true).SetRevokedAt(now).SetRevokedReason(revokedByManager).
+				Save(ctx)
+		case SessionKindToken:
+			n, err = tx.PrincipalToken.Update().
+				Where(
+					principaltoken.PrincipalID(managedID),
+					principaltoken.Revoked(false),
+					principaltoken.Or(principaltoken.FamilyID(sessionID), principaltoken.ID(sessionID)),
+				).
+				SetRevoked(true).SetRevokedAt(now).SetRevokedReason(revokedByManager).
+				Save(ctx)
+		default:
+			return fmt.Errorf("%w: session kind %q", ErrNotFound, kind)
+		}
+		if err != nil {
+			return fmt.Errorf("managedprincipal: revoke %s session: %w", kind, err)
+		}
+		if n == 0 {
+			return nil
+		}
+		// Access tokens already issued stop being honored at once (ADR-010).
+		change, err = accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: managedID, Reason: accesschange.SessionsRevoked})
+		return err
+	})
 	if err != nil {
-		return fmt.Errorf("managedprincipal: revoke %s session: %w", kind, err)
+		return err
 	}
 	if n == 0 {
 		return ErrNotFound
 	}
+	accesschange.Publish(s.accessSink, change)
 	s.emit(ctx, EventSessionRevoked, "revoke_session", actorID, managedID,
 		map[string]any{"kind": string(kind), "session_id": sessionID.String()})
 	return nil
@@ -253,6 +267,7 @@ func (s *Service) RevokeAll(ctx context.Context, actorID, managedID uuid.UUID) e
 	}
 	now := s.now()
 	counts := map[string]int{}
+	var change accesschange.Change
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		n, err := tx.Credential.Update().
 			Where(
@@ -284,11 +299,14 @@ func (s *Service) RevokeAll(ctx context.Context, actorID, managedID uuid.UUID) e
 			return fmt.Errorf("managedprincipal: revoke principal tokens: %w", err)
 		}
 		counts["principal_tokens"] = n
-		return nil
+		// Access tokens already issued stop being honored at once (ADR-010).
+		change, err = accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: managedID, Reason: accesschange.SessionsRevoked})
+		return err
 	})
 	if err != nil {
 		return err
 	}
+	accesschange.Publish(s.accessSink, change)
 	details := make(map[string]any, len(counts))
 	for k, v := range counts {
 		details[k] = v

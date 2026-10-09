@@ -13,6 +13,7 @@ import (
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
 
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/clientassertion"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
@@ -33,6 +34,7 @@ func ContextWithOwnerID(ctx context.Context, ownerID uuid.UUID) context.Context 
 type EntStorage struct {
 	db             *ent.Client
 	defaultOwnerID uuid.UUID
+	accessSink     accesschange.Sink
 }
 
 // EntStorageOption configures EntStorage.
@@ -44,6 +46,13 @@ func WithDefaultOwner(ownerID uuid.UUID) EntStorageOption {
 	return func(s *EntStorage) {
 		s.defaultOwnerID = ownerID
 	}
+}
+
+// WithEntAccessChangeSink announces RevokeSubjectTokens to sink after it
+// commits (ADR-010). The access-change record is written whether or not a
+// sink is set.
+func WithEntAccessChangeSink(sink accesschange.Sink) EntStorageOption {
+	return func(s *EntStorage) { s.accessSink = sink }
 }
 
 // NewEntStorage creates a new Ent-backed storage.
@@ -658,15 +667,32 @@ func (s *EntStorage) RevokeSubjectTokens(ctx context.Context, subject string) er
 	if subject == "" {
 		return nil
 	}
-	_, err := s.db.OAuthToken.Update().
+	tx, err := s.db.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("revoking tokens for subject: %w", err)
+	}
+	if _, err = tx.OAuthToken.Update().
 		Where(oauthtoken.SubjectEQ(subject), oauthtoken.RevokedEQ(false)).
 		SetRevoked(true).
 		SetRevokedAt(time.Now()).
 		SetRevokedReason("logout").
-		Save(ctx)
-	if err != nil {
+		Save(ctx); err != nil {
+		return errors.Join(fmt.Errorf("revoking tokens for subject: %w", err), tx.Rollback())
+	}
+	// A subject that is a principal also loses the access tokens already
+	// issued at once (ADR-010); a client's subject is not a principal.
+	var changes []accesschange.Change
+	if id, perr := uuid.Parse(subject); perr == nil {
+		change, rerr := accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: id, Reason: accesschange.SessionsRevoked})
+		if rerr != nil {
+			return errors.Join(rerr, tx.Rollback())
+		}
+		changes = append(changes, change)
+	}
+	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("revoking tokens for subject: %w", err)
 	}
+	accesschange.Publish(s.accessSink, changes...)
 	return nil
 }
 
