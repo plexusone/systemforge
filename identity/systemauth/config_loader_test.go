@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestDecodeConfigSkipsDefaultsAndValidation(t *testing.T) {
@@ -59,5 +60,43 @@ func TestDecodeConfigFile(t *testing.T) {
 	}
 	if _, err := DecodeConfigFile(filepath.Join(t.TempDir(), "missing.yaml")); err == nil {
 		t.Error("missing file accepted")
+	}
+}
+
+// TestAccessTokenLifetimeBounds verifies the ADR-010 default of 10 minutes
+// and the 15 minute ceiling, for the deployment and for a client.
+func TestAccessTokenLifetimeBounds(t *testing.T) {
+	cfg := DefaultConfig("https://auth.example.com")
+	if got := cfg.Tokens.AccessTokenLifetime.Duration(); got != 10*time.Minute {
+		t.Errorf("default access token lifetime = %v, want 10m", got)
+	}
+	empty := &Config{Issuer: "https://auth.example.com"}
+	empty.ApplyDefaults()
+	if got := empty.Tokens.AccessTokenLifetime.Duration(); got != 10*time.Minute {
+		t.Errorf("defaulted access token lifetime = %v, want 10m", got)
+	}
+
+	for lifetime, wantErr := range map[time.Duration]bool{
+		time.Minute: false, 15 * time.Minute: false, 16 * time.Minute: true, time.Hour: true,
+	} {
+		c := DefaultConfig("https://auth.example.com")
+		c.Tokens.AccessTokenLifetime = Duration(lifetime)
+		err := c.Validate()
+		if (err != nil) != wantErr || (err != nil && !errors.Is(err, ErrInvalidConfig)) {
+			t.Errorf("Validate with %v = %v, want error %v", lifetime, err, wantErr)
+		}
+	}
+	if _, err := ParseConfig([]byte("issuer: https://auth.example.com\ntokens:\n  access_token_lifetime: 1h\n"), FormatYAML); !errors.Is(err, ErrInvalidConfig) {
+		t.Errorf("ParseConfig with a 1h lifetime = %v, want ErrInvalidConfig", err)
+	}
+
+	// A client's own lifetime is lowered to the ceiling.
+	long := Duration(time.Hour)
+	c, err := NewClientFromConfig(ClientConfig{ID: "app", Name: "App", Type: "public", AccessTokenLifetime: &long})
+	if err != nil {
+		t.Fatalf("NewClientFromConfig: %v", err)
+	}
+	if got := *c.AccessTokenLifetime; got != 15*time.Minute {
+		t.Errorf("client lifetime = %v, want 15m", got)
 	}
 }

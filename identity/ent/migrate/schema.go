@@ -787,7 +787,7 @@ var (
 		{Name: "allowed_scopes", Type: field.TypeJSON},
 		{Name: "allowed_grants", Type: field.TypeJSON},
 		{Name: "allowed_response_types", Type: field.TypeJSON},
-		{Name: "access_token_ttl", Type: field.TypeInt, Default: 900},
+		{Name: "access_token_ttl", Type: field.TypeInt, Default: 600},
 		{Name: "refresh_token_ttl", Type: field.TypeInt, Default: 604800},
 		{Name: "login_token_ttl", Type: field.TypeInt, Nullable: true},
 		{Name: "refresh_token_rotation", Type: field.TypeBool, Default: true},

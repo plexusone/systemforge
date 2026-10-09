@@ -7,6 +7,7 @@ import (
 
 	"github.com/invopop/jsonschema"
 
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/credential"
 )
 
@@ -138,9 +139,12 @@ type KeyConfig struct {
 // TokenConfig configures token lifetimes.
 // Durations are specified as strings: "15m", "1h", "7d", etc.
 type TokenConfig struct {
-	// AccessTokenLifetime is how long access tokens are valid.
-	// Default: 15 minutes
-	AccessTokenLifetime Duration `json:"access_token_lifetime,omitempty" yaml:"access_token_lifetime,omitempty" jsonschema:"default=15m,description=Access token lifetime (e.g. 15m, 1h)"`
+	// AccessTokenLifetime is how long access tokens are valid. It is the
+	// fallback bound on how long an access change can go unseen by a
+	// relying party (ADR-010), so it may not exceed
+	// accesschange.MaxAccessTokenLifetime (15 minutes).
+	// Default: 10 minutes
+	AccessTokenLifetime Duration `json:"access_token_lifetime,omitempty" yaml:"access_token_lifetime,omitempty" jsonschema:"default=10m,description=Access token lifetime (e.g. 10m; at most 15m)"`
 
 	// RefreshTokenLifetime is how long refresh tokens are valid.
 	// Default: 7 days
@@ -257,7 +261,7 @@ type ClientConfig struct {
 	Audience []string `json:"audience,omitempty" yaml:"audience,omitempty" jsonschema:"description=Allowed token audiences"`
 
 	// AccessTokenLifetime overrides the default for this client.
-	AccessTokenLifetime *Duration `json:"access_token_lifetime,omitempty" yaml:"access_token_lifetime,omitempty" jsonschema:"description=Client-specific access token lifetime"`
+	AccessTokenLifetime *Duration `json:"access_token_lifetime,omitempty" yaml:"access_token_lifetime,omitempty" jsonschema:"description=Client-specific access token lifetime; capped at 15m"`
 
 	// RefreshTokenLifetime overrides the default for this client.
 	RefreshTokenLifetime *Duration `json:"refresh_token_lifetime,omitempty" yaml:"refresh_token_lifetime,omitempty" jsonschema:"description=Client-specific refresh token lifetime"`
@@ -338,7 +342,7 @@ func DefaultConfig(issuer string) *Config {
 			RotationDays: 0, // No auto-rotation in embedded mode
 		},
 		Tokens: TokenConfig{
-			AccessTokenLifetime:          Duration(15 * time.Minute),
+			AccessTokenLifetime:          Duration(accesschange.DefaultAccessTokenLifetime),
 			RefreshTokenLifetime:         Duration(7 * 24 * time.Hour),
 			RefreshTokenAbsoluteLifetime: Duration(30 * 24 * time.Hour),
 			IDTokenLifetime:              Duration(1 * time.Hour),
@@ -357,6 +361,9 @@ func DefaultConfig(issuer string) *Config {
 func (c *Config) Validate() error {
 	if c.Issuer == "" {
 		return ErrMissingIssuer
+	}
+	if d := c.Tokens.AccessTokenLifetime.Duration(); d < 0 || d > accesschange.MaxAccessTokenLifetime {
+		return fmt.Errorf("%w: tokens.access_token_lifetime must be between 0 and %s", ErrInvalidConfig, accesschange.MaxAccessTokenLifetime)
 	}
 	if abs := c.Tokens.RefreshTokenAbsoluteLifetime; abs != 0 && abs < c.Tokens.RefreshTokenLifetime {
 		return fmt.Errorf("%w: tokens.refresh_token_absolute_lifetime must be at least refresh_token_lifetime", ErrInvalidConfig)

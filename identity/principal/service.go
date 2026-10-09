@@ -329,9 +329,9 @@ func (s *DefaultService) CreateApplication(ctx context.Context, input CreateAppl
 	}
 
 	// Set defaults
-	accessTTL := 900
+	accessTTL := int(accesschange.DefaultAccessTokenLifetime.Seconds())
 	if input.AccessTokenTTLSeconds > 0 {
-		accessTTL = input.AccessTokenTTLSeconds
+		accessTTL = clampAccessTTL(input.AccessTokenTTLSeconds)
 	}
 	refreshTTL := 604800
 	if input.RefreshTokenTTLSeconds > 0 {
@@ -766,7 +766,7 @@ func (s *DefaultService) UpdateApplication(ctx context.Context, id uuid.UUID, in
 		update.SetAllowedResponseTypes(input.AllowedResponseTypes)
 	}
 	if input.AccessTokenTTLSeconds != nil {
-		update.SetAccessTokenTTL(*input.AccessTokenTTLSeconds)
+		update.SetAccessTokenTTL(clampAccessTTL(*input.AccessTokenTTLSeconds))
 	}
 	if input.RefreshTokenTTLSeconds != nil {
 		update.SetRefreshTokenTTL(*input.RefreshTokenTTLSeconds)
@@ -1106,4 +1106,10 @@ func derefString(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// clampAccessTTL limits an application's access-token lifetime, in
+// seconds, to accesschange.MaxAccessTokenLifetime (ADR-010).
+func clampAccessTTL(seconds int) int {
+	return int(accesschange.ClampAccessTokenLifetime(time.Duration(seconds) * time.Second).Seconds())
 }

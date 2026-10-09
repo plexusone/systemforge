@@ -69,8 +69,8 @@
         "access_token_lifetime": {
           "type": "string",
           "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
-          "description": "Access token lifetime (e.g. 15m",
-          "default": "15m",
+          "description": "Access token lifetime (e.g. 10m; at most 15m)",
+          "default": "10m",
           "examples": [
             "15m",
             "1h",
@@ -196,7 +196,7 @@
           "access_token_lifetime": {
             "type": "string",
             "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
-            "description": "Client-specific access token lifetime",
+            "description": "Client-specific access token lifetime; capped at 15m",
             "examples": [
               "15m",
               "1h",

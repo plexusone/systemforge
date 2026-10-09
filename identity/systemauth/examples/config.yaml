@@ -16,7 +16,7 @@ keys:
 
 # Token lifetime configuration
 tokens:
-  access_token_lifetime: 15m
+  access_token_lifetime: 10m
   refresh_token_lifetime: 168h  # 7 days
   refresh_token_absolute_lifetime: 720h  # 30 days across rotations
   id_token_lifetime: 1h

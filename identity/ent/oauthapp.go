@@ -43,7 +43,7 @@ type OAuthApp struct {
 	AllowedGrants []string `json:"allowed_grants,omitempty"`
 	// Allowed response types
 	AllowedResponseTypes []string `json:"allowed_response_types,omitempty"`
-	// Access token TTL in seconds (default 15 min)
+	// Access token TTL in seconds (default 10 min, at most 15 min)
 	AccessTokenTTL int `json:"access_token_ttl,omitempty"`
 	// Refresh token TTL in seconds (default 7 days)
 	RefreshTokenTTL int `json:"refresh_token_ttl,omitempty"`

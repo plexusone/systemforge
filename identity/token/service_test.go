@@ -389,3 +389,14 @@ func TestRevokeAllForPrincipalRecordsAccessChange(t *testing.T) {
 		t.Errorf("stored = %+v, %v", stored, err)
 	}
 }
+
+// TestAccessTTLIsCapped verifies that a requested access lifetime above the
+// ADR-010 maximum is lowered to it.
+func TestAccessTTLIsCapped(t *testing.T) {
+	db := openSQLite(t)
+	svc := NewService(db)
+	tok := issueFor(t, svc, addPrincipal(t, db), func(in *IssueInput) { in.AccessTTL = 24 * time.Hour })
+	if want := int(accesschange.MaxAccessTokenLifetime.Seconds()); tok.ExpiresIn != want {
+		t.Errorf("ExpiresIn = %d, want %d", tok.ExpiresIn, want)
+	}
+}

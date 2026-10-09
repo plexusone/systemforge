@@ -84,8 +84,8 @@ func (OAuthApp) Fields() []ent.Field {
 
 		// Token configuration
 		field.Int("access_token_ttl").
-			Default(900).
-			Comment("Access token TTL in seconds (default 15 min)"),
+			Default(600).
+			Comment("Access token TTL in seconds (default 10 min, at most 15 min)"),
 
 		field.Int("refresh_token_ttl").
 			Default(604800).

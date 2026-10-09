@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/principal"
 )
@@ -37,5 +39,24 @@ func TestDeactivateRecordsAccessChange(t *testing.T) {
 	stored, err := accesschange.Since(ctx, db, time.Time{}, 0)
 	if err != nil || len(stored) != 1 || stored[0].PrincipalID != h.ID {
 		t.Errorf("stored = %+v, %v", stored, err)
+	}
+}
+
+// TestApplicationAccessTokenTTLBounds verifies the ADR-010 default of ten
+// minutes for an application's access tokens and the fifteen minute cap.
+func TestApplicationAccessTokenTTLBounds(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _ := newService(t)
+	for ttl, want := range map[int]int{0: 600, 300: 300, 900: 900, 86400: 900} {
+		app, err := svc.CreateApplication(ctx, principal.CreateApplicationInput{
+			ClientID: uuid.NewString(), DisplayName: "App", AppType: principal.AppTypeSPA,
+			RedirectURIs: []string{"https://app.example.com/cb"}, Public: true, AccessTokenTTLSeconds: ttl,
+		})
+		if err != nil {
+			t.Fatalf("CreateApplication ttl %d: %v", ttl, err)
+		}
+		if app.Application.AccessTokenTTLSeconds != want {
+			t.Errorf("ttl %d stored as %d, want %d", ttl, app.Application.AccessTokenTTLSeconds, want)
+		}
 	}
 }

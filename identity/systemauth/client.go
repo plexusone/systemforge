@@ -5,6 +5,8 @@ import (
 
 	"github.com/ory/fosite"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/plexusone/systemforge/identity/accesschange"
 )
 
 // ClientType defines whether a client is public or confidential.
@@ -164,7 +166,7 @@ func NewClientFromConfig(cfg ClientConfig) (*Client, error) {
 
 	// Convert Duration pointers to time.Duration pointers
 	if cfg.AccessTokenLifetime != nil {
-		d := cfg.AccessTokenLifetime.Duration()
+		d := accesschange.ClampAccessTokenLifetime(cfg.AccessTokenLifetime.Duration())
 		client.AccessTokenLifetime = &d
 	}
 	if cfg.RefreshTokenLifetime != nil {

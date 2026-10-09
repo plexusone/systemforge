@@ -150,7 +150,7 @@ func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
 
 	// Set token TTLs if custom
 	if client.AccessTokenLifetime != nil {
-		builder.SetAccessTokenTTL(int(client.AccessTokenLifetime.Seconds()))
+		builder.SetAccessTokenTTL(int(accesschange.ClampAccessTokenLifetime(*client.AccessTokenLifetime).Seconds()))
 	}
 	if client.RefreshTokenLifetime != nil {
 		builder.SetRefreshTokenTTL(int(client.RefreshTokenLifetime.Seconds()))
@@ -244,7 +244,7 @@ func (s *EntStorage) UpdateClient(ctx context.Context, client *Client) error {
 	}
 
 	if client.AccessTokenLifetime != nil {
-		builder.SetAccessTokenTTL(int(client.AccessTokenLifetime.Seconds()))
+		builder.SetAccessTokenTTL(int(accesschange.ClampAccessTokenLifetime(*client.AccessTokenLifetime).Seconds()))
 	}
 	if client.RefreshTokenLifetime != nil {
 		builder.SetRefreshTokenTTL(int(client.RefreshTokenLifetime.Seconds()))
@@ -866,7 +866,7 @@ func (s *EntStorage) entAppToClient(app *ent.OAuthApp) *Client {
 
 	// Convert TTLs to durations
 	if app.AccessTokenTTL > 0 {
-		d := time.Duration(app.AccessTokenTTL) * time.Second
+		d := accesschange.ClampAccessTokenLifetime(time.Duration(app.AccessTokenTTL) * time.Second)
 		client.AccessTokenLifetime = &d
 	}
 	if app.RefreshTokenTTL > 0 {

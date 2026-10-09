@@ -27,6 +27,30 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/accesschange"
 )
 
+// Access-token lifetimes (ADR-010 decision 1). Lifetime is the fallback
+// bound on how long a change can go unseen, so it is short by default and
+// capped.
+const (
+	// DefaultAccessTokenLifetime is the access-token lifetime when none is
+	// configured.
+	DefaultAccessTokenLifetime = 10 * time.Minute
+	// MaxAccessTokenLifetime is the longest access-token lifetime a
+	// deployment, client or application may configure.
+	MaxAccessTokenLifetime = 15 * time.Minute
+)
+
+// ClampAccessTokenLifetime returns d limited to MaxAccessTokenLifetime. A
+// non-positive d returns DefaultAccessTokenLifetime.
+func ClampAccessTokenLifetime(d time.Duration) time.Duration {
+	switch {
+	case d <= 0:
+		return DefaultAccessTokenLifetime
+	case d > MaxAccessTokenLifetime:
+		return MaxAccessTokenLifetime
+	}
+	return d
+}
+
 // Reason says why access changed.
 type Reason string
 
@@ -155,7 +179,7 @@ func Prune(ctx context.Context, client *ent.Client, cutoff time.Time) (int, erro
 // Retention is how long a change is kept: the maximum access-token
 // lifetime, the largest clock-skew margin a relying party is expected to
 // use, and an hour of slack for pollers and replay that are behind.
-const Retention = 15*time.Minute + time.Minute + time.Hour
+const Retention = MaxAccessTokenLifetime + time.Minute + time.Hour
 
 // PruneExpired deletes the changes older than Retention.
 func PruneExpired(ctx context.Context, client *ent.Client) (int, error) {

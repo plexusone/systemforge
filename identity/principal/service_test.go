@@ -74,7 +74,7 @@ func TestCreateAndGetEachType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateApplication: %v", err)
 	}
-	if app.Application == nil || app.Application.ClientID != "billing" || app.Application.AccessTokenTTLSeconds != 900 || !app.Application.Public {
+	if app.Application == nil || app.Application.ClientID != "billing" || app.Application.AccessTokenTTLSeconds != 600 || !app.Application.Public {
 		t.Errorf("application = %+v", app.Application)
 	}
 

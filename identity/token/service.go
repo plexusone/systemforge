@@ -22,7 +22,8 @@ const (
 	// TokenBytes is the number of random bytes for token generation.
 	TokenBytes = 32
 	// DefaultAccessTTL is the access token lifetime when none is given.
-	DefaultAccessTTL = 15 * time.Minute
+	// A longer one is capped at accesschange.MaxAccessTokenLifetime.
+	DefaultAccessTTL = accesschange.DefaultAccessTokenLifetime
 
 	revokedRotated  = "rotated"
 	revokedReuse    = "refresh token reuse"
@@ -101,6 +102,7 @@ func issue(ctx context.Context, client *ent.Client, input IssueInput, family uui
 	if accessTTL <= 0 {
 		accessTTL = DefaultAccessTTL
 	}
+	accessTTL = accesschange.ClampAccessTokenLifetime(accessTTL)
 	accessExpiresAt := time.Now().Add(accessTTL)
 
 	create := client.PrincipalToken.Create().
