@@ -282,6 +282,7 @@ func newDeployment(t *testing.T) *deployment {
 		t.Fatal(err)
 	}
 	psc := aauth.NewPSClient(issuer, agent)
+	psc.HTTPClient = http.DefaultClient
 	if _, err := psc.Discover(ctx); err != nil {
 		t.Fatal(err)
 	}
