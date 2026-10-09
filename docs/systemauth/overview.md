@@ -78,6 +78,7 @@ serves:
 | `/oauth/introspect` | POST | Token introspection (RFC 7662) |
 | `/oauth/revoke` | POST | Token revocation (RFC 7009) |
 | `/oauth/userinfo` | GET/POST | OpenID Connect UserInfo |
+| `/oauth/userinfo/memberships` | GET | Paginated organization memberships of the token's principal (needs an `OrgsSource`) |
 
 With `social_login` configured, `/login*`, `/logout` and `/consent` are added
 (see [Social Login](social-login.md)).
@@ -98,6 +99,12 @@ body; query parameters are not accepted). The token must have been granted the
   "picture": "https://avatars.example.com/u/4242"
 }
 ```
+
+With `systemauth.WithOrgsSource` configured, userinfo and the ID token also
+carry `orgs` and `orgs_truncated` whatever the scopes, and JWT access tokens
+carry the compact form. `GET /oauth/userinfo/memberships?limit=&cursor=`
+returns every organization, paginated. See
+[The `orgs` claim](../design/architecture/organizations.md#the-orgs-claim).
 
 `sub` is the SystemAuth principal ID. Standard claims are released per granted
 scope — `email` → `email`, `email_verified`; `profile` → `name`, `picture`, … —

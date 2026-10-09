@@ -461,8 +461,7 @@ HTTP endpoints, on the organization API when `APIConfig.AppRoles` is set
 | `PUT /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role`; body `{"role": "..."}`; assigns or changes |
 | `DELETE /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role` |
 
-Not yet built: the `orgs` claim, invites carrying roles, and the
-relationship-sync calls (`AddAppRole`/`RemoveAppRole`); see
+Not yet built: invites carrying roles and the relationship-sync calls (`AddAppRole`/`RemoveAppRole`); see
 [Planned changes](#planned-changes).
 
 ## How relying parties get memberships today
@@ -501,10 +500,38 @@ signed in through social login or a login token they are:
 | `managed: true` | The human has no email (a managed principal); emitted whatever the scopes |
 | `email`, `email_verified` | `email` scope, and only when the principal has an email |
 | `name`, `picture` | `profile` scope |
+| `orgs`, `orgs_truncated` | When the server has an `OrgsSource` (`systemauth.WithOrgsSource(systemauth.NewEntOrgsSource(client, approleService))`); emitted whatever the scopes, like `managed` |
 
-No organization, role or entitlement claim is emitted. Access tokens are
+Without an `OrgsSource` no organization claim is emitted. Access tokens are
 JWTs (`relyingparty.AccessTokenVerifier` yields `Subject`, `ClientID`,
-`Scopes` and the raw claims); they carry no memberships either.
+`Scopes` and the raw claims).
+
+### The `orgs` claim
+
+`orgs` lists the organizations the principal belongs to through an active
+membership in an active organization, personal organization first and then
+newest membership first, at most `MaxOrgsInToken` (50); `orgs_truncated` is
+`true` when any were left out. Each entry has the organization `id`, the
+principal's organization `role` (`owner`, `admin`, `member` or
+`collaborator`) and `apps`, a map from application identifier to the
+principal's role there, from `approle.EffectiveRoles`: owners hold `admin` in
+every entitled application, everyone else holds what was assigned, and a
+collaborator's `apps` is empty. An application absent from `apps` is one the
+principal may not open.
+
+| Where | Form | Entry fields |
+|---|---|---|
+| ID token, `/oauth/userinfo` | Full | `id`, `slug`, `name`, `type` (`personal`, `team`, `enterprise`), `role`, `apps` |
+| JWT access token | Compact | `id`, `role`, `apps` |
+| `GET /oauth/userinfo/memberships?limit=&cursor=` | Full, every organization | as above, in `{"orgs": [...], "next_cursor": "..."}`; `limit` defaults to 50 and is at most 100; `cursor` is the last organization ID of the previous page; needs a token granted `openid` |
+
+`systemauth.OrgsClaim` (`Server.OrgsClaim(ctx, principalID, compact)`) builds
+the claim. The token endpoint recomputes it on every grant, so a refresh
+carries current roles in the access token and in the refreshed ID token; a
+refresh token is not revoked by a role or membership change (ADR-010
+decision 5). Subjects that are not principals (a client under
+`client_credentials`) get no claim. If the claim cannot be read, issuance
+fails with `server_error` rather than issuing a token without it.
 
 ## Token freshness and revocation
 
@@ -549,12 +576,8 @@ decides it.
 
 ### Memberships and entitlements as claims (ADR-007)
 
-- SystemAuth emits an `orgs` claim in the ID token and at userinfo: a list of
-  `{id, slug, name, type, role, apps}` where `apps` maps application
-  identifier to the principal's application role; the JWT access token
-  carries the compact `{id, role, apps}` form; at most 50 organizations,
-  personal first, with `orgs_truncated: true` when any were omitted.
-- `GET /userinfo/memberships` returns the full, paginated list.
+- Built: the `orgs` claim and `GET /oauth/userinfo/memberships` (see
+  [The `orgs` claim](#the-orgs-claim)).
 - `relyingparty` gains `ClaimsMemberships` (default) and
   `RemoteMemberships`; `LocalMemberships` remains for development and tests
   and is documented as not for production.
