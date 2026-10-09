@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/plexusone/systemforge/identity/ent/accesschange"
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/approle"
@@ -100,6 +101,7 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			accesschange.Table:        accesschange.ValidColumn,
 			agent.Table:               agent.ValidColumn,
 			approle.Table:             approle.ValidColumn,
 			application.Table:         application.ValidColumn,

@@ -111,6 +111,30 @@ func DenyMutationOperationRule(op ent.Op) MutationRule {
 	return OnMutationOperation(rule, op)
 }
 
+// The AccessChangeQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type AccessChangeQueryRuleFunc func(context.Context, *ent.AccessChangeQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f AccessChangeQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.AccessChangeQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.AccessChangeQuery", q)
+}
+
+// The AccessChangeMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type AccessChangeMutationRuleFunc func(context.Context, *ent.AccessChangeMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f AccessChangeMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.AccessChangeMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.AccessChangeMutation", m)
+}
+
 // The AgentQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type AgentQueryRuleFunc func(context.Context, *ent.AgentQuery) error
@@ -818,6 +842,8 @@ var _ QueryMutationRule = FilterFunc(nil)
 
 func queryFilter(q ent.Query) (Filter, error) {
 	switch q := q.(type) {
+	case *ent.AccessChangeQuery:
+		return q.Filter(), nil
 	case *ent.AgentQuery:
 		return q.Filter(), nil
 	case *ent.AppRoleQuery:
@@ -881,6 +907,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 
 func mutationFilter(m ent.Mutation) (Filter, error) {
 	switch m := m.(type) {
+	case *ent.AccessChangeMutation:
+		return m.Filter(), nil
 	case *ent.AgentMutation:
 		return m.Filter(), nil
 	case *ent.AppRoleMutation:

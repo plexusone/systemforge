@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/plexusone/systemforge/identity/ent/accesschange"
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/approle"
@@ -41,6 +42,19 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	accesschangeMixin := schema.AccessChange{}.Mixin()
+	accesschangeMixinFields0 := accesschangeMixin[0].Fields()
+	_ = accesschangeMixinFields0
+	accesschangeFields := schema.AccessChange{}.Fields()
+	_ = accesschangeFields
+	// accesschangeDescChangedAt is the schema descriptor for changed_at field.
+	accesschangeDescChangedAt := accesschangeFields[2].Descriptor()
+	// accesschange.DefaultChangedAt holds the default value on creation for the changed_at field.
+	accesschange.DefaultChangedAt = accesschangeDescChangedAt.Default.(func() time.Time)
+	// accesschangeDescID is the schema descriptor for id field.
+	accesschangeDescID := accesschangeMixinFields0[0].Descriptor()
+	// accesschange.DefaultID holds the default value on creation for the id field.
+	accesschange.DefaultID = accesschangeDescID.Default.(func() uuid.UUID)
 	agentMixin := schema.Agent{}.Mixin()
 	agentMixinFields0 := agentMixin[0].Fields()
 	_ = agentMixinFields0

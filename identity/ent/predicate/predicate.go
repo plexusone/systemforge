@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AccessChange is the predicate function for accesschange builders.
+type AccessChange func(*sql.Selector)
+
 // Agent is the predicate function for agent builders.
 type Agent func(*sql.Selector)
 

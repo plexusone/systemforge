@@ -9,6 +9,18 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 )
 
+// The AccessChangeFunc type is an adapter to allow the use of ordinary
+// function as AccessChange mutator.
+type AccessChangeFunc func(context.Context, *ent.AccessChangeMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AccessChangeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AccessChangeMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AccessChangeMutation", m)
+}
+
 // The AgentFunc type is an adapter to allow the use of ordinary
 // function as Agent mutator.
 type AgentFunc func(context.Context, *ent.AgentMutation) (ent.Value, error)

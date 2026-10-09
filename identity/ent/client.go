@@ -16,6 +16,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/plexusone/systemforge/identity/ent/accesschange"
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/approle"
@@ -53,6 +54,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// AccessChange is the client for interacting with the AccessChange builders.
+	AccessChange *AccessChangeClient
 	// Agent is the client for interacting with the Agent builders.
 	Agent *AgentClient
 	// AppRole is the client for interacting with the AppRole builders.
@@ -120,6 +123,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.AccessChange = NewAccessChangeClient(c.config)
 	c.Agent = NewAgentClient(c.config)
 	c.AppRole = NewAppRoleClient(c.config)
 	c.Application = NewApplicationClient(c.config)
@@ -240,6 +244,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:                 ctx,
 		config:              cfg,
+		AccessChange:        NewAccessChangeClient(cfg),
 		Agent:               NewAgentClient(cfg),
 		AppRole:             NewAppRoleClient(cfg),
 		Application:         NewApplicationClient(cfg),
@@ -287,6 +292,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:                 ctx,
 		config:              cfg,
+		AccessChange:        NewAccessChangeClient(cfg),
 		Agent:               NewAgentClient(cfg),
 		AppRole:             NewAppRoleClient(cfg),
 		Application:         NewApplicationClient(cfg),
@@ -321,7 +327,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Agent.
+//		AccessChange.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -344,9 +350,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Agent, c.AppRole, c.Application, c.ClientAssertionJTI, c.ConsentGrant,
-		c.Credential, c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing,
-		c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerRelationship,
+		c.AccessChange, c.Agent, c.AppRole, c.Application, c.ClientAssertionJTI,
+		c.ConsentGrant, c.Credential, c.ExternalIdentity, c.Human, c.Invite, c.License,
+		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerRelationship,
 		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
 		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
 		c.SeatAssignment, c.ServicePrincipal, c.SlugReservation, c.Subscription,
@@ -359,9 +365,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Agent, c.AppRole, c.Application, c.ClientAssertionJTI, c.ConsentGrant,
-		c.Credential, c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing,
-		c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerRelationship,
+		c.AccessChange, c.Agent, c.AppRole, c.Application, c.ClientAssertionJTI,
+		c.ConsentGrant, c.Credential, c.ExternalIdentity, c.Human, c.Invite, c.License,
+		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerRelationship,
 		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
 		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
 		c.SeatAssignment, c.ServicePrincipal, c.SlugReservation, c.Subscription,
@@ -373,6 +379,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AccessChangeMutation:
+		return c.AccessChange.mutate(ctx, m)
 	case *AgentMutation:
 		return c.Agent.mutate(ctx, m)
 	case *AppRoleMutation:
@@ -431,6 +439,139 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Subscription.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AccessChangeClient is a client for the AccessChange schema.
+type AccessChangeClient struct {
+	config
+}
+
+// NewAccessChangeClient returns a client for the AccessChange from the given config.
+func NewAccessChangeClient(c config) *AccessChangeClient {
+	return &AccessChangeClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `accesschange.Hooks(f(g(h())))`.
+func (c *AccessChangeClient) Use(hooks ...Hook) {
+	c.hooks.AccessChange = append(c.hooks.AccessChange, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `accesschange.Intercept(f(g(h())))`.
+func (c *AccessChangeClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AccessChange = append(c.inters.AccessChange, interceptors...)
+}
+
+// Create returns a builder for creating a AccessChange entity.
+func (c *AccessChangeClient) Create() *AccessChangeCreate {
+	mutation := newAccessChangeMutation(c.config, OpCreate)
+	return &AccessChangeCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AccessChange entities.
+func (c *AccessChangeClient) CreateBulk(builders ...*AccessChangeCreate) *AccessChangeCreateBulk {
+	return &AccessChangeCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AccessChangeClient) MapCreateBulk(slice any, setFunc func(*AccessChangeCreate, int)) *AccessChangeCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AccessChangeCreateBulk{err: fmt.Errorf("calling to AccessChangeClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AccessChangeCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AccessChangeCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AccessChange.
+func (c *AccessChangeClient) Update() *AccessChangeUpdate {
+	mutation := newAccessChangeMutation(c.config, OpUpdate)
+	return &AccessChangeUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AccessChangeClient) UpdateOne(_m *AccessChange) *AccessChangeUpdateOne {
+	mutation := newAccessChangeMutation(c.config, OpUpdateOne, withAccessChange(_m))
+	return &AccessChangeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AccessChangeClient) UpdateOneID(id uuid.UUID) *AccessChangeUpdateOne {
+	mutation := newAccessChangeMutation(c.config, OpUpdateOne, withAccessChangeID(id))
+	return &AccessChangeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AccessChange.
+func (c *AccessChangeClient) Delete() *AccessChangeDelete {
+	mutation := newAccessChangeMutation(c.config, OpDelete)
+	return &AccessChangeDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AccessChangeClient) DeleteOne(_m *AccessChange) *AccessChangeDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AccessChangeClient) DeleteOneID(id uuid.UUID) *AccessChangeDeleteOne {
+	builder := c.Delete().Where(accesschange.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AccessChangeDeleteOne{builder}
+}
+
+// Query returns a query builder for AccessChange.
+func (c *AccessChangeClient) Query() *AccessChangeQuery {
+	return &AccessChangeQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAccessChange},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AccessChange entity by its id.
+func (c *AccessChangeClient) Get(ctx context.Context, id uuid.UUID) (*AccessChange, error) {
+	return c.Query().Where(accesschange.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AccessChangeClient) GetX(ctx context.Context, id uuid.UUID) *AccessChange {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AccessChangeClient) Hooks() []Hook {
+	return c.hooks.AccessChange
+}
+
+// Interceptors returns the client interceptors.
+func (c *AccessChangeClient) Interceptors() []Interceptor {
+	return c.inters.AccessChange
+}
+
+func (c *AccessChangeClient) mutate(ctx context.Context, m *AccessChangeMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AccessChangeCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AccessChangeUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AccessChangeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AccessChangeDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AccessChange mutation op: %q", m.Op())
 	}
 }
 
@@ -5361,20 +5502,20 @@ func (c *SubscriptionClient) mutate(ctx context.Context, m *SubscriptionMutation
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant, Credential,
-		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
-		ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode,
-		OAuthConsent, OAuthToken, Organization, Principal, PrincipalMembership,
-		PrincipalToken, SeatAssignment, ServicePrincipal, SlugReservation,
-		Subscription []ent.Hook
+		AccessChange, Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant,
+		Credential, ExternalIdentity, Human, Invite, License, Listing, LoginSession,
+		LoginState, ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret,
+		OAuthAuthCode, OAuthConsent, OAuthToken, Organization, Principal,
+		PrincipalMembership, PrincipalToken, SeatAssignment, ServicePrincipal,
+		SlugReservation, Subscription []ent.Hook
 	}
 	inters struct {
-		Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant, Credential,
-		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
-		ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode,
-		OAuthConsent, OAuthToken, Organization, Principal, PrincipalMembership,
-		PrincipalToken, SeatAssignment, ServicePrincipal, SlugReservation,
-		Subscription []ent.Interceptor
+		AccessChange, Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant,
+		Credential, ExternalIdentity, Human, Invite, License, Listing, LoginSession,
+		LoginState, ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret,
+		OAuthAuthCode, OAuthConsent, OAuthToken, Organization, Principal,
+		PrincipalMembership, PrincipalToken, SeatAssignment, ServicePrincipal,
+		SlugReservation, Subscription []ent.Interceptor
 	}
 )
 

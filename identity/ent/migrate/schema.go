@@ -9,6 +9,27 @@ import (
 )
 
 var (
+	// SfAccessChangesColumns holds the columns for the "sf_access_changes" table.
+	SfAccessChangesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "principal_id", Type: field.TypeUUID},
+		{Name: "organization_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "changed_at", Type: field.TypeTime},
+		{Name: "reason", Type: field.TypeEnum, Enums: []string{"membership_removed", "org_role_changed", "app_role_changed", "grant_reduced", "deactivated", "sessions_revoked"}},
+	}
+	// SfAccessChangesTable holds the schema information for the "sf_access_changes" table.
+	SfAccessChangesTable = &schema.Table{
+		Name:       "sf_access_changes",
+		Columns:    SfAccessChangesColumns,
+		PrimaryKey: []*schema.Column{SfAccessChangesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "accesschange_changed_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfAccessChangesColumns[3]},
+			},
+		},
+	}
 	// SfAgentsColumns holds the columns for the "sf_agents" table.
 	SfAgentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1565,6 +1586,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		SfAccessChangesTable,
 		SfAgentsTable,
 		SfAppRolesTable,
 		SfApplicationsTable,
@@ -1597,6 +1619,9 @@ var (
 )
 
 func init() {
+	SfAccessChangesTable.Annotation = &entsql.Annotation{
+		Table: "sf_access_changes",
+	}
 	SfAgentsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfAgentsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfAgentsTable.Annotation = &entsql.Annotation{
