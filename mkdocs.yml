@@ -104,6 +104,11 @@ nav:
     - With Existing Apps: integration/existing-apps.md
     - Migration Guide: integration/migration.md
   - Design:
+    - Architecture:
+      - Overview: design/index.md
+      - Organizations and Membership: design/architecture/organizations.md
+      - Managed Principals: design/architecture/managed-principals.md
+      - Authorization: design/architecture/authorization.md
     - Architecture Decisions:
       - design/adrs/index.md
       - "ADR-001: Core-era Naming Cleanup": design/adrs/ADR-001-core-era-naming-cleanup-systemauth.md
