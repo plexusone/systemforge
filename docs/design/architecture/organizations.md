@@ -288,9 +288,15 @@ writes the principal, its `sf_humans` row, the `sf_external_identities` link,
 and, through `signup.CreatePersonalOrgInTx`, a personal organization (type
 `personal`, owner set, name = display name, else provider username, else
 email local part, logo = avatar) with an active `owner` membership. A failure
-at any step rolls all of it back. The organization is not registered with an
-authorization syncer: the directory has none, as it had none for the
-principal.
+at any step rolls all of it back. After the commit, the directory registers
+the principal (`syncer.RegisterPrincipal`) and the organization with its owner
+(`syncer.RegisterOrganization`) with an `authz.RelationshipSyncer`, so both
+exist in rebac mode; the backfill path registers only the organization it
+creates. Configure it with `systemauth.WithSocialAuthzSyncer(syncer, mode)`
+on the server, or `WithDirectoryAuthzSyncer`, `WithDirectorySyncMode` and
+`WithDirectoryLogger` on `NewEntPrincipalDirectory`. The default is `noop`
+and eventual mode: a failed registration is logged. In strict mode it is
+returned, with the rows already committed.
 
 - **Slug.** `signup.SlugForLogin(provider, username, email)` returns the
   GitHub username for `github`, the email local part for `google`, and the
