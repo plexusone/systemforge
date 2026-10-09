@@ -203,14 +203,44 @@ through an invite (`signup.SignupWithInvite`) applies the same match
 | `SignupWithInvite(input)` | `Signup`, then `invite.Accept` for the invite (email must match) |
 | `SignupOrGetExisting(input)` | Returns the existing principal and personal organization for an email only when `EmailVerified` is set (`ErrEmailNotVerified` otherwise); creates them otherwise |
 
-Nothing in SystemAuth calls `signup` today. GitHub and Google login
-(`systemauth.ResolveExternalLogin`, ADR-002) resolve a principal by
-`(provider, subject)` first, then link by a verified email to an existing
-principal whose own email is verified, and otherwise
-`CreateFromExternal` a principal, its `sf_humans` row and the
-`sf_external_identities` link, with no organization. A person whose first
-sign-in is social therefore has no organization until an application or
-operator creates one.
+### Signup on first social login
+
+GitHub and Google login (`systemauth.ResolveExternalLogin`, ADR-002,
+ADR-006 decision 1) resolve a principal by `(provider, subject)` first, then
+link by a verified email to an existing principal whose own email is
+verified, and otherwise create one. An unverified email never links to or
+creates an account (`ErrEmailNotVerified`, nothing written).
+
+The create step does not call `signup.Service`, whose principal and
+organization services each commit their own transaction. Instead
+`EntPrincipalDirectory.CreateFromExternal` opens one Ent transaction and
+writes the principal, its `sf_humans` row, the `sf_external_identities` link,
+and, through `signup.CreatePersonalOrgInTx`, a personal organization (type
+`personal`, owner set, name = display name, else provider username, else
+email local part, logo = avatar) with an active `owner` membership. A failure
+at any step rolls all of it back. The organization is not registered with an
+authorization syncer: the directory has none, as it had none for the
+principal.
+
+- **Slug.** `signup.SlugForLogin(provider, username, email)` returns the
+  GitHub username for `github`, the email local part for `google`, and the
+  username (else the local part) for any other provider, normalized to a valid
+  slug. If that slug is taken, `-1` to `-100` and then an eight-character
+  random suffix are tried inside the transaction. Managed principals and
+  reserved slugs are not handled yet (see Planned changes).
+- **Races.** Two first logins of the same identity race on the unique
+  `(provider, subject)` constraint; the loser's transaction rolls back and
+  `ResolveExternalLogin` re-reads the winner. A lost race for the slug alone
+  retries the transaction (up to three times).
+- **Backfill.** After every successful login `ResolveExternalLogin` calls
+  `EnsurePersonalOrg` (the optional `systemauth.PersonalOrgEnsurer`, which
+  `EntPrincipalDirectory` implements). A principal that has no personal
+  organization, such as one created before this behavior or linked by verified
+  email, gets one in its own transaction; a principal that has one is left
+  untouched, so repeat logins create nothing. `MemoryPrincipalDirectory` keeps
+  no organizations.
+- `signup.SignupOrGetExisting` is unchanged and still resolves by email only;
+  social login does not use it.
 
 ## The `plan` column
 
@@ -319,13 +349,10 @@ decides it.
 
 ### Lifecycle and slugs (ADR-006)
 
-- SystemAuth social login calls `signup.SignupOrGetExisting` on a first
-  login, so the principal and its personal organization are created
-  together; today social login creates a bare principal and no
-  organization.
-- `signup.SlugForLogin(provider, providerLogin, email)` derives the personal
-  slug: GitHub username, Google email local part, a manager-entered or
-  generated slug for a managed principal, numeric suffix on collision.
+- Slug derivation for a managed principal (a manager-entered slug, or a
+  generated one such as two words and a number, ADR-006 decision 2). The
+  GitHub and Google rules and the numeric suffix on collision are implemented
+  (see [Signup on first social login](#signup-on-first-social-login)).
 - Personal organizations have exactly one member: `AddMember` and invites
   to a personal organization are refused (except collaborators, ADR-008),
   and `TransferOwnership` of a personal organization is refused. Today none

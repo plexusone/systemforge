@@ -1381,6 +1381,10 @@
     ],
     "added": [
       {
+        "description": "A first GitHub or Google login creates the person's personal organization and owner membership in the same transaction as the principal, and an existing principal without one gets it on its next login; the slug is the GitHub username or the email local part, with a numeric suffix on collision (ADR-006). `signup.SlugForLogin`, `signup.CreatePersonalOrgInTx` and `signup.EnsurePersonalOrgInTx` expose the derivation and the in-transaction creation",
+        "commit": "32e0412"
+      },
+      {
         "description": "identity/requestprincipal: a protocol-neutral RequestPrincipal, an Authenticator interface, and middleware that tries authenticators in order and challenges with every protocol when none recognizes the request",
         "commit": "780ef1a"
       },
