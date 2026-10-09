@@ -118,6 +118,55 @@ func (s *DefaultService) CreateHuman(ctx context.Context, input CreateHumanInput
 		}
 	}()
 
+	p, h, caps, err := s.insertHuman(ctx, tx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if err = s.syncHuman(ctx, p.ID, input.IsPlatformAdmin); err != nil {
+		return nil, err
+	}
+	return humanResult(p, h, caps), nil
+}
+
+// AfterCommit registers a created entity with the authorization backend. It
+// must be called only after the transaction that created the entity
+// committed, and never when it rolled back.
+type AfterCommit func(ctx context.Context) error
+
+// HumanTxCreator is implemented by services that can create a human
+// principal inside a caller's transaction, so a larger operation such as
+// signup is atomic.
+type HumanTxCreator interface {
+	// CreateHumanInTx writes the principal and its human row in tx and
+	// leaves committing to the caller. The returned AfterCommit registers
+	// the principal with the authorization syncer; call it after a
+	// successful commit. Nothing is synced if it is never called.
+	CreateHumanInTx(ctx context.Context, tx *ent.Tx, input CreateHumanInput) (*Principal, AfterCommit, error)
+}
+
+var _ HumanTxCreator = (*DefaultService)(nil)
+
+// CreateHumanInTx implements HumanTxCreator.
+func (s *DefaultService) CreateHumanInTx(ctx context.Context, tx *ent.Tx, input CreateHumanInput) (*Principal, AfterCommit, error) {
+	if input.Email == "" {
+		return nil, nil, ErrEmailRequired
+	}
+	p, h, caps, err := s.insertHuman(ctx, tx, input)
+	if err != nil {
+		return nil, nil, err
+	}
+	return humanResult(p, h, caps), func(ctx context.Context) error {
+		return s.syncHuman(ctx, p.ID, input.IsPlatformAdmin)
+	}, nil
+}
+
+// insertHuman writes the principal and human rows in tx.
+func (s *DefaultService) insertHuman(ctx context.Context, tx *ent.Tx, input CreateHumanInput) (*ent.Principal, *ent.Human, Capabilities, error) {
 	// Set default capabilities for human
 	caps := DefaultCapabilitiesForType(TypeHuman)
 	capsMap := capabilitiesToMap(caps)
@@ -140,7 +189,7 @@ func (s *DefaultService) CreateHuman(ctx context.Context, input CreateHumanInput
 
 	p, err := principalCreate.Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create principal: %w", err)
+		return nil, nil, Capabilities{}, fmt.Errorf("failed to create principal: %w", err)
 	}
 
 	// Create human extension
@@ -167,31 +216,37 @@ func (s *DefaultService) CreateHuman(ctx context.Context, input CreateHumanInput
 
 	h, err := humanCreate.Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create human extension: %w", err)
+		return nil, nil, Capabilities{}, fmt.Errorf("failed to create human extension: %w", err)
 	}
 
-	if err = tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
+	return p, h, caps, nil
+}
 
+// syncHuman registers a committed human principal with the authorization
+// syncer, honoring the sync mode.
+func (s *DefaultService) syncHuman(ctx context.Context, id uuid.UUID, platformAdmin bool) error {
 	// Sync to authorization backend
-	if syncErr := s.syncer.RegisterPrincipal(ctx, p.ID); syncErr != nil {
+	if syncErr := s.syncer.RegisterPrincipal(ctx, id); syncErr != nil {
 		if s.syncMode == authz.SyncModeStrict {
-			return nil, fmt.Errorf("failed to sync principal to authz: %w", syncErr)
+			return fmt.Errorf("failed to sync principal to authz: %w", syncErr)
 		}
-		s.logger.Warn("failed to sync principal to authz", "principal_id", p.ID, "error", syncErr)
+		s.logger.Warn("failed to sync principal to authz", "principal_id", id, "error", syncErr)
 	}
 
 	// Set platform admin if applicable
-	if input.IsPlatformAdmin {
-		if syncErr := s.syncer.SetPlatformAdmin(ctx, p.ID, true); syncErr != nil {
+	if platformAdmin {
+		if syncErr := s.syncer.SetPlatformAdmin(ctx, id, true); syncErr != nil {
 			if s.syncMode == authz.SyncModeStrict {
-				return nil, fmt.Errorf("failed to sync platform admin to authz: %w", syncErr)
+				return fmt.Errorf("failed to sync platform admin to authz: %w", syncErr)
 			}
-			s.logger.Warn("failed to sync platform admin to authz", "principal_id", p.ID, "error", syncErr)
+			s.logger.Warn("failed to sync platform admin to authz", "principal_id", id, "error", syncErr)
 		}
 	}
+	return nil
+}
 
+// humanResult builds the Principal returned for a created human.
+func humanResult(p *ent.Principal, h *ent.Human, caps Capabilities) *Principal {
 	// Build result
 	result := &Principal{
 		ID:            p.ID,
@@ -220,7 +275,7 @@ func (s *DefaultService) CreateHuman(ctx context.Context, input CreateHumanInput
 		result.OrganizationID = p.OrganizationID
 	}
 
-	return result, nil
+	return result
 }
 
 // CreateApplication creates a new application principal.

@@ -83,12 +83,7 @@ func (s *DefaultService) Signup(ctx context.Context, input SignupInput) (*Signup
 		return nil, fmt.Errorf("slug %s is already taken", input.PersonalOrgSlug)
 	}
 
-	// The principal and organization services each write in their own
-	// transaction, so a failure after the principal exists is undone by
-	// deleting it; otherwise a retry would find the email taken.
-
-	// Create human principal
-	humanPrincipal, err := s.principalSvc.CreateHuman(ctx, principal.CreateHumanInput{
+	humanInput := principal.CreateHumanInput{
 		Email:         input.Email,
 		DisplayName:   input.DisplayName,
 		GivenName:     input.GivenName,
@@ -98,9 +93,6 @@ func (s *DefaultService) Signup(ctx context.Context, input SignupInput) (*Signup
 		Timezone:      input.Timezone,
 		AllowedScopes: []string{"openid", "profile", "email"},
 		Metadata:      input.Metadata,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
 	// Determine personal org name
@@ -108,14 +100,85 @@ func (s *DefaultService) Signup(ctx context.Context, input SignupInput) (*Signup
 	if orgName == "" {
 		orgName = input.DisplayName
 	}
+	orgInput := organization.CreatePersonalOrgInput{
+		Name:    orgName,
+		Slug:    input.PersonalOrgSlug,
+		LogoURL: input.AvatarURL,
+	}
+
+	// With services that can write inside a caller's transaction (the
+	// default ones), the principal, the organization and the owner
+	// membership commit together and a failure leaves nothing behind.
+	humanTx, humanOK := s.principalSvc.(principal.HumanTxCreator)
+	orgTx, orgOK := s.orgSvc.(organization.PersonalOrgTxCreator)
+	if humanOK && orgOK && s.client != nil {
+		return s.signupInTx(ctx, humanTx, orgTx, humanInput, orgInput)
+	}
+	return s.signupSeparately(ctx, humanInput, orgInput)
+}
+
+// signupInTx creates the principal, personal organization and owner
+// membership in one transaction, then registers them with the authorization
+// syncers. Registration runs after the commit, so a rolled-back signup is
+// never synced; in strict sync mode a failed registration is returned with
+// the rows already committed.
+func (s *DefaultService) signupInTx(
+	ctx context.Context,
+	humanTx principal.HumanTxCreator,
+	orgTx organization.PersonalOrgTxCreator,
+	humanInput principal.CreateHumanInput,
+	orgInput organization.CreatePersonalOrgInput,
+) (*SignupResult, error) {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	rollback := func(cause error) error {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return errors.Join(cause, fmt.Errorf("rolling back signup: %w", rbErr))
+		}
+		return cause
+	}
+
+	humanPrincipal, syncPrincipal, err := humanTx.CreateHumanInTx(ctx, tx, humanInput)
+	if err != nil {
+		return nil, rollback(fmt.Errorf("failed to create user: %w", err))
+	}
+	orgInput.OwnerPrincipalID = humanPrincipal.ID
+	personalOrg, membership, syncOrg, err := orgTx.CreatePersonalOrgInTx(ctx, tx, orgInput)
+	if err != nil {
+		return nil, rollback(fmt.Errorf("failed to create personal organization: %w", err))
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit signup: %w", err)
+	}
+
+	if err = syncPrincipal(ctx); err != nil {
+		return nil, err
+	}
+	if err = syncOrg(ctx); err != nil {
+		return nil, err
+	}
+	return &SignupResult{
+		Principal:            humanPrincipal,
+		PersonalOrganization: personalOrg,
+		Membership:           membership,
+	}, nil
+}
+
+// signupSeparately is the fallback for principal and organization services
+// that cannot write inside a caller's transaction. They each commit their
+// own, so a failure after the principal exists is undone by deleting it;
+// otherwise a retry would find the email taken.
+func (s *DefaultService) signupSeparately(ctx context.Context, humanInput principal.CreateHumanInput, orgInput organization.CreatePersonalOrgInput) (*SignupResult, error) {
+	humanPrincipal, err := s.principalSvc.CreateHuman(ctx, humanInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
 
 	// Create personal organization (this also creates the owner membership)
-	personalOrg, err := s.orgSvc.CreatePersonalOrg(ctx, organization.CreatePersonalOrgInput{
-		OwnerPrincipalID: humanPrincipal.ID,
-		Name:             orgName,
-		Slug:             input.PersonalOrgSlug,
-		LogoURL:          input.AvatarURL,
-	})
+	orgInput.OwnerPrincipalID = humanPrincipal.ID
+	personalOrg, err := s.orgSvc.CreatePersonalOrg(ctx, orgInput)
 	if err != nil {
 		return nil, errors.Join(fmt.Errorf("failed to create personal organization: %w", err), s.deletePrincipal(ctx, humanPrincipal.ID))
 	}

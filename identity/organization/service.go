@@ -142,20 +142,8 @@ func NewService(client *ent.Client, opts ...ServiceOption) Service {
 
 // Create creates a new organization.
 func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInput) (*Organization, error) {
-	// Validate slug
-	if !isValidSlug(input.Slug) {
-		return nil, fmt.Errorf("invalid slug format: must be lowercase alphanumeric with hyphens")
-	}
-
-	// Check slug availability
-	// A slug in its cooling-off period is open to the owner who released it.
-	if err := s.slugCheck(ctx, s.client, input.Slug, input.OwnerPrincipalID); err != nil {
-		return nil, fmt.Errorf("failed to check slug availability: %w", err)
-	}
-
-	// Validate personal org has owner
-	if input.OrgType == OrgTypePersonal && input.OwnerPrincipalID == nil {
-		return nil, fmt.Errorf("personal organizations require an owner principal ID")
+	if err := s.validateCreate(ctx, s.client, input); err != nil {
+		return nil, err
 	}
 
 	// Start transaction
@@ -169,6 +157,45 @@ func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInp
 		}
 	}()
 
+	org, _, err := s.insertOrganization(ctx, tx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if err = s.syncCreated(ctx, org.ID, input.OwnerPrincipalID); err != nil {
+		return nil, err
+	}
+
+	return entOrgToModel(org), nil
+}
+
+// validateCreate checks a create input against the data visible through c.
+func (s *DefaultService) validateCreate(ctx context.Context, c *ent.Client, input CreateOrganizationInput) error {
+	// Validate slug
+	if !isValidSlug(input.Slug) {
+		return fmt.Errorf("invalid slug format: must be lowercase alphanumeric with hyphens")
+	}
+
+	// Check slug availability
+	// A slug in its cooling-off period is open to the owner who released it.
+	if err := s.slugCheck(ctx, c, input.Slug, input.OwnerPrincipalID); err != nil {
+		return fmt.Errorf("failed to check slug availability: %w", err)
+	}
+
+	// Validate personal org has owner
+	if input.OrgType == OrgTypePersonal && input.OwnerPrincipalID == nil {
+		return fmt.Errorf("personal organizations require an owner principal ID")
+	}
+	return nil
+}
+
+// insertOrganization writes the organization and, when an owner is given,
+// the owner membership in tx.
+func (s *DefaultService) insertOrganization(ctx context.Context, tx *ent.Tx, input CreateOrganizationInput) (*ent.Organization, *ent.PrincipalMembership, error) {
 	// Create organization
 	create := tx.Organization.Create().
 		SetName(input.Name).
@@ -197,43 +224,85 @@ func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInp
 
 	org, err := create.Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create organization: %w", err)
+		return nil, nil, fmt.Errorf("failed to create organization: %w", err)
 	}
 	// The slug is now in use; a reservation for it (held by the owner,
 	// checked above) is spent.
 	if _, err = tx.SlugReservation.Delete().Where(slugreservation.SlugEQ(input.Slug)).Exec(ctx); err != nil {
-		return nil, fmt.Errorf("failed to clear slug reservation: %w", err)
+		return nil, nil, fmt.Errorf("failed to clear slug reservation: %w", err)
 	}
 
 	// The owner is a member with the owner role, so membership-based
 	// authorization recognizes it.
+	var membership *ent.PrincipalMembership
 	if input.OwnerPrincipalID != nil {
-		_, err = tx.PrincipalMembership.Create().
+		membership, err = tx.PrincipalMembership.Create().
 			SetPrincipalID(*input.OwnerPrincipalID).
 			SetOrganizationID(org.ID).
 			SetRole(RoleOwner).
 			SetActive(true).
 			Save(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create owner membership: %w", err)
+			return nil, nil, fmt.Errorf("failed to create owner membership: %w", err)
 		}
 	}
 
-	if err = tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
+	return org, membership, nil
+}
 
-	// Sync to authorization backend
-	if input.OwnerPrincipalID != nil {
-		if syncErr := s.syncer.RegisterOrganization(ctx, org.ID, *input.OwnerPrincipalID); syncErr != nil {
-			if s.syncMode == authz.SyncModeStrict {
-				return nil, fmt.Errorf("failed to sync organization to authz: %w", syncErr)
-			}
-			s.logger.Warn("failed to sync organization to authz", "org_id", org.ID, "error", syncErr)
+// syncCreated registers a committed organization with the authorization
+// syncer, honoring the sync mode.
+func (s *DefaultService) syncCreated(ctx context.Context, orgID uuid.UUID, owner *uuid.UUID) error {
+	if owner == nil {
+		return nil
+	}
+	if syncErr := s.syncer.RegisterOrganization(ctx, orgID, *owner); syncErr != nil {
+		if s.syncMode == authz.SyncModeStrict {
+			return fmt.Errorf("failed to sync organization to authz: %w", syncErr)
 		}
+		s.logger.Warn("failed to sync organization to authz", "org_id", orgID, "error", syncErr)
 	}
+	return nil
+}
 
-	return entOrgToModel(org), nil
+// AfterCommit registers a created entity with the authorization backend. It
+// must be called only after the transaction that created the entity
+// committed, and never when it rolled back.
+type AfterCommit func(ctx context.Context) error
+
+// PersonalOrgTxCreator is implemented by services that can create a
+// personal organization inside a caller's transaction, so a larger
+// operation such as signup is atomic.
+type PersonalOrgTxCreator interface {
+	// CreatePersonalOrgInTx writes the personal organization and its owner
+	// membership in tx and leaves committing to the caller. The owner
+	// principal may be a row created earlier in the same transaction. The
+	// returned AfterCommit registers the organization with the
+	// authorization syncer; call it after a successful commit.
+	CreatePersonalOrgInTx(ctx context.Context, tx *ent.Tx, input CreatePersonalOrgInput) (*Organization, *Membership, AfterCommit, error)
+}
+
+var _ PersonalOrgTxCreator = (*DefaultService)(nil)
+
+// CreatePersonalOrgInTx implements PersonalOrgTxCreator.
+func (s *DefaultService) CreatePersonalOrgInTx(ctx context.Context, tx *ent.Tx, input CreatePersonalOrgInput) (*Organization, *Membership, AfterCommit, error) {
+	in := CreateOrganizationInput{
+		Name:             input.Name,
+		Slug:             input.Slug,
+		OrgType:          OrgTypePersonal,
+		OwnerPrincipalID: &input.OwnerPrincipalID,
+		LogoURL:          input.LogoURL,
+	}
+	if err := s.validateCreate(ctx, tx.Client(), in); err != nil {
+		return nil, nil, nil, err
+	}
+	org, m, err := s.insertOrganization(ctx, tx, in)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return entOrgToModel(org), entMembershipToModel(m), func(ctx context.Context) error {
+		return s.syncCreated(ctx, org.ID, in.OwnerPrincipalID)
+	}, nil
 }
 
 // CreatePersonalOrg creates a personal organization for a user.
