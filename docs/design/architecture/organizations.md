@@ -611,8 +611,17 @@ refused token `401 invalid_token`, `error_description="token expired"`, and
 `NewBFF` (`BFFConfig.Revocation`) refreshes a session's tokens and claims
 instead of ending it. See [Access changes](../../systemauth/relying-party.md#access-changes).
 
-Not yet built: replica polling, the replay endpoint and back-channel
-delivery (see [Planned changes](#planned-changes)).
+Replicas that share the database poll it:
+`relyingparty.NewAccessChangePoller(pgstore.NewAccessChangeSource(db), cache)`
+(or `accesschange.NewSource` over Ent) reads the rows newer than its last read
+every 1 to 2 seconds, re-reading one margin behind the newest so late-committing
+rows are not missed. After a restart, `relyingparty.Replay` rebuilds the
+cache from `GET /access-changes?since=` (`systemauth.WithAccessChanges`; a
+token with the `access_changes:read` scope; paged by `next_since`) or from the
+database. A cache created with `WithSuspectStart` refuses tokens issued
+before it started listening until the replay or the first poll succeeds.
+
+Not yet built: back-channel delivery (see [Planned changes](#planned-changes)).
 
 ## Planned changes
 
@@ -662,11 +671,11 @@ decides it.
   organization) and reject tokens issued before the change, after a
   clock-skew margin (30 s default, 15 s floor); the cache is shared memory
   in a modular monolith (see [Relying-party revocation
-  cache](#relying-party-revocation-cache-relyingpartyrevocationcache)). Still
-  to do: polling `sf_access_changes` across replicas and delivering an OIDC
-  back-channel `access_change` event across deployments, in `relyingparty`.
+  cache](#relying-party-revocation-cache-relyingpartyrevocationcache)), with
+  polling across replicas and replay after a restart. Still to do:
+  delivering an OIDC back-channel `access_change` event across deployments.
 - Built: a membership or role change does not revoke refresh tokens (ADR-007
   decision 9 is amended); the next refresh issues reduced claims. Only
   deactivation and explicit session revocation revoke refresh tokens.
-- `GET /access-changes?since=` lets a restarted relying party rebuild its
-  cache.
+- Built: `GET /access-changes?since=` lets a restarted relying party rebuild
+  its cache.

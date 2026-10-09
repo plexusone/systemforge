@@ -227,8 +227,47 @@ the latest change plus the margin, so one change causes one refresh. Session
 stores persist this stamp (`Session.ClaimsIssuedAt`); `pgstore` keeps it in
 the sealed secrets document.
 
-Across replicas or separate deployments the cache is fed by polling and by
-back-channel events; those are not built yet.
+### Replicas and restarts
+
+Replicas of a monolith share the database, not memory. Each one polls
+`sf_access_changes` once every second or two, independent of request volume,
+and a restarted relying party replays the last token lifetime before it
+trusts its cache:
+
+```go
+// Replicas sharing SystemAuth's database (PostgreSQL):
+cache := relyingparty.NewRevocationCache(relyingparty.WithSuspectStart())
+poller := relyingparty.NewAccessChangePoller(pgstore.NewAccessChangeSource(db), cache)
+go poller.Run(ctx) // the first successful poll also ends suspect mode
+
+// A relying party in another process, replaying through SystemAuth:
+src := client.AccessChangesSource(client.ClientCredentialsToken(id, secret))
+go relyingparty.ReplayWithRetry(ctx, src, cache, logger)
+```
+
+`WithSuspectStart` (or `MarkSuspect`) puts the cache in suspect mode: changes
+made while it was not listening are unknown, so only tokens issued at least
+one margin after it started are accepted, and the rest are answered "token
+expired" so clients refresh. A successful `Replay`, or the first successful
+poll, rebuilds the cache and ends suspect mode; a failure leaves it suspect,
+so a restart never widens the window in which a revoked token is honored.
+Replay retries with backoff and the server may start serving at once.
+
+The poller re-reads from one margin behind its newest change, so a row that
+committed late with an earlier timestamp is still seen. Its interval is
+limited to 1 to 2 seconds. `accesschange.NewSource(entClient)` reads the same
+table through Ent.
+
+SystemAuth serves `GET /access-changes?since=<RFC 3339>[&limit=]` when built
+with `systemauth.WithAccessChanges(accesschange.NewSource(db))`. The caller
+needs a token with the `access_changes:read` scope, for example from the
+client-credentials grant for a client registered with that scope. The
+response is `{"changes": [{"principal_id", "organization_id", "changed_at",
+"reason"}], "next_since": ...}`; `next_since` appears when more follow, and
+the source follows it.
+
+Across separate deployments the cache can also be fed by back-channel events;
+that is not built yet.
 
 ## Sessions and back-channel logout
 
