@@ -31,7 +31,7 @@ type inviteAPI struct {
 	people map[string]uuid.UUID
 }
 
-func newInviteAPI(t *testing.T) *inviteAPI {
+func newInviteAPI(t *testing.T, optFns ...func(*ent.Client) invite.ServiceOption) *inviteAPI {
 	t.Helper()
 	ctx := context.Background()
 	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
@@ -63,9 +63,13 @@ func newInviteAPI(t *testing.T) *inviteAPI {
 			t.Fatalf("AddMember: %v", err)
 		}
 	}
+	var opts []invite.ServiceOption
+	for _, fn := range optFns {
+		opts = append(opts, fn(db))
+	}
 	cfg := invite.DefaultAPIConfig()
 	cfg.Authorizer = rbac.New(rbac.WithRoleGetter(organization.MembershipRoleGetter(orgs)))
-	a.h = invite.NewAPI(invite.NewService(db, "https://app.example.com"), orgs, cfg)
+	a.h = invite.NewAPI(invite.NewService(db, "https://app.example.com", opts...), orgs, cfg)
 	return a
 }
 

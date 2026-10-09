@@ -86,6 +86,12 @@ func (_c *InviteCreate) SetNillableRole(v *string) *InviteCreate {
 	return _c
 }
 
+// SetAppRoles sets the "app_roles" field.
+func (_c *InviteCreate) SetAppRoles(v map[string]string) *InviteCreate {
+	_c.mutation.SetAppRoles(v)
+	return _c
+}
+
 // SetToken sets the "token" field.
 func (_c *InviteCreate) SetToken(v string) *InviteCreate {
 	_c.mutation.SetToken(v)
@@ -390,6 +396,10 @@ func (_c *InviteCreate) createSpec() (*Invite, *sqlgraph.CreateSpec) {
 		_spec.SetField(invite.FieldRole, field.TypeString, value)
 		_node.Role = value
 	}
+	if value, ok := _c.mutation.AppRoles(); ok {
+		_spec.SetField(invite.FieldAppRoles, field.TypeJSON, value)
+		_node.AppRoles = value
+	}
 	if value, ok := _c.mutation.Token(); ok {
 		_spec.SetField(invite.FieldToken, field.TypeString, value)
 		_node.Token = value
@@ -565,6 +575,24 @@ func (u *InviteUpsert) SetRole(v string) *InviteUpsert {
 // UpdateRole sets the "role" field to the value that was provided on create.
 func (u *InviteUpsert) UpdateRole() *InviteUpsert {
 	u.SetExcluded(invite.FieldRole)
+	return u
+}
+
+// SetAppRoles sets the "app_roles" field.
+func (u *InviteUpsert) SetAppRoles(v map[string]string) *InviteUpsert {
+	u.Set(invite.FieldAppRoles, v)
+	return u
+}
+
+// UpdateAppRoles sets the "app_roles" field to the value that was provided on create.
+func (u *InviteUpsert) UpdateAppRoles() *InviteUpsert {
+	u.SetExcluded(invite.FieldAppRoles)
+	return u
+}
+
+// ClearAppRoles clears the value of the "app_roles" field.
+func (u *InviteUpsert) ClearAppRoles() *InviteUpsert {
+	u.SetNull(invite.FieldAppRoles)
 	return u
 }
 
@@ -806,6 +834,27 @@ func (u *InviteUpsertOne) SetRole(v string) *InviteUpsertOne {
 func (u *InviteUpsertOne) UpdateRole() *InviteUpsertOne {
 	return u.Update(func(s *InviteUpsert) {
 		s.UpdateRole()
+	})
+}
+
+// SetAppRoles sets the "app_roles" field.
+func (u *InviteUpsertOne) SetAppRoles(v map[string]string) *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.SetAppRoles(v)
+	})
+}
+
+// UpdateAppRoles sets the "app_roles" field to the value that was provided on create.
+func (u *InviteUpsertOne) UpdateAppRoles() *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.UpdateAppRoles()
+	})
+}
+
+// ClearAppRoles clears the value of the "app_roles" field.
+func (u *InviteUpsertOne) ClearAppRoles() *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.ClearAppRoles()
 	})
 }
 
@@ -1234,6 +1283,27 @@ func (u *InviteUpsertBulk) SetRole(v string) *InviteUpsertBulk {
 func (u *InviteUpsertBulk) UpdateRole() *InviteUpsertBulk {
 	return u.Update(func(s *InviteUpsert) {
 		s.UpdateRole()
+	})
+}
+
+// SetAppRoles sets the "app_roles" field.
+func (u *InviteUpsertBulk) SetAppRoles(v map[string]string) *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.SetAppRoles(v)
+	})
+}
+
+// UpdateAppRoles sets the "app_roles" field to the value that was provided on create.
+func (u *InviteUpsertBulk) UpdateAppRoles() *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.UpdateAppRoles()
+	})
+}
+
+// ClearAppRoles clears the value of the "app_roles" field.
+func (u *InviteUpsertBulk) ClearAppRoles() *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.ClearAppRoles()
 	})
 }
 

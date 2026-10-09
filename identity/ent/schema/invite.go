@@ -54,6 +54,12 @@ func (Invite) Fields() []ent.Field {
 			Default("member").
 			Comment("Role to assign when invite is accepted"),
 
+		// Application roles granted when the invite is accepted
+		// (ADR-007): application identifier to role.
+		field.JSON("app_roles", map[string]string{}).
+			Optional().
+			Comment("Application roles to grant on acceptance, application to role"),
+
 		// SHA-256 of the invite link's token; the token itself is never
 		// stored. The column keeps its name so existing databases migrate
 		// in place (migrations/0003_hash_invite_tokens.sql).

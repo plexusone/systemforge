@@ -250,6 +250,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			invite.FieldInviterPrincipalID:    {Type: field.TypeUUID, Column: invite.FieldInviterPrincipalID},
 			invite.FieldEmail:                 {Type: field.TypeString, Column: invite.FieldEmail},
 			invite.FieldRole:                  {Type: field.TypeString, Column: invite.FieldRole},
+			invite.FieldAppRoles:              {Type: field.TypeJSON, Column: invite.FieldAppRoles},
 			invite.FieldToken:                 {Type: field.TypeString, Column: invite.FieldToken},
 			invite.FieldStatus:                {Type: field.TypeEnum, Column: invite.FieldStatus},
 			invite.FieldMessage:               {Type: field.TypeString, Column: invite.FieldMessage},
@@ -2588,6 +2589,11 @@ func (f *InviteFilter) WhereEmail(p entql.StringP) {
 // WhereRole applies the entql string predicate on the role field.
 func (f *InviteFilter) WhereRole(p entql.StringP) {
 	f.Where(p.Field(invite.FieldRole))
+}
+
+// WhereAppRoles applies the entql json.RawMessage predicate on the app_roles field.
+func (f *InviteFilter) WhereAppRoles(p entql.BytesP) {
+	f.Where(p.Field(invite.FieldAppRoles))
 }
 
 // WhereToken applies the entql string predicate on the token field.

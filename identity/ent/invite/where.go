@@ -371,6 +371,16 @@ func RoleContainsFold(v string) predicate.Invite {
 	return predicate.Invite(sql.FieldContainsFold(FieldRole, v))
 }
 
+// AppRolesIsNil applies the IsNil predicate on the "app_roles" field.
+func AppRolesIsNil() predicate.Invite {
+	return predicate.Invite(sql.FieldIsNull(FieldAppRoles))
+}
+
+// AppRolesNotNil applies the NotNil predicate on the "app_roles" field.
+func AppRolesNotNil() predicate.Invite {
+	return predicate.Invite(sql.FieldNotNull(FieldAppRoles))
+}
+
 // TokenEQ applies the EQ predicate on the "token" field.
 func TokenEQ(v string) predicate.Invite {
 	return predicate.Invite(sql.FieldEQ(FieldToken, v))

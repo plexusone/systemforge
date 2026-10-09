@@ -189,25 +189,68 @@ func (s *Service) vocabulary(application string) (authz.AppVocabulary, error) {
 
 // validate checks the application, role, entitlement and membership of in
 // and returns the organization's grant for the application.
-func (s *Service) validate(ctx context.Context, in AssignInput) (Grant, error) {
-	v, err := s.vocabulary(in.Application)
+func (s *Service) validate(ctx context.Context, members *ent.PrincipalMembershipClient, in AssignInput) (Grant, error) {
+	g, err := s.validateRole(ctx, in.OrganizationID, in.Application, in.Role)
 	if err != nil {
 		return Grant{}, err
 	}
-	if _, ok := v.Roles()[in.Role]; !ok {
-		return Grant{}, fmt.Errorf("%w: %q in %q", ErrUnknownRole, in.Role, in.Application)
+	if _, err = s.membershipRole(ctx, members, in.OrganizationID, in.PrincipalID); err != nil {
+		return Grant{}, err
 	}
-	g, ok, err := s.grantFor(ctx, in.OrganizationID, in.Application)
+	return g, nil
+}
+
+// validateRole checks that the application is registered, declares the
+// role, and that the organization is entitled to it.
+func (s *Service) validateRole(ctx context.Context, organizationID uuid.UUID, application, role string) (Grant, error) {
+	v, err := s.vocabulary(application)
+	if err != nil {
+		return Grant{}, err
+	}
+	if _, ok := v.Roles()[role]; !ok {
+		return Grant{}, fmt.Errorf("%w: %q in %q", ErrUnknownRole, role, application)
+	}
+	g, ok, err := s.grantFor(ctx, organizationID, application)
 	if err != nil {
 		return Grant{}, err
 	}
 	if !ok {
-		return Grant{}, fmt.Errorf("%w: %q", ErrNotEntitled, in.Application)
-	}
-	if _, err = s.membershipRole(ctx, in.OrganizationID, in.PrincipalID); err != nil {
-		return Grant{}, err
+		return Grant{}, fmt.Errorf("%w: %q", ErrNotEntitled, application)
 	}
 	return g, nil
+}
+
+// ValidateRoles checks roles, a map from application identifier to role,
+// against the organization: each application must be registered, declare
+// the role, and be one the organization is entitled to. It does not check
+// membership or seats, so it can validate the roles of an invitation
+// before the invitee is a member.
+func (s *Service) ValidateRoles(ctx context.Context, organizationID uuid.UUID, roles map[string]string) error {
+	for _, app := range sortedKeys(roles) {
+		if _, err := s.validateRole(ctx, organizationID, app, roles[app]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// EntitledApplications lists the registered applications the organization
+// is entitled to, sorted. A role picker offers these.
+func (s *Service) EntitledApplications(ctx context.Context, organizationID uuid.UUID) ([]string, error) {
+	grants, err := s.entitledGrants(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	return sortedKeys(grants), nil
+}
+
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // checkSeat refuses an assignment that would exceed the application's
@@ -283,8 +326,8 @@ func (s *Service) entitledGrants(ctx context.Context, organizationID uuid.UUID) 
 
 // membershipRole returns the principal's role from an active membership
 // that may hold application roles, or ErrNotMember.
-func (s *Service) membershipRole(ctx context.Context, organizationID, principalID uuid.UUID) (string, error) {
-	m, err := s.client.PrincipalMembership.Query().
+func (s *Service) membershipRole(ctx context.Context, members *ent.PrincipalMembershipClient, organizationID, principalID uuid.UUID) (string, error) {
+	m, err := members.Query().
 		Where(
 			principalmembership.OrganizationID(organizationID),
 			principalmembership.PrincipalID(principalID),
@@ -306,7 +349,7 @@ func (s *Service) membershipRole(ctx context.Context, organizationID, principalI
 // application has a seat limit, counting the seats and inserting the role
 // happen under a lock, so concurrent assignments cannot exceed the limit.
 func (s *Service) Assign(ctx context.Context, in AssignInput) (*AppRole, error) {
-	g, err := s.validate(ctx, in)
+	g, err := s.validate(ctx, s.client.PrincipalMembership, in)
 	if err != nil {
 		return nil, err
 	}
@@ -381,6 +424,44 @@ func (s *Service) assignSeated(ctx context.Context, in AssignInput, g Grant) (*e
 	return row, nil
 }
 
+// AssignInTx gives the principal a role inside the caller's transaction,
+// for flows that create the membership and its roles together, such as
+// accepting an invitation. The principal's membership may be created in
+// tx, uncommitted. Seat limits are enforced under the same lock Assign
+// takes. It returns a function to call after tx commits, which audits the
+// assignment and writes it to the authorization graph; its error is the
+// sync error Assign would return.
+func (s *Service) AssignInTx(ctx context.Context, tx *ent.Tx, in AssignInput) (*AppRole, func(context.Context) error, error) {
+	g, err := s.validate(ctx, tx.PrincipalMembership, in)
+	if err != nil {
+		return nil, nil, err
+	}
+	if g.SeatLimit != nil {
+		postgres, perr := s.isPostgres(ctx)
+		if perr != nil {
+			return nil, nil, perr
+		}
+		if postgres {
+			key := in.OrganizationID.String() + ":" + in.Application
+			if _, err = tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", key); err != nil {
+				return nil, nil, fmt.Errorf("approle: locking seats: %w", err)
+			}
+		}
+		if err = s.checkSeat(ctx, tx.AppRole, in, g); err != nil {
+			return nil, nil, err
+		}
+	}
+	row, err := s.insert(ctx, tx.AppRole, in)
+	if err != nil {
+		return nil, nil, err
+	}
+	after := func(ctx context.Context) error {
+		s.audit(ctx, "assigned", in, "")
+		return s.syncAdd(ctx, in.PrincipalID, in.OrganizationID, in.Application, in.Role)
+	}
+	return toAppRole(row), after, nil
+}
+
 // isPostgres reports whether the client talks to PostgreSQL, probing once
 // with a function only SQLite defines.
 func (s *Service) isPostgres(ctx context.Context) (bool, error) {
@@ -403,7 +484,7 @@ func (s *Service) isPostgres(ctx context.Context) (bool, error) {
 // Change sets a different role for a principal who already has one. It
 // fails with ErrNotAssigned if there is none.
 func (s *Service) Change(ctx context.Context, in AssignInput) (*AppRole, error) {
-	if _, err := s.validate(ctx, in); err != nil {
+	if _, err := s.validate(ctx, s.client.PrincipalMembership, in); err != nil {
 		return nil, err
 	}
 	row, err := s.find(ctx, in.OrganizationID, in.PrincipalID, in.Application)
@@ -561,7 +642,7 @@ func (s *Service) list(ctx context.Context, preds ...predicate.AppRole) ([]*AppR
 // for entitled applications. If both apply, the higher role wins.
 func (s *Service) EffectiveRoles(ctx context.Context, principalID, organizationID uuid.UUID) (map[string]string, error) {
 	out := map[string]string{}
-	membership, err := s.membershipRole(ctx, organizationID, principalID)
+	membership, err := s.membershipRole(ctx, s.client.PrincipalMembership, organizationID, principalID)
 	if errors.Is(err, ErrNotMember) {
 		return out, nil
 	}

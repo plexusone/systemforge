@@ -6,13 +6,16 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
+	"github.com/plexusone/systemforge/identity/approle"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
@@ -62,6 +65,7 @@ type DefaultService struct {
 	syncer   authz.RelationshipSyncer
 	syncMode authz.SyncMode
 	logger   *slog.Logger
+	appRoles *approle.Service
 }
 
 // ServiceOption configures a DefaultService.
@@ -76,6 +80,13 @@ func WithAuthzSyncer(syncer authz.RelationshipSyncer) ServiceOption {
 // WithSyncMode sets the sync mode (strict or eventual).
 func WithSyncMode(mode authz.SyncMode) ServiceOption {
 	return func(s *DefaultService) { s.syncMode = mode }
+}
+
+// WithAppRoles lets invitations carry application roles: Create validates
+// them and Accept grants them in the same transaction as the membership.
+// Without it, an invitation's AppRoles are rejected.
+func WithAppRoles(svc *approle.Service) ServiceOption {
+	return func(s *DefaultService) { s.appRoles = svc }
 }
 
 // WithLogger sets the logger for the service.
@@ -101,6 +112,10 @@ func NewService(client *ent.Client, baseURL string, opts ...ServiceOption) Servi
 // Create creates a new invite.
 func (s *DefaultService) Create(ctx context.Context, input CreateInviteInput) (*InviteResult, error) {
 	if err := organization.RequireMembersAllowed(ctx, s.client, input.OrganizationID, input.Role); err != nil {
+		return nil, err
+	}
+
+	if err := s.validateAppRoles(ctx, input); err != nil {
 		return nil, err
 	}
 
@@ -144,6 +159,9 @@ func (s *DefaultService) Create(ctx context.Context, input CreateInviteInput) (*
 	if input.Message != nil {
 		create.SetMessage(*input.Message)
 	}
+	if len(input.AppRoles) > 0 {
+		create.SetAppRoles(input.AppRoles)
+	}
 
 	inv, err := create.Save(ctx)
 	if err != nil {
@@ -154,6 +172,30 @@ func (s *DefaultService) Create(ctx context.Context, input CreateInviteInput) (*
 		Invite:    entInviteToModel(inv),
 		InviteURL: s.buildInviteURL(token),
 	}, nil
+}
+
+// validateAppRoles checks the application roles of a new invitation.
+func (s *DefaultService) validateAppRoles(ctx context.Context, input CreateInviteInput) error {
+	if len(input.AppRoles) > 0 {
+		if s.appRoles == nil {
+			return errors.New("invite: application roles are not configured")
+		}
+		if input.Role == organization.RoleCollaborator {
+			return errors.New("invite: collaborators hold no application roles")
+		}
+		return s.appRoles.ValidateRoles(ctx, input.OrganizationID, input.AppRoles)
+	}
+	if s.appRoles == nil || (input.Role != organization.RoleAdmin && input.Role != organization.RoleMember) {
+		return nil
+	}
+	apps, err := s.appRoles.EntitledApplications(ctx, input.OrganizationID)
+	if err != nil {
+		return err
+	}
+	if len(apps) > 0 {
+		return ErrAppRoleRequired
+	}
+	return nil
 }
 
 // GetByToken retrieves an invite by its token.
@@ -250,6 +292,31 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 		return nil, fmt.Errorf("failed to create membership: %w", err)
 	}
 
+	// Grant the application roles the inviter chose, in the same
+	// transaction: an invitation that cannot grant them (no seat left, the
+	// entitlement gone) is not accepted.
+	var afterCommit []func(context.Context) error
+	if len(inv.AppRoles) > 0 {
+		if s.appRoles == nil {
+			err = errors.New("invite: application roles are not configured")
+			return nil, err
+		}
+		for _, app := range sortedApps(inv.AppRoles) {
+			var after func(context.Context) error
+			_, after, err = s.appRoles.AssignInTx(ctx, tx, approle.AssignInput{
+				OrganizationID: inv.OrganizationID,
+				PrincipalID:    input.PrincipalID,
+				Application:    app,
+				Role:           inv.AppRoles[app],
+				AssignedBy:     inv.InviterPrincipalID,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to grant %s role: %w", app, err)
+			}
+			afterCommit = append(afterCommit, after)
+		}
+	}
+
 	// Update invite status
 	now := time.Now()
 	inv, err = tx.Invite.UpdateOne(inv).
@@ -277,7 +344,22 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 			"error", syncErr)
 	}
 
+	for _, after := range afterCommit {
+		if syncErr := after(ctx); syncErr != nil {
+			return nil, syncErr
+		}
+	}
+
 	return entInviteToModel(inv), nil
+}
+
+func sortedApps(roles map[string]string) []string {
+	apps := make([]string, 0, len(roles))
+	for app := range roles {
+		apps = append(apps, app)
+	}
+	sort.Strings(apps)
+	return apps
 }
 
 // Decline declines an invite.
@@ -458,6 +540,7 @@ func entInviteToModel(inv *ent.Invite) *Invite {
 		InviterPrincipalID: inv.InviterPrincipalID,
 		Email:              inv.Email,
 		Role:               inv.Role,
+		AppRoles:           inv.AppRoles,
 		Status:             Status(inv.Status),
 		Message:            inv.Message,
 		ExpiresAt:          inv.ExpiresAt,

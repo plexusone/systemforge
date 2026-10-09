@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -32,6 +33,8 @@ type Invite struct {
 	Email string `json:"email,omitempty"`
 	// Role to assign when invite is accepted
 	Role string `json:"role,omitempty"`
+	// Application roles to grant on acceptance, application to role
+	AppRoles map[string]string `json:"app_roles,omitempty"`
 	// Hex SHA-256 of the invite URL token
 	Token string `json:"-"`
 	// Current status of the invite
@@ -94,6 +97,8 @@ func (*Invite) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case invite.FieldAcceptedByPrincipalID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case invite.FieldAppRoles:
+			values[i] = new([]byte)
 		case invite.FieldResendCount:
 			values[i] = new(sql.NullInt64)
 		case invite.FieldEmail, invite.FieldRole, invite.FieldToken, invite.FieldStatus, invite.FieldMessage:
@@ -158,6 +163,14 @@ func (_m *Invite) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field role", values[i])
 			} else if value.Valid {
 				_m.Role = value.String
+			}
+		case invite.FieldAppRoles:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field app_roles", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.AppRoles); err != nil {
+					return fmt.Errorf("unmarshal field app_roles: %w", err)
+				}
 			}
 		case invite.FieldToken:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -273,6 +286,9 @@ func (_m *Invite) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("role=")
 	builder.WriteString(_m.Role)
+	builder.WriteString(", ")
+	builder.WriteString("app_roles=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AppRoles))
 	builder.WriteString(", ")
 	builder.WriteString("token=<sensitive>")
 	builder.WriteString(", ")

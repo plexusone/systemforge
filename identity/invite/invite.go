@@ -2,6 +2,7 @@
 package invite
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,11 +21,14 @@ const (
 
 // Invite represents an invitation to join an organization.
 type Invite struct {
-	ID                    uuid.UUID
-	OrganizationID        uuid.UUID
-	InviterPrincipalID    uuid.UUID
-	Email                 string
-	Role                  string
+	ID                 uuid.UUID
+	OrganizationID     uuid.UUID
+	InviterPrincipalID uuid.UUID
+	Email              string
+	Role               string
+	// AppRoles are the application roles granted when the invite is
+	// accepted: application identifier to role. Empty means none.
+	AppRoles              map[string]string
 	Status                Status
 	Message               *string
 	ExpiresAt             time.Time
@@ -57,8 +61,14 @@ type CreateInviteInput struct {
 	InviterPrincipalID uuid.UUID
 	Email              string
 	Role               string
-	Message            *string
-	ExpiresIn          time.Duration // How long until expiry (default: 7 days)
+	// AppRoles are the application roles to grant on acceptance:
+	// application identifier to role. None is preselected; an inviter
+	// chooses each. With an approle service configured (WithAppRoles),
+	// an admin or member invitation to an organization entitled to any
+	// application must name at least one (ErrAppRoleRequired).
+	AppRoles  map[string]string
+	Message   *string
+	ExpiresIn time.Duration // How long until expiry (default: 7 days)
 }
 
 // AcceptInviteInput contains input for accepting an invite.
@@ -82,6 +92,12 @@ type InviteResult struct {
 	// InviteURL is the full URL to accept the invite
 	InviteURL string
 }
+
+// ErrAppRoleRequired means an admin or member invitation chose no
+// application role although the organization is entitled to applications
+// (ADR-007: nobody gets into an application by being a member alone, and
+// an invitation must open at least one).
+var ErrAppRoleRequired = errors.New("invite: choose an application role for at least one entitled application")
 
 // Default invite expiration time.
 const DefaultInviteExpiry = 7 * 24 * time.Hour // 7 days

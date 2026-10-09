@@ -93,6 +93,18 @@ func (_u *InviteUpdate) SetNillableRole(v *string) *InviteUpdate {
 	return _u
 }
 
+// SetAppRoles sets the "app_roles" field.
+func (_u *InviteUpdate) SetAppRoles(v map[string]string) *InviteUpdate {
+	_u.mutation.SetAppRoles(v)
+	return _u
+}
+
+// ClearAppRoles clears the value of the "app_roles" field.
+func (_u *InviteUpdate) ClearAppRoles() *InviteUpdate {
+	_u.mutation.ClearAppRoles()
+	return _u
+}
+
 // SetToken sets the "token" field.
 func (_u *InviteUpdate) SetToken(v string) *InviteUpdate {
 	_u.mutation.SetToken(v)
@@ -351,6 +363,12 @@ func (_u *InviteUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(invite.FieldRole, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.AppRoles(); ok {
+		_spec.SetField(invite.FieldAppRoles, field.TypeJSON, value)
+	}
+	if _u.mutation.AppRolesCleared() {
+		_spec.ClearField(invite.FieldAppRoles, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.Token(); ok {
 		_spec.SetField(invite.FieldToken, field.TypeString, value)
 	}
@@ -524,6 +542,18 @@ func (_u *InviteUpdateOne) SetNillableRole(v *string) *InviteUpdateOne {
 	if v != nil {
 		_u.SetRole(*v)
 	}
+	return _u
+}
+
+// SetAppRoles sets the "app_roles" field.
+func (_u *InviteUpdateOne) SetAppRoles(v map[string]string) *InviteUpdateOne {
+	_u.mutation.SetAppRoles(v)
+	return _u
+}
+
+// ClearAppRoles clears the value of the "app_roles" field.
+func (_u *InviteUpdateOne) ClearAppRoles() *InviteUpdateOne {
+	_u.mutation.ClearAppRoles()
 	return _u
 }
 
@@ -814,6 +844,12 @@ func (_u *InviteUpdateOne) sqlSave(ctx context.Context) (_node *Invite, err erro
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(invite.FieldRole, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.AppRoles(); ok {
+		_spec.SetField(invite.FieldAppRoles, field.TypeJSON, value)
+	}
+	if _u.mutation.AppRolesCleared() {
+		_spec.ClearField(invite.FieldAppRoles, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Token(); ok {
 		_spec.SetField(invite.FieldToken, field.TypeString, value)

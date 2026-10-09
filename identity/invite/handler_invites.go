@@ -15,20 +15,21 @@ import (
 
 // InviteResponse is the API representation of an invite.
 type InviteResponse struct {
-	ID                    string     `json:"id"`
-	OrganizationID        string     `json:"organization_id"`
-	InviterPrincipalID    string     `json:"inviter_principal_id"`
-	Email                 string     `json:"email"`
-	Role                  string     `json:"role"`
-	Status                string     `json:"status"`
-	Message               *string    `json:"message,omitempty"`
-	ExpiresAt             time.Time  `json:"expires_at"`
-	AcceptedAt            *time.Time `json:"accepted_at,omitempty"`
-	AcceptedByPrincipalID *string    `json:"accepted_by_principal_id,omitempty"`
-	ResendCount           int        `json:"resend_count"`
-	LastSentAt            time.Time  `json:"last_sent_at"`
-	CreatedAt             time.Time  `json:"created_at"`
-	UpdatedAt             time.Time  `json:"updated_at"`
+	ID                    string            `json:"id"`
+	OrganizationID        string            `json:"organization_id"`
+	InviterPrincipalID    string            `json:"inviter_principal_id"`
+	Email                 string            `json:"email"`
+	Role                  string            `json:"role"`
+	AppRoles              map[string]string `json:"app_roles,omitempty"`
+	Status                string            `json:"status"`
+	Message               *string           `json:"message,omitempty"`
+	ExpiresAt             time.Time         `json:"expires_at"`
+	AcceptedAt            *time.Time        `json:"accepted_at,omitempty"`
+	AcceptedByPrincipalID *string           `json:"accepted_by_principal_id,omitempty"`
+	ResendCount           int               `json:"resend_count"`
+	LastSentAt            time.Time         `json:"last_sent_at"`
+	CreatedAt             time.Time         `json:"created_at"`
+	UpdatedAt             time.Time         `json:"updated_at"`
 }
 
 // InviteResultResponse includes the invite URL.
@@ -44,6 +45,7 @@ func inviteToResponse(inv *Invite) *InviteResponse {
 		InviterPrincipalID: inv.InviterPrincipalID.String(),
 		Email:              inv.Email,
 		Role:               inv.Role,
+		AppRoles:           inv.AppRoles,
 		Status:             string(inv.Status),
 		Message:            inv.Message,
 		ExpiresAt:          inv.ExpiresAt,
@@ -71,11 +73,12 @@ func inviteResultToResponse(result *InviteResult) *InviteResultResponse {
 type CreateInviteRequest struct {
 	Slug string `path:"slug"`
 	Body struct {
-		Email              string  `json:"email" required:"true" format:"email"`
-		Role               string  `json:"role" required:"true" enum:"owner,admin,member"`
-		Message            *string `json:"message,omitempty"`
-		InviterPrincipalID string  `json:"inviter_principal_id,omitempty" required:"false" format:"uuid" doc:"Deprecated: the inviter is the authenticated caller; when present it must equal the caller"`
-		ExpiresInHours     int     `json:"expires_in_hours,omitempty" minimum:"1" maximum:"720"`
+		Email              string            `json:"email" required:"true" format:"email"`
+		Role               string            `json:"role" required:"true" enum:"owner,admin,member"`
+		AppRoles           map[string]string `json:"app_roles,omitempty" doc:"Application roles to grant on acceptance, application identifier to role; none is preselected"`
+		Message            *string           `json:"message,omitempty"`
+		InviterPrincipalID string            `json:"inviter_principal_id,omitempty" required:"false" format:"uuid" doc:"Deprecated: the inviter is the authenticated caller; when present it must equal the caller"`
+		ExpiresInHours     int               `json:"expires_in_hours,omitempty" minimum:"1" maximum:"720"`
 	}
 }
 
@@ -292,6 +295,7 @@ func (a *API) createInvite(ctx context.Context, input *CreateInviteRequest) (*Cr
 		InviterPrincipalID: inviterID,
 		Email:              input.Body.Email,
 		Role:               input.Body.Role,
+		AppRoles:           input.Body.AppRoles,
 		Message:            input.Body.Message,
 		ExpiresIn:          expiresIn,
 	})

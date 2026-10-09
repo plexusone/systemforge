@@ -8489,6 +8489,7 @@ type InviteMutation struct {
 	updated_at               *time.Time
 	email                    *string
 	role                     *string
+	app_roles                *map[string]string
 	token                    *string
 	status                   *invite.Status
 	message                  *string
@@ -8826,6 +8827,55 @@ func (m *InviteMutation) OldRole(ctx context.Context) (v string, err error) {
 // ResetRole resets all changes to the "role" field.
 func (m *InviteMutation) ResetRole() {
 	m.role = nil
+}
+
+// SetAppRoles sets the "app_roles" field.
+func (m *InviteMutation) SetAppRoles(value map[string]string) {
+	m.app_roles = &value
+}
+
+// AppRoles returns the value of the "app_roles" field in the mutation.
+func (m *InviteMutation) AppRoles() (r map[string]string, exists bool) {
+	v := m.app_roles
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAppRoles returns the old "app_roles" field's value of the Invite entity.
+// If the Invite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *InviteMutation) OldAppRoles(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAppRoles is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAppRoles requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAppRoles: %w", err)
+	}
+	return oldValue.AppRoles, nil
+}
+
+// ClearAppRoles clears the value of the "app_roles" field.
+func (m *InviteMutation) ClearAppRoles() {
+	m.app_roles = nil
+	m.clearedFields[invite.FieldAppRoles] = struct{}{}
+}
+
+// AppRolesCleared returns if the "app_roles" field was cleared in this mutation.
+func (m *InviteMutation) AppRolesCleared() bool {
+	_, ok := m.clearedFields[invite.FieldAppRoles]
+	return ok
+}
+
+// ResetAppRoles resets all changes to the "app_roles" field.
+func (m *InviteMutation) ResetAppRoles() {
+	m.app_roles = nil
+	delete(m.clearedFields, invite.FieldAppRoles)
 }
 
 // SetToken sets the "token" field.
@@ -9276,7 +9326,7 @@ func (m *InviteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *InviteMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
 	if m.created_at != nil {
 		fields = append(fields, invite.FieldCreatedAt)
 	}
@@ -9294,6 +9344,9 @@ func (m *InviteMutation) Fields() []string {
 	}
 	if m.role != nil {
 		fields = append(fields, invite.FieldRole)
+	}
+	if m.app_roles != nil {
+		fields = append(fields, invite.FieldAppRoles)
 	}
 	if m.token != nil {
 		fields = append(fields, invite.FieldToken)
@@ -9339,6 +9392,8 @@ func (m *InviteMutation) Field(name string) (ent.Value, bool) {
 		return m.Email()
 	case invite.FieldRole:
 		return m.Role()
+	case invite.FieldAppRoles:
+		return m.AppRoles()
 	case invite.FieldToken:
 		return m.Token()
 	case invite.FieldStatus:
@@ -9376,6 +9431,8 @@ func (m *InviteMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldEmail(ctx)
 	case invite.FieldRole:
 		return m.OldRole(ctx)
+	case invite.FieldAppRoles:
+		return m.OldAppRoles(ctx)
 	case invite.FieldToken:
 		return m.OldToken(ctx)
 	case invite.FieldStatus:
@@ -9442,6 +9499,13 @@ func (m *InviteMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRole(v)
+		return nil
+	case invite.FieldAppRoles:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAppRoles(v)
 		return nil
 	case invite.FieldToken:
 		v, ok := value.(string)
@@ -9544,6 +9608,9 @@ func (m *InviteMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *InviteMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(invite.FieldAppRoles) {
+		fields = append(fields, invite.FieldAppRoles)
+	}
 	if m.FieldCleared(invite.FieldMessage) {
 		fields = append(fields, invite.FieldMessage)
 	}
@@ -9567,6 +9634,9 @@ func (m *InviteMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *InviteMutation) ClearField(name string) error {
 	switch name {
+	case invite.FieldAppRoles:
+		m.ClearAppRoles()
+		return nil
 	case invite.FieldMessage:
 		m.ClearMessage()
 		return nil
@@ -9601,6 +9671,9 @@ func (m *InviteMutation) ResetField(name string) error {
 		return nil
 	case invite.FieldRole:
 		m.ResetRole()
+		return nil
+	case invite.FieldAppRoles:
+		m.ResetAppRoles()
 		return nil
 	case invite.FieldToken:
 		m.ResetToken()

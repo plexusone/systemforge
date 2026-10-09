@@ -28,6 +28,8 @@ const (
 	FieldEmail = "email"
 	// FieldRole holds the string denoting the role field in the database.
 	FieldRole = "role"
+	// FieldAppRoles holds the string denoting the app_roles field in the database.
+	FieldAppRoles = "app_roles"
 	// FieldToken holds the string denoting the token field in the database.
 	FieldToken = "token"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -75,6 +77,7 @@ var Columns = []string{
 	FieldInviterPrincipalID,
 	FieldEmail,
 	FieldRole,
+	FieldAppRoles,
 	FieldToken,
 	FieldStatus,
 	FieldMessage,

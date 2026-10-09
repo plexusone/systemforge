@@ -331,15 +331,15 @@ func init() {
 	// invite.RoleValidator is a validator for the "role" field. It is called by the builders before save.
 	invite.RoleValidator = inviteDescRole.Validators[0].(func(string) error)
 	// inviteDescToken is the schema descriptor for token field.
-	inviteDescToken := inviteFields[4].Descriptor()
+	inviteDescToken := inviteFields[5].Descriptor()
 	// invite.TokenValidator is a validator for the "token" field. It is called by the builders before save.
 	invite.TokenValidator = inviteDescToken.Validators[0].(func(string) error)
 	// inviteDescResendCount is the schema descriptor for resend_count field.
-	inviteDescResendCount := inviteFields[10].Descriptor()
+	inviteDescResendCount := inviteFields[11].Descriptor()
 	// invite.DefaultResendCount holds the default value on creation for the resend_count field.
 	invite.DefaultResendCount = inviteDescResendCount.Default.(int)
 	// inviteDescLastSentAt is the schema descriptor for last_sent_at field.
-	inviteDescLastSentAt := inviteFields[11].Descriptor()
+	inviteDescLastSentAt := inviteFields[12].Descriptor()
 	// invite.DefaultLastSentAt holds the default value on creation for the last_sent_at field.
 	invite.DefaultLastSentAt = inviteDescLastSentAt.Default.(func() time.Time)
 	// inviteDescID is the schema descriptor for id field.
