@@ -45,7 +45,9 @@ func SlugForLogin(provider, providerLogin, email string) string {
 // leading digit alone, which the slug rules refuse, so such a slug is
 // prefixed with "u-"; an empty name becomes "user".
 func normalizeSlug(name string) string {
-	if name == "" {
+	if !strings.ContainsFunc(strings.ToLower(name), func(r rune) bool {
+		return (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
+	}) {
 		name = "user"
 	}
 	slug := organization.Slugify(name)
