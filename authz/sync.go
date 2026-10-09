@@ -49,6 +49,31 @@ type RelationshipSyncer interface {
 	RemovePrincipalManager(ctx context.Context, managedID, managerID uuid.UUID, role string) error
 }
 
+// AppRoleSyncer is implemented by a RelationshipSyncer that also writes
+// application roles (ADR-007) to the authorization graph. It is a separate
+// interface so existing RelationshipSyncer implementers keep compiling;
+// callers type-assert a syncer to it and skip application roles when it does
+// not implement it. The relationship-based provider writes
+// "{application}_org:{org}#{role}@principal:{principal}", the facet an
+// application's schema fragment attaches to the base organization.
+type AppRoleSyncer interface {
+	// AddAppRole records that the principal holds role in application for
+	// the organization. Called when an application role is assigned or
+	// changed.
+	AddAppRole(ctx context.Context, principalID, orgID uuid.UUID, application, role string) error
+
+	// RemoveAppRole removes the principal's role in application for the
+	// organization. Called when an application role is removed or changed.
+	RemoveAppRole(ctx context.Context, principalID, orgID uuid.UUID, application, role string) error
+}
+
+// ValidAppName reports whether application is a valid application
+// identifier (lowercase letters and digits, 2 to 32 characters, starting
+// with a letter), the form AppVocabulary.App must have.
+func ValidAppName(application string) bool {
+	return appNameRe.MatchString(application)
+}
+
 // SyncMode determines how sync failures are handled.
 type SyncMode string
 

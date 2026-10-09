@@ -172,5 +172,43 @@ func managerRelationship(managedID, managerID uuid.UUID, role string) *Relations
 	}
 }
 
+// AddAppRole writes the principal's role in an application as a relation on
+// the application's organization facet, "{application}_org".
+func (s *Syncer) AddAppRole(ctx context.Context, principalID, orgID uuid.UUID, application, role string) error {
+	rel, err := appRoleRelationship(principalID, orgID, application, role)
+	if err != nil {
+		return err
+	}
+	return s.client.WriteRelationship(ctx, rel)
+}
+
+// RemoveAppRole deletes the principal's role in an application.
+func (s *Syncer) RemoveAppRole(ctx context.Context, principalID, orgID uuid.UUID, application, role string) error {
+	rel, err := appRoleRelationship(principalID, orgID, application, role)
+	if err != nil {
+		return err
+	}
+	return s.client.DeleteRelationship(ctx, rel)
+}
+
+func appRoleRelationship(principalID, orgID uuid.UUID, application, role string) (*Relationship, error) {
+	if !authz.ValidAppName(application) {
+		return nil, fmt.Errorf("spicedb: invalid application identifier %q", application)
+	}
+	if role == "" {
+		return nil, errors.New("spicedb: empty application role")
+	}
+	return &Relationship{
+		ResourceType: application + "_org",
+		ResourceID:   orgID.String(),
+		Relation:     role,
+		SubjectType:  TypePrincipal,
+		SubjectID:    principalID.String(),
+	}, nil
+}
+
 // Verify interface compliance at compile time.
-var _ authz.RelationshipSyncer = (*Syncer)(nil)
+var (
+	_ authz.RelationshipSyncer = (*Syncer)(nil)
+	_ authz.AppRoleSyncer      = (*Syncer)(nil)
+)

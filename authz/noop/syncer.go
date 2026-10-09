@@ -68,5 +68,18 @@ func (s *Syncer) RemovePrincipalManager(_ context.Context, _, _ uuid.UUID, _ str
 	return nil
 }
 
+// AddAppRole is a no-op.
+func (s *Syncer) AddAppRole(_ context.Context, _, _ uuid.UUID, _, _ string) error {
+	return nil
+}
+
+// RemoveAppRole is a no-op.
+func (s *Syncer) RemoveAppRole(_ context.Context, _, _ uuid.UUID, _, _ string) error {
+	return nil
+}
+
 // Verify interface compliance at compile time.
-var _ authz.RelationshipSyncer = (*Syncer)(nil)
+var (
+	_ authz.RelationshipSyncer = (*Syncer)(nil)
+	_ authz.AppRoleSyncer      = (*Syncer)(nil)
+)

@@ -11,7 +11,7 @@ import (
 	"github.com/plexusone/systemforge/authz/noop"
 )
 
-// Recorder records the registration calls made to it. All other syncer
+// Recorder records the registration and application-role calls made to it. All other syncer
 // methods are no-ops from the embedded noop syncer.
 type Recorder struct {
 	*noop.Syncer
@@ -43,6 +43,16 @@ func (r *Recorder) record(format string, args ...any) error {
 // AddOrgMembership records the call.
 func (r *Recorder) AddOrgMembership(_ context.Context, principalID, orgID uuid.UUID, role string) error {
 	return r.record("AddOrgMembership:%s:%s:%s", principalID, orgID, role)
+}
+
+// AddAppRole records the call.
+func (r *Recorder) AddAppRole(_ context.Context, principalID, orgID uuid.UUID, application, role string) error {
+	return r.record("AddAppRole:%s:%s:%s:%s", principalID, orgID, application, role)
+}
+
+// RemoveAppRole records the call.
+func (r *Recorder) RemoveAppRole(_ context.Context, principalID, orgID uuid.UUID, application, role string) error {
+	return r.record("RemoveAppRole:%s:%s:%s:%s", principalID, orgID, application, role)
 }
 
 // RegisterPrincipal records the call.

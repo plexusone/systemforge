@@ -554,6 +554,12 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 	}
 
 	// The member's application roles go with the membership.
+	heldRoles, err := s.client.AppRole.Query().
+		Where(approle.OrganizationID(organizationID), approle.PrincipalID(principalID)).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to read application roles: %w", err)
+	}
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
@@ -588,6 +594,25 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 			"org_id", organizationID,
 			"role", membership.Role,
 			"error", syncErr)
+	}
+
+	// The deleted application roles leave the graph too, when the syncer
+	// carries application roles.
+	if appSyncer, ok := s.syncer.(authz.AppRoleSyncer); ok {
+		for _, r := range heldRoles {
+			syncErr := appSyncer.RemoveAppRole(ctx, principalID, organizationID, r.Application, r.Role)
+			if syncErr == nil {
+				continue
+			}
+			if s.syncMode == authz.SyncModeStrict {
+				return fmt.Errorf("failed to sync application role removal to authz: %w", syncErr)
+			}
+			s.logger.Warn("failed to sync application role removal to authz",
+				"principal_id", principalID,
+				"org_id", organizationID,
+				"application", r.Application,
+				"error", syncErr)
+		}
 	}
 
 	return nil

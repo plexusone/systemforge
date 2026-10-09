@@ -96,6 +96,8 @@ type Service struct {
 	registry *authz.VocabularyRegistry
 	entitled EntitlementFunc
 	grants   GrantsFunc
+	syncer   authz.AppRoleSyncer
+	syncMode authz.SyncMode
 	logger   *slog.Logger
 }
 
@@ -128,6 +130,18 @@ func EntitleAll(registry *authz.VocabularyRegistry) Option {
 		}
 		return out, nil
 	})
+}
+
+// WithAuthzSyncer writes application roles to the authorization graph when
+// syncer also implements authz.AppRoleSyncer; a syncer that does not is
+// ignored, so any existing authz.RelationshipSyncer can be passed. In
+// authz.SyncModeStrict a failed write is returned to the caller after the
+// role was stored; in SyncModeEventual (the default) it is logged.
+func WithAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) Option {
+	return func(s *Service) {
+		s.syncer, _ = syncer.(authz.AppRoleSyncer)
+		s.syncMode = mode
+	}
 }
 
 // WithLogger sets the logger that records assignments.
@@ -302,6 +316,9 @@ func (s *Service) Assign(ctx context.Context, in AssignInput) (*AppRole, error) 
 		return nil, fmt.Errorf("approle: assigning: %w", err)
 	}
 	s.audit(ctx, "assigned", in, "")
+	if err := s.syncAdd(ctx, in.PrincipalID, in.OrganizationID, in.Application, in.Role); err != nil {
+		return nil, err
+	}
 	return toAppRole(row), nil
 }
 
@@ -324,6 +341,16 @@ func (s *Service) Change(ctx context.Context, in AssignInput) (*AppRole, error) 
 		return nil, fmt.Errorf("approle: changing: %w", err)
 	}
 	s.audit(ctx, "changed", in, previous)
+	if previous != in.Role {
+		// Add the new relation before removing the old one so the
+		// principal never has no role in the graph mid-change.
+		if err := s.syncAdd(ctx, in.PrincipalID, in.OrganizationID, in.Application, in.Role); err != nil {
+			return nil, err
+		}
+		if err := s.syncRemove(ctx, in.PrincipalID, in.OrganizationID, in.Application, previous); err != nil {
+			return nil, err
+		}
+	}
 	return toAppRole(row), nil
 }
 
@@ -341,7 +368,7 @@ func (s *Service) Remove(ctx context.Context, organizationID, principalID uuid.U
 		OrganizationID: organizationID, PrincipalID: principalID,
 		Application: application, Role: row.Role, AssignedBy: removedBy,
 	}, row.Role)
-	return nil
+	return s.syncRemove(ctx, principalID, organizationID, application, row.Role)
 }
 
 // RemoveForMember deletes every role the principal holds in the
@@ -349,13 +376,55 @@ func (s *Service) Remove(ctx context.Context, organizationID, principalID uuid.U
 // does the same inside its RemoveMember transaction; this is for callers
 // that remove access another way.
 func (s *Service) RemoveForMember(ctx context.Context, organizationID, principalID uuid.UUID) (int, error) {
+	held, err := s.ListForPrincipal(ctx, organizationID, principalID)
+	if err != nil {
+		return 0, err
+	}
 	n, err := s.client.AppRole.Delete().
 		Where(approle.OrganizationID(organizationID), approle.PrincipalID(principalID)).
 		Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("approle: removing member roles: %w", err)
 	}
-	return n, nil
+	var errs []error
+	for _, r := range held {
+		if err := s.syncRemove(ctx, principalID, organizationID, r.Application, r.Role); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return n, errors.Join(errs...)
+}
+
+// syncAdd writes a role to the authorization graph, honoring the sync mode.
+func (s *Service) syncAdd(ctx context.Context, principalID, organizationID uuid.UUID, application, role string) error {
+	if s.syncer == nil {
+		return nil
+	}
+	return s.handleSync(ctx, "add", principalID, organizationID, application, role,
+		s.syncer.AddAppRole(ctx, principalID, organizationID, application, role))
+}
+
+// syncRemove deletes a role from the authorization graph, honoring the
+// sync mode.
+func (s *Service) syncRemove(ctx context.Context, principalID, organizationID uuid.UUID, application, role string) error {
+	if s.syncer == nil {
+		return nil
+	}
+	return s.handleSync(ctx, "remove", principalID, organizationID, application, role,
+		s.syncer.RemoveAppRole(ctx, principalID, organizationID, application, role))
+}
+
+func (s *Service) handleSync(ctx context.Context, op string, principalID, organizationID uuid.UUID, application, role string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if s.syncMode == authz.SyncModeStrict {
+		return fmt.Errorf("approle: syncing %s of application role to authz: %w", op, err)
+	}
+	s.logger.WarnContext(ctx, "failed to sync application role to authz",
+		"op", op, "principal_id", principalID, "organization_id", organizationID,
+		"application", application, "role", role, "error", err)
+	return nil
 }
 
 func (s *Service) find(ctx context.Context, organizationID, principalID uuid.UUID, application string) (*ent.AppRole, error) {
