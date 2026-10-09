@@ -735,6 +735,30 @@ func (f ServicePrincipalMutationRuleFunc) EvalMutation(ctx context.Context, m en
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ServicePrincipalMutation", m)
 }
 
+// The SlugReservationQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type SlugReservationQueryRuleFunc func(context.Context, *ent.SlugReservationQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f SlugReservationQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SlugReservationQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.SlugReservationQuery", q)
+}
+
+// The SlugReservationMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type SlugReservationMutationRuleFunc func(context.Context, *ent.SlugReservationMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f SlugReservationMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.SlugReservationMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.SlugReservationMutation", m)
+}
+
 // The SubscriptionQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type SubscriptionQueryRuleFunc func(context.Context, *ent.SubscriptionQuery) error
@@ -846,6 +870,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.ServicePrincipalQuery:
 		return q.Filter(), nil
+	case *ent.SlugReservationQuery:
+		return q.Filter(), nil
 	case *ent.SubscriptionQuery:
 		return q.Filter(), nil
 	default:
@@ -906,6 +932,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.SeatAssignmentMutation:
 		return m.Filter(), nil
 	case *ent.ServicePrincipalMutation:
+		return m.Filter(), nil
+	case *ent.SlugReservationMutation:
 		return m.Filter(), nil
 	case *ent.SubscriptionMutation:
 		return m.Filter(), nil

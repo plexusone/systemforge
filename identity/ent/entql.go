@@ -30,6 +30,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
+	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 
 	"entgo.io/ent/dialect/sql"
@@ -40,7 +41,7 @@ import (
 
 // schemaGraph holds a representation of ent/schema at runtime.
 var schemaGraph = func() *sqlgraph.Schema {
-	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 27)}
+	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 28)}
 	graph.Nodes[0] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   agent.Table,
@@ -671,6 +672,26 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 	}
 	graph.Nodes[26] = &sqlgraph.Node{
+		NodeSpec: sqlgraph.NodeSpec{
+			Table:   slugreservation.Table,
+			Columns: slugreservation.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeUUID,
+				Column: slugreservation.FieldID,
+			},
+		},
+		Type: "SlugReservation",
+		Fields: map[string]*sqlgraph.FieldSpec{
+			slugreservation.FieldCreatedAt:                  {Type: field.TypeTime, Column: slugreservation.FieldCreatedAt},
+			slugreservation.FieldUpdatedAt:                  {Type: field.TypeTime, Column: slugreservation.FieldUpdatedAt},
+			slugreservation.FieldSlug:                       {Type: field.TypeString, Column: slugreservation.FieldSlug},
+			slugreservation.FieldReleasedByPrincipalID:      {Type: field.TypeUUID, Column: slugreservation.FieldReleasedByPrincipalID},
+			slugreservation.FieldReleasedFromOrganizationID: {Type: field.TypeUUID, Column: slugreservation.FieldReleasedFromOrganizationID},
+			slugreservation.FieldReleasedAt:                 {Type: field.TypeTime, Column: slugreservation.FieldReleasedAt},
+			slugreservation.FieldExpiresAt:                  {Type: field.TypeTime, Column: slugreservation.FieldExpiresAt},
+		},
+	}
+	graph.Nodes[27] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   subscription.Table,
 			Columns: subscription.Columns,
@@ -1556,6 +1577,30 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		"ServicePrincipal",
 		"Principal",
+	)
+	graph.MustAddE(
+		"released_by",
+		&sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   slugreservation.ReleasedByTable,
+			Columns: []string{slugreservation.ReleasedByColumn},
+			Bidi:    false,
+		},
+		"SlugReservation",
+		"Principal",
+	)
+	graph.MustAddE(
+		"released_from",
+		&sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   slugreservation.ReleasedFromTable,
+			Columns: []string{slugreservation.ReleasedFromColumn},
+			Bidi:    false,
+		},
+		"SlugReservation",
+		"Organization",
 	)
 	graph.MustAddE(
 		"organization",
@@ -5082,6 +5127,109 @@ func (f *ServicePrincipalFilter) WhereHasCreatorWith(preds ...predicate.Principa
 }
 
 // addPredicate implements the predicateAdder interface.
+func (_q *SlugReservationQuery) addPredicate(pred func(s *sql.Selector)) {
+	_q.predicates = append(_q.predicates, pred)
+}
+
+// Filter returns a Filter implementation to apply filters on the SlugReservationQuery builder.
+func (_q *SlugReservationQuery) Filter() *SlugReservationFilter {
+	return &SlugReservationFilter{config: _q.config, predicateAdder: _q}
+}
+
+// addPredicate implements the predicateAdder interface.
+func (m *SlugReservationMutation) addPredicate(pred func(s *sql.Selector)) {
+	m.predicates = append(m.predicates, pred)
+}
+
+// Filter returns an entql.Where implementation to apply filters on the SlugReservationMutation builder.
+func (m *SlugReservationMutation) Filter() *SlugReservationFilter {
+	return &SlugReservationFilter{config: m.config, predicateAdder: m}
+}
+
+// SlugReservationFilter provides a generic filtering capability at runtime for SlugReservationQuery.
+type SlugReservationFilter struct {
+	predicateAdder
+	config
+}
+
+// Where applies the entql predicate on the query filter.
+func (f *SlugReservationFilter) Where(p entql.P) {
+	f.addPredicate(func(s *sql.Selector) {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[26].Type, p, s); err != nil {
+			s.AddError(err)
+		}
+	})
+}
+
+// WhereID applies the entql [16]byte predicate on the id field.
+func (f *SlugReservationFilter) WhereID(p entql.ValueP) {
+	f.Where(p.Field(slugreservation.FieldID))
+}
+
+// WhereCreatedAt applies the entql time.Time predicate on the created_at field.
+func (f *SlugReservationFilter) WhereCreatedAt(p entql.TimeP) {
+	f.Where(p.Field(slugreservation.FieldCreatedAt))
+}
+
+// WhereUpdatedAt applies the entql time.Time predicate on the updated_at field.
+func (f *SlugReservationFilter) WhereUpdatedAt(p entql.TimeP) {
+	f.Where(p.Field(slugreservation.FieldUpdatedAt))
+}
+
+// WhereSlug applies the entql string predicate on the slug field.
+func (f *SlugReservationFilter) WhereSlug(p entql.StringP) {
+	f.Where(p.Field(slugreservation.FieldSlug))
+}
+
+// WhereReleasedByPrincipalID applies the entql [16]byte predicate on the released_by_principal_id field.
+func (f *SlugReservationFilter) WhereReleasedByPrincipalID(p entql.ValueP) {
+	f.Where(p.Field(slugreservation.FieldReleasedByPrincipalID))
+}
+
+// WhereReleasedFromOrganizationID applies the entql [16]byte predicate on the released_from_organization_id field.
+func (f *SlugReservationFilter) WhereReleasedFromOrganizationID(p entql.ValueP) {
+	f.Where(p.Field(slugreservation.FieldReleasedFromOrganizationID))
+}
+
+// WhereReleasedAt applies the entql time.Time predicate on the released_at field.
+func (f *SlugReservationFilter) WhereReleasedAt(p entql.TimeP) {
+	f.Where(p.Field(slugreservation.FieldReleasedAt))
+}
+
+// WhereExpiresAt applies the entql time.Time predicate on the expires_at field.
+func (f *SlugReservationFilter) WhereExpiresAt(p entql.TimeP) {
+	f.Where(p.Field(slugreservation.FieldExpiresAt))
+}
+
+// WhereHasReleasedBy applies a predicate to check if query has an edge released_by.
+func (f *SlugReservationFilter) WhereHasReleasedBy() {
+	f.Where(entql.HasEdge("released_by"))
+}
+
+// WhereHasReleasedByWith applies a predicate to check if query has an edge released_by with a given conditions (other predicates).
+func (f *SlugReservationFilter) WhereHasReleasedByWith(preds ...predicate.Principal) {
+	f.Where(entql.HasEdgeWith("released_by", sqlgraph.WrapFunc(func(s *sql.Selector) {
+		for _, p := range preds {
+			p(s)
+		}
+	})))
+}
+
+// WhereHasReleasedFrom applies a predicate to check if query has an edge released_from.
+func (f *SlugReservationFilter) WhereHasReleasedFrom() {
+	f.Where(entql.HasEdge("released_from"))
+}
+
+// WhereHasReleasedFromWith applies a predicate to check if query has an edge released_from with a given conditions (other predicates).
+func (f *SlugReservationFilter) WhereHasReleasedFromWith(preds ...predicate.Organization) {
+	f.Where(entql.HasEdgeWith("released_from", sqlgraph.WrapFunc(func(s *sql.Selector) {
+		for _, p := range preds {
+			p(s)
+		}
+	})))
+}
+
+// addPredicate implements the predicateAdder interface.
 func (_q *SubscriptionQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
 }
@@ -5110,7 +5258,7 @@ type SubscriptionFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SubscriptionFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[26].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[27].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})

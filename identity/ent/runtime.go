@@ -33,6 +33,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/schema"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
+	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 )
 
@@ -839,6 +840,33 @@ func init() {
 	serviceprincipalDescID := serviceprincipalMixinFields0[0].Descriptor()
 	// serviceprincipal.DefaultID holds the default value on creation for the id field.
 	serviceprincipal.DefaultID = serviceprincipalDescID.Default.(func() uuid.UUID)
+	slugreservationMixin := schema.SlugReservation{}.Mixin()
+	slugreservationMixinFields0 := slugreservationMixin[0].Fields()
+	_ = slugreservationMixinFields0
+	slugreservationFields := schema.SlugReservation{}.Fields()
+	_ = slugreservationFields
+	// slugreservationDescCreatedAt is the schema descriptor for created_at field.
+	slugreservationDescCreatedAt := slugreservationMixinFields0[1].Descriptor()
+	// slugreservation.DefaultCreatedAt holds the default value on creation for the created_at field.
+	slugreservation.DefaultCreatedAt = slugreservationDescCreatedAt.Default.(func() time.Time)
+	// slugreservationDescUpdatedAt is the schema descriptor for updated_at field.
+	slugreservationDescUpdatedAt := slugreservationMixinFields0[2].Descriptor()
+	// slugreservation.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	slugreservation.DefaultUpdatedAt = slugreservationDescUpdatedAt.Default.(func() time.Time)
+	// slugreservation.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	slugreservation.UpdateDefaultUpdatedAt = slugreservationDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// slugreservationDescSlug is the schema descriptor for slug field.
+	slugreservationDescSlug := slugreservationFields[0].Descriptor()
+	// slugreservation.SlugValidator is a validator for the "slug" field. It is called by the builders before save.
+	slugreservation.SlugValidator = slugreservationDescSlug.Validators[0].(func(string) error)
+	// slugreservationDescReleasedAt is the schema descriptor for released_at field.
+	slugreservationDescReleasedAt := slugreservationFields[3].Descriptor()
+	// slugreservation.DefaultReleasedAt holds the default value on creation for the released_at field.
+	slugreservation.DefaultReleasedAt = slugreservationDescReleasedAt.Default.(func() time.Time)
+	// slugreservationDescID is the schema descriptor for id field.
+	slugreservationDescID := slugreservationMixinFields0[0].Descriptor()
+	// slugreservation.DefaultID holds the default value on creation for the id field.
+	slugreservation.DefaultID = slugreservationDescID.Default.(func() uuid.UUID)
 	subscriptionMixin := schema.Subscription{}.Mixin()
 	subscriptionMixinFields0 := subscriptionMixin[0].Fields()
 	_ = subscriptionMixinFields0

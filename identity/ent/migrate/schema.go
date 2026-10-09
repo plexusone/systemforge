@@ -1434,6 +1434,44 @@ var (
 			},
 		},
 	}
+	// SfSlugReservationsColumns holds the columns for the "sf_slug_reservations" table.
+	SfSlugReservationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "slug", Type: field.TypeString, Unique: true},
+		{Name: "released_at", Type: field.TypeTime},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "released_by_principal_id", Type: field.TypeUUID},
+		{Name: "released_from_organization_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// SfSlugReservationsTable holds the schema information for the "sf_slug_reservations" table.
+	SfSlugReservationsTable = &schema.Table{
+		Name:       "sf_slug_reservations",
+		Columns:    SfSlugReservationsColumns,
+		PrimaryKey: []*schema.Column{SfSlugReservationsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "sf_slug_reservations_sf_principals_released_by",
+				Columns:    []*schema.Column{SfSlugReservationsColumns[6]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "sf_slug_reservations_sf_organizations_released_from",
+				Columns:    []*schema.Column{SfSlugReservationsColumns[7]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "slugreservation_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfSlugReservationsColumns[5]},
+			},
+		},
+	}
 	// SfSubscriptionsColumns holds the columns for the "sf_subscriptions" table.
 	SfSubscriptionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1527,6 +1565,7 @@ var (
 		SfPrincipalTokensTable,
 		SfSeatAssignmentsTable,
 		SfServicePrincipalsTable,
+		SfSlugReservationsTable,
 		SfSubscriptionsTable,
 	}
 )
@@ -1647,6 +1686,11 @@ func init() {
 	SfServicePrincipalsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfServicePrincipalsTable.Annotation = &entsql.Annotation{
 		Table: "sf_service_principals",
+	}
+	SfSlugReservationsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfSlugReservationsTable.ForeignKeys[1].RefTable = SfOrganizationsTable
+	SfSlugReservationsTable.Annotation = &entsql.Annotation{
+		Table: "sf_slug_reservations",
 	}
 	SfSubscriptionsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
 	SfSubscriptionsTable.Annotation = &entsql.Annotation{

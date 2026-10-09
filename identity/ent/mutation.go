@@ -39,6 +39,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
+	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 )
 
@@ -77,6 +78,7 @@ const (
 	TypePrincipalToken      = "PrincipalToken"
 	TypeSeatAssignment      = "SeatAssignment"
 	TypeServicePrincipal    = "ServicePrincipal"
+	TypeSlugReservation     = "SlugReservation"
 	TypeSubscription        = "Subscription"
 )
 
@@ -30562,6 +30564,810 @@ func (m *ServicePrincipalMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown ServicePrincipal edge %s", name)
+}
+
+// SlugReservationMutation represents an operation that mutates the SlugReservation nodes in the graph.
+type SlugReservationMutation struct {
+	config
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	created_at           *time.Time
+	updated_at           *time.Time
+	slug                 *string
+	released_at          *time.Time
+	expires_at           *time.Time
+	clearedFields        map[string]struct{}
+	released_by          *uuid.UUID
+	clearedreleased_by   bool
+	released_from        *uuid.UUID
+	clearedreleased_from bool
+	done                 bool
+	oldValue             func(context.Context) (*SlugReservation, error)
+	predicates           []predicate.SlugReservation
+}
+
+var _ ent.Mutation = (*SlugReservationMutation)(nil)
+
+// slugreservationOption allows management of the mutation configuration using functional options.
+type slugreservationOption func(*SlugReservationMutation)
+
+// newSlugReservationMutation creates new mutation for the SlugReservation entity.
+func newSlugReservationMutation(c config, op Op, opts ...slugreservationOption) *SlugReservationMutation {
+	m := &SlugReservationMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeSlugReservation,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withSlugReservationID sets the ID field of the mutation.
+func withSlugReservationID(id uuid.UUID) slugreservationOption {
+	return func(m *SlugReservationMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *SlugReservation
+		)
+		m.oldValue = func(ctx context.Context) (*SlugReservation, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().SlugReservation.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withSlugReservation sets the old SlugReservation of the mutation.
+func withSlugReservation(node *SlugReservation) slugreservationOption {
+	return func(m *SlugReservationMutation) {
+		m.oldValue = func(context.Context) (*SlugReservation, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m SlugReservationMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m SlugReservationMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of SlugReservation entities.
+func (m *SlugReservationMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *SlugReservationMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *SlugReservationMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().SlugReservation.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *SlugReservationMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *SlugReservationMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the SlugReservation entity.
+// If the SlugReservation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SlugReservationMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *SlugReservationMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *SlugReservationMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *SlugReservationMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the SlugReservation entity.
+// If the SlugReservation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SlugReservationMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *SlugReservationMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetSlug sets the "slug" field.
+func (m *SlugReservationMutation) SetSlug(s string) {
+	m.slug = &s
+}
+
+// Slug returns the value of the "slug" field in the mutation.
+func (m *SlugReservationMutation) Slug() (r string, exists bool) {
+	v := m.slug
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSlug returns the old "slug" field's value of the SlugReservation entity.
+// If the SlugReservation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SlugReservationMutation) OldSlug(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSlug is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSlug requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSlug: %w", err)
+	}
+	return oldValue.Slug, nil
+}
+
+// ResetSlug resets all changes to the "slug" field.
+func (m *SlugReservationMutation) ResetSlug() {
+	m.slug = nil
+}
+
+// SetReleasedByPrincipalID sets the "released_by_principal_id" field.
+func (m *SlugReservationMutation) SetReleasedByPrincipalID(u uuid.UUID) {
+	m.released_by = &u
+}
+
+// ReleasedByPrincipalID returns the value of the "released_by_principal_id" field in the mutation.
+func (m *SlugReservationMutation) ReleasedByPrincipalID() (r uuid.UUID, exists bool) {
+	v := m.released_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReleasedByPrincipalID returns the old "released_by_principal_id" field's value of the SlugReservation entity.
+// If the SlugReservation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SlugReservationMutation) OldReleasedByPrincipalID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReleasedByPrincipalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReleasedByPrincipalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReleasedByPrincipalID: %w", err)
+	}
+	return oldValue.ReleasedByPrincipalID, nil
+}
+
+// ResetReleasedByPrincipalID resets all changes to the "released_by_principal_id" field.
+func (m *SlugReservationMutation) ResetReleasedByPrincipalID() {
+	m.released_by = nil
+}
+
+// SetReleasedFromOrganizationID sets the "released_from_organization_id" field.
+func (m *SlugReservationMutation) SetReleasedFromOrganizationID(u uuid.UUID) {
+	m.released_from = &u
+}
+
+// ReleasedFromOrganizationID returns the value of the "released_from_organization_id" field in the mutation.
+func (m *SlugReservationMutation) ReleasedFromOrganizationID() (r uuid.UUID, exists bool) {
+	v := m.released_from
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReleasedFromOrganizationID returns the old "released_from_organization_id" field's value of the SlugReservation entity.
+// If the SlugReservation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SlugReservationMutation) OldReleasedFromOrganizationID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReleasedFromOrganizationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReleasedFromOrganizationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReleasedFromOrganizationID: %w", err)
+	}
+	return oldValue.ReleasedFromOrganizationID, nil
+}
+
+// ClearReleasedFromOrganizationID clears the value of the "released_from_organization_id" field.
+func (m *SlugReservationMutation) ClearReleasedFromOrganizationID() {
+	m.released_from = nil
+	m.clearedFields[slugreservation.FieldReleasedFromOrganizationID] = struct{}{}
+}
+
+// ReleasedFromOrganizationIDCleared returns if the "released_from_organization_id" field was cleared in this mutation.
+func (m *SlugReservationMutation) ReleasedFromOrganizationIDCleared() bool {
+	_, ok := m.clearedFields[slugreservation.FieldReleasedFromOrganizationID]
+	return ok
+}
+
+// ResetReleasedFromOrganizationID resets all changes to the "released_from_organization_id" field.
+func (m *SlugReservationMutation) ResetReleasedFromOrganizationID() {
+	m.released_from = nil
+	delete(m.clearedFields, slugreservation.FieldReleasedFromOrganizationID)
+}
+
+// SetReleasedAt sets the "released_at" field.
+func (m *SlugReservationMutation) SetReleasedAt(t time.Time) {
+	m.released_at = &t
+}
+
+// ReleasedAt returns the value of the "released_at" field in the mutation.
+func (m *SlugReservationMutation) ReleasedAt() (r time.Time, exists bool) {
+	v := m.released_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReleasedAt returns the old "released_at" field's value of the SlugReservation entity.
+// If the SlugReservation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SlugReservationMutation) OldReleasedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReleasedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReleasedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReleasedAt: %w", err)
+	}
+	return oldValue.ReleasedAt, nil
+}
+
+// ResetReleasedAt resets all changes to the "released_at" field.
+func (m *SlugReservationMutation) ResetReleasedAt() {
+	m.released_at = nil
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (m *SlugReservationMutation) SetExpiresAt(t time.Time) {
+	m.expires_at = &t
+}
+
+// ExpiresAt returns the value of the "expires_at" field in the mutation.
+func (m *SlugReservationMutation) ExpiresAt() (r time.Time, exists bool) {
+	v := m.expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresAt returns the old "expires_at" field's value of the SlugReservation entity.
+// If the SlugReservation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SlugReservationMutation) OldExpiresAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresAt: %w", err)
+	}
+	return oldValue.ExpiresAt, nil
+}
+
+// ResetExpiresAt resets all changes to the "expires_at" field.
+func (m *SlugReservationMutation) ResetExpiresAt() {
+	m.expires_at = nil
+}
+
+// SetReleasedByID sets the "released_by" edge to the Principal entity by id.
+func (m *SlugReservationMutation) SetReleasedByID(id uuid.UUID) {
+	m.released_by = &id
+}
+
+// ClearReleasedBy clears the "released_by" edge to the Principal entity.
+func (m *SlugReservationMutation) ClearReleasedBy() {
+	m.clearedreleased_by = true
+	m.clearedFields[slugreservation.FieldReleasedByPrincipalID] = struct{}{}
+}
+
+// ReleasedByCleared reports if the "released_by" edge to the Principal entity was cleared.
+func (m *SlugReservationMutation) ReleasedByCleared() bool {
+	return m.clearedreleased_by
+}
+
+// ReleasedByID returns the "released_by" edge ID in the mutation.
+func (m *SlugReservationMutation) ReleasedByID() (id uuid.UUID, exists bool) {
+	if m.released_by != nil {
+		return *m.released_by, true
+	}
+	return
+}
+
+// ReleasedByIDs returns the "released_by" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ReleasedByID instead. It exists only for internal usage by the builders.
+func (m *SlugReservationMutation) ReleasedByIDs() (ids []uuid.UUID) {
+	if id := m.released_by; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetReleasedBy resets all changes to the "released_by" edge.
+func (m *SlugReservationMutation) ResetReleasedBy() {
+	m.released_by = nil
+	m.clearedreleased_by = false
+}
+
+// SetReleasedFromID sets the "released_from" edge to the Organization entity by id.
+func (m *SlugReservationMutation) SetReleasedFromID(id uuid.UUID) {
+	m.released_from = &id
+}
+
+// ClearReleasedFrom clears the "released_from" edge to the Organization entity.
+func (m *SlugReservationMutation) ClearReleasedFrom() {
+	m.clearedreleased_from = true
+	m.clearedFields[slugreservation.FieldReleasedFromOrganizationID] = struct{}{}
+}
+
+// ReleasedFromCleared reports if the "released_from" edge to the Organization entity was cleared.
+func (m *SlugReservationMutation) ReleasedFromCleared() bool {
+	return m.ReleasedFromOrganizationIDCleared() || m.clearedreleased_from
+}
+
+// ReleasedFromID returns the "released_from" edge ID in the mutation.
+func (m *SlugReservationMutation) ReleasedFromID() (id uuid.UUID, exists bool) {
+	if m.released_from != nil {
+		return *m.released_from, true
+	}
+	return
+}
+
+// ReleasedFromIDs returns the "released_from" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ReleasedFromID instead. It exists only for internal usage by the builders.
+func (m *SlugReservationMutation) ReleasedFromIDs() (ids []uuid.UUID) {
+	if id := m.released_from; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetReleasedFrom resets all changes to the "released_from" edge.
+func (m *SlugReservationMutation) ResetReleasedFrom() {
+	m.released_from = nil
+	m.clearedreleased_from = false
+}
+
+// Where appends a list predicates to the SlugReservationMutation builder.
+func (m *SlugReservationMutation) Where(ps ...predicate.SlugReservation) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the SlugReservationMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *SlugReservationMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.SlugReservation, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *SlugReservationMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *SlugReservationMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (SlugReservation).
+func (m *SlugReservationMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *SlugReservationMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.created_at != nil {
+		fields = append(fields, slugreservation.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, slugreservation.FieldUpdatedAt)
+	}
+	if m.slug != nil {
+		fields = append(fields, slugreservation.FieldSlug)
+	}
+	if m.released_by != nil {
+		fields = append(fields, slugreservation.FieldReleasedByPrincipalID)
+	}
+	if m.released_from != nil {
+		fields = append(fields, slugreservation.FieldReleasedFromOrganizationID)
+	}
+	if m.released_at != nil {
+		fields = append(fields, slugreservation.FieldReleasedAt)
+	}
+	if m.expires_at != nil {
+		fields = append(fields, slugreservation.FieldExpiresAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *SlugReservationMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case slugreservation.FieldCreatedAt:
+		return m.CreatedAt()
+	case slugreservation.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case slugreservation.FieldSlug:
+		return m.Slug()
+	case slugreservation.FieldReleasedByPrincipalID:
+		return m.ReleasedByPrincipalID()
+	case slugreservation.FieldReleasedFromOrganizationID:
+		return m.ReleasedFromOrganizationID()
+	case slugreservation.FieldReleasedAt:
+		return m.ReleasedAt()
+	case slugreservation.FieldExpiresAt:
+		return m.ExpiresAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *SlugReservationMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case slugreservation.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case slugreservation.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case slugreservation.FieldSlug:
+		return m.OldSlug(ctx)
+	case slugreservation.FieldReleasedByPrincipalID:
+		return m.OldReleasedByPrincipalID(ctx)
+	case slugreservation.FieldReleasedFromOrganizationID:
+		return m.OldReleasedFromOrganizationID(ctx)
+	case slugreservation.FieldReleasedAt:
+		return m.OldReleasedAt(ctx)
+	case slugreservation.FieldExpiresAt:
+		return m.OldExpiresAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown SlugReservation field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SlugReservationMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case slugreservation.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case slugreservation.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case slugreservation.FieldSlug:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSlug(v)
+		return nil
+	case slugreservation.FieldReleasedByPrincipalID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReleasedByPrincipalID(v)
+		return nil
+	case slugreservation.FieldReleasedFromOrganizationID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReleasedFromOrganizationID(v)
+		return nil
+	case slugreservation.FieldReleasedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReleasedAt(v)
+		return nil
+	case slugreservation.FieldExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown SlugReservation field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *SlugReservationMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *SlugReservationMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SlugReservationMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown SlugReservation numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *SlugReservationMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(slugreservation.FieldReleasedFromOrganizationID) {
+		fields = append(fields, slugreservation.FieldReleasedFromOrganizationID)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *SlugReservationMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *SlugReservationMutation) ClearField(name string) error {
+	switch name {
+	case slugreservation.FieldReleasedFromOrganizationID:
+		m.ClearReleasedFromOrganizationID()
+		return nil
+	}
+	return fmt.Errorf("unknown SlugReservation nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *SlugReservationMutation) ResetField(name string) error {
+	switch name {
+	case slugreservation.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case slugreservation.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case slugreservation.FieldSlug:
+		m.ResetSlug()
+		return nil
+	case slugreservation.FieldReleasedByPrincipalID:
+		m.ResetReleasedByPrincipalID()
+		return nil
+	case slugreservation.FieldReleasedFromOrganizationID:
+		m.ResetReleasedFromOrganizationID()
+		return nil
+	case slugreservation.FieldReleasedAt:
+		m.ResetReleasedAt()
+		return nil
+	case slugreservation.FieldExpiresAt:
+		m.ResetExpiresAt()
+		return nil
+	}
+	return fmt.Errorf("unknown SlugReservation field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *SlugReservationMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.released_by != nil {
+		edges = append(edges, slugreservation.EdgeReleasedBy)
+	}
+	if m.released_from != nil {
+		edges = append(edges, slugreservation.EdgeReleasedFrom)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *SlugReservationMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case slugreservation.EdgeReleasedBy:
+		if id := m.released_by; id != nil {
+			return []ent.Value{*id}
+		}
+	case slugreservation.EdgeReleasedFrom:
+		if id := m.released_from; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *SlugReservationMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *SlugReservationMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *SlugReservationMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedreleased_by {
+		edges = append(edges, slugreservation.EdgeReleasedBy)
+	}
+	if m.clearedreleased_from {
+		edges = append(edges, slugreservation.EdgeReleasedFrom)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *SlugReservationMutation) EdgeCleared(name string) bool {
+	switch name {
+	case slugreservation.EdgeReleasedBy:
+		return m.clearedreleased_by
+	case slugreservation.EdgeReleasedFrom:
+		return m.clearedreleased_from
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *SlugReservationMutation) ClearEdge(name string) error {
+	switch name {
+	case slugreservation.EdgeReleasedBy:
+		m.ClearReleasedBy()
+		return nil
+	case slugreservation.EdgeReleasedFrom:
+		m.ClearReleasedFrom()
+		return nil
+	}
+	return fmt.Errorf("unknown SlugReservation unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *SlugReservationMutation) ResetEdge(name string) error {
+	switch name {
+	case slugreservation.EdgeReleasedBy:
+		m.ResetReleasedBy()
+		return nil
+	case slugreservation.EdgeReleasedFrom:
+		m.ResetReleasedFrom()
+		return nil
+	}
+	return fmt.Errorf("unknown SlugReservation edge %s", name)
 }
 
 // SubscriptionMutation represents an operation that mutates the Subscription nodes in the graph.

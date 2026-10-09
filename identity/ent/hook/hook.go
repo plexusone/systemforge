@@ -321,6 +321,18 @@ func (f ServicePrincipalFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.V
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ServicePrincipalMutation", m)
 }
 
+// The SlugReservationFunc type is an adapter to allow the use of ordinary
+// function as SlugReservation mutator.
+type SlugReservationFunc func(context.Context, *ent.SlugReservationMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SlugReservationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SlugReservationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SlugReservationMutation", m)
+}
+
 // The SubscriptionFunc type is an adapter to allow the use of ordinary
 // function as Subscription mutator.
 type SubscriptionFunc func(context.Context, *ent.SubscriptionMutation) (ent.Value, error)

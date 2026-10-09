@@ -42,6 +42,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
+	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 
 	stdsql "database/sql"
@@ -104,6 +105,8 @@ type Client struct {
 	SeatAssignment *SeatAssignmentClient
 	// ServicePrincipal is the client for interacting with the ServicePrincipal builders.
 	ServicePrincipal *ServicePrincipalClient
+	// SlugReservation is the client for interacting with the SlugReservation builders.
+	SlugReservation *SlugReservationClient
 	// Subscription is the client for interacting with the Subscription builders.
 	Subscription *SubscriptionClient
 }
@@ -143,6 +146,7 @@ func (c *Client) init() {
 	c.PrincipalToken = NewPrincipalTokenClient(c.config)
 	c.SeatAssignment = NewSeatAssignmentClient(c.config)
 	c.ServicePrincipal = NewServicePrincipalClient(c.config)
+	c.SlugReservation = NewSlugReservationClient(c.config)
 	c.Subscription = NewSubscriptionClient(c.config)
 }
 
@@ -262,6 +266,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PrincipalToken:      NewPrincipalTokenClient(cfg),
 		SeatAssignment:      NewSeatAssignmentClient(cfg),
 		ServicePrincipal:    NewServicePrincipalClient(cfg),
+		SlugReservation:     NewSlugReservationClient(cfg),
 		Subscription:        NewSubscriptionClient(cfg),
 	}, nil
 }
@@ -308,6 +313,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PrincipalToken:      NewPrincipalTokenClient(cfg),
 		SeatAssignment:      NewSeatAssignmentClient(cfg),
 		ServicePrincipal:    NewServicePrincipalClient(cfg),
+		SlugReservation:     NewSlugReservationClient(cfg),
 		Subscription:        NewSubscriptionClient(cfg),
 	}, nil
 }
@@ -343,7 +349,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerRelationship,
 		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
 		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
-		c.SeatAssignment, c.ServicePrincipal, c.Subscription,
+		c.SeatAssignment, c.ServicePrincipal, c.SlugReservation, c.Subscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -358,7 +364,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerRelationship,
 		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
 		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
-		c.SeatAssignment, c.ServicePrincipal, c.Subscription,
+		c.SeatAssignment, c.ServicePrincipal, c.SlugReservation, c.Subscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -419,6 +425,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.SeatAssignment.mutate(ctx, m)
 	case *ServicePrincipalMutation:
 		return c.ServicePrincipal.mutate(ctx, m)
+	case *SlugReservationMutation:
+		return c.SlugReservation.mutate(ctx, m)
 	case *SubscriptionMutation:
 		return c.Subscription.mutate(ctx, m)
 	default:
@@ -5036,6 +5044,171 @@ func (c *ServicePrincipalClient) mutate(ctx context.Context, m *ServicePrincipal
 	}
 }
 
+// SlugReservationClient is a client for the SlugReservation schema.
+type SlugReservationClient struct {
+	config
+}
+
+// NewSlugReservationClient returns a client for the SlugReservation from the given config.
+func NewSlugReservationClient(c config) *SlugReservationClient {
+	return &SlugReservationClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `slugreservation.Hooks(f(g(h())))`.
+func (c *SlugReservationClient) Use(hooks ...Hook) {
+	c.hooks.SlugReservation = append(c.hooks.SlugReservation, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `slugreservation.Intercept(f(g(h())))`.
+func (c *SlugReservationClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SlugReservation = append(c.inters.SlugReservation, interceptors...)
+}
+
+// Create returns a builder for creating a SlugReservation entity.
+func (c *SlugReservationClient) Create() *SlugReservationCreate {
+	mutation := newSlugReservationMutation(c.config, OpCreate)
+	return &SlugReservationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SlugReservation entities.
+func (c *SlugReservationClient) CreateBulk(builders ...*SlugReservationCreate) *SlugReservationCreateBulk {
+	return &SlugReservationCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SlugReservationClient) MapCreateBulk(slice any, setFunc func(*SlugReservationCreate, int)) *SlugReservationCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SlugReservationCreateBulk{err: fmt.Errorf("calling to SlugReservationClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SlugReservationCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SlugReservationCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SlugReservation.
+func (c *SlugReservationClient) Update() *SlugReservationUpdate {
+	mutation := newSlugReservationMutation(c.config, OpUpdate)
+	return &SlugReservationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SlugReservationClient) UpdateOne(_m *SlugReservation) *SlugReservationUpdateOne {
+	mutation := newSlugReservationMutation(c.config, OpUpdateOne, withSlugReservation(_m))
+	return &SlugReservationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SlugReservationClient) UpdateOneID(id uuid.UUID) *SlugReservationUpdateOne {
+	mutation := newSlugReservationMutation(c.config, OpUpdateOne, withSlugReservationID(id))
+	return &SlugReservationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SlugReservation.
+func (c *SlugReservationClient) Delete() *SlugReservationDelete {
+	mutation := newSlugReservationMutation(c.config, OpDelete)
+	return &SlugReservationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SlugReservationClient) DeleteOne(_m *SlugReservation) *SlugReservationDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SlugReservationClient) DeleteOneID(id uuid.UUID) *SlugReservationDeleteOne {
+	builder := c.Delete().Where(slugreservation.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SlugReservationDeleteOne{builder}
+}
+
+// Query returns a query builder for SlugReservation.
+func (c *SlugReservationClient) Query() *SlugReservationQuery {
+	return &SlugReservationQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSlugReservation},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a SlugReservation entity by its id.
+func (c *SlugReservationClient) Get(ctx context.Context, id uuid.UUID) (*SlugReservation, error) {
+	return c.Query().Where(slugreservation.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SlugReservationClient) GetX(ctx context.Context, id uuid.UUID) *SlugReservation {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryReleasedBy queries the released_by edge of a SlugReservation.
+func (c *SlugReservationClient) QueryReleasedBy(_m *SlugReservation) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(slugreservation.Table, slugreservation.FieldID, id),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, slugreservation.ReleasedByTable, slugreservation.ReleasedByColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryReleasedFrom queries the released_from edge of a SlugReservation.
+func (c *SlugReservationClient) QueryReleasedFrom(_m *SlugReservation) *OrganizationQuery {
+	query := (&OrganizationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(slugreservation.Table, slugreservation.FieldID, id),
+			sqlgraph.To(organization.Table, organization.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, slugreservation.ReleasedFromTable, slugreservation.ReleasedFromColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *SlugReservationClient) Hooks() []Hook {
+	return c.hooks.SlugReservation
+}
+
+// Interceptors returns the client interceptors.
+func (c *SlugReservationClient) Interceptors() []Interceptor {
+	return c.inters.SlugReservation
+}
+
+func (c *SlugReservationClient) mutate(ctx context.Context, m *SlugReservationMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SlugReservationCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SlugReservationUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SlugReservationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SlugReservationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SlugReservation mutation op: %q", m.Op())
+	}
+}
+
 // SubscriptionClient is a client for the Subscription schema.
 type SubscriptionClient struct {
 	config
@@ -5192,14 +5365,15 @@ type (
 		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
 		ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode,
 		OAuthConsent, OAuthToken, Organization, Principal, PrincipalMembership,
-		PrincipalToken, SeatAssignment, ServicePrincipal, Subscription []ent.Hook
+		PrincipalToken, SeatAssignment, ServicePrincipal, SlugReservation,
+		Subscription []ent.Hook
 	}
 	inters struct {
 		Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant, Credential,
 		ExternalIdentity, Human, Invite, License, Listing, LoginSession, LoginState,
 		ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode,
 		OAuthConsent, OAuthToken, Organization, Principal, PrincipalMembership,
-		PrincipalToken, SeatAssignment, ServicePrincipal,
+		PrincipalToken, SeatAssignment, ServicePrincipal, SlugReservation,
 		Subscription []ent.Interceptor
 	}
 )
