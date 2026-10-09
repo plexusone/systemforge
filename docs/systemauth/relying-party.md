@@ -245,7 +245,7 @@ Failures return `401` with `WWW-Authenticate: Bearer realm="api"` (plus
 ## Limitations
 
 - JWT access tokens are verified statelessly: a revoked token stays usable
-  until it expires (default 15 minutes). Opaque SystemAuth access tokens are
+  until it expires (default 10 minutes, at most 15) unless the application consumes SystemAuth's access-change records (ADR-010), which the relying-party package does not do yet. Opaque SystemAuth access tokens are
   not accepted by `BearerMiddleware` (no introspection client yet).
 - The default session and login-state stores are in-memory; use
   `relyingparty/pgstore` (encrypted at rest) or another shared implementation

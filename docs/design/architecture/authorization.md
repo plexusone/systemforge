@@ -236,8 +236,10 @@ middleware) establishing the principal and its scopes, and then by the
 handler's `Authorizer.Can` call. SystemAuth checks that a token's principal
 is still active on every token issue, refresh, introspection and userinfo
 call (`PrincipalStatus`), and nothing else: a token issued before a
-membership or role change is honored until it expires (15 minutes by
-default).
+membership or role change is honored until it expires (10 minutes by
+default, 15 at most). SystemAuth records those changes in
+`sf_access_changes` so a relying party can refuse such tokens sooner (ADR-010;
+see the [organizations page](organizations.md#access-change-records-identityaccesschange)).
 
 ## Planned changes
 

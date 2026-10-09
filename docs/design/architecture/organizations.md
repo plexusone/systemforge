@@ -555,19 +555,51 @@ fails with `server_error` rather than issuing a token without it.
 
 | Setting | Default | Where |
 |---|---|---|
-| Access token lifetime | 15 minutes | `systemauth` config `tokens.access_token_lifetime`; per client `access_token_lifetime`; `sf_oauth_apps.access_token_ttl` (900 s) |
+| Access token lifetime | 10 minutes, at most 15 (`accesschange.DefaultAccessTokenLifetime`, `MaxAccessTokenLifetime`) | `systemauth` config `tokens.access_token_lifetime` (a larger value is refused at load); per client `access_token_lifetime` and `sf_oauth_apps.access_token_ttl` (600 s), both lowered to the maximum |
 | Refresh token lifetime | 7 days (absolute lifetime 30 days) | `tokens.refresh_token_lifetime`, `refresh_token_absolute_lifetime` |
 | ID token lifetime | 1 hour | `tokens.id_token_lifetime` |
 
-Revocation today is by principal status, not by membership: every
-introspection, userinfo call and refresh runs `Server.requireActiveSubject`,
-which asks `PrincipalStatus.PrincipalActive(subject)` (implemented by the
-Ent and memory stores); a deactivated principal's token family is revoked
-and the token reported inactive. Removing a principal from an organization
-or changing their role does nothing to their tokens, and no relying-party
-revocation cache exists. The relying-party `SessionStore` can delete BFF
-sessions by SystemAuth session ID or subject, which is the hook back-channel
-logout would use.
+Revocation by principal status: every introspection, userinfo call and
+refresh runs `Server.requireActiveSubject`, which asks
+`PrincipalStatus.PrincipalActive(subject)` (implemented by the Ent and memory
+stores); a deactivated principal's token family is revoked and the token
+reported inactive. A role or membership change does not revoke refresh
+tokens: the next refresh re-evaluates the `orgs` claim (ADR-010 decision 5).
+The relying-party `SessionStore` can delete BFF sessions by SystemAuth
+session ID or subject, which is the hook back-channel logout would use.
+
+### Access-change records (`identity/accesschange`)
+
+Access tokens are self-contained, so a change that reduces what an existing
+token may claim is recorded and announced (ADR-010). `accesschange.Record`
+writes a row of `sf_access_changes` (`principal_id`, `organization_id` or
+null for every organization, `changed_at` on the server clock, `reason`) in
+the transaction that makes the change, and `accesschange.Publish` hands it
+to the service's `accesschange.Sink` after commit. The principal and
+organization are plain identifiers rather than foreign keys, so a row
+outlives the deletion it describes. Each recording service takes a sink
+option (`WithAccessChangeSink`; `systemauth.WithEntAccessChangeSink` for
+`EntStorage`); the rows are written with or without one.
+
+| Reason | Recorded by |
+|---|---|
+| `membership_removed` | `organization.RemoveMember`; `UpdateMember` setting a membership inactive (scoped to the organization) |
+| `org_role_changed` | `UpdateMember` changing the role; `TransferOwnership`, for both principals (scoped) |
+| `app_role_changed` | `approle.Change` to a different role, `Remove`, `RemoveForMember` (scoped); assignment only adds access and records nothing |
+| `deactivated` | `principal.Deactivate` (every organization) |
+| `sessions_revoked` | `token.RevokeAllForPrincipal`, `EntStorage.RevokeSubjectTokens` for a principal subject, `managedprincipal.RevokeSession` and `RevokeAll` (every organization) |
+| `grant_reduced` | Reserved for resource grants (ADR-008), which do not exist yet |
+
+`accesschange.Since` reads the rows after a timestamp for pollers and the
+replay endpoint, and `accesschange.PruneExpired` deletes rows older than
+`accesschange.Retention` (the maximum token lifetime, a minute of clock-skew
+margin and an hour of slack); no scheduled job calls it yet, so a deployment
+runs it from its own maintenance loop. The embedded in-memory
+`EmbeddedAuthProvider` keeps no database and records nothing.
+
+Not yet built: the relying-party cache that consumes the records, replica
+polling, the replay endpoint and back-channel delivery (see
+[Planned changes](#planned-changes)).
 
 ## Planned changes
 
@@ -609,21 +641,18 @@ decides it.
 
 ### Real-time invalidation (ADR-010)
 
-- The default access-token lifetime becomes 10 minutes, configurable up to
-  15; today the default is 15 minutes and no maximum is enforced.
-- SystemAuth records every access change (membership removal or role
-  change, application-role or grant change, deactivation, session
-  revocation, a manager revoking a managed principal's sessions) in a new
-  `sf_access_changes` table as `(principal_id, organization_id or null,
-  changed_at, reason)` and announces it.
+- Built: the access-token lifetime defaults to 10 minutes and is capped at
+  15, and SystemAuth records every access change in `sf_access_changes` and
+  announces it to a sink (see [Access-change
+  records](#access-change-records-identityaccesschange)).
 - Relying parties keep a revocation cache keyed by principal (and
   organization) and reject tokens issued before the change, after a
   clock-skew margin (30 s default, 15 s floor); the cache is shared memory
   in a modular monolith, polled from `sf_access_changes` across replicas,
   and delivered as an OIDC back-channel `access_change` event across
   deployments, all in `relyingparty`.
-- A membership or role change no longer revokes refresh tokens (ADR-007
-  decision 9 is amended): the next refresh issues reduced claims. Only
+- Built: a membership or role change does not revoke refresh tokens (ADR-007
+  decision 9 is amended); the next refresh issues reduced claims. Only
   deactivation and explicit session revocation revoke refresh tokens.
 - `GET /access-changes?since=` lets a restarted relying party rebuild its
   cache.
