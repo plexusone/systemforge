@@ -3,6 +3,7 @@ package approle_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,6 +15,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/organization"
+	"github.com/plexusone/systemforge/internal/syncrec"
 )
 
 // ladderVocab declares the standard application role ladder.
@@ -332,5 +334,154 @@ func TestSeatLimit(t *testing.T) {
 	}
 	if _, err := f.svc.Assign(ctx, f.in(f.admin, "alpha", "viewer")); err != nil {
 		t.Errorf("seat freed by Remove: %v", err)
+	}
+}
+
+// syncedFixture returns a fixture whose service writes to a recording
+// syncer.
+func syncedFixture(t *testing.T, mode authz.SyncMode) (*fixture, *syncrec.Recorder) {
+	t.Helper()
+	rec := syncrec.New()
+	f := newFixture(t)
+	reg := authz.NewVocabularyRegistry()
+	for _, app := range []string{"alpha", "beta"} {
+		if err := reg.Register(ladderVocab{app: app}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.svc = approle.NewService(f.db, reg, approle.EntitleAll(reg), approle.WithAuthzSyncer(rec, mode))
+	return f, rec
+}
+
+func appCalls(rec *syncrec.Recorder) []string {
+	var out []string
+	for _, c := range rec.Calls() {
+		if strings.Contains(c, "AppRole") {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func TestAppRolesSyncToTheGraph(t *testing.T) {
+	ctx := context.Background()
+	f, rec := syncedFixture(t, authz.SyncModeStrict)
+	call := func(op string, role string) string {
+		return op + ":" + f.member.String() + ":" + f.org.ID.String() + ":alpha:" + role
+	}
+	check := func(step string, want ...string) {
+		t.Helper()
+		got := appCalls(rec)
+		if strings.Join(got, "|") != strings.Join(want, "|") {
+			t.Errorf("%s: calls = %v, want %v", step, got, want)
+		}
+	}
+
+	if _, err := f.svc.Assign(ctx, f.in(f.member, "alpha", "viewer")); err != nil {
+		t.Fatal(err)
+	}
+	check("assign", call("AddAppRole", "viewer"))
+
+	if _, err := f.svc.Change(ctx, f.in(f.member, "alpha", "admin")); err != nil {
+		t.Fatal(err)
+	}
+	check("change", call("AddAppRole", "viewer"), call("AddAppRole", "admin"), call("RemoveAppRole", "viewer"))
+
+	if _, err := f.svc.Change(ctx, f.in(f.member, "alpha", "admin")); err != nil {
+		t.Fatal(err)
+	}
+	check("unchanged role writes nothing", call("AddAppRole", "viewer"), call("AddAppRole", "admin"), call("RemoveAppRole", "viewer"))
+
+	if err := f.svc.Remove(ctx, f.org.ID, f.member, "alpha", f.owner); err != nil {
+		t.Fatal(err)
+	}
+	check("remove", call("AddAppRole", "viewer"), call("AddAppRole", "admin"), call("RemoveAppRole", "viewer"), call("RemoveAppRole", "admin"))
+
+	// RemoveForMember removes every role from the graph.
+	rec2 := syncrec.New()
+	f.svc = approle.NewService(f.db, authzRegistry(t), approle.EntitleAll(authzRegistry(t)), approle.WithAuthzSyncer(rec2, authz.SyncModeStrict))
+	for _, app := range []string{"alpha", "beta"} {
+		if _, err := f.svc.Assign(ctx, f.in(f.member, app, "viewer")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n, err := f.svc.RemoveForMember(ctx, f.org.ID, f.member); err != nil || n != 2 {
+		t.Fatalf("RemoveForMember = %d, %v", n, err)
+	}
+	if got := len(appCalls(rec2)); got != 4 {
+		t.Errorf("RemoveForMember: %d app calls, want 2 adds and 2 removes: %v", got, appCalls(rec2))
+	}
+}
+
+func authzRegistry(t *testing.T) *authz.VocabularyRegistry {
+	t.Helper()
+	reg := authz.NewVocabularyRegistry()
+	for _, app := range []string{"alpha", "beta"} {
+		if err := reg.Register(ladderVocab{app: app}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return reg
+}
+
+func TestAppRoleSyncModes(t *testing.T) {
+	ctx := context.Background()
+	boom := errors.New("graph down")
+
+	f, rec := syncedFixture(t, authz.SyncModeStrict)
+	rec.Err = boom
+	if _, err := f.svc.Assign(ctx, f.in(f.member, "alpha", "viewer")); !errors.Is(err, boom) {
+		t.Errorf("strict Assign = %v, want the sync error", err)
+	}
+
+	f, rec = syncedFixture(t, authz.SyncModeEventual)
+	rec.Err = boom
+	if _, err := f.svc.Assign(ctx, f.in(f.member, "alpha", "viewer")); err != nil {
+		t.Errorf("eventual Assign = %v, want success with a logged warning", err)
+	}
+	stored, err := f.svc.ListForPrincipal(ctx, f.org.ID, f.member)
+	if err != nil || len(stored) != 1 {
+		t.Errorf("stored roles = %v, %v; the role is stored whatever the sync result", stored, err)
+	}
+}
+
+// plainSyncer implements only the original RelationshipSyncer methods, as
+// an existing implementer does.
+type plainSyncer struct{ authz.RelationshipSyncer }
+
+func TestSyncerWithoutAppRolesIsIgnored(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(t)
+	reg := authzRegistry(t)
+	var plain authz.RelationshipSyncer = plainSyncer{syncrec.New()}
+	if _, ok := plain.(authz.AppRoleSyncer); ok {
+		t.Fatal("test syncer unexpectedly implements AppRoleSyncer")
+	}
+	f.svc = approle.NewService(f.db, reg, approle.EntitleAll(reg), approle.WithAuthzSyncer(plain, authz.SyncModeStrict))
+	if _, err := f.svc.Assign(ctx, f.in(f.member, "alpha", "viewer")); err != nil {
+		t.Errorf("Assign with a syncer lacking app roles: %v", err)
+	}
+	if _, err := f.svc.Change(ctx, f.in(f.member, "alpha", "admin")); err != nil {
+		t.Errorf("Change: %v", err)
+	}
+	if err := f.svc.Remove(ctx, f.org.ID, f.member, "alpha", f.owner); err != nil {
+		t.Errorf("Remove: %v", err)
+	}
+}
+
+func TestRemoveMemberSyncsAppRoleRemoval(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(t)
+	if _, err := f.svc.Assign(ctx, f.in(f.member, "alpha", "viewer")); err != nil {
+		t.Fatal(err)
+	}
+	rec := syncrec.New()
+	orgs := organization.NewService(f.db, organization.WithAuthzSyncer(rec))
+	if err := orgs.RemoveMember(ctx, f.org.ID, f.member); err != nil {
+		t.Fatal(err)
+	}
+	want := "RemoveAppRole:" + f.member.String() + ":" + f.org.ID.String() + ":alpha:viewer"
+	if got := appCalls(rec); len(got) != 1 || got[0] != want {
+		t.Errorf("calls = %v, want %v", got, want)
 	}
 }
