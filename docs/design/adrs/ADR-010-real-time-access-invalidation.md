@@ -1,6 +1,6 @@
 # ADR-010: Real-Time Invalidation of Access on Membership Change
 
-**Status:** Proposed
+**Status:** Accepted
 **Deciders:** @grokify
 **Relates to:** ADR-007 (memberships and entitlements as claims; this ADR
 amends its decision 9), ADR-002 (relying parties), ADR-008 (collaborators,

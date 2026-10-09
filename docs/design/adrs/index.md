@@ -16,7 +16,7 @@ under `docs/specs/` and execute these decisions.
 | [ADR-007](ADR-007-memberships-and-entitlements-as-claims.md) | Organization Memberships and Entitlements as Claims | Accepted, amended by ADR-010 |
 | [ADR-008](ADR-008-resource-scoped-collaborators.md) | Resource-Scoped Collaborators on the Authorization Substrate | Accepted |
 | [ADR-009](ADR-009-management-is-a-relationship.md) | Management Is a Relationship, Not the Absence of an Email (amends ADR-005) | Accepted |
-| [ADR-010](ADR-010-real-time-access-invalidation.md) | Real-Time Invalidation of Access on Membership Change (amends ADR-007) | Proposed |
+| [ADR-010](ADR-010-real-time-access-invalidation.md) | Real-Time Invalidation of Access on Membership Change (amends ADR-007) | Accepted |
 
 ## Statuses
 
