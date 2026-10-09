@@ -49,7 +49,9 @@ func (a *API) orgFor(ctx context.Context, slug string, action authz.Action) (*Or
 	if err != nil {
 		return nil, uuid.Nil, err
 	}
-	org, err := a.service.GetBySlug(ctx, slug)
+	// An old slug still resolves during its cooling-off period; responses
+	// carry the current slug.
+	org, _, err := a.service.ResolveSlug(ctx, slug)
 	if err != nil {
 		return nil, uuid.Nil, huma.Error404NotFound("organization not found")
 	}

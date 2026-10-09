@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
@@ -15,6 +16,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
+	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 )
 
 // Service defines the organization service interface.
@@ -63,8 +65,18 @@ type Service interface {
 	// member of. Pass IncludeInactive to also list deactivated memberships.
 	ListMemberships(ctx context.Context, principalID uuid.UUID, opts ...ListOption) ([]*Membership, error)
 
+	// ResolveSlug returns the organization using slug or, within the
+	// cooling-off period after a rename, the organization that released it
+	// (alias true).
+	ResolveSlug(ctx context.Context, slug string) (*Organization, bool, error)
+
+	// Rename changes an organization's slug on behalf of actor, who must
+	// own it. The old slug is held for actor for the cooling-off period.
+	Rename(ctx context.Context, orgID uuid.UUID, slug string, actor uuid.UUID) error
+
 	// SlugAvailable checks if a slug is available. A reserved slug is
-	// refused with ErrSlugReserved (and false).
+	// refused with ErrSlugReserved, and one in its cooling-off period with
+	// ErrSlugCoolingOff (both with false).
 	SlugAvailable(ctx context.Context, slug string) (bool, error)
 
 	// GenerateSlug generates a unique slug from a name.
@@ -81,6 +93,8 @@ type DefaultService struct {
 	syncMode authz.SyncMode
 	logger   *slog.Logger
 	reserved map[string]struct{} // deployment-configured reserved slugs
+
+	coolingOff time.Duration // slug cooling-off period (default SlugCoolingOff)
 }
 
 // ServiceOption configures a DefaultService.
@@ -129,12 +143,9 @@ func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInp
 	}
 
 	// Check slug availability
-	available, err := s.SlugAvailable(ctx, input.Slug)
-	if err != nil {
+	// A slug in its cooling-off period is open to the owner who released it.
+	if err := s.slugCheck(ctx, s.client, input.Slug, input.OwnerPrincipalID); err != nil {
 		return nil, fmt.Errorf("failed to check slug availability: %w", err)
-	}
-	if !available {
-		return nil, fmt.Errorf("slug already taken: %s", input.Slug)
 	}
 
 	// Validate personal org has owner
@@ -182,6 +193,11 @@ func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInp
 	org, err := create.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create organization: %w", err)
+	}
+	// The slug is now in use; a reservation for it (held by the owner,
+	// checked above) is spent.
+	if _, err = tx.SlugReservation.Delete().Where(slugreservation.SlugEQ(input.Slug)).Exec(ctx); err != nil {
+		return nil, fmt.Errorf("failed to clear slug reservation: %w", err)
 	}
 
 	// The owner is a member with the owner role, so membership-based
@@ -582,16 +598,15 @@ func (s *DefaultService) ListMemberships(ctx context.Context, principalID uuid.U
 
 // SlugAvailable checks if a slug is available.
 func (s *DefaultService) SlugAvailable(ctx context.Context, slug string) (bool, error) {
-	if s.isReserved(slug) {
-		return false, fmt.Errorf("%w: %s", ErrSlugReserved, slug)
+	err := s.slugCheck(ctx, s.client, slug, nil)
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, ErrSlugTaken):
+		return false, nil
+	default:
+		return false, err
 	}
-	exists, err := s.client.Organization.Query().
-		Where(organization.Slug(slug)).
-		Exist(ctx)
-	if err != nil {
-		return false, fmt.Errorf("failed to check slug: %w", err)
-	}
-	return !exists, nil
 }
 
 // TransferOwnership transfers ownership of an organization to another principal.

@@ -354,7 +354,7 @@ func (a *API) checkSlug(ctx context.Context, input *CheckSlugInput) (*CheckSlugO
 		return nil, err
 	}
 	available, err := a.service.SlugAvailable(ctx, input.Slug)
-	if err != nil && !errors.Is(err, ErrSlugReserved) {
+	if err != nil && !errors.Is(err, ErrSlugReserved) && !errors.Is(err, ErrSlugCoolingOff) {
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
 

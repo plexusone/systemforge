@@ -65,7 +65,7 @@ func (a *API) orgForInvites(ctx context.Context, slug string) (*organization.Org
 	if err != nil {
 		return nil, uuid.Nil, err
 	}
-	org, err := a.orgSvc.GetBySlug(ctx, slug)
+	org, _, err := a.orgSvc.ResolveSlug(ctx, slug)
 	if err != nil {
 		return nil, uuid.Nil, huma.Error404NotFound("organization not found")
 	}

@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/ent"
 	entorg "github.com/plexusone/systemforge/identity/ent/organization"
+	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/organization"
 )
 
@@ -112,7 +114,8 @@ func EnsurePersonalOrgInTx(ctx context.Context, tx *ent.Tx, params PersonalOrgPa
 }
 
 // uniqueSlugInTx returns base, or base with a numeric suffix, that no
-// organization uses and that is not reserved (the built-in list plus extra).
+// organization uses, that is not reserved (the built-in list plus extra) and
+// that is not in the cooling-off period after a rename.
 // base must be valid.
 func uniqueSlugInTx(ctx context.Context, tx *ent.Tx, base string, extra ...string) (string, error) {
 	reserved := make(map[string]struct{}, len(extra))
@@ -132,7 +135,18 @@ func uniqueSlugInTx(ctx context.Context, tx *ent.Tx, base string, extra ...strin
 		if err != nil {
 			return "", fmt.Errorf("checking slug: %w", err)
 		}
-		if !taken {
+		if taken {
+			continue
+		}
+		// A slug an organization just gave up is held for whoever released
+		// it; a new account does not get it.
+		held, err := tx.SlugReservation.Query().
+			Where(slugreservation.SlugEQ(c), slugreservation.ExpiresAtGT(time.Now())).
+			Exist(ctx)
+		if err != nil {
+			return "", fmt.Errorf("checking slug reservation: %w", err)
+		}
+		if !held {
 			return c, nil
 		}
 	}
