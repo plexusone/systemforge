@@ -185,6 +185,51 @@ the SystemAuth organization ID, with `ProvisioningMemberships(source,
 application, hook)`: the hook runs once per organization per process for a
 principal who holds a role in `application` and must be idempotent.
 
+## Access changes
+
+Claims in a JWT access token are fixed when it is issued, so removing a
+person from an organization does not reach a token already issued until it
+expires. SystemAuth records each access change (ADR-010) and a
+`RevocationCache` remembers the recent ones:
+
+```go
+cache := relyingparty.NewRevocationCache() // margin 30 s (floor 15 s), covers 15 min tokens
+
+// In a modular monolith, hand the same cache to SystemAuth's services:
+orgs := organization.NewService(db, organization.WithAccessChangeSink(accesschange.ToSink(cache)))
+
+mw := relyingparty.BearerMiddleware(relyingparty.BearerConfig{
+    Tokens: client, Principals: principals,
+    Revocation:   cache,
+    Organization: func(r *http.Request) string { return r.PathValue("org") }, // optional
+})
+bff, _ := relyingparty.NewBFF(relyingparty.BFFConfig{Client: client, Principals: principals, Revocation: cache})
+```
+
+A JWT is accepted only if its `iat` is at or after the change plus the
+clock-skew margin (`WithSkewMargin`, default 30 s, never below 15 s); a token
+stamped inside the margin counts as issued before the change. Otherwise the
+middleware answers `401` with `WWW-Authenticate: Bearer error="invalid_token",
+error_description="token expired"`, which makes an OIDC client refresh and
+obtain claims that reflect the change. When the request names an
+organization, a change scoped to another organization does not refuse it;
+without one, any change to the principal does. A token with no `iat` is
+accepted only for a principal with no recorded change. Entries are dropped
+once the change plus the maximum token lifetime (`WithMaxTokenLifetime`,
+default 15 minutes) plus the margin has passed, so the cache holds only the
+changes of the last token lifetime.
+
+A BFF session does not end on a change. The BFF refreshes the session's
+tokens, re-reads the claims from the userinfo endpoint, and keeps the person
+signed in with reduced claims; a refresh SystemAuth refuses (deactivation,
+revoked sessions) ends the session. The session is then stamped valid from
+the latest change plus the margin, so one change causes one refresh. Session
+stores persist this stamp (`Session.ClaimsIssuedAt`); `pgstore` keeps it in
+the sealed secrets document.
+
+Across replicas or separate deployments the cache is fed by polling and by
+back-channel events; those are not built yet.
+
 ## Sessions and back-channel logout
 
 Each session records the SystemAuth `sub` and, when the ID token carries one,
@@ -245,7 +290,7 @@ Failures return `401` with `WWW-Authenticate: Bearer realm="api"` (plus
 ## Limitations
 
 - JWT access tokens are verified statelessly: a revoked token stays usable
-  until it expires (default 10 minutes, at most 15) unless the application consumes SystemAuth's access-change records (ADR-010), which the relying-party package does not do yet. Opaque SystemAuth access tokens are
+  until it expires (default 10 minutes, at most 15) unless the application configures a `RevocationCache` (see [Access changes](#access-changes)). Opaque SystemAuth access tokens are
   not accepted by `BearerMiddleware` (no introspection client yet).
 - The default session and login-state stores are in-memory; use
   `relyingparty/pgstore` (encrypted at rest) or another shared implementation

@@ -597,9 +597,22 @@ margin and an hour of slack); no scheduled job calls it yet, so a deployment
 runs it from its own maintenance loop. The embedded in-memory
 `EmbeddedAuthProvider` keeps no database and records nothing.
 
-Not yet built: the relying-party cache that consumes the records, replica
-polling, the replay endpoint and back-channel delivery (see
-[Planned changes](#planned-changes)).
+### Relying-party revocation cache (`relyingparty.RevocationCache`)
+
+`relyingparty.RevocationCache` consumes the records. `accesschange.ToSink`
+adapts it to a `Sink`, so in a modular monolith one instance is passed to
+every service's `WithAccessChangeSink` and read by every relying party; it is
+written after the recording transaction commits. It keeps the latest change per
+principal and per principal and organization, and accepts a token only if
+`iat >= changed_at + margin` (default 30 s, floor 15 s); entries expire at
+`changed_at + max lifetime + margin`, swept on `Record`. `BearerMiddleware`
+(`BearerConfig.Revocation`, with an optional `Organization` function) answers a
+refused token `401 invalid_token`, `error_description="token expired"`, and
+`NewBFF` (`BFFConfig.Revocation`) refreshes a session's tokens and claims
+instead of ending it. See [Access changes](../../systemauth/relying-party.md#access-changes).
+
+Not yet built: replica polling, the replay endpoint and back-channel
+delivery (see [Planned changes](#planned-changes)).
 
 ## Planned changes
 
@@ -645,12 +658,13 @@ decides it.
   15, and SystemAuth records every access change in `sf_access_changes` and
   announces it to a sink (see [Access-change
   records](#access-change-records-identityaccesschange)).
-- Relying parties keep a revocation cache keyed by principal (and
+- Built: relying parties keep a revocation cache keyed by principal (and
   organization) and reject tokens issued before the change, after a
   clock-skew margin (30 s default, 15 s floor); the cache is shared memory
-  in a modular monolith, polled from `sf_access_changes` across replicas,
-  and delivered as an OIDC back-channel `access_change` event across
-  deployments, all in `relyingparty`.
+  in a modular monolith (see [Relying-party revocation
+  cache](#relying-party-revocation-cache-relyingpartyrevocationcache)). Still
+  to do: polling `sf_access_changes` across replicas and delivering an OIDC
+  back-channel `access_change` event across deployments, in `relyingparty`.
 - Built: a membership or role change does not revoke refresh tokens (ADR-007
   decision 9 is amended); the next refresh issues reduced claims. Only
   deactivation and explicit session revocation revoke refresh tokens.
