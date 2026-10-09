@@ -48,10 +48,21 @@ Edges: `principal_memberships`, `invites`, `oauth_apps`, marketplace
 | `team` | `organization.OrgTypeTeam` | A shared organization; the default |
 | `enterprise` | `organization.OrgTypeEnterprise` | A large organization; no behavioral difference from `team` in code |
 
-Nothing in the service distinguishes the types beyond creation: a personal
-organization requires an owner (`Create` refuses one without
+A personal organization requires an owner (`Create` refuses one without
 `OwnerPrincipalID`), and `GetPersonalOrg(principalID)` finds it by
 `org_type = personal AND owner_principal_id = principalID`.
+
+A personal organization has exactly one member, its owner (ADR-006 decision
+3). `organization.RequireMembersAllowed` is the check every path that creates
+or changes a membership applies: `AddMember`, `UpdateMember` (including
+deactivating the owner), `invite.Create` and `invite.Accept`, and SCIM group
+membership refuse a personal organization with `ErrPersonalOrganization`
+unless the role is `organization.RoleCollaborator` (ADR-008), and
+`TransferOwnership` refuses it outright. The members API answers `409` for
+`ErrPersonalOrganization`, and `POST /organizations` accepts only `team` and
+`enterprise` for `org_type`: personal organizations come from signup. The
+`collaborator` role is accepted by the services but is not yet in the members
+API's role enum, since resource grants (ADR-008) are not implemented.
 
 ### Slug is the identity
 
@@ -172,8 +183,8 @@ only `role = owner` plus `sf_organizations.owner_principal_id`.
 `role = owner` and the new owner to already be a member. In one transaction
 it sets the old owner's role to `NewRoleForOld` (`admin` by default; only
 `admin` or `member` are accepted), sets the new owner's role to `owner`, and
-updates `owner_principal_id`. Both role changes are then synced. There is no
-type check: a personal organization can be transferred today.
+updates `owner_principal_id`. Both role changes are then synced. A personal
+organization is refused with `ErrPersonalOrganization`.
 
 ## Invites
 
@@ -311,6 +322,67 @@ Nothing today turns subscriptions and licenses into a per-application
 entitlement list, and `authz.FeatureAuthorizer` is an interface with no
 implementation in the repository.
 
+## Application roles (`identity/approle`)
+
+A principal's access inside an application is an application role, stored
+per (principal, organization, application) in `sf_app_roles` (Ent schema
+`AppRole`):
+
+| Column | Notes |
+|---|---|
+| `principal_id`, `organization_id` | Foreign keys, cascade on delete |
+| `application` | Identifier registered in `authz.VocabularyRegistry` |
+| `role` | One of the application's `AppVocabulary.Roles()`; free text in the column, validated by the service |
+| `assigned_by` | Principal who made the change; null if that principal is deleted |
+| `id`, `created_at`, `updated_at` | `BaseMixin` |
+
+Unique on `(principal_id, organization_id, application)`, indexed on
+`(organization_id, application)`. Fresh databases get the table from the Ent
+migration; no SQL migration is needed.
+
+`approle.Service` (built with `NewService(client, registry, opts...)`):
+
+| Method | Behavior |
+|---|---|
+| `Assign(in)` | Creates the role; `ErrAlreadyAssigned` if the principal already has one in that application |
+| `Change(in)` | Sets a different role; `ErrNotAssigned` if there is none |
+| `Remove(org, principal, app, by)` | Deletes the role; `ErrNotAssigned` if there is none |
+| `RemoveForMember(org, principal)` | Deletes every role of a member in the organization |
+| `ListForPrincipal`, `ListForOrganization` | Stored roles only |
+| `EffectiveRoles(principal, org)` | Map of application to role: stored roles plus the implicit owner role, only while the membership is active |
+| `Roles(app)` | The application's roles, lowest first, for pickers |
+
+Rules enforced by `Assign` and `Change`: the application is registered, the
+role is one the application declares, the organization is entitled to the
+application (when `WithEntitlements` is set; without it every registered
+application counts as entitled), and the principal has an active `owner`,
+`admin` or `member` membership. Collaborators, non-members and deactivated
+members cannot hold roles. Each assignment is logged with who made it and
+whether it was to themself.
+
+`EffectiveRoles` gives owners the top role of every entitled registered
+application, `admin` where the vocabulary declares it, else the highest role
+in its hierarchy; when an owner also has a stored role the higher wins.
+Admins and members hold only stored roles, and nobody holds any by default.
+Deactivating a membership leaves the rows but they are not effective;
+removing the member deletes them, in the same transaction
+(`organization.Service.RemoveMember`, and SCIM's group member removal).
+
+HTTP endpoints, on the organization API when `APIConfig.AppRoles` is set
+(501 otherwise):
+
+| Route | Permission |
+|---|---|
+| `GET /organizations/{slug}/app-roles[?application=]` | `change_role` |
+| `GET /organizations/{slug}/members/{principal_id}/app-roles` | `change_role`, or `view` for one's own roles; returns stored and effective roles |
+| `PUT /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role`; body `{"role": "..."}`; assigns or changes |
+| `DELETE /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role` |
+
+Not yet built: deriving entitled applications from the marketplace, seat
+counting against licenses, the `orgs` claim, invites carrying roles, and the
+relationship-sync calls (`AddAppRole`/`RemoveAppRole`); see
+[Planned changes](#planned-changes).
+
 ## How relying parties get memberships today
 
 A relying party (`identity/relyingparty`) authenticates a SystemAuth session,
@@ -381,10 +453,6 @@ decides it.
   generated one such as two words and a number, ADR-006 decision 2). The
   GitHub and Google rules and the numeric suffix on collision are implemented
   (see [Signup on first social login](#signup-on-first-social-login)).
-- Personal organizations have exactly one member: `AddMember` and invites
-  to a personal organization are refused (except collaborators, ADR-008),
-  and `TransferOwnership` of a personal organization is refused. Today none
-  of these checks exist.
 - `organization.Service.Rename(ctx, orgID, slug)`,
   `ConvertToTeam(ctx, orgID, teamSlug)` and `ResolveSlug(ctx, slug)`, backed
   by a new `sf_slug_reservations` table (slug, `released_by_principal_id`,
@@ -421,16 +489,15 @@ decides it.
   `RemoteMemberships`; `LocalMemberships` remains for development and tests
   and is documented as not for production.
 - Organization roles are `owner`, `admin`, `member` and `collaborator`
-  (ADR-008); application roles are recorded per (principal, organization,
-  application) in a new `sf_app_roles` table, which replaces seat
-  assignments as the record of who may use what. Owners hold `admin` in
-  every entitled application implicitly; admins and members hold only the
-  roles assigned to them, none by default; no custom roles.
+  (ADR-008). Application roles are stored in `sf_app_roles` (see
+  [Application roles](#application-roles-identityapprole)); still to do is
+  making them replace seat assignments as the record of who may use what,
+  with seat-licensed applications counting rows against the license.
 - Entitlements are derived from active subscriptions and licenses mapped to
   application identifiers registered through `authz.AppVocabulary`, with
   deployment-level default entitlements.
 - Invites carry the application roles to grant; removal from the
-  organization removes every application role and grant.
+  organization removes every application role (built) and grant.
 
 ### Real-time invalidation (ADR-010)
 

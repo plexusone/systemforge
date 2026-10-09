@@ -264,10 +264,12 @@ decides it.
 
 ### Application roles (ADR-007)
 
-- A new `sf_app_roles` table records the application role per (principal,
-  organization, application); it replaces seat assignments as the record
-  of who may use what, and a seat-licensed application counts its rows
-  against the license.
+- The `sf_app_roles` table records the application role per (principal,
+  organization, application) (built; see
+  [Organizations](organizations.md#application-roles-identityapprole)).
+  Still to do: it replaces seat assignments as the record of who may use
+  what, and a seat-licensed application counts its rows against the
+  license.
 - Owners hold `admin` in every entitled application implicitly. Admins
   manage the organization but hold only the application roles assigned to
   them, like members; an admin may assign roles to themself, explicitly and
@@ -276,7 +278,7 @@ decides it.
   declares (standard ladder `viewer`, `contributor`, `maintainer`,
   `admin`); no custom roles. Organization-defined roles and teams are
   deferred.
-- Removal from the organization removes every application role and grant.
+- Removal from the organization removes every application role (built) and grant.
 
 ### Revocation cache in request authorization (ADR-010)
 

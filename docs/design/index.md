@@ -16,7 +16,7 @@ changes" entry moves up into the page body and the ADR is unchanged.
 
 | Page | Scope |
 |---|---|
-| [Organizations and Membership](architecture/organizations.md) | Organization types, memberships and roles, invites, ownership transfer, slugs, why there is no `plan`, marketplace entitlements, how relying parties get memberships, claims, token freshness |
+| [Organizations and Membership](architecture/organizations.md) | Organization types, memberships and roles, invites, ownership transfer, slugs, why there is no `plan`, application roles, marketplace entitlements, how relying parties get memberships, claims, token freshness |
 | [Managed Principals and Manager Relationships](architecture/managed-principals.md) | Managed principals, invariants, guardian and educator roles, login tokens and their exchange, claims, sessions and manager visibility, attaching an email |
 | [Authorization](architecture/authorization.md) | The two-gate model, application vocabularies, the base schema, the role-based and relationship-based providers and what each can answer, conformance, syncing |
 
