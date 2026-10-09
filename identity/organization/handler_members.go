@@ -2,6 +2,7 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -254,7 +255,7 @@ func (a *API) addMember(ctx context.Context, input *AddMemberRequest) (*AddMembe
 		Permissions:    input.Body.Permissions,
 	})
 	if err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, memberError(err)
 	}
 
 	return &AddMemberResponse{Body: memberToResponse(member)}, nil
@@ -296,7 +297,7 @@ func (a *API) updateMember(ctx context.Context, input *UpdateMemberRequest) (*Up
 		Active:      input.Body.Active,
 	})
 	if err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, memberError(err)
 	}
 
 	return &UpdateMemberResponse{Body: memberToResponse(updated)}, nil
@@ -366,10 +367,19 @@ func (a *API) transferOwnership(ctx context.Context, input *TransferOwnershipReq
 		ToPrincipal:    newOwnerID,
 		NewRoleForOld:  input.Body.NewRoleForOldOwner,
 	}); err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, memberError(err)
 	}
 
 	resp := &TransferOwnershipResponse{}
 	resp.Body.Message = "Ownership transferred successfully"
 	return resp, nil
+}
+
+// memberError maps a membership service error to an API error: a personal
+// organization's one-member rule is a conflict, anything else a bad request.
+func memberError(err error) error {
+	if errors.Is(err, ErrPersonalOrganization) {
+		return huma.Error409Conflict(err.Error())
+	}
+	return huma.Error400BadRequest(err.Error())
 }

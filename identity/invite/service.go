@@ -13,6 +13,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
+	"github.com/plexusone/systemforge/identity/organization"
 )
 
 // Service defines the invite service interface.
@@ -67,6 +68,10 @@ func NewService(client *ent.Client, baseURL string) Service {
 
 // Create creates a new invite.
 func (s *DefaultService) Create(ctx context.Context, input CreateInviteInput) (*InviteResult, error) {
+	if err := organization.RequireMembersAllowed(ctx, s.client, input.OrganizationID, input.Role); err != nil {
+		return nil, err
+	}
+
 	// Check for existing pending invite
 	hasPending, err := s.HasPendingInvite(ctx, input.OrganizationID, input.Email)
 	if err != nil {
@@ -170,6 +175,11 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 			SetStatus(invite.StatusExpired).
 			Save(ctx)
 		return nil, fmt.Errorf("invite has expired")
+	}
+
+	// An organization may have become personal after the invite was sent.
+	if err = organization.RequireMembersAllowed(ctx, s.client, inv.OrganizationID, inv.Role); err != nil {
+		return nil, err
 	}
 
 	// Start transaction
