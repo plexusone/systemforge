@@ -65,17 +65,27 @@ is a function call.
    passed, because no token issued before the change can still be valid.
    The cache is therefore bounded by the number of changes within one
    lifetime.
-4. **Delivery has two forms with one contract.**
-   - **In-process:** relying parties built into the same binary as
-     SystemAuth (pbhq-cloud) register an `AccessChangeSink`; SystemAuth
-     calls it synchronously in the transaction that records the change.
-   - **Back-channel:** relying parties deployed separately receive a
-     signed event, an OIDC Back-Channel Logout token carrying an
+4. **The cache is shared memory in the monolith; delivery exists only at
+   process boundaries.**
+   - **Same process:** in a modular monolith (pbhq-cloud) SystemAuth and
+     the relying parties share one cache instance. SystemAuth writes to it
+     in the transaction that records the change, and every product reads
+     it on each request. There is no delivery and no delay; the check is a
+     lookup in the same memory.
+   - **Replicas of the same monolith:** instances behind a load balancer
+     share the database, not memory. Each instance polls
+     `sf_access_changes` for rows newer than its last read, every second
+     or two: one indexed query per instance per interval, independent of
+     request volume. The change is visible on every replica within the
+     polling interval.
+   - **Separate deployments:** a relying party in another process receives
+     a signed event, an OIDC Back-Channel Logout token carrying an
      `access_change` event with the same fields, at a registered endpoint.
      Delivery is retried, and failures are logged against the client.
 
-   The `relyingparty` package implements the cache and both receivers, so an
-   application adds one line of configuration for either.
+   The `relyingparty` package implements the cache, the poller and the
+   back-channel receiver, so an application adds one line of configuration
+   for whichever boundary it sits on.
 5. **A refresh after a change issues new claims rather than ending the
    session.** ADR-007's decision 9 ("removals revoke refresh tokens") is
    amended: a change of role or membership does not log the person out of
@@ -92,10 +102,10 @@ is a function call.
 
 ## Consequences
 
-- **Access changes take effect within one request**, in-process; within
-  the back-channel delivery time for separate deployments; and within one
-  token lifetime if a signal is lost, which is the bound ADR-007 already
-  had.
+- **Access changes take effect within one request** in the same process;
+  within the polling interval on other replicas; within the back-channel
+  delivery time for separate deployments; and within one token lifetime if
+  a signal is lost, which is the bound ADR-007 already had.
 - **Per-request cost is a map lookup**, and the cache holds only the
   changes of the last lifetime: tens of entries for a large deployment, not
   one per user.
