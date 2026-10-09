@@ -198,8 +198,23 @@ database transaction commits; there are no Ent hooks.
 | Caller | Syncer calls |
 |---|---|
 | `organization.Service` | `RegisterOrganization` (create), `AddOrgMembership`, `UpdateOrgMembership` (role change, both sides of an ownership transfer), `RemoveOrgMembership`, `UnregisterOrganization` (delete) |
+| `approle.Service` (with `WithAuthzSyncer`) | `AddAppRole` (assign, and the new role of a change), `RemoveAppRole` (remove, the old role of a change, `RemoveForMember`) |
 | `managedprincipal.Service` | `RegisterPrincipal`, `AddPrincipalManager`, `RemovePrincipalManager` |
 | `marketplace` (`marketplace.AuthzSyncer`, `SpiceDBSyncer`) | Listing, license, license revocation, seat assignment and unassignment, subscription relationships |
+
+`AddAppRole` and `RemoveAppRole` belong to the optional interface
+`authz.AppRoleSyncer`, which `noop`, `spicedb.Syncer` and the test recorder
+implement. A syncer that implements only `RelationshipSyncer` keeps
+compiling and working: callers type-assert and skip application roles when it
+is not an `AppRoleSyncer`. `spicedb.Syncer` writes
+`{application}_org:{org}#{role}@principal:{principal}`, the facet an
+application's schema fragment attaches to the base organization; an
+application identifier that is not a valid app name is refused. An owner's
+implicit `admin` is not a stored role and is not written; an application's
+schema fragment must derive it from the owner relation. `organization.Service.RemoveMember` removes the member's
+application roles from the graph after its transaction commits; SCIM group
+member removal deletes the rows but, like its membership changes, makes no
+syncer call.
 
 `invite.Service.Accept` writes the membership directly and makes no syncer
 call. `authz.SyncMode` decides what a sync failure does: `strict` returns
@@ -268,8 +283,9 @@ decides it.
   organization, application) (built; see
   [Organizations](organizations.md#application-roles-identityapprole)).
   Still to do: it replaces seat assignments as the record of who may use
-  what, and a seat-licensed application counts its rows against the
-  license.
+  what. A seat-licensed application already counts its rows against the
+  license, and role changes reach the authorization graph through
+  `AppRoleSyncer`.
 - Owners hold `admin` in every entitled application implicitly. Admins
   manage the organization but hold only the application roles assigned to
   them, like members; an admin may assign roles to themself, explicitly and

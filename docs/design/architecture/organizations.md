@@ -461,8 +461,11 @@ HTTP endpoints, on the organization API when `APIConfig.AppRoles` is set
 | `PUT /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role`; body `{"role": "..."}`; assigns or changes |
 | `DELETE /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role` |
 
-Not yet built: invites carrying roles and the relationship-sync calls (`AddAppRole`/`RemoveAppRole`); see
-[Planned changes](#planned-changes).
+With `approle.WithAuthzSyncer`, assign, change and remove also write to the
+authorization graph through the optional `authz.AppRoleSyncer` (see
+[Keeping providers in step with identity](authorization.md#keeping-providers-in-step-with-identity)).
+
+Not yet built: invites carrying roles; see [Planned changes](#planned-changes).
 
 ## How relying parties get memberships today
 
