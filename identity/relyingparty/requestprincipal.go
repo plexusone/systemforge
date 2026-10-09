@@ -26,7 +26,7 @@ func NewRequestAuthenticator(cfg BearerConfig) *RequestAuthenticator {
 	if cfg.Principals == nil {
 		panic("relyingparty: BearerConfig.Principals is required")
 	}
-	cfg.Memberships = defaultMembershipSource(cfg.Memberships, cfg.Principals)
+	cfg.Memberships = defaultMembershipSource(cfg.Memberships)
 	return &RequestAuthenticator{cfg: cfg}
 }
 

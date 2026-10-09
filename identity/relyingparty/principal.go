@@ -64,9 +64,15 @@ type Membership struct {
 	OrganizationID   string
 	OrganizationName string
 	OrganizationSlug string
-	// Role is guest, member, admin, owner or platform_admin.
+	// OrganizationType is personal, team or enterprise, when known.
+	OrganizationType string
+	// Role is the organization role: owner, admin, member or collaborator.
 	Role     string
 	JoinedAt time.Time
+	// Applications maps an application identifier to the principal's role
+	// there. An application absent from the map is one the principal may
+	// not open. Sources that do not know application roles leave it nil.
+	Applications map[string]string
 }
 
 // PrincipalStore is the persistence port the relying-party layer needs. An
@@ -101,8 +107,7 @@ type PrincipalStore interface {
 }
 
 // Organization memberships are not part of PrincipalStore: they come from
-// a MembershipSource (see memberships.go). A store that also implements
-// MembershipLister is used as the default source.
+// a MembershipSource (see memberships.go).
 
 // ResolvePrincipal finds or creates the app-local principal for a verified
 // SystemAuth identity, using the same account-linking rules as SystemAuth:

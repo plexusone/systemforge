@@ -42,8 +42,7 @@ type BFFConfig struct {
 	Principals PrincipalStore
 
 	// Memberships supplies organization memberships (with the session's
-	// SystemAuth claims). Default: Principals' own table when it implements
-	// MembershipLister, else none.
+	// SystemAuth claims). Default: ClaimsMemberships.
 	Memberships MembershipSource
 
 	// Sessions stores browser sessions. Default: in-memory (single
@@ -109,7 +108,7 @@ func NewBFF(cfg BFFConfig) (*BFF, error) {
 	if cfg.Sessions == nil {
 		cfg.Sessions = NewMemorySessionStore()
 	}
-	cfg.Memberships = defaultMembershipSource(cfg.Memberships, cfg.Principals)
+	cfg.Memberships = defaultMembershipSource(cfg.Memberships)
 	if cfg.LoginStates == nil {
 		cfg.LoginStates = NewMemoryLoginStateStore()
 	}
@@ -200,8 +199,11 @@ type UserMembership struct {
 	OrganizationID   string    `json:"organization_id"`
 	OrganizationName string    `json:"organization_name"`
 	OrganizationSlug string    `json:"organization_slug"`
+	OrganizationType string    `json:"organization_type,omitempty"`
 	Role             string    `json:"role"`
 	JoinedAt         time.Time `json:"joined_at"`
+	// Applications maps application identifiers to the user's role there.
+	Applications map[string]string `json:"applications,omitempty"`
 }
 
 // AuthError is the frontend's error shape.
@@ -268,7 +270,10 @@ func (b *BFF) CurrentSession(r *http.Request) (*Session, *Principal, []Membershi
 	if !p.Active {
 		return nil, nil, nil, ErrSessionNotFound
 	}
-	memberships, err := b.cfg.Memberships.Memberships(ctx, MembershipQuery{Principal: p, Subject: sess.Subject, Claims: sess.Claims})
+	memberships, err := b.cfg.Memberships.Memberships(ctx, MembershipQuery{
+		Principal: p, Subject: sess.Subject, Claims: sess.Claims,
+		AccessToken: func(context.Context) (string, error) { return b.AccessToken(r) },
+	})
 	if err != nil {
 		return nil, nil, nil, err
 	}

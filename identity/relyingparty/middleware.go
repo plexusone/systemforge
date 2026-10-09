@@ -91,8 +91,9 @@ type BearerConfig struct {
 	// principals (required).
 	Principals PrincipalStore
 
-	// Memberships supplies organization memberships. Default: Principals'
-	// own table when it implements MembershipLister, else none.
+	// Memberships supplies organization memberships. Default:
+	// ClaimsMemberships, which reads a JWT access token's claims and finds
+	// none for an API key.
 	Memberships MembershipSource
 
 	// Sessions, when set, also accepts a BFF cookie session for requests
@@ -127,7 +128,7 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	cfg.Memberships = defaultMembershipSource(cfg.Memberships, cfg.Principals)
+	cfg.Memberships = defaultMembershipSource(cfg.Memberships)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			p, err := cfg.authenticate(r)
@@ -238,7 +239,10 @@ func (cfg BearerConfig) authenticateJWT(ctx context.Context, token string) (*Aut
 	if !p.Active {
 		return nil, errUnauthenticated("invalid_token", "principal is inactive")
 	}
-	memberships, err := cfg.Memberships.Memberships(ctx, MembershipQuery{Principal: p, Subject: claims.Subject, Claims: claims.Raw})
+	memberships, err := cfg.Memberships.Memberships(ctx, MembershipQuery{
+		Principal: p, Subject: claims.Subject, Claims: claims.Raw,
+		AccessToken: func(context.Context) (string, error) { return token, nil },
+	})
 	if err != nil {
 		return nil, err
 	}

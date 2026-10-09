@@ -68,7 +68,7 @@ func TestBearerMiddlewareJWT(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	cfg := BearerConfig{Tokens: client, Principals: store}
+	cfg := BearerConfig{Tokens: client, Principals: store, Memberships: LocalMemberships(store)}
 
 	w, got := runBearer(t, cfg, withBearer(fake.accessJWT(fake.subject, testClientID, []string{"openid", "things:read"}, time.Minute)))
 	if w.Code != http.StatusOK || got.ID != p.ID || got.Method != AuthMethodAccessToken || got.Subject != fake.subject ||
@@ -161,7 +161,7 @@ func TestBearerMiddlewareAPIKey(t *testing.T) {
 		"sf_live_scoped": {ID: keyID, OwnerID: uuid.MustParse(p.ID), OrganizationID: &orgA, Scopes: []string{"things:write"}},
 		"sf_live_orphan": {ID: uuid.New(), OwnerID: uuid.New()},
 	}
-	cfg := BearerConfig{APIKeys: keys, Principals: store}
+	cfg := BearerConfig{APIKeys: keys, Principals: store, Memberships: LocalMemberships(store)}
 
 	for name, decorate := range map[string]func(*http.Request){
 		"bearer":    withBearer("sf_live_scoped"),

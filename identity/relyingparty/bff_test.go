@@ -22,7 +22,7 @@ func newHarness(t *testing.T) *bffHarness {
 	t.Helper()
 	fake := newFakeSystemAuth(t)
 	store := NewMemoryPrincipalStore()
-	b, err := NewBFF(BFFConfig{Client: fake.client(t), Principals: store})
+	b, err := NewBFF(BFFConfig{Client: fake.client(t), Principals: store, Memberships: LocalMemberships(store)})
 	if err != nil {
 		t.Fatalf("NewBFF: %v", err)
 	}
