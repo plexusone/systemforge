@@ -17,6 +17,7 @@ import (
 	"github.com/ory/fosite"
 	"golang.org/x/oauth2"
 
+	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/oauthclient"
 	"github.com/plexusone/systemforge/session/ratelimit"
@@ -46,12 +47,28 @@ type socialOptions struct {
 	consents   ConsentStore
 	connectors []*oauthclient.Connector
 
+	syncer   authz.RelationshipSyncer
+	syncMode authz.SyncMode
+
 	credentials    credential.Service
 	loginTokenRate ratelimit.Storage
 	loginTokenIP   ratelimit.Limit
 	loginTokenCli  ratelimit.Limit
 
 	loginTokenClientIP func(r *http.Request) string
+}
+
+// WithSocialAuthzSyncer sets the authorization syncer that registers principals and
+// personal organizations created by social login, so they exist in
+// relationship-based authorization (rebac) mode. It applies to the default
+// Ent-backed directory; a directory supplied with WithPrincipalDirectory is
+// responsible for its own registration. mode selects strict (a failed
+// registration fails the login, rows stay committed) or eventual (logged).
+func WithSocialAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) Option {
+	return func(s *Server) {
+		s.socialOpts.syncer = syncer
+		s.socialOpts.syncMode = mode
+	}
 }
 
 // WithPrincipalDirectory sets the principal store used by social login.
@@ -206,7 +223,14 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 	sl.setupLoginTokens(s)
 	if sl.directory == nil {
 		if es, ok := s.storage.(*EntStorage); ok {
-			sl.directory = NewEntPrincipalDirectory(es.db)
+			var dirOpts []EntPrincipalDirectoryOption
+			if s.socialOpts.syncer != nil {
+				dirOpts = append(dirOpts,
+					WithDirectoryAuthzSyncer(s.socialOpts.syncer),
+					WithDirectorySyncMode(s.socialOpts.syncMode),
+					WithDirectoryLogger(s.logger))
+			}
+			sl.directory = NewEntPrincipalDirectory(es.db, dirOpts...)
 		} else {
 			s.logger.Warn("social login using in-memory principal directory; principals will not persist")
 			sl.directory = NewMemoryPrincipalDirectory()

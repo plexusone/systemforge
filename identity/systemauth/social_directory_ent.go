@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/authz/noop"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
@@ -19,12 +22,60 @@ import (
 // EntPrincipalDirectory implements PrincipalDirectory on the Ent identity
 // schema: Principal (type=human) + Human extension + ExternalIdentity link.
 type EntPrincipalDirectory struct {
-	db *ent.Client
+	db       *ent.Client
+	syncer   authz.RelationshipSyncer
+	syncMode authz.SyncMode
+	logger   *slog.Logger
 }
 
-// NewEntPrincipalDirectory creates an Ent-backed PrincipalDirectory.
-func NewEntPrincipalDirectory(db *ent.Client) *EntPrincipalDirectory {
-	return &EntPrincipalDirectory{db: db}
+// EntPrincipalDirectoryOption configures an EntPrincipalDirectory.
+type EntPrincipalDirectoryOption func(*EntPrincipalDirectory)
+
+// WithDirectoryAuthzSyncer sets the authorization syncer that registers the
+// principals and personal organizations the directory creates, so they exist
+// in relationship-based authorization. Registration runs after the creating
+// transaction commits.
+func WithDirectoryAuthzSyncer(syncer authz.RelationshipSyncer) EntPrincipalDirectoryOption {
+	return func(d *EntPrincipalDirectory) { d.syncer = syncer }
+}
+
+// WithDirectorySyncMode sets the sync mode: in strict mode a failed
+// registration is returned (the rows stay committed), in eventual mode
+// (the default) it is logged.
+func WithDirectorySyncMode(mode authz.SyncMode) EntPrincipalDirectoryOption {
+	return func(d *EntPrincipalDirectory) { d.syncMode = mode }
+}
+
+// WithDirectoryLogger sets the logger used for tolerated sync failures.
+func WithDirectoryLogger(logger *slog.Logger) EntPrincipalDirectoryOption {
+	return func(d *EntPrincipalDirectory) { d.logger = logger }
+}
+
+// NewEntPrincipalDirectory creates an Ent-backed PrincipalDirectory. Without
+// a syncer option, nothing is registered with an authorization backend.
+func NewEntPrincipalDirectory(db *ent.Client, opts ...EntPrincipalDirectoryOption) *EntPrincipalDirectory {
+	d := &EntPrincipalDirectory{
+		db:       db,
+		syncer:   noop.NewSyncer(),
+		syncMode: authz.SyncModeEventual,
+		logger:   slog.Default(),
+	}
+	for _, opt := range opts {
+		opt(d)
+	}
+	return d
+}
+
+// syncOrg registers a personal organization and its owner with the
+// authorization syncer. It must be called after the transaction committed.
+func (d *EntPrincipalDirectory) syncOrg(ctx context.Context, org *signup.PersonalOrg) error {
+	if err := d.syncer.RegisterOrganization(ctx, org.Organization.ID, *org.Organization.OwnerPrincipalID); err != nil {
+		if d.syncMode == authz.SyncModeStrict {
+			return fmt.Errorf("failed to sync organization to authz: %w", err)
+		}
+		d.logger.Warn("failed to sync organization to authz", "org_id", org.Organization.ID, "error", err)
+	}
+	return nil
 }
 
 var (
@@ -105,7 +156,7 @@ func (d *EntPrincipalDirectory) createOnce(ctx context.Context, login ExternalLo
 		return nil, fmt.Errorf("starting transaction: %w", err)
 	}
 
-	p, err := d.createInTx(ctx, tx, login)
+	p, org, err := d.createInTx(ctx, tx, login)
 	if err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return nil, errors.Join(err, fmt.Errorf("rolling back: %w", rbErr))
@@ -117,10 +168,22 @@ func (d *EntPrincipalDirectory) createOnce(ctx context.Context, login ExternalLo
 	if err := tx.Commit(); err != nil {
 		return nil, d.classifyCreateError(ctx, login, fmt.Errorf("committing: %w", err))
 	}
+
+	// Register with the authorization backend only after the rows are
+	// durable, so a rolled-back signup never leaves graph entries behind.
+	if syncErr := d.syncer.RegisterPrincipal(ctx, p.ID); syncErr != nil {
+		if d.syncMode == authz.SyncModeStrict {
+			return nil, fmt.Errorf("failed to sync principal to authz: %w", syncErr)
+		}
+		d.logger.Warn("failed to sync principal to authz", "principal_id", p.ID, "error", syncErr)
+	}
+	if err := d.syncOrg(ctx, org); err != nil {
+		return nil, err
+	}
 	return p, nil
 }
 
-func (d *EntPrincipalDirectory) createInTx(ctx context.Context, tx *ent.Tx, login ExternalLogin) (*HumanPrincipal, error) {
+func (d *EntPrincipalDirectory) createInTx(ctx context.Context, tx *ent.Tx, login ExternalLogin) (*HumanPrincipal, *signup.PersonalOrg, error) {
 	now := time.Now()
 	hp := &HumanPrincipal{
 		Email:         login.Email,
@@ -130,7 +193,7 @@ func (d *EntPrincipalDirectory) createInTx(ctx context.Context, tx *ent.Tx, logi
 		Active:        true,
 	}
 	if err := createHumanRows(ctx, tx, hp, &now, &now); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if _, err := tx.ExternalIdentity.Create().
@@ -141,13 +204,14 @@ func (d *EntPrincipalDirectory) createInTx(ctx context.Context, tx *ent.Tx, logi
 		SetEmailVerified(login.EmailVerified).
 		SetLastLoginAt(now).
 		Save(ctx); err != nil {
-		return nil, fmt.Errorf("creating external identity: %w", err)
+		return nil, nil, fmt.Errorf("creating external identity: %w", err)
 	}
 
-	if _, err := signup.CreatePersonalOrgInTx(ctx, tx, personalOrgParams(hp.ID, login)); err != nil {
-		return nil, err
+	org, err := signup.CreatePersonalOrgInTx(ctx, tx, personalOrgParams(hp.ID, login))
+	if err != nil {
+		return nil, nil, err
 	}
-	return hp, nil
+	return hp, org, nil
 }
 
 // personalOrgParams builds the personal organization for a login: named for
@@ -190,7 +254,8 @@ func (d *EntPrincipalDirectory) ensureOnce(ctx context.Context, p *HumanPrincipa
 	if err != nil {
 		return fmt.Errorf("starting transaction: %w", err)
 	}
-	if _, _, err := signup.EnsurePersonalOrgInTx(ctx, tx, personalOrgParams(p.ID, login)); err != nil {
+	org, created, err := signup.EnsurePersonalOrgInTx(ctx, tx, personalOrgParams(p.ID, login))
+	if err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return errors.Join(err, fmt.Errorf("rolling back: %w", rbErr))
 		}
@@ -198,6 +263,9 @@ func (d *EntPrincipalDirectory) ensureOnce(ctx context.Context, p *HumanPrincipa
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("committing: %w", err)
+	}
+	if created {
+		return d.syncOrg(ctx, org)
 	}
 	return nil
 }
