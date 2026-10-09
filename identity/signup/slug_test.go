@@ -2,6 +2,7 @@ package signup
 
 import (
 	"context"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -118,5 +119,47 @@ func TestEnsurePersonalOrgInTxIsIdempotent(t *testing.T) {
 	}
 	if n := f.db.Organization.Query().CountX(ctx); n != 1 {
 		t.Errorf("organizations = %d, want 1", n)
+	}
+}
+
+func TestSlugForManaged(t *testing.T) {
+	if got := SlugForManaged("Kim's Kid"); got != "kims-kid" {
+		t.Errorf("entered = %q", got)
+	}
+	re := regexp.MustCompile(`^[a-z]+-[a-z]+-[0-9]{2}$`)
+	for range 50 {
+		got := SlugForManaged("")
+		if !re.MatchString(got) || !organization.IsValidSlug(got) {
+			t.Fatalf("generated slug %q has the wrong shape", got)
+		}
+	}
+}
+
+func TestCreatePersonalOrgInTxSkipsReservedSlugs(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(t)
+	create := func(email, slug string, reserved ...string) string {
+		p, err := f.db.Principal.Create().SetType("human").SetIdentifier(email).SetDisplayName(email).Save(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx, err := f.db.Tx(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		po, err := CreatePersonalOrgInTx(ctx, tx, PersonalOrgParams{OwnerID: p.ID, Name: "N", Slug: slug, ReservedSlugs: reserved})
+		if err != nil {
+			t.Fatalf("CreatePersonalOrgInTx: %v", err)
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatal(err)
+		}
+		return po.Organization.Slug
+	}
+	if got := create("a@example.com", "admin"); got != "admin-1" {
+		t.Errorf("built-in reserved: %q, want admin-1", got)
+	}
+	if got := create("b@example.com", "notes", "Notes", "notes-1"); got != "notes-2" {
+		t.Errorf("configured reserved: %q, want notes-2", got)
 	}
 }

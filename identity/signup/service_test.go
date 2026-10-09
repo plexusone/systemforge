@@ -135,11 +135,11 @@ func TestSignupWithInvite(t *testing.T) {
 	if _, err := f.svc.SignupWithInvite(ctx, AcceptInviteOnSignupInput{SignupInput: input("other@example.com", "other"), InviteToken: token}); !errors.Is(err, ErrInviteEmailMismatch) {
 		t.Errorf("signup under another email = %v, want ErrInviteEmailMismatch", err)
 	}
-	if _, err := f.svc.SignupWithInvite(ctx, AcceptInviteOnSignupInput{SignupInput: input("new@example.com", "new"), InviteToken: "bogus"}); err == nil {
+	if _, err := f.svc.SignupWithInvite(ctx, AcceptInviteOnSignupInput{SignupInput: input("new@example.com", "newbie"), InviteToken: "bogus"}); err == nil {
 		t.Error("signup with a bogus invite token succeeded")
 	}
 
-	joined, err := f.svc.SignupWithInvite(ctx, AcceptInviteOnSignupInput{SignupInput: input("new@example.com", "new"), InviteToken: token})
+	joined, err := f.svc.SignupWithInvite(ctx, AcceptInviteOnSignupInput{SignupInput: input("new@example.com", "newbie"), InviteToken: token})
 	if err != nil {
 		t.Fatalf("SignupWithInvite: %v", err)
 	}
