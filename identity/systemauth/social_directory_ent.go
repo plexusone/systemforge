@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/signup"
 )
 
 // EntPrincipalDirectory implements PrincipalDirectory on the Ent identity
@@ -25,7 +27,10 @@ func NewEntPrincipalDirectory(db *ent.Client) *EntPrincipalDirectory {
 	return &EntPrincipalDirectory{db: db}
 }
 
-var _ PrincipalDirectory = (*EntPrincipalDirectory)(nil)
+var (
+	_ PrincipalDirectory = (*EntPrincipalDirectory)(nil)
+	_ PersonalOrgEnsurer = (*EntPrincipalDirectory)(nil)
+)
 
 // FindByExternalIdentity implements PrincipalDirectory.
 func (d *EntPrincipalDirectory) FindByExternalIdentity(ctx context.Context, provider, subject string) (*HumanPrincipal, error) {
@@ -66,8 +71,35 @@ func (d *EntPrincipalDirectory) FindByVerifiedEmail(ctx context.Context, email s
 	return toHumanPrincipal(p), nil
 }
 
-// CreateFromExternal implements PrincipalDirectory.
+// createAttempts bounds retries of a first login that loses a race for the
+// personal organization's slug to another transaction.
+const createAttempts = 3
+
+// errCreateRace marks a create that failed on a constraint other than the
+// external identity or the email, i.e. a lost race for a slug; retrying the
+// whole transaction picks the next free slug.
+var errCreateRace = errors.New("systemauth: lost a race creating the principal")
+
+// CreateFromExternal implements PrincipalDirectory. The principal, its
+// human row, the external identity, the personal organization and the owner
+// membership are written in one transaction: a failure at any step leaves
+// nothing behind.
 func (d *EntPrincipalDirectory) CreateFromExternal(ctx context.Context, login ExternalLogin) (*HumanPrincipal, error) {
+	var lastErr error
+	for attempt := 0; attempt < createAttempts; attempt++ {
+		p, err := d.createOnce(ctx, login)
+		if err == nil {
+			return p, nil
+		}
+		if !errors.Is(err, errCreateRace) {
+			return nil, err
+		}
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+func (d *EntPrincipalDirectory) createOnce(ctx context.Context, login ExternalLogin) (*HumanPrincipal, error) {
 	tx, err := d.db.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -112,7 +144,62 @@ func (d *EntPrincipalDirectory) createInTx(ctx context.Context, tx *ent.Tx, logi
 		return nil, fmt.Errorf("creating external identity: %w", err)
 	}
 
+	if _, err := signup.CreatePersonalOrgInTx(ctx, tx, personalOrgParams(hp.ID, login)); err != nil {
+		return nil, err
+	}
 	return hp, nil
+}
+
+// personalOrgParams builds the personal organization for a login: named for
+// the person (display name, else provider handle, else email local part),
+// slugged by signup.SlugForLogin.
+func personalOrgParams(ownerID uuid.UUID, login ExternalLogin) signup.PersonalOrgParams {
+	name := login.Name
+	if name == "" {
+		name = login.Username
+	}
+	if name == "" {
+		name, _, _ = strings.Cut(login.Email, "@")
+	}
+	if name == "" {
+		name = displayNameFor(login)
+	}
+	return signup.PersonalOrgParams{
+		OwnerID: ownerID,
+		Name:    name,
+		Slug:    signup.SlugForLogin(login.Provider, login.Username, login.Email),
+		LogoURL: login.AvatarURL,
+	}
+}
+
+// EnsurePersonalOrg implements PersonalOrgEnsurer. It runs in its own
+// transaction and is a no-op for a principal that already has a personal
+// organization.
+func (d *EntPrincipalDirectory) EnsurePersonalOrg(ctx context.Context, p *HumanPrincipal, login ExternalLogin) error {
+	for attempt := 0; attempt < createAttempts; attempt++ {
+		err := d.ensureOnce(ctx, p, login)
+		if err == nil || !ent.IsConstraintError(err) {
+			return err
+		}
+	}
+	return fmt.Errorf("creating personal organization: slug contention after %d attempts", createAttempts)
+}
+
+func (d *EntPrincipalDirectory) ensureOnce(ctx context.Context, p *HumanPrincipal, login ExternalLogin) error {
+	tx, err := d.db.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("starting transaction: %w", err)
+	}
+	if _, _, err := signup.EnsurePersonalOrgInTx(ctx, tx, personalOrgParams(p.ID, login)); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return errors.Join(err, fmt.Errorf("rolling back: %w", rbErr))
+		}
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("committing: %w", err)
+	}
+	return nil
 }
 
 // classifyCreateError maps unique-constraint failures to the sentinel the
@@ -133,7 +220,14 @@ func (d *EntPrincipalDirectory) classifyCreateError(ctx context.Context, login E
 	if linked {
 		return ErrExternalIdentityExists
 	}
-	return fmt.Errorf("%w: %w", ErrEmailConflict, err)
+	taken, qerr := d.db.Human.Query().Where(human.EmailEqualFold(login.Email)).Exist(ctx)
+	if qerr != nil {
+		return errors.Join(err, qerr)
+	}
+	if taken {
+		return fmt.Errorf("%w: %w", ErrEmailConflict, err)
+	}
+	return fmt.Errorf("%w: %w", errCreateRace, err)
 }
 
 // LinkExternalIdentity implements PrincipalDirectory.

@@ -400,6 +400,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		Email:         user.Email,
 		EmailVerified: user.EmailVerified,
 		Name:          user.Name,
+		Username:      user.Username,
 		AvatarURL:     user.AvatarURL,
 	}, sl.now())
 	if err != nil {

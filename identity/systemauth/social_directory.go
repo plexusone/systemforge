@@ -28,6 +28,9 @@ type ExternalLogin struct {
 	EmailVerified bool
 	// Name is the display name.
 	Name string
+	// Username is the provider's handle for the person (the GitHub login),
+	// when it has one. It seeds the personal organization's slug.
+	Username string
 	// AvatarURL is the profile picture URL.
 	AvatarURL string
 }
@@ -44,7 +47,10 @@ type PrincipalDirectory interface {
 	FindByVerifiedEmail(ctx context.Context, email string) (*HumanPrincipal, error)
 
 	// CreateFromExternal creates a human principal from login, with the
-	// email marked verified, and links the external identity. It returns
+	// email marked verified, and links the external identity. An
+	// implementation backed by an organization store also creates the
+	// person's personal organization in the same transaction (ADR-006
+	// decision 1), so a first login yields both or nothing. It returns
 	// ErrEmailConflict if the email is already taken, and
 	// ErrExternalIdentityExists if the identity was linked concurrently.
 	CreateFromExternal(ctx context.Context, login ExternalLogin) (*HumanPrincipal, error)
@@ -122,12 +128,28 @@ func ResolveExternalLogin(ctx context.Context, dir PrincipalDirectory, login Ext
 	return nil, ErrExternalIdentityExists
 }
 
+// PersonalOrgEnsurer is implemented by directories that keep personal
+// organizations. ResolveExternalLogin calls it on every successful login.
+type PersonalOrgEnsurer interface {
+	// EnsurePersonalOrg creates the principal's personal organization when
+	// it has none and does nothing otherwise.
+	EnsurePersonalOrg(ctx context.Context, p *HumanPrincipal, login ExternalLogin) error
+}
+
 func finishLogin(ctx context.Context, dir PrincipalDirectory, p *HumanPrincipal, login ExternalLogin, now time.Time) (*HumanPrincipal, error) {
 	if !p.Active {
 		return nil, ErrPrincipalInactive
 	}
 	if err := dir.RecordLogin(ctx, p.ID, login, now); err != nil {
 		return nil, fmt.Errorf("recording login: %w", err)
+	}
+	// Backfill: a principal created before signup-on-first-login (or linked
+	// by verified email) may have no personal organization. Giving it one on
+	// its next login is idempotent, so repeat logins create nothing.
+	if e, ok := dir.(PersonalOrgEnsurer); ok {
+		if err := e.EnsurePersonalOrg(ctx, p, login); err != nil {
+			return nil, fmt.Errorf("ensuring personal organization: %w", err)
+		}
 	}
 	return p, nil
 }
