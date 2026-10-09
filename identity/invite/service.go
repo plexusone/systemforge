@@ -7,9 +7,12 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/authz/noop"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
@@ -54,16 +57,45 @@ type Service interface {
 
 // DefaultService implements the Service interface.
 type DefaultService struct {
-	client  *ent.Client
-	baseURL string // Base URL for invite links
+	client   *ent.Client
+	baseURL  string // Base URL for invite links
+	syncer   authz.RelationshipSyncer
+	syncMode authz.SyncMode
+	logger   *slog.Logger
+}
+
+// ServiceOption configures a DefaultService.
+type ServiceOption func(*DefaultService)
+
+// WithAuthzSyncer sets the authorization syncer used to register accepted
+// memberships in the authorization graph.
+func WithAuthzSyncer(syncer authz.RelationshipSyncer) ServiceOption {
+	return func(s *DefaultService) { s.syncer = syncer }
+}
+
+// WithSyncMode sets the sync mode (strict or eventual).
+func WithSyncMode(mode authz.SyncMode) ServiceOption {
+	return func(s *DefaultService) { s.syncMode = mode }
+}
+
+// WithLogger sets the logger for the service.
+func WithLogger(logger *slog.Logger) ServiceOption {
+	return func(s *DefaultService) { s.logger = logger }
 }
 
 // NewService creates a new invite service.
-func NewService(client *ent.Client, baseURL string) Service {
-	return &DefaultService{
-		client:  client,
-		baseURL: baseURL,
+func NewService(client *ent.Client, baseURL string, opts ...ServiceOption) Service {
+	s := &DefaultService{
+		client:   client,
+		baseURL:  baseURL,
+		syncer:   noop.NewSyncer(),
+		syncMode: authz.SyncModeEventual,
+		logger:   slog.Default(),
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // Create creates a new invite.
@@ -231,6 +263,18 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 
 	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit: %w", err)
+	}
+
+	// Sync the new membership to the authorization backend after commit.
+	if syncErr := s.syncer.AddOrgMembership(ctx, input.PrincipalID, inv.OrganizationID, inv.Role); syncErr != nil {
+		if s.syncMode == authz.SyncModeStrict {
+			return nil, fmt.Errorf("failed to sync membership to authz: %w", syncErr)
+		}
+		s.logger.Warn("failed to sync membership to authz",
+			"principal_id", input.PrincipalID,
+			"org_id", inv.OrganizationID,
+			"role", inv.Role,
+			"error", syncErr)
 	}
 
 	return entInviteToModel(inv), nil
