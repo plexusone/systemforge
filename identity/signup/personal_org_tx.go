@@ -3,6 +3,7 @@ package signup
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -21,6 +22,9 @@ type PersonalOrgParams struct {
 	// Slug is the preferred slug. It is made valid and, when taken, given a
 	// numeric suffix. Use SlugForLogin to derive it.
 	Slug string
+	// ReservedSlugs are deployment-configured slugs to avoid in addition to
+	// organization.ReservedSlugs; a reserved slug gets a numeric suffix.
+	ReservedSlugs []string
 	// LogoURL is the optional logo, usually the owner's avatar.
 	LogoURL string
 }
@@ -37,7 +41,7 @@ type PersonalOrg struct {
 // notify an authorization syncer: services that need that call
 // organization.Service.CreatePersonalOrg instead.
 //
-// The organization has type personal and the schema's default plan. Its
+// The organization has type personal. Its
 // slug is params.Slug if free, else params.Slug-1 ... -100, else the slug
 // with an eight-character random suffix. Two transactions may still pick
 // the same free slug; the loser fails with a constraint error and the
@@ -49,7 +53,7 @@ func CreatePersonalOrgInTx(ctx context.Context, tx *ent.Tx, params PersonalOrgPa
 	if params.Name == "" {
 		return nil, fmt.Errorf("signup: personal organization requires a name")
 	}
-	slug, err := uniqueSlugInTx(ctx, tx, normalizeSlug(params.Slug))
+	slug, err := uniqueSlugInTx(ctx, tx, normalizeSlug(params.Slug), params.ReservedSlugs...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,14 +112,22 @@ func EnsurePersonalOrgInTx(ctx context.Context, tx *ent.Tx, params PersonalOrgPa
 }
 
 // uniqueSlugInTx returns base, or base with a numeric suffix, that no
-// organization uses. base must be valid.
-func uniqueSlugInTx(ctx context.Context, tx *ent.Tx, base string) (string, error) {
+// organization uses and that is not reserved (the built-in list plus extra).
+// base must be valid.
+func uniqueSlugInTx(ctx context.Context, tx *ent.Tx, base string, extra ...string) (string, error) {
+	reserved := make(map[string]struct{}, len(extra))
+	for _, r := range extra {
+		reserved[strings.ToLower(r)] = struct{}{}
+	}
 	candidates := []string{base}
 	for i := 1; i <= 100; i++ {
 		candidates = append(candidates, withSuffix(base, fmt.Sprintf("-%d", i)))
 	}
 	candidates = append(candidates, withSuffix(base, "-"+uuid.NewString()[:8]))
 	for _, c := range candidates {
+		if _, ok := reserved[c]; ok || organization.IsReservedSlug(c) {
+			continue
+		}
 		taken, err := tx.Organization.Query().Where(entorg.SlugEQ(c)).Exist(ctx)
 		if err != nil {
 			return "", fmt.Errorf("checking slug: %w", err)

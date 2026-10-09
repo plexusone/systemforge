@@ -2,6 +2,7 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -61,7 +62,8 @@ type Service interface {
 	// member of. Pass IncludeInactive to also list deactivated memberships.
 	ListMemberships(ctx context.Context, principalID uuid.UUID, opts ...ListOption) ([]*Membership, error)
 
-	// SlugAvailable checks if a slug is available.
+	// SlugAvailable checks if a slug is available. A reserved slug is
+	// refused with ErrSlugReserved (and false).
 	SlugAvailable(ctx context.Context, slug string) (bool, error)
 
 	// GenerateSlug generates a unique slug from a name.
@@ -77,6 +79,7 @@ type DefaultService struct {
 	syncer   authz.RelationshipSyncer
 	syncMode authz.SyncMode
 	logger   *slog.Logger
+	reserved map[string]struct{} // deployment-configured reserved slugs
 }
 
 // ServiceOption configures a DefaultService.
@@ -565,6 +568,9 @@ func (s *DefaultService) ListMemberships(ctx context.Context, principalID uuid.U
 
 // SlugAvailable checks if a slug is available.
 func (s *DefaultService) SlugAvailable(ctx context.Context, slug string) (bool, error) {
+	if s.isReserved(slug) {
+		return false, fmt.Errorf("%w: %s", ErrSlugReserved, slug)
+	}
 	exists, err := s.client.Organization.Query().
 		Where(organization.Slug(slug)).
 		Exist(ctx)
@@ -672,7 +678,7 @@ func (s *DefaultService) GenerateSlug(ctx context.Context, name string) (string,
 
 	// Try base slug first
 	available, err := s.SlugAvailable(ctx, slug)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrSlugReserved) {
 		return "", err
 	}
 	if available {
@@ -683,7 +689,7 @@ func (s *DefaultService) GenerateSlug(ctx context.Context, name string) (string,
 	for i := 1; i <= 100; i++ {
 		slug = fmt.Sprintf("%s-%d", base, i)
 		available, err := s.SlugAvailable(ctx, slug)
-		if err != nil {
+		if err != nil && !errors.Is(err, ErrSlugReserved) {
 			return "", err
 		}
 		if available {

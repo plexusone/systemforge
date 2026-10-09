@@ -2,6 +2,7 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -359,7 +360,7 @@ func (a *API) checkSlug(ctx context.Context, input *CheckSlugInput) (*CheckSlugO
 		return nil, err
 	}
 	available, err := a.service.SlugAvailable(ctx, input.Slug)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrSlugReserved) {
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
 

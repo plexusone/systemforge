@@ -1,6 +1,9 @@
 package signup
 
 import (
+	"crypto/rand"
+	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/plexusone/systemforge/identity/organization"
@@ -61,4 +64,36 @@ func normalizeSlug(name string) string {
 		}
 	}
 	return slug
+}
+
+// managedAdjectives and managedNouns are the word lists SlugForManaged draws
+// from. They are fixed so the shape of a generated handle is stable.
+var (
+	managedAdjectives = []string{"quiet", "brave", "swift", "gentle", "bright", "calm", "clever", "lucky", "merry", "sunny", "witty", "bold"}
+	managedNouns      = []string{"otter", "falcon", "maple", "comet", "willow", "harbor", "meadow", "lantern", "pebble", "river", "cedar", "robin"}
+)
+
+// SlugForManaged returns the base personal-organization slug for a managed
+// principal (ADR-006 decision 2, ADR-009): the value its manager entered
+// when there is one, else two words and a number such as "quiet-otter-42".
+// A generated slug is random and never derived from an email address or any
+// other fact about the person. Like SlugForLogin it is only a base; the
+// caller resolves collisions and reserved names.
+func SlugForManaged(entered string) string {
+	if strings.TrimSpace(entered) != "" {
+		return normalizeSlug(entered)
+	}
+	return fmt.Sprintf("%s-%s-%d",
+		managedAdjectives[randIntn(len(managedAdjectives))],
+		managedNouns[randIntn(len(managedNouns))],
+		10+randIntn(90))
+}
+
+// randIntn returns a uniformly random int in [0, n).
+func randIntn(n int) int {
+	v, err := rand.Int(rand.Reader, big.NewInt(int64(n)))
+	if err != nil {
+		panic(fmt.Sprintf("signup: reading random bytes: %v", err)) // crypto/rand failure is unrecoverable
+	}
+	return int(v.Int64())
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
+	orgsvc "github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/identity/scim"
 	"github.com/plexusone/systemforge/identity/scim/filter"
 )
@@ -500,6 +501,10 @@ func (s *EntStore) CreateGroup(ctx context.Context, scimGroup *scim.Group) (*sci
 	slug := generateSlug(scimGroup.DisplayName)
 	if scimGroup.ExternalID != "" {
 		slug = scimGroup.ExternalID
+	}
+
+	if orgsvc.IsReservedSlug(slug) {
+		return nil, scim.ErrInvalidValue("group slug is reserved")
 	}
 
 	// Check for existing organization with same slug
