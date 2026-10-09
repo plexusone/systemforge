@@ -270,7 +270,9 @@ principal.
   untouched, so repeat logins create nothing. `MemoryPrincipalDirectory` keeps
   no organizations.
 - `signup.SignupOrGetExisting` is unchanged and still resolves by email only;
-  social login does not use it.
+  social login does not use it. Note on ADR-006 decision 1: that ADR says
+  social login calls `SignupOrGetExisting`; in practice it uses the
+  in-transaction helpers described above, which is the behavior of record.
 
 ## No plan on the organization
 

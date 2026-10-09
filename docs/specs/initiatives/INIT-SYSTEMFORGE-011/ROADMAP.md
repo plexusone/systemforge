@@ -30,13 +30,16 @@ INIT-SYSTEMFORGE-008.
   - Depends on: `RMI-SYSTEMFORGE-126`
   - Depends on: `RMI-SYSTEMFORGE-127`
 - [ ] `RMI-SYSTEMFORGE-129` Remove the organization `plan` column: drop from schema, `organization` service inputs and list filter, API responses, SCIM default and `Plan*` constants; organization API gains an `entitlements` summary derived from marketplace subscriptions and licenses
+- [ ] `RMI-SYSTEMFORGE-147` Authz registration for social-login-created principals and organizations: register them with the authorization relationship syncer so they exist in rebac mode
+- [ ] `RMI-SYSTEMFORGE-148` Make `signup.Signup` a single transaction: syncer-aware in-transaction variants on the principal and organization services; the architecture page notes that social login uses the in-transaction helpers rather than `SignupOrGetExisting`
+- [ ] `RMI-SYSTEMFORGE-149` Remove the unused stale Argon2id secret checkers (`EntStorage.ValidateSecretArgon2id`, `identity/oauth` `Client.ValidateSecret`)
 
 ## Phase 2 — Memberships and entitlements as claims (ADR-007)
 
 **Theme:** Relying parties learn organizations, roles and entitlements from SystemAuth, not from their own tables.
 
 - [ ] `RMI-SYSTEMFORGE-130` Application roles: `sf_app_roles` (principal, organization, application, role) validated against the application's `AppVocabulary` ladder; owners hold admin implicitly, admins and members only what is assigned, none by default; assign/change/remove API; cascade on membership removal
-- [ ] `RMI-SYSTEMFORGE-131` Entitlements from the marketplace: per-organization entitled applications derived from active subscriptions and licenses per listing, mapped to registered application identifiers; deployment-configured default entitlements; startup warning when a deployment has none; seat accounting for seat-licensed applications
+- [ ] `RMI-SYSTEMFORGE-131` Entitlements from the marketplace: per-organization entitled applications derived from active subscriptions and licenses per listing, mapped to registered application identifiers; deployment-configured default entitlements; startup warning when a deployment has none; seat accounting for seat-licensed applications; needs a marketplace model change (listings have no tiers, `plan_tier` sits on one subscription per organization, `FeatureAuthorizer` has no implementation)
   - Depends on: `RMI-SYSTEMFORGE-129`
 - [ ] `RMI-SYSTEMFORGE-132` The `orgs` claim: ID token and userinfo carry id, slug, name, type, role, apps (app → role); JWT access tokens carry the compact `{id, role, apps}`; at most 50 organizations with `orgs_truncated`; `GET /userinfo/memberships` paginated
   - Depends on: `RMI-SYSTEMFORGE-130`
@@ -45,6 +48,8 @@ INIT-SYSTEMFORGE-008.
   - Depends on: `RMI-SYSTEMFORGE-132`
 - [ ] `RMI-SYSTEMFORGE-134` Invites and member management carry application roles: invite create/accept with per-application role selection (none preselected); role changes per application without touching membership; SystemAuth pages and API
   - Depends on: `RMI-SYSTEMFORGE-130`
+- [ ] `RMI-SYSTEMFORGE-150` Authz graph sync for application roles: `AddAppRole`/`RemoveAppRole` on the relationship syncer, as an optional interface so existing implementers keep working
+- [ ] `RMI-SYSTEMFORGE-151` Fix: `invite.Accept` never syncs the new membership to the authorization graph
 
 ## Phase 3 — Real-time invalidation of access (ADR-010)
 
@@ -62,7 +67,7 @@ INIT-SYSTEMFORGE-008.
 
 **Theme:** Access to one resource without organization membership, on both authorization modes.
 
-- [ ] `RMI-SYSTEMFORGE-139` Base schema and conventions: `collaborator` relation and `list` permission on `organization` (no view/edit/manage); membership role `collaborator`; personal organizations accept collaborator memberships; the viewer/contributor/maintainer resource-role ladder reserved in `docs/authz-conventions.md`; schema parity test updated
+- [ ] `RMI-SYSTEMFORGE-139` Base schema and conventions: `collaborator` relation and `list` permission on `organization` (no view/edit/manage); membership role `collaborator`; personal organizations accept collaborator memberships; the viewer/contributor/maintainer resource-role ladder reserved in `docs/authz-conventions.md`; schema parity test updated; the marketplace `.zed` schema redefines `organization`, folded into `marketplace_org`; whether to drop `editor`/`viewer` as organization roles is an open question for the owner
 - [ ] `RMI-SYSTEMFORGE-140` Resource grants in `rbac`: `sf_resource_grants`; `GrantResourceRole`, `RevokeResourceRole`, `ListResourceGrants`, `ListResources`; first grant creates the collaborator membership, last revoke removes it
   - Depends on: `RMI-SYSTEMFORGE-139`
 - [ ] `RMI-SYSTEMFORGE-141` Resource grants in `rebac/spicedb`: grants as relationships, `ListResources` via LookupResources, vocabulary-fragment validation for collaborator-able resources; `providertest` parity suite for grants and lookups across both modes
@@ -82,6 +87,7 @@ INIT-SYSTEMFORGE-008.
 - [ ] `RMI-SYSTEMFORGE-145` Release and manager invitations: `Release` removes the last manager of a principal with a verified email; a manager-invitation kind accepted by the signed-in principal for self-managed humans entering management; slugs for managed principals never derived from an email
   - Depends on: `RMI-SYSTEMFORGE-144`
   - Depends on: `RMI-SYSTEMFORGE-134`
+- [ ] `RMI-SYSTEMFORGE-152` Managed-principal `Create`, `AddManager`, `RemoveManager` and `RedeemClaim` go through the authorizer, gain an HTTP surface, and a `Delete` is added
 
 ## Phase 6 — Documentation and release
 
