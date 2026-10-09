@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/url"
 	"os"
 	"path"
@@ -19,6 +20,7 @@ import (
 	"github.com/plexusone/systemforge/identity/invite"
 	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/internal/pgtest"
+	"github.com/plexusone/systemforge/internal/syncrec"
 )
 
 func tokenOf(t *testing.T, r *invite.InviteResult) string {
@@ -134,5 +136,51 @@ func TestHashInviteTokensMigration(t *testing.T) {
 	}
 	if inv, err := svc.GetByToken(ctx, tokenOf(t, current)); err != nil || inv.ID != current.Invite.ID {
 		t.Errorf("current link after migration = %+v, %v", inv, err)
+	}
+}
+
+// TestAcceptSyncsMembershipToAuthz verifies that accepting an invite
+// registers the new membership with the authorization syncer, and that a
+// sync failure does not undo the acceptance in the default eventual mode.
+func TestAcceptSyncsMembershipToAuthz(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	rec := syncrec.New()
+	svc := invite.NewService(db, "https://app.example.com", invite.WithAuthzSyncer(rec))
+	orgID, inviter := seedInviteOrg(t, db)
+	member, err := db.Principal.Create().SetType(entprincipal.TypeHuman).SetIdentifier(uuid.NewString() + "@example.com").SetDisplayName("Member").Save(ctx)
+	if err != nil {
+		t.Fatalf("principal: %v", err)
+	}
+
+	res, err := svc.Create(ctx, invite.CreateInviteInput{OrganizationID: orgID, InviterPrincipalID: inviter, Email: "kim@example.com", Role: "member"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Accept(ctx, invite.AcceptInviteInput{Token: tokenOf(t, res), PrincipalID: member.ID}); err != nil {
+		t.Fatalf("Accept: %v", err)
+	}
+	want := "AddOrgMembership:" + member.ID.String() + ":" + orgID.String() + ":member"
+	if calls := rec.Calls(); len(calls) != 1 || calls[0] != want {
+		t.Errorf("syncer calls = %v, want [%s]", calls, want)
+	}
+
+	// Eventual mode (the default) tolerates a sync failure.
+	rec.Err = errors.New("authz down")
+	other, err := db.Principal.Create().SetType(entprincipal.TypeHuman).SetIdentifier(uuid.NewString() + "@example.com").SetDisplayName("Other").Save(ctx)
+	if err != nil {
+		t.Fatalf("principal: %v", err)
+	}
+	res, err = svc.Create(ctx, invite.CreateInviteInput{OrganizationID: orgID, InviterPrincipalID: inviter, Email: "lee@example.com", Role: "member"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Accept(ctx, invite.AcceptInviteInput{Token: tokenOf(t, res), PrincipalID: other.ID}); err != nil {
+		t.Errorf("Accept in eventual mode: %v", err)
 	}
 }
