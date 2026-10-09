@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -161,5 +162,39 @@ func TestCreatePersonalOrgInTxSkipsReservedSlugs(t *testing.T) {
 	}
 	if got := create("b@example.com", "notes", "Notes", "notes-1"); got != "notes-2" {
 		t.Errorf("configured reserved: %q, want notes-2", got)
+	}
+}
+
+func TestCreatePersonalOrgInTxSkipsCoolingOffSlugs(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(t)
+	owner, err := f.db.Principal.Create().SetType("human").SetIdentifier("o@example.com").SetDisplayName("o").Save(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.db.SlugReservation.Create().
+		SetSlug("kim").
+		SetReleasedByPrincipalID(owner.ID).
+		SetExpiresAt(time.Now().Add(time.Hour)).
+		Save(ctx); err != nil {
+		t.Fatal(err)
+	}
+	other, err := f.db.Principal.Create().SetType("human").SetIdentifier("p@example.com").SetDisplayName("p").Save(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := f.db.Tx(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	po, err := CreatePersonalOrgInTx(ctx, tx, PersonalOrgParams{OwnerID: other.ID, Name: "N", Slug: "kim"})
+	if err != nil {
+		t.Fatalf("CreatePersonalOrgInTx: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if po.Organization.Slug != "kim-1" {
+		t.Errorf("slug = %q, want kim-1 (kim is in its cooling-off period)", po.Organization.Slug)
 	}
 }
