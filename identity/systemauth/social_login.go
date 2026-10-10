@@ -623,9 +623,9 @@ func (p *socialSessionProvider) GetUserClaims(ctx context.Context, userID string
 		return p.inner.GetUserClaims(ctx, userID, scopes)
 	}
 	claims := map[string]interface{}{"sub": userID}
-	// A human without an email is a managed principal (ADR-005); relying
-	// parties need to know regardless of the scopes granted.
-	if lp.Email == "" {
+	// A human with an active manager is a managed principal (ADR-009);
+	// relying parties need to know regardless of the scopes granted.
+	if lp.Managed {
 		claims[ManagedClaim] = true
 	}
 	for _, scope := range scopes {

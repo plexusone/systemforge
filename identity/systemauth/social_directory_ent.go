@@ -91,6 +91,7 @@ func (d *EntPrincipalDirectory) FindByExternalIdentity(ctx context.Context, prov
 			externalidentity.SubjectEQ(subject),
 		)).
 		WithHuman().
+		WithManagers(activeManagers).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -112,6 +113,7 @@ func (d *EntPrincipalDirectory) FindByVerifiedEmail(ctx context.Context, email s
 			),
 		).
 		WithHuman().
+		WithManagers(activeManagers).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -344,6 +346,7 @@ func (d *EntPrincipalDirectory) GetPrincipal(ctx context.Context, id uuid.UUID) 
 	p, err := d.db.Principal.Query().
 		Where(principal.IDEQ(id)).
 		WithHuman().
+		WithManagers(activeManagers).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {

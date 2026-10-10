@@ -12,12 +12,14 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 )
 
 // toHumanPrincipal converts a Principal loaded with its Human edge.
 func toHumanPrincipal(p *ent.Principal) *HumanPrincipal {
 	hp := &HumanPrincipal{
+		Managed:     len(p.Edges.Managers) > 0,
 		ID:          p.ID,
 		DisplayName: p.DisplayName,
 		Active:      p.Active,
@@ -154,7 +156,14 @@ func (s *EntStorage) CreateHuman(ctx context.Context, h *HumanPrincipal) error {
 func (s *EntStorage) queryHuman() *ent.PrincipalQuery {
 	return s.db.Principal.Query().
 		Where(principal.TypeEQ(principal.TypeHuman)).
-		WithHuman()
+		WithHuman().
+		WithManagers(activeManagers)
+}
+
+// activeManagers restricts a loaded managers edge to active relationships,
+// which is what makes a principal managed (ADR-009).
+func activeManagers(q *ent.ManagerRelationshipQuery) {
+	q.Where(managerrelationship.Active(true))
 }
 
 func (s *EntStorage) onlyHuman(ctx context.Context, q *ent.PrincipalQuery) (*HumanPrincipal, error) {
@@ -222,7 +231,7 @@ func (s *EntStorage) UpdateHuman(ctx context.Context, h *HumanPrincipal) error {
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		p, err := tx.Principal.Query().
 			Where(principal.IDEQ(h.ID), principal.TypeEQ(principal.TypeHuman)).
-			WithHuman().
+			WithHuman().WithManagers(activeManagers).
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {

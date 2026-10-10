@@ -18,8 +18,8 @@ import (
 const LoginTokenPath = "/login-token"
 
 // ManagedClaim is the ID token and userinfo claim, true for managed
-// principals: humans without an email whose managers control their
-// accounts. It is absent for everyone else.
+// principals: humans with at least one active manager (ADR-009), with or
+// without an email. It is absent for everyone else.
 const ManagedClaim = "managed"
 
 // loginTokenProvider is recorded as the provider of sessions established
@@ -239,9 +239,10 @@ func (sl *socialLogin) verifyLoginToken(ctx context.Context, x *loginTokenExchan
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("loading principal: %w", err)
 	}
-	// Only managed principals sign in with login tokens; a principal that
-	// has since attached an email uses its own credentials.
-	if !p.Active || p.Email != "" {
+	// Only managed principals sign in with login tokens. Having an email
+	// does not matter, but management that has ended (Release) does: the
+	// principal then uses its own credentials.
+	if !p.Active || !p.Managed {
 		return uuid.Nil, errLoginTokenRejected
 	}
 	return p.ID, nil

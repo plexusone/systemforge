@@ -19,9 +19,12 @@ type HumanPrincipal struct {
 	AvatarURL     string
 	Locale        string
 	Active        bool
-	Metadata      map[string]any
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	// Managed is true while the principal has an active manager
+	// relationship (ADR-009), whether or not it has an email.
+	Managed   bool
+	Metadata  map[string]any
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // FederationProvider is the ExternalIdentity provider name recorded for

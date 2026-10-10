@@ -14,6 +14,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/session/ratelimit"
 )
@@ -43,19 +44,46 @@ func newLoginTokenFixture(t *testing.T, opts ...Option) *loginTokenFixture {
 	return &loginTokenFixture{db: db, srv: srv, creds: credential.NewService(db)}
 }
 
-// managedHuman creates a human principal without an email.
+// managedHuman creates a human principal without an email and gives it a
+// manager.
 func (f *loginTokenFixture) managedHuman(t *testing.T) uuid.UUID {
+	t.Helper()
+	id := f.humanWithEmail(t, "")
+	f.manage(t, id)
+	return id
+}
+
+// humanWithEmail creates a human principal; an empty email creates one
+// without.
+func (f *loginTokenFixture) humanWithEmail(t *testing.T, email string) uuid.UUID {
 	t.Helper()
 	ctx := context.Background()
 	id := uuid.New()
+	identifier := "human:" + id.String()
+	if email != "" {
+		identifier = email
+	}
 	if _, err := f.db.Principal.Create().SetID(id).SetType(entprincipal.TypeHuman).
-		SetIdentifier("human:" + id.String()).SetDisplayName("Learner").Save(ctx); err != nil {
+		SetIdentifier(identifier).SetDisplayName("Learner").Save(ctx); err != nil {
 		t.Fatalf("principal: %v", err)
 	}
-	if _, err := f.db.Human.Create().SetPrincipalID(id).Save(ctx); err != nil {
+	hc := f.db.Human.Create().SetPrincipalID(id)
+	if email != "" {
+		hc.SetEmail(email)
+	}
+	if _, err := hc.Save(ctx); err != nil {
 		t.Fatalf("human: %v", err)
 	}
 	return id
+}
+
+// manage gives the principal an active guardian.
+func (f *loginTokenFixture) manage(t *testing.T, id uuid.UUID) {
+	t.Helper()
+	guardian := f.humanWithEmail(t, uuid.NewString()+"@example.com")
+	if err := f.db.ManagerRelationship.Create().SetManagedPrincipalID(id).SetManagerPrincipalID(guardian).SetRole("guardian").Exec(context.Background()); err != nil {
+		t.Fatalf("relationship: %v", err)
+	}
 }
 
 func (f *loginTokenFixture) issue(t *testing.T, principalID uuid.UUID, singleUse bool) string {
@@ -273,6 +301,44 @@ func TestManagedClaims(t *testing.T) {
 	}
 	if _, ok := got[ManagedClaim]; ok {
 		t.Errorf("adult claims include managed: %v", got)
+	}
+}
+
+// TestManagementIsARelationship verifies that management comes from an
+// active manager relationship and not from the email (ADR-009): a managed
+// principal with an email carries the managed claim and the email claims,
+// signs in with a login token, and stops doing both when management ends.
+func TestManagementIsARelationship(t *testing.T) {
+	ctx := context.Background()
+	f := newLoginTokenFixture(t)
+	student := f.humanWithEmail(t, "student@example.com")
+	f.manage(t, student)
+	scopes := []string{"openid", "profile", "email"}
+
+	got := f.srv.sessionProvider.GetUserClaims(ctx, student.String(), scopes)
+	if got[ManagedClaim] != true || got["email"] != "student@example.com" {
+		t.Errorf("managed claims with an email = %v", got)
+	}
+	plain := f.issue(t, student, false)
+	if w := postLoginToken(f.srv, url.Values{"token": {plain}, "client_id": {"learning"}}); w.Code != http.StatusSeeOther {
+		t.Errorf("managed principal with an email: login token status %d", w.Code)
+	}
+
+	// An email-less human with no manager is not managed.
+	orphan := f.humanWithEmail(t, "")
+	if got := f.srv.sessionProvider.GetUserClaims(ctx, orphan.String(), scopes); got[ManagedClaim] != nil {
+		t.Errorf("human without a manager has the managed claim: %v", got)
+	}
+
+	// Ending management removes the claim and the token's power.
+	if _, err := f.db.ManagerRelationship.Update().Where(managerrelationship.ManagedPrincipalID(student)).SetActive(false).Save(ctx); err != nil {
+		t.Fatalf("deactivate: %v", err)
+	}
+	if got := f.srv.sessionProvider.GetUserClaims(ctx, student.String(), scopes); got[ManagedClaim] != nil {
+		t.Errorf("released principal has the managed claim: %v", got)
+	}
+	if w := postLoginToken(f.srv, url.Values{"token": {plain}, "client_id": {"learning"}}); w.Code != http.StatusUnauthorized {
+		t.Errorf("released principal: login token status %d, want 401", w.Code)
 	}
 }
 
