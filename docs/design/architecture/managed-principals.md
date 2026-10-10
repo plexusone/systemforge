@@ -6,7 +6,8 @@ This page describes managed principals as implemented in
 service enforces, the built-in manager roles, the `login_token` credential
 and its exchange, the claims a managed session carries, what managers can
 see and revoke, and how an email is attached. The last section lists what
-ADR-009 changes that is not yet built. The user-facing guide is
+ADR-009 changes that is not yet built (releasing a principal, manager
+invitations, and slugs). The user-facing guide is
 [Managed Principals](../../identity/managed-principals.md).
 
 **Decisions:**
@@ -18,15 +19,17 @@ ADR-005).
 
 ## Definition as implemented
 
-A managed principal is a `Principal(type=human)` whose `sf_humans.email` is
-`NULL`. That is the test everywhere in the code today:
+A managed principal is a `Principal(type=human)` with at least one active
+row in `sf_manager_relationships` as the managed side (ADR-009). The email
+plays no part: a managed principal may have none, an unverified one, or a
+verified one. That is the test everywhere in the code:
 
 | Check | Where |
 |---|---|
-| `Service.IsManaged(principalID)` | `human.EmailIsNil()` |
-| Manager authority checks (`authorizeCredentials`, `authorizeAccount`, `checkIssuer`) | Require the target to be a human with `email IS NULL` (and active) before consulting the authorizer |
-| Login-token exchange (`verifyLoginToken`) | Rejects a principal whose `Email != ""` |
-| `managed` claim | Emitted when the session's principal has no email |
+| `Service.IsManaged(principalID)` | An active manager relationship exists (`hasActiveManager`) |
+| Manager authority checks (`authorizeCredentials`, `authorizeAccount`, `checkIssuer`) | Require the target to be an active human with an active manager relationship before consulting the authorizer; otherwise `ErrNotManaged` |
+| Login-token exchange (`verifyLoginToken`) | Requires the principal to be active and `HumanPrincipal.Managed`; an email does not matter |
+| `managed` claim | Emitted when the session's principal has an active manager relationship (`HumanPrincipal.Managed`, loaded with the principal) |
 
 A managed principal is created with `principal.ManagedHumanCapabilities()`
 (`CanAccessUI` only: `CanManageProfile` and `CanDelegate` are false) and
@@ -87,10 +90,11 @@ The manager-issued sign-in secret is a credential like any other:
 
 | # | Invariant | Enforcement |
 |---|---|---|
-| 1 | At least one active manager at all times | `Create` refuses `len(Managers) == 0` (`ErrNoManagers`); `RemoveManager` refuses to deactivate the last active relationship of a principal without an email (`ErrLastManager`). `lockHuman` takes a row lock on the principal for the transaction so concurrent removals serialize |
+| 1 | At least one active manager unless the principal has a verified email | `Create` refuses `len(Managers) == 0` (`ErrNoManagers`); `RemoveManager` refuses to deactivate the last active relationship of a principal whose email is missing or unverified (`ErrLastManager`). `lockHuman` takes a row lock on the principal for the transaction so concurrent removals serialize |
 | 2 | A manager is an active human with an email | `validateManager` requires `type = human`, `active`, `email IS NOT NULL`; a managed principal, having no email, cannot manage. A principal cannot manage itself |
 | 3 | Both the deployment and the client allow managed principals | `Create` and `IssueLoginToken` call `Gate.ManagedPrincipalsAllowed(clientID)` and return `ErrNotAllowed` otherwise |
-| 4 | A managed principal may later attach an email and become an ordinary human | `AttachVerifiedEmail` (below); afterwards `RemoveManager` may remove the last manager, and login tokens no longer sign it in |
+| 4 | Email is independent of management, but decides whether management may end | A managed principal may have an email from `Create` or `AttachVerifiedEmail` and keeps its managers and managed capabilities. Once the email is verified (`VerifyEmail`, or attached verified), `RemoveManager` may remove the last manager; with no active manager the principal is no longer managed and login tokens stop signing it in |
+| 5 | A principal with no manager cannot be given one by a manager | `AddManager` and `RedeemClaim` return `ErrNotManaged` for a principal with no active manager: entering management takes the principal's own consent (planned below) |
 
 Roles are checked against the registered set (`ErrInvalidRole`); the
 built-ins are `managedprincipal.RoleGuardian` and `RoleEducator`.
@@ -134,10 +138,11 @@ provider; an application maps them in its own vocabulary.
 
 | Method | Behavior |
 |---|---|
-| `Create(in CreateInput)` | Requires `DisplayName`, at least one `ManagerInput{PrincipalID, Role}`, a client that allows managed principals. In one transaction validates each manager, creates `sf_principals` (identifier `human:<id>`, managed capabilities), `sf_humans` without an email, and the relationships. Emits `managed_principal.created`, then syncs `RegisterPrincipal` and `AddPrincipalManager` for each manager |
+| `Create(in CreateInput)` | Requires `DisplayName`, at least one `ManagerInput{PrincipalID, Role}`, a client that allows managed principals. In one transaction validates each manager, creates `sf_principals` (identifier `human:<id>`, managed capabilities), `sf_humans`, and the relationships. `CreateInput.Email` is optional: when set it is stored unverified, becomes the identifier, and `ErrEmailInUse` refuses a taken address. Emits `managed_principal.created`, then syncs `RegisterPrincipal` and `AddPrincipalManager` for each manager |
 | `AddManager(managedID, m, actorID)` | Idempotent: no-op when active, reactivates when inactive; emits `managed_principal.manager_added`; syncs |
-| `RemoveManager(managedID, m, actorID)` | Deactivates; refuses the last manager of a principal without an email; emits `managed_principal.manager_removed`; syncs |
+| `RemoveManager(managedID, m, actorID)` | Deactivates; refuses the last manager of a principal without a verified email (`ErrLastManager`); emits `managed_principal.manager_removed`; syncs |
 | `ListManagers(managedID)` | Active relationships, oldest first |
+| `VerifyEmail(managedID, verifiedAt)` | Records that the principal controls the email it was created with; called by the verification flow, not by a manager. `managed_principal.email_verified` |
 | `IssueClaim(actorID, managedID)` | Returns the plain code once; `managed_principal.claim_issued` |
 | `RedeemClaim(code, claimantID)` | Normalizes the code (case, spaces, hyphens), compares the hash in constant time, spends the claim with a conditional update so two redemptions cannot both succeed, validates the claimant as a manager, and makes them `guardian`; `managed_principal.claim_redeemed`; syncs |
 
@@ -185,7 +190,8 @@ fields `token`, `client_id` and optional `return_to`, and:
    storage and proxy-aware addressing;
 2. resolves `return_to` against the redirect allowlist;
 3. requires the client to allow managed principals, verifies the token, and
-   requires the principal to be active and to have no email;
+   requires the principal to be active and managed (an email does not
+   matter);
 4. establishes a browser login session (`sf_login_sessions` with
    `provider = login_token`) and redirects.
 
@@ -194,13 +200,15 @@ says which condition failed.
 
 ## Claims
 
-`GetUserClaims` adds `"managed": true` for a session whose principal has no
-email, whatever scopes were granted, and omits `email` and
-`email_verified`. The claim appears in the ID token and at
+`GetUserClaims` adds `"managed": true` for a session whose principal has an
+active manager, whatever scopes were granted; `email` and `email_verified`
+appear only when the principal has an email and the `email` scope is
+granted. The claim appears in the ID token and at
 `/oauth/userinfo` (`systemauth.ManagedClaim`). The relying-party layer reads
 it into `relyingparty.VerifiedIdentity.Managed` from either source
 (`IdentityFromClaims`), and `ResolvePrincipal` creates a managed principal
-locally without an email and never links one by email; the BFF reports
+locally, with the email when the claims carry one but never linking by
+email; the BFF reports
 `managed` on the current user.
 
 ## Sessions and manager visibility
@@ -235,12 +243,14 @@ POST   /{principalID}/revoke-all
 
 `Service.AttachVerifiedEmail(actorID, managedID, email, verifiedAt)`
 requires `manage_account`, and in one transaction sets `sf_humans.email` and
-`email_verified_at`, makes the email the `sf_principals.identifier`, and
-restores `principal.DefaultCapabilitiesForType(human)`. A taken address is
-`ErrEmailInUse`. Manager relationships are kept, and from then on all of
-them may be removed; login tokens stop signing the principal in. Proving
-control of the address is the caller's job (ADR-003 verification is not
-wired into this step).
+`email_verified_at` on a managed principal that has no email, and makes the
+email the `sf_principals.identifier`. Management is unchanged (ADR-009):
+the relationships and the managed capabilities stay, and the verified email
+is what allows the last manager to be removed. A taken address is
+`ErrEmailInUse`; a principal that already has an email is `ErrHasEmail`.
+Proving control of the address is the caller's job (ADR-003 verification is
+not wired into this step). A principal created with an unverified email is
+verified with `Service.VerifyEmail` instead.
 
 ## Other surfaces today
 
@@ -258,26 +268,13 @@ decides it.
 
 ### Management is a relationship (ADR-009)
 
-- A managed principal is a human with at least one active manager
-  relationship. `IsManaged`, the authority checks that today require
-  `email IS NULL`, and the `managed` session claim answer from
-  `sf_manager_relationships` instead of the email column. `ErrNotManaged`
-  comes to mean "has no active manager".
-- Email is independent of management: `Create` accepts an optional email,
-  verified like any other (ADR-003) before it counts; attaching an email
-  changes nothing about management; a managed principal with an email
-  keeps its managers.
-- Email still decides whether management may end: the last manager can be
-  removed only when the principal has a verified email. `ErrLastManager`
-  keeps its meaning and its wording changes to say so.
 - A `release` operation removes the last manager of a principal with a
   verified email and clears the managed state in one transaction, as an
   explicit, audited event. Whether the person being released must confirm
   is the application's choice; the platform records the release.
 - A managed principal may hold its own credentials when a manager allows
-  it: a password, a social login linked to its email, or login tokens. The
-  login-token exchange stops rejecting principals that have an email, and
-  manager authority (consent, deletion, credential and session revocation)
+  it: a password, a social login linked to its email, or login tokens.
+  Manager authority (consent, deletion, credential and session revocation)
   is unchanged by the principal signing in itself.
 - Consent invitations: a new invite kind carrying a manager role, which a
   signed-in self-managed principal accepts to enter management. Creation

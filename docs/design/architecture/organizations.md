@@ -515,8 +515,8 @@ signed in through social login or a login token they are:
 | Claim | When |
 |---|---|
 | `sub` | Always; the SystemAuth principal ID, which relying parties store as `sf_principal_id` |
-| `managed: true` | The human has no email (a managed principal); emitted whatever the scopes |
-| `email`, `email_verified` | `email` scope, and only when the principal has an email |
+| `managed: true` | The human has an active manager relationship (a managed principal), with or without an email; emitted whatever the scopes |
+| `email`, `email_verified` | `email` scope, and only when the principal has an email (a managed principal may have one) |
 | `name`, `picture` | `profile` scope |
 | `orgs`, `orgs_truncated` | When the server has an `OrgsSource` (`systemauth.WithOrgsSource(systemauth.NewEntOrgsSource(client, approleService))`); emitted whatever the scopes, like `managed` |
 

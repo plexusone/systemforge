@@ -1,7 +1,8 @@
 # Managed Principals
 
-A **managed principal** is a human without an email whose account is created
-and controlled by **managers** who do have one. SystemForge provides the
+A **managed principal** is a human with at least one active **manager**: an
+account created and controlled by people who have a verified email. The
+managed principal may have an email of its own or none. SystemForge provides the
 primitive; applications supply the meaning. A learning application maps a
 child to a managed principal and a teacher or parent to a manager, but the
 same shape fits a caregiver and a dependent, a coach and an athlete, or an
@@ -14,25 +15,33 @@ deployment and an OAuth client both opt in, and the design of record is
 ## The Primitive
 
 A managed principal is an ordinary `Principal(type=human)` with a `Human`
-row whose `email` is null:
+row and an active manager relationship. Management comes from the
+relationship, not from the email
+([ADR-009](../design/adrs/ADR-009-management-is-a-relationship.md)):
 
 | Field | Value |
 |-------|-------|
-| `identifier` | `human:<principal-id>`, a lookup key and never an address |
+| `identifier` | `human:<principal-id>` without an email, a lookup key and never an address; the email when there is one |
 | `capabilities` | `can_access_ui` only: no profile management, no delegation |
-| `sf_humans.email` | null |
+| `sf_humans.email` | Optional; unverified when given at creation |
 
 SystemForge enforces these invariants, transactionally:
 
-1. A managed principal has **at least one active manager** at all times.
-   Removing the last one is refused with `ErrLastManager`; deactivate or
-   delete the principal instead.
+1. A managed principal has **at least one active manager** unless it has a
+   **verified email**. Removing the last manager of a principal without
+   one is refused with `ErrLastManager`; deactivate or delete the
+   principal instead.
 2. A manager is an **active human with an email** who is not itself
    managed.
 3. Managed principals are created only when the **deployment and the
    requesting client** both allow them.
-4. A managed principal may **later attach a verified email**, after which it
-   is an ordinary human; only then may its last manager be removed.
+4. A managed principal may have an email, from creation
+   (`CreateInput.Email`, unverified until `VerifyEmail`) or attached later
+   (`AttachVerifiedEmail`). It stays managed; the verified email is what
+   allows its last manager to be removed.
+5. A principal with no manager cannot be given one by a manager
+   (`AddManager` and claims return `ErrNotManaged`): entering management
+   takes the principal's own consent.
 
 ## Enabling
 
@@ -163,13 +172,13 @@ single-use token succeeds at most once, even when presented concurrently.
 
 ### Claims
 
-ID tokens and `userinfo` for a managed principal omit `email` and
-`email_verified` and carry `"managed": true`, whatever scopes were granted.
-Relying parties read it into `relyingparty.VerifiedIdentity.Managed`; the
-relying-party layer creates a managed principal locally on its first
-sign-in without an email and never links one by email, so an application's
-`PrincipalStore.CreatePrincipal` must accept an identity without an email
-when `Managed` is set.
+ID tokens and `userinfo` for a managed principal carry `"managed": true`,
+whatever scopes were granted, and omit `email` and `email_verified` when
+the principal has no email. Relying parties read it into
+`relyingparty.VerifiedIdentity.Managed`; the relying-party layer creates a
+managed principal locally on its first sign-in and never links one by
+email, so an application's `PrincipalStore.CreatePrincipal` must accept an
+identity with or without an email when `Managed` is set.
 
 ## Manager Visibility and Revocation
 
