@@ -621,7 +621,18 @@ token with the `access_changes:read` scope; paged by `next_since`) or from the
 database. A cache created with `WithSuspectStart` refuses tokens issued
 before it started listening until the replay or the first poll succeeds.
 
-Not yet built: back-channel delivery (see [Planned changes](#planned-changes)).
+Across separate deployments SystemAuth delivers each change as an OpenID
+Connect Back-Channel Logout token. A client registers `backchannel_logout_uri`
+(column `sf_oauth_apps.backchannel_logout_uri`, migration
+`migrations/0007_oauth_app_backchannel_logout_uri.sql`);
+`systemauth.Server.NewBackchannel()` is an `accesschange.Sink` that queues the
+change after commit, signs one `logout+jwt` per client carrying the
+`urn:systemforge:event:access_change` event (plus the standard logout event for
+deactivation and session revocation), POSTs it, retries with backoff up to one
+access-token lifetime and logs failures against the client ID.
+`relyingparty.BackchannelHandler` verifies it and feeds the cache and the
+session store; the BFF serves it at `<BasePath>/auth/backchannel-logout`. See
+[Back-channel events](../../systemauth/relying-party.md#back-channel-events).
 
 ## Planned changes
 
@@ -672,8 +683,8 @@ decides it.
   clock-skew margin (30 s default, 15 s floor); the cache is shared memory
   in a modular monolith (see [Relying-party revocation
   cache](#relying-party-revocation-cache-relyingpartyrevocationcache)), with
-  polling across replicas and replay after a restart. Still to do:
-  delivering an OIDC back-channel `access_change` event across deployments.
+  polling across replicas, replay after a restart and OIDC back-channel
+  delivery of an `access_change` event across deployments.
 - Built: a membership or role change does not revoke refresh tokens (ADR-007
   decision 9 is amended); the next refresh issues reduced claims. Only
   deactivation and explicit session revocation revoke refresh tokens.

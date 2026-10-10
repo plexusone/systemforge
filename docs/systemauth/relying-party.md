@@ -266,8 +266,42 @@ response is `{"changes": [{"principal_id", "organization_id", "changed_at",
 "reason"}], "next_since": ...}`; `next_since` appears when more follow, and
 the source follows it.
 
-Across separate deployments the cache can also be fed by back-channel events;
-that is not built yet.
+### Back-channel events
+
+A relying party in another process can be told at once instead of polling.
+Register an endpoint as the client's `backchannel_logout_uri` (an `https` URL,
+or `http` for a loopback host; `ClientConfig.BackchannelLogoutURI`, stored on
+`sf_oauth_apps`) and run SystemAuth's sender, passing it to the services that
+record changes:
+
+```go
+bc := auth.NewBackchannel()
+orgs := organization.NewService(db, organization.WithAccessChangeSink(bc))
+go bc.Run(ctx)
+```
+
+For each change SystemAuth POSTs `logout_token=<jwt>` to every registered
+client: an OpenID Connect Back-Channel Logout token (`typ` `logout+jwt`, signed
+with the issuer key) with `sub`, `aud` (the client ID), `jti`, `iat`, `exp`
+and an `events` claim. The `urn:systemforge:event:access_change` event carries
+`organization_id` (absent for every organization), `changed_at` and `reason`;
+for deactivation and session revocation the standard
+`http://schemas.openid.net/event/backchannel-logout` event is added too.
+Delivery is queued, retried with exponential backoff until one maximum
+access-token lifetime after the change, and each failure is logged against the
+client ID; a `4xx` other than 408 and 429 is not retried, and redirects are
+never followed. Every registered client receives every change; the token holds
+only opaque identifiers.
+
+The receiver is `relyingparty.BackchannelHandler(cache, client,
+relyingparty.WithBackchannelSessions(store))`: it verifies the token against
+the issuer's keys (`Client.VerifyLogoutToken`: signature, issuer, audience,
+`typ`, `jti`, expiry, no `nonce`, a known event), records the access change
+into the cache, and on a logout event deletes the sessions of the `sid`, or of
+the `sub` when there is none. A repeated `jti` is refused, and a failure to end
+sessions answers `500` so SystemAuth retries. The BFF already serves it at
+`<BasePath>/auth/backchannel-logout` (`BFF.BackchannelLogoutHandler()` mounts
+it elsewhere), ending its own sessions and feeding `BFFConfig.Revocation`.
 
 ## Sessions and back-channel logout
 
