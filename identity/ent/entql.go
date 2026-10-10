@@ -434,6 +434,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			oauthapp.FieldAccessTokenTTL:           {Type: field.TypeInt, Column: oauthapp.FieldAccessTokenTTL},
 			oauthapp.FieldRefreshTokenTTL:          {Type: field.TypeInt, Column: oauthapp.FieldRefreshTokenTTL},
 			oauthapp.FieldLoginTokenTTL:            {Type: field.TypeInt, Column: oauthapp.FieldLoginTokenTTL},
+			oauthapp.FieldBackchannelLogoutURI:     {Type: field.TypeString, Column: oauthapp.FieldBackchannelLogoutURI},
 			oauthapp.FieldRefreshTokenRotation:     {Type: field.TypeBool, Column: oauthapp.FieldRefreshTokenRotation},
 			oauthapp.FieldManagedPrincipalsEnabled: {Type: field.TypeBool, Column: oauthapp.FieldManagedPrincipalsEnabled},
 			oauthapp.FieldFirstParty:               {Type: field.TypeBool, Column: oauthapp.FieldFirstParty},
@@ -3490,6 +3491,11 @@ func (f *OAuthAppFilter) WhereRefreshTokenTTL(p entql.IntP) {
 // WhereLoginTokenTTL applies the entql int predicate on the login_token_ttl field.
 func (f *OAuthAppFilter) WhereLoginTokenTTL(p entql.IntP) {
 	f.Where(p.Field(oauthapp.FieldLoginTokenTTL))
+}
+
+// WhereBackchannelLogoutURI applies the entql string predicate on the backchannel_logout_uri field.
+func (f *OAuthAppFilter) WhereBackchannelLogoutURI(p entql.StringP) {
+	f.Where(p.Field(oauthapp.FieldBackchannelLogoutURI))
 }
 
 // WhereRefreshTokenRotation applies the entql bool predicate on the refresh_token_rotation field.

@@ -219,6 +219,10 @@
             "type": "boolean",
             "description": "Allow this client to create and sign in managed principals"
           },
+          "backchannel_logout_uri": {
+            "type": "string",
+            "description": "Endpoint for back-channel logout and access-change events"
+          },
           "login_token_ttl": {
             "type": "string",
             "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",

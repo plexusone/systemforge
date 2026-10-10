@@ -147,6 +147,9 @@ func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
 	if client.Description != "" {
 		builder.SetDescription(client.Description)
 	}
+	if client.BackchannelLogoutURI != "" {
+		builder.SetBackchannelLogoutURI(client.BackchannelLogoutURI)
+	}
 
 	// Set token TTLs if custom
 	if client.AccessTokenLifetime != nil {
@@ -241,6 +244,11 @@ func (s *EntStorage) UpdateClient(ctx context.Context, client *Client) error {
 
 	if client.Description != "" {
 		builder.SetDescription(client.Description)
+	}
+	if client.BackchannelLogoutURI != "" {
+		builder.SetBackchannelLogoutURI(client.BackchannelLogoutURI)
+	} else {
+		builder.ClearBackchannelLogoutURI()
 	}
 
 	if client.AccessTokenLifetime != nil {
@@ -862,6 +870,10 @@ func (s *EntStorage) entAppToClient(app *ent.OAuthApp) *Client {
 		// Managed principals are opt-in per client.
 		ManagedPrincipalsEnabled: app.ManagedPrincipalsEnabled,
 		UpdatedAt:                app.UpdatedAt,
+	}
+
+	if app.BackchannelLogoutURI != nil {
+		client.BackchannelLogoutURI = *app.BackchannelLogoutURI
 	}
 
 	// Convert TTLs to durations

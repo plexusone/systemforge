@@ -1,6 +1,7 @@
 package systemauth
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ory/fosite"
@@ -76,6 +77,12 @@ type Client struct {
 	// LoginTokenTTL overrides the deployment's default lifetime of reusable
 	// login tokens for this client's managed principals; nil uses it.
 	LoginTokenTTL *time.Duration `json:"login_token_ttl,omitempty"`
+
+	// BackchannelLogoutURI is the client's endpoint for OIDC Back-Channel
+	// Logout tokens, which also carry access-change events (ADR-010). It
+	// must be an https URL (http is allowed for loopback hosts); empty means
+	// the client receives none.
+	BackchannelLogoutURI string `json:"backchannel_logout_uri,omitempty"`
 
 	// CreatedAt is when the client was created.
 	CreatedAt time.Time `json:"created_at"`
@@ -161,7 +168,11 @@ func NewClientFromConfig(cfg ClientConfig) (*Client, error) {
 		CreatedAt:     time.Now(),
 		// Managed principals are opt-in per client.
 		ManagedPrincipalsEnabled: cfg.ManagedPrincipals,
+		BackchannelLogoutURI:     cfg.BackchannelLogoutURI,
 		UpdatedAt:                time.Now(),
+	}
+	if err := ValidateBackchannelLogoutURI(client.BackchannelLogoutURI); err != nil {
+		return nil, fmt.Errorf("client %q: %w", cfg.ID, err)
 	}
 
 	// Convert Duration pointers to time.Duration pointers

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -363,6 +364,9 @@ func (s *Server) jwtHeaders() *jwt.Headers {
 
 // RegisterClient registers a new OAuth client.
 func (s *Server) RegisterClient(client *Client) error {
+	if err := ValidateBackchannelLogoutURI(client.BackchannelLogoutURI); err != nil {
+		return fmt.Errorf("client %q: %w", client.ID, err)
+	}
 	return s.storage.CreateClient(context.Background(), client)
 }
 

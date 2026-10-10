@@ -44,6 +44,8 @@ const (
 	FieldRefreshTokenTTL = "refresh_token_ttl"
 	// FieldLoginTokenTTL holds the string denoting the login_token_ttl field in the database.
 	FieldLoginTokenTTL = "login_token_ttl"
+	// FieldBackchannelLogoutURI holds the string denoting the backchannel_logout_uri field in the database.
+	FieldBackchannelLogoutURI = "backchannel_logout_uri"
 	// FieldRefreshTokenRotation holds the string denoting the refresh_token_rotation field in the database.
 	FieldRefreshTokenRotation = "refresh_token_rotation"
 	// FieldManagedPrincipalsEnabled holds the string denoting the managed_principals_enabled field in the database.
@@ -137,6 +139,7 @@ var Columns = []string{
 	FieldAccessTokenTTL,
 	FieldRefreshTokenTTL,
 	FieldLoginTokenTTL,
+	FieldBackchannelLogoutURI,
 	FieldRefreshTokenRotation,
 	FieldManagedPrincipalsEnabled,
 	FieldFirstParty,
@@ -284,6 +287,11 @@ func ByRefreshTokenTTL(opts ...sql.OrderTermOption) OrderOption {
 // ByLoginTokenTTL orders the results by the login_token_ttl field.
 func ByLoginTokenTTL(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLoginTokenTTL, opts...).ToFunc()
+}
+
+// ByBackchannelLogoutURI orders the results by the backchannel_logout_uri field.
+func ByBackchannelLogoutURI(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBackchannelLogoutURI, opts...).ToFunc()
 }
 
 // ByRefreshTokenRotation orders the results by the refresh_token_rotation field.

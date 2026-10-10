@@ -170,6 +170,20 @@ func (_c *OAuthAppCreate) SetNillableLoginTokenTTL(v *int) *OAuthAppCreate {
 	return _c
 }
 
+// SetBackchannelLogoutURI sets the "backchannel_logout_uri" field.
+func (_c *OAuthAppCreate) SetBackchannelLogoutURI(v string) *OAuthAppCreate {
+	_c.mutation.SetBackchannelLogoutURI(v)
+	return _c
+}
+
+// SetNillableBackchannelLogoutURI sets the "backchannel_logout_uri" field if the given value is not nil.
+func (_c *OAuthAppCreate) SetNillableBackchannelLogoutURI(v *string) *OAuthAppCreate {
+	if v != nil {
+		_c.SetBackchannelLogoutURI(*v)
+	}
+	return _c
+}
+
 // SetRefreshTokenRotation sets the "refresh_token_rotation" field.
 func (_c *OAuthAppCreate) SetRefreshTokenRotation(v bool) *OAuthAppCreate {
 	_c.mutation.SetRefreshTokenRotation(v)
@@ -634,6 +648,10 @@ func (_c *OAuthAppCreate) createSpec() (*OAuthApp, *sqlgraph.CreateSpec) {
 		_spec.SetField(oauthapp.FieldLoginTokenTTL, field.TypeInt, value)
 		_node.LoginTokenTTL = &value
 	}
+	if value, ok := _c.mutation.BackchannelLogoutURI(); ok {
+		_spec.SetField(oauthapp.FieldBackchannelLogoutURI, field.TypeString, value)
+		_node.BackchannelLogoutURI = &value
+	}
 	if value, ok := _c.mutation.RefreshTokenRotation(); ok {
 		_spec.SetField(oauthapp.FieldRefreshTokenRotation, field.TypeBool, value)
 		_node.RefreshTokenRotation = value
@@ -1015,6 +1033,24 @@ func (u *OAuthAppUpsert) AddLoginTokenTTL(v int) *OAuthAppUpsert {
 // ClearLoginTokenTTL clears the value of the "login_token_ttl" field.
 func (u *OAuthAppUpsert) ClearLoginTokenTTL() *OAuthAppUpsert {
 	u.SetNull(oauthapp.FieldLoginTokenTTL)
+	return u
+}
+
+// SetBackchannelLogoutURI sets the "backchannel_logout_uri" field.
+func (u *OAuthAppUpsert) SetBackchannelLogoutURI(v string) *OAuthAppUpsert {
+	u.Set(oauthapp.FieldBackchannelLogoutURI, v)
+	return u
+}
+
+// UpdateBackchannelLogoutURI sets the "backchannel_logout_uri" field to the value that was provided on create.
+func (u *OAuthAppUpsert) UpdateBackchannelLogoutURI() *OAuthAppUpsert {
+	u.SetExcluded(oauthapp.FieldBackchannelLogoutURI)
+	return u
+}
+
+// ClearBackchannelLogoutURI clears the value of the "backchannel_logout_uri" field.
+func (u *OAuthAppUpsert) ClearBackchannelLogoutURI() *OAuthAppUpsert {
+	u.SetNull(oauthapp.FieldBackchannelLogoutURI)
 	return u
 }
 
@@ -1408,6 +1444,27 @@ func (u *OAuthAppUpsertOne) UpdateLoginTokenTTL() *OAuthAppUpsertOne {
 func (u *OAuthAppUpsertOne) ClearLoginTokenTTL() *OAuthAppUpsertOne {
 	return u.Update(func(s *OAuthAppUpsert) {
 		s.ClearLoginTokenTTL()
+	})
+}
+
+// SetBackchannelLogoutURI sets the "backchannel_logout_uri" field.
+func (u *OAuthAppUpsertOne) SetBackchannelLogoutURI(v string) *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.SetBackchannelLogoutURI(v)
+	})
+}
+
+// UpdateBackchannelLogoutURI sets the "backchannel_logout_uri" field to the value that was provided on create.
+func (u *OAuthAppUpsertOne) UpdateBackchannelLogoutURI() *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.UpdateBackchannelLogoutURI()
+	})
+}
+
+// ClearBackchannelLogoutURI clears the value of the "backchannel_logout_uri" field.
+func (u *OAuthAppUpsertOne) ClearBackchannelLogoutURI() *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.ClearBackchannelLogoutURI()
 	})
 }
 
@@ -1986,6 +2043,27 @@ func (u *OAuthAppUpsertBulk) UpdateLoginTokenTTL() *OAuthAppUpsertBulk {
 func (u *OAuthAppUpsertBulk) ClearLoginTokenTTL() *OAuthAppUpsertBulk {
 	return u.Update(func(s *OAuthAppUpsert) {
 		s.ClearLoginTokenTTL()
+	})
+}
+
+// SetBackchannelLogoutURI sets the "backchannel_logout_uri" field.
+func (u *OAuthAppUpsertBulk) SetBackchannelLogoutURI(v string) *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.SetBackchannelLogoutURI(v)
+	})
+}
+
+// UpdateBackchannelLogoutURI sets the "backchannel_logout_uri" field to the value that was provided on create.
+func (u *OAuthAppUpsertBulk) UpdateBackchannelLogoutURI() *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.UpdateBackchannelLogoutURI()
+	})
+}
+
+// ClearBackchannelLogoutURI clears the value of the "backchannel_logout_uri" field.
+func (u *OAuthAppUpsertBulk) ClearBackchannelLogoutURI() *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.ClearBackchannelLogoutURI()
 	})
 }
 

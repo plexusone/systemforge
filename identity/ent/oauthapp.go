@@ -49,6 +49,8 @@ type OAuthApp struct {
 	RefreshTokenTTL int `json:"refresh_token_ttl,omitempty"`
 	// Default lifetime in seconds of login tokens issued for this client's managed principals; null uses the platform default (ADR-005)
 	LoginTokenTTL *int `json:"login_token_ttl,omitempty"`
+	// Endpoint that receives OIDC Back-Channel Logout tokens, including access_change events (ADR-010); null means none
+	BackchannelLogoutURI *string `json:"backchannel_logout_uri,omitempty"`
 	// Rotate refresh tokens on use
 	RefreshTokenRotation bool `json:"refresh_token_rotation,omitempty"`
 	// Whether this client may create and sign in managed principals; also requires the deployment setting (ADR-005)
@@ -163,7 +165,7 @@ func (*OAuthApp) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case oauthapp.FieldAccessTokenTTL, oauthapp.FieldRefreshTokenTTL, oauthapp.FieldLoginTokenTTL:
 			values[i] = new(sql.NullInt64)
-		case oauthapp.FieldClientID, oauthapp.FieldName, oauthapp.FieldDescription, oauthapp.FieldLogoURL, oauthapp.FieldAppType:
+		case oauthapp.FieldClientID, oauthapp.FieldName, oauthapp.FieldDescription, oauthapp.FieldLogoURL, oauthapp.FieldAppType, oauthapp.FieldBackchannelLogoutURI:
 			values[i] = new(sql.NullString)
 		case oauthapp.FieldRevokedAt, oauthapp.FieldCreatedAt, oauthapp.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -283,6 +285,13 @@ func (_m *OAuthApp) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.LoginTokenTTL = new(int)
 				*_m.LoginTokenTTL = int(value.Int64)
+			}
+		case oauthapp.FieldBackchannelLogoutURI:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field backchannel_logout_uri", values[i])
+			} else if value.Valid {
+				_m.BackchannelLogoutURI = new(string)
+				*_m.BackchannelLogoutURI = value.String
 			}
 		case oauthapp.FieldRefreshTokenRotation:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -451,6 +460,11 @@ func (_m *OAuthApp) String() string {
 	if v := _m.LoginTokenTTL; v != nil {
 		builder.WriteString("login_token_ttl=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.BackchannelLogoutURI; v != nil {
+		builder.WriteString("backchannel_logout_uri=")
+		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
 	builder.WriteString("refresh_token_rotation=")

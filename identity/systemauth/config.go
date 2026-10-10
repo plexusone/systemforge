@@ -271,6 +271,11 @@ type ClientConfig struct {
 	// when the deployment's managed_principals.enabled is also set.
 	ManagedPrincipals bool `json:"managed_principals,omitempty" yaml:"managed_principals,omitempty" jsonschema:"description=Allow this client to create and sign in managed principals"`
 
+	// BackchannelLogoutURI is where SystemAuth sends this client OIDC
+	// Back-Channel Logout tokens, which also carry access-change events
+	// (ADR-010). An https URL; http only for loopback hosts.
+	BackchannelLogoutURI string `json:"backchannel_logout_uri,omitempty" yaml:"backchannel_logout_uri,omitempty" jsonschema:"description=Endpoint for back-channel logout and access-change events"`
+
 	// LoginTokenTTL overrides the deployment's default lifetime of reusable
 	// login tokens issued for this client's managed principals, for example
 	// a school year. It never exceeds managed_principals.login_token_max_ttl.

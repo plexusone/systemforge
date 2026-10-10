@@ -97,6 +97,11 @@ func (OAuthApp) Fields() []ent.Field {
 			Positive().
 			Comment("Default lifetime in seconds of login tokens issued for this client's managed principals; null uses the platform default (ADR-005)"),
 
+		field.String("backchannel_logout_uri").
+			Optional().
+			Nillable().
+			Comment("Endpoint that receives OIDC Back-Channel Logout tokens, including access_change events (ADR-010); null means none"),
+
 		field.Bool("refresh_token_rotation").
 			Default(true).
 			Comment("Rotate refresh tokens on use"),

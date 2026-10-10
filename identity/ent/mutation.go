@@ -15845,6 +15845,7 @@ type OAuthAppMutation struct {
 	addrefresh_token_ttl         *int
 	login_token_ttl              *int
 	addlogin_token_ttl           *int
+	backchannel_logout_uri       *string
 	refresh_token_rotation       *bool
 	managed_principals_enabled   *bool
 	first_party                  *bool
@@ -16657,6 +16658,55 @@ func (m *OAuthAppMutation) ResetLoginTokenTTL() {
 	delete(m.clearedFields, oauthapp.FieldLoginTokenTTL)
 }
 
+// SetBackchannelLogoutURI sets the "backchannel_logout_uri" field.
+func (m *OAuthAppMutation) SetBackchannelLogoutURI(s string) {
+	m.backchannel_logout_uri = &s
+}
+
+// BackchannelLogoutURI returns the value of the "backchannel_logout_uri" field in the mutation.
+func (m *OAuthAppMutation) BackchannelLogoutURI() (r string, exists bool) {
+	v := m.backchannel_logout_uri
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBackchannelLogoutURI returns the old "backchannel_logout_uri" field's value of the OAuthApp entity.
+// If the OAuthApp object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OAuthAppMutation) OldBackchannelLogoutURI(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBackchannelLogoutURI is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBackchannelLogoutURI requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBackchannelLogoutURI: %w", err)
+	}
+	return oldValue.BackchannelLogoutURI, nil
+}
+
+// ClearBackchannelLogoutURI clears the value of the "backchannel_logout_uri" field.
+func (m *OAuthAppMutation) ClearBackchannelLogoutURI() {
+	m.backchannel_logout_uri = nil
+	m.clearedFields[oauthapp.FieldBackchannelLogoutURI] = struct{}{}
+}
+
+// BackchannelLogoutURICleared returns if the "backchannel_logout_uri" field was cleared in this mutation.
+func (m *OAuthAppMutation) BackchannelLogoutURICleared() bool {
+	_, ok := m.clearedFields[oauthapp.FieldBackchannelLogoutURI]
+	return ok
+}
+
+// ResetBackchannelLogoutURI resets all changes to the "backchannel_logout_uri" field.
+func (m *OAuthAppMutation) ResetBackchannelLogoutURI() {
+	m.backchannel_logout_uri = nil
+	delete(m.clearedFields, oauthapp.FieldBackchannelLogoutURI)
+}
+
 // SetRefreshTokenRotation sets the "refresh_token_rotation" field.
 func (m *OAuthAppMutation) SetRefreshTokenRotation(b bool) {
 	m.refresh_token_rotation = &b
@@ -17311,7 +17361,7 @@ func (m *OAuthAppMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuthAppMutation) Fields() []string {
-	fields := make([]string, 0, 23)
+	fields := make([]string, 0, 24)
 	if m.client_id != nil {
 		fields = append(fields, oauthapp.FieldClientID)
 	}
@@ -17353,6 +17403,9 @@ func (m *OAuthAppMutation) Fields() []string {
 	}
 	if m.login_token_ttl != nil {
 		fields = append(fields, oauthapp.FieldLoginTokenTTL)
+	}
+	if m.backchannel_logout_uri != nil {
+		fields = append(fields, oauthapp.FieldBackchannelLogoutURI)
 	}
 	if m.refresh_token_rotation != nil {
 		fields = append(fields, oauthapp.FieldRefreshTokenRotation)
@@ -17417,6 +17470,8 @@ func (m *OAuthAppMutation) Field(name string) (ent.Value, bool) {
 		return m.RefreshTokenTTL()
 	case oauthapp.FieldLoginTokenTTL:
 		return m.LoginTokenTTL()
+	case oauthapp.FieldBackchannelLogoutURI:
+		return m.BackchannelLogoutURI()
 	case oauthapp.FieldRefreshTokenRotation:
 		return m.RefreshTokenRotation()
 	case oauthapp.FieldManagedPrincipalsEnabled:
@@ -17472,6 +17527,8 @@ func (m *OAuthAppMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldRefreshTokenTTL(ctx)
 	case oauthapp.FieldLoginTokenTTL:
 		return m.OldLoginTokenTTL(ctx)
+	case oauthapp.FieldBackchannelLogoutURI:
+		return m.OldBackchannelLogoutURI(ctx)
 	case oauthapp.FieldRefreshTokenRotation:
 		return m.OldRefreshTokenRotation(ctx)
 	case oauthapp.FieldManagedPrincipalsEnabled:
@@ -17596,6 +17653,13 @@ func (m *OAuthAppMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLoginTokenTTL(v)
+		return nil
+	case oauthapp.FieldBackchannelLogoutURI:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBackchannelLogoutURI(v)
 		return nil
 	case oauthapp.FieldRefreshTokenRotation:
 		v, ok := value.(bool)
@@ -17741,6 +17805,9 @@ func (m *OAuthAppMutation) ClearedFields() []string {
 	if m.FieldCleared(oauthapp.FieldLoginTokenTTL) {
 		fields = append(fields, oauthapp.FieldLoginTokenTTL)
 	}
+	if m.FieldCleared(oauthapp.FieldBackchannelLogoutURI) {
+		fields = append(fields, oauthapp.FieldBackchannelLogoutURI)
+	}
 	if m.FieldCleared(oauthapp.FieldRevokedAt) {
 		fields = append(fields, oauthapp.FieldRevokedAt)
 	}
@@ -17772,6 +17839,9 @@ func (m *OAuthAppMutation) ClearField(name string) error {
 		return nil
 	case oauthapp.FieldLoginTokenTTL:
 		m.ClearLoginTokenTTL()
+		return nil
+	case oauthapp.FieldBackchannelLogoutURI:
+		m.ClearBackchannelLogoutURI()
 		return nil
 	case oauthapp.FieldRevokedAt:
 		m.ClearRevokedAt()
@@ -17828,6 +17898,9 @@ func (m *OAuthAppMutation) ResetField(name string) error {
 		return nil
 	case oauthapp.FieldLoginTokenTTL:
 		m.ResetLoginTokenTTL()
+		return nil
+	case oauthapp.FieldBackchannelLogoutURI:
+		m.ResetBackchannelLogoutURI()
 		return nil
 	case oauthapp.FieldRefreshTokenRotation:
 		m.ResetRefreshTokenRotation()

@@ -255,6 +255,26 @@ func (_u *OAuthAppUpdate) ClearLoginTokenTTL() *OAuthAppUpdate {
 	return _u
 }
 
+// SetBackchannelLogoutURI sets the "backchannel_logout_uri" field.
+func (_u *OAuthAppUpdate) SetBackchannelLogoutURI(v string) *OAuthAppUpdate {
+	_u.mutation.SetBackchannelLogoutURI(v)
+	return _u
+}
+
+// SetNillableBackchannelLogoutURI sets the "backchannel_logout_uri" field if the given value is not nil.
+func (_u *OAuthAppUpdate) SetNillableBackchannelLogoutURI(v *string) *OAuthAppUpdate {
+	if v != nil {
+		_u.SetBackchannelLogoutURI(*v)
+	}
+	return _u
+}
+
+// ClearBackchannelLogoutURI clears the value of the "backchannel_logout_uri" field.
+func (_u *OAuthAppUpdate) ClearBackchannelLogoutURI() *OAuthAppUpdate {
+	_u.mutation.ClearBackchannelLogoutURI()
+	return _u
+}
+
 // SetRefreshTokenRotation sets the "refresh_token_rotation" field.
 func (_u *OAuthAppUpdate) SetRefreshTokenRotation(v bool) *OAuthAppUpdate {
 	_u.mutation.SetRefreshTokenRotation(v)
@@ -680,6 +700,12 @@ func (_u *OAuthAppUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.LoginTokenTTLCleared() {
 		_spec.ClearField(oauthapp.FieldLoginTokenTTL, field.TypeInt)
+	}
+	if value, ok := _u.mutation.BackchannelLogoutURI(); ok {
+		_spec.SetField(oauthapp.FieldBackchannelLogoutURI, field.TypeString, value)
+	}
+	if _u.mutation.BackchannelLogoutURICleared() {
+		_spec.ClearField(oauthapp.FieldBackchannelLogoutURI, field.TypeString)
 	}
 	if value, ok := _u.mutation.RefreshTokenRotation(); ok {
 		_spec.SetField(oauthapp.FieldRefreshTokenRotation, field.TypeBool, value)
@@ -1188,6 +1214,26 @@ func (_u *OAuthAppUpdateOne) ClearLoginTokenTTL() *OAuthAppUpdateOne {
 	return _u
 }
 
+// SetBackchannelLogoutURI sets the "backchannel_logout_uri" field.
+func (_u *OAuthAppUpdateOne) SetBackchannelLogoutURI(v string) *OAuthAppUpdateOne {
+	_u.mutation.SetBackchannelLogoutURI(v)
+	return _u
+}
+
+// SetNillableBackchannelLogoutURI sets the "backchannel_logout_uri" field if the given value is not nil.
+func (_u *OAuthAppUpdateOne) SetNillableBackchannelLogoutURI(v *string) *OAuthAppUpdateOne {
+	if v != nil {
+		_u.SetBackchannelLogoutURI(*v)
+	}
+	return _u
+}
+
+// ClearBackchannelLogoutURI clears the value of the "backchannel_logout_uri" field.
+func (_u *OAuthAppUpdateOne) ClearBackchannelLogoutURI() *OAuthAppUpdateOne {
+	_u.mutation.ClearBackchannelLogoutURI()
+	return _u
+}
+
 // SetRefreshTokenRotation sets the "refresh_token_rotation" field.
 func (_u *OAuthAppUpdateOne) SetRefreshTokenRotation(v bool) *OAuthAppUpdateOne {
 	_u.mutation.SetRefreshTokenRotation(v)
@@ -1643,6 +1689,12 @@ func (_u *OAuthAppUpdateOne) sqlSave(ctx context.Context) (_node *OAuthApp, err 
 	}
 	if _u.mutation.LoginTokenTTLCleared() {
 		_spec.ClearField(oauthapp.FieldLoginTokenTTL, field.TypeInt)
+	}
+	if value, ok := _u.mutation.BackchannelLogoutURI(); ok {
+		_spec.SetField(oauthapp.FieldBackchannelLogoutURI, field.TypeString, value)
+	}
+	if _u.mutation.BackchannelLogoutURICleared() {
+		_spec.ClearField(oauthapp.FieldBackchannelLogoutURI, field.TypeString)
 	}
 	if value, ok := _u.mutation.RefreshTokenRotation(); ok {
 		_spec.SetField(oauthapp.FieldRefreshTokenRotation, field.TypeBool, value)
