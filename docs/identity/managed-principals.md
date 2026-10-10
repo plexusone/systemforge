@@ -207,6 +207,28 @@ managerID, err := svc.AcceptManagerInvite(ctx, token, signedInPrincipalID)
 An invitation is single use, expires after seven days, and matches only a
 principal whose verified email is the invited address.
 
+## Authorization and the HTTP API
+
+Every service operation consults the authorizer, so a Go caller and the
+HTTP handler are held to the same rules:
+
+| Operation | Needs |
+|-----------|-------|
+| `Create` | The actor is one of the named managers, or a platform administrator |
+| `AddManager`, `RemoveManager`, `Release` | `manage_managers` (guardians) |
+| `Delete`, `AttachVerifiedEmail` | `manage_account` (guardians) |
+| `IssueClaim`, tokens, sessions | `manage_credentials` (guardians, educators) |
+| `RedeemClaim` | A valid manager claimant, and an issuer that still holds `manage_credentials` |
+
+`Delete` deactivates the principal and erases what identifies or
+authenticates the person (email, names, credentials, sessions, consents),
+keeping the row so identifiers elsewhere keep resolving; data the
+application keeps is its own to remove.
+
+`managedprincipal.NewHandler(svc)` serves the same operations as JSON; see
+the route list in the
+[architecture page](../design/architecture/managed-principals.md#sessions-and-manager-visibility).
+
 ## Manager Visibility and Revocation
 
 Managers holding `manage_credentials` can see and end every way a managed

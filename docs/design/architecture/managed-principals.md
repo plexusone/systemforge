@@ -142,9 +142,13 @@ Which service operations consult the authorizer:
 | Operation | Permission checked |
 |---|---|
 | `IssueClaim`, `ListLoginTokens`, `RevokeLoginToken`, `ListSessions`, `RevokeSession`, `RevokeAll` | `manage_credentials` |
-| `AttachVerifiedEmail` | `manage_account` |
+| `AttachVerifiedEmail`, `Delete` | `manage_account` |
+| `AddManager`, `RemoveManager`, `Release` | `manage_managers` |
+| `ListManagersFor` | `view_profile` |
 | `IssueLoginToken` | None through the authorizer: `checkIssuer` requires the issuer to be an active manager of the principal, in any role |
-| `Create`, `AddManager`, `RemoveManager`, `RedeemClaim` | None: the caller supplies `ActorID` for the audit trail and is expected to have checked `manage_managers` (or to be the manager creating the principal). The repository mounts no HTTP surface for these; the only handler is the visibility API below |
+| `Create` | No principal exists to check a permission against, so the actor must be one of the managers being named (the manager creating the principal) or a platform administrator (`authz.PlatformAuthorizer.IsPlatformAdmin`); otherwise `ErrForbidden`. A missing actor is refused |
+| `RedeemClaim` | The claim carries its issuer's authority: redemption is refused (`ErrInvalidClaim`) unless the issuer still holds `manage_credentials` on the principal, so removing a manager withdraws the claims they issued. The claimant must be a valid manager |
+| `InviteManager` | The inviter must be a valid manager and the client must allow managed principals; consent is given by the invitee in `AcceptManagerInvite`, which checks the principal's own verified email, not a permission |
 
 The service accepts `WithRoles` for application-defined manager roles, but
 `authz.ManagerRolePermissions` grants nothing to them in the role-based
@@ -155,9 +159,10 @@ provider; an application maps them in its own vocabulary.
 | Method | Behavior |
 |---|---|
 | `Create(in CreateInput)` | Requires `DisplayName`, at least one `ManagerInput{PrincipalID, Role}`, a client that allows managed principals. In one transaction validates each manager, creates `sf_principals` (identifier `human:<id>`, managed capabilities), `sf_humans`, and the relationships. `CreateInput.Email` is optional: when set it is stored unverified, becomes the identifier, and `ErrEmailInUse` refuses a taken address. Emits `managed_principal.created`, then syncs `RegisterPrincipal` and `AddPrincipalManager` for each manager |
-| `AddManager(managedID, m, actorID)` | Idempotent: no-op when active, reactivates when inactive; emits `managed_principal.manager_added`; syncs |
-| `RemoveManager(managedID, m, actorID)` | Deactivates; refuses the last manager of a principal without a verified email (`ErrLastManager`); emits `managed_principal.manager_removed`; syncs |
-| `ListManagers(managedID)` | Active relationships, oldest first |
+| `AddManager(managedID, m, actorID)` | Needs `manage_managers`. Idempotent: no-op when active, reactivates when inactive; emits `managed_principal.manager_added`; syncs |
+| `RemoveManager(managedID, m, actorID)` | Needs `manage_managers`. Deactivates; refuses the last manager of a principal without a verified email (`ErrLastManager`); emits `managed_principal.manager_removed`; syncs |
+| `ListManagers(managedID)` | Active relationships, oldest first; unchecked, for callers that already hold authority. `ListManagersFor(actorID, managedID)` checks `view_profile` |
+| `Delete(actorID, managedID)` | Needs `manage_account`. Soft delete with erasure in one transaction: the principal is deactivated, its identifier becomes `deleted:<id>` and its display name "Deleted account"; email, verification, names and avatar are cleared (freeing the address); credentials, external identities, login sessions, OAuth consents and claims are deleted; OAuth and principal token families are revoked; memberships and manager relationships are deactivated; pending manager invitations to its address are withdrawn; an access change `deactivated` is recorded and announced (ADR-010); the authorization backend loses its relations and the principal. `managed_principal.deleted`. The row stays so identifiers elsewhere keep resolving; application data and any personal organization are the application's to remove |
 | `Release(actorID, managedID)` | Ends management of a principal with a verified email: deactivates every remaining relationship, restores `DefaultCapabilitiesForType(human)`, in one transaction. Needs `manage_managers`; `ErrEmailNotVerified` without a verified email; `managed_principal.released`; syncs each removal. `RemoveManager` of the last manager of a verified principal does the same |
 | `InviteManager(in)` | A manager-to-be offers to manage the human with a verified `Email`. Needs a client that allows managed principals and a valid manager; returns the token once; `managed_principal.manager_invited` |
 | `AcceptManagerInvite(token, principalID)` | The signed-in principal's consent. Spends the invitation conditionally, creates the relationship, sets `ManagedHumanCapabilities`, records an access change (`grant_reduced`), `managed_principal.manager_invite_accepted`, syncs. `ErrInvalidInvite` for any mismatch, `ErrAlreadyManaged`, `ErrManagesOthers` |
@@ -248,16 +253,37 @@ ClientID, CreatedAt, ExpiresAt, LastUsedAt, ClientIP}`:
 `RevokeAll` revokes every login token and ends every session in one
 transaction. Each emits an audit event (`login_token_revoked`,
 `session_revoked`, `all_revoked`). `managedprincipal.NewHandler(svc)`
-exposes these as a chi router to mount behind
-`requestprincipal.Middleware`, which identifies the calling manager:
+exposes these and the managing operations as a chi router to mount behind
+`requestprincipal.Middleware`, which identifies the calling principal. The
+caller is always the actor; every route runs the service operation and so
+its authorizer check:
 
 ```
+POST   /                                          Create (JSON: client_id, display_name, email?, managers[])
+GET    /{principalID}/managers                    ListManagersFor
+POST   /{principalID}/managers                    AddManager (JSON: principal_id, role)
+DELETE /{principalID}/managers/{managerID}/{role} RemoveManager
+POST   /{principalID}/release                     Release
+DELETE /{principalID}                             Delete
+POST   /{principalID}/claims                      IssueClaim
+POST   /claims/redeem                             RedeemClaim (JSON: code)
+POST   /manager-invites                           InviteManager (JSON: client_id, email, role)
+POST   /manager-invites/accept                    AcceptManagerInvite (JSON: token)
+DELETE /manager-invites/{inviteID}                RevokeManagerInvite
 GET    /{principalID}/login-tokens
 DELETE /{principalID}/login-tokens/{credentialID}
 GET    /{principalID}/sessions
 DELETE /{principalID}/sessions/{kind}/{sessionID}
 POST   /{principalID}/revoke-all
 ```
+
+Responses: 401 without a principal, 403 for a missing permission (or a
+client that does not allow managed principals), 404 for an unknown or
+unmanaged principal, 400 for malformed input or any unusable code, 409 for
+conflicts (`ErrLastManager`, `ErrEmailInUse`, `ErrEmailNotVerified`,
+`ErrAlreadyManaged`). Bodies are bounded and refuse unknown fields.
+`client_id` in a create or invite body is the caller's assertion; the
+deployment and that client's opt-in still gate it (`ManagedPrincipalsAllowed`).
 
 ## Attaching an email
 
@@ -279,7 +305,7 @@ verified with `Service.VerifyEmail` instead.
 | Invites | Accepting or listing invites requires a caller with an email; a managed principal gets 403 |
 | Signup and social login | Look principals up by email; a managed identifier never matches |
 | Marketplace | `marketplace.PurchaserChecker` (`Service.IsManaged`) refuses checkout for managed principals |
-| Deletion | No `Delete` operation exists in the service; deleting or deactivating a managed principal is done through the principal service by the application, which ADR-005 restricts to guardians and platform administrators |
+| Deletion | `Service.Delete` (above), restricted by `manage_account` to guardians, which ADR-005 requires |
 
 ## Releasing a principal
 
