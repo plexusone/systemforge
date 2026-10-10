@@ -18,6 +18,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
 	"github.com/plexusone/systemforge/identity/ent/managerclaim"
+	"github.com/plexusone/systemforge/identity/ent/managerinvite"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
@@ -42,7 +43,7 @@ import (
 
 // schemaGraph holds a representation of ent/schema at runtime.
 var schemaGraph = func() *sqlgraph.Schema {
-	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 29)}
+	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 30)}
 	graph.Nodes[0] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   accesschange.Table,
@@ -391,6 +392,29 @@ var schemaGraph = func() *sqlgraph.Schema {
 	}
 	graph.Nodes[15] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
+			Table:   managerinvite.Table,
+			Columns: managerinvite.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeUUID,
+				Column: managerinvite.FieldID,
+			},
+		},
+		Type: "ManagerInvite",
+		Fields: map[string]*sqlgraph.FieldSpec{
+			managerinvite.FieldManagerPrincipalID: {Type: field.TypeUUID, Column: managerinvite.FieldManagerPrincipalID},
+			managerinvite.FieldEmail:              {Type: field.TypeString, Column: managerinvite.FieldEmail},
+			managerinvite.FieldRole:               {Type: field.TypeString, Column: managerinvite.FieldRole},
+			managerinvite.FieldTokenPrefix:        {Type: field.TypeString, Column: managerinvite.FieldTokenPrefix},
+			managerinvite.FieldTokenHash:          {Type: field.TypeString, Column: managerinvite.FieldTokenHash},
+			managerinvite.FieldExpiresAt:          {Type: field.TypeTime, Column: managerinvite.FieldExpiresAt},
+			managerinvite.FieldAcceptedAt:         {Type: field.TypeTime, Column: managerinvite.FieldAcceptedAt},
+			managerinvite.FieldAcceptedBy:         {Type: field.TypeUUID, Column: managerinvite.FieldAcceptedBy},
+			managerinvite.FieldRevokedAt:          {Type: field.TypeTime, Column: managerinvite.FieldRevokedAt},
+			managerinvite.FieldCreatedAt:          {Type: field.TypeTime, Column: managerinvite.FieldCreatedAt},
+		},
+	}
+	graph.Nodes[16] = &sqlgraph.Node{
+		NodeSpec: sqlgraph.NodeSpec{
 			Table:   managerrelationship.Table,
 			Columns: managerrelationship.Columns,
 			ID: &sqlgraph.FieldSpec{
@@ -409,7 +433,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			managerrelationship.FieldCreatedBy:          {Type: field.TypeUUID, Column: managerrelationship.FieldCreatedBy},
 		},
 	}
-	graph.Nodes[16] = &sqlgraph.Node{
+	graph.Nodes[17] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   oauthapp.Table,
 			Columns: oauthapp.Columns,
@@ -446,7 +470,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			oauthapp.FieldUpdatedAt:                {Type: field.TypeTime, Column: oauthapp.FieldUpdatedAt},
 		},
 	}
-	graph.Nodes[17] = &sqlgraph.Node{
+	graph.Nodes[18] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   oauthappsecret.Table,
 			Columns: oauthappsecret.Columns,
@@ -467,7 +491,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			oauthappsecret.FieldCreatedAt:    {Type: field.TypeTime, Column: oauthappsecret.FieldCreatedAt},
 		},
 	}
-	graph.Nodes[18] = &sqlgraph.Node{
+	graph.Nodes[19] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   oauthauthcode.Table,
 			Columns: oauthauthcode.Columns,
@@ -496,7 +520,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			oauthauthcode.FieldCreatedAt:           {Type: field.TypeTime, Column: oauthauthcode.FieldCreatedAt},
 		},
 	}
-	graph.Nodes[19] = &sqlgraph.Node{
+	graph.Nodes[20] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   oauthconsent.Table,
 			Columns: oauthconsent.Columns,
@@ -520,7 +544,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			oauthconsent.FieldUpdatedAt:     {Type: field.TypeTime, Column: oauthconsent.FieldUpdatedAt},
 		},
 	}
-	graph.Nodes[20] = &sqlgraph.Node{
+	graph.Nodes[21] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   oauthtoken.Table,
 			Columns: oauthtoken.Columns,
@@ -551,7 +575,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			oauthtoken.FieldCreatedAt:             {Type: field.TypeTime, Column: oauthtoken.FieldCreatedAt},
 		},
 	}
-	graph.Nodes[21] = &sqlgraph.Node{
+	graph.Nodes[22] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   organization.Table,
 			Columns: organization.Columns,
@@ -575,7 +599,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			organization.FieldActive:           {Type: field.TypeBool, Column: organization.FieldActive},
 		},
 	}
-	graph.Nodes[22] = &sqlgraph.Node{
+	graph.Nodes[23] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   principal.Table,
 			Columns: principal.Columns,
@@ -598,7 +622,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			principal.FieldMetadata:       {Type: field.TypeJSON, Column: principal.FieldMetadata},
 		},
 	}
-	graph.Nodes[23] = &sqlgraph.Node{
+	graph.Nodes[24] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   principalmembership.Table,
 			Columns: principalmembership.Columns,
@@ -618,7 +642,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			principalmembership.FieldActive:         {Type: field.TypeBool, Column: principalmembership.FieldActive},
 		},
 	}
-	graph.Nodes[24] = &sqlgraph.Node{
+	graph.Nodes[25] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   principaltoken.Table,
 			Columns: principaltoken.Columns,
@@ -654,7 +678,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			principaltoken.FieldCreatedAt:             {Type: field.TypeTime, Column: principaltoken.FieldCreatedAt},
 		},
 	}
-	graph.Nodes[25] = &sqlgraph.Node{
+	graph.Nodes[26] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   seatassignment.Table,
 			Columns: seatassignment.Columns,
@@ -671,7 +695,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			seatassignment.FieldAssignedAt:  {Type: field.TypeTime, Column: seatassignment.FieldAssignedAt},
 		},
 	}
-	graph.Nodes[26] = &sqlgraph.Node{
+	graph.Nodes[27] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   serviceprincipal.Table,
 			Columns: serviceprincipal.Columns,
@@ -692,7 +716,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			serviceprincipal.FieldAllowedIps:  {Type: field.TypeJSON, Column: serviceprincipal.FieldAllowedIps},
 		},
 	}
-	graph.Nodes[27] = &sqlgraph.Node{
+	graph.Nodes[28] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   slugreservation.Table,
 			Columns: slugreservation.Columns,
@@ -712,7 +736,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			slugreservation.FieldExpiresAt:                  {Type: field.TypeTime, Column: slugreservation.FieldExpiresAt},
 		},
 	}
-	graph.Nodes[28] = &sqlgraph.Node{
+	graph.Nodes[29] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   subscription.Table,
 			Columns: subscription.Columns,
@@ -3281,6 +3305,96 @@ func (f *ManagerClaimFilter) WhereHasManagedWith(preds ...predicate.Principal) {
 }
 
 // addPredicate implements the predicateAdder interface.
+func (_q *ManagerInviteQuery) addPredicate(pred func(s *sql.Selector)) {
+	_q.predicates = append(_q.predicates, pred)
+}
+
+// Filter returns a Filter implementation to apply filters on the ManagerInviteQuery builder.
+func (_q *ManagerInviteQuery) Filter() *ManagerInviteFilter {
+	return &ManagerInviteFilter{config: _q.config, predicateAdder: _q}
+}
+
+// addPredicate implements the predicateAdder interface.
+func (m *ManagerInviteMutation) addPredicate(pred func(s *sql.Selector)) {
+	m.predicates = append(m.predicates, pred)
+}
+
+// Filter returns an entql.Where implementation to apply filters on the ManagerInviteMutation builder.
+func (m *ManagerInviteMutation) Filter() *ManagerInviteFilter {
+	return &ManagerInviteFilter{config: m.config, predicateAdder: m}
+}
+
+// ManagerInviteFilter provides a generic filtering capability at runtime for ManagerInviteQuery.
+type ManagerInviteFilter struct {
+	predicateAdder
+	config
+}
+
+// Where applies the entql predicate on the query filter.
+func (f *ManagerInviteFilter) Where(p entql.P) {
+	f.addPredicate(func(s *sql.Selector) {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[15].Type, p, s); err != nil {
+			s.AddError(err)
+		}
+	})
+}
+
+// WhereID applies the entql [16]byte predicate on the id field.
+func (f *ManagerInviteFilter) WhereID(p entql.ValueP) {
+	f.Where(p.Field(managerinvite.FieldID))
+}
+
+// WhereManagerPrincipalID applies the entql [16]byte predicate on the manager_principal_id field.
+func (f *ManagerInviteFilter) WhereManagerPrincipalID(p entql.ValueP) {
+	f.Where(p.Field(managerinvite.FieldManagerPrincipalID))
+}
+
+// WhereEmail applies the entql string predicate on the email field.
+func (f *ManagerInviteFilter) WhereEmail(p entql.StringP) {
+	f.Where(p.Field(managerinvite.FieldEmail))
+}
+
+// WhereRole applies the entql string predicate on the role field.
+func (f *ManagerInviteFilter) WhereRole(p entql.StringP) {
+	f.Where(p.Field(managerinvite.FieldRole))
+}
+
+// WhereTokenPrefix applies the entql string predicate on the token_prefix field.
+func (f *ManagerInviteFilter) WhereTokenPrefix(p entql.StringP) {
+	f.Where(p.Field(managerinvite.FieldTokenPrefix))
+}
+
+// WhereTokenHash applies the entql string predicate on the token_hash field.
+func (f *ManagerInviteFilter) WhereTokenHash(p entql.StringP) {
+	f.Where(p.Field(managerinvite.FieldTokenHash))
+}
+
+// WhereExpiresAt applies the entql time.Time predicate on the expires_at field.
+func (f *ManagerInviteFilter) WhereExpiresAt(p entql.TimeP) {
+	f.Where(p.Field(managerinvite.FieldExpiresAt))
+}
+
+// WhereAcceptedAt applies the entql time.Time predicate on the accepted_at field.
+func (f *ManagerInviteFilter) WhereAcceptedAt(p entql.TimeP) {
+	f.Where(p.Field(managerinvite.FieldAcceptedAt))
+}
+
+// WhereAcceptedBy applies the entql [16]byte predicate on the accepted_by field.
+func (f *ManagerInviteFilter) WhereAcceptedBy(p entql.ValueP) {
+	f.Where(p.Field(managerinvite.FieldAcceptedBy))
+}
+
+// WhereRevokedAt applies the entql time.Time predicate on the revoked_at field.
+func (f *ManagerInviteFilter) WhereRevokedAt(p entql.TimeP) {
+	f.Where(p.Field(managerinvite.FieldRevokedAt))
+}
+
+// WhereCreatedAt applies the entql time.Time predicate on the created_at field.
+func (f *ManagerInviteFilter) WhereCreatedAt(p entql.TimeP) {
+	f.Where(p.Field(managerinvite.FieldCreatedAt))
+}
+
+// addPredicate implements the predicateAdder interface.
 func (_q *ManagerRelationshipQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
 }
@@ -3309,7 +3423,7 @@ type ManagerRelationshipFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *ManagerRelationshipFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[15].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[16].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -3412,7 +3526,7 @@ type OAuthAppFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *OAuthAppFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[16].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[17].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -3656,7 +3770,7 @@ type OAuthAppSecretFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *OAuthAppSecretFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[17].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[18].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -3750,7 +3864,7 @@ type OAuthAuthCodeFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *OAuthAuthCodeFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[18].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[19].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -3884,7 +3998,7 @@ type OAuthConsentFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *OAuthConsentFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[19].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[20].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4007,7 +4121,7 @@ type OAuthTokenFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *OAuthTokenFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[20].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[21].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4151,7 +4265,7 @@ type OrganizationFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *OrganizationFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[21].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[22].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4358,7 +4472,7 @@ type PrincipalFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *PrincipalFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[22].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[23].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4728,7 +4842,7 @@ type PrincipalMembershipFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *PrincipalMembershipFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[23].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[24].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4831,7 +4945,7 @@ type PrincipalTokenFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *PrincipalTokenFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[24].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[25].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5042,7 +5156,7 @@ type SeatAssignmentFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SeatAssignmentFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[25].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[26].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5144,7 +5258,7 @@ type ServicePrincipalFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *ServicePrincipalFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[26].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[27].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5252,7 +5366,7 @@ type SlugReservationFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SlugReservationFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[27].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[28].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5355,7 +5469,7 @@ type SubscriptionFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SubscriptionFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[28].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[29].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})

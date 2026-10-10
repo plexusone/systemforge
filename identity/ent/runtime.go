@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
 	"github.com/plexusone/systemforge/identity/ent/managerclaim"
+	"github.com/plexusone/systemforge/identity/ent/managerinvite"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
@@ -460,6 +461,24 @@ func init() {
 	managerclaimDescID := managerclaimFields[0].Descriptor()
 	// managerclaim.DefaultID holds the default value on creation for the id field.
 	managerclaim.DefaultID = managerclaimDescID.Default.(func() uuid.UUID)
+	managerinviteFields := schema.ManagerInvite{}.Fields()
+	_ = managerinviteFields
+	// managerinviteDescEmail is the schema descriptor for email field.
+	managerinviteDescEmail := managerinviteFields[2].Descriptor()
+	// managerinvite.EmailValidator is a validator for the "email" field. It is called by the builders before save.
+	managerinvite.EmailValidator = managerinviteDescEmail.Validators[0].(func(string) error)
+	// managerinviteDescRole is the schema descriptor for role field.
+	managerinviteDescRole := managerinviteFields[3].Descriptor()
+	// managerinvite.RoleValidator is a validator for the "role" field. It is called by the builders before save.
+	managerinvite.RoleValidator = managerinviteDescRole.Validators[0].(func(string) error)
+	// managerinviteDescCreatedAt is the schema descriptor for created_at field.
+	managerinviteDescCreatedAt := managerinviteFields[10].Descriptor()
+	// managerinvite.DefaultCreatedAt holds the default value on creation for the created_at field.
+	managerinvite.DefaultCreatedAt = managerinviteDescCreatedAt.Default.(func() time.Time)
+	// managerinviteDescID is the schema descriptor for id field.
+	managerinviteDescID := managerinviteFields[0].Descriptor()
+	// managerinvite.DefaultID holds the default value on creation for the id field.
+	managerinvite.DefaultID = managerinviteDescID.Default.(func() uuid.UUID)
 	managerrelationshipMixin := schema.ManagerRelationship{}.Mixin()
 	managerrelationshipMixinFields0 := managerrelationshipMixin[0].Fields()
 	_ = managerrelationshipMixinFields0

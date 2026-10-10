@@ -31,6 +31,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
 	"github.com/plexusone/systemforge/identity/ent/managerclaim"
+	"github.com/plexusone/systemforge/identity/ent/managerinvite"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
@@ -84,6 +85,8 @@ type Client struct {
 	LoginState *LoginStateClient
 	// ManagerClaim is the client for interacting with the ManagerClaim builders.
 	ManagerClaim *ManagerClaimClient
+	// ManagerInvite is the client for interacting with the ManagerInvite builders.
+	ManagerInvite *ManagerInviteClient
 	// ManagerRelationship is the client for interacting with the ManagerRelationship builders.
 	ManagerRelationship *ManagerRelationshipClient
 	// OAuthApp is the client for interacting with the OAuthApp builders.
@@ -138,6 +141,7 @@ func (c *Client) init() {
 	c.LoginSession = NewLoginSessionClient(c.config)
 	c.LoginState = NewLoginStateClient(c.config)
 	c.ManagerClaim = NewManagerClaimClient(c.config)
+	c.ManagerInvite = NewManagerInviteClient(c.config)
 	c.ManagerRelationship = NewManagerRelationshipClient(c.config)
 	c.OAuthApp = NewOAuthAppClient(c.config)
 	c.OAuthAppSecret = NewOAuthAppSecretClient(c.config)
@@ -259,6 +263,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		LoginSession:        NewLoginSessionClient(cfg),
 		LoginState:          NewLoginStateClient(cfg),
 		ManagerClaim:        NewManagerClaimClient(cfg),
+		ManagerInvite:       NewManagerInviteClient(cfg),
 		ManagerRelationship: NewManagerRelationshipClient(cfg),
 		OAuthApp:            NewOAuthAppClient(cfg),
 		OAuthAppSecret:      NewOAuthAppSecretClient(cfg),
@@ -307,6 +312,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		LoginSession:        NewLoginSessionClient(cfg),
 		LoginState:          NewLoginStateClient(cfg),
 		ManagerClaim:        NewManagerClaimClient(cfg),
+		ManagerInvite:       NewManagerInviteClient(cfg),
 		ManagerRelationship: NewManagerRelationshipClient(cfg),
 		OAuthApp:            NewOAuthAppClient(cfg),
 		OAuthAppSecret:      NewOAuthAppSecretClient(cfg),
@@ -352,10 +358,11 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AccessChange, c.Agent, c.AppRole, c.Application, c.ClientAssertionJTI,
 		c.ConsentGrant, c.Credential, c.ExternalIdentity, c.Human, c.Invite, c.License,
-		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerRelationship,
-		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
-		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
-		c.SeatAssignment, c.ServicePrincipal, c.SlugReservation, c.Subscription,
+		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerInvite,
+		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
+		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
+		c.PrincipalMembership, c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal,
+		c.SlugReservation, c.Subscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -367,10 +374,11 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AccessChange, c.Agent, c.AppRole, c.Application, c.ClientAssertionJTI,
 		c.ConsentGrant, c.Credential, c.ExternalIdentity, c.Human, c.Invite, c.License,
-		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerRelationship,
-		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
-		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
-		c.SeatAssignment, c.ServicePrincipal, c.SlugReservation, c.Subscription,
+		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerInvite,
+		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
+		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
+		c.PrincipalMembership, c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal,
+		c.SlugReservation, c.Subscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -409,6 +417,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.LoginState.mutate(ctx, m)
 	case *ManagerClaimMutation:
 		return c.ManagerClaim.mutate(ctx, m)
+	case *ManagerInviteMutation:
+		return c.ManagerInvite.mutate(ctx, m)
 	case *ManagerRelationshipMutation:
 		return c.ManagerRelationship.mutate(ctx, m)
 	case *OAuthAppMutation:
@@ -2754,6 +2764,139 @@ func (c *ManagerClaimClient) mutate(ctx context.Context, m *ManagerClaimMutation
 		return (&ManagerClaimDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ManagerClaim mutation op: %q", m.Op())
+	}
+}
+
+// ManagerInviteClient is a client for the ManagerInvite schema.
+type ManagerInviteClient struct {
+	config
+}
+
+// NewManagerInviteClient returns a client for the ManagerInvite from the given config.
+func NewManagerInviteClient(c config) *ManagerInviteClient {
+	return &ManagerInviteClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `managerinvite.Hooks(f(g(h())))`.
+func (c *ManagerInviteClient) Use(hooks ...Hook) {
+	c.hooks.ManagerInvite = append(c.hooks.ManagerInvite, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `managerinvite.Intercept(f(g(h())))`.
+func (c *ManagerInviteClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ManagerInvite = append(c.inters.ManagerInvite, interceptors...)
+}
+
+// Create returns a builder for creating a ManagerInvite entity.
+func (c *ManagerInviteClient) Create() *ManagerInviteCreate {
+	mutation := newManagerInviteMutation(c.config, OpCreate)
+	return &ManagerInviteCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ManagerInvite entities.
+func (c *ManagerInviteClient) CreateBulk(builders ...*ManagerInviteCreate) *ManagerInviteCreateBulk {
+	return &ManagerInviteCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ManagerInviteClient) MapCreateBulk(slice any, setFunc func(*ManagerInviteCreate, int)) *ManagerInviteCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ManagerInviteCreateBulk{err: fmt.Errorf("calling to ManagerInviteClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ManagerInviteCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ManagerInviteCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ManagerInvite.
+func (c *ManagerInviteClient) Update() *ManagerInviteUpdate {
+	mutation := newManagerInviteMutation(c.config, OpUpdate)
+	return &ManagerInviteUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ManagerInviteClient) UpdateOne(_m *ManagerInvite) *ManagerInviteUpdateOne {
+	mutation := newManagerInviteMutation(c.config, OpUpdateOne, withManagerInvite(_m))
+	return &ManagerInviteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ManagerInviteClient) UpdateOneID(id uuid.UUID) *ManagerInviteUpdateOne {
+	mutation := newManagerInviteMutation(c.config, OpUpdateOne, withManagerInviteID(id))
+	return &ManagerInviteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ManagerInvite.
+func (c *ManagerInviteClient) Delete() *ManagerInviteDelete {
+	mutation := newManagerInviteMutation(c.config, OpDelete)
+	return &ManagerInviteDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ManagerInviteClient) DeleteOne(_m *ManagerInvite) *ManagerInviteDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ManagerInviteClient) DeleteOneID(id uuid.UUID) *ManagerInviteDeleteOne {
+	builder := c.Delete().Where(managerinvite.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ManagerInviteDeleteOne{builder}
+}
+
+// Query returns a query builder for ManagerInvite.
+func (c *ManagerInviteClient) Query() *ManagerInviteQuery {
+	return &ManagerInviteQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeManagerInvite},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ManagerInvite entity by its id.
+func (c *ManagerInviteClient) Get(ctx context.Context, id uuid.UUID) (*ManagerInvite, error) {
+	return c.Query().Where(managerinvite.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ManagerInviteClient) GetX(ctx context.Context, id uuid.UUID) *ManagerInvite {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ManagerInviteClient) Hooks() []Hook {
+	return c.hooks.ManagerInvite
+}
+
+// Interceptors returns the client interceptors.
+func (c *ManagerInviteClient) Interceptors() []Interceptor {
+	return c.inters.ManagerInvite
+}
+
+func (c *ManagerInviteClient) mutate(ctx context.Context, m *ManagerInviteMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ManagerInviteCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ManagerInviteUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ManagerInviteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ManagerInviteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ManagerInvite mutation op: %q", m.Op())
 	}
 }
 
@@ -5504,18 +5647,18 @@ type (
 	hooks struct {
 		AccessChange, Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant,
 		Credential, ExternalIdentity, Human, Invite, License, Listing, LoginSession,
-		LoginState, ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret,
-		OAuthAuthCode, OAuthConsent, OAuthToken, Organization, Principal,
-		PrincipalMembership, PrincipalToken, SeatAssignment, ServicePrincipal,
-		SlugReservation, Subscription []ent.Hook
+		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
+		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
+		Principal, PrincipalMembership, PrincipalToken, SeatAssignment,
+		ServicePrincipal, SlugReservation, Subscription []ent.Hook
 	}
 	inters struct {
 		AccessChange, Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant,
 		Credential, ExternalIdentity, Human, Invite, License, Listing, LoginSession,
-		LoginState, ManagerClaim, ManagerRelationship, OAuthApp, OAuthAppSecret,
-		OAuthAuthCode, OAuthConsent, OAuthToken, Organization, Principal,
-		PrincipalMembership, PrincipalToken, SeatAssignment, ServicePrincipal,
-		SlugReservation, Subscription []ent.Interceptor
+		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
+		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
+		Principal, PrincipalMembership, PrincipalToken, SeatAssignment,
+		ServicePrincipal, SlugReservation, Subscription []ent.Interceptor
 	}
 )
 

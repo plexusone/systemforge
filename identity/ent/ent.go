@@ -27,6 +27,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
 	"github.com/plexusone/systemforge/identity/ent/loginstate"
 	"github.com/plexusone/systemforge/identity/ent/managerclaim"
+	"github.com/plexusone/systemforge/identity/ent/managerinvite"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
@@ -116,6 +117,7 @@ func checkColumn(t, c string) error {
 			loginsession.Table:        loginsession.ValidColumn,
 			loginstate.Table:          loginstate.ValidColumn,
 			managerclaim.Table:        managerclaim.ValidColumn,
+			managerinvite.Table:       managerinvite.ValidColumn,
 			managerrelationship.Table: managerrelationship.ValidColumn,
 			oauthapp.Table:            oauthapp.ValidColumn,
 			oauthappsecret.Table:      oauthappsecret.ValidColumn,

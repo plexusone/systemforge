@@ -51,6 +51,9 @@ type LoginState func(*sql.Selector)
 // ManagerClaim is the predicate function for managerclaim builders.
 type ManagerClaim func(*sql.Selector)
 
+// ManagerInvite is the predicate function for managerinvite builders.
+type ManagerInvite func(*sql.Selector)
+
 // ManagerRelationship is the predicate function for managerrelationship builders.
 type ManagerRelationship func(*sql.Selector)
 

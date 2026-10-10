@@ -732,6 +732,38 @@ var (
 			},
 		},
 	}
+	// SfManagerInvitesColumns holds the columns for the "sf_manager_invites" table.
+	SfManagerInvitesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "manager_principal_id", Type: field.TypeUUID},
+		{Name: "email", Type: field.TypeString},
+		{Name: "role", Type: field.TypeString},
+		{Name: "token_prefix", Type: field.TypeString, Unique: true},
+		{Name: "token_hash", Type: field.TypeString},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "accepted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "accepted_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "revoked_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// SfManagerInvitesTable holds the schema information for the "sf_manager_invites" table.
+	SfManagerInvitesTable = &schema.Table{
+		Name:       "sf_manager_invites",
+		Columns:    SfManagerInvitesColumns,
+		PrimaryKey: []*schema.Column{SfManagerInvitesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "managerinvite_manager_principal_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfManagerInvitesColumns[1]},
+			},
+			{
+				Name:    "managerinvite_email",
+				Unique:  false,
+				Columns: []*schema.Column{SfManagerInvitesColumns[2]},
+			},
+		},
+	}
 	// SfManagerRelationshipsColumns holds the columns for the "sf_manager_relationships" table.
 	SfManagerRelationshipsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1602,6 +1634,7 @@ var (
 		SfLoginSessionsTable,
 		SfLoginStatesTable,
 		SfManagerClaimsTable,
+		SfManagerInvitesTable,
 		SfManagerRelationshipsTable,
 		SfOauthAppsTable,
 		SfOauthAppSecretsTable,
@@ -1681,6 +1714,9 @@ func init() {
 	SfManagerClaimsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfManagerClaimsTable.Annotation = &entsql.Annotation{
 		Table: "sf_manager_claims",
+	}
+	SfManagerInvitesTable.Annotation = &entsql.Annotation{
+		Table: "sf_manager_invites",
 	}
 	SfManagerRelationshipsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfManagerRelationshipsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
