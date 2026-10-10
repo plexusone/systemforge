@@ -231,7 +231,7 @@ func (s *Service) AcceptManagerInvite(ctx context.Context, token string, princip
 		}
 		// Tokens issued before may carry the capabilities just given up
 		// (ADR-010).
-		change, err = accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: principalID, Reason: accesschange.GrantReduced})
+		change, err = accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: principalID, Reason: accesschange.ManagementGranted})
 		return err
 	})
 	if err != nil {

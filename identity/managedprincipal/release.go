@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
@@ -28,7 +29,10 @@ var ErrEmailNotVerified = errors.New("managedprincipal: release requires a verif
 // (managed_principal.released); whether the person being released must
 // confirm first is the application's decision.
 func (s *Service) Release(ctx context.Context, actorID, managedID uuid.UUID) error {
-	var released []Relationship
+	var (
+		released []Relationship
+		change   accesschange.Change
+	)
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		h, err := s.lockAndAuthorize(ctx, tx, actorID, managedID)
 		if err != nil {
@@ -57,11 +61,13 @@ func (s *Service) Release(ctx context.Context, actorID, managedID uuid.UUID) err
 				ManagedPrincipalID: r.ManagedPrincipalID, ManagerPrincipalID: r.ManagerPrincipalID, Role: r.Role,
 			})
 		}
-		return clearManagedState(ctx, tx, managedID)
+		change, err = endManagement(ctx, tx, managedID)
+		return err
 	})
 	if err != nil {
 		return err
 	}
+	accesschange.Publish(s.accessSink, change)
 	managers := make([]ManagerInput, 0, len(released))
 	for _, r := range released {
 		managers = append(managers, ManagerInput{PrincipalID: r.ManagerPrincipalID, Role: r.Role})
@@ -75,14 +81,17 @@ func (s *Service) Release(ctx context.Context, actorID, managedID uuid.UUID) err
 	return syncErr
 }
 
-// clearManagedState restores the capabilities a managed principal gave up
-// while managed. The caller has removed its last manager.
-func clearManagedState(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+// endManagement restores the capabilities a managed principal gave up
+// while managed and records that its management ended, so tokens issued
+// while it was managed, which say so, are refreshed (ADR-010). The caller
+// has removed its last manager and publishes the returned change after the
+// transaction commits.
+func endManagement(ctx context.Context, tx *ent.Tx, id uuid.UUID) (accesschange.Change, error) {
 	caps := principal.DefaultCapabilitiesForType(principal.TypeHuman)
 	if err := tx.Principal.UpdateOneID(id).SetCapabilities(caps.ToMap()).Exec(ctx); err != nil {
-		return fmt.Errorf("managedprincipal: restore capabilities: %w", err)
+		return accesschange.Change{}, fmt.Errorf("managedprincipal: restore capabilities: %w", err)
 	}
-	return nil
+	return accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: id, Reason: accesschange.ManagementEnded})
 }
 
 // authorizeProfile requires actorID to hold view_profile on a managed

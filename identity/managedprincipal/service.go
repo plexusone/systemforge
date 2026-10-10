@@ -267,7 +267,10 @@ func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m Manager
 // concurrent removals that each withdraw the other's authority exactly one
 // succeeds.
 func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m ManagerInput, actorID uuid.UUID) error {
-	var released bool
+	var (
+		released bool
+		change   accesschange.Change
+	)
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		h, err := s.lockAndAuthorize(ctx, tx, actorID, managedID)
 		if err != nil {
@@ -314,12 +317,16 @@ func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m Mana
 		}
 		if remaining == 0 {
 			released = true
-			return clearManagedState(ctx, tx, managedID)
+			change, err = endManagement(ctx, tx, managedID)
+			return err
 		}
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+	if released {
+		accesschange.Publish(s.accessSink, change)
 	}
 	s.emit(ctx, EventManagerRemoved, "remove_manager", actorID, managedID,
 		map[string]any{"manager_principal_id": m.PrincipalID.String(), "role": m.Role})

@@ -79,8 +79,8 @@ func TestManagerInvite(t *testing.T) {
 	if err != nil || p.Capabilities["can_manage_profile"] || p.Capabilities["can_delegate"] {
 		t.Errorf("capabilities after accept = %v, %v", p.Capabilities, err)
 	}
-	if len(changes) != 1 || changes[0].PrincipalID != adult {
-		t.Errorf("access changes = %+v, want one for the invitee", changes)
+	if len(changes) != 1 || changes[0].PrincipalID != adult || changes[0].Reason != accesschange.ManagementGranted {
+		t.Errorf("access changes = %+v, want one management_granted for the invitee", changes)
 	}
 	if got := rec.types(); got[len(got)-1] != EventManagerInviteAccepted {
 		t.Errorf("audit = %v", got)
@@ -93,6 +93,9 @@ func TestManagerInvite(t *testing.T) {
 	// The email is verified, so the guardian can release the adult again.
 	if err := svc.Release(ctx, family, adult); err != nil {
 		t.Errorf("Release: %v", err)
+	}
+	if n := len(changes); n != 2 || changes[1].PrincipalID != adult || changes[1].Reason != accesschange.ManagementEnded {
+		t.Errorf("access changes after release = %+v, want management_ended for the released principal", changes)
 	}
 }
 
@@ -160,5 +163,38 @@ func TestManagerInviteRefusals(t *testing.T) {
 	svc.now = func() time.Time { return now.Add(DefaultInviteTTL + time.Second) }
 	if _, err := svc.AcceptManagerInvite(ctx, expiring.Token, other); !errors.Is(err, ErrInvalidInvite) {
 		t.Errorf("accept expired = %v, want ErrInvalidInvite", err)
+	}
+}
+
+// TestRemovingTheLastManagerRecordsManagementEnded verifies that releasing a
+// principal by removing its last manager records management_ended, and that
+// removing one of several managers records nothing.
+func TestRemovingTheLastManagerRecordsManagementEnded(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	svc, _ := newService(t, db)
+	var changes []accesschange.Change
+	svc.accessSink = accesschange.SinkFunc(func(c accesschange.Change) { changes = append(changes, c) })
+	parent := addVerifiedHuman(t, db, "parent@example.com")
+	teacher := addVerifiedHuman(t, db, "teacher@example.com")
+	kid, err := svc.Create(ctx, CreateInput{ActorID: parent, DisplayName: "Kid", ClientID: client, Email: "kid@example.com",
+		Managers: []ManagerInput{{parent, RoleGuardian}, {teacher, RoleEducator}}})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := db.Human.Update().Where(human.PrincipalID(kid)).SetEmailVerifiedAt(time.Now()).Exec(ctx); err != nil {
+		t.Fatalf("verify email: %v", err)
+	}
+	if err := svc.RemoveManager(ctx, kid, ManagerInput{teacher, RoleEducator}, parent); err != nil {
+		t.Fatalf("RemoveManager: %v", err)
+	}
+	if len(changes) != 0 {
+		t.Fatalf("access changes after removing one of two managers = %+v, want none", changes)
+	}
+	if err := svc.RemoveManager(ctx, kid, ManagerInput{parent, RoleGuardian}, parent); err != nil {
+		t.Fatalf("RemoveManager last: %v", err)
+	}
+	if len(changes) != 1 || changes[0].PrincipalID != kid || changes[0].Reason != accesschange.ManagementEnded {
+		t.Errorf("access changes = %+v, want one management_ended for the released principal", changes)
 	}
 }
