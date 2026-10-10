@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/plexusone/systemforge/authz/rbac"
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
@@ -314,21 +315,54 @@ func TestAddAndRemoveManager(t *testing.T) {
 	}
 }
 
-// TestConcurrentRemoveKeepsAManager verifies on PostgreSQL that two
-// managers removed concurrently cannot together leave a managed principal
-// without one.
-func TestConcurrentRemoveKeepsAManager(t *testing.T) {
-	ctx := context.Background()
+// openPostgres returns a client on the PostgreSQL test database.
+func openPostgres(t *testing.T) *ent.Client {
+	t.Helper()
 	db := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, pgtest.Open(t))))
 	t.Cleanup(func() {
 		if err := db.Close(); err != nil {
 			t.Errorf("close: %v", err)
 		}
 	})
-	if err := db.Schema.Create(ctx); err != nil {
+	if err := db.Schema.Create(context.Background()); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	svc, _ := newService(t, db)
+	return db
+}
+
+// removeConcurrently has each manager removal run at the same moment, as
+// actor, and returns their errors in input order.
+func removeConcurrently(ctx context.Context, svc *Service, managed uuid.UUID, actor uuid.UUID, ms ...ManagerInput) []error {
+	errs := make([]error, len(ms))
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i, m := range ms {
+		wg.Go(func() {
+			<-start
+			errs[i] = svc.RemoveManager(ctx, managed, m, actor)
+		})
+	}
+	close(start)
+	wg.Wait()
+	return errs
+}
+
+// TestConcurrentRemoveKeepsAManager verifies on PostgreSQL that two
+// managers removed concurrently cannot together leave a managed principal
+// without one, with exact outcomes: one removal succeeds and the other is
+// refused as the last manager.
+func TestConcurrentRemoveKeepsAManager(t *testing.T) {
+	ctx := context.Background()
+	db := openPostgres(t)
+	root := uuid.New()
+	var svc *Service
+	svc = NewService(db, gate{client: true}, WithAuthorizer(rbac.New(
+		rbac.WithManagerRoleGetter(func(ctx context.Context, managerID, managedID uuid.UUID) ([]string, error) {
+			return svc.ManagerRoles(ctx, managerID, managedID)
+		}),
+		rbac.WithPlatformAdminChecker(func(_ context.Context, id uuid.UUID) (bool, error) { return id == root, nil }),
+		rbac.WithPlatformAdminBypass(true),
+	)))
 
 	for range 10 {
 		a := addHuman(t, db, uuid.NewString()+"@example.com", true)
@@ -337,11 +371,61 @@ func TestConcurrentRemoveKeepsAManager(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create: %v", err)
 		}
-		var wg sync.WaitGroup
-		errs := make([]error, 2)
-		for i, m := range []ManagerInput{{a, RoleGuardian}, {b, RoleEducator}} {
-			wg.Go(func() { errs[i] = svc.RemoveManager(ctx, id, m, a) })
+		// A platform administrator's authority does not depend on either
+		// removal, so the loser is always refused as the last manager.
+		errs := removeConcurrently(ctx, svc, id, root, ManagerInput{a, RoleGuardian}, ManagerInput{b, RoleEducator})
+		wins, lastManager := 0, 0
+		for _, err := range errs {
+			switch {
+			case err == nil:
+				wins++
+			case errors.Is(err, ErrLastManager):
+				lastManager++
+			default:
+				t.Fatalf("RemoveManager: %v", err)
+			}
 		}
+		if wins != 1 || lastManager != 1 {
+			t.Fatalf("wins = %d, last-manager refusals = %d (errors %v), want 1 and 1", wins, lastManager, errs)
+		}
+		rels, err := svc.ListManagers(ctx, id)
+		if err != nil {
+			t.Fatalf("ListManagers: %v", err)
+		}
+		if len(rels) != 1 {
+			t.Fatalf("active managers = %d, want 1", len(rels))
+		}
+	}
+}
+
+// TestConcurrentRemoveByAManagerKeepsAManager verifies on PostgreSQL that a
+// guardian acting concurrently to remove herself and a co-manager ends
+// consistently: exactly one removal commits, and the other is refused for
+// the reason the committed state gives, never both removed and never both
+// kept.
+func TestConcurrentRemoveByAManagerKeepsAManager(t *testing.T) {
+	ctx := context.Background()
+	db := openPostgres(t)
+	svc, _ := newService(t, db)
+
+	for range 10 {
+		a := addHuman(t, db, uuid.NewString()+"@example.com", true)
+		b := addHuman(t, db, uuid.NewString()+"@example.com", true)
+		id, err := svc.Create(ctx, CreateInput{ActorID: a, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{a, RoleGuardian}, {b, RoleGuardian}}})
+		if err != nil {
+			t.Fatalf("Create: %v", err)
+		}
+		// Each guardian removes the other, as herself.
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		errs := make([]error, 2)
+		for i, pair := range [][2]uuid.UUID{{a, b}, {b, a}} {
+			wg.Go(func() {
+				<-start
+				errs[i] = svc.RemoveManager(ctx, id, ManagerInput{pair[1], RoleGuardian}, pair[0])
+			})
+		}
+		close(start)
 		wg.Wait()
 		rels, err := svc.ListManagers(ctx, id)
 		if err != nil {
@@ -350,18 +434,17 @@ func TestConcurrentRemoveKeepsAManager(t *testing.T) {
 		if len(rels) != 1 {
 			t.Fatalf("active managers = %d (errors %v), want 1", len(rels), errs)
 		}
-		failed := 0
-		for _, err := range errs {
-			// The loser either finds itself the last manager or, having
-			// lost its own authority to the winner, is refused.
-			if errors.Is(err, ErrLastManager) || errors.Is(err, ErrForbidden) {
-				failed++
-			} else if err != nil {
-				t.Fatalf("RemoveManager: %v", err)
-			}
+		// The survivor is the guardian whose removal of the other
+		// committed; the other, having lost her authority, is refused.
+		survivor, loser := 0, 1
+		if rels[0].ManagerPrincipalID == b {
+			survivor, loser = 1, 0
 		}
-		if failed != 1 {
-			t.Fatalf("refused removals = %d, want 1", failed)
+		if errs[survivor] != nil {
+			t.Fatalf("surviving guardian's removal = %v, want success", errs[survivor])
+		}
+		if !errors.Is(errs[loser], ErrForbidden) {
+			t.Fatalf("removed guardian's removal = %v, want ErrForbidden", errs[loser])
 		}
 	}
 }
