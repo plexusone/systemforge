@@ -68,15 +68,26 @@ code host, correctable or removable before it is final.
 ### Data classification
 
 6. **Every persisted field is classified.** The vocabulary is small and
-   deliberately matches existing tooling:
-   - `public` (the default, written explicitly);
+   deliberately overlaps existing tooling:
+   - `public` (the default, written explicitly): may be shown to
+     application users, subject to the application's own authorization;
+   - `internal` — system data that is neither personal nor a credential but
+     is not shown to application users: flags, counters, security stamps,
+     internal references, operational state;
    - `pii` — personal data about an identifiable person;
    - `secret` — credentials, tokens, keys and anything whose disclosure
      grants access.
+   A field has one class, and where more than one applies the most
+   restrictive wins in the order `secret`, `pii`, `internal`, `public`. A
+   personal-data field that only staff should see is therefore `pii`, since
+   export and erasure must reach it, and carries an **exposure** attribute
+   (`application`, `staff` or `none`) saying who may see it; `internal` and
+   `secret` default to `none` toward application users and `public` to
+   `application`.
    A field also carries optional attributes: the **subject key** (how the
    row maps to a data subject), an **erasure strategy** (`clear`,
-   `tombstone`, `hash`, `delete_row` or `retain` with a stated reason), an
-   **export** flag, and a **retention** note.
+   `tombstone`, `hash`, `delete_row`, `shred` or `retain` with a stated
+   reason), an **export** flag, and a **retention** note.
 7. **The classification is metadata in Go, next to the schema.** It is an
    Ent annotation on each field in SystemForge's own schemas, collected into
    a registry by a small `dataclass` package. Applications annotate their
@@ -84,12 +95,14 @@ code host, correctable or removable before it is final.
    covered by the same mechanism. A test fails when a field has no
    classification, so a new column cannot ship unclassified.
 8. **The registry is the single source for governance tooling.** It drives
-   export and erasure (below), log redaction, and, as an optional adapter,
-   a `guardsql` schema so analytics queries exclude `pii` and `secret`
-   columns by default. The vocabulary (`pii`, `secret`) is the one
-   `guardsql` already uses; the richer attributes are SystemForge's own, so
-   the adapter maps down and does not make `guardsql` a dependency of the
-   platform.
+   export and erasure (below), log redaction, response filtering (a
+   serialization helper omits every field whose exposure is not
+   `application` unless the caller asks for staff or system views), and, as
+   an optional adapter, a `guardsql` schema so analytics queries exclude
+   `internal`, `pii` and `secret` columns by default. `guardsql` knows
+   `pii` and `secret`; the adapter maps `internal` to its restricted class
+   and the richer attributes are SystemForge's own, so `guardsql` does not
+   become a dependency of the platform.
 
 ### Privacy rights
 
