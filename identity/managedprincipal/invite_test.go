@@ -198,3 +198,111 @@ func TestRemovingTheLastManagerRecordsManagementEnded(t *testing.T) {
 		t.Errorf("access changes = %+v, want one management_ended for the released principal", changes)
 	}
 }
+
+func TestDeclineManagerInvite(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	svc, rec := newService(t, db)
+	var changes []accesschange.Change
+	svc.accessSink = accesschange.SinkFunc(func(c accesschange.Change) { changes = append(changes, c) })
+	family := addVerifiedHuman(t, db, "family@example.com")
+	adult := addVerifiedHuman(t, db, "adult@example.com")
+	stranger := addVerifiedHuman(t, db, "stranger@example.com")
+	unverified := addHuman(t, db, "unverified@example.com", true)
+
+	invite := func(email string) *ManagerInvite {
+		t.Helper()
+		inv, err := svc.InviteManager(ctx, InviteManagerInput{ClientID: client, ManagerID: family, Email: email, Role: RoleGuardian})
+		if err != nil {
+			t.Fatalf("InviteManager(%s): %v", email, err)
+		}
+		return inv
+	}
+	inv := invite("adult@example.com")
+
+	// Only the invitee may decline, and a malformed token matches nothing.
+	if err := svc.DeclineManagerInvite(ctx, inv.Token, stranger); !errors.Is(err, ErrInvalidInvite) {
+		t.Errorf("decline by a stranger = %v, want ErrInvalidInvite", err)
+	}
+	if err := svc.DeclineManagerInvite(ctx, inv.Token, family); !errors.Is(err, ErrInvalidInvite) {
+		t.Errorf("decline by the inviter = %v, want ErrInvalidInvite", err)
+	}
+	if err := svc.DeclineManagerInvite(ctx, "SFMIAAAAAAAAAAAA", adult); !errors.Is(err, ErrInvalidInvite) {
+		t.Errorf("decline of an unknown token = %v, want ErrInvalidInvite", err)
+	}
+	if err := svc.DeclineManagerInvite(ctx, "x", adult); !errors.Is(err, ErrInvalidInvite) {
+		t.Errorf("decline of a malformed token = %v, want ErrInvalidInvite", err)
+	}
+	if err := svc.DeclineManagerInvite(ctx, invite("unverified@example.com").Token, unverified); !errors.Is(err, ErrInvalidInvite) {
+		t.Errorf("decline with an unverified email = %v, want ErrInvalidInvite", err)
+	}
+	// A refused decline leaves the invitation acceptable.
+	row, err := db.ManagerInvite.Get(ctx, inv.ID)
+	if err != nil || row.DeclinedAt != nil {
+		t.Fatalf("invitation after refused declines = %+v, %v", row, err)
+	}
+
+	if err := svc.DeclineManagerInvite(ctx, inv.Token, adult); err != nil {
+		t.Fatalf("DeclineManagerInvite: %v", err)
+	}
+	row, err = db.ManagerInvite.Get(ctx, inv.ID)
+	if err != nil || row.DeclinedAt == nil || row.DeclinedBy == nil || *row.DeclinedBy != adult || row.AcceptedAt != nil {
+		t.Errorf("invitation after decline = %+v, %v", row, err)
+	}
+	if got := rec.types(); got[len(got)-1] != EventManagerInviteDeclined {
+		t.Errorf("audit = %v, want the decline event last", got)
+	}
+	last := rec.events[len(rec.events)-1]
+	if last.Details["manager_principal_id"] != family.String() || last.Details["invite_id"] != inv.ID.String() {
+		t.Errorf("decline event details = %v, want the inviter and the invitation", last.Details)
+	}
+
+	// Single use: neither a second decline nor an acceptance works, and
+	// nothing about the invitee changed.
+	if err := svc.DeclineManagerInvite(ctx, inv.Token, adult); !errors.Is(err, ErrInvalidInvite) {
+		t.Errorf("second decline = %v, want ErrInvalidInvite", err)
+	}
+	if _, err := svc.AcceptManagerInvite(ctx, inv.Token, adult); !errors.Is(err, ErrInvalidInvite) {
+		t.Errorf("accept after decline = %v, want ErrInvalidInvite", err)
+	}
+	if managed, err := svc.IsManaged(ctx, adult); err != nil || managed {
+		t.Errorf("IsManaged after decline = %v, %v; want false", managed, err)
+	}
+	if len(changes) != 0 {
+		t.Errorf("access changes = %+v, want none", changes)
+	}
+	// The inviter cannot withdraw a declined invitation.
+	if err := svc.RevokeManagerInvite(ctx, family, inv.ID); !errors.Is(err, ErrNotFound) {
+		t.Errorf("revoke after decline = %v, want ErrNotFound", err)
+	}
+
+	// An accepted invitation cannot be declined.
+	second := invite("adult@example.com")
+	if _, err := svc.AcceptManagerInvite(ctx, second.Token, adult); err != nil {
+		t.Fatalf("AcceptManagerInvite: %v", err)
+	}
+	if err := svc.DeclineManagerInvite(ctx, second.Token, adult); !errors.Is(err, ErrInvalidInvite) {
+		t.Errorf("decline after accept = %v, want ErrInvalidInvite", err)
+	}
+
+	// A revoked or expired invitation cannot be declined.
+	other := addVerifiedHuman(t, db, "other@example.com")
+	revoked, err := svc.InviteManager(ctx, InviteManagerInput{ClientID: client, ManagerID: family, Email: "other@example.com", Role: RoleEducator})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.RevokeManagerInvite(ctx, family, revoked.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeclineManagerInvite(ctx, revoked.Token, other); !errors.Is(err, ErrInvalidInvite) {
+		t.Errorf("decline after revoke = %v, want ErrInvalidInvite", err)
+	}
+	expiring, err := svc.InviteManager(ctx, InviteManagerInput{ClientID: client, ManagerID: family, Email: "other@example.com", Role: RoleEducator})
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc.now = func() time.Time { return time.Now().Add(DefaultInviteTTL + time.Hour) }
+	if err := svc.DeclineManagerInvite(ctx, expiring.Token, other); !errors.Is(err, ErrInvalidInvite) {
+		t.Errorf("decline after expiry = %v, want ErrInvalidInvite", err)
+	}
+}

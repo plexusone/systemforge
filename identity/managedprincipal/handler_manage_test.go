@@ -165,6 +165,26 @@ func TestInviteEndpoints(t *testing.T) {
 	if w := do(family, http.MethodPost, "/"+adult.String()+"/release", struct{}{}); w.Code != http.StatusNoContent {
 		t.Errorf("release by the guardian: %d %s", w.Code, w.Body)
 	}
+	// Decline.
+	decl := do(family, http.MethodPost, "/manager-invites", map[string]string{"client_id": client, "email": "adult@example.com", "role": RoleEducator})
+	if decl.Code != http.StatusCreated {
+		t.Fatalf("second invite: %d %s", decl.Code, decl.Body)
+	}
+	var second struct {
+		Token string `json:"token"`
+	}
+	if err := json.Unmarshal(decl.Body.Bytes(), &second); err != nil {
+		t.Fatal(err)
+	}
+	if w := do(stranger, http.MethodPost, "/manager-invites/decline", map[string]string{"token": second.Token}); w.Code != http.StatusBadRequest {
+		t.Errorf("decline by a stranger: %d, want 400", w.Code)
+	}
+	if w := do(adult, http.MethodPost, "/manager-invites/decline", map[string]string{"token": second.Token}); w.Code != http.StatusNoContent {
+		t.Errorf("decline: %d %s", w.Code, w.Body)
+	}
+	if w := do(adult, http.MethodPost, "/manager-invites/decline", map[string]string{"token": second.Token}); w.Code != http.StatusBadRequest {
+		t.Errorf("second decline: %d, want 400", w.Code)
+	}
 	// Unknown fields are refused.
 	if w := do(family, http.MethodPost, "/manager-invites", map[string]string{"client_id": client, "email": "x@example.com", "role": RoleGuardian, "extra": "1"}); w.Code != http.StatusBadRequest {
 		t.Errorf("unknown field: %d", w.Code)
