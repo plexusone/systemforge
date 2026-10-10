@@ -227,22 +227,18 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 // AddManager makes manager a manager of managed with the given role. It is
 // a no-op when the relationship is already active and reactivates it when
 // inactive. The actor needs manage_managers on the managed principal,
-// which guardians hold.
+// which guardians hold; the permission is checked under the principal's
+// row lock, in the transaction that writes.
 func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m ManagerInput, actorID uuid.UUID) error {
 	if err := s.checkRole(m.Role); err != nil {
 		return err
 	}
-	if err := s.authorizeManagers(ctx, actorID, managedID); err != nil {
-		return err
-	}
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
-		if _, err := lockHuman(ctx, tx, managedID); err != nil {
-			return err
-		}
 		// Only a principal that already has a manager can gain another;
 		// a self-managed human enters management by accepting an
-		// invitation (ADR-009).
-		if err := requireManaged(ctx, tx, managedID); err != nil {
+		// invitation (ADR-009). The check, and the actor's authority, are
+		// made under the principal's row lock.
+		if _, err := s.lockAndAuthorize(ctx, tx, actorID, managedID); err != nil {
 			return err
 		}
 		if m.PrincipalID == managedID {
@@ -266,14 +262,14 @@ func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m Manager
 // without a verified email; deactivate or delete the principal instead.
 // Removing the last manager of a principal with a verified email releases
 // it, as Release does. The actor needs manage_managers on the managed
-// principal, which guardians hold.
+// principal, which guardians hold; the permission is checked under the
+// principal's row lock, in the transaction that writes, so of two
+// concurrent removals that each withdraw the other's authority exactly one
+// succeeds.
 func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m ManagerInput, actorID uuid.UUID) error {
-	if err := s.authorizeManagers(ctx, actorID, managedID); err != nil {
-		return err
-	}
 	var released bool
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
-		h, err := lockHuman(ctx, tx, managedID)
+		h, err := s.lockAndAuthorize(ctx, tx, actorID, managedID)
 		if err != nil {
 			return err
 		}
@@ -455,7 +451,13 @@ func (s *Service) ListManagers(ctx context.Context, managedID uuid.UUID) ([]Rela
 // It matches authz.ManagerRoleGetter, so it can back the simple provider:
 // rbac.WithManagerRoleGetter(svc.ManagerRoles).
 func (s *Service) ManagerRoles(ctx context.Context, managerID, managedID uuid.UUID) ([]string, error) {
-	roles, err := s.client.ManagerRelationship.Query().
+	rels := s.client.ManagerRelationship
+	if tx, ok := ctx.Value(txContextKey{}).(*ent.Tx); ok {
+		// An authorization check made under a row lock reads in that
+		// transaction (lockAndAuthorize).
+		rels = tx.ManagerRelationship
+	}
+	roles, err := rels.Query().
 		Where(
 			managerrelationship.ManagedPrincipalID(managedID),
 			managerrelationship.ManagerPrincipalID(managerID),
@@ -532,6 +534,51 @@ func validateManager(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
 		return fmt.Errorf("%w: %s", ErrInvalidManager, id)
 	}
 	return nil
+}
+
+// txContextKey carries the transaction of an authorization check made
+// under a row lock, for the built-in role lookup.
+type txContextKey struct{}
+
+// lockAndAuthorize takes the managed principal's row lock and then
+// requires that principal to be an active managed principal and actorID to
+// hold manage_managers on it, returning the principal's human extension.
+// Checking after the lock closes the window between check and write: a
+// concurrent change to the managers of the same principal has committed, or
+// has not started, by the time the authority is read, so two managers
+// cannot each act on authority the other's removal withdraws.
+//
+// The authorizer is called with a context carrying tx, which ManagerRoles
+// reads through, so the built-in role lookup runs in the locked
+// transaction (a second connection would block on the held lock under
+// SQLite). Authorizers backed by another store read committed state, which
+// already includes any change whose lock this one waited for.
+func (s *Service) lockAndAuthorize(ctx context.Context, tx *ent.Tx, actorID, managedID uuid.UUID) (*ent.Human, error) {
+	h, err := lockHuman(ctx, tx, managedID)
+	if errors.Is(err, ErrNotFound) {
+		return nil, ErrNotManaged
+	}
+	if err != nil {
+		return nil, err
+	}
+	active, err := tx.Principal.Query().Where(entprincipal.ID(managedID), entprincipal.Active(true)).Exist(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("managedprincipal: check principal: %w", err)
+	}
+	if !active {
+		return nil, ErrNotManaged
+	}
+	if err := requireManaged(ctx, tx, managedID); err != nil {
+		return nil, err
+	}
+	ok, err := s.authz.Can(context.WithValue(ctx, txContextKey{}, tx), authz.NewUserPrincipal(actorID), authz.PermManageManagers, authz.NewPrincipalResource(managedID))
+	if err != nil {
+		return nil, fmt.Errorf("managedprincipal: authorize: %w", err)
+	}
+	if !ok {
+		return nil, ErrForbidden
+	}
+	return h, nil
 }
 
 // lockHuman returns the human extension of the principal after updating
