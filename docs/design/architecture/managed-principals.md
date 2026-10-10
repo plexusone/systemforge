@@ -90,7 +90,7 @@ manage a self-managed human. Kept apart from organization invites
 | `role` | The manager role the inviter will hold |
 | `token_prefix`, `token_hash` | `SFMI` plus 8 characters, unique, used to look it up; SHA-256 of the full token (`SFMI` + 160 random bits, base32) |
 | `expires_at` | `DefaultInviteTTL` 7 days, `WithInviteTTL` |
-| `accepted_at`, `accepted_by`, `revoked_at` | Set once; an accepted, revoked or expired invitation is refused |
+| `accepted_at`, `accepted_by`, `revoked_at`, `declined_at`, `declined_by` | Set once; an accepted, revoked, declined or expired invitation is refused |
 
 ### `sf_credentials` type `login_token` (`identity/ent/schema/credential.go`)
 
@@ -166,7 +166,8 @@ provider; an application maps them in its own vocabulary.
 | `Release(actorID, managedID)` | Ends management of a principal with a verified email: deactivates every remaining relationship, restores `DefaultCapabilitiesForType(human)` and records an access change (`management_ended`), in one transaction. Needs `manage_managers`, checked under the principal's row lock; `ErrEmailNotVerified` without a verified email; `managed_principal.released`; syncs each removal. `RemoveManager` of the last manager of a verified principal does the same |
 | `InviteManager(in)` | A manager-to-be offers to manage the human with a verified `Email`. Needs a client that allows managed principals and a valid manager; returns the token once; `managed_principal.manager_invited` |
 | `AcceptManagerInvite(token, principalID)` | The signed-in principal's consent. Spends the invitation conditionally, creates the relationship, sets `ManagedHumanCapabilities`, records an access change (`management_granted`), `managed_principal.manager_invite_accepted`, syncs. `ErrInvalidInvite` for any mismatch, `ErrAlreadyManaged`, `ErrManagesOthers` |
-| `RevokeManagerInvite(actorID, inviteID)` | The inviter withdraws a pending invitation; `ErrNotFound` otherwise |
+| `DeclineManagerInvite(token, principalID)` | The invitee's refusal, with the same identity match as acceptance (an active principal whose verified email is the invited address; `ErrInvalidInvite` for any mismatch, unknown, expired, revoked, accepted or already declined token). Single use: it marks the invitation declined (`declined_at`, `declined_by`) conditionally, so a concurrent acceptance or decline wins exactly once, and a declined invitation can be neither accepted nor revoked. Touches no relationship, capability or access change. `managed_principal.manager_invite_declined`, whose details carry the inviter and the invitation, is the inviter's notification: the service sends none itself, so the application delivers it |
+| `RevokeManagerInvite(actorID, inviteID)` | The inviter withdraws a pending invitation; `ErrNotFound` otherwise, including after the invitee accepted or declined |
 | `VerifyEmail(managedID, verifiedAt)` | Records that the principal controls the email it was created with; called by the verification flow, not by a manager. `managed_principal.email_verified` |
 | `IssueClaim(actorID, managedID)` | Returns the plain code once; `managed_principal.claim_issued` |
 | `RedeemClaim(code, claimantID)` | Normalizes the code (case, spaces, hyphens), compares the hash in constant time, spends the claim with a conditional update so two redemptions cannot both succeed, validates the claimant as a manager, and makes them `guardian`; `managed_principal.claim_redeemed`; syncs |
@@ -269,6 +270,7 @@ POST   /{principalID}/claims                      IssueClaim
 POST   /claims/redeem                             RedeemClaim (JSON: code)
 POST   /manager-invites                           InviteManager (JSON: client_id, email, role)
 POST   /manager-invites/accept                    AcceptManagerInvite (JSON: token)
+POST   /manager-invites/decline                   DeclineManagerInvite (JSON: token); 204, 400 for any mismatch
 DELETE /manager-invites/{inviteID}                RevokeManagerInvite
 GET    /{principalID}/login-tokens
 DELETE /{principalID}/login-tokens/{credentialID}
@@ -327,7 +329,10 @@ own profile, so it is created only by that principal accepting an
 invitation while signed in (`AcceptManagerInvite`). The caller passes its
 own authenticated principal ID, and the invitation matches only when the
 principal's verified email is the invited address, so a leaked token alone
-does not enter anyone into management. Creation by a manager (`Create`,
+does not enter anyone into management. The invitee may instead decline
+(`DeclineManagerInvite`), with the same identity match: the invitation is
+then spent, the inviter cannot withdraw it and nothing about the invitee
+changes. Creation by a manager (`Create`,
 `RedeemClaim`) remains the path for principals the manager creates or
 whose guardian claims them. How the token is delivered (email, link, QR)
 is the application's choice.
