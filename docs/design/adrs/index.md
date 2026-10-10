@@ -18,6 +18,7 @@ under `docs/specs/` and execute these decisions.
 | [ADR-009](ADR-009-management-is-a-relationship.md) | Management Is a Relationship, Not the Absence of an Email (amends ADR-005) | Accepted |
 | [ADR-010](ADR-010-real-time-access-invalidation.md) | Real-Time Invalidation of Access on Membership Change (amends ADR-007) | Accepted |
 | [ADR-011](ADR-011-lifecycle-states-data-classification-and-privacy-rights.md) | Lifecycle States, Data Classification and Privacy Rights (amends ADR-009) | Proposed |
+| [ADR-012](ADR-012-data-governance-enforcement-and-legal-hold.md) | Data Governance Enforcement and Legal Hold | Proposed |
 
 ## Statuses
 

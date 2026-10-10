@@ -4,7 +4,7 @@
 **Deciders:** @grokify
 **Relates to:** ADR-005 and ADR-009 (managed principals; this ADR amends the
 release decision of ADR-009), ADR-006 (organization lifecycle), ADR-010
-(access changes).
+(access changes), ADR-012 (enforcement and the semantics of a hold).
 **Updates:** `docs/design/architecture/managed-principals.md`,
 `docs/design/architecture/organizations.md`, a new
 `docs/design/architecture/data-governance.md`.
@@ -115,8 +115,9 @@ code host, correctable or removable before it is final.
 12. **Erasure can be held, minimally.** A subject may carry an *erasure
     hold*: a flag with a reason, set and cleared only by a platform
     administrator and recorded as an access-controlled audit event. While it
-    is set, `Erase` and the delete transition refuse with `ErrHeld`, and
-    archive remains available. SystemForge does not model legal cases,
+    is set, `Erase`, the delete transition and edits to `pii` fields refuse
+    with `ErrHeld`, and archive remains available; ADR-012 defines what a
+    hold preserves and how it is enforced. SystemForge does not model legal cases,
     scopes or expiry; an application that needs them keeps them and sets the
     flag.
 13. **The audit log is exportable.** Lifecycle transitions, erasure results
