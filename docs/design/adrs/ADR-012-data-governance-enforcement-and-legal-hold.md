@@ -65,10 +65,12 @@ without taking over their data access.
 5. **Custodians are subjects, grouped by the hold.** A hold lists its
    custodians explicitly. As a convenience a hold may be placed on an
    organization, which adds the organization's members at that time and
-   records the hold against the organization; whether later members are
-   added is a setting on the hold, off by default. The platform understands
-   the grouping (which subjects a hold covers, and which holds cover a
-   subject) and nothing about the matter itself.
+   records the hold against the organization. Whether members who join
+   later are also added is chosen when the hold is placed
+   (`include_future_members`), and defaults to no. The setting is recorded
+   with the hold and changing it is an audited change by the legal manager.
+   The platform understands the grouping (which subjects a hold covers, and
+   which holds cover a subject) and nothing about the matter itself.
 6. **Placing a hold snapshots each custodian.** For every custodian the
    platform runs the same `Export` operation (ADR-011, decision 9) and
    stores the result as a sealed, immutable artifact with a digest, time,
@@ -97,11 +99,24 @@ without taking over their data access.
 
 ### Roles and notification
 
-10. **A `legal_manager` role places, changes and releases holds.** It is a
-    platform-level role in the SystemForge vocabulary (ADR-007), separate
-    from platform administration, so that placing a hold is not available to
-    everyone who can administer accounts. Holds and snapshots are readable
-    only to it and to platform administrators with the audit permission.
+10. **Two platform roles, with privacy under legal.** Organizations place
+    privacy inside legal, so the roles are separate in permission and nested
+    in default assignment:
+    - `privacy_manager` handles data subject requests: the catalog (read),
+      access and portability exports, restriction (archive), and erasure
+      and deletion requests, which are refused while a hold applies.
+    - `legal_manager` places, changes and releases holds, decides whether a
+      hold is disclosed, and holds every `privacy_manager` permission. A
+      hold overrides erasure, so the role that can place one must be able to
+      see the requests it defers.
+    Both are platform-level roles in the SystemForge vocabulary (ADR-007),
+    separate from platform administration, so that placing a hold or
+    erasing a person is not available to everyone who can administer
+    accounts. Permissions are named (`privacy.request.manage`,
+    `privacy.catalog.read`, `legal.hold.manage`, `legal.hold.disclose`,
+    `audit.read`) so a deployment whose privacy office sits outside legal
+    can assign them differently. Holds and snapshots are readable only to
+    `legal_manager` and to administrators with `audit.read`.
 11. **A hold is marked internally, and notification is the legal manager's
     decision.** The marker is visible to staff in admin tooling. Whether
     and how the person is told is set per hold: not at all, in the
@@ -193,10 +208,10 @@ without taking over their data access.
 
 ## Open questions
 
-- Whether a hold on an organization adds members who join later by default,
-  or only those present at placement (decision 5 defaults to the latter).
 - How a data subject access request interacts with a hold the subject must
   not be told about (decision 11 defaults to "pending review").
-- Whether the legal manager role is platform-wide only, or also available
-  per organization for enterprise tenants.
+- Whether `legal_manager` and `privacy_manager` are also available per
+  organization for enterprise tenants (they are platform-level to start).
+- Whether erasure by a `privacy_manager` needs a second approver
+  (separation of duties) for subjects with an active deferred request.
 - Snapshot encryption keys: per hold, per subject, or platform-wide.
