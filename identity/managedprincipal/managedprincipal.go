@@ -1,11 +1,14 @@
-// Package managedprincipal manages humans without an email: managed
-// principals, such as young learners, whose accounts are created and
-// controlled by managers who do have an email (ADR-005).
+// Package managedprincipal manages managed principals: humans, such as
+// young learners, whose accounts are created and controlled by managers
+// who have a verified email (ADR-005). A principal is managed while it has
+// at least one active manager relationship, whether or not it has an email
+// of its own (ADR-009).
 //
 // The package enforces the invariants: a managed principal can be created
-// only when the deployment and the requesting client both allow it, always
-// has at least one active manager, and every manager is an active human
-// with an email who is not itself managed.
+// only when the deployment and the requesting client both allow it, a
+// principal without a verified email always has at least one active
+// manager, and every manager is an active human with an email who is not
+// itself managed.
 package managedprincipal
 
 import (
@@ -43,12 +46,14 @@ var (
 	ErrInvalidManager = errors.New("managedprincipal: manager must be an active human with an email")
 	// ErrInvalidRole is returned for a manager role that is not registered.
 	ErrInvalidRole = errors.New("managedprincipal: unknown manager role")
-	// ErrNotManaged is returned when the principal is not a human, or for
-	// operations that apply only to managed principals, has an email.
-	ErrNotManaged = errors.New("managedprincipal: principal is not a managed human")
+	// ErrNotManaged is returned when the principal is not a human, or has
+	// no active manager, for operations that apply only to managed
+	// principals.
+	ErrNotManaged = errors.New("managedprincipal: principal is not managed (it has no active manager)")
 	// ErrLastManager is returned when removing the last active manager of
-	// a principal that has no email.
-	ErrLastManager = errors.New("managedprincipal: cannot remove the last manager of a principal without an email")
+	// a principal that has no verified email. Management ends only for a
+	// principal that can be reached and verified (ADR-009).
+	ErrLastManager = errors.New("managedprincipal: cannot remove the last manager of a principal without a verified email")
 	// ErrNotManager is returned when the acting principal is not an
 	// active manager of the managed principal.
 	ErrNotManager = errors.New("managedprincipal: not an active manager of this principal")
@@ -82,6 +87,10 @@ type CreateInput struct {
 	ClientID string
 	// DisplayName is the name shown for the managed principal.
 	DisplayName string
+	// Email optionally gives the principal an address of its own. It is
+	// stored unverified: it counts toward ending management only once
+	// verified (VerifyEmail). Management does not depend on it (ADR-009).
+	Email string
 	// Managers must contain at least one manager.
 	Managers []ManagerInput
 	// ActorID is the principal performing the action, for the audit trail.

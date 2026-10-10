@@ -271,9 +271,22 @@ func TestAddAndRemoveManager(t *testing.T) {
 		t.Errorf("relationships after reactivate = %d, %v; want 2", n, err)
 	}
 
-	// Once the principal has an email, the last manager may be removed.
+	// An unverified email does not let the last manager go.
 	if err := db.Human.Update().Where(human.PrincipalID(id)).SetEmail("learner@example.com").Exec(ctx); err != nil {
 		t.Fatalf("attach email: %v", err)
+	}
+	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleEducator}, parent); err != nil {
+		t.Fatalf("RemoveManager with two managers: %v", err)
+	}
+	if err := svc.RemoveManager(ctx, id, ManagerInput{parent, RoleGuardian}, parent); !errors.Is(err, ErrLastManager) {
+		t.Fatalf("RemoveManager last with unverified email = %v, want ErrLastManager", err)
+	}
+	if err := svc.AddManager(ctx, id, ManagerInput{teacher, RoleEducator}, parent); err != nil {
+		t.Fatalf("AddManager: %v", err)
+	}
+	// Once the email is verified, the last manager may be removed.
+	if err := svc.VerifyEmail(ctx, id, time.Now()); err != nil {
+		t.Fatalf("VerifyEmail: %v", err)
 	}
 	for _, m := range []ManagerInput{{teacher, RoleEducator}, {parent, RoleGuardian}} {
 		if err := svc.RemoveManager(ctx, id, m, parent); err != nil {
@@ -281,7 +294,7 @@ func TestAddAndRemoveManager(t *testing.T) {
 		}
 	}
 
-	want := []string{EventCreated, EventManagerAdded, EventManagerAdded, EventManagerRemoved, EventManagerAdded, EventManagerRemoved, EventManagerRemoved}
+	want := []string{EventCreated, EventManagerAdded, EventManagerAdded, EventManagerRemoved, EventManagerAdded, EventManagerRemoved, EventManagerAdded, EventEmailVerified, EventManagerRemoved, EventManagerRemoved}
 	got := rec.types()
 	if len(got) != len(want) {
 		t.Fatalf("audit = %v, want %v", got, want)
@@ -446,5 +459,70 @@ func TestIssueLoginToken(t *testing.T) {
 	}
 	if _, err := svc.IssueLoginToken(ctx, in(func(*IssueLoginTokenInput) {})); !errors.Is(err, ErrNotManaged) {
 		t.Errorf("inactive principal: %v", err)
+	}
+}
+
+// TestManagementIsARelationship verifies ADR-009: a principal is managed
+// because it has an active manager, not because it lacks an email.
+func TestManagementIsARelationship(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	svc, _ := newService(t, db)
+	teacher := addHuman(t, db, "teacher@example.com", true)
+	addHuman(t, db, "taken@example.com", true)
+
+	if _, err := svc.Create(ctx, CreateInput{DisplayName: "Student", ClientID: client, Email: "TAKEN@example.com",
+		Managers: []ManagerInput{{teacher, RoleGuardian}}}); !errors.Is(err, ErrEmailInUse) {
+		t.Fatalf("Create with a taken email = %v, want ErrEmailInUse", err)
+	}
+	if n, err := db.Human.Query().Count(ctx); err != nil || n != 2 {
+		t.Fatalf("humans after refused create = %d, %v; want 2", n, err)
+	}
+
+	id, err := svc.Create(ctx, CreateInput{DisplayName: "Student", ClientID: client, Email: "student@example.com",
+		Managers: []ManagerInput{{teacher, RoleGuardian}}, ActorID: teacher})
+	if err != nil {
+		t.Fatalf("Create with email: %v", err)
+	}
+	h, err := db.Human.Query().Where(human.PrincipalID(id)).Only(ctx)
+	if err != nil || h.Email == nil || *h.Email != "student@example.com" || h.EmailVerifiedAt != nil {
+		t.Fatalf("human = %+v, %v; want an unverified email", h, err)
+	}
+	if managed, err := svc.IsManaged(ctx, id); err != nil || !managed {
+		t.Errorf("IsManaged with an email = %v, %v; want true", managed, err)
+	}
+	// Authority checks apply to a managed principal that has an email.
+	if _, err := svc.IssueLoginToken(ctx, IssueLoginTokenInput{ManagedID: id, ClientID: client, IssuedBy: teacher}); err != nil {
+		t.Errorf("IssueLoginToken for a managed principal with an email: %v", err)
+	}
+	if _, err := svc.ListLoginTokens(ctx, teacher, id); err != nil {
+		t.Errorf("ListLoginTokens: %v", err)
+	}
+
+	// The email is unverified, so the only manager cannot go.
+	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleGuardian}, teacher); !errors.Is(err, ErrLastManager) {
+		t.Errorf("RemoveManager with an unverified email = %v, want ErrLastManager", err)
+	}
+	if err := svc.VerifyEmail(ctx, addHuman(t, db, "", true), time.Now()); !errors.Is(err, ErrNotManaged) {
+		t.Errorf("VerifyEmail for an unmanaged principal = %v, want ErrNotManaged", err)
+	}
+	if err := svc.VerifyEmail(ctx, id, time.Now()); err != nil {
+		t.Fatalf("VerifyEmail: %v", err)
+	}
+
+	// A human without a manager is not managed, whatever its email, and
+	// cannot be given a manager by AddManager: that takes consent.
+	plain := addHuman(t, db, "plain@example.com", true)
+	noEmail := addHuman(t, db, "", true)
+	for _, id := range []uuid.UUID{plain, noEmail} {
+		if managed, err := svc.IsManaged(ctx, id); err != nil || managed {
+			t.Errorf("IsManaged(unmanaged) = %v, %v; want false", managed, err)
+		}
+		if err := svc.AddManager(ctx, id, ManagerInput{teacher, RoleGuardian}, teacher); !errors.Is(err, ErrNotManaged) {
+			t.Errorf("AddManager to an unmanaged principal = %v, want ErrNotManaged", err)
+		}
+	}
+	if _, err := svc.IssueLoginToken(ctx, IssueLoginTokenInput{ManagedID: noEmail, ClientID: client, IssuedBy: teacher}); !errors.Is(err, ErrNotManaged) {
+		t.Errorf("IssueLoginToken for an unmanaged human = %v, want ErrNotManaged", err)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
+	"github.com/plexusone/systemforge/identity/ent/predicate"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/principal"
 )
@@ -150,6 +152,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 		return uuid.Nil, ErrNotAllowed
 	}
 
+	email := strings.TrimSpace(in.Email)
 	id := uuid.New()
 	err = s.withTx(ctx, func(tx *ent.Tx) error {
 		for _, m := range in.Managers {
@@ -157,17 +160,35 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 				return err
 			}
 		}
+		identifier := "human:" + id.String()
+		if email != "" {
+			taken, err := tx.Human.Query().Where(human.EmailEqualFold(email)).Exist(ctx)
+			if err != nil {
+				return fmt.Errorf("managedprincipal: check email: %w", err)
+			}
+			if taken {
+				return ErrEmailInUse
+			}
+			identifier = email
+		}
 		if _, err := tx.Principal.Create().
 			SetID(id).
 			SetType(entprincipal.TypeHuman).
-			SetIdentifier("human:" + id.String()).
+			SetIdentifier(identifier).
 			SetDisplayName(in.DisplayName).
 			SetActive(true).
 			SetCapabilities(principal.ManagedHumanCapabilities().ToMap()).
 			Save(ctx); err != nil {
 			return fmt.Errorf("managedprincipal: create principal: %w", err)
 		}
-		if _, err := tx.Human.Create().SetPrincipalID(id).Save(ctx); err != nil {
+		hc := tx.Human.Create().SetPrincipalID(id)
+		if email != "" {
+			hc.SetEmail(email)
+		}
+		if _, err := hc.Save(ctx); err != nil {
+			if ent.IsConstraintError(err) && email != "" {
+				return ErrEmailInUse
+			}
 			return fmt.Errorf("managedprincipal: create human: %w", err)
 		}
 		for _, m := range in.Managers {
@@ -181,7 +202,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 		return uuid.Nil, err
 	}
 
-	details := map[string]any{"client_id": in.ClientID, "managers": managerDetails(in.Managers)}
+	details := map[string]any{"client_id": in.ClientID, "managers": managerDetails(in.Managers), "has_email": email != ""}
 	s.emit(ctx, EventCreated, "create", in.ActorID, id, details)
 
 	syncErr := s.sync(ctx, "register principal", id, s.syncer.RegisterPrincipal(ctx, id))
@@ -205,6 +226,12 @@ func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m Manager
 		if _, err := lockHuman(ctx, tx, managedID); err != nil {
 			return err
 		}
+		// Only a principal that already has a manager can gain another;
+		// a self-managed human enters management by accepting an
+		// invitation (ADR-009).
+		if err := requireManaged(ctx, tx, managedID); err != nil {
+			return err
+		}
 		if m.PrincipalID == managedID {
 			return ErrInvalidManager
 		}
@@ -222,8 +249,8 @@ func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m Manager
 }
 
 // RemoveManager deactivates a manager relationship. It refuses with
-// ErrLastManager when the managed principal has no email and this is its
-// last active manager; deactivate or delete the principal instead.
+// ErrLastManager when this is the last active manager of a principal
+// without a verified email; deactivate or delete the principal instead.
 func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m ManagerInput, actorID uuid.UUID) error {
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		h, err := lockHuman(ctx, tx, managedID)
@@ -244,7 +271,7 @@ func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m Mana
 		if err != nil {
 			return fmt.Errorf("managedprincipal: find relationship: %w", err)
 		}
-		if h.Email == nil {
+		if !emailVerified(h) {
 			n, err := tx.ManagerRelationship.Query().
 				Where(
 					managerrelationship.ManagedPrincipalID(managedID),
@@ -324,7 +351,7 @@ func (s *Service) checkIssuer(ctx context.Context, managedID, issuerID uuid.UUID
 	ok, err := s.client.Human.Query().
 		Where(
 			human.PrincipalID(managedID),
-			human.EmailIsNil(),
+			hasActiveManager(),
 			human.HasPrincipalWith(entprincipal.Active(true)),
 		).
 		Exist(ctx)
@@ -397,11 +424,40 @@ func (s *Service) ManagerRoles(ctx context.Context, managerID, managedID uuid.UU
 	return roles, nil
 }
 
-// IsManaged reports whether the principal is a human without an email.
+// IsManaged reports whether the principal is a human with at least one
+// active manager relationship. An email, verified or not, does not change
+// the answer (ADR-009).
 func (s *Service) IsManaged(ctx context.Context, principalID uuid.UUID) (bool, error) {
 	return s.client.Human.Query().
-		Where(human.PrincipalID(principalID), human.EmailIsNil()).
+		Where(human.PrincipalID(principalID), hasActiveManager()).
 		Exist(ctx)
+}
+
+// hasActiveManager matches humans whose principal has an active manager
+// relationship: the definition of a managed principal.
+func hasActiveManager() predicate.Human {
+	return human.HasPrincipalWith(entprincipal.HasManagersWith(managerrelationship.Active(true)))
+}
+
+// emailVerified reports whether the human has an email it has proven to
+// control, the condition for management to end.
+func emailVerified(h *ent.Human) bool {
+	return h.Email != nil && h.EmailVerifiedAt != nil
+}
+
+// requireManaged returns ErrNotManaged unless the principal has an active
+// manager relationship.
+func requireManaged(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	ok, err := tx.ManagerRelationship.Query().
+		Where(managerrelationship.ManagedPrincipalID(id), managerrelationship.Active(true)).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("managedprincipal: check managed: %w", err)
+	}
+	if !ok {
+		return ErrNotManaged
+	}
+	return nil
 }
 
 func (s *Service) checkRole(role string) error {

@@ -19,7 +19,6 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/managerclaim"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
-	"github.com/plexusone/systemforge/identity/principal"
 )
 
 const (
@@ -40,6 +39,7 @@ const (
 	EventClaimIssued   = "managed_principal.claim_issued"
 	EventClaimRedeemed = "managed_principal.claim_redeemed"
 	EventEmailAttached = "managed_principal.email_attached"
+	EventEmailVerified = "managed_principal.email_verified"
 )
 
 var (
@@ -49,7 +49,11 @@ var (
 	// ErrEmailInUse is returned when attaching an email another human
 	// already has.
 	ErrEmailInUse = errors.New("managedprincipal: email is already in use")
-	// ErrEmailRequired is returned when attaching an empty email.
+	// ErrHasEmail is returned when attaching an email to a principal that
+	// already has one.
+	ErrHasEmail = errors.New("managedprincipal: principal already has an email")
+	// ErrEmailRequired is returned when attaching an empty email, or
+	// verifying a principal that has none.
 	ErrEmailRequired = errors.New("managedprincipal: email is required")
 )
 
@@ -147,6 +151,9 @@ func (s *Service) RedeemClaim(ctx context.Context, code string, claimantID uuid.
 		if _, err := lockHuman(ctx, tx, c.ManagedPrincipalID); err != nil {
 			return err
 		}
+		if err := requireManaged(ctx, tx, c.ManagedPrincipalID); err != nil {
+			return err
+		}
 		if c.ManagedPrincipalID == claimantID {
 			return ErrInvalidManager
 		}
@@ -164,14 +171,16 @@ func (s *Service) RedeemClaim(ctx context.Context, code string, claimantID uuid.
 	return managedID, s.sync(ctx, "add manager", managedID, s.syncer.AddPrincipalManager(ctx, managedID, claimantID, RoleGuardian))
 }
 
-// AttachVerifiedEmail turns a managed principal into an ordinary human:
-// it sets an email the caller has verified the principal controls, makes
-// it the identifier, and restores default human capabilities. Manager
-// relationships are kept, and may now all be removed. The actor needs
-// manage_account, which guardians hold.
+// AttachVerifiedEmail gives a managed principal that has no email an
+// address the caller has verified the principal controls, and makes it the
+// identifier. Management is unchanged (ADR-009): manager relationships and
+// the principal's managed capabilities stay until management ends, and the
+// verified email is what allows it to end. The actor needs manage_account,
+// which guardians hold.
 //
 // Proving control of the address is the caller's job until SystemAuth's
-// email verification (ADR-003) drives this step.
+// email verification (ADR-003) drives this step. A principal created with
+// an unverified email is verified with VerifyEmail instead.
 func (s *Service) AttachVerifiedEmail(ctx context.Context, actorID, managedID uuid.UUID, email string, verifiedAt time.Time) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
@@ -185,8 +194,11 @@ func (s *Service) AttachVerifiedEmail(ctx context.Context, actorID, managedID uu
 		if err != nil {
 			return err
 		}
+		if err := requireManaged(ctx, tx, managedID); err != nil {
+			return err
+		}
 		if h.Email != nil {
-			return ErrNotManaged
+			return ErrHasEmail
 		}
 		taken, err := tx.Human.Query().Where(human.EmailEqualFold(email)).Exist(ctx)
 		if err != nil {
@@ -201,11 +213,7 @@ func (s *Service) AttachVerifiedEmail(ctx context.Context, actorID, managedID uu
 			}
 			return fmt.Errorf("managedprincipal: set email: %w", err)
 		}
-		caps := principal.DefaultCapabilitiesForType(principal.TypeHuman)
-		if err := tx.Principal.UpdateOneID(managedID).
-			SetIdentifier(email).
-			SetCapabilities(caps.ToMap()).
-			Exec(ctx); err != nil {
+		if err := tx.Principal.UpdateOneID(managedID).SetIdentifier(email).Exec(ctx); err != nil {
 			if ent.IsConstraintError(err) {
 				return ErrEmailInUse
 			}
@@ -220,11 +228,43 @@ func (s *Service) AttachVerifiedEmail(ctx context.Context, actorID, managedID uu
 	return nil
 }
 
+// VerifyEmail records that a managed principal controls the email it was
+// created with, so that its management may end (Release). It is called by
+// the verification flow once the principal has proven control of the
+// address (ADR-003), not by a manager: the platform does not let a manager
+// vouch for someone else's address.
+func (s *Service) VerifyEmail(ctx context.Context, managedID uuid.UUID, verifiedAt time.Time) error {
+	err := s.withTx(ctx, func(tx *ent.Tx) error {
+		h, err := lockHuman(ctx, tx, managedID)
+		if err != nil {
+			return err
+		}
+		if err := requireManaged(ctx, tx, managedID); err != nil {
+			return err
+		}
+		if h.Email == nil {
+			return ErrEmailRequired
+		}
+		if h.EmailVerifiedAt != nil {
+			return nil
+		}
+		if err := tx.Human.UpdateOne(h).SetEmailVerifiedAt(verifiedAt).Exec(ctx); err != nil {
+			return fmt.Errorf("managedprincipal: verify email: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	s.emit(ctx, EventEmailVerified, "verify_email", managedID, managedID, nil)
+	return nil
+}
+
 // authorizeAccount requires actorID to hold manage_account on a managed
 // principal.
 func (s *Service) authorizeAccount(ctx context.Context, actorID, managedID uuid.UUID) error {
 	managed, err := s.client.Human.Query().
-		Where(human.PrincipalID(managedID), human.EmailIsNil(), human.HasPrincipalWith(entprincipal.Active(true))).
+		Where(human.PrincipalID(managedID), hasActiveManager(), human.HasPrincipalWith(entprincipal.Active(true))).
 		Exist(ctx)
 	if err != nil {
 		return fmt.Errorf("managedprincipal: check principal: %w", err)

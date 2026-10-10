@@ -62,7 +62,7 @@ type Session struct {
 // managed principal.
 func (s *Service) authorizeCredentials(ctx context.Context, actorID, managedID uuid.UUID) error {
 	managed, err := s.client.Human.Query().
-		Where(human.PrincipalID(managedID), human.EmailIsNil()).
+		Where(human.PrincipalID(managedID), hasActiveManager()).
 		Exist(ctx)
 	if err != nil {
 		return fmt.Errorf("managedprincipal: check principal: %w", err)

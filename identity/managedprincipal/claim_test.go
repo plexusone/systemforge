@@ -133,11 +133,15 @@ func TestAttachVerifiedEmail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("principal: %v", err)
 	}
-	if p.Identifier != "kid@example.com" || !p.Capabilities["can_manage_profile"] {
+	// Attaching an email changes nothing about management (ADR-009).
+	if p.Identifier != "kid@example.com" || p.Capabilities["can_manage_profile"] {
 		t.Errorf("principal after attach = %+v", p)
 	}
-	if managed, err := svc.IsManaged(ctx, learner); err != nil || managed {
-		t.Errorf("IsManaged = %v, %v", managed, err)
+	if managed, err := svc.IsManaged(ctx, learner); err != nil || !managed {
+		t.Errorf("IsManaged after attach = %v, %v; want true", managed, err)
+	}
+	if err := svc.AttachVerifiedEmail(ctx, parent, learner, "again@example.com", now); !errors.Is(err, ErrHasEmail) {
+		t.Errorf("second attach = %v, want ErrHasEmail", err)
 	}
 	// Relationships persist, and now the last may be removed.
 	for _, m := range []ManagerInput{{teacher, RoleEducator}, {parent, RoleGuardian}} {
@@ -145,8 +149,11 @@ func TestAttachVerifiedEmail(t *testing.T) {
 			t.Errorf("RemoveManager after attach: %v", err)
 		}
 	}
+	if managed, err := svc.IsManaged(ctx, learner); err != nil || managed {
+		t.Errorf("IsManaged after removal = %v, %v; want false", managed, err)
+	}
 	if err := svc.AttachVerifiedEmail(ctx, parent, learner, "again@example.com", now); !errors.Is(err, ErrNotManaged) {
-		t.Errorf("second attach = %v, want ErrNotManaged", err)
+		t.Errorf("attach after management ended = %v, want ErrNotManaged", err)
 	}
 }
 
