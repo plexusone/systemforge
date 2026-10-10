@@ -70,6 +70,11 @@ func ChangedAt(v time.Time) predicate.AccessChange {
 	return predicate.AccessChange(sql.FieldEQ(FieldChangedAt, v))
 }
 
+// Reason applies equality check predicate on the "reason" field. It's identical to ReasonEQ.
+func Reason(v string) predicate.AccessChange {
+	return predicate.AccessChange(sql.FieldEQ(FieldReason, v))
+}
+
 // PrincipalIDEQ applies the EQ predicate on the "principal_id" field.
 func PrincipalIDEQ(v uuid.UUID) predicate.AccessChange {
 	return predicate.AccessChange(sql.FieldEQ(FieldPrincipalID, v))
@@ -201,23 +206,68 @@ func ChangedAtLTE(v time.Time) predicate.AccessChange {
 }
 
 // ReasonEQ applies the EQ predicate on the "reason" field.
-func ReasonEQ(v Reason) predicate.AccessChange {
+func ReasonEQ(v string) predicate.AccessChange {
 	return predicate.AccessChange(sql.FieldEQ(FieldReason, v))
 }
 
 // ReasonNEQ applies the NEQ predicate on the "reason" field.
-func ReasonNEQ(v Reason) predicate.AccessChange {
+func ReasonNEQ(v string) predicate.AccessChange {
 	return predicate.AccessChange(sql.FieldNEQ(FieldReason, v))
 }
 
 // ReasonIn applies the In predicate on the "reason" field.
-func ReasonIn(vs ...Reason) predicate.AccessChange {
+func ReasonIn(vs ...string) predicate.AccessChange {
 	return predicate.AccessChange(sql.FieldIn(FieldReason, vs...))
 }
 
 // ReasonNotIn applies the NotIn predicate on the "reason" field.
-func ReasonNotIn(vs ...Reason) predicate.AccessChange {
+func ReasonNotIn(vs ...string) predicate.AccessChange {
 	return predicate.AccessChange(sql.FieldNotIn(FieldReason, vs...))
+}
+
+// ReasonGT applies the GT predicate on the "reason" field.
+func ReasonGT(v string) predicate.AccessChange {
+	return predicate.AccessChange(sql.FieldGT(FieldReason, v))
+}
+
+// ReasonGTE applies the GTE predicate on the "reason" field.
+func ReasonGTE(v string) predicate.AccessChange {
+	return predicate.AccessChange(sql.FieldGTE(FieldReason, v))
+}
+
+// ReasonLT applies the LT predicate on the "reason" field.
+func ReasonLT(v string) predicate.AccessChange {
+	return predicate.AccessChange(sql.FieldLT(FieldReason, v))
+}
+
+// ReasonLTE applies the LTE predicate on the "reason" field.
+func ReasonLTE(v string) predicate.AccessChange {
+	return predicate.AccessChange(sql.FieldLTE(FieldReason, v))
+}
+
+// ReasonContains applies the Contains predicate on the "reason" field.
+func ReasonContains(v string) predicate.AccessChange {
+	return predicate.AccessChange(sql.FieldContains(FieldReason, v))
+}
+
+// ReasonHasPrefix applies the HasPrefix predicate on the "reason" field.
+func ReasonHasPrefix(v string) predicate.AccessChange {
+	return predicate.AccessChange(sql.FieldHasPrefix(FieldReason, v))
+}
+
+// ReasonHasSuffix applies the HasSuffix predicate on the "reason" field.
+func ReasonHasSuffix(v string) predicate.AccessChange {
+	return predicate.AccessChange(sql.FieldHasSuffix(FieldReason, v))
+}
+
+// ReasonEqualFold applies the EqualFold predicate on the "reason" field.
+func ReasonEqualFold(v string) predicate.AccessChange {
+	return predicate.AccessChange(sql.FieldEqualFold(FieldReason, v))
+}
+
+// ReasonContainsFold applies the ContainsFold predicate on the "reason" field.
+func ReasonContainsFold(v string) predicate.AccessChange {
+	return predicate.AccessChange(sql.FieldContainsFold(FieldReason, v))
 }
 
 // And groups predicates with the AND operator between them.

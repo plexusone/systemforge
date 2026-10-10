@@ -53,17 +53,14 @@ func (AccessChange) Fields() []ent.Field {
 			Default(time.Now).
 			Immutable().
 			Comment("When the change was recorded, on the server clock"),
-		field.Enum("reason").
-			Values(
-				"membership_removed",
-				"org_role_changed",
-				"app_role_changed",
-				"grant_reduced",
-				"deactivated",
-				"sessions_revoked",
-			).
+		// A string rather than an enum so that adding a reason is a code
+		// change only. The reasons are the registry in
+		// identity/accesschange, which accesschange.Record enforces.
+		field.String("reason").
+			NotEmpty().
+			MaxLen(64).
 			Immutable().
-			Comment("Why access changed"),
+			Comment("Why access changed; a reason from the identity/accesschange registry"),
 	}
 }
 

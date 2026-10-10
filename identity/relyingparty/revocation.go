@@ -31,8 +31,10 @@ type AccessChange struct {
 	OrganizationID string
 	// ChangedAt is when SystemAuth recorded the change, on its clock.
 	ChangedAt time.Time
-	// Reason says why access changed (membership_removed, org_role_changed,
-	// app_role_changed, grant_reduced, deactivated, sessions_revoked).
+	// Reason says why access changed, such as membership_removed or
+	// deactivated. It is opaque here: SystemAuth's registry of reasons grows
+	// without a migration, so a value this package does not know is not an
+	// error.
 	Reason string
 }
 

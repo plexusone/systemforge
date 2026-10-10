@@ -15,7 +15,7 @@ var (
 		{Name: "principal_id", Type: field.TypeUUID},
 		{Name: "organization_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "changed_at", Type: field.TypeTime},
-		{Name: "reason", Type: field.TypeEnum, Enums: []string{"membership_removed", "org_role_changed", "app_role_changed", "grant_reduced", "deactivated", "sessions_revoked"}},
+		{Name: "reason", Type: field.TypeString, Size: 64},
 	}
 	// SfAccessChangesTable holds the schema information for the "sf_access_changes" table.
 	SfAccessChangesTable = &schema.Table{

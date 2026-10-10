@@ -52,6 +52,24 @@ func init() {
 	accesschangeDescChangedAt := accesschangeFields[2].Descriptor()
 	// accesschange.DefaultChangedAt holds the default value on creation for the changed_at field.
 	accesschange.DefaultChangedAt = accesschangeDescChangedAt.Default.(func() time.Time)
+	// accesschangeDescReason is the schema descriptor for reason field.
+	accesschangeDescReason := accesschangeFields[3].Descriptor()
+	// accesschange.ReasonValidator is a validator for the "reason" field. It is called by the builders before save.
+	accesschange.ReasonValidator = func() func(string) error {
+		validators := accesschangeDescReason.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(reason string) error {
+			for _, fn := range fns {
+				if err := fn(reason); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// accesschangeDescID is the schema descriptor for id field.
 	accesschangeDescID := accesschangeMixinFields0[0].Descriptor()
 	// accesschange.DefaultID holds the default value on creation for the id field.

@@ -2,6 +2,7 @@ package accesschange_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -134,5 +135,38 @@ func TestSourceReadsChangesForRelyingParties(t *testing.T) {
 	}
 	if listed, err := src.List(ctx, first.ChangedAt.Add(-time.Hour), 1); err != nil || len(listed) != 1 {
 		t.Errorf("List with limit 1 = %+v, %v", listed, err)
+	}
+}
+
+// TestRecordRejectsUnknownReason verifies that the sink of record refuses a
+// reason outside the registry, leaving no row, and accepts a registered one
+// without any schema knowledge of it.
+func TestRecordRejectsUnknownReason(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	tx, err := db.Tx(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: uuid.New(), Reason: "grant_widened"})
+	if err == nil || !strings.Contains(err.Error(), `unknown reason "grant_widened"`) {
+		t.Errorf("Record(unknown) = %v, want an unknown-reason error", err)
+	}
+	for _, r := range accesschange.Reasons() {
+		if _, err := accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: uuid.New(), Reason: r}); err != nil {
+			t.Errorf("Record(%s): %v", r, err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	n, err := db.AccessChange.Query().Count(ctx)
+	if err != nil || n != len(accesschange.Reasons()) {
+		t.Errorf("rows = %d, %v; want %d", n, err, len(accesschange.Reasons()))
 	}
 }

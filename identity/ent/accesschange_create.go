@@ -59,7 +59,7 @@ func (_c *AccessChangeCreate) SetNillableChangedAt(v *time.Time) *AccessChangeCr
 }
 
 // SetReason sets the "reason" field.
-func (_c *AccessChangeCreate) SetReason(v accesschange.Reason) *AccessChangeCreate {
+func (_c *AccessChangeCreate) SetReason(v string) *AccessChangeCreate {
 	_c.mutation.SetReason(v)
 	return _c
 }
@@ -188,7 +188,7 @@ func (_c *AccessChangeCreate) createSpec() (*AccessChange, *sqlgraph.CreateSpec)
 		_node.ChangedAt = value
 	}
 	if value, ok := _c.mutation.Reason(); ok {
-		_spec.SetField(accesschange.FieldReason, field.TypeEnum, value)
+		_spec.SetField(accesschange.FieldReason, field.TypeString, value)
 		_node.Reason = value
 	}
 	return _node, _spec

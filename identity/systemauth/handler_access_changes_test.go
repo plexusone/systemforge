@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/accesschange"
-	entaccesschange "github.com/plexusone/systemforge/identity/ent/accesschange"
 )
 
 func accessChangesServer(t *testing.T, opts ...Option) *Server {
@@ -75,7 +74,7 @@ func TestAccessChangesReplayEndpoint(t *testing.T) {
 		{PrincipalID: uuid.New(), Reason: accesschange.SessionsRevoked},
 	} {
 		// Written directly so each row carries a distinct, known time.
-		create := db.AccessChange.Create().SetPrincipalID(c.PrincipalID).SetReason(entaccesschange.Reason(c.Reason)).SetChangedAt(base.Add(time.Duration(i) * time.Minute))
+		create := db.AccessChange.Create().SetPrincipalID(c.PrincipalID).SetReason(string(c.Reason)).SetChangedAt(base.Add(time.Duration(i) * time.Minute))
 		if c.OrganizationID != nil {
 			create.SetOrganizationID(*c.OrganizationID)
 		}

@@ -3,7 +3,6 @@
 package accesschange
 
 import (
-	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -49,36 +48,11 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultChangedAt holds the default value on creation for the "changed_at" field.
 	DefaultChangedAt func() time.Time
+	// ReasonValidator is a validator for the "reason" field. It is called by the builders before save.
+	ReasonValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
-
-// Reason defines the type for the "reason" enum field.
-type Reason string
-
-// Reason values.
-const (
-	ReasonMembershipRemoved Reason = "membership_removed"
-	ReasonOrgRoleChanged    Reason = "org_role_changed"
-	ReasonAppRoleChanged    Reason = "app_role_changed"
-	ReasonGrantReduced      Reason = "grant_reduced"
-	ReasonDeactivated       Reason = "deactivated"
-	ReasonSessionsRevoked   Reason = "sessions_revoked"
-)
-
-func (r Reason) String() string {
-	return string(r)
-}
-
-// ReasonValidator is a validator for the "reason" field enum values. It is called by the builders before save.
-func ReasonValidator(r Reason) error {
-	switch r {
-	case ReasonMembershipRemoved, ReasonOrgRoleChanged, ReasonAppRoleChanged, ReasonGrantReduced, ReasonDeactivated, ReasonSessionsRevoked:
-		return nil
-	default:
-		return fmt.Errorf("accesschange: invalid enum value for reason field: %q", r)
-	}
-}
 
 // OrderOption defines the ordering options for the AccessChange queries.
 type OrderOption func(*sql.Selector)

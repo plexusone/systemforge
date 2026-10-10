@@ -58,7 +58,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			accesschange.FieldPrincipalID:    {Type: field.TypeUUID, Column: accesschange.FieldPrincipalID},
 			accesschange.FieldOrganizationID: {Type: field.TypeUUID, Column: accesschange.FieldOrganizationID},
 			accesschange.FieldChangedAt:      {Type: field.TypeTime, Column: accesschange.FieldChangedAt},
-			accesschange.FieldReason:         {Type: field.TypeEnum, Column: accesschange.FieldReason},
+			accesschange.FieldReason:         {Type: field.TypeString, Column: accesschange.FieldReason},
 		},
 	}
 	graph.Nodes[1] = &sqlgraph.Node{

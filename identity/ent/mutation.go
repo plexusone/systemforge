@@ -95,7 +95,7 @@ type AccessChangeMutation struct {
 	principal_id    *uuid.UUID
 	organization_id *uuid.UUID
 	changed_at      *time.Time
-	reason          *accesschange.Reason
+	reason          *string
 	clearedFields   map[string]struct{}
 	done            bool
 	oldValue        func(context.Context) (*AccessChange, error)
@@ -328,12 +328,12 @@ func (m *AccessChangeMutation) ResetChangedAt() {
 }
 
 // SetReason sets the "reason" field.
-func (m *AccessChangeMutation) SetReason(a accesschange.Reason) {
-	m.reason = &a
+func (m *AccessChangeMutation) SetReason(s string) {
+	m.reason = &s
 }
 
 // Reason returns the value of the "reason" field in the mutation.
-func (m *AccessChangeMutation) Reason() (r accesschange.Reason, exists bool) {
+func (m *AccessChangeMutation) Reason() (r string, exists bool) {
 	v := m.reason
 	if v == nil {
 		return
@@ -344,7 +344,7 @@ func (m *AccessChangeMutation) Reason() (r accesschange.Reason, exists bool) {
 // OldReason returns the old "reason" field's value of the AccessChange entity.
 // If the AccessChange object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AccessChangeMutation) OldReason(ctx context.Context) (v accesschange.Reason, err error) {
+func (m *AccessChangeMutation) OldReason(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldReason is only allowed on UpdateOne operations")
 	}
@@ -474,7 +474,7 @@ func (m *AccessChangeMutation) SetField(name string, value ent.Value) error {
 		m.SetChangedAt(v)
 		return nil
 	case accesschange.FieldReason:
-		v, ok := value.(accesschange.Reason)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

@@ -24,8 +24,8 @@ type AccessChange struct {
 	OrganizationID *uuid.UUID `json:"organization_id,omitempty"`
 	// When the change was recorded, on the server clock
 	ChangedAt time.Time `json:"changed_at,omitempty"`
-	// Why access changed
-	Reason       accesschange.Reason `json:"reason,omitempty"`
+	// Why access changed; a reason from the identity/accesschange registry
+	Reason       string `json:"reason,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -86,7 +86,7 @@ func (_m *AccessChange) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field reason", values[i])
 			} else if value.Valid {
-				_m.Reason = accesschange.Reason(value.String)
+				_m.Reason = value.String
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -136,7 +136,7 @@ func (_m *AccessChange) String() string {
 	builder.WriteString(_m.ChangedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("reason=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Reason))
+	builder.WriteString(_m.Reason)
 	builder.WriteByte(')')
 	return builder.String()
 }

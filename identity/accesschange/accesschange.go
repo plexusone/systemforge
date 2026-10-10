@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,9 +54,23 @@ func ClampAccessTokenLifetime(d time.Duration) time.Duration {
 }
 
 // Reason says why access changed.
+//
+// The reasons form an open registry: the constants below are the complete
+// list, sf_access_changes stores the value as a plain string, and Record
+// rejects any value that is not registered. Adding a reason is therefore a
+// code and documentation change with no migration: declare the constant,
+// add it to Reasons, and add a row to the reason table in
+// docs/design/architecture/authorization.md. TestRegistry fails when a
+// constant is missing from Reasons, a reason has no documentation row, or a
+// call site passes a value that is not registered.
+//
+// Reasons are wire values: they appear in the back-channel access_change
+// event and in GET /access-changes, so a value is never renamed or reused
+// for a different meaning. Relying parties treat the reason as opaque, so a
+// reason added later does not break an older relying party.
 type Reason string
 
-// Reasons, matching the sf_access_changes enum.
+// Reasons.
 const (
 	// MembershipRemoved: the principal was removed from, or deactivated
 	// in, an organization.
@@ -70,11 +85,43 @@ const (
 	Deactivated Reason = "deactivated"
 	// SessionsRevoked: the principal's sessions or tokens were revoked.
 	SessionsRevoked Reason = "sessions_revoked"
+	// ManagementGranted: the principal came under management and gave up
+	// the capabilities a managed principal does not hold (ADR-009).
+	ManagementGranted Reason = "management_granted"
+	// ManagementEnded: the principal's management ended and its own
+	// capabilities were restored (ADR-009).
+	ManagementEnded Reason = "management_ended"
 )
 
-// Valid reports whether r is one of the defined reasons.
+// registry is the complete list of reasons. A reason is valid if and only
+// if it is listed here.
+var registry = []Reason{
+	MembershipRemoved,
+	OrgRoleChanged,
+	AppRoleChanged,
+	GrantReduced,
+	Deactivated,
+	SessionsRevoked,
+	ManagementGranted,
+	ManagementEnded,
+}
+
+// Reasons returns the registered reasons.
+func Reasons() []Reason {
+	return slices.Clone(registry)
+}
+
+// Valid reports whether r is a registered reason.
 func (r Reason) Valid() bool {
-	return accesschange.ReasonValidator(accesschange.Reason(r)) == nil
+	return slices.Contains(registry, r)
+}
+
+// Validate returns an error naming r when it is not a registered reason.
+func (r Reason) Validate() error {
+	if r.Valid() {
+		return nil
+	}
+	return fmt.Errorf("accesschange: unknown reason %q: register it in accesschange.Reasons and document it in the authorization architecture page", string(r))
 }
 
 // Change is one recorded access change.
@@ -135,14 +182,14 @@ func Record(ctx context.Context, tx *ent.Tx, c Change) (Change, error) {
 	if c.PrincipalID == uuid.Nil {
 		return Change{}, errors.New("accesschange: principal is required")
 	}
-	if !c.Reason.Valid() {
-		return Change{}, fmt.Errorf("accesschange: unknown reason %q", c.Reason)
+	if err := c.Reason.Validate(); err != nil {
+		return Change{}, err
 	}
 	c.ChangedAt = time.Now().UTC()
 	create := tx.AccessChange.Create().
 		SetPrincipalID(c.PrincipalID).
 		SetChangedAt(c.ChangedAt).
-		SetReason(accesschange.Reason(c.Reason))
+		SetReason(string(c.Reason))
 	if c.OrganizationID != nil {
 		create.SetOrganizationID(*c.OrganizationID)
 	}
