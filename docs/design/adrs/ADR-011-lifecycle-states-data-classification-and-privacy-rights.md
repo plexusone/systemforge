@@ -67,42 +67,44 @@ code host, correctable or removable before it is final.
 
 ### Data classification
 
-6. **Every persisted field is classified.** The vocabulary is small and
-   deliberately overlaps existing tooling:
-   - `public` (the default, written explicitly): may be shown to
-     application users, subject to the application's own authorization;
-   - `internal` — system data that is neither personal nor a credential but
-     is not shown to application users: flags, counters, security stamps,
-     internal references, operational state;
-   - `pii` — personal data about an identifiable person;
-   - `secret` — credentials, tokens, keys and anything whose disclosure
-     grants access.
-   A field has one class, and where more than one applies the most
-   restrictive wins in the order `secret`, `pii`, `internal`, `public`. A
-   personal-data field that only staff should see is therefore `pii`, since
-   export and erasure must reach it, and carries an **exposure** attribute
-   (`application`, `staff` or `none`) saying who may see it; `internal` and
-   `secret` default to `none` toward application users and `public` to
-   `application`.
-   A field also carries optional attributes: the **subject key** (how the
-   row maps to a data subject), an **erasure strategy** (`clear`,
-   `tombstone`, `hash`, `delete_row`, `shred` or `retain` with a stated
-   reason), an **export** flag, and a **retention** note.
-7. **The classification is metadata in Go, next to the schema.** It is an
-   Ent annotation on each field in SystemForge's own schemas, collected into
-   a registry by a small `dataclass` package. Applications annotate their
-   own entities the same way and register them, so a product's tables are
-   covered by the same mechanism. A test fails when a field has no
-   classification, so a new column cannot ship unclassified.
-8. **The registry is the single source for governance tooling.** It drives
+6. **Every persisted field is classified, on two independent axes.**
+   - **Visibility** is `public` or `internal`. `public` may be shown to
+     application users, subject to the application's own authorization.
+     `internal` is system data not shown to application users: flags,
+     counters, security stamps, internal references and operational state.
+   - **Tags**, each on or off: `pii` (personal data about an identifiable
+     person) and `secret` (credentials, tokens, keys, anything whose
+     disclosure grants access).
+   The axes are independent: a display name is `public` and `pii`; a login
+   record's IP address is `internal` and `pii`; a password hash is
+   `internal` and `secret`. One rule ties them: `secret` implies `internal`,
+   and validation rejects a secret field marked `public`. Visibility is
+   never defaulted: an unclassified field is an error, not a public one.
+   A field also carries optional attributes: an **erasure strategy**
+   (`clear`, `tombstone`, `hash`, `delete_row`, `shred` or `retain` with a
+   stated reason) and an **export** flag. An entity carries the **subject
+   key** (how a row maps to a data subject), whether it is in privacy scope,
+   whether it can be placed under hold, whether it is versioned, and a
+   **retention** note.
+7. **The model is a separate, generic module, and the classification is
+   metadata in Go next to the schema.** The catalog model, its validation
+   and its audience filtering live in `github.com/grokify/datacatalog`, a
+   public, dependency-free module that other tools (a query guard such as
+   `guardsql`, documentation generators, a future management application)
+   consume without depending on SystemForge or on an ORM. SystemForge adds
+   the pieces that are specific to it: Ent annotations on each field of its
+   own schemas, collected into a catalog by a small `dataclass` package, and
+   the orchestration of export, erasure and holds. Applications annotate
+   their own entities the same way and register them. A test fails when a
+   field has no classification, so a new column cannot ship unclassified.
+8. **The catalog is the single source for governance tooling.** It drives
    export and erasure (below), log redaction, response filtering (a
-   serialization helper omits every field whose exposure is not
-   `application` unless the caller asks for staff or system views), and, as
-   an optional adapter, a `guardsql` schema so analytics queries exclude
-   `internal`, `pii` and `secret` columns by default. `guardsql` knows
-   `pii` and `secret`; the adapter maps `internal` to its restricted class
-   and the richer attributes are SystemForge's own, so `guardsql` does not
-   become a dependency of the platform.
+   serialization helper omits every `internal` field unless the caller asks
+   for a staff or system view), and query gating: a query guard such as
+   `guardsql` blocks `internal` and `secret` columns for customer queries
+   always, and `pii` columns unless the profile allows them. The guard adopts
+   the catalog's own predicate, so there is one definition of what a
+   customer query may touch.
 
 ### Privacy rights
 

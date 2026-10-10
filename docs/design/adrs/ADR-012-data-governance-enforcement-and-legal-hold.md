@@ -38,13 +38,15 @@ without taking over their data access.
 ### The data catalog
 
 1. **The classification registry is a central data catalog.** Each
-   registered entity and field is described once, and the catalog is the
-   answer to "what data do we hold and what rules apply to it". Per entity
-   it records: the owner (product or platform), the data subject key,
-   whether it is subject to access and erasure requests (GDPR scope),
-   whether it can be placed under hold, whether it is `versioned`, its
-   retention note and its eraser. Per field it records the class (`public`,
-   `pii`, `secret`), the erasure strategy and the export flag.
+   registered entity and field is described once, in the model of
+   `github.com/grokify/datacatalog` (ADR-011, decisions 6 and 7), and the
+   catalog is the answer to "what data do we hold and what rules apply to
+   it". Per entity it records: the owner (product or platform), the data
+   subject key, whether it is subject to access and erasure requests (GDPR
+   scope), whether it can be placed under hold, whether it is `versioned`,
+   its retention note and its eraser. Per field it records the visibility
+   (`public` or `internal`), the `pii` and `secret` tags, the erasure
+   strategy and the export flag.
 2. **The catalog is queryable and published.** It is available through an
    API and a command, and rendered as a documentation page from the same
    source, so a data protection review, a customer questionnaire and the
