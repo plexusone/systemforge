@@ -89,6 +89,12 @@ INIT-SYSTEMFORGE-008.
   - Depends on: `RMI-SYSTEMFORGE-144`
   - Depends on: `RMI-SYSTEMFORGE-134`
 - [ ] `RMI-SYSTEMFORGE-152` Managed-principal `Create`, `AddManager`, `RemoveManager` and `RedeemClaim` go through the authorizer, gain an HTTP surface, and a `Delete` is added
+- [ ] `RMI-SYSTEMFORGE-154` Fix: the authorization checks for `AddManager`, `RemoveManager` and `Release` run inside the row-locked transaction, leaving no window between check and write; the concurrent-removal test asserts exact outcomes
+  - Depends on: `RMI-SYSTEMFORGE-152`
+- [ ] `RMI-SYSTEMFORGE-155` Fix: access-change reasons form an open, validated registry (string column, Go constants in one package, validated by the sink, documented, guarded by a test) and each call site records the accurate reason, including `management_granted` and `management_ended`
+  - Depends on: `RMI-SYSTEMFORGE-154`
+- [ ] `RMI-SYSTEMFORGE-156` Decline a manager invitation: `DeclineManagerInvite` by the signed-in invitee, single use, with an HTTP route
+  - Depends on: `RMI-SYSTEMFORGE-155`
 
 ## Phase 6 — Documentation and release
 
