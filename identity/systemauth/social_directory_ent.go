@@ -216,6 +216,31 @@ func (d *EntPrincipalDirectory) createInTx(ctx context.Context, tx *ent.Tx, logi
 	return hp, org, nil
 }
 
+// managedPersonalOrgParams builds the personal organization of a managed
+// principal that signs in with an email of its own (ADR-009). Nothing in it
+// comes from the login: a handle derived from the email's local part or a
+// provider username would expose a managed person's address, so the slug is
+// the generated, address-free form and the name is the one its managers
+// gave.
+func managedPersonalOrgParams(p *HumanPrincipal) signup.PersonalOrgParams {
+	slug := signup.SlugForManaged("")
+	name := p.DisplayName
+	if name == "" {
+		name = slug
+	}
+	return signup.PersonalOrgParams{OwnerID: p.ID, Name: name, Slug: slug}
+}
+
+// personalOrgParamsFor picks the personal organization parameters for a
+// principal: the generated form for a managed principal, otherwise the
+// login's.
+func personalOrgParamsFor(p *HumanPrincipal, login ExternalLogin) signup.PersonalOrgParams {
+	if p.Managed {
+		return managedPersonalOrgParams(p)
+	}
+	return personalOrgParams(p.ID, login)
+}
+
 // personalOrgParams builds the personal organization for a login: named for
 // the person (display name, else provider handle, else email local part),
 // slugged by signup.SlugForLogin.
@@ -256,7 +281,7 @@ func (d *EntPrincipalDirectory) ensureOnce(ctx context.Context, p *HumanPrincipa
 	if err != nil {
 		return fmt.Errorf("starting transaction: %w", err)
 	}
-	org, created, err := signup.EnsurePersonalOrgInTx(ctx, tx, personalOrgParams(p.ID, login))
+	org, created, err := signup.EnsurePersonalOrgInTx(ctx, tx, personalOrgParamsFor(p, login))
 	if err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return errors.Join(err, fmt.Errorf("rolling back: %w", rbErr))

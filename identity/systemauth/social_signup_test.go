@@ -3,6 +3,7 @@ package systemauth
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -216,4 +217,45 @@ func TestSocialLoginBackfillsPersonalOrg(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertCounts(t, db, 1, 1, 1, 1, 1)
+}
+
+// TestManagedPrincipalPersonalOrgSlugIgnoresEmail verifies that a managed
+// principal with an email gets a generated slug and its managers' name,
+// never a handle derived from its address or provider username (ADR-009).
+func TestManagedPrincipalPersonalOrgSlugIgnoresEmail(t *testing.T) {
+	ctx := context.Background()
+	db := openTestEnt(t)
+	dir := NewEntPrincipalDirectory(db)
+	now := time.Now()
+
+	student := seedHuman(t, db, "robin.smith@school.example", true)
+	guardian := seedHuman(t, db, "guardian@example.com", true)
+	if err := db.ManagerRelationship.Create().SetManagedPrincipalID(student).SetManagerPrincipalID(guardian).
+		SetRole("guardian").Exec(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Principal.UpdateOneID(student).SetDisplayName("Robin").Exec(ctx); err != nil {
+		t.Fatal(err)
+	}
+	login := ExternalLogin{Provider: "google", Subject: "g-student", Email: "robin.smith@school.example", EmailVerified: true, Username: "robinsmith", Name: "Robin Smith"}
+	if err := dir.LinkExternalIdentity(ctx, student, login); err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := ResolveExternalLogin(ctx, dir, login, now)
+	if err != nil || p.ID != student || !p.Managed {
+		t.Fatalf("login = %+v, %v", p, err)
+	}
+	org := db.Organization.Query().Where(entorg.OwnerPrincipalID(student)).OnlyX(ctx)
+	for _, leak := range []string{"robin", "smith", "school", "example"} {
+		if strings.Contains(org.Slug, leak) {
+			t.Errorf("slug %q reveals %q", org.Slug, leak)
+		}
+	}
+	if org.Name != "Robin" {
+		t.Errorf("organization name = %q, want the managers' display name", org.Name)
+	}
+	if org.LogoURL != nil {
+		t.Errorf("logo = %v, want none", org.LogoURL)
+	}
 }
