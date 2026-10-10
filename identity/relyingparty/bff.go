@@ -164,6 +164,11 @@ func NewBFF(cfg BFFConfig) (*BFF, error) {
 	mux.HandleFunc("POST "+base+"/auth/login", b.handlePasswordLogin)
 	mux.HandleFunc("GET "+base+"/auth/callback", b.handleCallback)
 	mux.HandleFunc("POST "+base+"/auth/logout", b.handleLogout)
+	// SystemAuth's back-channel events: logouts end this BFF's sessions and
+	// access changes feed the revocation cache (ADR-010). Register
+	// <BasePath>/auth/backchannel-logout as the client's
+	// backchannel_logout_uri. Only tokens signed by the issuer are acted on.
+	mux.Handle("POST "+base+"/auth/backchannel-logout", b.BackchannelLogoutHandler())
 	mux.HandleFunc("GET "+base+"/auth/{provider}", b.handleProviderLogin)
 	mux.HandleFunc(base+"/", func(w http.ResponseWriter, _ *http.Request) {
 		writeAuthError(w, http.StatusNotFound, "NOT_FOUND", "not found")
@@ -176,6 +181,19 @@ func NewBFF(cfg BFFConfig) (*BFF, error) {
 func (b *BFF) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	b.mux.ServeHTTP(w, r)
+}
+
+// BackchannelLogoutHandler is the endpoint SystemAuth POSTs back-channel
+// logout and access-change tokens to. The BFF serves it at
+// <BasePath>/auth/backchannel-logout; use this to mount it elsewhere. It
+// ends the sessions of a logout event's sid or sub and records access
+// changes into BFFConfig.Revocation, when set.
+func (b *BFF) BackchannelLogoutHandler() http.Handler {
+	var sink AccessChangeSink
+	if b.cfg.Revocation != nil {
+		sink = b.cfg.Revocation
+	}
+	return BackchannelHandler(sink, b.cfg.Client, WithBackchannelSessions(b.cfg.Sessions), WithBackchannelLogger(b.logger))
 }
 
 // --- JSON shapes of the shared frontend contract ---

@@ -7,9 +7,11 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/systemauth"
 )
@@ -166,5 +168,84 @@ func TestInteropWithSystemAuth(t *testing.T) {
 	}
 	if _, _, _, err := bff.CurrentSession(sessReq); err == nil {
 		t.Error("session survived logout")
+	}
+}
+
+// TestInteropBackchannelAccessChange sends an access change from a real
+// SystemAuth server's back-channel sender to a relying party's receiver
+// over HTTP, with the receiver verifying the token against SystemAuth's
+// published keys.
+func TestInteropBackchannelAccessChange(t *testing.T) {
+	var sa *systemauth.Server
+	saSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { sa.ServeHTTP(w, r) }))
+	t.Cleanup(saSrv.Close)
+	var receiver http.Handler
+	rpSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { receiver.ServeHTTP(w, r) }))
+	t.Cleanup(rpSrv.Close)
+
+	const callback = "https://app.example.com/bff/auth/callback"
+	var err error
+	sa, err = systemauth.NewEmbedded(systemauth.Config{
+		Issuer: saSrv.URL,
+		Clients: []systemauth.ClientConfig{{
+			ID: "app", Type: "public", Name: "App", RedirectURIs: []string{callback},
+			GrantTypes: []string{"authorization_code"}, ResponseTypes: []string{"code"}, Scopes: []string{"openid"},
+			BackchannelLogoutURI: rpSrv.URL,
+		}},
+		Features: systemauth.FeatureConfig{RequirePKCE: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := relyingparty.NewClient(t.Context(), relyingparty.Config{Issuer: saSrv.URL, ClientID: "app", RedirectURL: callback})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cache := relyingparty.NewRevocationCache()
+	sessions := relyingparty.NewMemorySessionStore()
+	subject := uuid.New()
+	if err := sessions.Create(t.Context(), "tok", relyingparty.Session{Subject: subject.String(), ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	receiver = relyingparty.BackchannelHandler(cache, client, relyingparty.WithBackchannelSessions(sessions))
+
+	bc := sa.NewBackchannel(systemauth.WithBackchannelBackoff(10*time.Millisecond, 50*time.Millisecond))
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = bc.Run(ctx)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+
+	org := uuid.New()
+	issued := time.Now().Add(-time.Minute)
+	bc.AccessChange(accesschange.Change{PrincipalID: subject, OrganizationID: &org, ChangedAt: time.Now(), Reason: accesschange.MembershipRemoved})
+	deadline := time.After(10 * time.Second)
+	for cache.Accept(subject.String(), org.String(), issued) {
+		select {
+		case <-deadline:
+			t.Fatal("the access change never reached the relying party")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	if _, err := sessions.Get(t.Context(), "tok"); err != nil {
+		t.Errorf("a membership removal ended the session: %v", err)
+	}
+
+	// A deactivation also logs the person out.
+	bc.AccessChange(accesschange.Change{PrincipalID: subject, ChangedAt: time.Now(), Reason: accesschange.Deactivated})
+	for {
+		if _, err := sessions.Get(t.Context(), "tok"); err != nil {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("the logout never reached the relying party")
+		case <-time.After(10 * time.Millisecond):
+		}
 	}
 }
