@@ -180,6 +180,33 @@ managed principal locally on its first sign-in and never links one by
 email, so an application's `PrincipalStore.CreatePrincipal` must accept an
 identity with or without an email when `Managed` is set.
 
+## Ending and Entering Management
+
+`Release` ends management of a principal with a verified email: its
+managers are removed and its default human capabilities restored, as one
+audited event. Without a verified email it returns `ErrEmailNotVerified`;
+removing the last manager of a principal with one has the same effect.
+
+```go
+err := svc.Release(ctx, guardianID, studentID) // needs manage_managers
+```
+
+A self-managed human enters management only by consent. A prospective
+manager invites its verified address, and the person accepts while signed
+in:
+
+```go
+inv, err := svc.InviteManager(ctx, managedprincipal.InviteManagerInput{
+    ClientID: "match-app", ManagerID: familyMemberID,
+    Email: "adult@example.com", Role: managedprincipal.RoleGuardian,
+})
+// deliver inv.Token; then, as the signed-in invitee:
+managerID, err := svc.AcceptManagerInvite(ctx, token, signedInPrincipalID)
+```
+
+An invitation is single use, expires after seven days, and matches only a
+principal whose verified email is the invited address.
+
 ## Manager Visibility and Revocation
 
 Managers holding `manage_credentials` can see and end every way a managed
