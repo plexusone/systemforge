@@ -37,17 +37,18 @@ const (
 
 // Service creates managed principals and maintains their managers.
 type Service struct {
-	client   *ent.Client
-	creds    credential.Service
-	now      func() time.Time
-	gate     Gate
-	audit    audit.Emitter
-	syncer   authz.RelationshipSyncer
-	syncMode authz.SyncMode
-	authz    authz.Authorizer
-	claimTTL time.Duration
-	logger   *slog.Logger
-	roles    []string
+	client    *ent.Client
+	creds     credential.Service
+	now       func() time.Time
+	gate      Gate
+	audit     audit.Emitter
+	syncer    authz.RelationshipSyncer
+	syncMode  authz.SyncMode
+	authz     authz.Authorizer
+	claimTTL  time.Duration
+	inviteTTL time.Duration
+	logger    *slog.Logger
+	roles     []string
 
 	accessSink accesschange.Sink
 }
@@ -108,15 +109,16 @@ func WithRoles(roles ...string) Option {
 // create managed principals; pass the SystemAuth server.
 func NewService(client *ent.Client, gate Gate, opts ...Option) *Service {
 	s := &Service{
-		client:   client,
-		creds:    credential.NewService(client),
-		now:      time.Now,
-		claimTTL: DefaultClaimTTL,
-		gate:     gate,
-		syncer:   noop.NewSyncer(),
-		syncMode: authz.SyncModeEventual,
-		logger:   slog.Default(),
-		roles:    []string{RoleGuardian, RoleEducator},
+		client:    client,
+		creds:     credential.NewService(client),
+		now:       time.Now,
+		claimTTL:  DefaultClaimTTL,
+		inviteTTL: DefaultInviteTTL,
+		gate:      gate,
+		syncer:    noop.NewSyncer(),
+		syncMode:  authz.SyncModeEventual,
+		logger:    slog.Default(),
+		roles:     []string{RoleGuardian, RoleEducator},
 	}
 	for _, opt := range opts {
 		opt(s)
