@@ -94,7 +94,7 @@ type PrincipalStore interface {
 
 	// CreatePrincipal creates an active human principal linked to
 	// identity.Subject, with a verified email or, when identity.Managed,
-	// without an email. It returns ErrSubjectLinked if the subject was
+	// with or without an email. It returns ErrSubjectLinked if the subject was
 	// linked concurrently and ErrEmailConflict if the email is taken.
 	CreatePrincipal(ctx context.Context, identity VerifiedIdentity) (*Principal, error)
 
@@ -121,8 +121,8 @@ type PrincipalStore interface {
 //     email.
 //
 // An unverified email never links to or creates a principal. A managed
-// identity has no email, so it never links by email: after the subject
-// lookup it is created directly, marked managed.
+// identity never links by email, even when it has one (ADR-009): after the
+// subject lookup it is created directly, marked managed.
 func ResolvePrincipal(ctx context.Context, store PrincipalStore, id VerifiedIdentity, now time.Time) (*Principal, error) {
 	if id.Subject == "" {
 		return nil, errors.New("relyingparty: identity requires a subject")
@@ -141,9 +141,6 @@ func ResolvePrincipal(ctx context.Context, store PrincipalStore, id VerifiedIden
 		}
 
 		if id.Managed {
-			if id.Email != "" {
-				return nil, fmt.Errorf("%w: managed identity has an email", ErrInvalidToken)
-			}
 			p, err = store.CreatePrincipal(ctx, id)
 			if errors.Is(err, ErrSubjectLinked) {
 				continue
@@ -338,7 +335,7 @@ func (s *MemoryPrincipalStore) CreatePrincipal(_ context.Context, id VerifiedIde
 		Type:          "human",
 		SFPrincipalID: id.Subject,
 		Email:         id.Email,
-		EmailVerified: id.Email != "",
+		EmailVerified: id.Email != "" && (id.EmailVerified || !id.Managed),
 		Managed:       id.Managed,
 		Name:          name,
 		AvatarURL:     id.Picture,

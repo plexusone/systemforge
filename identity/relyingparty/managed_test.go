@@ -37,9 +37,15 @@ func TestResolveManagedPrincipal(t *testing.T) {
 		t.Errorf("FindByEmail(\"\") = %v, want ErrPrincipalNotFound", err)
 	}
 
-	// A managed identity that carries an email is inconsistent.
-	if _, err := ResolvePrincipal(ctx, store, VerifiedIdentity{Subject: "sf-odd", Email: "x@example.com", EmailVerified: true, Managed: true}, now); !errors.Is(err, ErrInvalidToken) {
-		t.Errorf("managed with email = %v, want ErrInvalidToken", err)
+	// A managed identity may carry an email (ADR-009); it never links to
+	// an existing principal by that email.
+	withEmail, err := ResolvePrincipal(ctx, store, VerifiedIdentity{Subject: "sf-odd", Email: "x@example.com", EmailVerified: true, Managed: true}, now)
+	if err != nil || !withEmail.Managed || withEmail.Email != "x@example.com" || !withEmail.EmailVerified {
+		t.Errorf("managed with email = %+v, %v", withEmail, err)
+	}
+	unverified, err := ResolvePrincipal(ctx, store, VerifiedIdentity{Subject: "sf-odd2", Email: "y@example.com", Managed: true}, now)
+	if err != nil || !unverified.Managed || unverified.EmailVerified {
+		t.Errorf("managed with unverified email = %+v, %v", unverified, err)
 	}
 	// An unmanaged identity without an email is still refused.
 	if _, err := ResolvePrincipal(ctx, store, VerifiedIdentity{Subject: "sf-plain"}, now); !errors.Is(err, ErrEmailNotVerified) {
