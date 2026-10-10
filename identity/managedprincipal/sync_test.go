@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -126,5 +127,37 @@ func TestSimpleProviderWithManagerRoles(t *testing.T) {
 	}
 	if can(parent, authz.PermManageAccount) {
 		t.Error("deactivated guardian still manages the account")
+	}
+}
+
+// TestReleaseSyncsEveryManagerRemoval verifies that Release removes each
+// manager's relation from the authorization backend.
+func TestReleaseSyncsEveryManagerRemoval(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	rec := &syncRecorder{}
+	svc := NewService(db, gate{client: true}, WithAuthzSyncer(rec, authz.SyncModeStrict))
+	teacher := addHuman(t, db, "teacher@example.com", true)
+	parent := addHuman(t, db, "parent@example.com", true)
+	id, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client, Email: "learner@example.com",
+		Managers: []ManagerInput{{parent, RoleGuardian}, {teacher, RoleEducator}}})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.VerifyEmail(ctx, id, time.Now()); err != nil {
+		t.Fatalf("VerifyEmail: %v", err)
+	}
+	rec.ops = nil
+	if err := svc.Release(ctx, parent, id); err != nil {
+		t.Fatalf("Release: %v", err)
+	}
+	want := []string{
+		fmt.Sprintf("remove %s %s guardian", id, parent),
+		fmt.Sprintf("remove %s %s educator", id, teacher),
+	}
+	slices.Sort(want)
+	slices.Sort(rec.ops)
+	if !slices.Equal(rec.ops, want) {
+		t.Errorf("sync ops = %v, want %v", rec.ops, want)
 	}
 }

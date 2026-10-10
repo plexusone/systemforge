@@ -31,6 +31,8 @@ const (
 	EventManagerAdded   = "managed_principal.manager_added"
 	EventManagerRemoved = "managed_principal.manager_removed"
 	EventTokenIssued    = "managed_principal.login_token_issued"
+	// EventReleased records that a principal's management ended.
+	EventReleased = "managed_principal.released"
 )
 
 // Service creates managed principals and maintains their managers.
@@ -251,7 +253,10 @@ func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m Manager
 // RemoveManager deactivates a manager relationship. It refuses with
 // ErrLastManager when this is the last active manager of a principal
 // without a verified email; deactivate or delete the principal instead.
+// Removing the last manager of a principal with a verified email releases
+// it, as Release does.
 func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m ManagerInput, actorID uuid.UUID) error {
+	var released bool
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		h, err := lockHuman(ctx, tx, managedID)
 		if err != nil {
@@ -288,6 +293,18 @@ func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m Mana
 		if err := tx.ManagerRelationship.UpdateOne(rel).SetActive(false).Exec(ctx); err != nil {
 			return fmt.Errorf("managedprincipal: deactivate relationship: %w", err)
 		}
+		// Only a principal with a verified email gets here with no manager
+		// left: removing its last manager releases it (ADR-009).
+		remaining, err := tx.ManagerRelationship.Query().
+			Where(managerrelationship.ManagedPrincipalID(managedID), managerrelationship.Active(true)).
+			Count(ctx)
+		if err != nil {
+			return fmt.Errorf("managedprincipal: count managers: %w", err)
+		}
+		if remaining == 0 {
+			released = true
+			return clearManagedState(ctx, tx, managedID)
+		}
 		return nil
 	})
 	if err != nil {
@@ -295,6 +312,10 @@ func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m Mana
 	}
 	s.emit(ctx, EventManagerRemoved, "remove_manager", actorID, managedID,
 		map[string]any{"manager_principal_id": m.PrincipalID.String(), "role": m.Role})
+	if released {
+		s.emit(ctx, EventReleased, "release", actorID, managedID,
+			map[string]any{"managers": managerDetails([]ManagerInput{m})})
+	}
 	return s.sync(ctx, "remove manager", managedID, s.syncer.RemovePrincipalManager(ctx, managedID, m.PrincipalID, m.Role))
 }
 

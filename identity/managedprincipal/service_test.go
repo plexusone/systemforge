@@ -293,8 +293,15 @@ func TestAddAndRemoveManager(t *testing.T) {
 			t.Errorf("RemoveManager after email: %v", err)
 		}
 	}
+	// Removing the last manager released the principal.
+	if managed, err := svc.IsManaged(ctx, id); err != nil || managed {
+		t.Errorf("IsManaged after the last removal = %v, %v; want false", managed, err)
+	}
+	if p, err := db.Principal.Get(ctx, id); err != nil || !p.Capabilities["can_manage_profile"] {
+		t.Errorf("capabilities after release = %v, %v", p.Capabilities, err)
+	}
 
-	want := []string{EventCreated, EventManagerAdded, EventManagerAdded, EventManagerRemoved, EventManagerAdded, EventManagerRemoved, EventManagerAdded, EventEmailVerified, EventManagerRemoved, EventManagerRemoved}
+	want := []string{EventCreated, EventManagerAdded, EventManagerAdded, EventManagerRemoved, EventManagerAdded, EventManagerRemoved, EventManagerAdded, EventEmailVerified, EventManagerRemoved, EventManagerRemoved, EventReleased}
 	got := rec.types()
 	if len(got) != len(want) {
 		t.Fatalf("audit = %v, want %v", got, want)
@@ -524,5 +531,58 @@ func TestManagementIsARelationship(t *testing.T) {
 	}
 	if _, err := svc.IssueLoginToken(ctx, IssueLoginTokenInput{ManagedID: noEmail, ClientID: client, IssuedBy: teacher}); !errors.Is(err, ErrNotManaged) {
 		t.Errorf("IssueLoginToken for an unmanaged human = %v, want ErrNotManaged", err)
+	}
+}
+
+func TestRelease(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	svc, rec := newService(t, db)
+	teacher := addHuman(t, db, "teacher@example.com", true)
+	parent := addHuman(t, db, "parent@example.com", true)
+	id, err := svc.Create(ctx, CreateInput{DisplayName: "Student", ClientID: client, Email: "student@example.com",
+		Managers: []ManagerInput{{teacher, RoleEducator}, {parent, RoleGuardian}}, ActorID: parent})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// An unverified email cannot end management.
+	if err := svc.Release(ctx, parent, id); !errors.Is(err, ErrEmailNotVerified) {
+		t.Fatalf("Release with an unverified email = %v, want ErrEmailNotVerified", err)
+	}
+	if err := svc.VerifyEmail(ctx, id, time.Now()); err != nil {
+		t.Fatalf("VerifyEmail: %v", err)
+	}
+	// An educator lacks manage_managers.
+	if err := svc.Release(ctx, teacher, id); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("Release by an educator = %v, want ErrForbidden", err)
+	}
+	if err := svc.Release(ctx, parent, id); err != nil {
+		t.Fatalf("Release: %v", err)
+	}
+
+	if managed, err := svc.IsManaged(ctx, id); err != nil || managed {
+		t.Errorf("IsManaged after release = %v, %v; want false", managed, err)
+	}
+	if rels, err := svc.ListManagers(ctx, id); err != nil || len(rels) != 0 {
+		t.Errorf("managers after release = %+v, %v", rels, err)
+	}
+	p, err := db.Principal.Get(ctx, id)
+	if err != nil || !p.Capabilities["can_manage_profile"] || !p.Active || p.Identifier != "student@example.com" {
+		t.Errorf("principal after release = %+v, %v", p, err)
+	}
+	if got := rec.types(); got[len(got)-1] != EventReleased {
+		t.Errorf("audit = %v, want a final %s", got, EventReleased)
+	}
+	// The principal is self-managed now: a manager cannot act on it, or
+	// release it again.
+	if err := svc.Release(ctx, parent, id); !errors.Is(err, ErrNotManaged) {
+		t.Errorf("second Release = %v, want ErrNotManaged", err)
+	}
+	if _, err := svc.IssueLoginToken(ctx, IssueLoginTokenInput{ManagedID: id, ClientID: client, IssuedBy: parent}); !errors.Is(err, ErrNotManaged) {
+		t.Errorf("IssueLoginToken after release = %v, want ErrNotManaged", err)
+	}
+	if err := svc.AddManager(ctx, id, ManagerInput{parent, RoleGuardian}, parent); !errors.Is(err, ErrNotManaged) {
+		t.Errorf("AddManager after release = %v, want ErrNotManaged", err)
 	}
 }
