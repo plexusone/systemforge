@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -28,20 +29,50 @@ type LoginTokenView struct {
 	LastUsedIP string     `json:"last_used_ip,omitempty"`
 }
 
-// NewHandler returns the manager visibility API. Mount it under a prefix,
+// NewHandler returns the managed-principal API. Mount it under a prefix,
 // such as /managed-principals, behind requestprincipal.Middleware, which
-// identifies the calling manager:
+// identifies the calling principal. Every route goes through the same
+// service operations, and so the same authorizer checks, as the Go API.
+//
+// Managing a principal:
+//
+//	POST   /                                         create (actor must be a manager)
+//	GET    /{principalID}/managers                   view_profile
+//	POST   /{principalID}/managers                   add a manager; manage_managers
+//	DELETE /{principalID}/managers/{managerID}/{role} remove a manager; manage_managers
+//	POST   /{principalID}/release                    end management; manage_managers
+//	DELETE /{principalID}                            delete; manage_account
+//	POST   /{principalID}/claims                     issue a claim code; manage_credentials
+//	POST   /claims/redeem                            the caller redeems a claim code
+//
+// Consent to be managed:
+//
+//	POST   /manager-invites                          the caller offers to manage a verified address
+//	POST   /manager-invites/accept                   the caller accepts, entering management
+//	DELETE /manager-invites/{inviteID}               the inviter withdraws it
+//
+// Credentials and sessions, each requiring manage_credentials on the
+// managed principal:
 //
 //	GET    /{principalID}/login-tokens
 //	DELETE /{principalID}/login-tokens/{credentialID}
 //	GET    /{principalID}/sessions
 //	DELETE /{principalID}/sessions/{kind}/{sessionID}
 //	POST   /{principalID}/revoke-all
-//
-// Every route requires manage_credentials on the managed principal.
 func NewHandler(svc *Service) http.Handler {
 	h := &handler{svc: svc}
 	r := chi.NewRouter()
+	r.Post("/", h.create)
+	r.Post("/claims/redeem", h.redeemClaim)
+	r.Post("/manager-invites", h.inviteManager)
+	r.Post("/manager-invites/accept", h.acceptInvite)
+	r.Delete("/manager-invites/{inviteID}", h.revokeInvite)
+	r.Delete("/{principalID}", h.delete)
+	r.Get("/{principalID}/managers", h.listManagers)
+	r.Post("/{principalID}/managers", h.addManager)
+	r.Delete("/{principalID}/managers/{managerID}/{role}", h.removeManager)
+	r.Post("/{principalID}/release", h.release)
+	r.Post("/{principalID}/claims", h.issueClaim)
 	r.Get("/{principalID}/login-tokens", h.listLoginTokens)
 	r.Delete("/{principalID}/login-tokens/{credentialID}", h.revokeLoginToken)
 	r.Get("/{principalID}/sessions", h.listSessions)
@@ -54,22 +85,32 @@ type handler struct {
 	svc *Service
 }
 
-// ids returns the calling principal and the managed principal of the
-// request, writing an error response when either is missing.
-func (h *handler) ids(w http.ResponseWriter, r *http.Request) (actor, managed uuid.UUID, ok bool) {
+// caller returns the calling principal, writing an error response when
+// there is none.
+func (h *handler) caller(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	rp, found := requestprincipal.FromContext(r.Context())
 	if !found {
 		writeError(w, http.StatusUnauthorized, "authentication required")
-		return uuid.Nil, uuid.Nil, false
+		return uuid.Nil, false
 	}
 	actor, err := uuid.Parse(rp.PrincipalID)
 	if err != nil {
 		// Credentials issued elsewhere carry issuer-qualified subjects,
 		// which cannot manage SystemForge principals.
 		writeError(w, http.StatusForbidden, "forbidden")
+		return uuid.Nil, false
+	}
+	return actor, true
+}
+
+// ids returns the calling principal and the managed principal of the
+// request, writing an error response when either is missing.
+func (h *handler) ids(w http.ResponseWriter, r *http.Request) (actor, managed uuid.UUID, ok bool) {
+	actor, ok = h.caller(w, r)
+	if !ok {
 		return uuid.Nil, uuid.Nil, false
 	}
-	managed, err = uuid.Parse(chi.URLParam(r, "principalID"))
+	managed, err := uuid.Parse(chi.URLParam(r, "principalID"))
 	if err != nil {
 		writeError(w, http.StatusNotFound, "not found")
 		return uuid.Nil, uuid.Nil, false
@@ -168,10 +209,19 @@ func (h *handler) revokeAll(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
-	case errors.Is(err, ErrForbidden):
+	case errors.Is(err, ErrForbidden), errors.Is(err, ErrNotAllowed), errors.Is(err, ErrNotManager):
 		writeError(w, http.StatusForbidden, "forbidden")
 	case errors.Is(err, ErrNotFound), errors.Is(err, ErrNotManaged):
 		writeError(w, http.StatusNotFound, "not found")
+	case errors.Is(err, ErrInvalidClaim), errors.Is(err, ErrInvalidInvite):
+		// One answer for every reason a code cannot be used.
+		writeError(w, http.StatusBadRequest, "invalid code")
+	case errors.Is(err, ErrDisplayNameRequired), errors.Is(err, ErrNoManagers), errors.Is(err, ErrInvalidManager),
+		errors.Is(err, ErrInvalidRole), errors.Is(err, ErrEmailRequired), errors.Is(err, ErrInviteEmailRequired):
+		writeError(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), "managedprincipal: "))
+	case errors.Is(err, ErrLastManager), errors.Is(err, ErrEmailInUse), errors.Is(err, ErrHasEmail),
+		errors.Is(err, ErrEmailNotVerified), errors.Is(err, ErrAlreadyManaged), errors.Is(err, ErrManagesOthers):
+		writeError(w, http.StatusConflict, strings.TrimPrefix(err.Error(), "managedprincipal: "))
 	default:
 		h.svc.logger.ErrorContext(r.Context(), "managedprincipal: request failed", "path", r.URL.Path, "error", err)
 		writeError(w, http.StatusInternalServerError, "internal error")

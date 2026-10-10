@@ -109,3 +109,25 @@ func (s *Service) authorizeManagers(ctx context.Context, actorID, managedID uuid
 	}
 	return nil
 }
+
+// authorizeProfile requires actorID to hold view_profile on a managed
+// principal.
+func (s *Service) authorizeProfile(ctx context.Context, actorID, managedID uuid.UUID) error {
+	managed, err := s.client.Human.Query().
+		Where(human.PrincipalID(managedID), hasActiveManager()).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("managedprincipal: check principal: %w", err)
+	}
+	if !managed {
+		return ErrNotManaged
+	}
+	ok, err := s.authz.Can(ctx, authz.NewUserPrincipal(actorID), authz.PermViewProfile, authz.NewPrincipalResource(managedID))
+	if err != nil {
+		return fmt.Errorf("managedprincipal: authorize: %w", err)
+	}
+	if !ok {
+		return ErrForbidden
+	}
+	return nil
+}

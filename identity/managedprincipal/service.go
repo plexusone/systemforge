@@ -417,6 +417,16 @@ func (s *Service) checkIssuer(ctx context.Context, managedID, issuerID uuid.UUID
 	return nil
 }
 
+// ListManagersFor returns the active manager relationships of a managed
+// principal to an actor that holds view_profile on it, which guardians and
+// educators do.
+func (s *Service) ListManagersFor(ctx context.Context, actorID, managedID uuid.UUID) ([]Relationship, error) {
+	if err := s.authorizeProfile(ctx, actorID, managedID); err != nil {
+		return nil, err
+	}
+	return s.ListManagers(ctx, managedID)
+}
+
 // ListManagers returns the active manager relationships of a principal.
 func (s *Service) ListManagers(ctx context.Context, managedID uuid.UUID) ([]Relationship, error) {
 	rows, err := s.client.ManagerRelationship.Query().
