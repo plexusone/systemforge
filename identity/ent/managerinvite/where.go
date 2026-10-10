@@ -100,6 +100,16 @@ func RevokedAt(v time.Time) predicate.ManagerInvite {
 	return predicate.ManagerInvite(sql.FieldEQ(FieldRevokedAt, v))
 }
 
+// DeclinedAt applies equality check predicate on the "declined_at" field. It's identical to DeclinedAtEQ.
+func DeclinedAt(v time.Time) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldEQ(FieldDeclinedAt, v))
+}
+
+// DeclinedBy applies equality check predicate on the "declined_by" field. It's identical to DeclinedByEQ.
+func DeclinedBy(v uuid.UUID) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldEQ(FieldDeclinedBy, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.ManagerInvite {
 	return predicate.ManagerInvite(sql.FieldEQ(FieldCreatedAt, v))
@@ -593,6 +603,106 @@ func RevokedAtIsNil() predicate.ManagerInvite {
 // RevokedAtNotNil applies the NotNil predicate on the "revoked_at" field.
 func RevokedAtNotNil() predicate.ManagerInvite {
 	return predicate.ManagerInvite(sql.FieldNotNull(FieldRevokedAt))
+}
+
+// DeclinedAtEQ applies the EQ predicate on the "declined_at" field.
+func DeclinedAtEQ(v time.Time) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldEQ(FieldDeclinedAt, v))
+}
+
+// DeclinedAtNEQ applies the NEQ predicate on the "declined_at" field.
+func DeclinedAtNEQ(v time.Time) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldNEQ(FieldDeclinedAt, v))
+}
+
+// DeclinedAtIn applies the In predicate on the "declined_at" field.
+func DeclinedAtIn(vs ...time.Time) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldIn(FieldDeclinedAt, vs...))
+}
+
+// DeclinedAtNotIn applies the NotIn predicate on the "declined_at" field.
+func DeclinedAtNotIn(vs ...time.Time) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldNotIn(FieldDeclinedAt, vs...))
+}
+
+// DeclinedAtGT applies the GT predicate on the "declined_at" field.
+func DeclinedAtGT(v time.Time) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldGT(FieldDeclinedAt, v))
+}
+
+// DeclinedAtGTE applies the GTE predicate on the "declined_at" field.
+func DeclinedAtGTE(v time.Time) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldGTE(FieldDeclinedAt, v))
+}
+
+// DeclinedAtLT applies the LT predicate on the "declined_at" field.
+func DeclinedAtLT(v time.Time) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldLT(FieldDeclinedAt, v))
+}
+
+// DeclinedAtLTE applies the LTE predicate on the "declined_at" field.
+func DeclinedAtLTE(v time.Time) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldLTE(FieldDeclinedAt, v))
+}
+
+// DeclinedAtIsNil applies the IsNil predicate on the "declined_at" field.
+func DeclinedAtIsNil() predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldIsNull(FieldDeclinedAt))
+}
+
+// DeclinedAtNotNil applies the NotNil predicate on the "declined_at" field.
+func DeclinedAtNotNil() predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldNotNull(FieldDeclinedAt))
+}
+
+// DeclinedByEQ applies the EQ predicate on the "declined_by" field.
+func DeclinedByEQ(v uuid.UUID) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldEQ(FieldDeclinedBy, v))
+}
+
+// DeclinedByNEQ applies the NEQ predicate on the "declined_by" field.
+func DeclinedByNEQ(v uuid.UUID) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldNEQ(FieldDeclinedBy, v))
+}
+
+// DeclinedByIn applies the In predicate on the "declined_by" field.
+func DeclinedByIn(vs ...uuid.UUID) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldIn(FieldDeclinedBy, vs...))
+}
+
+// DeclinedByNotIn applies the NotIn predicate on the "declined_by" field.
+func DeclinedByNotIn(vs ...uuid.UUID) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldNotIn(FieldDeclinedBy, vs...))
+}
+
+// DeclinedByGT applies the GT predicate on the "declined_by" field.
+func DeclinedByGT(v uuid.UUID) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldGT(FieldDeclinedBy, v))
+}
+
+// DeclinedByGTE applies the GTE predicate on the "declined_by" field.
+func DeclinedByGTE(v uuid.UUID) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldGTE(FieldDeclinedBy, v))
+}
+
+// DeclinedByLT applies the LT predicate on the "declined_by" field.
+func DeclinedByLT(v uuid.UUID) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldLT(FieldDeclinedBy, v))
+}
+
+// DeclinedByLTE applies the LTE predicate on the "declined_by" field.
+func DeclinedByLTE(v uuid.UUID) predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldLTE(FieldDeclinedBy, v))
+}
+
+// DeclinedByIsNil applies the IsNil predicate on the "declined_by" field.
+func DeclinedByIsNil() predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldIsNull(FieldDeclinedBy))
+}
+
+// DeclinedByNotNil applies the NotNil predicate on the "declined_by" field.
+func DeclinedByNotNil() predicate.ManagerInvite {
+	return predicate.ManagerInvite(sql.FieldNotNull(FieldDeclinedBy))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

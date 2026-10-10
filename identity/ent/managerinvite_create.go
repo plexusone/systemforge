@@ -102,6 +102,34 @@ func (_c *ManagerInviteCreate) SetNillableRevokedAt(v *time.Time) *ManagerInvite
 	return _c
 }
 
+// SetDeclinedAt sets the "declined_at" field.
+func (_c *ManagerInviteCreate) SetDeclinedAt(v time.Time) *ManagerInviteCreate {
+	_c.mutation.SetDeclinedAt(v)
+	return _c
+}
+
+// SetNillableDeclinedAt sets the "declined_at" field if the given value is not nil.
+func (_c *ManagerInviteCreate) SetNillableDeclinedAt(v *time.Time) *ManagerInviteCreate {
+	if v != nil {
+		_c.SetDeclinedAt(*v)
+	}
+	return _c
+}
+
+// SetDeclinedBy sets the "declined_by" field.
+func (_c *ManagerInviteCreate) SetDeclinedBy(v uuid.UUID) *ManagerInviteCreate {
+	_c.mutation.SetDeclinedBy(v)
+	return _c
+}
+
+// SetNillableDeclinedBy sets the "declined_by" field if the given value is not nil.
+func (_c *ManagerInviteCreate) SetNillableDeclinedBy(v *uuid.UUID) *ManagerInviteCreate {
+	if v != nil {
+		_c.SetDeclinedBy(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *ManagerInviteCreate) SetCreatedAt(v time.Time) *ManagerInviteCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -280,6 +308,14 @@ func (_c *ManagerInviteCreate) createSpec() (*ManagerInvite, *sqlgraph.CreateSpe
 		_spec.SetField(managerinvite.FieldRevokedAt, field.TypeTime, value)
 		_node.RevokedAt = &value
 	}
+	if value, ok := _c.mutation.DeclinedAt(); ok {
+		_spec.SetField(managerinvite.FieldDeclinedAt, field.TypeTime, value)
+		_node.DeclinedAt = &value
+	}
+	if value, ok := _c.mutation.DeclinedBy(); ok {
+		_spec.SetField(managerinvite.FieldDeclinedBy, field.TypeUUID, value)
+		_node.DeclinedBy = &value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(managerinvite.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -387,6 +423,42 @@ func (u *ManagerInviteUpsert) UpdateRevokedAt() *ManagerInviteUpsert {
 // ClearRevokedAt clears the value of the "revoked_at" field.
 func (u *ManagerInviteUpsert) ClearRevokedAt() *ManagerInviteUpsert {
 	u.SetNull(managerinvite.FieldRevokedAt)
+	return u
+}
+
+// SetDeclinedAt sets the "declined_at" field.
+func (u *ManagerInviteUpsert) SetDeclinedAt(v time.Time) *ManagerInviteUpsert {
+	u.Set(managerinvite.FieldDeclinedAt, v)
+	return u
+}
+
+// UpdateDeclinedAt sets the "declined_at" field to the value that was provided on create.
+func (u *ManagerInviteUpsert) UpdateDeclinedAt() *ManagerInviteUpsert {
+	u.SetExcluded(managerinvite.FieldDeclinedAt)
+	return u
+}
+
+// ClearDeclinedAt clears the value of the "declined_at" field.
+func (u *ManagerInviteUpsert) ClearDeclinedAt() *ManagerInviteUpsert {
+	u.SetNull(managerinvite.FieldDeclinedAt)
+	return u
+}
+
+// SetDeclinedBy sets the "declined_by" field.
+func (u *ManagerInviteUpsert) SetDeclinedBy(v uuid.UUID) *ManagerInviteUpsert {
+	u.Set(managerinvite.FieldDeclinedBy, v)
+	return u
+}
+
+// UpdateDeclinedBy sets the "declined_by" field to the value that was provided on create.
+func (u *ManagerInviteUpsert) UpdateDeclinedBy() *ManagerInviteUpsert {
+	u.SetExcluded(managerinvite.FieldDeclinedBy)
+	return u
+}
+
+// ClearDeclinedBy clears the value of the "declined_by" field.
+func (u *ManagerInviteUpsert) ClearDeclinedBy() *ManagerInviteUpsert {
+	u.SetNull(managerinvite.FieldDeclinedBy)
 	return u
 }
 
@@ -519,6 +591,48 @@ func (u *ManagerInviteUpsertOne) UpdateRevokedAt() *ManagerInviteUpsertOne {
 func (u *ManagerInviteUpsertOne) ClearRevokedAt() *ManagerInviteUpsertOne {
 	return u.Update(func(s *ManagerInviteUpsert) {
 		s.ClearRevokedAt()
+	})
+}
+
+// SetDeclinedAt sets the "declined_at" field.
+func (u *ManagerInviteUpsertOne) SetDeclinedAt(v time.Time) *ManagerInviteUpsertOne {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.SetDeclinedAt(v)
+	})
+}
+
+// UpdateDeclinedAt sets the "declined_at" field to the value that was provided on create.
+func (u *ManagerInviteUpsertOne) UpdateDeclinedAt() *ManagerInviteUpsertOne {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.UpdateDeclinedAt()
+	})
+}
+
+// ClearDeclinedAt clears the value of the "declined_at" field.
+func (u *ManagerInviteUpsertOne) ClearDeclinedAt() *ManagerInviteUpsertOne {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.ClearDeclinedAt()
+	})
+}
+
+// SetDeclinedBy sets the "declined_by" field.
+func (u *ManagerInviteUpsertOne) SetDeclinedBy(v uuid.UUID) *ManagerInviteUpsertOne {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.SetDeclinedBy(v)
+	})
+}
+
+// UpdateDeclinedBy sets the "declined_by" field to the value that was provided on create.
+func (u *ManagerInviteUpsertOne) UpdateDeclinedBy() *ManagerInviteUpsertOne {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.UpdateDeclinedBy()
+	})
+}
+
+// ClearDeclinedBy clears the value of the "declined_by" field.
+func (u *ManagerInviteUpsertOne) ClearDeclinedBy() *ManagerInviteUpsertOne {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.ClearDeclinedBy()
 	})
 }
 
@@ -818,6 +932,48 @@ func (u *ManagerInviteUpsertBulk) UpdateRevokedAt() *ManagerInviteUpsertBulk {
 func (u *ManagerInviteUpsertBulk) ClearRevokedAt() *ManagerInviteUpsertBulk {
 	return u.Update(func(s *ManagerInviteUpsert) {
 		s.ClearRevokedAt()
+	})
+}
+
+// SetDeclinedAt sets the "declined_at" field.
+func (u *ManagerInviteUpsertBulk) SetDeclinedAt(v time.Time) *ManagerInviteUpsertBulk {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.SetDeclinedAt(v)
+	})
+}
+
+// UpdateDeclinedAt sets the "declined_at" field to the value that was provided on create.
+func (u *ManagerInviteUpsertBulk) UpdateDeclinedAt() *ManagerInviteUpsertBulk {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.UpdateDeclinedAt()
+	})
+}
+
+// ClearDeclinedAt clears the value of the "declined_at" field.
+func (u *ManagerInviteUpsertBulk) ClearDeclinedAt() *ManagerInviteUpsertBulk {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.ClearDeclinedAt()
+	})
+}
+
+// SetDeclinedBy sets the "declined_by" field.
+func (u *ManagerInviteUpsertBulk) SetDeclinedBy(v uuid.UUID) *ManagerInviteUpsertBulk {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.SetDeclinedBy(v)
+	})
+}
+
+// UpdateDeclinedBy sets the "declined_by" field to the value that was provided on create.
+func (u *ManagerInviteUpsertBulk) UpdateDeclinedBy() *ManagerInviteUpsertBulk {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.UpdateDeclinedBy()
+	})
+}
+
+// ClearDeclinedBy clears the value of the "declined_by" field.
+func (u *ManagerInviteUpsertBulk) ClearDeclinedBy() *ManagerInviteUpsertBulk {
+	return u.Update(func(s *ManagerInviteUpsert) {
+		s.ClearDeclinedBy()
 	})
 }
 

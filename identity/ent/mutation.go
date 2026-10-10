@@ -15033,6 +15033,8 @@ type ManagerInviteMutation struct {
 	accepted_at          *time.Time
 	accepted_by          *uuid.UUID
 	revoked_at           *time.Time
+	declined_at          *time.Time
+	declined_by          *uuid.UUID
 	created_at           *time.Time
 	clearedFields        map[string]struct{}
 	done                 bool
@@ -15507,6 +15509,104 @@ func (m *ManagerInviteMutation) ResetRevokedAt() {
 	delete(m.clearedFields, managerinvite.FieldRevokedAt)
 }
 
+// SetDeclinedAt sets the "declined_at" field.
+func (m *ManagerInviteMutation) SetDeclinedAt(t time.Time) {
+	m.declined_at = &t
+}
+
+// DeclinedAt returns the value of the "declined_at" field in the mutation.
+func (m *ManagerInviteMutation) DeclinedAt() (r time.Time, exists bool) {
+	v := m.declined_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeclinedAt returns the old "declined_at" field's value of the ManagerInvite entity.
+// If the ManagerInvite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerInviteMutation) OldDeclinedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeclinedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeclinedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeclinedAt: %w", err)
+	}
+	return oldValue.DeclinedAt, nil
+}
+
+// ClearDeclinedAt clears the value of the "declined_at" field.
+func (m *ManagerInviteMutation) ClearDeclinedAt() {
+	m.declined_at = nil
+	m.clearedFields[managerinvite.FieldDeclinedAt] = struct{}{}
+}
+
+// DeclinedAtCleared returns if the "declined_at" field was cleared in this mutation.
+func (m *ManagerInviteMutation) DeclinedAtCleared() bool {
+	_, ok := m.clearedFields[managerinvite.FieldDeclinedAt]
+	return ok
+}
+
+// ResetDeclinedAt resets all changes to the "declined_at" field.
+func (m *ManagerInviteMutation) ResetDeclinedAt() {
+	m.declined_at = nil
+	delete(m.clearedFields, managerinvite.FieldDeclinedAt)
+}
+
+// SetDeclinedBy sets the "declined_by" field.
+func (m *ManagerInviteMutation) SetDeclinedBy(u uuid.UUID) {
+	m.declined_by = &u
+}
+
+// DeclinedBy returns the value of the "declined_by" field in the mutation.
+func (m *ManagerInviteMutation) DeclinedBy() (r uuid.UUID, exists bool) {
+	v := m.declined_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeclinedBy returns the old "declined_by" field's value of the ManagerInvite entity.
+// If the ManagerInvite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ManagerInviteMutation) OldDeclinedBy(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeclinedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeclinedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeclinedBy: %w", err)
+	}
+	return oldValue.DeclinedBy, nil
+}
+
+// ClearDeclinedBy clears the value of the "declined_by" field.
+func (m *ManagerInviteMutation) ClearDeclinedBy() {
+	m.declined_by = nil
+	m.clearedFields[managerinvite.FieldDeclinedBy] = struct{}{}
+}
+
+// DeclinedByCleared returns if the "declined_by" field was cleared in this mutation.
+func (m *ManagerInviteMutation) DeclinedByCleared() bool {
+	_, ok := m.clearedFields[managerinvite.FieldDeclinedBy]
+	return ok
+}
+
+// ResetDeclinedBy resets all changes to the "declined_by" field.
+func (m *ManagerInviteMutation) ResetDeclinedBy() {
+	m.declined_by = nil
+	delete(m.clearedFields, managerinvite.FieldDeclinedBy)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *ManagerInviteMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -15577,7 +15677,7 @@ func (m *ManagerInviteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ManagerInviteMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 12)
 	if m.manager_principal_id != nil {
 		fields = append(fields, managerinvite.FieldManagerPrincipalID)
 	}
@@ -15604,6 +15704,12 @@ func (m *ManagerInviteMutation) Fields() []string {
 	}
 	if m.revoked_at != nil {
 		fields = append(fields, managerinvite.FieldRevokedAt)
+	}
+	if m.declined_at != nil {
+		fields = append(fields, managerinvite.FieldDeclinedAt)
+	}
+	if m.declined_by != nil {
+		fields = append(fields, managerinvite.FieldDeclinedBy)
 	}
 	if m.created_at != nil {
 		fields = append(fields, managerinvite.FieldCreatedAt)
@@ -15634,6 +15740,10 @@ func (m *ManagerInviteMutation) Field(name string) (ent.Value, bool) {
 		return m.AcceptedBy()
 	case managerinvite.FieldRevokedAt:
 		return m.RevokedAt()
+	case managerinvite.FieldDeclinedAt:
+		return m.DeclinedAt()
+	case managerinvite.FieldDeclinedBy:
+		return m.DeclinedBy()
 	case managerinvite.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -15663,6 +15773,10 @@ func (m *ManagerInviteMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldAcceptedBy(ctx)
 	case managerinvite.FieldRevokedAt:
 		return m.OldRevokedAt(ctx)
+	case managerinvite.FieldDeclinedAt:
+		return m.OldDeclinedAt(ctx)
+	case managerinvite.FieldDeclinedBy:
+		return m.OldDeclinedBy(ctx)
 	case managerinvite.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -15737,6 +15851,20 @@ func (m *ManagerInviteMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRevokedAt(v)
 		return nil
+	case managerinvite.FieldDeclinedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeclinedAt(v)
+		return nil
+	case managerinvite.FieldDeclinedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeclinedBy(v)
+		return nil
 	case managerinvite.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -15783,6 +15911,12 @@ func (m *ManagerInviteMutation) ClearedFields() []string {
 	if m.FieldCleared(managerinvite.FieldRevokedAt) {
 		fields = append(fields, managerinvite.FieldRevokedAt)
 	}
+	if m.FieldCleared(managerinvite.FieldDeclinedAt) {
+		fields = append(fields, managerinvite.FieldDeclinedAt)
+	}
+	if m.FieldCleared(managerinvite.FieldDeclinedBy) {
+		fields = append(fields, managerinvite.FieldDeclinedBy)
+	}
 	return fields
 }
 
@@ -15805,6 +15939,12 @@ func (m *ManagerInviteMutation) ClearField(name string) error {
 		return nil
 	case managerinvite.FieldRevokedAt:
 		m.ClearRevokedAt()
+		return nil
+	case managerinvite.FieldDeclinedAt:
+		m.ClearDeclinedAt()
+		return nil
+	case managerinvite.FieldDeclinedBy:
+		m.ClearDeclinedBy()
 		return nil
 	}
 	return fmt.Errorf("unknown ManagerInvite nullable field %s", name)
@@ -15840,6 +15980,12 @@ func (m *ManagerInviteMutation) ResetField(name string) error {
 		return nil
 	case managerinvite.FieldRevokedAt:
 		m.ResetRevokedAt()
+		return nil
+	case managerinvite.FieldDeclinedAt:
+		m.ResetDeclinedAt()
+		return nil
+	case managerinvite.FieldDeclinedBy:
+		m.ResetDeclinedBy()
 		return nil
 	case managerinvite.FieldCreatedAt:
 		m.ResetCreatedAt()

@@ -744,6 +744,8 @@ var (
 		{Name: "accepted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "accepted_by", Type: field.TypeUUID, Nullable: true},
 		{Name: "revoked_at", Type: field.TypeTime, Nullable: true},
+		{Name: "declined_at", Type: field.TypeTime, Nullable: true},
+		{Name: "declined_by", Type: field.TypeUUID, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// SfManagerInvitesTable holds the schema information for the "sf_manager_invites" table.

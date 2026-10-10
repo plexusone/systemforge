@@ -68,7 +68,7 @@ func (s *Service) Delete(ctx context.Context, actorID, managedID uuid.UUID) erro
 		}
 		if h.Email != nil {
 			if counts["invites"], err = tx.ManagerInvite.Update().
-				Where(managerinvite.EmailEqualFold(*h.Email), managerinvite.AcceptedAtIsNil(), managerinvite.RevokedAtIsNil()).
+				Where(managerinvite.EmailEqualFold(*h.Email), managerinvite.AcceptedAtIsNil(), managerinvite.RevokedAtIsNil(), managerinvite.DeclinedAtIsNil()).
 				SetRevokedAt(now).
 				Save(ctx); err != nil {
 				return fmt.Errorf("managedprincipal: withdraw invitations: %w", err)

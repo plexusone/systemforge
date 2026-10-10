@@ -49,6 +49,7 @@ type LoginTokenView struct {
 //
 //	POST   /manager-invites                          the caller offers to manage a verified address
 //	POST   /manager-invites/accept                   the caller accepts, entering management
+//	POST   /manager-invites/decline                  the caller declines
 //	DELETE /manager-invites/{inviteID}               the inviter withdraws it
 //
 // Credentials and sessions, each requiring manage_credentials on the
@@ -66,6 +67,7 @@ func NewHandler(svc *Service) http.Handler {
 	r.Post("/claims/redeem", h.redeemClaim)
 	r.Post("/manager-invites", h.inviteManager)
 	r.Post("/manager-invites/accept", h.acceptInvite)
+	r.Post("/manager-invites/decline", h.declineInvite)
 	r.Delete("/manager-invites/{inviteID}", h.revokeInvite)
 	r.Delete("/{principalID}", h.delete)
 	r.Get("/{principalID}/managers", h.listManagers)

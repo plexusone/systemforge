@@ -32,6 +32,10 @@ const (
 	FieldAcceptedBy = "accepted_by"
 	// FieldRevokedAt holds the string denoting the revoked_at field in the database.
 	FieldRevokedAt = "revoked_at"
+	// FieldDeclinedAt holds the string denoting the declined_at field in the database.
+	FieldDeclinedAt = "declined_at"
+	// FieldDeclinedBy holds the string denoting the declined_by field in the database.
+	FieldDeclinedBy = "declined_by"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// Table holds the table name of the managerinvite in the database.
@@ -50,6 +54,8 @@ var Columns = []string{
 	FieldAcceptedAt,
 	FieldAcceptedBy,
 	FieldRevokedAt,
+	FieldDeclinedAt,
+	FieldDeclinedBy,
 	FieldCreatedAt,
 }
 
@@ -125,6 +131,16 @@ func ByAcceptedBy(opts ...sql.OrderTermOption) OrderOption {
 // ByRevokedAt orders the results by the revoked_at field.
 func ByRevokedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRevokedAt, opts...).ToFunc()
+}
+
+// ByDeclinedAt orders the results by the declined_at field.
+func ByDeclinedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeclinedAt, opts...).ToFunc()
+}
+
+// ByDeclinedBy orders the results by the declined_by field.
+func ByDeclinedBy(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeclinedBy, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

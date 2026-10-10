@@ -410,6 +410,8 @@ var schemaGraph = func() *sqlgraph.Schema {
 			managerinvite.FieldAcceptedAt:         {Type: field.TypeTime, Column: managerinvite.FieldAcceptedAt},
 			managerinvite.FieldAcceptedBy:         {Type: field.TypeUUID, Column: managerinvite.FieldAcceptedBy},
 			managerinvite.FieldRevokedAt:          {Type: field.TypeTime, Column: managerinvite.FieldRevokedAt},
+			managerinvite.FieldDeclinedAt:         {Type: field.TypeTime, Column: managerinvite.FieldDeclinedAt},
+			managerinvite.FieldDeclinedBy:         {Type: field.TypeUUID, Column: managerinvite.FieldDeclinedBy},
 			managerinvite.FieldCreatedAt:          {Type: field.TypeTime, Column: managerinvite.FieldCreatedAt},
 		},
 	}
@@ -3387,6 +3389,16 @@ func (f *ManagerInviteFilter) WhereAcceptedBy(p entql.ValueP) {
 // WhereRevokedAt applies the entql time.Time predicate on the revoked_at field.
 func (f *ManagerInviteFilter) WhereRevokedAt(p entql.TimeP) {
 	f.Where(p.Field(managerinvite.FieldRevokedAt))
+}
+
+// WhereDeclinedAt applies the entql time.Time predicate on the declined_at field.
+func (f *ManagerInviteFilter) WhereDeclinedAt(p entql.TimeP) {
+	f.Where(p.Field(managerinvite.FieldDeclinedAt))
+}
+
+// WhereDeclinedBy applies the entql [16]byte predicate on the declined_by field.
+func (f *ManagerInviteFilter) WhereDeclinedBy(p entql.ValueP) {
+	f.Where(p.Field(managerinvite.FieldDeclinedBy))
 }
 
 // WhereCreatedAt applies the entql time.Time predicate on the created_at field.

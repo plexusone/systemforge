@@ -89,6 +89,46 @@ func (_u *ManagerInviteUpdate) ClearRevokedAt() *ManagerInviteUpdate {
 	return _u
 }
 
+// SetDeclinedAt sets the "declined_at" field.
+func (_u *ManagerInviteUpdate) SetDeclinedAt(v time.Time) *ManagerInviteUpdate {
+	_u.mutation.SetDeclinedAt(v)
+	return _u
+}
+
+// SetNillableDeclinedAt sets the "declined_at" field if the given value is not nil.
+func (_u *ManagerInviteUpdate) SetNillableDeclinedAt(v *time.Time) *ManagerInviteUpdate {
+	if v != nil {
+		_u.SetDeclinedAt(*v)
+	}
+	return _u
+}
+
+// ClearDeclinedAt clears the value of the "declined_at" field.
+func (_u *ManagerInviteUpdate) ClearDeclinedAt() *ManagerInviteUpdate {
+	_u.mutation.ClearDeclinedAt()
+	return _u
+}
+
+// SetDeclinedBy sets the "declined_by" field.
+func (_u *ManagerInviteUpdate) SetDeclinedBy(v uuid.UUID) *ManagerInviteUpdate {
+	_u.mutation.SetDeclinedBy(v)
+	return _u
+}
+
+// SetNillableDeclinedBy sets the "declined_by" field if the given value is not nil.
+func (_u *ManagerInviteUpdate) SetNillableDeclinedBy(v *uuid.UUID) *ManagerInviteUpdate {
+	if v != nil {
+		_u.SetDeclinedBy(*v)
+	}
+	return _u
+}
+
+// ClearDeclinedBy clears the value of the "declined_by" field.
+func (_u *ManagerInviteUpdate) ClearDeclinedBy() *ManagerInviteUpdate {
+	_u.mutation.ClearDeclinedBy()
+	return _u
+}
+
 // Mutation returns the ManagerInviteMutation object of the builder.
 func (_u *ManagerInviteUpdate) Mutation() *ManagerInviteMutation {
 	return _u.mutation
@@ -147,6 +187,18 @@ func (_u *ManagerInviteUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if _u.mutation.RevokedAtCleared() {
 		_spec.ClearField(managerinvite.FieldRevokedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DeclinedAt(); ok {
+		_spec.SetField(managerinvite.FieldDeclinedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeclinedAtCleared() {
+		_spec.ClearField(managerinvite.FieldDeclinedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DeclinedBy(); ok {
+		_spec.SetField(managerinvite.FieldDeclinedBy, field.TypeUUID, value)
+	}
+	if _u.mutation.DeclinedByCleared() {
+		_spec.ClearField(managerinvite.FieldDeclinedBy, field.TypeUUID)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -225,6 +277,46 @@ func (_u *ManagerInviteUpdateOne) SetNillableRevokedAt(v *time.Time) *ManagerInv
 // ClearRevokedAt clears the value of the "revoked_at" field.
 func (_u *ManagerInviteUpdateOne) ClearRevokedAt() *ManagerInviteUpdateOne {
 	_u.mutation.ClearRevokedAt()
+	return _u
+}
+
+// SetDeclinedAt sets the "declined_at" field.
+func (_u *ManagerInviteUpdateOne) SetDeclinedAt(v time.Time) *ManagerInviteUpdateOne {
+	_u.mutation.SetDeclinedAt(v)
+	return _u
+}
+
+// SetNillableDeclinedAt sets the "declined_at" field if the given value is not nil.
+func (_u *ManagerInviteUpdateOne) SetNillableDeclinedAt(v *time.Time) *ManagerInviteUpdateOne {
+	if v != nil {
+		_u.SetDeclinedAt(*v)
+	}
+	return _u
+}
+
+// ClearDeclinedAt clears the value of the "declined_at" field.
+func (_u *ManagerInviteUpdateOne) ClearDeclinedAt() *ManagerInviteUpdateOne {
+	_u.mutation.ClearDeclinedAt()
+	return _u
+}
+
+// SetDeclinedBy sets the "declined_by" field.
+func (_u *ManagerInviteUpdateOne) SetDeclinedBy(v uuid.UUID) *ManagerInviteUpdateOne {
+	_u.mutation.SetDeclinedBy(v)
+	return _u
+}
+
+// SetNillableDeclinedBy sets the "declined_by" field if the given value is not nil.
+func (_u *ManagerInviteUpdateOne) SetNillableDeclinedBy(v *uuid.UUID) *ManagerInviteUpdateOne {
+	if v != nil {
+		_u.SetDeclinedBy(*v)
+	}
+	return _u
+}
+
+// ClearDeclinedBy clears the value of the "declined_by" field.
+func (_u *ManagerInviteUpdateOne) ClearDeclinedBy() *ManagerInviteUpdateOne {
+	_u.mutation.ClearDeclinedBy()
 	return _u
 }
 
@@ -316,6 +408,18 @@ func (_u *ManagerInviteUpdateOne) sqlSave(ctx context.Context) (_node *ManagerIn
 	}
 	if _u.mutation.RevokedAtCleared() {
 		_spec.ClearField(managerinvite.FieldRevokedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DeclinedAt(); ok {
+		_spec.SetField(managerinvite.FieldDeclinedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeclinedAtCleared() {
+		_spec.ClearField(managerinvite.FieldDeclinedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DeclinedBy(); ok {
+		_spec.SetField(managerinvite.FieldDeclinedBy, field.TypeUUID, value)
+	}
+	if _u.mutation.DeclinedByCleared() {
+		_spec.ClearField(managerinvite.FieldDeclinedBy, field.TypeUUID)
 	}
 	_node = &ManagerInvite{config: _u.config}
 	_spec.Assign = _node.assignValues

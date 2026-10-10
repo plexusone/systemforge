@@ -490,7 +490,7 @@ func init() {
 	// managerinvite.RoleValidator is a validator for the "role" field. It is called by the builders before save.
 	managerinvite.RoleValidator = managerinviteDescRole.Validators[0].(func(string) error)
 	// managerinviteDescCreatedAt is the schema descriptor for created_at field.
-	managerinviteDescCreatedAt := managerinviteFields[10].Descriptor()
+	managerinviteDescCreatedAt := managerinviteFields[12].Descriptor()
 	// managerinvite.DefaultCreatedAt holds the default value on creation for the created_at field.
 	managerinvite.DefaultCreatedAt = managerinviteDescCreatedAt.Default.(func() time.Time)
 	// managerinviteDescID is the schema descriptor for id field.

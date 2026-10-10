@@ -221,6 +221,24 @@ func (h *handler) acceptInvite(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, r, map[string]any{"manager_principal_id": managerID})
 }
 
+func (h *handler) declineInvite(w http.ResponseWriter, r *http.Request) {
+	actor, ok := h.caller(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Token string `json:"token"`
+	}
+	if !h.decode(w, r, &req) {
+		return
+	}
+	if err := h.svc.DeclineManagerInvite(r.Context(), req.Token, actor); err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *handler) revokeInvite(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.caller(w, r)
 	if !ok {

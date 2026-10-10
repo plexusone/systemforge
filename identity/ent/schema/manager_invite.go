@@ -74,6 +74,16 @@ func (ManagerInvite) Fields() []ent.Field {
 			Optional().
 			Nillable(),
 
+		field.Time("declined_at").
+			Optional().
+			Nillable().
+			Comment("When the invitee declined the invitation"),
+
+		field.UUID("declined_by", uuid.UUID{}).
+			Optional().
+			Nillable().
+			Comment("Human that declined the invitation"),
+
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),

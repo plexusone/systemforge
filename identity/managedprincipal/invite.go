@@ -15,6 +15,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/managerinvite"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
@@ -35,12 +36,14 @@ const (
 	EventManagerInvited        = "managed_principal.manager_invited"
 	EventManagerInviteAccepted = "managed_principal.manager_invite_accepted"
 	EventManagerInviteRevoked  = "managed_principal.manager_invite_revoked"
+	EventManagerInviteDeclined = "managed_principal.manager_invite_declined"
 )
 
 var (
 	// ErrInvalidInvite is returned for every invitation that cannot be
-	// accepted: unknown, malformed, expired, revoked, already accepted, or
-	// addressed to someone other than the signed-in principal.
+	// accepted or declined: unknown, malformed, expired, revoked, already
+	// accepted or declined, or addressed to someone other than the
+	// signed-in principal.
 	ErrInvalidInvite = errors.New("managedprincipal: invalid manager invitation")
 	// ErrAlreadyManaged is returned when accepting an invitation for a
 	// principal that already has a manager. Its managers change the
@@ -157,24 +160,10 @@ func (s *Service) AcceptManagerInvite(ctx context.Context, token string, princip
 		change    accesschange.Change
 	)
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
-		inv, err := tx.ManagerInvite.Query().Where(managerinvite.TokenPrefix(token[:invitePrefixLen])).Only(ctx)
-		if ent.IsNotFound(err) {
-			return ErrInvalidInvite
-		}
-		if err != nil {
-			return fmt.Errorf("managedprincipal: find invitation: %w", err)
-		}
-		want, err := hex.DecodeString(inv.TokenHash)
-		if err != nil {
-			return fmt.Errorf("managedprincipal: corrupt invitation hash %s: %w", inv.ID, err)
-		}
-		got := sha256.Sum256([]byte(token))
-		if subtle.ConstantTimeCompare(got[:], want) != 1 {
-			return ErrInvalidInvite
-		}
 		now := s.now()
-		if inv.AcceptedAt != nil || inv.RevokedAt != nil || !inv.ExpiresAt.After(now) {
-			return ErrInvalidInvite
+		inv, err := pendingInvite(ctx, tx, token, now)
+		if err != nil {
+			return err
 		}
 		h, err := lockHuman(ctx, tx, principalID)
 		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrNotManaged) {
@@ -210,7 +199,7 @@ func (s *Service) AcceptManagerInvite(ctx context.Context, token string, princip
 		// Spend the invitation conditionally so concurrent acceptances
 		// cannot both succeed.
 		n, err := tx.ManagerInvite.Update().
-			Where(managerinvite.ID(inv.ID), managerinvite.AcceptedAtIsNil(), managerinvite.RevokedAtIsNil()).
+			Where(managerinvite.ID(inv.ID), managerinvite.AcceptedAtIsNil(), managerinvite.RevokedAtIsNil(), managerinvite.DeclinedAtIsNil()).
 			SetAcceptedAt(now).
 			SetAcceptedBy(principalID).
 			Save(ctx)
@@ -243,6 +232,93 @@ func (s *Service) AcceptManagerInvite(ctx context.Context, token string, princip
 	return managerID, s.sync(ctx, "add manager", principalID, s.syncer.AddPrincipalManager(ctx, principalID, managerID, role))
 }
 
+// pendingInvite finds the invitation a token names and requires it to be
+// pending: not accepted, revoked, declined or expired. Every way a token
+// fails to match is ErrInvalidInvite, so the answer says nothing about
+// which invitations exist.
+func pendingInvite(ctx context.Context, tx *ent.Tx, token string, now time.Time) (*ent.ManagerInvite, error) {
+	inv, err := tx.ManagerInvite.Query().Where(managerinvite.TokenPrefix(token[:invitePrefixLen])).Only(ctx)
+	if ent.IsNotFound(err) {
+		return nil, ErrInvalidInvite
+	}
+	if err != nil {
+		return nil, fmt.Errorf("managedprincipal: find invitation: %w", err)
+	}
+	want, err := hex.DecodeString(inv.TokenHash)
+	if err != nil {
+		return nil, fmt.Errorf("managedprincipal: corrupt invitation hash %s: %w", inv.ID, err)
+	}
+	got := sha256.Sum256([]byte(token))
+	if subtle.ConstantTimeCompare(got[:], want) != 1 {
+		return nil, ErrInvalidInvite
+	}
+	if inv.AcceptedAt != nil || inv.RevokedAt != nil || inv.DeclinedAt != nil || !inv.ExpiresAt.After(now) {
+		return nil, ErrInvalidInvite
+	}
+	return inv, nil
+}
+
+// DeclineManagerInvite is the invitee's refusal of an invitation to be
+// managed. It marks the invitation declined, so it can be neither accepted
+// nor declined again, and records an audit event, managed_principal.
+// manager_invite_declined, carrying the inviter and the invitation for
+// whoever notifies them. The inviter sees nothing change: no relationship
+// or capability is touched.
+//
+// principalID is the caller's own identity, never a value a manager
+// supplies. As for AcceptManagerInvite, it must be an active human whose
+// verified email is the invited address, and every failure to match is
+// ErrInvalidInvite. Unlike acceptance it does not depend on the invitee's
+// management state, so an invitee that is already managed may still clear
+// an invitation away.
+func (s *Service) DeclineManagerInvite(ctx context.Context, token string, principalID uuid.UUID) error {
+	token = normalizeCode(token)
+	if len(token) <= invitePrefixLen || !strings.HasPrefix(token, InviteCodePrefix) {
+		return ErrInvalidInvite
+	}
+	var inv *ent.ManagerInvite
+	err := s.withTx(ctx, func(tx *ent.Tx) error {
+		now := s.now()
+		found, err := pendingInvite(ctx, tx, token, now)
+		if err != nil {
+			return err
+		}
+		h, err := tx.Human.Query().
+			Where(human.PrincipalID(principalID), human.HasPrincipalWith(entprincipal.Active(true))).
+			Only(ctx)
+		if ent.IsNotFound(err) {
+			return ErrInvalidInvite
+		}
+		if err != nil {
+			return fmt.Errorf("managedprincipal: load invitee: %w", err)
+		}
+		if !emailVerified(h) || !strings.EqualFold(*h.Email, found.Email) {
+			return ErrInvalidInvite
+		}
+		// Spend the invitation conditionally so a concurrent acceptance or
+		// decline wins exactly once.
+		n, err := tx.ManagerInvite.Update().
+			Where(managerinvite.ID(found.ID), managerinvite.AcceptedAtIsNil(), managerinvite.RevokedAtIsNil(), managerinvite.DeclinedAtIsNil()).
+			SetDeclinedAt(now).
+			SetDeclinedBy(principalID).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("managedprincipal: decline invitation: %w", err)
+		}
+		if n != 1 {
+			return ErrInvalidInvite
+		}
+		inv = found
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	s.emit(ctx, EventManagerInviteDeclined, "decline_manager_invite", principalID, principalID,
+		map[string]any{"invite_id": inv.ID.String(), "manager_principal_id": inv.ManagerPrincipalID.String(), "role": inv.Role})
+	return nil
+}
+
 // RevokeManagerInvite withdraws a pending invitation. Only the inviter may.
 func (s *Service) RevokeManagerInvite(ctx context.Context, actorID, inviteID uuid.UUID) error {
 	n, err := s.client.ManagerInvite.Update().
@@ -251,6 +327,7 @@ func (s *Service) RevokeManagerInvite(ctx context.Context, actorID, inviteID uui
 			managerinvite.ManagerPrincipalID(actorID),
 			managerinvite.AcceptedAtIsNil(),
 			managerinvite.RevokedAtIsNil(),
+			managerinvite.DeclinedAtIsNil(),
 		).
 		SetRevokedAt(s.now()).
 		Save(ctx)

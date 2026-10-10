@@ -36,6 +36,10 @@ type ManagerInvite struct {
 	AcceptedBy *uuid.UUID `json:"accepted_by,omitempty"`
 	// RevokedAt holds the value of the "revoked_at" field.
 	RevokedAt *time.Time `json:"revoked_at,omitempty"`
+	// When the invitee declined the invitation
+	DeclinedAt *time.Time `json:"declined_at,omitempty"`
+	// Human that declined the invitation
+	DeclinedBy *uuid.UUID `json:"declined_by,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt    time.Time `json:"created_at,omitempty"`
 	selectValues sql.SelectValues
@@ -46,11 +50,11 @@ func (*ManagerInvite) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case managerinvite.FieldAcceptedBy:
+		case managerinvite.FieldAcceptedBy, managerinvite.FieldDeclinedBy:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case managerinvite.FieldEmail, managerinvite.FieldRole, managerinvite.FieldTokenPrefix, managerinvite.FieldTokenHash:
 			values[i] = new(sql.NullString)
-		case managerinvite.FieldExpiresAt, managerinvite.FieldAcceptedAt, managerinvite.FieldRevokedAt, managerinvite.FieldCreatedAt:
+		case managerinvite.FieldExpiresAt, managerinvite.FieldAcceptedAt, managerinvite.FieldRevokedAt, managerinvite.FieldDeclinedAt, managerinvite.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
 		case managerinvite.FieldID, managerinvite.FieldManagerPrincipalID:
 			values[i] = new(uuid.UUID)
@@ -132,6 +136,20 @@ func (_m *ManagerInvite) assignValues(columns []string, values []any) error {
 				_m.RevokedAt = new(time.Time)
 				*_m.RevokedAt = value.Time
 			}
+		case managerinvite.FieldDeclinedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field declined_at", values[i])
+			} else if value.Valid {
+				_m.DeclinedAt = new(time.Time)
+				*_m.DeclinedAt = value.Time
+			}
+		case managerinvite.FieldDeclinedBy:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field declined_by", values[i])
+			} else if value.Valid {
+				_m.DeclinedBy = new(uuid.UUID)
+				*_m.DeclinedBy = *value.S.(*uuid.UUID)
+			}
 		case managerinvite.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -204,6 +222,16 @@ func (_m *ManagerInvite) String() string {
 	if v := _m.RevokedAt; v != nil {
 		builder.WriteString("revoked_at=")
 		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.DeclinedAt; v != nil {
+		builder.WriteString("declined_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.DeclinedBy; v != nil {
+		builder.WriteString("declined_by=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
