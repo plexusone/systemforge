@@ -112,14 +112,13 @@ code host, correctable or removable before it is final.
     records a retention note per field and exposes a purge hook, but does
     not fix periods: they follow the product's tier and packaging, which the
     application configures.
-12. **Erasure can be held, minimally.** A subject may carry an *erasure
-    hold*: a flag with a reason, set and cleared only by a platform
-    administrator and recorded as an access-controlled audit event. While it
-    is set, `Erase`, the delete transition and edits to `pii` fields refuse
-    with `ErrHeld`, and archive remains available; ADR-012 defines what a
-    hold preserves and how it is enforced. SystemForge does not model legal cases,
-    scopes or expiry; an application that needs them keeps them and sets the
-    flag.
+12. **Erasure can be held.** A subject may be covered by one or more legal
+    holds (ADR-012). While any hold covers it, `Erase`, the delete
+    transition and edits to `pii` fields refuse with `ErrHeld`, and archive
+    remains available. Holds are placed and released by a legal manager,
+    not by a platform administrator acting alone. ADR-012 defines holds,
+    what they preserve, and how they are enforced. SystemForge models the
+    hold and its custodians; legal case management stays outside it.
 13. **The audit log is exportable.** Lifecycle transitions, erasure results
     and hold changes are recorded without personal data, and an
     administrator can export them (by organization and time range), so a

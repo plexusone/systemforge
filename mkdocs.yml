@@ -122,7 +122,7 @@ nav:
       - "ADR-009: Management Is a Relationship": design/adrs/ADR-009-management-is-a-relationship.md
       - "ADR-010: Real-Time Access Invalidation": design/adrs/ADR-010-real-time-access-invalidation.md
       - "ADR-011: Lifecycle, Data Classification and Privacy Rights": design/adrs/ADR-011-lifecycle-states-data-classification-and-privacy-rights.md
-      - "ADR-012: Data Governance Enforcement and Legal Hold": design/adrs/ADR-012-data-governance-enforcement-and-legal-hold.md
+      - "ADR-012: Data Catalog, Legal Holds and Enforcement": design/adrs/ADR-012-data-governance-enforcement-and-legal-hold.md
     - Authentication PRD: design/PRD_AUTHN.md
     - OAuth PRD: design/PRD_OAUTH.md
     - Authentication TRD: design/TRD_AUTHN.md
