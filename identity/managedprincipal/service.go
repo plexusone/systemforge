@@ -489,13 +489,15 @@ func (s *Service) checkRole(role string) error {
 }
 
 // validateManager checks that the principal is an active human with an
-// email; a managed principal has no email, so it cannot be a manager.
+// email that is not itself managed (ADR-009).
 func validateManager(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
 	ok, err := tx.Human.Query().
 		Where(
 			human.PrincipalID(id),
 			human.EmailNotNil(),
 			human.HasPrincipalWith(entprincipal.Active(true), entprincipal.TypeEQ(entprincipal.TypeHuman)),
+			// A managed principal cannot manage, with or without an email.
+			human.Not(hasActiveManager()),
 		).
 		Exist(ctx)
 	if err != nil {

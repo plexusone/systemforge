@@ -586,3 +586,28 @@ func TestRelease(t *testing.T) {
 		t.Errorf("AddManager after release = %v, want ErrNotManaged", err)
 	}
 }
+
+// TestManagedPrincipalCannotManage verifies that a managed principal is
+// not a valid manager even when it has an email (ADR-009).
+func TestManagedPrincipalCannotManage(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	svc, _ := newService(t, db)
+	teacher := addHuman(t, db, "teacher@example.com", true)
+	student, err := svc.Create(ctx, CreateInput{DisplayName: "Student", ClientID: client, Email: "student@example.com",
+		Managers: []ManagerInput{{teacher, RoleGuardian}}})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.Create(ctx, CreateInput{DisplayName: "Sibling", ClientID: client,
+		Managers: []ManagerInput{{student, RoleGuardian}}}); !errors.Is(err, ErrInvalidManager) {
+		t.Errorf("Create with a managed manager = %v, want ErrInvalidManager", err)
+	}
+	other, err := svc.Create(ctx, CreateInput{DisplayName: "Other", ClientID: client, Managers: []ManagerInput{{teacher, RoleGuardian}}})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.AddManager(ctx, other, ManagerInput{student, RoleEducator}, teacher); !errors.Is(err, ErrInvalidManager) {
+		t.Errorf("AddManager with a managed manager = %v, want ErrInvalidManager", err)
+	}
+}
