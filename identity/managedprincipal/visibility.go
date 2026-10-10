@@ -27,6 +27,7 @@ const (
 
 	revokedByManager    = "revoked by manager"
 	revokedAllByManager = "all revoked by manager"
+	revokedDeleted      = "principal deleted"
 )
 
 // SessionKind distinguishes the ways a managed principal can be signed in.
