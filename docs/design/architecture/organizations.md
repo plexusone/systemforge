@@ -581,14 +581,10 @@ outlives the deletion it describes. Each recording service takes a sink
 option (`WithAccessChangeSink`; `systemauth.WithEntAccessChangeSink` for
 `EntStorage`); the rows are written with or without one.
 
-| Reason | Recorded by |
-|---|---|
-| `membership_removed` | `organization.RemoveMember`; `UpdateMember` setting a membership inactive (scoped to the organization) |
-| `org_role_changed` | `UpdateMember` changing the role; `TransferOwnership`, for both principals (scoped) |
-| `app_role_changed` | `approle.Change` to a different role, `Remove`, `RemoveForMember` (scoped); assignment only adds access and records nothing |
-| `deactivated` | `principal.Deactivate` (every organization) |
-| `sessions_revoked` | `token.RevokeAllForPrincipal`, `EntStorage.RevokeSubjectTokens` for a principal subject, `managedprincipal.RevokeSession` and `RevokeAll` (every organization) |
-| `grant_reduced` | Reserved for resource grants (ADR-008), which do not exist yet |
+The reasons form an open registry, documented with what records each in the
+[access-change reasons](authorization.md#access-change-reasons) table of the
+authorization page. The column is a plain string, so a new reason needs no
+migration; `accesschange.Record` rejects any reason that is not registered.
 
 `accesschange.Since` reads the rows after a timestamp for pollers and the
 replay endpoint, and `accesschange.PruneExpired` deletes rows older than

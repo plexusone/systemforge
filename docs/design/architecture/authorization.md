@@ -241,6 +241,43 @@ default, 15 at most). SystemAuth records those changes in
 `sf_access_changes` so a relying party can refuse such tokens sooner (ADR-010;
 see the [organizations page](organizations.md#access-change-records-identityaccesschange)).
 
+### Access-change reasons
+
+Every row of `sf_access_changes` carries a reason. The reasons are an open,
+validated registry, not a database enum:
+
+- The column is a string, so adding a reason needs no migration.
+- The constants live in one package, `identity/accesschange`, and are listed in
+  `accesschange.Reasons()`. `accesschange.Record` rejects a value that is not
+  registered with an error naming it, and `Reason.Valid()` reports membership.
+- Every registered reason has a row in the table below. `TestRegistry`,
+  `TestReasonsAreDocumented` and `TestCallSitesUseRegisteredReasons` fail when a
+  constant is not registered, a reason has no row (or a row names no reason),
+  or a call site builds an `accesschange.Change` with anything other than a
+  registered constant.
+- Reasons are wire values. They are carried unchanged in the back-channel
+  `access_change` event and in `GET /access-changes`, so a reason is never
+  renamed or reused for a different meaning. Relying parties treat the
+  reason as opaque and tolerate one they do not know, so adding a reason does
+  not break an older relying party.
+
+To add a reason: declare the constant and list it in `Reasons()`, add a row
+here, and use it at the call site that records the change. Record the
+reason that says what happened to the principal; do not reuse a near
+match, which is how an invitation that put a principal under management came
+to be recorded as a reduced grant.
+
+| Reason | Meaning | Recorded by |
+|---|---|---|
+| `membership_removed` | The principal was removed from, or deactivated in, an organization | `organization.RemoveMember`; `UpdateMember` setting a membership inactive (scoped to the organization) |
+| `org_role_changed` | The principal's organization role changed | `UpdateMember` changing the role; `TransferOwnership`, for both principals (scoped) |
+| `app_role_changed` | An application role was changed or removed | `approle.Change` to a different role, `Remove`, `RemoveForMember` (scoped); assignment only adds access and records nothing |
+| `deactivated` | The principal was deactivated | `principal.Deactivate`; `managedprincipal.Delete` (every organization) |
+| `sessions_revoked` | The principal's sessions or tokens were revoked | `token.RevokeAllForPrincipal`, `EntStorage.RevokeSubjectTokens` for a principal subject, `managedprincipal.RevokeSession` and `RevokeAll` (every organization) |
+| `management_granted` | The principal came under management and gave up the capabilities managed principals do not hold | `managedprincipal.AcceptManagerInvite` (every organization) |
+| `management_ended` | The principal's management ended and its own capabilities were restored | `managedprincipal.Release`; `RemoveManager` removing the last manager of a principal with a verified email (every organization) |
+| `grant_reduced` | A resource grant was reduced or removed | Reserved for resource grants (ADR-008), which do not exist yet |
+
 ## Planned changes
 
 Accepted decisions not yet implemented. Each item names the ADR that
