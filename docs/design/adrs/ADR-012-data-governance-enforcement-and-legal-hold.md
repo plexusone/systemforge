@@ -5,7 +5,8 @@
 **Relates to:** ADR-011 (lifecycle states, data classification and privacy
 rights; this ADR defines the catalog, holds and enforcement behind them;
 it replaces ADR-011's single erasure flag with holds), ADR-007 (roles),
-ADR-010 (access changes).
+ADR-010 (access changes), ADR-013 (key management, which owns snapshot
+encryption).
 **Updates:** a new `docs/design/architecture/data-governance.md`.
 
 ## Context
@@ -48,7 +49,7 @@ without taking over their data access.
    API and a command, and rendered as a documentation page from the same
    source, so a data protection review, a customer questionnaire and the
    enforcement code read one definition. Products' entries appear in it when
-   they register (decision 14).
+   they register (decision 16).
 
 ### Legal holds
 
@@ -116,8 +117,28 @@ without taking over their data access.
     `privacy.catalog.read`, `legal.hold.manage`, `legal.hold.disclose`,
     `audit.read`) so a deployment whose privacy office sits outside legal
     can assign them differently. Holds and snapshots are readable only to
-    `legal_manager` and to administrators with `audit.read`.
-11. **A hold is marked internally, and notification is the legal manager's
+    `legal_manager` and to administrators with `audit.read`. The roles and
+    permissions are part of the platform so every product gets the same
+    generic capability; an application may extend them with its own roles or
+    narrower permissions in its vocabulary, but may not weaken the platform's
+    refusals (a hold still blocks erasure).
+11. **Destructive and disclosing actions are requests.** Erasure,
+    deletion, hold release and disclosure run as a request with states
+    `requested`, `approved`, `executed` or `cancelled`, so there is one
+    audited path whatever the policy. A deployment sets a policy per action:
+    - `none`: the requester's authority is enough and the request executes
+      at once. This is the default, since many businesses start with one
+      person who holds every role.
+    - `delay`: the request executes after a configurable period, during
+      which it can be cancelled and the stated notification is sent. This
+      protects a single operator from a mistake without needing a second
+      person.
+    - `approval`: a second principal holding the permission, different from
+      the requester, must approve. The approver cannot be the requester or
+      the subject, and an unapproved request expires.
+    The policy can be tightened without a code change as the business grows.
+
+12. **A hold is marked internally, and notification is the legal manager's
     decision.** The marker is visible to staff in admin tooling. Whether
     and how the person is told is set per hold: not at all, in the
     application (a notice the product renders from a claim or an API field),
@@ -128,7 +149,7 @@ without taking over their data access.
 
 ### Snapshot storage
 
-12. **The snapshot location is configurable.** Two stores are supported
+13. **The snapshot location is configurable.** Two stores are supported
     behind one interface: the database (a sealed, encrypted record, the
     default and the one used at first, since the volume is expected to be
     small) and an S3-compatible object store, with the snapshot written as a
@@ -136,35 +157,37 @@ without taking over their data access.
     location and digest. Moving to the object store is a configuration
     change; existing snapshots remain readable through their recorded
     location.
-13. **Snapshots are personal data.** They carry the classification of their
-    contents, are encrypted at rest, are excluded from ordinary exports, and
-    are removed only when every hold covering the subject has been released
-    and the subject's own erasure has proceeded.
+14. **Snapshots are personal data.** They carry the classification of their
+    contents, are encrypted at rest under keys managed as ADR-013 decides,
+    are excluded from ordinary exports, and are removed only when every hold
+    covering the subject has been released and the subject's own erasure has
+    proceeded. The key hierarchy (per hold, per subject or platform-wide) is
+    ADR-013's decision, not this one's.
 
 ### Enforcement in applications
 
-14. **Applications reach their own data directly.** SystemForge does not sit
+15. **Applications reach their own data directly.** SystemForge does not sit
     between a product and its database. Identity and organization data stays
     behind SystemForge's services, because it owns them; product data goes
     through the product's own access layer.
-15. **Registration is mandatory and verified.** A product annotates its Ent
+16. **Registration is mandatory and verified.** A product annotates its Ent
     entities with classification (ADR-011, decision 7) and registers them in
     the catalog. `dataclass.Verify` runs at startup and fails in production,
     and warns in development, when a registered field has no classification
     or an entity with personal data has no subject key and eraser.
-16. **SystemForge ships the enforcement as an Ent hook.** A mutation hook
+17. **SystemForge ships the enforcement as an Ent hook.** A mutation hook
     consults the catalog and the holds covering the subject and refuses the
     writes that decision 7 forbids; for versioned entities it writes the
     before-image. A product installs it once on its client, so enforcement
     sits in the write path without a data service.
-17. **A conformance test is provided.** It fails in CI when a registered
+18. **A conformance test is provided.** It fails in CI when a registered
     entity can be mutated without the hook installed, which catches a second
     client or a bulk path that skips it.
-18. **Where tables share a database with SystemForge,** a trigger or
+19. **Where tables share a database with SystemForge,** a trigger or
     row-level-security policy may back the hook as defense in depth. This is
     optional and engine-specific, and it lives in the engine-specific
     packages, not in the portable core.
-19. **What this does not stop is stated.** Raw SQL, a bulk import script or a
+20. **What this does not stop is stated.** Raw SQL, a bulk import script or a
     direct console session bypasses an ORM hook. The mitigations are
     operational and documented: lint rules against raw SQL in product code,
     `guardsql` for query paths, and control over who holds a database
@@ -209,9 +232,8 @@ without taking over their data access.
 ## Open questions
 
 - How a data subject access request interacts with a hold the subject must
-  not be told about (decision 11 defaults to "pending review").
-- Whether `legal_manager` and `privacy_manager` are also available per
-  organization for enterprise tenants (they are platform-level to start).
-- Whether erasure by a `privacy_manager` needs a second approver
-  (separation of duties) for subjects with an active deferred request.
-- Snapshot encryption keys: per hold, per subject, or platform-wide.
+  not be told about (decision 12 defaults to "pending review").
+- The default delay period for the `delay` policy.
+- Whether a deployment with one principal can satisfy `approval` through an
+  external approver (for example a named advisor with a scoped, temporary
+  role), or must stay on `none` or `delay`.
