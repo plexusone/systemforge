@@ -45,9 +45,11 @@ code host, correctable or removable before it is final.
      customer-facing applications;
    - platform administrators and the owners' admin tooling can still list,
      read and restore it;
-   - it cannot sign in and its sessions are revoked when it is archived
-     (an access change, ADR-010); an archived organization's members lose
-     access to it through their claims;
+   - it cannot sign in at all, so that "archived" has one clear meaning,
+     and its sessions are revoked when it is archived (an access change,
+     ADR-010); an archived organization's members lose access to it through
+     their claims; data export for an archived subject is performed by an
+     administrator;
    - memberships, grants and history are preserved.
 3. **Deleted is a soft delete.** The row stays so references hold, and every
    column classified as personal data (below) is erased according to its
@@ -106,16 +108,33 @@ code host, correctable or removable before it is final.
     each registers an eraser for its entities (or relies on annotations for
     simple cases). `Erase` runs them, records per-entity results without
     personal data, and can be resumed after a partial failure.
-11. **Managed principals are covered.** A managed subject's request is made
+11. **Retention is a policy input, not a platform constant.** SystemForge
+    records a retention note per field and exposes a purge hook, but does
+    not fix periods: they follow the product's tier and packaging, which the
+    application configures.
+12. **Erasure can be held, minimally.** A subject may carry an *erasure
+    hold*: a flag with a reason, set and cleared only by a platform
+    administrator and recorded as an access-controlled audit event. While it
+    is set, `Erase` and the delete transition refuse with `ErrHeld`, and
+    archive remains available. SystemForge does not model legal cases,
+    scopes or expiry; an application that needs them keeps them and sets the
+    flag.
+13. **The audit log is exportable.** Lifecycle transitions, erasure results
+    and hold changes are recorded without personal data, and an
+    administrator can export them (by organization and time range), so a
+    customer can evidence what was erased, when and under whose authority.
+    This is independent of the hold: the export serves accountability, the
+    hold serves refusal.
+14. **Managed principals are covered.** A managed subject's request is made
     by an authorized manager, and the audit record names that manager's
     authority; once released, the principal acts for itself.
-12. **A request is verified before it is honored.** Verification of the
+15. **A request is verified before it is honored.** Verification of the
     requester's identity is the application's responsibility; SystemForge
     exposes the operations behind the authorization checks of decision 5.
 
 ### Release of a managed principal (amends ADR-009, decision 3)
 
-13. **Release is a record with a state, not an instant.** Releasing a
+16. **Release is a record with a state, not an instant.** Releasing a
     principal creates a release record in state `open`. While it is open:
     - the principal is self-managed: it may act for itself, and the managers'
       authority over it is suspended (`managed` is false);
@@ -123,11 +142,11 @@ code host, correctable or removable before it is final.
       can be reversed;
     - the record may be edited (for example its note and effective details)
       and may be deleted, which restores the management arrangement.
-14. **Closing a release is the formal end of management.** Closing removes
+17. **Closing a release is the formal end of management.** Closing removes
     the manager relationships and cannot be undone by a manager. After a
     release is closed only a platform administrator may change or reopen
     it.
-15. **ADR-009's other rules stand:** a principal without a verified email
+18. **ADR-009's other rules stand:** a principal without a verified email
     must have a manager, so release still requires a verified email, and
     email remains independent of management.
 
@@ -149,9 +168,7 @@ code host, correctable or removable before it is final.
 
 ## Open questions
 
-- Whether an archived principal may keep a read-only sign-in (for data
-  export) instead of none.
-- Default retention periods and the legal-hold mechanism for `retain`.
+- Retention periods, which follow product tier and packaging decisions.
 - Whether organizations get the same `Erase` semantics for their member
   data, or only archive and delete of the organization record.
 - The shape of the export format (one archive per subject, with a manifest).
