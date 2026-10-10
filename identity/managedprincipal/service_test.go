@@ -163,6 +163,7 @@ func TestCreateRefusals(t *testing.T) {
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	inactive := addHuman(t, db, "gone@example.com", false)
 	learner := addHuman(t, db, "", true)
+	missing := uuid.New()
 	svc.roles = append(svc.roles, "coach")
 
 	tests := []struct {
@@ -170,14 +171,14 @@ func TestCreateRefusals(t *testing.T) {
 		in   CreateInput
 		want error
 	}{
-		{"client not allowed", CreateInput{DisplayName: "Learner", ClientID: "other", Managers: []ManagerInput{{teacher, RoleGuardian}}}, ErrNotAllowed},
-		{"no display name", CreateInput{ClientID: client, Managers: []ManagerInput{{teacher, RoleGuardian}}}, ErrDisplayNameRequired},
+		{"client not allowed", CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: "other", Managers: []ManagerInput{{teacher, RoleGuardian}}}, ErrNotAllowed},
+		{"no display name", CreateInput{ActorID: teacher, ClientID: client, Managers: []ManagerInput{{teacher, RoleGuardian}}}, ErrDisplayNameRequired},
 		{"no managers", CreateInput{DisplayName: "Learner", ClientID: client}, ErrNoManagers},
-		{"unknown role", CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, "parent"}}}, ErrInvalidRole},
-		{"inactive manager", CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{inactive, RoleGuardian}}}, ErrInvalidManager},
-		{"managed manager", CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{learner, RoleGuardian}}}, ErrInvalidManager},
-		{"missing manager", CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{uuid.New(), RoleGuardian}}}, ErrInvalidManager},
-		{"one bad manager", CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}, {learner, RoleGuardian}}}, ErrInvalidManager},
+		{"unknown role", CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, "parent"}}}, ErrInvalidRole},
+		{"inactive manager", CreateInput{ActorID: inactive, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{inactive, RoleGuardian}}}, ErrInvalidManager},
+		{"managed manager", CreateInput{ActorID: learner, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{learner, RoleGuardian}}}, ErrInvalidManager},
+		{"missing manager", CreateInput{ActorID: missing, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{missing, RoleGuardian}}}, ErrInvalidManager},
+		{"one bad manager", CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}, {learner, RoleGuardian}}}, ErrInvalidManager},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -196,7 +197,7 @@ func TestCreateRefusals(t *testing.T) {
 	}
 
 	// A registered role is accepted.
-	if _, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, "coach"}}}); err != nil {
+	if _, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, "coach"}}}); err != nil {
 		t.Errorf("Create with registered role: %v", err)
 	}
 }
@@ -222,13 +223,13 @@ func TestAddAndRemoveManager(t *testing.T) {
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	parent := addHuman(t, db, "parent@example.com", true)
 
-	id, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}}, ActorID: teacher})
+	id, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, RoleGuardian}}, ActorID: teacher})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
 	// The only manager cannot be removed.
-	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleEducator}, teacher); !errors.Is(err, ErrLastManager) {
+	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleGuardian}, teacher); !errors.Is(err, ErrLastManager) {
 		t.Fatalf("RemoveManager last = %v, want ErrLastManager", err)
 	}
 
@@ -244,15 +245,15 @@ func TestAddAndRemoveManager(t *testing.T) {
 	if err := svc.AddManager(ctx, id, ManagerInput{id, RoleGuardian}, teacher); !errors.Is(err, ErrInvalidManager) {
 		t.Errorf("AddManager self = %v, want ErrInvalidManager", err)
 	}
-	if err := svc.AddManager(ctx, uuid.New(), ManagerInput{parent, RoleGuardian}, teacher); !errors.Is(err, ErrNotFound) {
-		t.Errorf("AddManager to missing principal = %v, want ErrNotFound", err)
+	if err := svc.AddManager(ctx, uuid.New(), ManagerInput{parent, RoleGuardian}, teacher); !errors.Is(err, ErrNotManaged) {
+		t.Errorf("AddManager to missing principal = %v, want ErrNotManaged", err)
 	}
 
 	// With two managers, one can go; then the other is the last.
-	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleEducator}, parent); err != nil {
+	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleGuardian}, parent); err != nil {
 		t.Fatalf("RemoveManager: %v", err)
 	}
-	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleEducator}, parent); !errors.Is(err, ErrNotFound) {
+	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleGuardian}, parent); !errors.Is(err, ErrNotFound) {
 		t.Errorf("RemoveManager twice = %v, want ErrNotFound", err)
 	}
 	if err := svc.RemoveManager(ctx, id, ManagerInput{parent, RoleGuardian}, parent); !errors.Is(err, ErrLastManager) {
@@ -264,7 +265,7 @@ func TestAddAndRemoveManager(t *testing.T) {
 	}
 
 	// Re-adding reactivates the soft-deleted relationship.
-	if err := svc.AddManager(ctx, id, ManagerInput{teacher, RoleEducator}, parent); err != nil {
+	if err := svc.AddManager(ctx, id, ManagerInput{teacher, RoleGuardian}, parent); err != nil {
 		t.Fatalf("AddManager reactivate: %v", err)
 	}
 	if n, err := db.ManagerRelationship.Query().Count(ctx); err != nil || n != 2 {
@@ -275,20 +276,20 @@ func TestAddAndRemoveManager(t *testing.T) {
 	if err := db.Human.Update().Where(human.PrincipalID(id)).SetEmail("learner@example.com").Exec(ctx); err != nil {
 		t.Fatalf("attach email: %v", err)
 	}
-	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleEducator}, parent); err != nil {
+	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleGuardian}, parent); err != nil {
 		t.Fatalf("RemoveManager with two managers: %v", err)
 	}
 	if err := svc.RemoveManager(ctx, id, ManagerInput{parent, RoleGuardian}, parent); !errors.Is(err, ErrLastManager) {
 		t.Fatalf("RemoveManager last with unverified email = %v, want ErrLastManager", err)
 	}
-	if err := svc.AddManager(ctx, id, ManagerInput{teacher, RoleEducator}, parent); err != nil {
+	if err := svc.AddManager(ctx, id, ManagerInput{teacher, RoleGuardian}, parent); err != nil {
 		t.Fatalf("AddManager: %v", err)
 	}
 	// Once the email is verified, the last manager may be removed.
 	if err := svc.VerifyEmail(ctx, id, time.Now()); err != nil {
 		t.Fatalf("VerifyEmail: %v", err)
 	}
-	for _, m := range []ManagerInput{{teacher, RoleEducator}, {parent, RoleGuardian}} {
+	for _, m := range []ManagerInput{{teacher, RoleGuardian}, {parent, RoleGuardian}} {
 		if err := svc.RemoveManager(ctx, id, m, parent); err != nil {
 			t.Errorf("RemoveManager after email: %v", err)
 		}
@@ -332,7 +333,7 @@ func TestConcurrentRemoveKeepsAManager(t *testing.T) {
 	for range 10 {
 		a := addHuman(t, db, uuid.NewString()+"@example.com", true)
 		b := addHuman(t, db, uuid.NewString()+"@example.com", true)
-		id, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{a, RoleGuardian}, {b, RoleEducator}}})
+		id, err := svc.Create(ctx, CreateInput{ActorID: a, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{a, RoleGuardian}, {b, RoleEducator}}})
 		if err != nil {
 			t.Fatalf("Create: %v", err)
 		}
@@ -372,8 +373,8 @@ func TestIssueLoginToken(t *testing.T) {
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	parent := addHuman(t, db, "parent@example.com", true)
 	stranger := addHuman(t, db, "stranger@example.com", true)
-	id, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client,
-		Managers: []ManagerInput{{teacher, RoleEducator}, {parent, RoleGuardian}}})
+	id, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client,
+		Managers: []ManagerInput{{teacher, RoleGuardian}, {parent, RoleGuardian}}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -478,7 +479,7 @@ func TestManagementIsARelationship(t *testing.T) {
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	addHuman(t, db, "taken@example.com", true)
 
-	if _, err := svc.Create(ctx, CreateInput{DisplayName: "Student", ClientID: client, Email: "TAKEN@example.com",
+	if _, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Student", ClientID: client, Email: "TAKEN@example.com",
 		Managers: []ManagerInput{{teacher, RoleGuardian}}}); !errors.Is(err, ErrEmailInUse) {
 		t.Fatalf("Create with a taken email = %v, want ErrEmailInUse", err)
 	}
@@ -594,16 +595,16 @@ func TestManagedPrincipalCannotManage(t *testing.T) {
 	db := openSQLite(t)
 	svc, _ := newService(t, db)
 	teacher := addHuman(t, db, "teacher@example.com", true)
-	student, err := svc.Create(ctx, CreateInput{DisplayName: "Student", ClientID: client, Email: "student@example.com",
+	student, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Student", ClientID: client, Email: "student@example.com",
 		Managers: []ManagerInput{{teacher, RoleGuardian}}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
-	if _, err := svc.Create(ctx, CreateInput{DisplayName: "Sibling", ClientID: client,
+	if _, err := svc.Create(ctx, CreateInput{ActorID: student, DisplayName: "Sibling", ClientID: client,
 		Managers: []ManagerInput{{student, RoleGuardian}}}); !errors.Is(err, ErrInvalidManager) {
 		t.Errorf("Create with a managed manager = %v, want ErrInvalidManager", err)
 	}
-	other, err := svc.Create(ctx, CreateInput{DisplayName: "Other", ClientID: client, Managers: []ManagerInput{{teacher, RoleGuardian}}})
+	other, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Other", ClientID: client, Managers: []ManagerInput{{teacher, RoleGuardian}}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}

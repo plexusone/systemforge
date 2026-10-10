@@ -93,7 +93,8 @@ type CreateInput struct {
 	Email string
 	// Managers must contain at least one manager.
 	Managers []ManagerInput
-	// ActorID is the principal performing the action, for the audit trail.
+	// ActorID is the principal performing the action. It must be one of the
+	// managers, or a platform administrator.
 	ActorID uuid.UUID
 }
 

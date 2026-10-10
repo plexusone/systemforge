@@ -47,14 +47,14 @@ func TestManagerRelationsSync(t *testing.T) {
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	parent := addHuman(t, db, "parent@example.com", true)
 
-	id, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}}})
+	id, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, RoleGuardian}}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 	if err := svc.AddManager(ctx, id, ManagerInput{parent, RoleGuardian}, teacher); err != nil {
 		t.Fatalf("AddManager: %v", err)
 	}
-	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleEducator}, parent); err != nil {
+	if err := svc.RemoveManager(ctx, id, ManagerInput{teacher, RoleGuardian}, parent); err != nil {
 		t.Fatalf("RemoveManager: %v", err)
 	}
 	// A refused removal writes nothing.
@@ -62,9 +62,9 @@ func TestManagerRelationsSync(t *testing.T) {
 		t.Fatalf("RemoveManager last = %v", err)
 	}
 	want := []string{
-		fmt.Sprintf("add %s %s educator", id, teacher),
+		fmt.Sprintf("add %s %s guardian", id, teacher),
 		fmt.Sprintf("add %s %s guardian", id, parent),
-		fmt.Sprintf("remove %s %s educator", id, teacher),
+		fmt.Sprintf("remove %s %s guardian", id, teacher),
 	}
 	if !slices.Equal(rec.ops, want) {
 		t.Errorf("sync ops = %v, want %v", rec.ops, want)
@@ -72,19 +72,19 @@ func TestManagerRelationsSync(t *testing.T) {
 
 	// Strict mode reports a failed sync; the database change stands.
 	rec.fail = errors.New("backend down")
-	if err := svc.AddManager(ctx, id, ManagerInput{teacher, RoleEducator}, parent); err == nil {
+	if err := svc.AddManager(ctx, id, ManagerInput{teacher, RoleGuardian}, parent); err == nil {
 		t.Error("strict sync failure not returned")
 	}
-	if roles, err := svc.ManagerRoles(ctx, teacher, id); err != nil || !slices.Equal(roles, []string{RoleEducator}) {
+	if roles, err := svc.ManagerRoles(ctx, teacher, id); err != nil || !slices.Equal(roles, []string{RoleGuardian}) {
 		t.Errorf("ManagerRoles after failed sync = %v, %v", roles, err)
 	}
-	if _, err := svc.Create(ctx, CreateInput{DisplayName: "Learner 2", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}}}); err == nil {
+	if _, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner 2", ClientID: client, Managers: []ManagerInput{{teacher, RoleGuardian}}}); err == nil {
 		t.Error("strict sync failure on create not returned")
 	}
 
 	// Eventual mode logs it instead.
 	eventual := NewService(db, gate{client: true}, WithAuthzSyncer(rec, authz.SyncModeEventual))
-	if err := eventual.AddManager(ctx, id, ManagerInput{teacher, RoleEducator}, parent); err != nil {
+	if err := eventual.AddManager(ctx, id, ManagerInput{teacher, RoleGuardian}, parent); err != nil {
 		t.Errorf("eventual sync failure returned: %v", err)
 	}
 }
@@ -97,7 +97,7 @@ func TestSimpleProviderWithManagerRoles(t *testing.T) {
 	svc, _ := newService(t, db)
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	parent := addHuman(t, db, "parent@example.com", true)
-	id, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client,
+	id, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client,
 		Managers: []ManagerInput{{teacher, RoleEducator}, {parent, RoleGuardian}}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
@@ -139,7 +139,7 @@ func TestReleaseSyncsEveryManagerRemoval(t *testing.T) {
 	svc := NewService(db, gate{client: true}, WithAuthzSyncer(rec, authz.SyncModeStrict))
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	parent := addHuman(t, db, "parent@example.com", true)
-	id, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client, Email: "learner@example.com",
+	id, err := svc.Create(ctx, CreateInput{ActorID: parent, DisplayName: "Learner", ClientID: client, Email: "learner@example.com",
 		Managers: []ManagerInput{{parent, RoleGuardian}, {teacher, RoleEducator}}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)

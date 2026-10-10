@@ -122,7 +122,7 @@ func TestManagerInviteRefusals(t *testing.T) {
 	}
 
 	// Already managed: the invitation is not the way to add a manager.
-	if _, err := svc.Create(ctx, CreateInput{DisplayName: "Kid", ClientID: client, Email: "kid@example.com",
+	if _, err := svc.Create(ctx, CreateInput{ActorID: family, DisplayName: "Kid", ClientID: client, Email: "kid@example.com",
 		Managers: []ManagerInput{{family, RoleGuardian}}}); err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestManagerInviteRefusals(t *testing.T) {
 	}
 
 	// A principal that manages others cannot become managed.
-	if _, err := svc.Create(ctx, CreateInput{DisplayName: "Ward", ClientID: client, Managers: []ManagerInput{{manager, RoleGuardian}}}); err != nil {
+	if _, err := svc.Create(ctx, CreateInput{ActorID: manager, DisplayName: "Ward", ClientID: client, Managers: []ManagerInput{{manager, RoleGuardian}}}); err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 	if _, err := svc.AcceptManagerInvite(ctx, invite("manager@example.com").Token, manager); !errors.Is(err, ErrManagesOthers) {

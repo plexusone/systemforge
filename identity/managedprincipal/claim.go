@@ -114,6 +114,12 @@ func (s *Service) RedeemClaim(ctx context.Context, code string, claimantID uuid.
 	if len(code) <= claimPrefixLen || !strings.HasPrefix(code, ClaimCodePrefix) {
 		return uuid.Nil, ErrInvalidClaim
 	}
+	// A claim carries its issuer's authority: it is honored only while the
+	// issuer still holds manage_credentials over the principal, so removing
+	// a manager also withdraws the claims they handed out.
+	if err := s.checkClaimIssuer(ctx, code); err != nil {
+		return uuid.Nil, err
+	}
 	var managedID uuid.UUID
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		c, err := tx.ManagerClaim.Query().Where(managerclaim.CodePrefix(code[:claimPrefixLen])).Only(ctx)
@@ -257,6 +263,28 @@ func (s *Service) VerifyEmail(ctx context.Context, managedID uuid.UUID, verified
 		return err
 	}
 	s.emit(ctx, EventEmailVerified, "verify_email", managedID, managedID, nil)
+	return nil
+}
+
+// checkClaimIssuer returns ErrInvalidClaim when the claim for code exists
+// but its issuer no longer holds manage_credentials on the principal. Codes
+// that do not exist are left to RedeemClaim's own checks, so the same error
+// answers every failure.
+func (s *Service) checkClaimIssuer(ctx context.Context, code string) error {
+	c, err := s.client.ManagerClaim.Query().Where(managerclaim.CodePrefix(code[:claimPrefixLen])).Only(ctx)
+	if ent.IsNotFound(err) {
+		return ErrInvalidClaim
+	}
+	if err != nil {
+		return fmt.Errorf("managedprincipal: find claim: %w", err)
+	}
+	ok, err := s.authz.Can(ctx, authz.NewUserPrincipal(c.IssuedBy), authz.PermManageCredentials, authz.NewPrincipalResource(c.ManagedPrincipalID))
+	if err != nil {
+		return fmt.Errorf("managedprincipal: authorize: %w", err)
+	}
+	if !ok {
+		return ErrInvalidClaim
+	}
 	return nil
 }
 

@@ -37,7 +37,7 @@ func newVisibilityFixture(t *testing.T) *visibilityFixture {
 	f.parent = addHuman(t, f.db, "parent@example.com", true)
 	f.stranger = addHuman(t, f.db, "stranger@example.com", true)
 	var err error
-	f.learner, err = f.svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client,
+	f.learner, err = f.svc.Create(ctx, CreateInput{ActorID: f.teacher, DisplayName: "Learner", ClientID: client,
 		Managers: []ManagerInput{{f.teacher, RoleEducator}, {f.parent, RoleGuardian}}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)

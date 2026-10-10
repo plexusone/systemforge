@@ -23,7 +23,7 @@ func TestClaim(t *testing.T) {
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	parent := addHuman(t, db, "parent@example.com", true)
 	stranger := addHuman(t, db, "stranger@example.com", true)
-	learner, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}}})
+	learner, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestClaim(t *testing.T) {
 
 	// The managed principal itself and another managed principal cannot
 	// redeem; a failed redemption does not spend the claim.
-	other, err := svc.Create(ctx, CreateInput{DisplayName: "Other", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}}})
+	other, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Other", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}}})
 	if err != nil {
 		t.Fatalf("Create other: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestAttachVerifiedEmail(t *testing.T) {
 	svc, _ := newService(t, db)
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	parent := addHuman(t, db, "parent@example.com", true)
-	learner, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client,
+	learner, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client,
 		Managers: []ManagerInput{{teacher, RoleEducator}, {parent, RoleGuardian}}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
@@ -172,7 +172,7 @@ func TestConcurrentRedeem(t *testing.T) {
 	}
 	svc, _ := newService(t, db)
 	teacher := addHuman(t, db, uuid.NewString()+"@example.com", true)
-	learner, err := svc.Create(ctx, CreateInput{DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}}})
+	learner, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client, Managers: []ManagerInput{{teacher, RoleEducator}}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}

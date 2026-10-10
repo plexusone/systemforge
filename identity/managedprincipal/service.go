@@ -135,7 +135,9 @@ func (s *Service) Roles() []string {
 }
 
 // Create creates a managed principal with its managers in one transaction.
-// It returns the new principal's ID.
+// It returns the new principal's ID. The actor must be one of the managers,
+// the manager creating the principal, or a platform administrator
+// (ErrForbidden otherwise).
 func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error) {
 	if in.DisplayName == "" {
 		return uuid.Nil, ErrDisplayNameRequired
@@ -147,6 +149,9 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 		if err := s.checkRole(m.Role); err != nil {
 			return uuid.Nil, err
 		}
+	}
+	if err := s.authorizeCreate(ctx, in.ActorID, in.Managers); err != nil {
+		return uuid.Nil, err
 	}
 	allowed, err := s.gate.ManagedPrincipalsAllowed(ctx, in.ClientID)
 	if err != nil {
@@ -221,9 +226,13 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 
 // AddManager makes manager a manager of managed with the given role. It is
 // a no-op when the relationship is already active and reactivates it when
-// inactive.
+// inactive. The actor needs manage_managers on the managed principal,
+// which guardians hold.
 func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m ManagerInput, actorID uuid.UUID) error {
 	if err := s.checkRole(m.Role); err != nil {
+		return err
+	}
+	if err := s.authorizeManagers(ctx, actorID, managedID); err != nil {
 		return err
 	}
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
@@ -256,8 +265,12 @@ func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m Manager
 // ErrLastManager when this is the last active manager of a principal
 // without a verified email; deactivate or delete the principal instead.
 // Removing the last manager of a principal with a verified email releases
-// it, as Release does.
+// it, as Release does. The actor needs manage_managers on the managed
+// principal, which guardians hold.
 func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m ManagerInput, actorID uuid.UUID) error {
+	if err := s.authorizeManagers(ctx, actorID, managedID); err != nil {
+		return err
+	}
 	var released bool
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		h, err := lockHuman(ctx, tx, managedID)
@@ -621,4 +634,31 @@ func managerDetails(ms []ManagerInput) []map[string]string {
 		out = append(out, map[string]string{"principal_id": m.PrincipalID.String(), "role": m.Role})
 	}
 	return out
+}
+
+// authorizeCreate requires the actor to be one of the principal's managers,
+// or a platform administrator. There is no principal yet to check a
+// permission against: the creating manager is the authority, as it is for
+// the first guardian or educator of a classroom.
+func (s *Service) authorizeCreate(ctx context.Context, actorID uuid.UUID, managers []ManagerInput) error {
+	if actorID == uuid.Nil {
+		return fmt.Errorf("%w: an acting principal is required", ErrForbidden)
+	}
+	for _, m := range managers {
+		if m.PrincipalID == actorID {
+			return nil
+		}
+	}
+	pa, ok := s.authz.(authz.PlatformAuthorizer)
+	if !ok {
+		return ErrForbidden
+	}
+	admin, err := pa.IsPlatformAdmin(ctx, authz.NewUserPrincipal(actorID))
+	if err != nil {
+		return fmt.Errorf("managedprincipal: authorize: %w", err)
+	}
+	if !admin {
+		return ErrForbidden
+	}
+	return nil
 }
