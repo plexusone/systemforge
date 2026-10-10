@@ -352,14 +352,16 @@ func TestConcurrentRemoveKeepsAManager(t *testing.T) {
 		}
 		failed := 0
 		for _, err := range errs {
-			if errors.Is(err, ErrLastManager) {
+			// The loser either finds itself the last manager or, having
+			// lost its own authority to the winner, is refused.
+			if errors.Is(err, ErrLastManager) || errors.Is(err, ErrForbidden) {
 				failed++
 			} else if err != nil {
 				t.Fatalf("RemoveManager: %v", err)
 			}
 		}
 		if failed != 1 {
-			t.Fatalf("ErrLastManager count = %d, want 1", failed)
+			t.Fatalf("refused removals = %d, want 1", failed)
 		}
 	}
 }
