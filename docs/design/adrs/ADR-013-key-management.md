@@ -161,9 +161,9 @@ specification governs the mechanism while this ADR governs the policy.
     (`crypto/mlkem`, FIPS 203), HPKE with ML-KEM and hybrid KEMs
     (`crypto/hpke`, which adds `MLKEM768X25519` and `MLKEM768P256`), and ML-DSA
     (`crypto/mldsa`, FIPS 204). The platform's position is:
-    - **Symmetric keys need no change.** AES-256 key wrapping and encryption
-      are already adequate against a quantum adversary, so KEKs and DEKs under
-      decision 2 stay as they are.
+    - **Symmetric keys need no change.** AES-256-GCM encryption and key
+      wrapping are already adequate against a quantum adversary, so KEKs and
+      DEKs under decision 2 stay as they are.
     - **Asymmetric KEKs are hybrid.** When asymmetric KEKs are introduced
       (decision 11) the default KEM is a hybrid of a classical and a
       post-quantum scheme through `crypto/hpke`, not a classical-only one.
@@ -203,6 +203,38 @@ specification governs the mechanism while this ADR governs the policy.
     - **FIPS is a constraint, not a security guarantee.** It validates a
       module on tested platforms; it does not cover the rest of an
       application. This ADR does not claim a deployment is "FIPS compliant".
+16. **Algorithms are a platform policy that keyforge owns.**
+    - **Everything goes through keyforge.** Every protection of stored data
+      and of keys uses an algorithm from keyforge's registry. Platform and
+      application packages do not choose or call primitives for that purpose.
+      Transport security (TLS) and password hashing are outside this rule and
+      are decided where they live.
+    - **Algorithms are named exactly.** A mode and a size are always stated:
+      "AES-256-GCM", never "AES-256", because the bare name does not say
+      whether the mode authenticates. Specifications, configuration, logs and
+      the ciphertext's algorithm identifier all carry the full name.
+    - **The floor is an authenticated mode.** AES-256-GCM is the floor for
+      encrypting data and wrapping keys. ECB, CBC, CTR and any unauthenticated
+      mode are never offered. "Better" means an authenticated algorithm added
+      to the registry from the standard library (or `golang.org/x/crypto`
+      where the standard library has none), after review.
+    - **Two profiles, `fips` and `standard`.** Each is a fixed, reviewed set of
+      algorithms compiled into keyforge. `fips` contains only algorithms the
+      Go cryptographic module approves; `standard` adds non-approved ones
+      (for example ChaCha20-Poly1305). A process selects its profile from its
+      FIPS mode by default; configuration may narrow a profile (deny an
+      algorithm, or run the `fips` profile outside FIPS mode) and may never
+      widen it.
+    - **The sets are code, not configuration.** Acceptable algorithms change
+      rarely, and the standard library's set changes with Go releases. Hard-
+      coding the profiles keeps them reviewable and keeps the platform's
+      claims truthful. Adding an algorithm is a keyforge release, with the
+      envelope identifier and vectors that implies.
+    - **Reads follow the profile.** A process in the `fips` profile refuses to
+      decrypt an envelope that used a non-approved algorithm, with a typed
+      error that says so, and the data is migrated by re-encrypting it in a
+      `standard` process. A purpose may pin its profile, so data meant for a
+      FIPS deployment is never written with a non-approved algorithm.
 
 ## Consequences
 
