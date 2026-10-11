@@ -129,7 +129,7 @@ systemforge/
 │   ├── service.go
 │   └── authz.go           # SpiceDB sync for licenses
 │
-└── docs/design/
+└── docs/specs/
     ├── FEAT_AUTHZ_PRD.md  # This document
     └── FEAT_AUTHZ_TRD.md  # Technical reference
 ```

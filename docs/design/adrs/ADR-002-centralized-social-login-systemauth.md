@@ -3,10 +3,10 @@
 **Status:** Accepted
 **Deciders:** @grokify
 **Relates to:** ADR-001 (the `SystemAuth` / `sf_` / `sf_principal_id` naming this
-ADR keys its account-linking on), the OAuth server PRD (`docs/design/FEAT_OAUTH_PRD.md`,
+ADR keys its account-linking on), the OAuth server PRD (`docs/specs/FEAT_OAUTH_PRD.md`,
 which listed "social login providers (handled separately)" as a non-goal — this
 ADR is where that deferred work lands), and the authentication PRD
-(`docs/design/FEAT_AUTHN_PRD.md`, US-1: "sign in via OAuth (GitHub, Google)").
+(`docs/specs/FEAT_AUTHN_PRD.md`, US-1: "sign in via OAuth (GitHub, Google)").
 Executed by INIT-SYSTEMFORGE-005. Consumed by downstream relying-party
 applications, which depend on this capability as `RMI-SYSTEMFORGE-001`.
 
@@ -156,8 +156,8 @@ party consumes it" intent that downstream consumers already depend on.
 ## References
 
 - ADR-001 (`SystemAuth` / `sf_` / `sf_principal_id` — the linking identity).
-- `docs/design/FEAT_OAUTH_PRD.md` (social login deferred as "handled
-  separately"); `docs/design/FEAT_AUTHN_PRD.md` US-1 (the requirement).
+- `docs/specs/FEAT_OAUTH_PRD.md` (social login deferred as "handled
+  separately"); `docs/specs/FEAT_AUTHN_PRD.md` US-1 (the requirement).
 - INIT-SYSTEMFORGE-005 ROADMAP (the execution RMIs).
 - Affected surfaces: `session/oauth`, `identity/oauthclient` (consolidate);
   `cmd/systemauth`, `identity/systemauth/server.go`,

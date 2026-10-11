@@ -183,4 +183,4 @@ None currently identified.
 - [PRD.md](PRD.md) - Product requirements
 - [TRD.md](TRD.md) - Technical requirements
 - [PLAN.md](PLAN.md) - Implementation plan
-- [Observability TRD](../FEAT_OBSERVABILITY_TRD.md)
+- [Observability TRD](../../specs/FEAT_OBSERVABILITY_TRD.md)

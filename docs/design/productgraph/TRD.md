@@ -592,4 +592,4 @@ func TestProductGraphClient(t *testing.T) {
 - [PRD.md](PRD.md) - Product requirements
 - [PLAN.md](PLAN.md) - Implementation plan
 - [TASKS.md](TASKS.md) - Task breakdown
-- [Observability TRD](../FEAT_OBSERVABILITY_TRD.md)
+- [Observability TRD](../../specs/FEAT_OBSERVABILITY_TRD.md)

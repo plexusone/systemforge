@@ -174,4 +174,4 @@ systemforge → omnidxi → Amplitude/Mixpanel
 - [TRD.md](TRD.md) - Technical requirements
 - [PLAN.md](PLAN.md) - Implementation plan
 - [TASKS.md](TASKS.md) - Task breakdown
-- [systemforge observability TRD](../FEAT_OBSERVABILITY_TRD.md)
+- [systemforge observability TRD](../../specs/FEAT_OBSERVABILITY_TRD.md)
