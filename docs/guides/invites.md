@@ -1,0 +1,101 @@
+# Invites
+
+An invite brings a person with a known email address into an organization.
+It can also grant application roles on acceptance, or, for a collaborator, a
+role on one resource. The design is in
+[Organizations and Membership](../design/architecture/organizations.md#invites);
+this guide is what a developer needs to wire and call it.
+
+## Wiring
+
+```go
+invites := invite.NewService(db, baseURL,
+    invite.WithAuthzSyncer(res.Syncer),
+    invite.WithAppRoles(appRoles),          // optional: application roles on invites
+    invite.WithResourceGrants(res.Grants),  // optional: resource-targeted invites
+)
+cfg := invite.DefaultAPIConfig()
+cfg.Authorizer = authorizer
+api := invite.NewAPI(invites, orgService, cfg)
+```
+
+Without `WithAppRoles`, `app_roles` on an invite is refused and no
+application role is ever required. Without `WithResourceGrants`, a resource
+target is refused.
+
+## Creating an invite
+
+`POST /organizations/{slug}/invites`
+
+| Field | Meaning |
+|---|---|
+| `email` | The invitee; the invite is bound to this address (case-insensitive) |
+| `role` | Required: `owner`, `admin`, `member` or `collaborator` |
+| `app_roles` | Optional map of application identifier to role, granted on acceptance |
+| `resource_type`, `resource_id`, `resource_role` | Optional, all or none: a resource and the resource role (`viewer`, `contributor`, `maintainer`) to grant |
+| `message`, `expires_in_hours` | Optional note; expiry defaults to 7 days, at most 720 hours |
+| `inviter_principal_id` | Optional; if given it must be the authenticated caller |
+
+The response carries `invite_url` (`{baseURL}/invites/{token}`). The token
+is shown once: only its SHA-256 is stored, so deliver the URL yourself.
+
+### Application roles on an invite
+
+With `WithAppRoles`:
+
+- Each `app_roles` entry is validated: the application is registered, the
+  role is one it declares, and the organization is entitled to it.
+- An `admin` or `member` invitation to an organization that is entitled to
+  any application must choose at least one role (`ErrAppRoleRequired`).
+  Owners hold every role implicitly, so an owner invite needs none.
+- A collaborator invite may carry none.
+- Roles are granted in the same transaction as the membership. If one cannot
+  be granted at acceptance (no seat left, entitlement gone) the invite is
+  refused and stays pending.
+
+### Resource-targeted invites
+
+A resource target requires `role: collaborator` and
+`WithResourceGrants`, and is validated against the application's
+vocabulary: the type must be `{app}_{type}` of a registered application and,
+when the vocabulary has a schema fragment, a collaborator-able definition.
+On acceptance the collaborator membership and the grant are created together;
+an existing member keeps their role and gains the grant.
+
+A person may hold several pending invites to one organization if each
+targets a different resource. A personal organization accepts only
+resource-targeted collaborator invites. See
+[Collaborators and resource grants](collaborators.md).
+
+## Accepting and declining
+
+| Route | Rule |
+|---|---|
+| `GET /invites/{token}` | Landing-page lookup |
+| `POST /invites/{token}/accept` | The caller's email must match the invite |
+| `POST /invites/{token}/decline` | Same match |
+| `GET /invites` | Lists the caller's own pending invites; another address is `403` |
+
+Signing up through an invite (`signup.SignupWithInvite`) applies the same
+email match (`signup.ErrInviteEmailMismatch`).
+
+## Permissions
+
+| Operation | Needs |
+|---|---|
+| Create, list, resend, revoke | `invite_member` on the organization (owner or admin) |
+| Invite with `role: owner` | The owner-only permission (`delete`) |
+| Accept, decline, list own | An authenticated principal whose email matches the invite |
+
+## Errors
+
+| Status | Cause |
+|---|---|
+| `400` | The service refused the request. The message names the cause: `pending invite already exists for this email`; `invite: choose an application role for at least one entitled application`; `invite: collaborators hold no application roles`; `invite: application roles are not configured`; `invite: invalid resource target` (incomplete target, role not `collaborator`, grants not configured, or a type or role the vocabulary rejects); a collaborator invite without a target to a personal organization; `invite is no longer pending`; `invite has expired`; `principal is already a member of this organization`; an application role that cannot be granted (`approle: no seats available for the application`, `approle: organization is not entitled to the application`) |
+| `403` | `inviter_principal_id` is not the caller; an admin inviting an owner; a principal without an email (a managed principal) answering an invite; listing another address's invites; the caller can view the organization but may not invite |
+| `404` | Unknown organization or invite; a caller who cannot even view the organization; an invite addressed to a different email (a mismatch looks like an unknown token) |
+| `501` | No `Authorizer`, or no principal email lookup, is configured |
+
+Manager invitations, which put an existing person under the management of a
+guardian, are a separate flow; see
+[Managed Principals](../identity/managed-principals.md).

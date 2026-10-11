@@ -206,7 +206,6 @@ func copyOrganizations(ctx context.Context, appClient *appent.Client, sfClient *
             SetID(t.ID).
             SetName(t.Name).
             SetSlug(t.Slug).
-            SetPlan(mapPlan(t.Plan)).
             Save(ctx); err != nil {
             return err
         }
@@ -215,7 +214,7 @@ func copyOrganizations(ctx context.Context, appClient *appent.Client, sfClient *
 }
 ```
 
-`mapPlan` returns an `organization.Plan` value: `free`, `starter`, `pro`, or `enterprise`.
+Organizations have no `plan`; carry a tenant's paid tier over as a marketplace subscription or license.
 
 ### Map Existing Memberships
 

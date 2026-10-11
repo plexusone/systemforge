@@ -202,8 +202,8 @@ err := creds.CreatePassword(ctx, credential.CreatePasswordInput{
 
 ```sql
 INSERT INTO sf_organizations
-    (id, created_at, updated_at, name, slug, org_type, plan, active)
-SELECT t.id, t.created_at, now(), t.name, t.slug, 'team', 'free', true
+    (id, created_at, updated_at, name, slug, org_type, active)
+SELECT t.id, t.created_at, now(), t.name, t.slug, 'team', true
 FROM tenants t
 WHERE t.deleted_at IS NULL
 ON CONFLICT (id) DO UPDATE SET
@@ -211,7 +211,7 @@ ON CONFLICT (id) DO UPDATE SET
     updated_at = now();
 ```
 
-`org_type` is one of `personal`, `team`, or `enterprise`; `plan` is one of `free`, `starter`, `pro`, or `enterprise`.
+`org_type` is one of `personal`, `team`, or `enterprise`. Organizations have no `plan`; map a tenant's paid tier to a marketplace subscription or license instead.
 
 ### Memberships
 

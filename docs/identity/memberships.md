@@ -20,7 +20,7 @@ The `sf_principal_memberships` table contains:
 
 ### The `active` Flag
 
-`active` lets a membership be suspended without deleting it. A membership that is inactive should be treated as absent for access decisions. The SCIM store returns only active memberships and reactivates an existing row when a member is re-added. `organization.Service.ListMembers` and `ListMemberships` return memberships regardless of `active`, so filter on `Membership.Active` where it matters.
+`active` lets a membership be suspended without deleting it. A membership that is inactive should be treated as absent for access decisions. The SCIM store returns only active memberships and reactivates an existing row when a member is re-added. `organization.Service.ListMembers` and `ListMemberships` return only active memberships unless `organization.IncludeInactive()` is passed; `GetMembership` returns the row whatever its `active` value.
 
 ## Roles
 

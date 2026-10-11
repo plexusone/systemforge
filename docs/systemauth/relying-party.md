@@ -368,4 +368,5 @@ Failures return `401` with `WWW-Authenticate: Bearer realm="api"` (plus
 - The default session and login-state stores are in-memory; use
   `relyingparty/pgstore` (encrypted at rest) or another shared implementation
   in production. See [Production Stores](production-stores.md).
-- No front- or back-channel logout notifications from SystemAuth.
+- Back-channel notifications are sent only to clients that register a
+  `backchannel_logout_uri`; there is no front-channel logout.

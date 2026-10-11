@@ -250,13 +250,10 @@ Links a Principal to an upstream login identity (e.g. a GitHub or Google account
 | `description` | string | nullable | Organization description |
 | `website_url` | string | nullable | Organization website |
 | `settings` | JSON | nullable | App-specific configuration |
-| `plan` | enum | default: free |  |
 | `active` | bool | default: true |  |
 | `owner_principal_id` | UUID | FK → Principal, nullable | For personal orgs, the principal who owns this namespace |
 
 **`org_type` values**: `personal`, `team`, `enterprise`
-
-**`plan` values**: `free`, `starter`, `pro`, `enterprise`
 
 **Edges**:
 

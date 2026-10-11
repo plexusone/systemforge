@@ -13,19 +13,18 @@ The `sf_organizations` table contains:
 | `slug` | string | URL-safe identifier |
 | `logo_url` | string | Organization logo |
 | `settings` | JSON | Custom configuration |
-| `plan` | enum | Subscription tier |
+| `org_type` | enum | `personal`, `team` (default) or `enterprise` |
+| `owner_principal_id` | UUID | Owner of a personal organization |
 | `active` | bool | Organization status |
 | `created_at` | time | Creation timestamp |
 | `updated_at` | time | Last modification |
 
-## Plans
+## No plan column
 
-Organizations have subscription plans:
-
-- `free` - Free tier
-- `starter` - Entry-level paid
-- `pro` - Professional tier
-- `enterprise` - Enterprise tier
+An organization has no `plan`. What it may use is its entitlements, derived
+from its marketplace subscriptions and licenses; see
+[Entitlements via the marketplace](../design/architecture/organizations.md#entitlements-via-the-marketplace).
+Existing databases drop the column with `migrations/0004_drop_organization_plan.sql`.
 
 ## Creating Organizations
 
@@ -33,7 +32,6 @@ Organizations have subscription plans:
 org, err := client.Organization.Create().
     SetName("Acme Corporation").
     SetSlug("acme-corp").
-    SetPlan("pro").
     SetSettings(map[string]any{
         "timezone": "America/New_York",
         "features": []string{"advanced_analytics"},
@@ -112,22 +110,12 @@ org, err := client.Organization.UpdateOneID(orgID).
 timezone := org.Settings["timezone"].(string)
 ```
 
-## Feature Checks by Plan
+## Feature Checks
 
-```go
-func canUseFeature(org *ent.Organization, feature string) bool {
-    switch org.Plan {
-    case "enterprise":
-        return true // All features
-    case "pro":
-        return feature != "sso" && feature != "audit_logs"
-    case "starter":
-        return feature == "basic_analytics"
-    default:
-        return false
-    }
-}
-```
+Gate a feature on the organization's entitlements, not on a plan value. Each
+`OrgResponse` carries an `entitlements` list, and application roles can be
+granted only for entitled applications; see
+[Application roles and entitlements](../guides/application-roles.md).
 
 ## Organization Edges
 
