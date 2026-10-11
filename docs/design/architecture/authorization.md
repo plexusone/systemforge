@@ -113,7 +113,8 @@ parses the schema and fails if either table drifts from it.
 
 ADR-008 names the modes for what they evaluate. The packages were renamed
 ahead of the ADR; the old paths forward to the new ones as deprecated
-packages for one release.
+packages (`// Deprecated:` notices name the next major release as their
+removal). They forward only what existed under the old path.
 
 | Mode | Package | Formerly | Evaluates |
 |---|---|---|---|
@@ -275,6 +276,49 @@ An application written to the contract switches by configuration; the cost
 of `rebac` is operational (a service with its own datastore, schema
 management, relationship sync).
 
+### Configuring the mode (`authz` key)
+
+The mode is the `authz` key of the SystemAuth configuration file
+(`systemauth.Config.Authz`, an `authz.ModeConfig`), validated with the rest
+of the file:
+
+```yaml
+authz:
+  mode: rebac            # rbac (default) | rebac
+  engine: spicedb        # rebac only; default spicedb
+  spicedb:
+    mode: remote         # embedded (default) | remote
+    endpoint: spicedb.internal:50051
+    token: ${SPICEDB_TOKEN}
+    write_schema: false  # remote only: write the composed schema at startup
+```
+
+| Key | Meaning |
+|---|---|
+| `mode` | `rbac` evaluates roles and direct grants in process from the tables; `rebac` evaluates relationships with an engine. Default `rbac` |
+| `engine` | The relationship engine, for `rebac` only; `spicedb` is the only one today and the default. Giving it with `rbac` is an error, so a leftover setting is not silently ignored |
+| `spicedb.mode` | `embedded` runs an instance in the process (`datastore_engine` `memory` or `postgres` with `datastore_uri`); `remote` connects to `endpoint` with `token`, over TLS unless `insecure` |
+| `spicedb.write_schema` | Embedded instances always get the composed schema (they start empty). A remote instance's schema is an operational decision, so it is written only when this is set |
+
+`authz/mode.New(ctx, cfg, Deps{DB, Registry, ...})` builds the provider
+from it: it applies the defaults, validates, and for `rebac` starts or
+connects to the engine and writes the schema composed from the registered
+vocabularies. It returns a `mode.Result` carrying `Provider` (an
+`authz.Provider`: `PlatformAuthorizer` and `ResourceGranter`), the `Syncer`
+to pass to the identity services (the no-op syncer for `rbac`, which reads
+the tables at check time; the engine's for `rebac`), the grant store `Grants`
+(`invite.WithResourceGrants`) and `Close()`. The package is separate from
+`authz` because both providers import it, and so that loading a
+configuration file does not link the SpiceDB server: `authz.SpiceDBConfig`
+is the engine's configuration type (`spicedb.Config` is an alias).
+
+The membership, role and grant tables are the record in both modes. Under
+`rebac` the identity services mirror each change into the graph as it is
+made (organization memberships, application roles, resource grants), so a
+deployment that switches from `rbac` starts with an empty graph: write the
+existing rows through the syncer before the first request is served. No
+bulk rebuild command ships yet.
+
 ## Keeping providers in step with identity
 
 Identity changes reach the authorization backend through
@@ -384,9 +428,13 @@ decides it.
   resource role; accepting such an invite creates the collaborator
   membership and the grant in one transaction (see
   [Invites](organizations.md#invites)).
-- The `orgs` claim (ADR-007) lists a collaborator's organizations with role
-  `collaborator`; the resources are the application's to look up.
-- Agents and managed principals are granted the same way.
+- Built: the `authz` configuration key and `authz/mode.New` (see
+  [Configuring the mode](#configuring-the-mode-authz-key)).
+- Built: the `orgs` claim (ADR-007) lists a collaborator's organizations
+  with role `collaborator`; the resources are the application's to look up
+  with `ListResources`. Agents and managed principals are principals like
+  any other, so they are granted through the same operations, which
+  confines them to the granted resources.
 
 ### Application roles (ADR-007)
 
