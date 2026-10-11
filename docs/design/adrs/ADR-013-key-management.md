@@ -4,6 +4,10 @@
 **Deciders:** @grokify
 **Relates to:** ADR-012 (snapshots and held data are encrypted under keys this
 ADR manages), ADR-011 (erasure and its strategies).
+**Builds on:** [keyforge](https://github.com/plexusone/keyforge), the generic
+key-lifecycle library and control plane whose
+[specifications](https://github.com/plexusone/keyforge/tree/main/docs/specs)
+define the mechanism.
 **Updates:** a new `docs/design/architecture/key-management.md`.
 
 ## Context
@@ -25,27 +29,43 @@ is part of the privacy design, not a separate concern.
 Many SystemForge businesses start as a single person on one host, and some
 will run in a cloud with a managed key service. The design has to work with
 a local file key on day one and with a managed service later, without
-changing the data.
+changing the data. Because none of this is specific to identity, the
+mechanism is its own module, keyforge, usable by every PlexusOne product.
 
 ## Decision
 
-1. **Key management is a subsystem with one library at its core.** The
-   `keys` package is the library every encryption use in the platform goes
-   through, replacing the per-package mechanisms over time; applications use
-   it for their own data through the same interface. An embeddable service,
-   `keyssvc`, follows the `systemauth` / `systemauthsvc` split and owns the
-   control plane: the key registry (purposes, versions, states), rotation
-   policy and scheduling, provider configuration and health, retirement and
-   destruction requests, audit, and status reporting through an admin API and
-   a CLI. Key custody is a trust boundary, so the service has its own tables
-   and narrow interface, and holds the provider credentials; application
-   code never reads key material.
-   - **Encrypt and decrypt stay in-process.** The library caches unwrapped
-     data keys in memory, so no network call is made per read or write and a
-     key service outage does not stop reads of cached keys. The service is
-     never on the data path.
-   - **It runs inside the monolith by default** and is split into its own
-     process only when another process needs it, like SystemAuth.
+Key management is a generic capability, so its mechanism lives in a
+separate module, keyforge, and not in SystemForge. This ADR records what
+SystemForge decides on top of it: that the platform uses keyforge for every
+encryption need, the policy it applies, and the points where platform policy
+(holds, approvals, roles, the catalog) plugs into it. Decisions 2 to 6 and 10
+to 13 state the platform's requirements; keyforge's technical requirements
+specify how they are met, and where the wording differs the keyforge
+specification governs the mechanism while this ADR governs the policy.
+
+1. **SystemForge adopts keyforge as its one key library and control
+   plane.** Every encryption use in the platform goes through it, replacing
+   the per-package mechanisms over time; applications use it for their own
+   data through the same interface. SystemForge provides a thin `keys`
+   package that wires keyforge to the platform:
+   - **Store:** the keyforge registry runs on SystemForge's database through
+     Ent (SQLite or PostgreSQL), in the same deployment as everything else.
+   - **Guard:** keyforge's `DestroyGuard` is implemented from ADR-012: holds
+     protect keys (decision 7), and destruction follows the platform's delay
+     or approval policy. keyforge does not know about holds.
+   - **Audit:** keyforge's audit events flow into the platform audit trail
+     (decision 8).
+   - **Authorizer:** control-plane actions are authorized by SystemForge's
+     authorization, with the `privacy_manager` and `legal_manager` roles of
+     ADR-012 where the action concerns erasure or held data.
+   - **Catalog:** an entity registered in the data catalog (ADR-012) states
+     its data-key granularity (decision 10), and the catalog is the inventory
+     of which data a purpose protects.
+   - **Root key:** the local provider's root key is read through omnivault,
+     so a deployment supplies it from its secret manager.
+   - **Mounting:** the keyforge control plane is mounted in the same
+     process, like SystemAuth, and split out only when another process needs
+     it. Encrypt and decrypt stay in process and make no network call.
 2. **Envelope encryption.** Data is encrypted with a data key (DEK);
    DEKs are encrypted (wrapped) by a key-encryption key (KEK) held by a
    `KeyProvider`. Ciphertext carries the identifier and version of the key
@@ -149,9 +169,9 @@ changing the data.
   The local provider is only as safe as the host; the documentation says
   so and recommends a managed provider for any deployment holding data under
   hold.
-- **A control plane to run.** `keyssvc` adds tables, an admin API and a CLI
-  that need the same care as SystemAuth, but only the library is on the data
-  path.
+- **A dependency on keyforge, and a control plane to run.** The registry
+  adds tables, an admin API and a CLI that need the same care as SystemAuth,
+  but only the library is on the data path.
 - **Rotation needs no downtime and no cutover**, at the cost of keeping old
   key versions until nothing references them.
 - **Migration work:** existing sealed secrets and signing keys move onto
@@ -161,6 +181,9 @@ changing the data.
 
 - **Leave each package to manage its own keys.** Rejected: rotation and
   audit cannot be done consistently, and erasure cannot reach backups.
+- **Build the mechanism inside SystemForge.** Rejected: it is not specific
+  to identity, other products need it, and key custody deserves its own
+  small, separately reviewed module.
 - **Require a cloud KMS everywhere.** Rejected: excludes single-host and
   local development, and ties the platform to one vendor.
 - **A remote key service on the data path.** Rejected: it adds latency and
