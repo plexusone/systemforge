@@ -84,6 +84,9 @@ type PrincipalMembership func(*sql.Selector)
 // PrincipalToken is the predicate function for principaltoken builders.
 type PrincipalToken func(*sql.Selector)
 
+// ResourceGrant is the predicate function for resourcegrant builders.
+type ResourceGrant func(*sql.Selector)
+
 // SeatAssignment is the predicate function for seatassignment builders.
 type SeatAssignment func(*sql.Selector)
 

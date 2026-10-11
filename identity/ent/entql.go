@@ -30,6 +30,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
+	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
@@ -43,7 +44,7 @@ import (
 
 // schemaGraph holds a representation of ent/schema at runtime.
 var schemaGraph = func() *sqlgraph.Schema {
-	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 30)}
+	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 31)}
 	graph.Nodes[0] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   accesschange.Table,
@@ -682,6 +683,27 @@ var schemaGraph = func() *sqlgraph.Schema {
 	}
 	graph.Nodes[26] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
+			Table:   resourcegrant.Table,
+			Columns: resourcegrant.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeUUID,
+				Column: resourcegrant.FieldID,
+			},
+		},
+		Type: "ResourceGrant",
+		Fields: map[string]*sqlgraph.FieldSpec{
+			resourcegrant.FieldCreatedAt:      {Type: field.TypeTime, Column: resourcegrant.FieldCreatedAt},
+			resourcegrant.FieldUpdatedAt:      {Type: field.TypeTime, Column: resourcegrant.FieldUpdatedAt},
+			resourcegrant.FieldPrincipalID:    {Type: field.TypeUUID, Column: resourcegrant.FieldPrincipalID},
+			resourcegrant.FieldOrganizationID: {Type: field.TypeUUID, Column: resourcegrant.FieldOrganizationID},
+			resourcegrant.FieldResourceType:   {Type: field.TypeString, Column: resourcegrant.FieldResourceType},
+			resourcegrant.FieldResourceID:     {Type: field.TypeString, Column: resourcegrant.FieldResourceID},
+			resourcegrant.FieldRole:           {Type: field.TypeString, Column: resourcegrant.FieldRole},
+			resourcegrant.FieldGrantedBy:      {Type: field.TypeUUID, Column: resourcegrant.FieldGrantedBy},
+		},
+	}
+	graph.Nodes[27] = &sqlgraph.Node{
+		NodeSpec: sqlgraph.NodeSpec{
 			Table:   seatassignment.Table,
 			Columns: seatassignment.Columns,
 			ID: &sqlgraph.FieldSpec{
@@ -697,7 +719,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			seatassignment.FieldAssignedAt:  {Type: field.TypeTime, Column: seatassignment.FieldAssignedAt},
 		},
 	}
-	graph.Nodes[27] = &sqlgraph.Node{
+	graph.Nodes[28] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   serviceprincipal.Table,
 			Columns: serviceprincipal.Columns,
@@ -718,7 +740,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			serviceprincipal.FieldAllowedIps:  {Type: field.TypeJSON, Column: serviceprincipal.FieldAllowedIps},
 		},
 	}
-	graph.Nodes[28] = &sqlgraph.Node{
+	graph.Nodes[29] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   slugreservation.Table,
 			Columns: slugreservation.Columns,
@@ -738,7 +760,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			slugreservation.FieldExpiresAt:                  {Type: field.TypeTime, Column: slugreservation.FieldExpiresAt},
 		},
 	}
-	graph.Nodes[29] = &sqlgraph.Node{
+	graph.Nodes[30] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   subscription.Table,
 			Columns: subscription.Columns,
@@ -1565,6 +1587,42 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		"PrincipalToken",
 		"PrincipalToken",
+	)
+	graph.MustAddE(
+		"principal",
+		&sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   resourcegrant.PrincipalTable,
+			Columns: []string{resourcegrant.PrincipalColumn},
+			Bidi:    false,
+		},
+		"ResourceGrant",
+		"Principal",
+	)
+	graph.MustAddE(
+		"organization",
+		&sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   resourcegrant.OrganizationTable,
+			Columns: []string{resourcegrant.OrganizationColumn},
+			Bidi:    false,
+		},
+		"ResourceGrant",
+		"Organization",
+	)
+	graph.MustAddE(
+		"granter",
+		&sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   resourcegrant.GranterTable,
+			Columns: []string{resourcegrant.GranterColumn},
+			Bidi:    false,
+		},
+		"ResourceGrant",
+		"Principal",
 	)
 	graph.MustAddE(
 		"license",
@@ -5140,6 +5198,128 @@ func (f *PrincipalTokenFilter) WhereHasChildTokensWith(preds ...predicate.Princi
 }
 
 // addPredicate implements the predicateAdder interface.
+func (_q *ResourceGrantQuery) addPredicate(pred func(s *sql.Selector)) {
+	_q.predicates = append(_q.predicates, pred)
+}
+
+// Filter returns a Filter implementation to apply filters on the ResourceGrantQuery builder.
+func (_q *ResourceGrantQuery) Filter() *ResourceGrantFilter {
+	return &ResourceGrantFilter{config: _q.config, predicateAdder: _q}
+}
+
+// addPredicate implements the predicateAdder interface.
+func (m *ResourceGrantMutation) addPredicate(pred func(s *sql.Selector)) {
+	m.predicates = append(m.predicates, pred)
+}
+
+// Filter returns an entql.Where implementation to apply filters on the ResourceGrantMutation builder.
+func (m *ResourceGrantMutation) Filter() *ResourceGrantFilter {
+	return &ResourceGrantFilter{config: m.config, predicateAdder: m}
+}
+
+// ResourceGrantFilter provides a generic filtering capability at runtime for ResourceGrantQuery.
+type ResourceGrantFilter struct {
+	predicateAdder
+	config
+}
+
+// Where applies the entql predicate on the query filter.
+func (f *ResourceGrantFilter) Where(p entql.P) {
+	f.addPredicate(func(s *sql.Selector) {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[26].Type, p, s); err != nil {
+			s.AddError(err)
+		}
+	})
+}
+
+// WhereID applies the entql [16]byte predicate on the id field.
+func (f *ResourceGrantFilter) WhereID(p entql.ValueP) {
+	f.Where(p.Field(resourcegrant.FieldID))
+}
+
+// WhereCreatedAt applies the entql time.Time predicate on the created_at field.
+func (f *ResourceGrantFilter) WhereCreatedAt(p entql.TimeP) {
+	f.Where(p.Field(resourcegrant.FieldCreatedAt))
+}
+
+// WhereUpdatedAt applies the entql time.Time predicate on the updated_at field.
+func (f *ResourceGrantFilter) WhereUpdatedAt(p entql.TimeP) {
+	f.Where(p.Field(resourcegrant.FieldUpdatedAt))
+}
+
+// WherePrincipalID applies the entql [16]byte predicate on the principal_id field.
+func (f *ResourceGrantFilter) WherePrincipalID(p entql.ValueP) {
+	f.Where(p.Field(resourcegrant.FieldPrincipalID))
+}
+
+// WhereOrganizationID applies the entql [16]byte predicate on the organization_id field.
+func (f *ResourceGrantFilter) WhereOrganizationID(p entql.ValueP) {
+	f.Where(p.Field(resourcegrant.FieldOrganizationID))
+}
+
+// WhereResourceType applies the entql string predicate on the resource_type field.
+func (f *ResourceGrantFilter) WhereResourceType(p entql.StringP) {
+	f.Where(p.Field(resourcegrant.FieldResourceType))
+}
+
+// WhereResourceID applies the entql string predicate on the resource_id field.
+func (f *ResourceGrantFilter) WhereResourceID(p entql.StringP) {
+	f.Where(p.Field(resourcegrant.FieldResourceID))
+}
+
+// WhereRole applies the entql string predicate on the role field.
+func (f *ResourceGrantFilter) WhereRole(p entql.StringP) {
+	f.Where(p.Field(resourcegrant.FieldRole))
+}
+
+// WhereGrantedBy applies the entql [16]byte predicate on the granted_by field.
+func (f *ResourceGrantFilter) WhereGrantedBy(p entql.ValueP) {
+	f.Where(p.Field(resourcegrant.FieldGrantedBy))
+}
+
+// WhereHasPrincipal applies a predicate to check if query has an edge principal.
+func (f *ResourceGrantFilter) WhereHasPrincipal() {
+	f.Where(entql.HasEdge("principal"))
+}
+
+// WhereHasPrincipalWith applies a predicate to check if query has an edge principal with a given conditions (other predicates).
+func (f *ResourceGrantFilter) WhereHasPrincipalWith(preds ...predicate.Principal) {
+	f.Where(entql.HasEdgeWith("principal", sqlgraph.WrapFunc(func(s *sql.Selector) {
+		for _, p := range preds {
+			p(s)
+		}
+	})))
+}
+
+// WhereHasOrganization applies a predicate to check if query has an edge organization.
+func (f *ResourceGrantFilter) WhereHasOrganization() {
+	f.Where(entql.HasEdge("organization"))
+}
+
+// WhereHasOrganizationWith applies a predicate to check if query has an edge organization with a given conditions (other predicates).
+func (f *ResourceGrantFilter) WhereHasOrganizationWith(preds ...predicate.Organization) {
+	f.Where(entql.HasEdgeWith("organization", sqlgraph.WrapFunc(func(s *sql.Selector) {
+		for _, p := range preds {
+			p(s)
+		}
+	})))
+}
+
+// WhereHasGranter applies a predicate to check if query has an edge granter.
+func (f *ResourceGrantFilter) WhereHasGranter() {
+	f.Where(entql.HasEdge("granter"))
+}
+
+// WhereHasGranterWith applies a predicate to check if query has an edge granter with a given conditions (other predicates).
+func (f *ResourceGrantFilter) WhereHasGranterWith(preds ...predicate.Principal) {
+	f.Where(entql.HasEdgeWith("granter", sqlgraph.WrapFunc(func(s *sql.Selector) {
+		for _, p := range preds {
+			p(s)
+		}
+	})))
+}
+
+// addPredicate implements the predicateAdder interface.
 func (_q *SeatAssignmentQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
 }
@@ -5168,7 +5348,7 @@ type SeatAssignmentFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SeatAssignmentFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[26].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[27].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5270,7 +5450,7 @@ type ServicePrincipalFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *ServicePrincipalFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[27].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[28].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5378,7 +5558,7 @@ type SlugReservationFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SlugReservationFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[28].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[29].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5481,7 +5661,7 @@ type SubscriptionFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SubscriptionFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[29].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[30].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})

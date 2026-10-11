@@ -66,6 +66,8 @@ type Tx struct {
 	PrincipalMembership *PrincipalMembershipClient
 	// PrincipalToken is the client for interacting with the PrincipalToken builders.
 	PrincipalToken *PrincipalTokenClient
+	// ResourceGrant is the client for interacting with the ResourceGrant builders.
+	ResourceGrant *ResourceGrantClient
 	// SeatAssignment is the client for interacting with the SeatAssignment builders.
 	SeatAssignment *SeatAssignmentClient
 	// ServicePrincipal is the client for interacting with the ServicePrincipal builders.
@@ -231,6 +233,7 @@ func (tx *Tx) init() {
 	tx.Principal = NewPrincipalClient(tx.config)
 	tx.PrincipalMembership = NewPrincipalMembershipClient(tx.config)
 	tx.PrincipalToken = NewPrincipalTokenClient(tx.config)
+	tx.ResourceGrant = NewResourceGrantClient(tx.config)
 	tx.SeatAssignment = NewSeatAssignmentClient(tx.config)
 	tx.ServicePrincipal = NewServicePrincipalClient(tx.config)
 	tx.SlugReservation = NewSlugReservationClient(tx.config)

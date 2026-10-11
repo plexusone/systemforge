@@ -38,6 +38,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
+	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
@@ -128,6 +129,7 @@ func checkColumn(t, c string) error {
 			principal.Table:           principal.ValidColumn,
 			principalmembership.Table: principalmembership.ValidColumn,
 			principaltoken.Table:      principaltoken.ValidColumn,
+			resourcegrant.Table:       resourcegrant.ValidColumn,
 			seatassignment.Table:      seatassignment.ValidColumn,
 			serviceprincipal.Table:    serviceprincipal.ValidColumn,
 			slugreservation.Table:     slugreservation.ValidColumn,

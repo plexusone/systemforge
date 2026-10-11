@@ -321,6 +321,18 @@ func (f PrincipalTokenFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PrincipalTokenMutation", m)
 }
 
+// The ResourceGrantFunc type is an adapter to allow the use of ordinary
+// function as ResourceGrant mutator.
+type ResourceGrantFunc func(context.Context, *ent.ResourceGrantMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ResourceGrantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ResourceGrantMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ResourceGrantMutation", m)
+}
+
 // The SeatAssignmentFunc type is an adapter to allow the use of ordinary
 // function as SeatAssignment mutator.
 type SeatAssignmentFunc func(context.Context, *ent.SeatAssignmentMutation) (ent.Value, error)

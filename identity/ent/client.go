@@ -42,6 +42,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
+	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
@@ -107,6 +108,8 @@ type Client struct {
 	PrincipalMembership *PrincipalMembershipClient
 	// PrincipalToken is the client for interacting with the PrincipalToken builders.
 	PrincipalToken *PrincipalTokenClient
+	// ResourceGrant is the client for interacting with the ResourceGrant builders.
+	ResourceGrant *ResourceGrantClient
 	// SeatAssignment is the client for interacting with the SeatAssignment builders.
 	SeatAssignment *SeatAssignmentClient
 	// ServicePrincipal is the client for interacting with the ServicePrincipal builders.
@@ -152,6 +155,7 @@ func (c *Client) init() {
 	c.Principal = NewPrincipalClient(c.config)
 	c.PrincipalMembership = NewPrincipalMembershipClient(c.config)
 	c.PrincipalToken = NewPrincipalTokenClient(c.config)
+	c.ResourceGrant = NewResourceGrantClient(c.config)
 	c.SeatAssignment = NewSeatAssignmentClient(c.config)
 	c.ServicePrincipal = NewServicePrincipalClient(c.config)
 	c.SlugReservation = NewSlugReservationClient(c.config)
@@ -274,6 +278,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Principal:           NewPrincipalClient(cfg),
 		PrincipalMembership: NewPrincipalMembershipClient(cfg),
 		PrincipalToken:      NewPrincipalTokenClient(cfg),
+		ResourceGrant:       NewResourceGrantClient(cfg),
 		SeatAssignment:      NewSeatAssignmentClient(cfg),
 		ServicePrincipal:    NewServicePrincipalClient(cfg),
 		SlugReservation:     NewSlugReservationClient(cfg),
@@ -323,6 +328,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Principal:           NewPrincipalClient(cfg),
 		PrincipalMembership: NewPrincipalMembershipClient(cfg),
 		PrincipalToken:      NewPrincipalTokenClient(cfg),
+		ResourceGrant:       NewResourceGrantClient(cfg),
 		SeatAssignment:      NewSeatAssignmentClient(cfg),
 		ServicePrincipal:    NewServicePrincipalClient(cfg),
 		SlugReservation:     NewSlugReservationClient(cfg),
@@ -361,8 +367,8 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerInvite,
 		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
 		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
-		c.PrincipalMembership, c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal,
-		c.SlugReservation, c.Subscription,
+		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.SeatAssignment,
+		c.ServicePrincipal, c.SlugReservation, c.Subscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -377,8 +383,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerInvite,
 		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
 		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
-		c.PrincipalMembership, c.PrincipalToken, c.SeatAssignment, c.ServicePrincipal,
-		c.SlugReservation, c.Subscription,
+		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.SeatAssignment,
+		c.ServicePrincipal, c.SlugReservation, c.Subscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -439,6 +445,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PrincipalMembership.mutate(ctx, m)
 	case *PrincipalTokenMutation:
 		return c.PrincipalToken.mutate(ctx, m)
+	case *ResourceGrantMutation:
+		return c.ResourceGrant.mutate(ctx, m)
 	case *SeatAssignmentMutation:
 		return c.SeatAssignment.mutate(ctx, m)
 	case *ServicePrincipalMutation:
@@ -4982,6 +4990,187 @@ func (c *PrincipalTokenClient) mutate(ctx context.Context, m *PrincipalTokenMuta
 	}
 }
 
+// ResourceGrantClient is a client for the ResourceGrant schema.
+type ResourceGrantClient struct {
+	config
+}
+
+// NewResourceGrantClient returns a client for the ResourceGrant from the given config.
+func NewResourceGrantClient(c config) *ResourceGrantClient {
+	return &ResourceGrantClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `resourcegrant.Hooks(f(g(h())))`.
+func (c *ResourceGrantClient) Use(hooks ...Hook) {
+	c.hooks.ResourceGrant = append(c.hooks.ResourceGrant, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `resourcegrant.Intercept(f(g(h())))`.
+func (c *ResourceGrantClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ResourceGrant = append(c.inters.ResourceGrant, interceptors...)
+}
+
+// Create returns a builder for creating a ResourceGrant entity.
+func (c *ResourceGrantClient) Create() *ResourceGrantCreate {
+	mutation := newResourceGrantMutation(c.config, OpCreate)
+	return &ResourceGrantCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ResourceGrant entities.
+func (c *ResourceGrantClient) CreateBulk(builders ...*ResourceGrantCreate) *ResourceGrantCreateBulk {
+	return &ResourceGrantCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ResourceGrantClient) MapCreateBulk(slice any, setFunc func(*ResourceGrantCreate, int)) *ResourceGrantCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ResourceGrantCreateBulk{err: fmt.Errorf("calling to ResourceGrantClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ResourceGrantCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ResourceGrantCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ResourceGrant.
+func (c *ResourceGrantClient) Update() *ResourceGrantUpdate {
+	mutation := newResourceGrantMutation(c.config, OpUpdate)
+	return &ResourceGrantUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ResourceGrantClient) UpdateOne(_m *ResourceGrant) *ResourceGrantUpdateOne {
+	mutation := newResourceGrantMutation(c.config, OpUpdateOne, withResourceGrant(_m))
+	return &ResourceGrantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ResourceGrantClient) UpdateOneID(id uuid.UUID) *ResourceGrantUpdateOne {
+	mutation := newResourceGrantMutation(c.config, OpUpdateOne, withResourceGrantID(id))
+	return &ResourceGrantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ResourceGrant.
+func (c *ResourceGrantClient) Delete() *ResourceGrantDelete {
+	mutation := newResourceGrantMutation(c.config, OpDelete)
+	return &ResourceGrantDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ResourceGrantClient) DeleteOne(_m *ResourceGrant) *ResourceGrantDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ResourceGrantClient) DeleteOneID(id uuid.UUID) *ResourceGrantDeleteOne {
+	builder := c.Delete().Where(resourcegrant.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ResourceGrantDeleteOne{builder}
+}
+
+// Query returns a query builder for ResourceGrant.
+func (c *ResourceGrantClient) Query() *ResourceGrantQuery {
+	return &ResourceGrantQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeResourceGrant},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ResourceGrant entity by its id.
+func (c *ResourceGrantClient) Get(ctx context.Context, id uuid.UUID) (*ResourceGrant, error) {
+	return c.Query().Where(resourcegrant.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ResourceGrantClient) GetX(ctx context.Context, id uuid.UUID) *ResourceGrant {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPrincipal queries the principal edge of a ResourceGrant.
+func (c *ResourceGrantClient) QueryPrincipal(_m *ResourceGrant) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(resourcegrant.Table, resourcegrant.FieldID, id),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, resourcegrant.PrincipalTable, resourcegrant.PrincipalColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOrganization queries the organization edge of a ResourceGrant.
+func (c *ResourceGrantClient) QueryOrganization(_m *ResourceGrant) *OrganizationQuery {
+	query := (&OrganizationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(resourcegrant.Table, resourcegrant.FieldID, id),
+			sqlgraph.To(organization.Table, organization.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, resourcegrant.OrganizationTable, resourcegrant.OrganizationColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryGranter queries the granter edge of a ResourceGrant.
+func (c *ResourceGrantClient) QueryGranter(_m *ResourceGrant) *PrincipalQuery {
+	query := (&PrincipalClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(resourcegrant.Table, resourcegrant.FieldID, id),
+			sqlgraph.To(principal.Table, principal.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, resourcegrant.GranterTable, resourcegrant.GranterColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ResourceGrantClient) Hooks() []Hook {
+	return c.hooks.ResourceGrant
+}
+
+// Interceptors returns the client interceptors.
+func (c *ResourceGrantClient) Interceptors() []Interceptor {
+	return c.inters.ResourceGrant
+}
+
+func (c *ResourceGrantClient) mutate(ctx context.Context, m *ResourceGrantMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ResourceGrantCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ResourceGrantUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ResourceGrantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ResourceGrantDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ResourceGrant mutation op: %q", m.Op())
+	}
+}
+
 // SeatAssignmentClient is a client for the SeatAssignment schema.
 type SeatAssignmentClient struct {
 	config
@@ -5649,7 +5838,7 @@ type (
 		Credential, ExternalIdentity, Human, Invite, License, Listing, LoginSession,
 		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
 		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
-		Principal, PrincipalMembership, PrincipalToken, SeatAssignment,
+		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, SeatAssignment,
 		ServicePrincipal, SlugReservation, Subscription []ent.Hook
 	}
 	inters struct {
@@ -5657,7 +5846,7 @@ type (
 		Credential, ExternalIdentity, Human, Invite, License, Listing, LoginSession,
 		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
 		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
-		Principal, PrincipalMembership, PrincipalToken, SeatAssignment,
+		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, SeatAssignment,
 		ServicePrincipal, SlugReservation, Subscription []ent.Interceptor
 	}
 )

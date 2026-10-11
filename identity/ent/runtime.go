@@ -32,6 +32,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
+	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/schema"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
@@ -847,6 +848,65 @@ func init() {
 	principaltokenDescID := principaltokenFields[0].Descriptor()
 	// principaltoken.DefaultID holds the default value on creation for the id field.
 	principaltoken.DefaultID = principaltokenDescID.Default.(func() uuid.UUID)
+	resourcegrantMixin := schema.ResourceGrant{}.Mixin()
+	resourcegrantMixinFields0 := resourcegrantMixin[0].Fields()
+	_ = resourcegrantMixinFields0
+	resourcegrantFields := schema.ResourceGrant{}.Fields()
+	_ = resourcegrantFields
+	// resourcegrantDescCreatedAt is the schema descriptor for created_at field.
+	resourcegrantDescCreatedAt := resourcegrantMixinFields0[1].Descriptor()
+	// resourcegrant.DefaultCreatedAt holds the default value on creation for the created_at field.
+	resourcegrant.DefaultCreatedAt = resourcegrantDescCreatedAt.Default.(func() time.Time)
+	// resourcegrantDescUpdatedAt is the schema descriptor for updated_at field.
+	resourcegrantDescUpdatedAt := resourcegrantMixinFields0[2].Descriptor()
+	// resourcegrant.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	resourcegrant.DefaultUpdatedAt = resourcegrantDescUpdatedAt.Default.(func() time.Time)
+	// resourcegrant.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	resourcegrant.UpdateDefaultUpdatedAt = resourcegrantDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// resourcegrantDescResourceType is the schema descriptor for resource_type field.
+	resourcegrantDescResourceType := resourcegrantFields[2].Descriptor()
+	// resourcegrant.ResourceTypeValidator is a validator for the "resource_type" field. It is called by the builders before save.
+	resourcegrant.ResourceTypeValidator = func() func(string) error {
+		validators := resourcegrantDescResourceType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(resource_type string) error {
+			for _, fn := range fns {
+				if err := fn(resource_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// resourcegrantDescResourceID is the schema descriptor for resource_id field.
+	resourcegrantDescResourceID := resourcegrantFields[3].Descriptor()
+	// resourcegrant.ResourceIDValidator is a validator for the "resource_id" field. It is called by the builders before save.
+	resourcegrant.ResourceIDValidator = func() func(string) error {
+		validators := resourcegrantDescResourceID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(resource_id string) error {
+			for _, fn := range fns {
+				if err := fn(resource_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// resourcegrantDescRole is the schema descriptor for role field.
+	resourcegrantDescRole := resourcegrantFields[4].Descriptor()
+	// resourcegrant.RoleValidator is a validator for the "role" field. It is called by the builders before save.
+	resourcegrant.RoleValidator = resourcegrantDescRole.Validators[0].(func(string) error)
+	// resourcegrantDescID is the schema descriptor for id field.
+	resourcegrantDescID := resourcegrantMixinFields0[0].Descriptor()
+	// resourcegrant.DefaultID holds the default value on creation for the id field.
+	resourcegrant.DefaultID = resourcegrantDescID.Default.(func() uuid.UUID)
 	seatassignmentMixin := schema.SeatAssignment{}.Mixin()
 	seatassignmentMixinFields0 := seatassignmentMixin[0].Fields()
 	_ = seatassignmentMixinFields0

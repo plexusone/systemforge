@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
 )
 
@@ -53,6 +54,21 @@ func (r *Recorder) AddAppRole(_ context.Context, principalID, orgID uuid.UUID, a
 // RemoveAppRole records the call.
 func (r *Recorder) RemoveAppRole(_ context.Context, principalID, orgID uuid.UUID, application, role string) error {
 	return r.record("RemoveAppRole:%s:%s:%s:%s", principalID, orgID, application, role)
+}
+
+// SetResourceGrant records the call.
+func (r *Recorder) SetResourceGrant(_ context.Context, principalID uuid.UUID, ref authz.ResourceRef, role string) error {
+	return r.record("SetResourceGrant:%s:%s:%s:%s:%s", principalID, ref.OrganizationID, ref.Type, ref.ID, role)
+}
+
+// RemoveResourceGrant records the call.
+func (r *Recorder) RemoveResourceGrant(_ context.Context, principalID uuid.UUID, ref authz.ResourceRef) error {
+	return r.record("RemoveResourceGrant:%s:%s:%s:%s", principalID, ref.OrganizationID, ref.Type, ref.ID)
+}
+
+// RemoveOrgMembership records the call.
+func (r *Recorder) RemoveOrgMembership(_ context.Context, principalID, orgID uuid.UUID, role string) error {
+	return r.record("RemoveOrgMembership:%s:%s:%s", principalID, orgID, role)
 }
 
 // RegisterPrincipal records the call.

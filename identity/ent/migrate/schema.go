@@ -1392,6 +1392,66 @@ var (
 			},
 		},
 	}
+	// SfResourceGrantsColumns holds the columns for the "sf_resource_grants" table.
+	SfResourceGrantsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "resource_type", Type: field.TypeString, Size: 128},
+		{Name: "resource_id", Type: field.TypeString, Size: 1024},
+		{Name: "role", Type: field.TypeString},
+		{Name: "principal_id", Type: field.TypeUUID},
+		{Name: "organization_id", Type: field.TypeUUID},
+		{Name: "granted_by", Type: field.TypeUUID, Nullable: true},
+	}
+	// SfResourceGrantsTable holds the schema information for the "sf_resource_grants" table.
+	SfResourceGrantsTable = &schema.Table{
+		Name:       "sf_resource_grants",
+		Columns:    SfResourceGrantsColumns,
+		PrimaryKey: []*schema.Column{SfResourceGrantsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "sf_resource_grants_sf_principals_principal",
+				Columns:    []*schema.Column{SfResourceGrantsColumns[6]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "sf_resource_grants_sf_organizations_organization",
+				Columns:    []*schema.Column{SfResourceGrantsColumns[7]},
+				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "sf_resource_grants_sf_principals_granter",
+				Columns:    []*schema.Column{SfResourceGrantsColumns[8]},
+				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "resourcegrant_principal_id_resource_type_resource_id",
+				Unique:  true,
+				Columns: []*schema.Column{SfResourceGrantsColumns[6], SfResourceGrantsColumns[3], SfResourceGrantsColumns[4]},
+			},
+			{
+				Name:    "resourcegrant_organization_id_principal_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfResourceGrantsColumns[7], SfResourceGrantsColumns[6]},
+			},
+			{
+				Name:    "resourcegrant_resource_type_principal_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfResourceGrantsColumns[3], SfResourceGrantsColumns[6]},
+			},
+			{
+				Name:    "resourcegrant_resource_type_resource_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfResourceGrantsColumns[3], SfResourceGrantsColumns[4]},
+			},
+		},
+	}
 	// SfSeatAssignmentsColumns holds the columns for the "sf_seat_assignments" table.
 	SfSeatAssignmentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1647,6 +1707,7 @@ var (
 		SfPrincipalsTable,
 		SfPrincipalMembershipsTable,
 		SfPrincipalTokensTable,
+		SfResourceGrantsTable,
 		SfSeatAssignmentsTable,
 		SfServicePrincipalsTable,
 		SfSlugReservationsTable,
@@ -1765,6 +1826,12 @@ func init() {
 	SfPrincipalTokensTable.ForeignKeys[2].RefTable = SfPrincipalTokensTable
 	SfPrincipalTokensTable.Annotation = &entsql.Annotation{
 		Table: "sf_principal_tokens",
+	}
+	SfResourceGrantsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
+	SfResourceGrantsTable.ForeignKeys[1].RefTable = SfOrganizationsTable
+	SfResourceGrantsTable.ForeignKeys[2].RefTable = SfPrincipalsTable
+	SfResourceGrantsTable.Annotation = &entsql.Annotation{
+		Table: "sf_resource_grants",
 	}
 	SfSeatAssignmentsTable.ForeignKeys[0].RefTable = SfLicensesTable
 	SfSeatAssignmentsTable.ForeignKeys[1].RefTable = SfPrincipalsTable

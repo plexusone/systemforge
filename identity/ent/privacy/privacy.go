@@ -735,6 +735,30 @@ func (f PrincipalTokenMutationRuleFunc) EvalMutation(ctx context.Context, m ent.
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.PrincipalTokenMutation", m)
 }
 
+// The ResourceGrantQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type ResourceGrantQueryRuleFunc func(context.Context, *ent.ResourceGrantQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f ResourceGrantQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ResourceGrantQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ResourceGrantQuery", q)
+}
+
+// The ResourceGrantMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type ResourceGrantMutationRuleFunc func(context.Context, *ent.ResourceGrantMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f ResourceGrantMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.ResourceGrantMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ResourceGrantMutation", m)
+}
+
 // The SeatAssignmentQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type SeatAssignmentQueryRuleFunc func(context.Context, *ent.SeatAssignmentQuery) error
@@ -918,6 +942,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.PrincipalTokenQuery:
 		return q.Filter(), nil
+	case *ent.ResourceGrantQuery:
+		return q.Filter(), nil
 	case *ent.SeatAssignmentQuery:
 		return q.Filter(), nil
 	case *ent.ServicePrincipalQuery:
@@ -984,6 +1010,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.PrincipalMembershipMutation:
 		return m.Filter(), nil
 	case *ent.PrincipalTokenMutation:
+		return m.Filter(), nil
+	case *ent.ResourceGrantMutation:
 		return m.Filter(), nil
 	case *ent.SeatAssignmentMutation:
 		return m.Filter(), nil

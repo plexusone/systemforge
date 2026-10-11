@@ -17,6 +17,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
+	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 )
 
@@ -597,9 +598,24 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 	if err != nil {
 		return fmt.Errorf("failed to read application roles: %w", err)
 	}
+	// So do the member's resource grants (ADR-008).
+	heldGrants, err := s.client.ResourceGrant.Query().
+		Where(resourcegrant.OrganizationID(organizationID), resourcegrant.PrincipalID(principalID)).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to read resource grants: %w", err)
+	}
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	if _, err = tx.ResourceGrant.Delete().
+		Where(
+			resourcegrant.OrganizationID(organizationID),
+			resourcegrant.PrincipalID(principalID),
+		).
+		Exec(ctx); err != nil {
+		return errors.Join(fmt.Errorf("failed to remove resource grants: %w", err), tx.Rollback())
 	}
 	if _, err = tx.AppRole.Delete().
 		Where(
@@ -653,6 +669,26 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 				"principal_id", principalID,
 				"org_id", organizationID,
 				"application", r.Application,
+				"error", syncErr)
+		}
+	}
+
+	// So do the deleted resource grants, when the syncer carries them.
+	if grantSyncer, ok := s.syncer.(authz.ResourceGrantSyncer); ok {
+		for _, g := range heldGrants {
+			ref := authz.ResourceRef{Type: g.ResourceType, ID: g.ResourceID, OrganizationID: organizationID}
+			syncErr := grantSyncer.RemoveResourceGrant(ctx, principalID, ref)
+			if syncErr == nil {
+				continue
+			}
+			if s.syncMode == authz.SyncModeStrict {
+				return fmt.Errorf("failed to sync resource grant removal to authz: %w", syncErr)
+			}
+			s.logger.Warn("failed to sync resource grant removal to authz",
+				"principal_id", principalID,
+				"org_id", organizationID,
+				"resource_type", g.ResourceType,
+				"resource_id", g.ResourceID,
 				"error", syncErr)
 		}
 	}

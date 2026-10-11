@@ -39,6 +39,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
+	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
@@ -80,6 +81,7 @@ const (
 	TypePrincipal           = "Principal"
 	TypePrincipalMembership = "PrincipalMembership"
 	TypePrincipalToken      = "PrincipalToken"
+	TypeResourceGrant       = "ResourceGrant"
 	TypeSeatAssignment      = "SeatAssignment"
 	TypeServicePrincipal    = "ServicePrincipal"
 	TypeSlugReservation     = "SlugReservation"
@@ -30799,6 +30801,897 @@ func (m *PrincipalTokenMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown PrincipalToken edge %s", name)
+}
+
+// ResourceGrantMutation represents an operation that mutates the ResourceGrant nodes in the graph.
+type ResourceGrantMutation struct {
+	config
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	created_at          *time.Time
+	updated_at          *time.Time
+	resource_type       *string
+	resource_id         *string
+	role                *string
+	clearedFields       map[string]struct{}
+	principal           *uuid.UUID
+	clearedprincipal    bool
+	organization        *uuid.UUID
+	clearedorganization bool
+	granter             *uuid.UUID
+	clearedgranter      bool
+	done                bool
+	oldValue            func(context.Context) (*ResourceGrant, error)
+	predicates          []predicate.ResourceGrant
+}
+
+var _ ent.Mutation = (*ResourceGrantMutation)(nil)
+
+// resourcegrantOption allows management of the mutation configuration using functional options.
+type resourcegrantOption func(*ResourceGrantMutation)
+
+// newResourceGrantMutation creates new mutation for the ResourceGrant entity.
+func newResourceGrantMutation(c config, op Op, opts ...resourcegrantOption) *ResourceGrantMutation {
+	m := &ResourceGrantMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeResourceGrant,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withResourceGrantID sets the ID field of the mutation.
+func withResourceGrantID(id uuid.UUID) resourcegrantOption {
+	return func(m *ResourceGrantMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ResourceGrant
+		)
+		m.oldValue = func(ctx context.Context) (*ResourceGrant, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ResourceGrant.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withResourceGrant sets the old ResourceGrant of the mutation.
+func withResourceGrant(node *ResourceGrant) resourcegrantOption {
+	return func(m *ResourceGrantMutation) {
+		m.oldValue = func(context.Context) (*ResourceGrant, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ResourceGrantMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ResourceGrantMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ResourceGrant entities.
+func (m *ResourceGrantMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ResourceGrantMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ResourceGrantMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ResourceGrant.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ResourceGrantMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ResourceGrantMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ResourceGrant entity.
+// If the ResourceGrant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourceGrantMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ResourceGrantMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ResourceGrantMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ResourceGrantMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ResourceGrant entity.
+// If the ResourceGrant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourceGrantMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ResourceGrantMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetPrincipalID sets the "principal_id" field.
+func (m *ResourceGrantMutation) SetPrincipalID(u uuid.UUID) {
+	m.principal = &u
+}
+
+// PrincipalID returns the value of the "principal_id" field in the mutation.
+func (m *ResourceGrantMutation) PrincipalID() (r uuid.UUID, exists bool) {
+	v := m.principal
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrincipalID returns the old "principal_id" field's value of the ResourceGrant entity.
+// If the ResourceGrant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourceGrantMutation) OldPrincipalID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrincipalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrincipalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrincipalID: %w", err)
+	}
+	return oldValue.PrincipalID, nil
+}
+
+// ResetPrincipalID resets all changes to the "principal_id" field.
+func (m *ResourceGrantMutation) ResetPrincipalID() {
+	m.principal = nil
+}
+
+// SetOrganizationID sets the "organization_id" field.
+func (m *ResourceGrantMutation) SetOrganizationID(u uuid.UUID) {
+	m.organization = &u
+}
+
+// OrganizationID returns the value of the "organization_id" field in the mutation.
+func (m *ResourceGrantMutation) OrganizationID() (r uuid.UUID, exists bool) {
+	v := m.organization
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrganizationID returns the old "organization_id" field's value of the ResourceGrant entity.
+// If the ResourceGrant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourceGrantMutation) OldOrganizationID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrganizationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrganizationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrganizationID: %w", err)
+	}
+	return oldValue.OrganizationID, nil
+}
+
+// ResetOrganizationID resets all changes to the "organization_id" field.
+func (m *ResourceGrantMutation) ResetOrganizationID() {
+	m.organization = nil
+}
+
+// SetResourceType sets the "resource_type" field.
+func (m *ResourceGrantMutation) SetResourceType(s string) {
+	m.resource_type = &s
+}
+
+// ResourceType returns the value of the "resource_type" field in the mutation.
+func (m *ResourceGrantMutation) ResourceType() (r string, exists bool) {
+	v := m.resource_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceType returns the old "resource_type" field's value of the ResourceGrant entity.
+// If the ResourceGrant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourceGrantMutation) OldResourceType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceType: %w", err)
+	}
+	return oldValue.ResourceType, nil
+}
+
+// ResetResourceType resets all changes to the "resource_type" field.
+func (m *ResourceGrantMutation) ResetResourceType() {
+	m.resource_type = nil
+}
+
+// SetResourceID sets the "resource_id" field.
+func (m *ResourceGrantMutation) SetResourceID(s string) {
+	m.resource_id = &s
+}
+
+// ResourceID returns the value of the "resource_id" field in the mutation.
+func (m *ResourceGrantMutation) ResourceID() (r string, exists bool) {
+	v := m.resource_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceID returns the old "resource_id" field's value of the ResourceGrant entity.
+// If the ResourceGrant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourceGrantMutation) OldResourceID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceID: %w", err)
+	}
+	return oldValue.ResourceID, nil
+}
+
+// ResetResourceID resets all changes to the "resource_id" field.
+func (m *ResourceGrantMutation) ResetResourceID() {
+	m.resource_id = nil
+}
+
+// SetRole sets the "role" field.
+func (m *ResourceGrantMutation) SetRole(s string) {
+	m.role = &s
+}
+
+// Role returns the value of the "role" field in the mutation.
+func (m *ResourceGrantMutation) Role() (r string, exists bool) {
+	v := m.role
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRole returns the old "role" field's value of the ResourceGrant entity.
+// If the ResourceGrant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourceGrantMutation) OldRole(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRole is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRole requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRole: %w", err)
+	}
+	return oldValue.Role, nil
+}
+
+// ResetRole resets all changes to the "role" field.
+func (m *ResourceGrantMutation) ResetRole() {
+	m.role = nil
+}
+
+// SetGrantedBy sets the "granted_by" field.
+func (m *ResourceGrantMutation) SetGrantedBy(u uuid.UUID) {
+	m.granter = &u
+}
+
+// GrantedBy returns the value of the "granted_by" field in the mutation.
+func (m *ResourceGrantMutation) GrantedBy() (r uuid.UUID, exists bool) {
+	v := m.granter
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGrantedBy returns the old "granted_by" field's value of the ResourceGrant entity.
+// If the ResourceGrant object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourceGrantMutation) OldGrantedBy(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGrantedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGrantedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGrantedBy: %w", err)
+	}
+	return oldValue.GrantedBy, nil
+}
+
+// ClearGrantedBy clears the value of the "granted_by" field.
+func (m *ResourceGrantMutation) ClearGrantedBy() {
+	m.granter = nil
+	m.clearedFields[resourcegrant.FieldGrantedBy] = struct{}{}
+}
+
+// GrantedByCleared returns if the "granted_by" field was cleared in this mutation.
+func (m *ResourceGrantMutation) GrantedByCleared() bool {
+	_, ok := m.clearedFields[resourcegrant.FieldGrantedBy]
+	return ok
+}
+
+// ResetGrantedBy resets all changes to the "granted_by" field.
+func (m *ResourceGrantMutation) ResetGrantedBy() {
+	m.granter = nil
+	delete(m.clearedFields, resourcegrant.FieldGrantedBy)
+}
+
+// ClearPrincipal clears the "principal" edge to the Principal entity.
+func (m *ResourceGrantMutation) ClearPrincipal() {
+	m.clearedprincipal = true
+	m.clearedFields[resourcegrant.FieldPrincipalID] = struct{}{}
+}
+
+// PrincipalCleared reports if the "principal" edge to the Principal entity was cleared.
+func (m *ResourceGrantMutation) PrincipalCleared() bool {
+	return m.clearedprincipal
+}
+
+// PrincipalIDs returns the "principal" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PrincipalID instead. It exists only for internal usage by the builders.
+func (m *ResourceGrantMutation) PrincipalIDs() (ids []uuid.UUID) {
+	if id := m.principal; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPrincipal resets all changes to the "principal" edge.
+func (m *ResourceGrantMutation) ResetPrincipal() {
+	m.principal = nil
+	m.clearedprincipal = false
+}
+
+// ClearOrganization clears the "organization" edge to the Organization entity.
+func (m *ResourceGrantMutation) ClearOrganization() {
+	m.clearedorganization = true
+	m.clearedFields[resourcegrant.FieldOrganizationID] = struct{}{}
+}
+
+// OrganizationCleared reports if the "organization" edge to the Organization entity was cleared.
+func (m *ResourceGrantMutation) OrganizationCleared() bool {
+	return m.clearedorganization
+}
+
+// OrganizationIDs returns the "organization" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// OrganizationID instead. It exists only for internal usage by the builders.
+func (m *ResourceGrantMutation) OrganizationIDs() (ids []uuid.UUID) {
+	if id := m.organization; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetOrganization resets all changes to the "organization" edge.
+func (m *ResourceGrantMutation) ResetOrganization() {
+	m.organization = nil
+	m.clearedorganization = false
+}
+
+// SetGranterID sets the "granter" edge to the Principal entity by id.
+func (m *ResourceGrantMutation) SetGranterID(id uuid.UUID) {
+	m.granter = &id
+}
+
+// ClearGranter clears the "granter" edge to the Principal entity.
+func (m *ResourceGrantMutation) ClearGranter() {
+	m.clearedgranter = true
+	m.clearedFields[resourcegrant.FieldGrantedBy] = struct{}{}
+}
+
+// GranterCleared reports if the "granter" edge to the Principal entity was cleared.
+func (m *ResourceGrantMutation) GranterCleared() bool {
+	return m.GrantedByCleared() || m.clearedgranter
+}
+
+// GranterID returns the "granter" edge ID in the mutation.
+func (m *ResourceGrantMutation) GranterID() (id uuid.UUID, exists bool) {
+	if m.granter != nil {
+		return *m.granter, true
+	}
+	return
+}
+
+// GranterIDs returns the "granter" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// GranterID instead. It exists only for internal usage by the builders.
+func (m *ResourceGrantMutation) GranterIDs() (ids []uuid.UUID) {
+	if id := m.granter; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetGranter resets all changes to the "granter" edge.
+func (m *ResourceGrantMutation) ResetGranter() {
+	m.granter = nil
+	m.clearedgranter = false
+}
+
+// Where appends a list predicates to the ResourceGrantMutation builder.
+func (m *ResourceGrantMutation) Where(ps ...predicate.ResourceGrant) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ResourceGrantMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ResourceGrantMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ResourceGrant, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ResourceGrantMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ResourceGrantMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ResourceGrant).
+func (m *ResourceGrantMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ResourceGrantMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.created_at != nil {
+		fields = append(fields, resourcegrant.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, resourcegrant.FieldUpdatedAt)
+	}
+	if m.principal != nil {
+		fields = append(fields, resourcegrant.FieldPrincipalID)
+	}
+	if m.organization != nil {
+		fields = append(fields, resourcegrant.FieldOrganizationID)
+	}
+	if m.resource_type != nil {
+		fields = append(fields, resourcegrant.FieldResourceType)
+	}
+	if m.resource_id != nil {
+		fields = append(fields, resourcegrant.FieldResourceID)
+	}
+	if m.role != nil {
+		fields = append(fields, resourcegrant.FieldRole)
+	}
+	if m.granter != nil {
+		fields = append(fields, resourcegrant.FieldGrantedBy)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ResourceGrantMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case resourcegrant.FieldCreatedAt:
+		return m.CreatedAt()
+	case resourcegrant.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case resourcegrant.FieldPrincipalID:
+		return m.PrincipalID()
+	case resourcegrant.FieldOrganizationID:
+		return m.OrganizationID()
+	case resourcegrant.FieldResourceType:
+		return m.ResourceType()
+	case resourcegrant.FieldResourceID:
+		return m.ResourceID()
+	case resourcegrant.FieldRole:
+		return m.Role()
+	case resourcegrant.FieldGrantedBy:
+		return m.GrantedBy()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ResourceGrantMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case resourcegrant.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case resourcegrant.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case resourcegrant.FieldPrincipalID:
+		return m.OldPrincipalID(ctx)
+	case resourcegrant.FieldOrganizationID:
+		return m.OldOrganizationID(ctx)
+	case resourcegrant.FieldResourceType:
+		return m.OldResourceType(ctx)
+	case resourcegrant.FieldResourceID:
+		return m.OldResourceID(ctx)
+	case resourcegrant.FieldRole:
+		return m.OldRole(ctx)
+	case resourcegrant.FieldGrantedBy:
+		return m.OldGrantedBy(ctx)
+	}
+	return nil, fmt.Errorf("unknown ResourceGrant field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ResourceGrantMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case resourcegrant.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case resourcegrant.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case resourcegrant.FieldPrincipalID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrincipalID(v)
+		return nil
+	case resourcegrant.FieldOrganizationID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrganizationID(v)
+		return nil
+	case resourcegrant.FieldResourceType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceType(v)
+		return nil
+	case resourcegrant.FieldResourceID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceID(v)
+		return nil
+	case resourcegrant.FieldRole:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRole(v)
+		return nil
+	case resourcegrant.FieldGrantedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGrantedBy(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ResourceGrant field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ResourceGrantMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ResourceGrantMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ResourceGrantMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ResourceGrant numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ResourceGrantMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(resourcegrant.FieldGrantedBy) {
+		fields = append(fields, resourcegrant.FieldGrantedBy)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ResourceGrantMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ResourceGrantMutation) ClearField(name string) error {
+	switch name {
+	case resourcegrant.FieldGrantedBy:
+		m.ClearGrantedBy()
+		return nil
+	}
+	return fmt.Errorf("unknown ResourceGrant nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ResourceGrantMutation) ResetField(name string) error {
+	switch name {
+	case resourcegrant.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case resourcegrant.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case resourcegrant.FieldPrincipalID:
+		m.ResetPrincipalID()
+		return nil
+	case resourcegrant.FieldOrganizationID:
+		m.ResetOrganizationID()
+		return nil
+	case resourcegrant.FieldResourceType:
+		m.ResetResourceType()
+		return nil
+	case resourcegrant.FieldResourceID:
+		m.ResetResourceID()
+		return nil
+	case resourcegrant.FieldRole:
+		m.ResetRole()
+		return nil
+	case resourcegrant.FieldGrantedBy:
+		m.ResetGrantedBy()
+		return nil
+	}
+	return fmt.Errorf("unknown ResourceGrant field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ResourceGrantMutation) AddedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.principal != nil {
+		edges = append(edges, resourcegrant.EdgePrincipal)
+	}
+	if m.organization != nil {
+		edges = append(edges, resourcegrant.EdgeOrganization)
+	}
+	if m.granter != nil {
+		edges = append(edges, resourcegrant.EdgeGranter)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ResourceGrantMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case resourcegrant.EdgePrincipal:
+		if id := m.principal; id != nil {
+			return []ent.Value{*id}
+		}
+	case resourcegrant.EdgeOrganization:
+		if id := m.organization; id != nil {
+			return []ent.Value{*id}
+		}
+	case resourcegrant.EdgeGranter:
+		if id := m.granter; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ResourceGrantMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 3)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ResourceGrantMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ResourceGrantMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.clearedprincipal {
+		edges = append(edges, resourcegrant.EdgePrincipal)
+	}
+	if m.clearedorganization {
+		edges = append(edges, resourcegrant.EdgeOrganization)
+	}
+	if m.clearedgranter {
+		edges = append(edges, resourcegrant.EdgeGranter)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ResourceGrantMutation) EdgeCleared(name string) bool {
+	switch name {
+	case resourcegrant.EdgePrincipal:
+		return m.clearedprincipal
+	case resourcegrant.EdgeOrganization:
+		return m.clearedorganization
+	case resourcegrant.EdgeGranter:
+		return m.clearedgranter
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ResourceGrantMutation) ClearEdge(name string) error {
+	switch name {
+	case resourcegrant.EdgePrincipal:
+		m.ClearPrincipal()
+		return nil
+	case resourcegrant.EdgeOrganization:
+		m.ClearOrganization()
+		return nil
+	case resourcegrant.EdgeGranter:
+		m.ClearGranter()
+		return nil
+	}
+	return fmt.Errorf("unknown ResourceGrant unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ResourceGrantMutation) ResetEdge(name string) error {
+	switch name {
+	case resourcegrant.EdgePrincipal:
+		m.ResetPrincipal()
+		return nil
+	case resourcegrant.EdgeOrganization:
+		m.ResetOrganization()
+		return nil
+	case resourcegrant.EdgeGranter:
+		m.ResetGranter()
+		return nil
+	}
+	return fmt.Errorf("unknown ResourceGrant edge %s", name)
 }
 
 // SeatAssignmentMutation represents an operation that mutates the SeatAssignment nodes in the graph.
