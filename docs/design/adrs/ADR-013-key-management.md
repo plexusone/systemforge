@@ -29,17 +29,31 @@ changing the data.
 
 ## Decision
 
-1. **SystemForge has one key management package** (`keys`) that every
-   encryption use in the platform goes through, replacing the per-package
-   mechanisms over time. Applications use it for their own data through the
-   same interface.
+1. **Key management is a subsystem with one library at its core.** The
+   `keys` package is the library every encryption use in the platform goes
+   through, replacing the per-package mechanisms over time; applications use
+   it for their own data through the same interface. An embeddable service,
+   `keyssvc`, follows the `systemauth` / `systemauthsvc` split and owns the
+   control plane: the key registry (purposes, versions, states), rotation
+   policy and scheduling, provider configuration and health, retirement and
+   destruction requests, audit, and status reporting through an admin API and
+   a CLI. Key custody is a trust boundary, so the service has its own tables
+   and narrow interface, and holds the provider credentials; application
+   code never reads key material.
+   - **Encrypt and decrypt stay in-process.** The library caches unwrapped
+     data keys in memory, so no network call is made per read or write and a
+     key service outage does not stop reads of cached keys. The service is
+     never on the data path.
+   - **It runs inside the monolith by default** and is split into its own
+     process only when another process needs it, like SystemAuth.
 2. **Envelope encryption.** Data is encrypted with a data key (DEK);
    DEKs are encrypted (wrapped) by a key-encryption key (KEK) held by a
    `KeyProvider`. Ciphertext carries the identifier and version of the key
    that wrapped it, so any record can be decrypted, rotated or destroyed
    knowing only what is stored beside it.
 3. **Providers are pluggable.** A provider wraps and unwraps and never
-   exposes a KEK. Initial providers: a local provider (a key file or
+   exposes a KEK. The KEK may be a symmetric key or an asymmetric keypair;
+   `Wrap` and `Unwrap` are the same either way (decision 11). Initial providers: a local provider (a key file or
    environment-supplied key, for development and single-host deployments)
    and a cloud KMS provider interface with a first implementation for the
    hosting target. A deployment selects the provider by configuration.
@@ -52,7 +66,9 @@ changing the data.
 5. **Rotation re-wraps, it does not re-encrypt.** Rotating a KEK re-wraps
    its DEKs; rotating a DEK applies to new data and to data re-encrypted on
    write or by a background job. Old versions stay available for decryption
-   until nothing references them.
+   until nothing references them. Rotation is online and needs no downtime:
+   ciphertext carries the key version that wrapped it, so old and new
+   versions are read side by side. Schedule and procedure are decision 12.
 6. **Crypto-shredding is a supported erasure strategy.** An entity may be
    registered with a per-subject DEK (ADR-011's erasure strategies gain
    `shred`): erasure destroys that subject's DEK, which makes the subject's
@@ -71,6 +87,55 @@ changing the data.
    snapshots can destroy that DEK). A per-subject DEK is added when a
    subject's data participates in more than one hold or when crypto-shredding
    is selected for the subject.
+10. **Data keys have a configurable granularity,** chosen when an entity
+    or store is registered:
+
+    | Granularity | Fits | Cost |
+    |---|---|---|
+    | Per object | Files, exports, snapshots; erasing one object is trivial | One wrap and unwrap per read; with a remote KMS, a call per read unless the unwrapped key is cached |
+    | Per subject or per hold | Rows tied to a person or a hold (decision 9) | Erasure or release destroys one key |
+    | Per purpose | High-volume, low-sensitivity data such as sessions | A cap on encryptions per key (decision 12) |
+
+    There is no single default: the registration states one, and the catalog
+    (ADR-012) records it.
+11. **Bulk data is never encrypted directly with an asymmetric key.** An
+    asymmetric KEK is used as a hybrid: a random symmetric data key
+    (AES-256-GCM) encrypts the data and is wrapped to the public key (RSA-OAEP
+    or HPKE), with the wrapped key stored beside the ciphertext; reading
+    unwraps with the private key, then decrypts. Asymmetric KEKs are for
+    components that must encrypt without being able to decrypt, such as hold
+    snapshots and exports sealed to a key held in a managed service or offline.
+    Symmetric KEKs from a managed service or the local provider are the
+    default for ordinary platform data. Rotating an asymmetric KEK creates a
+    new keypair and keeps old private versions for decryption, subject to
+    decision 7.
+12. **Rotation is automatic, with defaults by key type.** Each is
+    configurable per purpose.
+
+    | Key | Default | Notes |
+    |---|---|---|
+    | KEK | 365 days; floor 90 | Re-wraps data keys; no data is re-encrypted |
+    | Data key | New key every 90 days or after N encryptions per purpose, whichever is first | Applies to new writes; old data is re-encrypted lazily on write, or by a throttled, resumable background job after a compromise or policy change |
+    | Token signing key (if in scope, see open questions) | 90 days, with a published overlap longer than relying parties' JWKS cache time | |
+    | Snapshot, per-hold and per-subject keys | Never by schedule | Destroyed by release or erasure (decisions 6 and 9) |
+
+    - A managed provider rotates automatically. The local provider rotates
+      automatically only after its keyring is verified as backed up;
+      otherwise it warns and requires an operator `keys rotate`, because a
+      restored backup that predates a rotation would lose everything wrapped
+      under the newer version. `keys status` flags a keyring not backed up
+      since its last rotation.
+    - Rotation never deletes old versions. Retirement is a separate step with
+      its own delay, and never while a hold covers the data (decision 7).
+    - A failed or overdue rotation raises an alert; a key past its period is
+      reported, not silently kept.
+13. **Emergency rotation is a separate procedure from scheduled rotation.**
+    If a KEK is compromised, re-wrapping is not enough: the old KEK version
+    is destroyed (subject to holds, with the approval path of ADR-012's
+    decision 11 available but not blocking an emergency) and the data keys
+    are rotated. If a data key is exposed, its data is re-encrypted under a
+    new key. Both are audited, and the procedure is documented with the
+    provider.
 
 ## Consequences
 
@@ -84,6 +149,11 @@ changing the data.
   The local provider is only as safe as the host; the documentation says
   so and recommends a managed provider for any deployment holding data under
   hold.
+- **A control plane to run.** `keyssvc` adds tables, an admin API and a CLI
+  that need the same care as SystemAuth, but only the library is on the data
+  path.
+- **Rotation needs no downtime and no cutover**, at the cost of keeping old
+  key versions until nothing references them.
 - **Migration work:** existing sealed secrets and signing keys move onto
   the package incrementally, each behind its own change.
 
@@ -93,6 +163,12 @@ changing the data.
   audit cannot be done consistently, and erasure cannot reach backups.
 - **Require a cloud KMS everywhere.** Rejected: excludes single-host and
   local development, and ties the platform to one vendor.
+- **A remote key service on the data path.** Rejected: it adds latency and
+  an availability dependency to every read and write. Keys are unwrapped
+  once and cached in process.
+- **Encrypt bulk data directly with an asymmetric key.** Rejected:
+  payload limits and cost; hybrid encryption (decision 11) gives the same
+  separation of encrypt and decrypt.
 - **Encrypt the database as a whole only.** Insufficient: it does not give
   per-purpose or per-subject destruction, and it does not protect exports,
   snapshots or object-store files.
@@ -102,7 +178,10 @@ changing the data.
 - Which KMS provider to implement first.
 - How per-subject keys are stored and cached so that reads stay fast.
 - Whether the key package also provides signing-key management for tokens
-  in its first version, or only data encryption.
+  in its first version, or only data encryption. Decision 12 gives the
+  rotation policy that would apply if it does.
+- The default `N` for the encryptions-per-key cap, and the default delay
+  before a retired key version is destroyed.
 - Key escrow and recovery for the local provider.
 - Interaction with the database's own encryption at rest and with customers
   who bring their own keys.
