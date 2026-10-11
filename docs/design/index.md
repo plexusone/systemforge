@@ -37,6 +37,7 @@ describe them as features.
 | [ADR-011](adrs/ADR-011-lifecycle-states-data-classification-and-privacy-rights.md) | Lifecycle states, data classification and privacy rights (would amend ADR-009) |
 | [ADR-012](adrs/ADR-012-data-governance-enforcement-and-legal-hold.md) | Data governance catalog, legal holds and enforcement |
 | [ADR-013](adrs/ADR-013-key-management.md) | Key management |
+| [ADR-014](adrs/ADR-014-application-roles-and-seat-assignments.md) | Application roles and marketplace seat assignments are separate records (would amend ADR-007 decision 8) |
 
 ## Guides
 

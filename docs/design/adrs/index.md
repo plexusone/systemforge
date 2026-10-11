@@ -20,6 +20,7 @@ under `docs/specs/` and execute these decisions.
 | [ADR-011](ADR-011-lifecycle-states-data-classification-and-privacy-rights.md) | Lifecycle States, Data Classification and Privacy Rights (amends ADR-009) | Proposed |
 | [ADR-012](ADR-012-data-governance-enforcement-and-legal-hold.md) | Data Governance Catalog, Legal Holds and Enforcement | Proposed |
 | [ADR-013](ADR-013-key-management.md) | Key Management | Proposed |
+| [ADR-014](ADR-014-application-roles-and-seat-assignments.md) | Application Roles and Marketplace Seat Assignments Are Separate Records (amends ADR-007 decision 8) | Proposed |
 
 ## Statuses
 
