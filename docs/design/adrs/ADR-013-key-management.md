@@ -272,6 +272,21 @@ specification governs the mechanism while this ADR governs the policy.
     - **Metadata only.** The export never contains key material or secret
       values, and a use of a primitive outside keyforge is found by source and
       dependency analysis rather than assumed absent.
+18. **Recovery is proven by an automated drill, and judgment is by agents.**
+    - A recovery drill restores the registry and keyring from backup into an
+      isolated environment, decrypts a sentinel for every retained key version,
+      measures recovery time and recovery point against configured limits,
+      runs negative checks that must fail, and destroys the environment. It
+      runs quarterly and after any change to the provider or backups, with no
+      person involved.
+    - **Objective results are the engine's** and are final. **Judgments** such
+      as severity, trends against earlier drills, likely cause and
+      recommendations are written into a DR report by an analyst agent that
+      receives metadata only, never key material, plaintext or access to the
+      restored environment.
+    - The report is evidence for the system's crypto specification: objective
+      results are `verified`; the analyst's conclusions are `inferred` until
+      someone attests them, and the analyst cannot change policy or key state.
 
 ## Consequences
 
