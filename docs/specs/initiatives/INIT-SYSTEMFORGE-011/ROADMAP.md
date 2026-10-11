@@ -100,7 +100,7 @@ INIT-SYSTEMFORGE-008.
 
 **Theme:** Architecture pages describe what shipped; release.
 
-- [ ] `RMI-SYSTEMFORGE-146` Documentation and release: update `docs/design/architecture/{organizations,managed-principals,authorization}.md` to the implemented behavior (planned sections emptied), guides for invites, roles, collaborators and slugs, changelog, release notes, tag v0.15.0 after CI
+- [ ] `RMI-SYSTEMFORGE-146` Documentation and release: update `docs/design/architecture/{organizations,managed-principals,authorization}.md` to the implemented behavior (planned sections emptied), guides for invites, roles, collaborators and slugs, changelog, release notes, tag v0.14.0 after CI
   - Depends on: `RMI-SYSTEMFORGE-128`
   - Depends on: `RMI-SYSTEMFORGE-133`
   - Depends on: `RMI-SYSTEMFORGE-134`

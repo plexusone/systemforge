@@ -13,8 +13,9 @@
   creating them.
 - The `authz/rbac` and `authz/rebac/spicedb` packages exist under their
   mode names with `authz/simple` and `authz/spicedb` forwarding to them.
-- v0.14.0 tagged (the INIT-007/INIT-008 release), so this initiative ships
-  as v0.15.0 on its own.
+- No release was cut between INIT-007/INIT-008 and this initiative, and the
+  local `aauth-go` replace directive left no earlier commit that could be
+  tagged, so all of it ships together as v0.14.0.
 
 ## Build Order
 
@@ -90,7 +91,7 @@ invitation.
 Rewrite the organizations, managed-principals and authorization
 architecture pages to describe what shipped and empty their planned
 sections; add guides for invites, application roles, collaborators and
-slugs; update the changelog and release notes; tag v0.15.0 after CI passes
+slugs; update the changelog and release notes; tag v0.14.0 after CI passes
 and record the release. Exit: the PRD success criteria hold and the mkdocs
 strict build is clean.
 
@@ -108,7 +109,7 @@ strict build is clean.
 
 ## Release
 
-v0.15.0, after all phases are complete and CI passes on the pushed
+v0.14.0, after all phases are complete and CI passes on the pushed
 commits; tag only after CI is green. The release notes call out the
 `plan` removal, the changed refresh-token semantics, the new token
 lifetime default and ceiling, the `collaborator` role, and the forwarder
