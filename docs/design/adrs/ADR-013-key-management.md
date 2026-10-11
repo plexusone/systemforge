@@ -186,29 +186,24 @@ specification governs the mechanism while this ADR governs the policy.
     - **Standard library only.** No third-party post-quantum implementation
       is used. The envelope's algorithm identifier makes each of these a
       format addition, not a change to stored data.
-15. **FIPS 140-3 operation is supported and tested, and is the default
-    posture for a production deployment that has no reason to leave it.**
-    The Go standard library includes a FIPS 140-3 cryptographic module,
-    selected at build time (`GOFIPS140`) and enabled at run time
-    (`GODEBUG=fips140=on`, or `only` to make non-approved algorithms fail).
-    - **keyforge and the `keys` package must run under `fips140=only`.**
-      Only approved constructions are used on the default paths: AES-256-GCM
-      through `cipher.NewGCMWithRandomNonce` (the only GCM constructor that
-      mode permits), HKDF and HMAC with SHA-2, ECDSA, Ed25519, RSA-OAEP, and
-      ML-KEM. Non-approved options, such as ChaCha20-Poly1305 or X25519, are
-      never the default, are isolated behind an explicit option, and are
-      refused in `only` mode. Conformance tests run in a FIPS-only
-      configuration.
-    - **Build and run with the validated module where compliance matters.**
-      A build that pins the certified module version has validation
-      evidence; a build using the in-tree module in FIPS mode has the same
-      behavior without it. The deployment records which it uses, and `status`
-      reports it.
-    - **Reasons to run outside FIPS mode are stated, not assumed away:**
-      a dependency that needs a non-approved algorithm, a module version that
+15. **FIPS 140-3 operation is a supported configuration of the selector,
+    and the platform starts without requiring it.** The Go standard library
+    includes a FIPS 140-3 cryptographic module, selected at build time
+    (`GOFIPS140`) and enabled at run time (`GODEBUG=fips140=on`, or `only` to
+    make non-approved algorithms fail).
+    - **Start in the `standard` profile.** The first release does not require
+      FIPS mode and implements no non-approved algorithm. Its one algorithm,
+      AES-256-GCM through `cipher.NewGCMWithRandomNonce`, is approved in both
+      profiles, so the code stays valid under `fips140=only` by construction.
+    - **The selector is the deliverable** (decision 16). Requiring FIPS-only
+      operation, or adding the first non-approved algorithm, is then a
+      registry entry and a configuration change. A FIPS-only CI job and the
+      recording of which module version a build uses are added when FIPS
+      operation is first required.
+    - **Reasons to run outside FIPS mode are stated, not assumed away:** a
+      dependency that needs a non-approved algorithm, a module version that
       lacks an algorithm the deployment wants (the validated v1.0.0 module has
-      no ML-DSA), or a development environment. Leaving FIPS mode is a
-      configuration decision recorded in the deployment, not a code path.
+      no ML-DSA), or a development environment.
     - **FIPS is a constraint, not a security guarantee.** It validates a
       module on tested platforms; it does not cover the rest of an
       application. This ADR does not claim a deployment is "FIPS compliant".
@@ -307,9 +302,9 @@ specification governs the mechanism while this ADR governs the policy.
   key versions until nothing references them.
 - **Migration work:** existing sealed secrets and signing keys move onto
   the package incrementally, each behind its own change.
-- **Compliance-driven deployments are first-class.** Running under FIPS mode
-  is a tested configuration, so a customer that requires it is a
-  configuration change, not a fork.
+- **A compliance-driven deployment is a configuration change, not a
+  fork.** The selector already distinguishes the profiles, so the work when a
+  customer requires FIPS-only operation is to enable and test it.
 - **Some existing choices are outside FIPS-approved algorithms.** The
   identity credential service hashes passwords with Argon2id, which is not an
   approved algorithm and is not part of the standard library's module. A
