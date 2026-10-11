@@ -74,7 +74,7 @@ type CreateInviteRequest struct {
 	Slug string `path:"slug"`
 	Body struct {
 		Email              string            `json:"email" required:"true" format:"email"`
-		Role               string            `json:"role" required:"true" enum:"owner,admin,member"`
+		Role               string            `json:"role" required:"true" enum:"owner,admin,member,collaborator"`
 		AppRoles           map[string]string `json:"app_roles,omitempty" doc:"Application roles to grant on acceptance, application identifier to role; none is preselected"`
 		Message            *string           `json:"message,omitempty"`
 		InviterPrincipalID string            `json:"inviter_principal_id,omitempty" required:"false" format:"uuid" doc:"Deprecated: the inviter is the authenticated caller; when present it must equal the caller"`

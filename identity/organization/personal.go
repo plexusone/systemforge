@@ -16,17 +16,37 @@ import (
 // only role a personal organization accepts besides its owner.
 const RoleCollaborator = "collaborator"
 
+// ErrInvalidRole is returned for a membership role that is not an
+// organization role. The organization roles are owner, admin, member and
+// collaborator; editor and viewer were retired (ADR-008), and finer access
+// to one resource is a resource role granted through the authorization
+// provider.
+var ErrInvalidRole = errors.New("invalid organization role")
+
+// ValidRole reports whether role is an organization role.
+func ValidRole(role string) bool {
+	switch role {
+	case RoleOwner, RoleAdmin, RoleMember, RoleCollaborator:
+		return true
+	}
+	return false
+}
+
 // ErrPersonalOrganization is returned when an operation would give a
 // personal organization a second member or hand it to someone else. A
 // personal organization has exactly one member, its owner (ADR-006
 // decision 3), and collaborators.
 var ErrPersonalOrganization = errors.New("operation not allowed on a personal organization")
 
-// RequireMembersAllowed returns ErrPersonalOrganization when orgID is a
-// personal organization and role is not RoleCollaborator. It is the check
-// every path that creates or changes a membership applies, including the
-// invite service and SCIM group membership.
+// RequireMembersAllowed returns ErrInvalidRole when role is not an
+// organization role, and ErrPersonalOrganization when orgID is a personal
+// organization and role is not RoleCollaborator. It is the check every path
+// that creates or changes a membership applies, including the invite
+// service and SCIM group membership.
 func RequireMembersAllowed(ctx context.Context, client *ent.Client, orgID uuid.UUID, role string) error {
+	if !ValidRole(role) {
+		return fmt.Errorf("%w: %q (want owner, admin, member or collaborator)", ErrInvalidRole, role)
+	}
 	if role == RoleCollaborator {
 		return nil
 	}

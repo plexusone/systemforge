@@ -42,7 +42,7 @@ type AddMemberRequest struct {
 	Slug string `path:"slug"`
 	Body struct {
 		PrincipalID string   `json:"principal_id" required:"true" format:"uuid"`
-		Role        string   `json:"role" required:"true" enum:"owner,admin,member"`
+		Role        string   `json:"role" required:"true" enum:"owner,admin,member,collaborator"`
 		Permissions []string `json:"permissions,omitempty"`
 	}
 }
@@ -57,7 +57,7 @@ type UpdateMemberRequest struct {
 	Slug        string `path:"slug"`
 	PrincipalID string `path:"principal_id" format:"uuid"`
 	Body        struct {
-		Role        *string  `json:"role,omitempty" enum:"owner,admin,member"`
+		Role        *string  `json:"role,omitempty" enum:"owner,admin,member,collaborator"`
 		Permissions []string `json:"permissions,omitempty"`
 		Active      *bool    `json:"active,omitempty"`
 	}

@@ -79,3 +79,33 @@ func TestPersonalOrganizationRules(t *testing.T) {
 		t.Errorf("TransferOwnership of a team: %v", err)
 	}
 }
+
+// TestRetiredRolesAreRefused checks that editor and viewer, retired as
+// organization roles, and unknown roles are refused wherever a membership
+// is created or changed.
+func TestRetiredRolesAreRefused(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	svc := organization.NewService(db)
+	owner := newHuman(t, db, "owner-roles@example.com")
+	team, err := svc.Create(ctx, organization.CreateOrganizationInput{Name: "Acme", Slug: "acme-roles", OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &owner})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	for _, role := range []string{"editor", "viewer", "guest", ""} {
+		_, err := svc.AddMember(ctx, organization.AddMemberInput{OrganizationID: team.ID, PrincipalID: newHuman(t, db, uuid.NewString()+"@example.com"), Role: role})
+		if !errors.Is(err, organization.ErrInvalidRole) {
+			t.Errorf("AddMember(%q) = %v, want ErrInvalidRole", role, err)
+		}
+	}
+	for _, role := range []string{"owner", "admin", "member", "collaborator"} {
+		if !organization.ValidRole(role) {
+			t.Errorf("ValidRole(%q) = false", role)
+		}
+	}
+}
