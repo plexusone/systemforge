@@ -223,21 +223,24 @@ func TestSocialLoginBackfillsPersonalOrg(t *testing.T) {
 // principal with an email gets a generated slug and its managers' name,
 // never a handle derived from its address or provider username (ADR-009).
 func TestManagedPrincipalPersonalOrgSlugIgnoresEmail(t *testing.T) {
+	// The fixture uses a generic name; a real first name could be a word the
+	// slug generator draws (it has a "robin"), and the leak check would fail
+	// at random.
 	ctx := context.Background()
 	db := openTestEnt(t)
 	dir := NewEntPrincipalDirectory(db)
 	now := time.Now()
 
-	student := seedHuman(t, db, "robin.smith@school.example", true)
+	student := seedHuman(t, db, "example.user@school.example", true)
 	guardian := seedHuman(t, db, "guardian@example.com", true)
 	if err := db.ManagerRelationship.Create().SetManagedPrincipalID(student).SetManagerPrincipalID(guardian).
 		SetRole("guardian").Exec(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Principal.UpdateOneID(student).SetDisplayName("Robin").Exec(ctx); err != nil {
+	if err := db.Principal.UpdateOneID(student).SetDisplayName("Pat").Exec(ctx); err != nil {
 		t.Fatal(err)
 	}
-	login := ExternalLogin{Provider: "google", Subject: "g-student", Email: "robin.smith@school.example", EmailVerified: true, Username: "robinsmith", Name: "Robin Smith"}
+	login := ExternalLogin{Provider: "google", Subject: "g-student", Email: "example.user@school.example", EmailVerified: true, Username: "exampleuser", Name: "Example User"}
 	if err := dir.LinkExternalIdentity(ctx, student, login); err != nil {
 		t.Fatal(err)
 	}
@@ -247,12 +250,12 @@ func TestManagedPrincipalPersonalOrgSlugIgnoresEmail(t *testing.T) {
 		t.Fatalf("login = %+v, %v", p, err)
 	}
 	org := db.Organization.Query().Where(entorg.OwnerPrincipalID(student)).OnlyX(ctx)
-	for _, leak := range []string{"robin", "smith", "school", "example"} {
+	for _, leak := range []string{"user", "school", "example"} {
 		if strings.Contains(org.Slug, leak) {
 			t.Errorf("slug %q reveals %q", org.Slug, leak)
 		}
 	}
-	if org.Name != "Robin" {
+	if org.Name != "Pat" {
 		t.Errorf("organization name = %q, want the managers' display name", org.Name)
 	}
 	if org.LogoURL != nil {
