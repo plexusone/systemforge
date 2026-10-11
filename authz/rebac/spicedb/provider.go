@@ -202,20 +202,30 @@ const BaseSchema = authz.BaseSpiceDBSchema
 // type that accepts collaborators (ADR-008). It declares the resource-role
 // ladder (viewer, contributor, maintainer) and attaches the resource to its
 // organization, so members keep their organization-wide access and a
-// collaborator has only the direct grant. Applications prefix resourceType
-// with their identifier ("myapp_project") and write the fragment into their
+// collaborator has only the direct grant. An optional owner relation holds
+// the resource's creator. Applications prefix resourceType with their
+// identifier ("myapp_project") and write the fragment into their
 // vocabulary.
 func ResourceSchema(resourceType string) string {
 	return fmt.Sprintf(`
 definition %s {
     relation org: organization
+    relation owner: principal
     relation viewer: principal
     relation contributor: principal
     relation maintainer: principal
 
-    permission view = viewer + contributor + maintainer + org->view
-    permission edit = contributor + maintainer + org->edit
-    permission manage = maintainer + org->manage
+    // The owner and maintainers manage; organization admins do too.
+    permission manage = owner + maintainer + org->manage
+
+    // Contributors edit, and so does anyone who manages.
+    permission edit = manage + contributor + org->edit
+
+    // Viewers view, and so does anyone who edits or is a member.
+    permission view = edit + viewer + org->view
+
+    // Only the owner and organization managers delete.
+    permission delete = owner + org->manage
 }
 `, resourceType)
 }
