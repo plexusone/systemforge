@@ -1,11 +1,16 @@
 package marketplace
 
 import (
+	"regexp"
 	"testing"
 	"time"
 
+	"github.com/authzed/spicedb/pkg/schemadsl/compiler"
+	"github.com/authzed/spicedb/pkg/schemadsl/input"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/plexusone/systemforge/authz"
 )
 
 func TestListing_IsPublished(t *testing.T) {
@@ -261,8 +266,7 @@ func TestPlanTiers(t *testing.T) {
 func TestMarketplaceSchema(t *testing.T) {
 	// Verify schema is embedded and non-empty
 	assert.NotEmpty(t, MarketplaceSchema)
-	assert.Contains(t, MarketplaceSchema, "definition principal")
-	assert.Contains(t, MarketplaceSchema, "definition organization")
+	assert.Contains(t, MarketplaceSchema, "definition marketplace_org")
 	assert.Contains(t, MarketplaceSchema, "definition creator_org")
 	assert.Contains(t, MarketplaceSchema, "definition listing")
 	assert.Contains(t, MarketplaceSchema, "definition license")
@@ -279,7 +283,36 @@ definition course {
 `
 	merged := MergeSchema(appSchema)
 	assert.Contains(t, merged, "definition principal")
+	assert.Contains(t, merged, "definition marketplace_org")
 	assert.Contains(t, merged, "definition course")
+	assertSchemaCompiles(t, merged)
+}
+
+// assertSchemaCompiles compiles a composed schema with SpiceDB's own
+// compiler, so unknown references and duplicate definitions fail here
+// rather than when a deployment writes the schema.
+func assertSchemaCompiles(t *testing.T, schema string) {
+	t.Helper()
+	if _, err := compiler.Compile(compiler.InputSchema{Source: input.Source("marketplace"), SchemaString: schema}, compiler.AllowUnprefixedObjectType()); err != nil {
+		t.Fatalf("composed schema does not compile: %v", err)
+	}
+}
+
+// TestMarketplaceSchemaComposesWithBase checks the fragment against the
+// base schema: it compiles after it, redefines none of its definitions,
+// and attaches through the marketplace_org facet.
+func TestMarketplaceSchemaComposesWithBase(t *testing.T) {
+	assertSchemaCompiles(t, MergeSchema(""))
+
+	definition := regexp.MustCompile(`(?m)^definition\s+(\w+)`)
+	base := map[string]bool{}
+	for _, m := range definition.FindAllStringSubmatch(authz.BaseSpiceDBSchema, -1) {
+		base[m[1]] = true
+	}
+	for _, m := range definition.FindAllStringSubmatch(MarketplaceSchema, -1) {
+		assert.Falsef(t, base[m[1]], "marketplace.zed redefines the base definition %q", m[1])
+	}
+	assert.Regexp(t, `(?s)definition marketplace_org \{.*relation org: organization`, MarketplaceSchema)
 }
 
 func TestListingJSON(t *testing.T) {

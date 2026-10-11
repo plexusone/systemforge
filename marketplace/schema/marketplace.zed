@@ -1,46 +1,38 @@
-// CoreForge Marketplace Schema
+// SystemForge Marketplace Schema
 // This schema defines authorization for two-sided marketplace applications.
+// It composes after the SystemForge base schema, which owns "principal" and
+// "organization": use marketplace.MergeSchema, or write
+// authz.BaseSpiceDBSchema first.
 //
 // Entity Types:
-// - principal: Users, services, or other entities that can perform actions
-// - organization: Consumer organizations that subscribe to the platform
+// - marketplace_org: Facet on the base organization for consumer
+//   organizations that subscribe to the platform
 // - creator_org: Creator organizations that publish products
 // - listing: Marketplace product listings
 // - license: Entitlements granting access to products
 // - subscription: Platform-level subscriptions
 
 // =============================================================================
-// PRINCIPALS
-// =============================================================================
-
-definition principal {}
-
-// =============================================================================
 // CONSUMER ORGANIZATIONS
 // =============================================================================
 
-// organization represents a consumer organization that subscribes to the platform,
-// purchases products, and uses features.
-definition organization {
-    // Membership relations (hierarchical)
-    relation owner: principal
-    relation admin: principal
-    relation member: principal
-    relation viewer: principal
+// marketplace_org attaches the marketplace to the shared organization of the
+// SystemForge base schema (authz.BaseSpiceDBSchema), which the marketplace
+// never redefines. A consumer organization subscribes to the platform,
+// purchases products and uses licensed features; each permission derives
+// from the base organization's membership ladder. Collaborators hold none
+// of them, since the base organization grants a collaborator only "list".
+//
+// Write one relationship per organization:
+//   marketplace_org:<org-id>#org@organization:<org-id>
+definition marketplace_org {
+    relation org: organization
 
-    // Membership hierarchy permissions
-    permission manage = owner + admin
-    permission edit = manage + member
-    permission view = edit + viewer
-    permission use = view
-
-    // Organization operations
-    permission delete = owner
-    permission settings = manage
-    permission billing = owner + admin
-    permission invite_member = manage
-    permission remove_member = manage
-    permission purchase = manage
+    permission manage = org->manage
+    permission view = org->view
+    permission use = org->view
+    permission billing = org->manage
+    permission purchase = org->manage
 }
 
 // =============================================================================
@@ -80,7 +72,7 @@ definition listing {
     relation owner: principal
 
     // Licensing
-    relation licensed_org: organization
+    relation licensed_org: marketplace_org
 
     // Creator permissions
     permission manage = owner + creator_org->manage
@@ -102,7 +94,7 @@ definition listing {
 definition license {
     // References
     relation listing: listing
-    relation organization: organization
+    relation organization: marketplace_org
     relation purchased_by: principal
 
     // Seat assignments (for per-seat licenses)
@@ -123,7 +115,7 @@ definition license {
 // subscription represents a platform-level subscription for an organization.
 definition subscription {
     // References
-    relation organization: organization
+    relation organization: marketplace_org
     relation subscriber: principal
 
     // Permissions
