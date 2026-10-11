@@ -15,7 +15,11 @@ how a managed principal's slug is chosen. The user-facing guide is
 (managed principals and manager relationships),
 [ADR-009](../adrs/ADR-009-management-is-a-relationship.md)
 (management is a relationship, not the absence of an email; amends
-ADR-005).
+ADR-005),
+[ADR-006](../adrs/ADR-006-organization-lifecycle-personal-team-slugs.md)
+(how a managed principal's slug is chosen),
+[ADR-010](../adrs/ADR-010-real-time-access-invalidation.md)
+(access changes recorded when management starts or ends).
 
 ## Definition as implemented
 

@@ -5,14 +5,16 @@ them, how people get in, what an organization is entitled to, and how a
 relying party learns a principal's memberships. The first part describes the
 system as implemented in `identity/organization`, `identity/invite`,
 `identity/signup`, `identity/systemauth`, `identity/relyingparty` and
-`marketplace`; the last section lists what the accepted decisions change
-that is not yet built.
+`marketplace`; the last section records where the implementation differs
+from the wording of the decisions.
 
 **Decisions:**
 [ADR-006](../adrs/ADR-006-organization-lifecycle-personal-team-slugs.md)
 (lifecycle, personal and team organizations, slugs, removal of `plan`),
 [ADR-007](../adrs/ADR-007-memberships-and-entitlements-as-claims.md)
 (memberships and entitlements as claims),
+[ADR-008](../adrs/ADR-008-resource-scoped-collaborators.md)
+(collaborators, resource grants, resource-targeted invites),
 [ADR-010](../adrs/ADR-010-real-time-access-invalidation.md)
 (real-time invalidation of access),
 [ADR-002](../adrs/ADR-002-centralized-social-login-systemauth.md)
@@ -155,7 +157,7 @@ back. There is no HTTP endpoint for the conversion yet.
 | `GetByID`, `GetBySlug`, `GetPersonalOrg` | Lookups |
 | `Update(id, input)` | Name, logo, description, website, settings; never the slug or type |
 | `Delete(id)` | Sets `active = false`; `syncer.UnregisterOrganization` |
-| `List(input)` | Filters: `OrgType`, `Plan`, `Active`, `MemberPrincipalID` (active memberships only), limit and offset |
+| `List(input)` | Filters: `OrgType`, `Active`, `MemberPrincipalID` (active memberships only), limit and offset |
 | `TransferOwnership(input)` | See [Ownership transfer](#ownership-transfer) |
 | `Rename(orgID, slug, actor)`, `ResolveSlug(slug)` | See [Renaming and the cooling-off period](#renaming-and-the-cooling-off-period) |
 | `SlugAvailable`, `GenerateSlug` | See above |
@@ -308,9 +310,12 @@ returned, with the rows already committed.
 - **Slug.** `signup.SlugForLogin(provider, username, email)` returns the
   GitHub username for `github`, the email local part for `google`, and the
   username (else the local part) for any other provider, normalized to a valid
-  slug. If that slug is taken, `-1` to `-100` and then an eight-character
-  random suffix are tried inside the transaction. Managed principals and
-  reserved slugs are not handled yet (see Planned changes).
+  slug. If that slug is taken or reserved (the built-in list, or the
+  deployment's through `PersonalOrgParams.ReservedSlugs`), `-1` to `-100` and
+  then an eight-character random suffix are tried inside the transaction. A
+  managed principal's organization is never slugged from an email:
+  `signup.SlugForManaged` returns a manager-entered value or a generated
+  `adjective-noun-NN` (see [Slugs](managed-principals.md#slugs)).
 - **Races.** Two first logins of the same identity race on the unique
   `(provider, subject)` constraint; the loser's transaction rolls back and
   `ResolveExternalLogin` re-reads the winner. A lost race for the slug alone
@@ -678,60 +683,32 @@ access-token lifetime and logs failures against the client ID.
 session store; the BFF serves it at `<BasePath>/auth/backchannel-logout`. See
 [Back-channel events](../../systemauth/relying-party.md#back-channel-events).
 
-## Planned changes
+## Where the implementation differs from the decisions
 
-Accepted decisions not yet implemented. Each item names the ADR that
-decides it.
+Every item of the accepted decisions this page covers is implemented. These
+are the places where the code is narrower than, or words things differently
+from, the ADR text; the ADRs are append-only and are not rewritten.
 
-### Lifecycle and slugs (ADR-006)
-
-- Slug derivation for a managed principal (a manager-entered slug, or a
-  generated one such as two words and a number, ADR-006 decision 2). The
-  GitHub and Google rules and the numeric suffix on collision are implemented
-  (see [Signup on first social login](#signup-on-first-social-login)).
-- ADR-006 speaks of listings with tiers; tiers (`plan_tier`) live on
-  subscriptions and listings have none. Listings map to applications and
-  subscriptions may be per listing instead (see
+- **Listings have no tier.** ADR-006 speaks of listings with tiers. Tiers
+  (`plan_tier`) live on subscriptions, a listing maps to an application,
+  and a subscription may be per listing (see
   [Entitlements via the marketplace](#entitlements-via-the-marketplace)).
-
-### Planned, not yet decided by an ADR
-
-- The display name becomes optional and defaults to the slug (today
-  `name` is required).
-- Reserved slugs: names the shell needs as path segments (`admin`, `api`,
-  `o`, `login`, product names) are refused for organizations.
-
-### Memberships and entitlements as claims (ADR-007)
-
-- Built: the `orgs` claim and `GET /oauth/userinfo/memberships` (see
-  [The `orgs` claim](#the-orgs-claim)).
-- Organization roles are `owner`, `admin`, `member` and `collaborator`
-  (ADR-008). Application roles are stored in `sf_app_roles` (see
-  [Application roles](#application-roles-identityapprole)); still to do is
-  making them replace seat assignments as the record of who may use what
-  (seat-licensed applications already count rows against the license).
-- Built: invites carry the application roles to grant (see [Invites](#invites)).
-  Still to do: `addMember` (adding without an invite) takes no application
-  roles; the administration pages for choosing them are the application's to
-  build, as this repository ships no UI. Removal from the
-  organization removes every application role and every resource grant
-  (built).
-
-### Real-time invalidation (ADR-010)
-
-- Built: the access-token lifetime defaults to 10 minutes and is capped at
-  15, and SystemAuth records every access change in `sf_access_changes` and
-  announces it to a sink (see [Access-change
-  records](#access-change-records-identityaccesschange)).
-- Built: relying parties keep a revocation cache keyed by principal (and
-  organization) and reject tokens issued before the change, after a
-  clock-skew margin (30 s default, 15 s floor); the cache is shared memory
-  in a modular monolith (see [Relying-party revocation
-  cache](#relying-party-revocation-cache-relyingpartyrevocationcache)), with
-  polling across replicas, replay after a restart and OIDC back-channel
-  delivery of an `access_change` event across deployments.
-- Built: a membership or role change does not revoke refresh tokens (ADR-007
-  decision 9 is amended); the next refresh issues reduced claims. Only
-  deactivation and explicit session revocation revoke refresh tokens.
-- Built: `GET /access-changes?since=` lets a restarted relying party rebuild
-  its cache.
+- **The display name is required.** `name` is `NotEmpty` on
+  `sf_organizations`; it does not default to the slug.
+- **Social login does not call `SignupOrGetExisting`.** See
+  [Signup on first social login](#signup-on-first-social-login).
+- **Application roles do not replace seat assignments.** ADR-007 decision 8
+  says the `sf_app_roles` table replaces seat assignments as the record of
+  who may use what. The marketplace seat assignments
+  (`LicenseService.AssignSeat`, `CheckPrincipal`) remain a separate record,
+  and a seat-licensed application counts its `sf_app_roles` rows against the
+  license (see [Application roles](#application-roles-identityapprole)).
+- **`addMember` takes no application roles.** Roles are granted by an invite
+  or afterwards through the application role endpoints. The administration
+  pages for choosing them are the application's to build; this repository
+  ships no UI.
+- **Rename and conversion are service methods.** `Rename` and
+  `ConvertToTeam` have no HTTP endpoint.
+- **Refresh tokens survive a role change.** ADR-010 decision 5 amends
+  ADR-007 decision 9: only deactivation and explicit session revocation
+  revoke refresh tokens.

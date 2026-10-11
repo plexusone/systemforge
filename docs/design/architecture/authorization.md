@@ -4,8 +4,9 @@ This page describes the authorization substrate as implemented in `authz`
 and its providers: the two-gate model, the application vocabulary, the base
 schema shared by every application, the role-based and relationship-based
 providers and what each can answer, the conformance suite that keeps them
-in step, and how identity changes reach them. The last section lists what
-the accepted decisions add that is not yet built. The normative
+in step, and how identity changes reach them. The last section states the
+rules for application roles and for revocation in request authorization.
+The normative
 cross-application contract is
 [Cross-Forge Authorization Conventions](../../authz-conventions.md).
 
@@ -15,7 +16,10 @@ cross-application contract is
 [ADR-008](../adrs/ADR-008-resource-scoped-collaborators.md)
 (resource-scoped collaborators, provider naming),
 [ADR-010](../adrs/ADR-010-real-time-access-invalidation.md)
-(revocation cache as part of request authorization).
+(revocation cache as part of request authorization),
+[ADR-005](../adrs/ADR-005-managed-principals-and-manager-relationships.md)
+(the manager relations in the base schema, see
+[Managed Principals](managed-principals.md)).
 
 ## The two-gate model
 
@@ -358,18 +362,20 @@ and organization from `session/middleware` claims. The organization,
 invite, marketplace and managed-principal APIs call the authorizer directly
 with the `PermOrg*` and manager permissions.
 
-## Request authorization today
+## Request authorization
 
 A request is authorized by the authenticator (`requestprincipal.Middleware`
 with `relyingparty.RequestAuthenticator`, or SystemAuth's own token
 middleware) establishing the principal and its scopes, and then by the
 handler's `Authorizer.Can` call. SystemAuth checks that a token's principal
 is still active on every token issue, refresh, introspection and userinfo
-call (`PrincipalStatus`), and nothing else: a token issued before a
-membership or role change is honored until it expires (10 minutes by
-default, 15 at most). SystemAuth records those changes in
-`sf_access_changes` so a relying party can refuse such tokens sooner (ADR-010;
-see the [organizations page](organizations.md#access-change-records-identityaccesschange)).
+call (`PrincipalStatus`). A token issued before a membership or role change
+is otherwise honored until it expires (10 minutes by default, 15 at most),
+unless the relying party consults a revocation cache: SystemAuth records
+each such change in `sf_access_changes`, and `relyingparty.BearerMiddleware`
+and the BFF refuse tokens issued before it (ADR-010; see the
+[organizations page](organizations.md#access-change-records-identityaccesschange)
+and [Revocation cache in request authorization](#revocation-cache-in-request-authorization-adr-010)).
 
 ### Access-change reasons
 
@@ -408,56 +414,54 @@ to be recorded as a reduced grant.
 | `management_ended` | The principal's management ended and its own capabilities were restored | `managedprincipal.Release`; `RemoveManager` removing the last manager of a principal with a verified email (every organization) |
 | `grant_reduced` | A resource grant was reduced or removed | `resourcegrant.Service.GrantResourceRole` giving a lower role, `RevokeResourceRole` (scoped to the resource's organization); granting or raising a role records nothing. Revoking a collaborator's last grant also records `membership_removed` |
 
-## Planned changes
+## Rules for application roles and revocation
 
-Accepted decisions not yet implemented. Each item names the ADR that
-decides it.
+These rules are implemented as described; the ADR each names holds the
+reasoning.
 
 ### Resource-scoped collaborators (ADR-008)
 
 - The base `organization` definition, `authz.OrgRolePermissions`, the
   parity test and the conventions carry the `collaborator` relation and the
-  `list` permission (built). A collaborator is a principal with a membership
-  of role `collaborator`, who has no `view`, `edit` or `manage` on the
-  organization; personal organizations accept such memberships.
-- Built: the standard resource-role ladder, the grant contract, both
-  providers' implementations, the vocabulary validation of collaborator-able
-  definitions and the shared suite across both modes (see [Resource
-  grants](#resource-grants)).
-- Built: `sf_invites` carries an optional resource type, resource ID and
-  resource role; accepting such an invite creates the collaborator
-  membership and the grant in one transaction (see
-  [Invites](organizations.md#invites)).
-- Built: the `authz` configuration key and `authz/mode.New` (see
-  [Configuring the mode](#configuring-the-mode-authz-key)).
-- Built: the `orgs` claim (ADR-007) lists a collaborator's organizations
-  with role `collaborator`; the resources are the application's to look up
-  with `ListResources`. Agents and managed principals are principals like
-  any other, so they are granted through the same operations, which
-  confines them to the granted resources.
+  `list` permission. A collaborator is a principal with a membership of role
+  `collaborator`, who has no `view`, `edit` or `manage` on the organization;
+  personal organizations accept such memberships.
+- The standard resource-role ladder, the grant contract, both providers'
+  implementations, the vocabulary validation of collaborator-able
+  definitions and the shared suite across both modes are described in
+  [Resource grants](#resource-grants).
+- `sf_invites` carries an optional resource type, resource ID and resource
+  role; accepting such an invite creates the collaborator membership and
+  the grant in one transaction (see [Invites](organizations.md#invites)).
+- The `authz` configuration key and `authz/mode.New` are described in
+  [Configuring the mode](#configuring-the-mode-authz-key).
+- The `orgs` claim (ADR-007) lists a collaborator's organizations with role
+  `collaborator`; the resources are the application's to look up with
+  `ListResources`. Agents and managed principals are principals like any
+  other, so they are granted through the same operations, which confines
+  them to the granted resources.
 
 ### Application roles (ADR-007)
 
 - The `sf_app_roles` table records the application role per (principal,
-  organization, application) (built; see
-  [Organizations](organizations.md#application-roles-identityapprole)).
-  Still to do: it replaces seat assignments as the record of who may use
-  what. A seat-licensed application already counts its rows against the
-  license, and role changes reach the authorization graph through
-  `AppRoleSyncer`.
+  organization, application) (see
+  [Organizations](organizations.md#application-roles-identityapprole)). A
+  seat-licensed application counts its rows against the license; the
+  marketplace's seat assignments remain a separate record. Role changes
+  reach the authorization graph through `AppRoleSyncer`.
 - Owners hold `admin` in every entitled application implicitly. Admins
   manage the organization but hold only the application roles assigned to
   them, like members; an admin may assign roles to themself, explicitly and
   audited. Members and admins have no application access by default.
 - The roles available in an application are the ones its vocabulary
   declares (standard ladder `viewer`, `contributor`, `maintainer`,
-  `admin`); no custom roles. Organization-defined roles and teams are
-  deferred.
-- Removal from the organization removes every application role (built) and grant.
+  `admin`); there are no custom roles, and organization-defined roles
+  and teams do not exist.
+- Removal from the organization removes every application role and every resource grant.
 
 ### Revocation cache in request authorization (ADR-010)
 
-- Request authorization gains a step between token verification and the
+- Request authorization has a step between token verification and the
   permission check: the relying party looks up its revocation cache by
   principal (and organization) and accepts the token only if its `iat` is
   at or after the recorded `changed_at` plus the clock-skew margin;
@@ -467,7 +471,9 @@ decides it.
   in a modular monolith, polling across replicas, back-channel
   `access_change` events across deployments) and rebuilt after a restart
   from `GET /access-changes?since=`; the `relyingparty` package implements
-  all three. Applications that bypass `relyingparty` must implement the
+  all three (see
+  [Token freshness and revocation](organizations.md#token-freshness-and-revocation)).
+  Applications that bypass `relyingparty` must implement the
   same check.
 - Changes to resource grants that reduce access (ADR-008) are access
   changes and invalidate the same way.
