@@ -50,6 +50,14 @@ nav:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
     - Configuration: getting-started/configuration.md
+  - Guides:
+    - Invites: guides/invites.md
+    - Application Roles and Entitlements: guides/application-roles.md
+    - Collaborators and Resource Grants: guides/collaborators.md
+    - Organization Slugs: guides/organization-slugs.md
+    - Personal to Team Conversion: guides/personal-to-team.md
+    - Access-Change Invalidation: guides/access-change-invalidation.md
+    - Authorization Mode: guides/authorization-mode.md
   - Identity:
     - Overview: identity/overview.md
     - Users: identity/users.md
@@ -121,21 +129,18 @@ nav:
       - "ADR-008: Resource-Scoped Collaborators": design/adrs/ADR-008-resource-scoped-collaborators.md
       - "ADR-009: Management Is a Relationship": design/adrs/ADR-009-management-is-a-relationship.md
       - "ADR-010: Real-Time Access Invalidation": design/adrs/ADR-010-real-time-access-invalidation.md
-      - "ADR-011: Lifecycle, Data Classification and Privacy Rights": design/adrs/ADR-011-lifecycle-states-data-classification-and-privacy-rights.md
-      - "ADR-012: Data Catalog, Legal Holds and Enforcement": design/adrs/ADR-012-data-governance-enforcement-and-legal-hold.md
-      - "ADR-013: Key Management": design/adrs/ADR-013-key-management.md
-      - "ADR-013: Key Management": design/adrs/ADR-013-key-management.md
-    - Authentication PRD: design/PRD_AUTHN.md
-    - OAuth PRD: design/PRD_OAUTH.md
-    - Authentication TRD: design/TRD_AUTHN.md
-    - OAuth TRD: design/TRD_OAUTH.md
-    - Implementation Tasks: design/TRD_TASKS.md
+      - "ADR-011: Lifecycle, Data Classification and Privacy Rights (Proposed)": design/adrs/ADR-011-lifecycle-states-data-classification-and-privacy-rights.md
+      - "ADR-012: Data Catalog, Legal Holds and Enforcement (Proposed)": design/adrs/ADR-012-data-governance-enforcement-and-legal-hold.md
+      - "ADR-013: Key Management (Proposed)": design/adrs/ADR-013-key-management.md
     - ProductGraph:
       - PRD: design/productgraph/PRD.md
       - TRD: design/productgraph/TRD.md
       - Plan: design/productgraph/PLAN.md
       - Tasks: design/productgraph/TASKS.md
   - Releases:
+    - Overview: releases/index.md
+    - Changelog: releases/changelog.md
+    - v0.15.0: releases/v0.15.0.md
     - v0.14.0: releases/v0.14.0.md
     - v0.13.0: releases/v0.13.0.md
     - v0.12.0: releases/v0.12.0.md

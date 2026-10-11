@@ -417,6 +417,16 @@ Relevant authorization guides:
 - `docs/authorization/integration.md`
 - `docs/authorization/query-policy-engines.md`
 
+Guides for organizations, roles and access invalidation are in `docs/guides/`:
+
+- `docs/guides/invites.md`
+- `docs/guides/application-roles.md`
+- `docs/guides/collaborators.md`
+- `docs/guides/organization-slugs.md`
+- `docs/guides/personal-to-team.md`
+- `docs/guides/access-change-invalidation.md`
+- `docs/guides/authorization-mode.md`
+
 ## Contributing
 
 Contributions are welcome! Please read the contributing guidelines before submitting PRs.

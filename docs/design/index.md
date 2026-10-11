@@ -5,12 +5,12 @@ rules.
 
 | Folder | Holds | Rule |
 |---|---|---|
-| [`architecture/`](architecture/organizations.md) | How the system is: one page per area, describing the implementation as it stands, with a "Planned changes" section for accepted decisions not yet built | Edited in place; a page is rewritten as the code changes |
+| [`architecture/`](architecture/organizations.md) | How the system is: one page per area, describing the implementation as it stands | Edited in place; a page is rewritten as the code changes |
 | [`adrs/`](adrs/index.md) | Why it is that way: architecture decision records with their context and consequences | Append-only; a later ADR amends or supersedes an earlier one and says so, and the earlier one is never rewritten |
 
 An architecture page lists the ADRs that decide its area in a
-**Decisions** line. When an ADR is implemented, the page's "Planned
-changes" entry moves up into the page body and the ADR is unchanged.
+**Decisions** line. When an ADR is implemented, the page is edited to
+describe the implementation and the ADR is unchanged.
 
 ## Architecture
 
@@ -23,4 +23,24 @@ changes" entry moves up into the page body and the ADR is unchanged.
 ## Decisions
 
 [Architecture Decision Records](adrs/index.md) lists every ADR with its
-status.
+status. ADR-001 to ADR-010 are Accepted; the architecture pages above
+describe their implementation.
+
+### Proposed
+
+These ADRs are drafts under review. They are design proposals only: nothing
+in them is implemented, and the architecture pages and release notes do not
+describe them as features.
+
+| ADR | Proposal |
+|---|---|
+| [ADR-011](adrs/ADR-011-lifecycle-states-data-classification-and-privacy-rights.md) | Lifecycle states, data classification and privacy rights (would amend ADR-009) |
+| [ADR-012](adrs/ADR-012-data-governance-enforcement-and-legal-hold.md) | Data governance catalog, legal holds and enforcement |
+| [ADR-013](adrs/ADR-013-key-management.md) | Key management |
+
+## Guides
+
+How-to guides for the implemented behavior are under
+[Guides](../guides/invites.md): invites, application roles and entitlements,
+collaborators and resource grants, organization slugs, personal-to-team
+conversion, access-change invalidation and the authorization mode.

@@ -354,5 +354,5 @@ authz.Can(ctx, principal, "publish", listing)
 
 - [Stripe Connect Documentation](https://stripe.com/docs/connect)
 - [SpiceDB Documentation](https://authzed.com/docs)
-- [App1 FEAT_ENTITLEMENTS_PRD.md](../../../app1/docs/design/FEAT_ENTITLEMENTS_PRD.md)
-- [App2 AUTHORIZATION.md](../../../app2/docs/design/AUTHORIZATION.md)
+- App1 `docs/design/FEAT_ENTITLEMENTS_PRD.md`
+- App2 `docs/design/AUTHORIZATION.md`
