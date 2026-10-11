@@ -147,6 +147,10 @@ specification governs the mechanism while this ADR governs the policy.
       since its last rotation.
     - Rotation never deletes old versions. Retirement is a separate step with
       its own delay, and never while a hold covers the data (decision 7).
+    - The last two versions, the active one and its predecessor, are always
+      kept, so a bad rotation can be rolled back. Older versions retire only
+      when nothing references them, the delay has passed, no hold applies and
+      the guard allows it; the count is a floor, not a trigger to delete.
     - A failed or overdue rotation raises an alert; a key past its period is
       reported, not silently kept.
 13. **Emergency rotation is a separate procedure from scheduled rotation.**
