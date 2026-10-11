@@ -124,3 +124,28 @@ func TestBaseSchemaOrganizationRelations(t *testing.T) {
 		t.Errorf("OrgRolePermissions roles = %v, want %v", roles, want)
 	}
 }
+
+// TestResourceRolePermissionsMatchFragment keeps the resource-role ladder
+// equal to the standard collaborator-able resource definition.
+func TestResourceRolePermissionsMatchFragment(t *testing.T) {
+	assertSameGrants(t, schemaRoleGrants(t, ResourceRoleFragment("myapp_project"), "myapp_project"), ResourceRolePermissions)
+
+	// The ladder is ordered, each role including the ones below it.
+	for i := 1; i < len(resourceRoles); i++ {
+		lower, higher := resourceRoles[i-1], resourceRoles[i]
+		for _, p := range ResourceRolePermissions[lower] {
+			if !ResourceRoleAllows(higher, p) {
+				t.Errorf("%s lacks %s, which %s has", higher, p, lower)
+			}
+		}
+		if ResourceRoleRank(higher) <= ResourceRoleRank(lower) {
+			t.Errorf("rank(%s) <= rank(%s)", higher, lower)
+		}
+	}
+	if ValidResourceRole("admin") || ValidResourceRole("editor") || ResourceRoleRank("admin") != 0 {
+		t.Error("admin and editor are not resource roles")
+	}
+	if got := ResourceRolesGranting(PermResourceEdit); !slices.Equal(got, []string{ResourceRoleContributor, ResourceRoleMaintainer}) {
+		t.Errorf("roles granting edit = %v", got)
+	}
+}

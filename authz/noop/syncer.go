@@ -78,8 +78,19 @@ func (s *Syncer) RemoveAppRole(_ context.Context, _, _ uuid.UUID, _, _ string) e
 	return nil
 }
 
+// SetResourceGrant is a no-op.
+func (s *Syncer) SetResourceGrant(_ context.Context, _ uuid.UUID, _ authz.ResourceRef, _ string) error {
+	return nil
+}
+
+// RemoveResourceGrant is a no-op.
+func (s *Syncer) RemoveResourceGrant(_ context.Context, _ uuid.UUID, _ authz.ResourceRef) error {
+	return nil
+}
+
 // Verify interface compliance at compile time.
 var (
-	_ authz.RelationshipSyncer = (*Syncer)(nil)
-	_ authz.AppRoleSyncer      = (*Syncer)(nil)
+	_ authz.RelationshipSyncer  = (*Syncer)(nil)
+	_ authz.AppRoleSyncer       = (*Syncer)(nil)
+	_ authz.ResourceGrantSyncer = (*Syncer)(nil)
 )
