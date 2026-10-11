@@ -51,7 +51,10 @@ type AppVocabulary interface {
 | Function | Rule |
 |---|---|
 | `ValidateScope(app, scope)` | Scope matches the convention and its prefix is `app` |
-| `ValidateAppSchema(app, schema)` | Every `definition` in the fragment is prefixed `{app}_`, so a fragment can never redefine a base or another application's definition |
+| `ValidateAppSchema(app, schema)` | Every `definition` in the fragment is prefixed `{app}_`, so a fragment can never redefine a base or another application's definition; a definition that declares any of the reserved resource-role relations `viewer`, `contributor`, `maintainer` declares all three, binds each to `principal`, and has `relation org: organization` |
+| `CollaboratorDefinitions(schema)` | The definitions of a fragment that declare the whole ladder, that is, the resource types that accept collaborators |
+| `VocabularyRegistry.ValidateResourceType(type)` | `{app}_{type}` whose application is registered and, when the vocabulary carries a fragment, whose definition is collaborator-able; a vocabulary with no fragment accepts any type of its application |
+| `VocabularyRegistry.CollaboratorResourceTypes(app)` | The sorted collaborator-able types of an application's fragment |
 | `ValidateVocabulary(v)` | App name, non-empty roles, hierarchy covering every role, scopes valid and unique, schema prefixed |
 | `VocabularyRegistry.Register(v)` | Validates; refuses a duplicate app |
 | `VocabularyRegistry.AllScopes()` | Every registered scope, sorted, for consent screens and `AllowedScopes` |
@@ -150,12 +153,32 @@ Configured with options: `WithRoleHierarchy`, `WithPermissions`,
 
 A thin provider over `spicedb.Client`: `Can` is a `Check` with subject
 `principal:<id>`, resource `<type>:<id>` and the action as the permission;
-`GetRole` and `IsMember` read the organization's membership relations;
-`Filter` checks per resource. The client wraps schema writes and reads,
-relationship writes and deletes, `LookupSubjects` and `LookupResources`;
-`LookupResources` is available on the client, not on the `Authorizer`
-interface. `spicedb.Syncer` implements `authz.RelationshipSyncer` by
-writing and deleting base-schema relationships.
+`GetRole` reads the organization's membership relations (owner, admin,
+member, collaborator), and `IsMember` checks `list`, which every
+membership grants, collaborators included; `Filter` checks per resource.
+The client wraps schema writes and reads, relationship writes and deletes
+(`ReplaceRelationships` applies deletes and writes in one request),
+`LookupSubjects` and `LookupResources`; a lookup stream that fails returns
+the error rather than a partial list. `spicedb.Syncer` implements
+`authz.RelationshipSyncer` by writing and deleting base-schema
+relationships, `authz.AppRoleSyncer` for application roles and
+`authz.ResourceGrantSyncer` for resource grants.
+
+With `spicedb.WithResourceGrants(store)` the provider implements
+`authz.ResourceGranter`. The store is the same `resourcegrant.Service` the
+role-based provider uses, built with `WithAuthzSyncer(spicedb.NewSyncer(c),
+mode)`: it keeps the rows the graph cannot (the collaborator membership
+behind the `orgs` claim, the last-grant test, access changes) and mirrors
+each change into the graph, so a deployment that switches modes rebuilds its
+relationships from the membership, role and grant tables. A grant is the
+relationship `{type}:{id}#{role}@principal:{principal}`; changing a role
+deletes the other two ladder relations in the same request; the collaborator
+membership is `organization:{org}#collaborator@principal:{principal}`. The
+application writes a resource's `org` relation when it creates the resource,
+which is what lets organization members reach it through `org->view`.
+`ListResources` is `LookupResources` for the permission; it follows every
+relationship the schema expresses, so its answer is `IDs` and
+`OrganizationIDs` is empty.
 
 ### Resource grants
 
@@ -221,19 +244,23 @@ grants. `RunResourceGrantTests` (with `Config.ResourceGranter`,
 the ladder, reductions, revocation, what a collaborator may do on the
 organization, and `ListResources` for each permission. The role-based
 provider runs it in `authz/rbac/resource_grants_test.go`, on SQLite and on
-PostgreSQL. The suites are what makes the modes interchangeable on the
+PostgreSQL; the relationship-based provider runs it in
+`authz/rebac/spicedb/integration_grants_test.go` (build tag `integration`)
+against an embedded in-memory SpiceDB, with the deployment schema composed
+from a registered vocabulary. The suites are what makes the modes interchangeable on the
 platform contract.
 
 ### Capability table
 
-What each provider can answer today, and after ADR-008:
+What each provider can answer:
 
-| Question | `rbac` today | `rbac` after ADR-008 | `rebac` |
-|---|---|---|---|
-| Does the principal's organization or application role grant this action? | yes | yes | yes |
-| Does the principal own this resource? | yes (`WithOwnerFullAccess`, `Resource.OwnerID` supplied by the caller) | yes | yes |
-| Does the principal hold a direct grant on this specific resource? | no | yes, from `sf_resource_grants` (built) | yes |
-| Does a permission reach the principal through relationships (team membership, a parent resource, a share with a group)? | no | no | yes, through the schema fragment |
+| Question | `rbac` | `rebac` |
+|---|---|---|
+| Does the principal's organization or application role grant this action? | yes | yes |
+| Does the principal own this resource? | yes (`WithOwnerFullAccess`, `Resource.OwnerID` supplied by the caller) | yes |
+| Does the principal hold a direct grant on this specific resource? | yes, from `sf_resource_grants` | yes, as a relationship |
+| Which resources of a type may the principal view, edit or manage? | yes: grants plus the organizations whose role grants it | yes: `LookupResources` |
+| Does a permission reach the principal through relationships (team membership, a parent resource, a share with a group)? | no | yes, through the schema fragment |
 
 ### Choosing a mode
 
@@ -349,11 +376,10 @@ decides it.
   `list` permission (built). A collaborator is a principal with a membership
   of role `collaborator`, who has no `view`, `edit` or `manage` on the
   organization; personal organizations accept such memberships.
-- Built: the standard resource-role ladder and the grant contract (see
-  [Resource grants](#resource-grants)) for the role-based provider. The
-  relationship-based provider's implementation, the vocabulary validation of
-  collaborator-able definitions and the shared suite across both modes are
-  still to do.
+- Built: the standard resource-role ladder, the grant contract, both
+  providers' implementations, the vocabulary validation of collaborator-able
+  definitions and the shared suite across both modes (see [Resource
+  grants](#resource-grants)).
 - `sf_invites` gains optional resource type, resource ID and resource role;
   accepting such an invite creates the collaborator membership and the
   grant in one transaction.

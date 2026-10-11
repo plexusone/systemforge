@@ -105,6 +105,9 @@ definition myapp_project {
 }
 ```
 
+A definition that declares some of the three but not all, or binds one to
+anything but `principal`, or has no `org` relation to `organization`, is
+refused when the vocabulary is registered (`authz.ValidateAppSchema`).
 Granting a resource role to a principal who is not a member of the
 resource's organization makes them a `collaborator` of it; revoking their
 last grant there removes the membership. A grant is by `{app}_{type}` and
