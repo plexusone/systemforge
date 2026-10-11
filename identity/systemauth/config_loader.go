@@ -113,6 +113,13 @@ func (c *Config) expandEnvVars() {
 		c.Clients[i].Secret = os.ExpandEnv(c.Clients[i].Secret)
 	}
 
+	// Expand in the authorization engine settings
+	if c.Authz.SpiceDB != nil {
+		c.Authz.SpiceDB.Token = os.ExpandEnv(c.Authz.SpiceDB.Token)
+		c.Authz.SpiceDB.DatastoreURI = os.ExpandEnv(c.Authz.SpiceDB.DatastoreURI)
+		c.Authz.SpiceDB.Endpoint = os.ExpandEnv(c.Authz.SpiceDB.Endpoint)
+	}
+
 	// Expand in federation config
 	if c.Federation != nil {
 		c.Federation.ClientID = os.ExpandEnv(c.Federation.ClientID)

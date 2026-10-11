@@ -7,6 +7,7 @@ import (
 
 	"github.com/invopop/jsonschema"
 
+	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/credential"
 )
@@ -40,6 +41,12 @@ type Config struct {
 	// SocialLogin enables "log in with GitHub/Google" on this server.
 	// If nil, no social login routes are mounted.
 	SocialLogin *SocialLoginConfig `json:"social_login,omitempty" yaml:"social_login,omitempty" jsonschema:"description=Upstream GitHub/Google social login configuration"`
+
+	// Authz selects the authorization mode (ADR-008): "rbac" (the default)
+	// or "rebac" with an engine. SystemAuth does not build the provider
+	// from it: the application passes it to authz/mode.New, so the
+	// configuration file stays one document.
+	Authz authz.ModeConfig `json:"authz,omitempty" yaml:"authz,omitempty" jsonschema:"description=Authorization mode and relationship engine"`
 
 	// ManagedPrincipals configures managed principals; nil disables them.
 	ManagedPrincipals *ManagedPrincipalsConfig `json:"managed_principals,omitempty" yaml:"managed_principals,omitempty" jsonschema:"description=Managed principal configuration (humans without an email)"`
@@ -378,6 +385,13 @@ func (c *Config) Validate() error {
 			return err
 		}
 	}
+	// A configuration that never called ApplyDefaults has no mode, which
+	// means rbac; a stated mode is checked as written.
+	az := c.Authz
+	az.ApplyDefaults()
+	if err := az.Validate(); err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalidConfig, err)
+	}
 	return nil
 }
 
@@ -421,6 +435,8 @@ func (c *Config) ApplyDefaults() {
 	if c.Tokens.AuthCodeLifetime == 0 {
 		c.Tokens.AuthCodeLifetime = defaults.Tokens.AuthCodeLifetime
 	}
+
+	c.Authz.ApplyDefaults()
 
 	if mp := c.ManagedPrincipals; mp != nil {
 		if mp.LoginTokenTTL == 0 {

@@ -16,6 +16,7 @@ import (
 	"github.com/authzed/spicedb/pkg/cmd/datastore"
 	"github.com/authzed/spicedb/pkg/cmd/server"
 	"github.com/authzed/spicedb/pkg/cmd/util"
+	"github.com/plexusone/systemforge/authz"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -29,25 +30,11 @@ type Client struct {
 	logger       *slog.Logger
 }
 
-// Config holds SpiceDB client configuration.
-type Config struct {
-	// Mode: "embedded" or "remote"
-	Mode string `json:"mode" yaml:"mode"`
-
-	// Embedded mode settings
-	// DatastoreEngine: "memory" or "postgres"
-	DatastoreEngine string `json:"datastore_engine,omitempty" yaml:"datastore_engine,omitempty"`
-	// DatastoreURI: connection string for postgres
-	DatastoreURI string `json:"datastore_uri,omitempty" yaml:"datastore_uri,omitempty"`
-
-	// Remote mode settings
-	// Endpoint: SpiceDB gRPC endpoint (e.g., "localhost:50051")
-	Endpoint string `json:"endpoint,omitempty" yaml:"endpoint,omitempty"`
-	// Token: preshared key for authentication
-	Token string `json:"token,omitempty" yaml:"token,omitempty"`
-	// Insecure: skip TLS verification
-	Insecure bool `json:"insecure,omitempty" yaml:"insecure,omitempty"`
-}
+// Config holds SpiceDB client configuration. It is authz.SpiceDBConfig,
+// the type of the `authz.spicedb` configuration key, which lives in the
+// authz package so that loading configuration does not link the SpiceDB
+// server.
+type Config = authz.SpiceDBConfig
 
 // DefaultConfig returns a default configuration for embedded mode.
 func DefaultConfig() Config {

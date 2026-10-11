@@ -404,6 +404,76 @@
       "type": "object",
       "description": "Upstream GitHub/Google social login configuration"
     },
+    "authz": {
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "rbac",
+            "rebac"
+          ],
+          "description": "Authorization mode: rbac (roles and direct grants) or rebac (relationships evaluated by an engine)",
+          "default": "rbac"
+        },
+        "engine": {
+          "type": "string",
+          "enum": [
+            "spicedb"
+          ],
+          "description": "Relationship engine for mode rebac (default spicedb)"
+        },
+        "spicedb": {
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "embedded",
+                "remote"
+              ],
+              "description": "embedded (in process) or remote (gRPC service)",
+              "default": "embedded"
+            },
+            "datastore_engine": {
+              "type": "string",
+              "enum": [
+                "memory",
+                "postgres"
+              ],
+              "description": "Embedded datastore",
+              "default": "memory"
+            },
+            "datastore_uri": {
+              "type": "string",
+              "description": "Connection string of the embedded postgres datastore (supports env var expansion)"
+            },
+            "endpoint": {
+              "type": "string",
+              "description": "gRPC address of a remote SpiceDB"
+            },
+            "token": {
+              "type": "string",
+              "description": "Preshared key of a remote SpiceDB (supports env var expansion)"
+            },
+            "insecure": {
+              "type": "boolean",
+              "description": "Development only: connect to a remote SpiceDB without TLS",
+              "default": false
+            },
+            "write_schema": {
+              "type": "boolean",
+              "description": "Write the composed schema to a remote SpiceDB at startup",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "SpiceDB engine settings for mode rebac"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Authorization mode and relationship engine"
+    },
     "managed_principals": {
       "properties": {
         "enabled": {

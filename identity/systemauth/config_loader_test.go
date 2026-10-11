@@ -100,3 +100,45 @@ func TestAccessTokenLifetimeBounds(t *testing.T) {
 		t.Errorf("client lifetime = %v, want 15m", got)
 	}
 }
+
+func TestAuthzConfig(t *testing.T) {
+	t.Setenv("TEST_SPICEDB_TOKEN", "preshared")
+	parse := func(t *testing.T, yaml string) (*Config, error) {
+		t.Helper()
+		return ParseConfig([]byte("issuer: https://auth.example.com\n"+yaml), FormatYAML)
+	}
+
+	cfg, err := parse(t, "")
+	if err != nil {
+		t.Fatalf("no authz key: %v", err)
+	}
+	if cfg.Authz.Mode != "rbac" {
+		t.Errorf("default mode = %q, want rbac", cfg.Authz.Mode)
+	}
+
+	cfg, err = parse(t, "authz:\n  mode: rebac\n  spicedb:\n    mode: remote\n    endpoint: spicedb.internal:50051\n    token: ${TEST_SPICEDB_TOKEN}\n")
+	if err != nil {
+		t.Fatalf("rebac: %v", err)
+	}
+	if cfg.Authz.Engine != "spicedb" || cfg.Authz.SpiceDB.Token != "preshared" || cfg.Authz.SpiceDB.Endpoint != "spicedb.internal:50051" {
+		t.Errorf("rebac config = %+v / %+v", cfg.Authz, cfg.Authz.SpiceDB)
+	}
+
+	cfg, err = parse(t, "authz:\n  mode: rebac\n")
+	if err != nil {
+		t.Fatalf("rebac defaults: %v", err)
+	}
+	if cfg.Authz.SpiceDB == nil || cfg.Authz.SpiceDB.Mode != "embedded" {
+		t.Errorf("rebac defaults = %+v", cfg.Authz.SpiceDB)
+	}
+
+	for name, yaml := range map[string]string{
+		"unknown mode":       "authz:\n  mode: abac\n",
+		"engine with rbac":   "authz:\n  mode: rbac\n  engine: spicedb\n",
+		"remote no endpoint": "authz:\n  mode: rebac\n  spicedb:\n    mode: remote\n",
+	} {
+		if _, err := parse(t, yaml); !errors.Is(err, ErrInvalidConfig) {
+			t.Errorf("%s: %v, want ErrInvalidConfig", name, err)
+		}
+	}
+}
