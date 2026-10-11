@@ -207,8 +207,64 @@ func appRoleRelationship(principalID, orgID uuid.UUID, application, role string)
 	}, nil
 }
 
+// SetResourceGrant writes the principal's resource role as a relationship,
+// "{type}:{id}#{role}@principal:{principal}", and deletes the other two
+// ladder roles it may hold on the resource in the same request, so a
+// change of role is never seen half-applied. It writes only the grant:
+// the resource's org relation is the application's, written when it
+// creates the resource.
+func (s *Syncer) SetResourceGrant(ctx context.Context, principalID uuid.UUID, resource authz.ResourceRef, role string) error {
+	if !authz.ValidResourceRole(role) {
+		return fmt.Errorf("spicedb: %w: %q", authz.ErrInvalidResourceRole, role)
+	}
+	if err := validateGrantRef(resource); err != nil {
+		return err
+	}
+	var stale []*Relationship
+	for _, other := range authz.ResourceRoles() {
+		if other != role {
+			stale = append(stale, grantRelationship(principalID, resource, other))
+		}
+	}
+	return s.client.ReplaceRelationships(ctx, stale, []*Relationship{grantRelationship(principalID, resource, role)})
+}
+
+// RemoveResourceGrant deletes every resource role the principal holds on
+// the resource.
+func (s *Syncer) RemoveResourceGrant(ctx context.Context, principalID uuid.UUID, resource authz.ResourceRef) error {
+	if err := validateGrantRef(resource); err != nil {
+		return err
+	}
+	var all []*Relationship
+	for _, role := range authz.ResourceRoles() {
+		all = append(all, grantRelationship(principalID, resource, role))
+	}
+	return s.client.ReplaceRelationships(ctx, all, nil)
+}
+
+// validateGrantRef checks the parts of a reference the relationship uses;
+// the organization is the store's, not the graph's.
+func validateGrantRef(resource authz.ResourceRef) error {
+	ref := resource
+	if ref.OrganizationID == uuid.Nil {
+		ref.OrganizationID = uuid.New()
+	}
+	return authz.ValidateResourceRef(ref)
+}
+
+func grantRelationship(principalID uuid.UUID, resource authz.ResourceRef, role string) *Relationship {
+	return &Relationship{
+		ResourceType: resource.Type,
+		ResourceID:   resource.ID,
+		Relation:     role,
+		SubjectType:  TypePrincipal,
+		SubjectID:    principalID.String(),
+	}
+}
+
 // Verify interface compliance at compile time.
 var (
-	_ authz.RelationshipSyncer = (*Syncer)(nil)
-	_ authz.AppRoleSyncer      = (*Syncer)(nil)
+	_ authz.RelationshipSyncer  = (*Syncer)(nil)
+	_ authz.AppRoleSyncer       = (*Syncer)(nil)
+	_ authz.ResourceGrantSyncer = (*Syncer)(nil)
 )

@@ -18,3 +18,17 @@ func TestResourceSchemaComposesWithBase(t *testing.T) {
 		t.Fatalf("composed schema does not compile: %v", err)
 	}
 }
+
+// TestResourceRoleFragmentComposesWithBase compiles the standard
+// collaborator-able definition after the base schema, and checks that it
+// passes the vocabulary rules for an application of that name.
+func TestResourceRoleFragmentComposesWithBase(t *testing.T) {
+	fragment := authz.ResourceRoleFragment("myapp_project")
+	if err := authz.ValidateAppSchema("myapp", fragment); err != nil {
+		t.Fatalf("ValidateAppSchema: %v", err)
+	}
+	schema := authz.BaseSpiceDBSchema + "\n" + fragment
+	if _, err := compiler.Compile(compiler.InputSchema{Source: input.Source("test"), SchemaString: schema}, compiler.AllowUnprefixedObjectType()); err != nil {
+		t.Fatalf("composed schema does not compile: %v", err)
+	}
+}

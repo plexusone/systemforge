@@ -2,7 +2,9 @@ package spicedb
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
@@ -11,11 +13,30 @@ import (
 // Provider implements the authz.Authorizer interface using SpiceDB.
 type Provider struct {
 	client *Client
+	grants authz.ResourceGranter
+}
+
+// ProviderOption configures a Provider.
+type ProviderOption func(*Provider)
+
+// WithResourceGrants gives the provider the store of resource grants
+// (ADR-008). The store owns what the graph cannot: the collaborator
+// membership rows behind the "orgs" claim, the last-grant test and the
+// access-change records; it mirrors grants and memberships into the graph
+// through this package's Syncer (resourcegrant.WithAuthzSyncer). The
+// provider delegates the grant operations to it and answers ListResources
+// from the engine with LookupResources.
+func WithResourceGrants(g authz.ResourceGranter) ProviderOption {
+	return func(p *Provider) { p.grants = g }
 }
 
 // NewProvider creates a new SpiceDB authorization provider.
-func NewProvider(client *Client) *Provider {
-	return &Provider{client: client}
+func NewProvider(client *Client, opts ...ProviderOption) *Provider {
+	p := &Provider{client: client}
+	for _, o := range opts {
+		o(p)
+	}
+	return p
 }
 
 // Client returns the underlying SpiceDB client for advanced operations.
@@ -183,8 +204,66 @@ func (p *Provider) Close() error {
 	return p.client.Close()
 }
 
+// ErrNoResourceGrants is returned by the grant operations of a Provider
+// built without WithResourceGrants.
+var ErrNoResourceGrants = errors.New("spicedb: resource grants are not configured (use WithResourceGrants)")
+
+// GrantResourceRole gives the principal a role on the resource through the
+// configured store, which writes the relationship to the graph. Granting
+// to a principal with no membership in the resource's organization adds a
+// collaborator membership.
+func (p *Provider) GrantResourceRole(ctx context.Context, principalID uuid.UUID, resource authz.ResourceRef, role string, grantedBy uuid.UUID) error {
+	if p.grants == nil {
+		return ErrNoResourceGrants
+	}
+	return p.grants.GrantResourceRole(ctx, principalID, resource, role, grantedBy)
+}
+
+// RevokeResourceRole removes the principal's grant on the resource;
+// revoking a collaborator's last grant removes the membership.
+func (p *Provider) RevokeResourceRole(ctx context.Context, principalID uuid.UUID, resource authz.ResourceRef) error {
+	if p.grants == nil {
+		return ErrNoResourceGrants
+	}
+	return p.grants.RevokeResourceRole(ctx, principalID, resource)
+}
+
+// ListResourceGrants lists the grants on one resource, highest role first.
+func (p *Provider) ListResourceGrants(ctx context.Context, resource authz.ResourceRef) ([]authz.Grant, error) {
+	if p.grants == nil {
+		return nil, ErrNoResourceGrants
+	}
+	return p.grants.ListResourceGrants(ctx, resource)
+}
+
+// ListResources returns the resources of resourceType the principal holds
+// permission (view, edit or manage) on, by SpiceDB's LookupResources. The
+// lookup follows every relationship the schema expresses, so an
+// organization member's access through the "org" relation is in IDs and
+// OrganizationIDs is empty.
+func (p *Provider) ListResources(ctx context.Context, principalID uuid.UUID, resourceType string, permission authz.Action) (authz.ResourceSet, error) {
+	if !authz.IsResourcePermission(permission) {
+		return authz.ResourceSet{}, fmt.Errorf("%w: %q is not view, edit or manage", authz.ErrInvalidResource, permission)
+	}
+	ids, err := p.client.LookupResources(ctx, &LookupResourcesRequest{
+		ResourceType: resourceType,
+		Permission:   string(permission),
+		SubjectType:  TypePrincipal,
+		SubjectID:    principalID.String(),
+	})
+	if err != nil {
+		return authz.ResourceSet{}, err
+	}
+	slices.Sort(ids)
+	if ids == nil {
+		ids = []string{}
+	}
+	return authz.ResourceSet{IDs: ids}, nil
+}
+
 // Verify interface compliance at compile time.
 var (
+	_ authz.ResourceGranter    = (*Provider)(nil)
 	_ authz.Authorizer         = (*Provider)(nil)
 	_ authz.OrgAuthorizer      = (*Provider)(nil)
 	_ authz.PlatformAuthorizer = (*Provider)(nil)

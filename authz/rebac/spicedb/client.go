@@ -2,9 +2,12 @@ package spicedb
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
+	"slices"
 	"time"
 
 	pb "github.com/authzed/authzed-go/proto/authzed/api/v1"
@@ -286,6 +289,44 @@ func (c *Client) WriteRelationship(ctx context.Context, rel *Relationship) error
 	return nil
 }
 
+// ReplaceRelationships deletes and then writes relationship tuples in one
+// atomic request: a reader sees either the old set or the new one. Deleting
+// a tuple that does not exist is not an error.
+func (c *Client) ReplaceRelationships(ctx context.Context, deletes, writes []*Relationship) error {
+	updates := make([]*pb.RelationshipUpdate, 0, len(deletes)+len(writes))
+	add := func(op pb.RelationshipUpdate_Operation, rels []*Relationship) {
+		for _, rel := range rels {
+			updates = append(updates, &pb.RelationshipUpdate{
+				Operation: op,
+				Relationship: &pb.Relationship{
+					Resource: &pb.ObjectReference{ObjectType: rel.ResourceType, ObjectId: rel.ResourceID},
+					Relation: rel.Relation,
+					Subject: &pb.SubjectReference{
+						Object: &pb.ObjectReference{ObjectType: rel.SubjectType, ObjectId: rel.SubjectID},
+					},
+				},
+			})
+		}
+	}
+	// SpiceDB rejects one request that names the same tuple twice, so a
+	// tuple in both lists is written, not deleted.
+	var keep []*Relationship
+	for _, d := range deletes {
+		if !slices.ContainsFunc(writes, func(w *Relationship) bool { return *w == *d }) {
+			keep = append(keep, d)
+		}
+	}
+	add(pb.RelationshipUpdate_OPERATION_DELETE, keep)
+	add(pb.RelationshipUpdate_OPERATION_TOUCH, writes)
+	if len(updates) == 0 {
+		return nil
+	}
+	if _, err := c.permClient.WriteRelationships(ctx, &pb.WriteRelationshipsRequest{Updates: updates}); err != nil {
+		return fmt.Errorf("failed to replace relationships: %w", err)
+	}
+	return nil
+}
+
 // WriteRelationships writes multiple relationship tuples atomically.
 func (c *Client) WriteRelationships(ctx context.Context, rels []*Relationship) error {
 	updates := make([]*pb.RelationshipUpdate, len(rels))
@@ -401,8 +442,11 @@ func (c *Client) LookupSubjects(ctx context.Context, req *LookupSubjectsRequest)
 	var subjects []string
 	for {
 		resp, err := stream.Recv()
-		if err != nil {
+		if errors.Is(err, io.EOF) {
 			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("lookup subjects failed: %w", err)
 		}
 		subjects = append(subjects, resp.Subject.SubjectObjectId)
 	}
@@ -431,8 +475,11 @@ func (c *Client) LookupResources(ctx context.Context, req *LookupResourcesReques
 	var resources []string
 	for {
 		resp, err := stream.Recv()
-		if err != nil {
+		if errors.Is(err, io.EOF) {
 			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("lookup resources failed: %w", err)
 		}
 		resources = append(resources, resp.ResourceObjectId)
 	}
