@@ -156,6 +156,53 @@ specification governs the mechanism while this ADR governs the policy.
     are rotated. If a data key is exposed, its data is re-encrypted under a
     new key. Both are audited, and the procedure is documented with the
     provider.
+14. **Post-quantum algorithms are adopted from the Go standard library as
+    they appear, hybrid first.** The standard library now provides ML-KEM
+    (`crypto/mlkem`, FIPS 203), HPKE with ML-KEM and hybrid KEMs
+    (`crypto/hpke`, which adds `MLKEM768X25519` and `MLKEM768P256`), and ML-DSA
+    (`crypto/mldsa`, FIPS 204). The platform's position is:
+    - **Symmetric keys need no change.** AES-256 key wrapping and encryption
+      are already adequate against a quantum adversary, so KEKs and DEKs under
+      decision 2 stay as they are.
+    - **Asymmetric KEKs are hybrid.** When asymmetric KEKs are introduced
+      (decision 11) the default KEM is a hybrid of a classical and a
+      post-quantum scheme through `crypto/hpke`, not a classical-only one.
+      Long-lived confidentiality, such as hold snapshots, exports and backups,
+      is exposed to harvest-now-decrypt-later, and these are the uses that
+      justify it first.
+    - **Signatures follow ecosystem support.** Signing keys (decision 12) move
+      to ML-DSA, or a hybrid, when the formats that carry them (token and key
+      set specifications) and the relying parties support it. Until then they
+      stay on Ed25519 or ECDSA.
+    - **Standard library only.** No third-party post-quantum implementation
+      is used. The envelope's algorithm identifier makes each of these a
+      format addition, not a change to stored data.
+15. **FIPS 140-3 operation is supported and tested, and is the default
+    posture for a production deployment that has no reason to leave it.**
+    The Go standard library includes a FIPS 140-3 cryptographic module,
+    selected at build time (`GOFIPS140`) and enabled at run time
+    (`GODEBUG=fips140=on`, or `only` to make non-approved algorithms fail).
+    - **keyforge and the `keys` package must run under `fips140=only`.**
+      Only approved constructions are used on the default paths: AES-256-GCM
+      through `cipher.NewGCMWithRandomNonce` (the only GCM constructor that
+      mode permits), HKDF and HMAC with SHA-2, ECDSA, Ed25519, RSA-OAEP, and
+      ML-KEM. Non-approved options, such as ChaCha20-Poly1305 or X25519, are
+      never the default, are isolated behind an explicit option, and are
+      refused in `only` mode. Conformance tests run in a FIPS-only
+      configuration.
+    - **Build and run with the validated module where compliance matters.**
+      A build that pins the certified module version has validation
+      evidence; a build using the in-tree module in FIPS mode has the same
+      behavior without it. The deployment records which it uses, and `status`
+      reports it.
+    - **Reasons to run outside FIPS mode are stated, not assumed away:**
+      a dependency that needs a non-approved algorithm, a module version that
+      lacks an algorithm the deployment wants (the validated v1.0.0 module has
+      no ML-DSA), or a development environment. Leaving FIPS mode is a
+      configuration decision recorded in the deployment, not a code path.
+    - **FIPS is a constraint, not a security guarantee.** It validates a
+      module on tested platforms; it does not cover the rest of an
+      application. This ADR does not claim a deployment is "FIPS compliant".
 
 ## Consequences
 
@@ -176,6 +223,18 @@ specification governs the mechanism while this ADR governs the policy.
   key versions until nothing references them.
 - **Migration work:** existing sealed secrets and signing keys move onto
   the package incrementally, each behind its own change.
+- **Compliance-driven deployments are first-class.** Running under FIPS mode
+  is a tested configuration, so a customer that requires it is a
+  configuration change, not a fork.
+- **Some existing choices are outside FIPS-approved algorithms.** The
+  identity credential service hashes passwords with Argon2id, which is not an
+  approved algorithm and is not part of the standard library's module. A
+  deployment that must use only approved algorithms needs a PBKDF2 option
+  there; that is a separate change to the credential service and is not
+  decided here.
+- **Hybrid post-quantum KEMs carry a classical component.** Where that
+  component is X25519, FIPS-only mode refuses it, so such a deployment
+  selects a hybrid built on a NIST curve (`MLKEM768P256`).
 
 ## Alternatives considered
 
@@ -198,7 +257,10 @@ specification governs the mechanism while this ADR governs the policy.
 
 ## Open questions
 
-- Which KMS provider to implement first.
+- Which KMS provider to implement first, and whether it supports ML-KEM or
+  hybrid wrapping natively.
+- Which hybrid KEM is the default outside FIPS mode and which inside it, and
+  when asymmetric KEKs ship.
 - How per-subject keys are stored and cached so that reads stay fast.
 - Whether the key package also provides signing-key management for tokens
   in its first version, or only data encryption. Decision 12 gives the
