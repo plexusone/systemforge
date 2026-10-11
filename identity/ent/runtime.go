@@ -364,16 +364,24 @@ func init() {
 	invite.DefaultRole = inviteDescRole.Default.(string)
 	// invite.RoleValidator is a validator for the "role" field. It is called by the builders before save.
 	invite.RoleValidator = inviteDescRole.Validators[0].(func(string) error)
+	// inviteDescResourceType is the schema descriptor for resource_type field.
+	inviteDescResourceType := inviteFields[5].Descriptor()
+	// invite.ResourceTypeValidator is a validator for the "resource_type" field. It is called by the builders before save.
+	invite.ResourceTypeValidator = inviteDescResourceType.Validators[0].(func(string) error)
+	// inviteDescResourceID is the schema descriptor for resource_id field.
+	inviteDescResourceID := inviteFields[6].Descriptor()
+	// invite.ResourceIDValidator is a validator for the "resource_id" field. It is called by the builders before save.
+	invite.ResourceIDValidator = inviteDescResourceID.Validators[0].(func(string) error)
 	// inviteDescToken is the schema descriptor for token field.
-	inviteDescToken := inviteFields[5].Descriptor()
+	inviteDescToken := inviteFields[8].Descriptor()
 	// invite.TokenValidator is a validator for the "token" field. It is called by the builders before save.
 	invite.TokenValidator = inviteDescToken.Validators[0].(func(string) error)
 	// inviteDescResendCount is the schema descriptor for resend_count field.
-	inviteDescResendCount := inviteFields[11].Descriptor()
+	inviteDescResendCount := inviteFields[14].Descriptor()
 	// invite.DefaultResendCount holds the default value on creation for the resend_count field.
 	invite.DefaultResendCount = inviteDescResendCount.Default.(int)
 	// inviteDescLastSentAt is the schema descriptor for last_sent_at field.
-	inviteDescLastSentAt := inviteFields[12].Descriptor()
+	inviteDescLastSentAt := inviteFields[15].Descriptor()
 	// invite.DefaultLastSentAt holds the default value on creation for the last_sent_at field.
 	invite.DefaultLastSentAt = inviteDescLastSentAt.Default.(func() time.Time)
 	// inviteDescID is the schema descriptor for id field.

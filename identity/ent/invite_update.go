@@ -105,6 +105,66 @@ func (_u *InviteUpdate) ClearAppRoles() *InviteUpdate {
 	return _u
 }
 
+// SetResourceType sets the "resource_type" field.
+func (_u *InviteUpdate) SetResourceType(v string) *InviteUpdate {
+	_u.mutation.SetResourceType(v)
+	return _u
+}
+
+// SetNillableResourceType sets the "resource_type" field if the given value is not nil.
+func (_u *InviteUpdate) SetNillableResourceType(v *string) *InviteUpdate {
+	if v != nil {
+		_u.SetResourceType(*v)
+	}
+	return _u
+}
+
+// ClearResourceType clears the value of the "resource_type" field.
+func (_u *InviteUpdate) ClearResourceType() *InviteUpdate {
+	_u.mutation.ClearResourceType()
+	return _u
+}
+
+// SetResourceID sets the "resource_id" field.
+func (_u *InviteUpdate) SetResourceID(v string) *InviteUpdate {
+	_u.mutation.SetResourceID(v)
+	return _u
+}
+
+// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
+func (_u *InviteUpdate) SetNillableResourceID(v *string) *InviteUpdate {
+	if v != nil {
+		_u.SetResourceID(*v)
+	}
+	return _u
+}
+
+// ClearResourceID clears the value of the "resource_id" field.
+func (_u *InviteUpdate) ClearResourceID() *InviteUpdate {
+	_u.mutation.ClearResourceID()
+	return _u
+}
+
+// SetResourceRole sets the "resource_role" field.
+func (_u *InviteUpdate) SetResourceRole(v string) *InviteUpdate {
+	_u.mutation.SetResourceRole(v)
+	return _u
+}
+
+// SetNillableResourceRole sets the "resource_role" field if the given value is not nil.
+func (_u *InviteUpdate) SetNillableResourceRole(v *string) *InviteUpdate {
+	if v != nil {
+		_u.SetResourceRole(*v)
+	}
+	return _u
+}
+
+// ClearResourceRole clears the value of the "resource_role" field.
+func (_u *InviteUpdate) ClearResourceRole() *InviteUpdate {
+	_u.mutation.ClearResourceRole()
+	return _u
+}
+
 // SetToken sets the "token" field.
 func (_u *InviteUpdate) SetToken(v string) *InviteUpdate {
 	_u.mutation.SetToken(v)
@@ -323,6 +383,16 @@ func (_u *InviteUpdate) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Invite.role": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ResourceType(); ok {
+		if err := invite.ResourceTypeValidator(v); err != nil {
+			return &ValidationError{Name: "resource_type", err: fmt.Errorf(`ent: validator failed for field "Invite.resource_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ResourceID(); ok {
+		if err := invite.ResourceIDValidator(v); err != nil {
+			return &ValidationError{Name: "resource_id", err: fmt.Errorf(`ent: validator failed for field "Invite.resource_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Token(); ok {
 		if err := invite.TokenValidator(v); err != nil {
 			return &ValidationError{Name: "token", err: fmt.Errorf(`ent: validator failed for field "Invite.token": %w`, err)}
@@ -368,6 +438,24 @@ func (_u *InviteUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.AppRolesCleared() {
 		_spec.ClearField(invite.FieldAppRoles, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.ResourceType(); ok {
+		_spec.SetField(invite.FieldResourceType, field.TypeString, value)
+	}
+	if _u.mutation.ResourceTypeCleared() {
+		_spec.ClearField(invite.FieldResourceType, field.TypeString)
+	}
+	if value, ok := _u.mutation.ResourceID(); ok {
+		_spec.SetField(invite.FieldResourceID, field.TypeString, value)
+	}
+	if _u.mutation.ResourceIDCleared() {
+		_spec.ClearField(invite.FieldResourceID, field.TypeString)
+	}
+	if value, ok := _u.mutation.ResourceRole(); ok {
+		_spec.SetField(invite.FieldResourceRole, field.TypeString, value)
+	}
+	if _u.mutation.ResourceRoleCleared() {
+		_spec.ClearField(invite.FieldResourceRole, field.TypeString)
 	}
 	if value, ok := _u.mutation.Token(); ok {
 		_spec.SetField(invite.FieldToken, field.TypeString, value)
@@ -554,6 +642,66 @@ func (_u *InviteUpdateOne) SetAppRoles(v map[string]string) *InviteUpdateOne {
 // ClearAppRoles clears the value of the "app_roles" field.
 func (_u *InviteUpdateOne) ClearAppRoles() *InviteUpdateOne {
 	_u.mutation.ClearAppRoles()
+	return _u
+}
+
+// SetResourceType sets the "resource_type" field.
+func (_u *InviteUpdateOne) SetResourceType(v string) *InviteUpdateOne {
+	_u.mutation.SetResourceType(v)
+	return _u
+}
+
+// SetNillableResourceType sets the "resource_type" field if the given value is not nil.
+func (_u *InviteUpdateOne) SetNillableResourceType(v *string) *InviteUpdateOne {
+	if v != nil {
+		_u.SetResourceType(*v)
+	}
+	return _u
+}
+
+// ClearResourceType clears the value of the "resource_type" field.
+func (_u *InviteUpdateOne) ClearResourceType() *InviteUpdateOne {
+	_u.mutation.ClearResourceType()
+	return _u
+}
+
+// SetResourceID sets the "resource_id" field.
+func (_u *InviteUpdateOne) SetResourceID(v string) *InviteUpdateOne {
+	_u.mutation.SetResourceID(v)
+	return _u
+}
+
+// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
+func (_u *InviteUpdateOne) SetNillableResourceID(v *string) *InviteUpdateOne {
+	if v != nil {
+		_u.SetResourceID(*v)
+	}
+	return _u
+}
+
+// ClearResourceID clears the value of the "resource_id" field.
+func (_u *InviteUpdateOne) ClearResourceID() *InviteUpdateOne {
+	_u.mutation.ClearResourceID()
+	return _u
+}
+
+// SetResourceRole sets the "resource_role" field.
+func (_u *InviteUpdateOne) SetResourceRole(v string) *InviteUpdateOne {
+	_u.mutation.SetResourceRole(v)
+	return _u
+}
+
+// SetNillableResourceRole sets the "resource_role" field if the given value is not nil.
+func (_u *InviteUpdateOne) SetNillableResourceRole(v *string) *InviteUpdateOne {
+	if v != nil {
+		_u.SetResourceRole(*v)
+	}
+	return _u
+}
+
+// ClearResourceRole clears the value of the "resource_role" field.
+func (_u *InviteUpdateOne) ClearResourceRole() *InviteUpdateOne {
+	_u.mutation.ClearResourceRole()
 	return _u
 }
 
@@ -788,6 +936,16 @@ func (_u *InviteUpdateOne) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Invite.role": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ResourceType(); ok {
+		if err := invite.ResourceTypeValidator(v); err != nil {
+			return &ValidationError{Name: "resource_type", err: fmt.Errorf(`ent: validator failed for field "Invite.resource_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ResourceID(); ok {
+		if err := invite.ResourceIDValidator(v); err != nil {
+			return &ValidationError{Name: "resource_id", err: fmt.Errorf(`ent: validator failed for field "Invite.resource_id": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Token(); ok {
 		if err := invite.TokenValidator(v); err != nil {
 			return &ValidationError{Name: "token", err: fmt.Errorf(`ent: validator failed for field "Invite.token": %w`, err)}
@@ -850,6 +1008,24 @@ func (_u *InviteUpdateOne) sqlSave(ctx context.Context) (_node *Invite, err erro
 	}
 	if _u.mutation.AppRolesCleared() {
 		_spec.ClearField(invite.FieldAppRoles, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.ResourceType(); ok {
+		_spec.SetField(invite.FieldResourceType, field.TypeString, value)
+	}
+	if _u.mutation.ResourceTypeCleared() {
+		_spec.ClearField(invite.FieldResourceType, field.TypeString)
+	}
+	if value, ok := _u.mutation.ResourceID(); ok {
+		_spec.SetField(invite.FieldResourceID, field.TypeString, value)
+	}
+	if _u.mutation.ResourceIDCleared() {
+		_spec.ClearField(invite.FieldResourceID, field.TypeString)
+	}
+	if value, ok := _u.mutation.ResourceRole(); ok {
+		_spec.SetField(invite.FieldResourceRole, field.TypeString, value)
+	}
+	if _u.mutation.ResourceRoleCleared() {
+		_spec.ClearField(invite.FieldResourceRole, field.TypeString)
 	}
 	if value, ok := _u.mutation.Token(); ok {
 		_spec.SetField(invite.FieldToken, field.TypeString, value)

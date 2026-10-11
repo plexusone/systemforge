@@ -86,6 +86,21 @@ func Role(v string) predicate.Invite {
 	return predicate.Invite(sql.FieldEQ(FieldRole, v))
 }
 
+// ResourceType applies equality check predicate on the "resource_type" field. It's identical to ResourceTypeEQ.
+func ResourceType(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldResourceType, v))
+}
+
+// ResourceID applies equality check predicate on the "resource_id" field. It's identical to ResourceIDEQ.
+func ResourceID(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldResourceID, v))
+}
+
+// ResourceRole applies equality check predicate on the "resource_role" field. It's identical to ResourceRoleEQ.
+func ResourceRole(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldResourceRole, v))
+}
+
 // Token applies equality check predicate on the "token" field. It's identical to TokenEQ.
 func Token(v string) predicate.Invite {
 	return predicate.Invite(sql.FieldEQ(FieldToken, v))
@@ -379,6 +394,231 @@ func AppRolesIsNil() predicate.Invite {
 // AppRolesNotNil applies the NotNil predicate on the "app_roles" field.
 func AppRolesNotNil() predicate.Invite {
 	return predicate.Invite(sql.FieldNotNull(FieldAppRoles))
+}
+
+// ResourceTypeEQ applies the EQ predicate on the "resource_type" field.
+func ResourceTypeEQ(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldResourceType, v))
+}
+
+// ResourceTypeNEQ applies the NEQ predicate on the "resource_type" field.
+func ResourceTypeNEQ(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldNEQ(FieldResourceType, v))
+}
+
+// ResourceTypeIn applies the In predicate on the "resource_type" field.
+func ResourceTypeIn(vs ...string) predicate.Invite {
+	return predicate.Invite(sql.FieldIn(FieldResourceType, vs...))
+}
+
+// ResourceTypeNotIn applies the NotIn predicate on the "resource_type" field.
+func ResourceTypeNotIn(vs ...string) predicate.Invite {
+	return predicate.Invite(sql.FieldNotIn(FieldResourceType, vs...))
+}
+
+// ResourceTypeGT applies the GT predicate on the "resource_type" field.
+func ResourceTypeGT(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldGT(FieldResourceType, v))
+}
+
+// ResourceTypeGTE applies the GTE predicate on the "resource_type" field.
+func ResourceTypeGTE(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldGTE(FieldResourceType, v))
+}
+
+// ResourceTypeLT applies the LT predicate on the "resource_type" field.
+func ResourceTypeLT(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldLT(FieldResourceType, v))
+}
+
+// ResourceTypeLTE applies the LTE predicate on the "resource_type" field.
+func ResourceTypeLTE(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldLTE(FieldResourceType, v))
+}
+
+// ResourceTypeContains applies the Contains predicate on the "resource_type" field.
+func ResourceTypeContains(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldContains(FieldResourceType, v))
+}
+
+// ResourceTypeHasPrefix applies the HasPrefix predicate on the "resource_type" field.
+func ResourceTypeHasPrefix(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldHasPrefix(FieldResourceType, v))
+}
+
+// ResourceTypeHasSuffix applies the HasSuffix predicate on the "resource_type" field.
+func ResourceTypeHasSuffix(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldHasSuffix(FieldResourceType, v))
+}
+
+// ResourceTypeIsNil applies the IsNil predicate on the "resource_type" field.
+func ResourceTypeIsNil() predicate.Invite {
+	return predicate.Invite(sql.FieldIsNull(FieldResourceType))
+}
+
+// ResourceTypeNotNil applies the NotNil predicate on the "resource_type" field.
+func ResourceTypeNotNil() predicate.Invite {
+	return predicate.Invite(sql.FieldNotNull(FieldResourceType))
+}
+
+// ResourceTypeEqualFold applies the EqualFold predicate on the "resource_type" field.
+func ResourceTypeEqualFold(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEqualFold(FieldResourceType, v))
+}
+
+// ResourceTypeContainsFold applies the ContainsFold predicate on the "resource_type" field.
+func ResourceTypeContainsFold(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldContainsFold(FieldResourceType, v))
+}
+
+// ResourceIDEQ applies the EQ predicate on the "resource_id" field.
+func ResourceIDEQ(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldResourceID, v))
+}
+
+// ResourceIDNEQ applies the NEQ predicate on the "resource_id" field.
+func ResourceIDNEQ(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldNEQ(FieldResourceID, v))
+}
+
+// ResourceIDIn applies the In predicate on the "resource_id" field.
+func ResourceIDIn(vs ...string) predicate.Invite {
+	return predicate.Invite(sql.FieldIn(FieldResourceID, vs...))
+}
+
+// ResourceIDNotIn applies the NotIn predicate on the "resource_id" field.
+func ResourceIDNotIn(vs ...string) predicate.Invite {
+	return predicate.Invite(sql.FieldNotIn(FieldResourceID, vs...))
+}
+
+// ResourceIDGT applies the GT predicate on the "resource_id" field.
+func ResourceIDGT(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldGT(FieldResourceID, v))
+}
+
+// ResourceIDGTE applies the GTE predicate on the "resource_id" field.
+func ResourceIDGTE(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldGTE(FieldResourceID, v))
+}
+
+// ResourceIDLT applies the LT predicate on the "resource_id" field.
+func ResourceIDLT(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldLT(FieldResourceID, v))
+}
+
+// ResourceIDLTE applies the LTE predicate on the "resource_id" field.
+func ResourceIDLTE(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldLTE(FieldResourceID, v))
+}
+
+// ResourceIDContains applies the Contains predicate on the "resource_id" field.
+func ResourceIDContains(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldContains(FieldResourceID, v))
+}
+
+// ResourceIDHasPrefix applies the HasPrefix predicate on the "resource_id" field.
+func ResourceIDHasPrefix(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldHasPrefix(FieldResourceID, v))
+}
+
+// ResourceIDHasSuffix applies the HasSuffix predicate on the "resource_id" field.
+func ResourceIDHasSuffix(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldHasSuffix(FieldResourceID, v))
+}
+
+// ResourceIDIsNil applies the IsNil predicate on the "resource_id" field.
+func ResourceIDIsNil() predicate.Invite {
+	return predicate.Invite(sql.FieldIsNull(FieldResourceID))
+}
+
+// ResourceIDNotNil applies the NotNil predicate on the "resource_id" field.
+func ResourceIDNotNil() predicate.Invite {
+	return predicate.Invite(sql.FieldNotNull(FieldResourceID))
+}
+
+// ResourceIDEqualFold applies the EqualFold predicate on the "resource_id" field.
+func ResourceIDEqualFold(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEqualFold(FieldResourceID, v))
+}
+
+// ResourceIDContainsFold applies the ContainsFold predicate on the "resource_id" field.
+func ResourceIDContainsFold(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldContainsFold(FieldResourceID, v))
+}
+
+// ResourceRoleEQ applies the EQ predicate on the "resource_role" field.
+func ResourceRoleEQ(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEQ(FieldResourceRole, v))
+}
+
+// ResourceRoleNEQ applies the NEQ predicate on the "resource_role" field.
+func ResourceRoleNEQ(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldNEQ(FieldResourceRole, v))
+}
+
+// ResourceRoleIn applies the In predicate on the "resource_role" field.
+func ResourceRoleIn(vs ...string) predicate.Invite {
+	return predicate.Invite(sql.FieldIn(FieldResourceRole, vs...))
+}
+
+// ResourceRoleNotIn applies the NotIn predicate on the "resource_role" field.
+func ResourceRoleNotIn(vs ...string) predicate.Invite {
+	return predicate.Invite(sql.FieldNotIn(FieldResourceRole, vs...))
+}
+
+// ResourceRoleGT applies the GT predicate on the "resource_role" field.
+func ResourceRoleGT(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldGT(FieldResourceRole, v))
+}
+
+// ResourceRoleGTE applies the GTE predicate on the "resource_role" field.
+func ResourceRoleGTE(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldGTE(FieldResourceRole, v))
+}
+
+// ResourceRoleLT applies the LT predicate on the "resource_role" field.
+func ResourceRoleLT(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldLT(FieldResourceRole, v))
+}
+
+// ResourceRoleLTE applies the LTE predicate on the "resource_role" field.
+func ResourceRoleLTE(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldLTE(FieldResourceRole, v))
+}
+
+// ResourceRoleContains applies the Contains predicate on the "resource_role" field.
+func ResourceRoleContains(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldContains(FieldResourceRole, v))
+}
+
+// ResourceRoleHasPrefix applies the HasPrefix predicate on the "resource_role" field.
+func ResourceRoleHasPrefix(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldHasPrefix(FieldResourceRole, v))
+}
+
+// ResourceRoleHasSuffix applies the HasSuffix predicate on the "resource_role" field.
+func ResourceRoleHasSuffix(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldHasSuffix(FieldResourceRole, v))
+}
+
+// ResourceRoleIsNil applies the IsNil predicate on the "resource_role" field.
+func ResourceRoleIsNil() predicate.Invite {
+	return predicate.Invite(sql.FieldIsNull(FieldResourceRole))
+}
+
+// ResourceRoleNotNil applies the NotNil predicate on the "resource_role" field.
+func ResourceRoleNotNil() predicate.Invite {
+	return predicate.Invite(sql.FieldNotNull(FieldResourceRole))
+}
+
+// ResourceRoleEqualFold applies the EqualFold predicate on the "resource_role" field.
+func ResourceRoleEqualFold(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldEqualFold(FieldResourceRole, v))
+}
+
+// ResourceRoleContainsFold applies the ContainsFold predicate on the "resource_role" field.
+func ResourceRoleContainsFold(v string) predicate.Invite {
+	return predicate.Invite(sql.FieldContainsFold(FieldResourceRole, v))
 }
 
 // TokenEQ applies the EQ predicate on the "token" field.

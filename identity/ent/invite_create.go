@@ -92,6 +92,48 @@ func (_c *InviteCreate) SetAppRoles(v map[string]string) *InviteCreate {
 	return _c
 }
 
+// SetResourceType sets the "resource_type" field.
+func (_c *InviteCreate) SetResourceType(v string) *InviteCreate {
+	_c.mutation.SetResourceType(v)
+	return _c
+}
+
+// SetNillableResourceType sets the "resource_type" field if the given value is not nil.
+func (_c *InviteCreate) SetNillableResourceType(v *string) *InviteCreate {
+	if v != nil {
+		_c.SetResourceType(*v)
+	}
+	return _c
+}
+
+// SetResourceID sets the "resource_id" field.
+func (_c *InviteCreate) SetResourceID(v string) *InviteCreate {
+	_c.mutation.SetResourceID(v)
+	return _c
+}
+
+// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
+func (_c *InviteCreate) SetNillableResourceID(v *string) *InviteCreate {
+	if v != nil {
+		_c.SetResourceID(*v)
+	}
+	return _c
+}
+
+// SetResourceRole sets the "resource_role" field.
+func (_c *InviteCreate) SetResourceRole(v string) *InviteCreate {
+	_c.mutation.SetResourceRole(v)
+	return _c
+}
+
+// SetNillableResourceRole sets the "resource_role" field if the given value is not nil.
+func (_c *InviteCreate) SetNillableResourceRole(v *string) *InviteCreate {
+	if v != nil {
+		_c.SetResourceRole(*v)
+	}
+	return _c
+}
+
 // SetToken sets the "token" field.
 func (_c *InviteCreate) SetToken(v string) *InviteCreate {
 	_c.mutation.SetToken(v)
@@ -313,6 +355,16 @@ func (_c *InviteCreate) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Invite.role": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.ResourceType(); ok {
+		if err := invite.ResourceTypeValidator(v); err != nil {
+			return &ValidationError{Name: "resource_type", err: fmt.Errorf(`ent: validator failed for field "Invite.resource_type": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.ResourceID(); ok {
+		if err := invite.ResourceIDValidator(v); err != nil {
+			return &ValidationError{Name: "resource_id", err: fmt.Errorf(`ent: validator failed for field "Invite.resource_id": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Token(); !ok {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required field "Invite.token"`)}
 	}
@@ -399,6 +451,18 @@ func (_c *InviteCreate) createSpec() (*Invite, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.AppRoles(); ok {
 		_spec.SetField(invite.FieldAppRoles, field.TypeJSON, value)
 		_node.AppRoles = value
+	}
+	if value, ok := _c.mutation.ResourceType(); ok {
+		_spec.SetField(invite.FieldResourceType, field.TypeString, value)
+		_node.ResourceType = &value
+	}
+	if value, ok := _c.mutation.ResourceID(); ok {
+		_spec.SetField(invite.FieldResourceID, field.TypeString, value)
+		_node.ResourceID = &value
+	}
+	if value, ok := _c.mutation.ResourceRole(); ok {
+		_spec.SetField(invite.FieldResourceRole, field.TypeString, value)
+		_node.ResourceRole = &value
 	}
 	if value, ok := _c.mutation.Token(); ok {
 		_spec.SetField(invite.FieldToken, field.TypeString, value)
@@ -593,6 +657,60 @@ func (u *InviteUpsert) UpdateAppRoles() *InviteUpsert {
 // ClearAppRoles clears the value of the "app_roles" field.
 func (u *InviteUpsert) ClearAppRoles() *InviteUpsert {
 	u.SetNull(invite.FieldAppRoles)
+	return u
+}
+
+// SetResourceType sets the "resource_type" field.
+func (u *InviteUpsert) SetResourceType(v string) *InviteUpsert {
+	u.Set(invite.FieldResourceType, v)
+	return u
+}
+
+// UpdateResourceType sets the "resource_type" field to the value that was provided on create.
+func (u *InviteUpsert) UpdateResourceType() *InviteUpsert {
+	u.SetExcluded(invite.FieldResourceType)
+	return u
+}
+
+// ClearResourceType clears the value of the "resource_type" field.
+func (u *InviteUpsert) ClearResourceType() *InviteUpsert {
+	u.SetNull(invite.FieldResourceType)
+	return u
+}
+
+// SetResourceID sets the "resource_id" field.
+func (u *InviteUpsert) SetResourceID(v string) *InviteUpsert {
+	u.Set(invite.FieldResourceID, v)
+	return u
+}
+
+// UpdateResourceID sets the "resource_id" field to the value that was provided on create.
+func (u *InviteUpsert) UpdateResourceID() *InviteUpsert {
+	u.SetExcluded(invite.FieldResourceID)
+	return u
+}
+
+// ClearResourceID clears the value of the "resource_id" field.
+func (u *InviteUpsert) ClearResourceID() *InviteUpsert {
+	u.SetNull(invite.FieldResourceID)
+	return u
+}
+
+// SetResourceRole sets the "resource_role" field.
+func (u *InviteUpsert) SetResourceRole(v string) *InviteUpsert {
+	u.Set(invite.FieldResourceRole, v)
+	return u
+}
+
+// UpdateResourceRole sets the "resource_role" field to the value that was provided on create.
+func (u *InviteUpsert) UpdateResourceRole() *InviteUpsert {
+	u.SetExcluded(invite.FieldResourceRole)
+	return u
+}
+
+// ClearResourceRole clears the value of the "resource_role" field.
+func (u *InviteUpsert) ClearResourceRole() *InviteUpsert {
+	u.SetNull(invite.FieldResourceRole)
 	return u
 }
 
@@ -855,6 +973,69 @@ func (u *InviteUpsertOne) UpdateAppRoles() *InviteUpsertOne {
 func (u *InviteUpsertOne) ClearAppRoles() *InviteUpsertOne {
 	return u.Update(func(s *InviteUpsert) {
 		s.ClearAppRoles()
+	})
+}
+
+// SetResourceType sets the "resource_type" field.
+func (u *InviteUpsertOne) SetResourceType(v string) *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.SetResourceType(v)
+	})
+}
+
+// UpdateResourceType sets the "resource_type" field to the value that was provided on create.
+func (u *InviteUpsertOne) UpdateResourceType() *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.UpdateResourceType()
+	})
+}
+
+// ClearResourceType clears the value of the "resource_type" field.
+func (u *InviteUpsertOne) ClearResourceType() *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.ClearResourceType()
+	})
+}
+
+// SetResourceID sets the "resource_id" field.
+func (u *InviteUpsertOne) SetResourceID(v string) *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.SetResourceID(v)
+	})
+}
+
+// UpdateResourceID sets the "resource_id" field to the value that was provided on create.
+func (u *InviteUpsertOne) UpdateResourceID() *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.UpdateResourceID()
+	})
+}
+
+// ClearResourceID clears the value of the "resource_id" field.
+func (u *InviteUpsertOne) ClearResourceID() *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.ClearResourceID()
+	})
+}
+
+// SetResourceRole sets the "resource_role" field.
+func (u *InviteUpsertOne) SetResourceRole(v string) *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.SetResourceRole(v)
+	})
+}
+
+// UpdateResourceRole sets the "resource_role" field to the value that was provided on create.
+func (u *InviteUpsertOne) UpdateResourceRole() *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.UpdateResourceRole()
+	})
+}
+
+// ClearResourceRole clears the value of the "resource_role" field.
+func (u *InviteUpsertOne) ClearResourceRole() *InviteUpsertOne {
+	return u.Update(func(s *InviteUpsert) {
+		s.ClearResourceRole()
 	})
 }
 
@@ -1304,6 +1485,69 @@ func (u *InviteUpsertBulk) UpdateAppRoles() *InviteUpsertBulk {
 func (u *InviteUpsertBulk) ClearAppRoles() *InviteUpsertBulk {
 	return u.Update(func(s *InviteUpsert) {
 		s.ClearAppRoles()
+	})
+}
+
+// SetResourceType sets the "resource_type" field.
+func (u *InviteUpsertBulk) SetResourceType(v string) *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.SetResourceType(v)
+	})
+}
+
+// UpdateResourceType sets the "resource_type" field to the value that was provided on create.
+func (u *InviteUpsertBulk) UpdateResourceType() *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.UpdateResourceType()
+	})
+}
+
+// ClearResourceType clears the value of the "resource_type" field.
+func (u *InviteUpsertBulk) ClearResourceType() *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.ClearResourceType()
+	})
+}
+
+// SetResourceID sets the "resource_id" field.
+func (u *InviteUpsertBulk) SetResourceID(v string) *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.SetResourceID(v)
+	})
+}
+
+// UpdateResourceID sets the "resource_id" field to the value that was provided on create.
+func (u *InviteUpsertBulk) UpdateResourceID() *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.UpdateResourceID()
+	})
+}
+
+// ClearResourceID clears the value of the "resource_id" field.
+func (u *InviteUpsertBulk) ClearResourceID() *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.ClearResourceID()
+	})
+}
+
+// SetResourceRole sets the "resource_role" field.
+func (u *InviteUpsertBulk) SetResourceRole(v string) *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.SetResourceRole(v)
+	})
+}
+
+// UpdateResourceRole sets the "resource_role" field to the value that was provided on create.
+func (u *InviteUpsertBulk) UpdateResourceRole() *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.UpdateResourceRole()
+	})
+}
+
+// ClearResourceRole clears the value of the "resource_role" field.
+func (u *InviteUpsertBulk) ClearResourceRole() *InviteUpsertBulk {
+	return u.Update(func(s *InviteUpsert) {
+		s.ClearResourceRole()
 	})
 }
 

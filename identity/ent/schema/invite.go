@@ -60,6 +60,24 @@ func (Invite) Fields() []ent.Field {
 			Optional().
 			Comment("Application roles to grant on acceptance, application to role"),
 
+		// A resource-targeted invitation (ADR-008): accepting it makes the
+		// invitee a collaborator and grants the role on the resource, in
+		// one transaction. All three are set together, or none.
+		field.String("resource_type").
+			Optional().
+			Nillable().
+			MaxLen(128).
+			Comment("Resource type, {app}_{type}, the invite grants a role on; null for an organization invite"),
+		field.String("resource_id").
+			Optional().
+			Nillable().
+			MaxLen(1024).
+			Comment("The application's identifier of the resource the invite grants a role on"),
+		field.String("resource_role").
+			Optional().
+			Nillable().
+			Comment("The resource role granted on acceptance: viewer, contributor or maintainer"),
+
 		// SHA-256 of the invite link's token; the token itself is never
 		// stored. The column keeps its name so existing databases migrate
 		// in place (migrations/0003_hash_invite_tokens.sql).

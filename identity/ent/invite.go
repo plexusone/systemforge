@@ -35,6 +35,12 @@ type Invite struct {
 	Role string `json:"role,omitempty"`
 	// Application roles to grant on acceptance, application to role
 	AppRoles map[string]string `json:"app_roles,omitempty"`
+	// Resource type, {app}_{type}, the invite grants a role on; null for an organization invite
+	ResourceType *string `json:"resource_type,omitempty"`
+	// The application's identifier of the resource the invite grants a role on
+	ResourceID *string `json:"resource_id,omitempty"`
+	// The resource role granted on acceptance: viewer, contributor or maintainer
+	ResourceRole *string `json:"resource_role,omitempty"`
 	// Hex SHA-256 of the invite URL token
 	Token string `json:"-"`
 	// Current status of the invite
@@ -101,7 +107,7 @@ func (*Invite) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case invite.FieldResendCount:
 			values[i] = new(sql.NullInt64)
-		case invite.FieldEmail, invite.FieldRole, invite.FieldToken, invite.FieldStatus, invite.FieldMessage:
+		case invite.FieldEmail, invite.FieldRole, invite.FieldResourceType, invite.FieldResourceID, invite.FieldResourceRole, invite.FieldToken, invite.FieldStatus, invite.FieldMessage:
 			values[i] = new(sql.NullString)
 		case invite.FieldCreatedAt, invite.FieldUpdatedAt, invite.FieldExpiresAt, invite.FieldAcceptedAt, invite.FieldLastSentAt:
 			values[i] = new(sql.NullTime)
@@ -171,6 +177,27 @@ func (_m *Invite) assignValues(columns []string, values []any) error {
 				if err := json.Unmarshal(*value, &_m.AppRoles); err != nil {
 					return fmt.Errorf("unmarshal field app_roles: %w", err)
 				}
+			}
+		case invite.FieldResourceType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field resource_type", values[i])
+			} else if value.Valid {
+				_m.ResourceType = new(string)
+				*_m.ResourceType = value.String
+			}
+		case invite.FieldResourceID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field resource_id", values[i])
+			} else if value.Valid {
+				_m.ResourceID = new(string)
+				*_m.ResourceID = value.String
+			}
+		case invite.FieldResourceRole:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field resource_role", values[i])
+			} else if value.Valid {
+				_m.ResourceRole = new(string)
+				*_m.ResourceRole = value.String
 			}
 		case invite.FieldToken:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -289,6 +316,21 @@ func (_m *Invite) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("app_roles=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AppRoles))
+	builder.WriteString(", ")
+	if v := _m.ResourceType; v != nil {
+		builder.WriteString("resource_type=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.ResourceID; v != nil {
+		builder.WriteString("resource_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.ResourceRole; v != nil {
+		builder.WriteString("resource_role=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("token=<sensitive>")
 	builder.WriteString(", ")

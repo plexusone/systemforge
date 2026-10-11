@@ -271,6 +271,9 @@ var schemaGraph = func() *sqlgraph.Schema {
 			invite.FieldEmail:                 {Type: field.TypeString, Column: invite.FieldEmail},
 			invite.FieldRole:                  {Type: field.TypeString, Column: invite.FieldRole},
 			invite.FieldAppRoles:              {Type: field.TypeJSON, Column: invite.FieldAppRoles},
+			invite.FieldResourceType:          {Type: field.TypeString, Column: invite.FieldResourceType},
+			invite.FieldResourceID:            {Type: field.TypeString, Column: invite.FieldResourceID},
+			invite.FieldResourceRole:          {Type: field.TypeString, Column: invite.FieldResourceRole},
 			invite.FieldToken:                 {Type: field.TypeString, Column: invite.FieldToken},
 			invite.FieldStatus:                {Type: field.TypeEnum, Column: invite.FieldStatus},
 			invite.FieldMessage:               {Type: field.TypeString, Column: invite.FieldMessage},
@@ -2757,6 +2760,21 @@ func (f *InviteFilter) WhereRole(p entql.StringP) {
 // WhereAppRoles applies the entql json.RawMessage predicate on the app_roles field.
 func (f *InviteFilter) WhereAppRoles(p entql.BytesP) {
 	f.Where(p.Field(invite.FieldAppRoles))
+}
+
+// WhereResourceType applies the entql string predicate on the resource_type field.
+func (f *InviteFilter) WhereResourceType(p entql.StringP) {
+	f.Where(p.Field(invite.FieldResourceType))
+}
+
+// WhereResourceID applies the entql string predicate on the resource_id field.
+func (f *InviteFilter) WhereResourceID(p entql.StringP) {
+	f.Where(p.Field(invite.FieldResourceID))
+}
+
+// WhereResourceRole applies the entql string predicate on the resource_role field.
+func (f *InviteFilter) WhereResourceRole(p entql.StringP) {
+	f.Where(p.Field(invite.FieldResourceRole))
 }
 
 // WhereToken applies the entql string predicate on the token field.

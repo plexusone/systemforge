@@ -9012,6 +9012,9 @@ type InviteMutation struct {
 	email                    *string
 	role                     *string
 	app_roles                *map[string]string
+	resource_type            *string
+	resource_id              *string
+	resource_role            *string
 	token                    *string
 	status                   *invite.Status
 	message                  *string
@@ -9398,6 +9401,153 @@ func (m *InviteMutation) AppRolesCleared() bool {
 func (m *InviteMutation) ResetAppRoles() {
 	m.app_roles = nil
 	delete(m.clearedFields, invite.FieldAppRoles)
+}
+
+// SetResourceType sets the "resource_type" field.
+func (m *InviteMutation) SetResourceType(s string) {
+	m.resource_type = &s
+}
+
+// ResourceType returns the value of the "resource_type" field in the mutation.
+func (m *InviteMutation) ResourceType() (r string, exists bool) {
+	v := m.resource_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceType returns the old "resource_type" field's value of the Invite entity.
+// If the Invite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *InviteMutation) OldResourceType(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceType: %w", err)
+	}
+	return oldValue.ResourceType, nil
+}
+
+// ClearResourceType clears the value of the "resource_type" field.
+func (m *InviteMutation) ClearResourceType() {
+	m.resource_type = nil
+	m.clearedFields[invite.FieldResourceType] = struct{}{}
+}
+
+// ResourceTypeCleared returns if the "resource_type" field was cleared in this mutation.
+func (m *InviteMutation) ResourceTypeCleared() bool {
+	_, ok := m.clearedFields[invite.FieldResourceType]
+	return ok
+}
+
+// ResetResourceType resets all changes to the "resource_type" field.
+func (m *InviteMutation) ResetResourceType() {
+	m.resource_type = nil
+	delete(m.clearedFields, invite.FieldResourceType)
+}
+
+// SetResourceID sets the "resource_id" field.
+func (m *InviteMutation) SetResourceID(s string) {
+	m.resource_id = &s
+}
+
+// ResourceID returns the value of the "resource_id" field in the mutation.
+func (m *InviteMutation) ResourceID() (r string, exists bool) {
+	v := m.resource_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceID returns the old "resource_id" field's value of the Invite entity.
+// If the Invite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *InviteMutation) OldResourceID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceID: %w", err)
+	}
+	return oldValue.ResourceID, nil
+}
+
+// ClearResourceID clears the value of the "resource_id" field.
+func (m *InviteMutation) ClearResourceID() {
+	m.resource_id = nil
+	m.clearedFields[invite.FieldResourceID] = struct{}{}
+}
+
+// ResourceIDCleared returns if the "resource_id" field was cleared in this mutation.
+func (m *InviteMutation) ResourceIDCleared() bool {
+	_, ok := m.clearedFields[invite.FieldResourceID]
+	return ok
+}
+
+// ResetResourceID resets all changes to the "resource_id" field.
+func (m *InviteMutation) ResetResourceID() {
+	m.resource_id = nil
+	delete(m.clearedFields, invite.FieldResourceID)
+}
+
+// SetResourceRole sets the "resource_role" field.
+func (m *InviteMutation) SetResourceRole(s string) {
+	m.resource_role = &s
+}
+
+// ResourceRole returns the value of the "resource_role" field in the mutation.
+func (m *InviteMutation) ResourceRole() (r string, exists bool) {
+	v := m.resource_role
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceRole returns the old "resource_role" field's value of the Invite entity.
+// If the Invite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *InviteMutation) OldResourceRole(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceRole is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceRole requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceRole: %w", err)
+	}
+	return oldValue.ResourceRole, nil
+}
+
+// ClearResourceRole clears the value of the "resource_role" field.
+func (m *InviteMutation) ClearResourceRole() {
+	m.resource_role = nil
+	m.clearedFields[invite.FieldResourceRole] = struct{}{}
+}
+
+// ResourceRoleCleared returns if the "resource_role" field was cleared in this mutation.
+func (m *InviteMutation) ResourceRoleCleared() bool {
+	_, ok := m.clearedFields[invite.FieldResourceRole]
+	return ok
+}
+
+// ResetResourceRole resets all changes to the "resource_role" field.
+func (m *InviteMutation) ResetResourceRole() {
+	m.resource_role = nil
+	delete(m.clearedFields, invite.FieldResourceRole)
 }
 
 // SetToken sets the "token" field.
@@ -9848,7 +9998,7 @@ func (m *InviteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *InviteMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 18)
 	if m.created_at != nil {
 		fields = append(fields, invite.FieldCreatedAt)
 	}
@@ -9869,6 +10019,15 @@ func (m *InviteMutation) Fields() []string {
 	}
 	if m.app_roles != nil {
 		fields = append(fields, invite.FieldAppRoles)
+	}
+	if m.resource_type != nil {
+		fields = append(fields, invite.FieldResourceType)
+	}
+	if m.resource_id != nil {
+		fields = append(fields, invite.FieldResourceID)
+	}
+	if m.resource_role != nil {
+		fields = append(fields, invite.FieldResourceRole)
 	}
 	if m.token != nil {
 		fields = append(fields, invite.FieldToken)
@@ -9916,6 +10075,12 @@ func (m *InviteMutation) Field(name string) (ent.Value, bool) {
 		return m.Role()
 	case invite.FieldAppRoles:
 		return m.AppRoles()
+	case invite.FieldResourceType:
+		return m.ResourceType()
+	case invite.FieldResourceID:
+		return m.ResourceID()
+	case invite.FieldResourceRole:
+		return m.ResourceRole()
 	case invite.FieldToken:
 		return m.Token()
 	case invite.FieldStatus:
@@ -9955,6 +10120,12 @@ func (m *InviteMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldRole(ctx)
 	case invite.FieldAppRoles:
 		return m.OldAppRoles(ctx)
+	case invite.FieldResourceType:
+		return m.OldResourceType(ctx)
+	case invite.FieldResourceID:
+		return m.OldResourceID(ctx)
+	case invite.FieldResourceRole:
+		return m.OldResourceRole(ctx)
 	case invite.FieldToken:
 		return m.OldToken(ctx)
 	case invite.FieldStatus:
@@ -10028,6 +10199,27 @@ func (m *InviteMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAppRoles(v)
+		return nil
+	case invite.FieldResourceType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceType(v)
+		return nil
+	case invite.FieldResourceID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceID(v)
+		return nil
+	case invite.FieldResourceRole:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceRole(v)
 		return nil
 	case invite.FieldToken:
 		v, ok := value.(string)
@@ -10133,6 +10325,15 @@ func (m *InviteMutation) ClearedFields() []string {
 	if m.FieldCleared(invite.FieldAppRoles) {
 		fields = append(fields, invite.FieldAppRoles)
 	}
+	if m.FieldCleared(invite.FieldResourceType) {
+		fields = append(fields, invite.FieldResourceType)
+	}
+	if m.FieldCleared(invite.FieldResourceID) {
+		fields = append(fields, invite.FieldResourceID)
+	}
+	if m.FieldCleared(invite.FieldResourceRole) {
+		fields = append(fields, invite.FieldResourceRole)
+	}
 	if m.FieldCleared(invite.FieldMessage) {
 		fields = append(fields, invite.FieldMessage)
 	}
@@ -10158,6 +10359,15 @@ func (m *InviteMutation) ClearField(name string) error {
 	switch name {
 	case invite.FieldAppRoles:
 		m.ClearAppRoles()
+		return nil
+	case invite.FieldResourceType:
+		m.ClearResourceType()
+		return nil
+	case invite.FieldResourceID:
+		m.ClearResourceID()
+		return nil
+	case invite.FieldResourceRole:
+		m.ClearResourceRole()
 		return nil
 	case invite.FieldMessage:
 		m.ClearMessage()
@@ -10196,6 +10406,15 @@ func (m *InviteMutation) ResetField(name string) error {
 		return nil
 	case invite.FieldAppRoles:
 		m.ResetAppRoles()
+		return nil
+	case invite.FieldResourceType:
+		m.ResetResourceType()
+		return nil
+	case invite.FieldResourceID:
+		m.ResetResourceID()
+		return nil
+	case invite.FieldResourceRole:
+		m.ResetResourceRole()
 		return nil
 	case invite.FieldToken:
 		m.ResetToken()

@@ -30,6 +30,12 @@ const (
 	FieldRole = "role"
 	// FieldAppRoles holds the string denoting the app_roles field in the database.
 	FieldAppRoles = "app_roles"
+	// FieldResourceType holds the string denoting the resource_type field in the database.
+	FieldResourceType = "resource_type"
+	// FieldResourceID holds the string denoting the resource_id field in the database.
+	FieldResourceID = "resource_id"
+	// FieldResourceRole holds the string denoting the resource_role field in the database.
+	FieldResourceRole = "resource_role"
 	// FieldToken holds the string denoting the token field in the database.
 	FieldToken = "token"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -78,6 +84,9 @@ var Columns = []string{
 	FieldEmail,
 	FieldRole,
 	FieldAppRoles,
+	FieldResourceType,
+	FieldResourceID,
+	FieldResourceRole,
 	FieldToken,
 	FieldStatus,
 	FieldMessage,
@@ -111,6 +120,10 @@ var (
 	DefaultRole string
 	// RoleValidator is a validator for the "role" field. It is called by the builders before save.
 	RoleValidator func(string) error
+	// ResourceTypeValidator is a validator for the "resource_type" field. It is called by the builders before save.
+	ResourceTypeValidator func(string) error
+	// ResourceIDValidator is a validator for the "resource_id" field. It is called by the builders before save.
+	ResourceIDValidator func(string) error
 	// TokenValidator is a validator for the "token" field. It is called by the builders before save.
 	TokenValidator func(string) error
 	// DefaultResendCount holds the default value on creation for the "resend_count" field.
@@ -186,6 +199,21 @@ func ByEmail(opts ...sql.OrderTermOption) OrderOption {
 // ByRole orders the results by the role field.
 func ByRole(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRole, opts...).ToFunc()
+}
+
+// ByResourceType orders the results by the resource_type field.
+func ByResourceType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldResourceType, opts...).ToFunc()
+}
+
+// ByResourceID orders the results by the resource_id field.
+func ByResourceID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldResourceID, opts...).ToFunc()
+}
+
+// ByResourceRole orders the results by the resource_role field.
+func ByResourceRole(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldResourceRole, opts...).ToFunc()
 }
 
 // ByToken orders the results by the token field.

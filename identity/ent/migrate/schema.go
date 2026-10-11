@@ -422,6 +422,9 @@ var (
 		{Name: "email", Type: field.TypeString},
 		{Name: "role", Type: field.TypeString, Default: "member"},
 		{Name: "app_roles", Type: field.TypeJSON, Nullable: true},
+		{Name: "resource_type", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "resource_id", Type: field.TypeString, Nullable: true, Size: 1024},
+		{Name: "resource_role", Type: field.TypeString, Nullable: true},
 		{Name: "token", Type: field.TypeString, Unique: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "accepted", "declined", "expired", "revoked"}, Default: "pending"},
 		{Name: "message", Type: field.TypeString, Nullable: true, Size: 2147483647},
@@ -441,13 +444,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_invites_sf_organizations_invites",
-				Columns:    []*schema.Column{SfInvitesColumns[14]},
+				Columns:    []*schema.Column{SfInvitesColumns[17]},
 				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "sf_invites_sf_principals_sent_invites",
-				Columns:    []*schema.Column{SfInvitesColumns[15]},
+				Columns:    []*schema.Column{SfInvitesColumns[18]},
 				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -456,7 +459,7 @@ var (
 			{
 				Name:    "invite_token",
 				Unique:  true,
-				Columns: []*schema.Column{SfInvitesColumns[6]},
+				Columns: []*schema.Column{SfInvitesColumns[9]},
 			},
 			{
 				Name:    "invite_email",
@@ -466,27 +469,27 @@ var (
 			{
 				Name:    "invite_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfInvitesColumns[14]},
+				Columns: []*schema.Column{SfInvitesColumns[17]},
 			},
 			{
 				Name:    "invite_organization_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{SfInvitesColumns[14], SfInvitesColumns[7]},
+				Columns: []*schema.Column{SfInvitesColumns[17], SfInvitesColumns[10]},
 			},
 			{
 				Name:    "invite_organization_id_email_status",
 				Unique:  false,
-				Columns: []*schema.Column{SfInvitesColumns[14], SfInvitesColumns[3], SfInvitesColumns[7]},
+				Columns: []*schema.Column{SfInvitesColumns[17], SfInvitesColumns[3], SfInvitesColumns[10]},
 			},
 			{
 				Name:    "invite_inviter_principal_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfInvitesColumns[15]},
+				Columns: []*schema.Column{SfInvitesColumns[18]},
 			},
 			{
 				Name:    "invite_status_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{SfInvitesColumns[7], SfInvitesColumns[9]},
+				Columns: []*schema.Column{SfInvitesColumns[10], SfInvitesColumns[12]},
 			},
 		},
 	}
