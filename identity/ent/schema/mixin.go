@@ -24,6 +24,30 @@ func (UUIDMixin) Fields() []ent.Field {
 	}
 }
 
+// TimeOrderedUUIDMixin provides a UUIDv7 primary key field. Unlike
+// UUIDMixin's random v4 IDs, v7 IDs sort in creation order, so ordering by
+// (timestamp, id) is deterministic when timestamps tie, as they do on
+// platforms with a coarse clock such as Windows. Use it on append-only
+// records that are read back in the order they were written.
+type TimeOrderedUUIDMixin struct {
+	mixin.Schema
+}
+
+// Fields returns the UUIDv7 id field.
+func (TimeOrderedUUIDMixin) Fields() []ent.Field {
+	return []ent.Field{
+		field.UUID("id", uuid.UUID{}).
+			Default(newTimeOrderedUUID).
+			Immutable(),
+	}
+}
+
+// newTimeOrderedUUID returns a UUIDv7. It fails only if the system random
+// source does, which is an unrecoverable invariant violation.
+func newTimeOrderedUUID() uuid.UUID {
+	return uuid.Must(uuid.NewV7())
+}
+
 // TimestampMixin provides created_at and updated_at timestamp fields.
 type TimestampMixin struct {
 	mixin.Schema

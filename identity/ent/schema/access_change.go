@@ -34,7 +34,9 @@ func (AccessChange) Annotations() []schema.Annotation {
 // Mixin of the AccessChange.
 func (AccessChange) Mixin() []ent.Mixin {
 	return []ent.Mixin{
-		UUIDMixin{},
+		// Rows are read back oldest first; v7 IDs keep that order when
+		// changed_at ties on a coarse clock.
+		TimeOrderedUUIDMixin{},
 	}
 }
 
