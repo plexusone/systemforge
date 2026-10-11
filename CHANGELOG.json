@@ -9,6 +9,1028 @@
   ],
   "releases": [
     {
+      "version": "v0.15.0",
+      "date": "2026-10-11",
+      "highlights": [
+        {
+          "description": "Organizations without a plan: a first social login creates the person's personal organization, slugs are reserved, renamed with a cooling-off period and aliases, a personal organization converts to a team, and what an organization may use comes from its marketplace subscriptions and licenses (ADR-006)"
+        },
+        {
+          "description": "Application roles per member, entitled through the marketplace, carried in the `orgs` claim and on invites, with relying parties reading memberships from claims by default (ADR-007)"
+        },
+        {
+          "description": "Real-time invalidation of access: access tokens default to 10 minutes and are capped at 15, every access-reducing change is recorded, and relying parties refuse tokens issued before it, with polling, replay and back-channel delivery (ADR-010)"
+        },
+        {
+          "description": "Resource-scoped collaborators: the `collaborator` organization role, resource grants with a standard viewer, contributor and maintainer ladder in both authorization modes, and invites that target one resource (ADR-008)"
+        },
+        {
+          "description": "The authorization mode is configuration: the `authz` key selects `rbac` or `rebac`, and `authz/mode.New` builds the provider, syncer and grant store (ADR-008)"
+        },
+        {
+          "description": "Management is derived from manager relationships; a manager can release a principal, a self-managed human can be invited to be managed or decline, and managing operations are authorized and served over HTTP (ADR-009)"
+        },
+        {
+          "description": "Editor and viewer are no longer organization roles, and the organization `plan` column is removed; run migrations 0004 to 0009 on existing PostgreSQL databases"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "The organization `plan` column and `organization.Plan` constants are removed from the schema, service inputs, list filter, API and SCIM group provisioning; organization responses carry an `entitlements` list instead. Existing PostgreSQL databases run migrations/0004_drop_organization_plan.sql",
+          "commit": "ed6354e",
+          "rmis": [
+            "RMI-SYSTEMFORGE-129"
+          ]
+        },
+        {
+          "description": "`editor` and `viewer` are no longer organization roles: the roles are owner, admin, member and collaborator, every membership path refuses any other value, and the base schema gains the `collaborator` relation and `list` permission. migrations/0008_drop_editor_viewer_roles.sql maps stored `editor` to `member` and `viewer` to `collaborator`, including pending invites",
+          "commit": "c68973f",
+          "rmis": [
+            "RMI-SYSTEMFORGE-139"
+          ]
+        },
+        {
+          "description": "Every path that creates or changes a membership validates the role against owner, admin, member and collaborator and answers ErrInvalidRole otherwise",
+          "commit": "736cb29",
+          "rmis": [
+            "RMI-SYSTEMFORGE-139"
+          ]
+        },
+        {
+          "description": "The marketplace SpiceDB fragment no longer redefines `principal` and `organization`; it attaches to the base organization through a `marketplace_org` facet carrying use, billing and purchase. Compose it with MergeSchema, which places the base schema first",
+          "commit": "9b3e1cc",
+          "rmis": [
+            "RMI-SYSTEMFORGE-139"
+          ]
+        },
+        {
+          "description": "Entitlement checks fail closed: an approle service with no entitlement source entitles no organization to any application. Configure marketplace.EntitlementSource through marketplace.ApproleOptions, or use approle.EntitleAll in development and tests",
+          "commit": "9254a31",
+          "rmis": [
+            "RMI-SYSTEMFORGE-131"
+          ]
+        },
+        {
+          "description": "Relying parties read memberships from SystemAuth claims by default (ClaimsMemberships); LocalMemberships is no longer picked up implicitly from the principal store and is for development and tests only",
+          "commit": "e185ffa",
+          "rmis": [
+            "RMI-SYSTEMFORGE-133"
+          ]
+        },
+        {
+          "description": "The default access token lifetime drops from 15 to 10 minutes, and a configured lifetime above 15 minutes is refused at load; per-client lifetimes are capped at 15 minutes",
+          "commit": "6099b4c",
+          "rmis": [
+            "RMI-SYSTEMFORGE-135"
+          ]
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "Run the migrations against an existing PostgreSQL database, in order: 0004_drop_organization_plan, 0005_subscriptions_per_listing, 0006_invite_app_roles, 0007_oauth_app_backchannel_logout_uri, 0008_drop_editor_viewer_roles and 0009_invite_resource_target. Each is idempotent. Fresh databases need none of them. Then run `systemauth migrate` for the new tables sf_app_roles, sf_slug_reservations, sf_access_changes, sf_resource_grants and sf_manager_invites"
+        },
+        {
+          "description": "Replace uses of the organization plan with entitlements: remove `Plan` from organization inputs and filters, and read `entitlements` from organization responses. Supply APIConfig.Entitlements with marketplace.EntitlementSource; carry a paid tier over as a subscription or license"
+        },
+        {
+          "description": "Replace `editor` and `viewer` in your own role tables, vocabularies and invites with `member` and `collaborator` (or resource roles); stored memberships are mapped by migration 0008, which records an access change for each active membership it changes"
+        },
+        {
+          "description": "Configure entitlements for application roles: build the approle service with marketplace.ApproleOptions(marketplace.EntitlementSource(...)), and declare applications free to everyone with marketplace.WithDefaultEntitlements. Without them no organization is entitled to anything, and marketplace.WarnIfNoEntitlements logs a startup warning"
+        },
+        {
+          "description": "Relying parties that depended on LocalMemberships must pass it explicitly. The default reads the `orgs` claim; use ClaimsOrRemoteMemberships to fall back to /oauth/userinfo/memberships when the claim is truncated or absent"
+        },
+        {
+          "description": "Pass a revocation cache to BearerMiddleware and NewBFF to refuse tokens issued before an access change; feed it with accesschange.ToSink in one process, the poller across replicas, or back-channel delivery across deployments. Review any configured access_token_lifetime against the 15 minute cap"
+        },
+        {
+          "description": "Build the authorization provider from configuration with `authz/mode.New(ctx, cfg.Authz, mode.Deps{...})` and pass its Syncer to the identity services. The `authz` key defaults to `rbac`. The `authz/simple` and `authz/spicedb` forwarding packages remain deprecated and will be removed in the next major release; import `authz/rbac` and `authz/rebac/spicedb`"
+        },
+        {
+          "description": "When switching to `rebac`, write existing memberships, application roles and resource grants into the graph through the syncer before serving requests, and write the composed schema (embedded instances always receive it; remote ones only with `write_schema`)"
+        }
+      ],
+      "added": [
+        {
+          "description": "A first GitHub or Google login creates the person's personal organization and owner membership in the same transaction as the principal, and an existing principal without one gets it on its next login; the slug is the GitHub username or the email local part, with a numeric suffix on collision (ADR-006). signup.SlugForLogin, signup.CreatePersonalOrgInTx and signup.EnsurePersonalOrgInTx expose the derivation and the in-transaction creation",
+          "commit": "32e0412",
+          "rmis": [
+            "RMI-SYSTEMFORGE-124"
+          ]
+        },
+        {
+          "description": "Reserved slugs: organization.ReservedSlugs lists names no organization may take, WithReservedSlugs adds product names, and signup avoids them; a managed principal's slug is a manager-entered value or a generated adjective-noun-NN, never its email (signup.SlugForManaged)",
+          "commit": "ad8dd5e",
+          "rmis": [
+            "RMI-SYSTEMFORGE-125"
+          ]
+        },
+        {
+          "description": "Personal organization rules: a personal organization has one member, its owner, and refuses members, invitations, SCIM membership and ownership transfer with ErrPersonalOrganization unless the role is collaborator",
+          "commit": "5936ea7",
+          "rmis": [
+            "RMI-SYSTEMFORGE-127"
+          ]
+        },
+        {
+          "description": "Slug rename with a cooling-off period (default 7 days, WithSlugCoolingOff), reservations in sf_slug_reservations, and aliases through ResolveSlug so old links keep working",
+          "commit": "d3807e4",
+          "rmis": [
+            "RMI-SYSTEMFORGE-126"
+          ]
+        },
+        {
+          "description": "organization.ConvertToTeam turns a personal organization into a team in one transaction and creates a new personal organization under the handle",
+          "commit": "b469f3c",
+          "rmis": [
+            "RMI-SYSTEMFORGE-128"
+          ]
+        },
+        {
+          "description": "Entitlements derived from the marketplace: organization responses carry an `entitlements` list built from active subscriptions, valid licenses and default entitlements, and subscriptions may be per listing (migration 0005)",
+          "commit": "94fb7ed",
+          "rmis": [
+            "RMI-SYSTEMFORGE-129"
+          ]
+        },
+        {
+          "description": "Entitled applications: a listing may name an application, and marketplace.ApproleOptions maps subscriptions, licenses and marketplace.WithDefaultEntitlements to applications with seat limits from seat-based licenses",
+          "commit": "9254a31",
+          "rmis": [
+            "RMI-SYSTEMFORGE-131"
+          ]
+        },
+        {
+          "description": "Application roles: the AppRole schema (sf_app_roles) and the approle service to assign, change and remove a role per principal, organization and application, with endpoints under /organizations/{slug}/members/{principal_id}/app-roles",
+          "commit": "8a3b2ca",
+          "rmis": [
+            "RMI-SYSTEMFORGE-130"
+          ]
+        },
+        {
+          "description": "Application roles reach the authorization graph through the optional authz.AppRoleSyncer",
+          "commit": "6770834",
+          "rmis": [
+            "RMI-SYSTEMFORGE-150"
+          ]
+        },
+        {
+          "description": "The `orgs` claim in ID tokens, access tokens and userinfo, and a paginated GET /oauth/userinfo/memberships",
+          "commit": "f576b86",
+          "rmis": [
+            "RMI-SYSTEMFORGE-132"
+          ]
+        },
+        {
+          "description": "relyingparty membership sources: ClaimsMemberships, RemoteMemberships, ClaimsOrRemoteMemberships and ProvisioningMemberships",
+          "commit": "e185ffa",
+          "rmis": [
+            "RMI-SYSTEMFORGE-133"
+          ]
+        },
+        {
+          "description": "Invitations carry application roles to grant on acceptance, validated against entitlements and seats (migration 0006)",
+          "commit": "40d38a3",
+          "rmis": [
+            "RMI-SYSTEMFORGE-134"
+          ]
+        },
+        {
+          "description": "sf_access_changes and the accesschange package record every access-reducing change in the transaction that makes it and announce it to a sink",
+          "commit": "1861f45",
+          "rmis": [
+            "RMI-SYSTEMFORGE-135"
+          ]
+        },
+        {
+          "description": "Access changes are recorded for member removal and deactivation, organization and application role changes, ownership transfer, principal deactivation and session or token revocation",
+          "commit": "0bcf199",
+          "rmis": [
+            "RMI-SYSTEMFORGE-135"
+          ]
+        },
+        {
+          "description": "relyingparty.RevocationCache, and BearerMiddleware and the BFF refuse tokens issued before an access change, after a clock-skew margin",
+          "commit": "b898ece",
+          "rmis": [
+            "RMI-SYSTEMFORGE-136"
+          ]
+        },
+        {
+          "description": "Access-change poller, replay after a restart, suspect-start mode and the GET /access-changes endpoint with the access_changes:read scope",
+          "commit": "44743a2",
+          "rmis": [
+            "RMI-SYSTEMFORGE-137"
+          ]
+        },
+        {
+          "description": "Back-channel delivery of access changes as OpenID Connect Back-Channel Logout tokens to clients that register backchannel_logout_uri (migration 0007), and relyingparty.BackchannelHandler to receive them",
+          "commit": "b5b904b",
+          "rmis": [
+            "RMI-SYSTEMFORGE-138"
+          ]
+        },
+        {
+          "description": "Access-change reasons form an open, validated registry",
+          "commit": "6cf189e",
+          "rmis": [
+            "RMI-SYSTEMFORGE-155"
+          ]
+        },
+        {
+          "description": "The resource-role ladder (viewer, contributor, maintainer) and the ResourceGranter contract",
+          "commit": "50db248",
+          "rmis": [
+            "RMI-SYSTEMFORGE-140"
+          ]
+        },
+        {
+          "description": "Resource grants stored in sf_resource_grants and mirrored to the graph; the role-based provider consults and manages them",
+          "commit": "d521157",
+          "rmis": [
+            "RMI-SYSTEMFORGE-140"
+          ]
+        },
+        {
+          "description": "The relationship-based provider writes grants as relationships and lists resources by lookup, and vocabulary fragments validate collaborator-able definitions",
+          "commit": "c15b111",
+          "rmis": [
+            "RMI-SYSTEMFORGE-141"
+          ]
+        },
+        {
+          "description": "Resource-targeted invites: an invite can name a resource type, id and role, and accepting it creates the collaborator membership and the grant together (migration 0009)",
+          "commit": "c28b6fd",
+          "rmis": [
+            "RMI-SYSTEMFORGE-142"
+          ]
+        },
+        {
+          "description": "The `authz` configuration key with `rbac` and `rebac` modes, ModeConfig and SpiceDBConfig",
+          "commit": "0718db8",
+          "rmis": [
+            "RMI-SYSTEMFORGE-143"
+          ]
+        },
+        {
+          "description": "authz/mode.New builds the configured provider, relationship syncer and grant store from a ModeConfig, with Close",
+          "commit": "b8be730",
+          "rmis": [
+            "RMI-SYSTEMFORGE-143"
+          ]
+        },
+        {
+          "description": "Management is derived from active manager relationships rather than from the absence of an email; a managed identity may carry an email",
+          "commit": "dc0e542",
+          "rmis": [
+            "RMI-SYSTEMFORGE-144"
+          ]
+        },
+        {
+          "description": "Release a principal from management, invite a self-managed human to be managed, and decline a manager invitation",
+          "commit": "a1a703a",
+          "rmis": [
+            "RMI-SYSTEMFORGE-145"
+          ]
+        },
+        {
+          "description": "A manager invitation can be declined by the invitee",
+          "commit": "091d119",
+          "rmis": [
+            "RMI-SYSTEMFORGE-156"
+          ]
+        },
+        {
+          "description": "Authorized managed-principal operations, deletion with erasure and an HTTP API for managing operations",
+          "commit": "b0a51c1",
+          "rmis": [
+            "RMI-SYSTEMFORGE-152"
+          ]
+        }
+      ],
+      "changed": [
+        {
+          "description": "Unused stale Argon2id secret checkers are removed from the identity packages",
+          "commit": "751e0ad",
+          "rmis": [
+            "RMI-SYSTEMFORGE-149"
+          ]
+        }
+      ],
+      "deprecated": [
+        {
+          "description": "The `authz/simple` and `authz/spicedb` forwarding packages will be removed in the next major release; use `authz/rbac` and `authz/rebac/spicedb`",
+          "commit": "b8be730",
+          "rmis": [
+            "RMI-SYSTEMFORGE-143"
+          ]
+        }
+      ],
+      "fixed": [
+        {
+          "description": "A login with no usable characters in its username gets a neutral slug",
+          "commit": "b937fd6",
+          "rmis": [
+            "RMI-SYSTEMFORGE-124"
+          ]
+        },
+        {
+          "description": "Accepting an invite syncs the new membership to the authorization graph",
+          "commit": "7aa28cf",
+          "rmis": [
+            "RMI-SYSTEMFORGE-151"
+          ]
+        },
+        {
+          "description": "Principals and organizations created by social login are registered with the authorization syncer",
+          "commit": "1c98662",
+          "rmis": [
+            "RMI-SYSTEMFORGE-147"
+          ]
+        },
+        {
+          "description": "Signup creates the principal and personal organization in one transaction",
+          "commit": "917326c",
+          "rmis": [
+            "RMI-SYSTEMFORGE-148"
+          ]
+        },
+        {
+          "description": "The application-role seat limit is checked under a lock so concurrent assignments cannot exceed it",
+          "commit": "14c5d21",
+          "rmis": [
+            "RMI-SYSTEMFORGE-153"
+          ]
+        },
+        {
+          "description": "A managed principal is never a valid manager",
+          "commit": "4d6107c",
+          "rmis": [
+            "RMI-SYSTEMFORGE-144"
+          ]
+        },
+        {
+          "description": "Authorization checks for AddManager, RemoveManager and Release run inside the row-locked transaction",
+          "commit": "57feb33",
+          "rmis": [
+            "RMI-SYSTEMFORGE-154"
+          ]
+        },
+        {
+          "description": "Managing operations record the accurate access-change reason",
+          "commit": "957dc87",
+          "rmis": [
+            "RMI-SYSTEMFORGE-155"
+          ]
+        },
+        {
+          "description": "The resource schema helper keeps `owner` and `delete`",
+          "commit": "632407b",
+          "rmis": [
+            "RMI-SYSTEMFORGE-139"
+          ]
+        },
+        {
+          "description": "Assigning an application role with no seat left answers 409 instead of 500",
+          "commit": "ebb7d15",
+          "rmis": [
+            "RMI-SYSTEMFORGE-146"
+          ]
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Architecture pages for organizations, managed principals and authorization describe the implemented behavior",
+          "commit": "b9da8d3",
+          "rmis": [
+            "RMI-SYSTEMFORGE-146"
+          ]
+        },
+        {
+          "description": "Guides for invites, application roles and entitlements, collaborators and resource grants, organization slugs, personal-to-team conversion, access-change invalidation and the authorization mode",
+          "commit": "3b604fb",
+          "rmis": [
+            "RMI-SYSTEMFORGE-146"
+          ]
+        },
+        {
+          "description": "Feature specifications moved from docs/design to docs/specs",
+          "commit": "e1cdbe2",
+          "rmis": [
+            "RMI-SYSTEMFORGE-146"
+          ]
+        },
+        {
+          "description": "INIT-SYSTEMFORGE-011 specifications for the organizations initiative",
+          "commit": "4d774b1"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Update dependencies",
+          "commit": "06de513"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The test person-server client uses an explicit HTTP client",
+          "commit": "d92469d"
+        }
+      ]
+    },
+    {
+      "version": "v0.14.0",
+      "date": "2026-10-09",
+      "highlights": [
+        {
+          "description": "Managed principals: humans without an email, such as young learners, created and controlled by guardian and educator managers, who sign them in with QR-friendly login tokens; opt-in per deployment and per client (ADR-005)"
+        },
+        {
+          "description": "Principal is the sole identity root: the legacy User model and its dependent tables are removed, so password login, social login, federation sync, and SCIM all resolve a person to the same principal (ADR-004)"
+        },
+        {
+          "description": "Resource servers can authenticate AI agents with AAuth through a protocol-neutral request principal and authenticator chain shared with bearer, API-key, and BFF-session credentials"
+        },
+        {
+          "description": "Fixed a panic on every ascending SCIM list sort, including the default order"
+        },
+        {
+          "description": "Security: the marketplace, organization, and invite APIs act for the authenticated caller and check organization permissions, instead of trusting IDs in the request; invite tokens are stored hashed"
+        },
+        {
+          "description": "The simple and SpiceDB authorization providers grant the same organization and manager permissions, held to the base schema by a parity test and a shared conformance suite"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "Removed Ent schemas and packages user, membership, oauthaccount, refreshtoken, apikey, serviceaccount, and serviceaccountkeypair, with the Organization memberships, api_keys, and service_accounts edges and OAuthToken.service_account_id",
+          "commit": "344af04"
+        },
+        {
+          "description": "systemauth.Storage user methods are replaced by CreateHuman, GetHuman, GetHumanByEmail, GetHumanByExternalIdentity, LinkExternalIdentity, UpdateHuman, and DeleteHuman on one HumanPrincipal type; systemauth.User, LoginPrincipal, ErrUserNotFound, and ErrUserExists are removed in favor of HumanPrincipal, ErrPrincipalNotFound, and ErrPrincipalExists",
+          "commit": "e0946ab"
+        },
+        {
+          "description": "OAuthApp.owner references Principal; statically configured clients are owned by a service principal at the fixed system ID instead of a synthetic user",
+          "commit": "6b8322c"
+        },
+        {
+          "description": "OAuth tokens and authorization codes drop user_id and the user edge in favor of the subject column; OAuthConsent.user_id becomes principal_id",
+          "commit": "519f77c"
+        },
+        {
+          "description": "SCIM users are human principals and group membership uses PrincipalMembership; users provisioned before this release are not visible through SCIM",
+          "commit": "5a16f01"
+        },
+        {
+          "description": "An existing PostgreSQL development database must run migrations/0002_drop_legacy_user_tables.sql before starting this version; fresh databases need no migration",
+          "commit": "a4de9a8"
+        },
+        {
+          "description": "The default BFF session cookie is sf_session instead of the Core-era cf_session; browsers holding the old cookie sign in again. Applications that set CookieConfig.Name are unaffected",
+          "commit": "27b58f2"
+        },
+        {
+          "description": "organization.Service ListMembers and ListMemberships exclude inactive memberships unless IncludeInactive is passed, and take variadic ListOption arguments",
+          "commit": "5b05d5c"
+        },
+        {
+          "description": "mixin.UserBase and mixin.MembershipBase are removed",
+          "commit": "a083a0a"
+        },
+        {
+          "description": "Human.email is optional: a human without one is a managed principal with the identifier human:<id>. HumanPrincipal.Email, principal.Human.Email, and contract identity types treat it as optional; existing creation paths still require an email",
+          "commit": "f6346cb"
+        },
+        {
+          "description": "Marketplace checkout buys as the authenticated caller for an organization the caller may buy for, and answers 501 until marketplace.WithPurchaseAuthorizer or WithAuthorizer is configured; purchaser_id is optional, deprecated, and must equal the caller",
+          "commit": "63b6db8"
+        },
+        {
+          "description": "Marketplace listing and license operations answer 501 until marketplace.WithAuthorizer is configured and require an authenticated caller; only published listings are readable anonymously; owner_id and assigned_by are optional, deprecated, and must equal the caller",
+          "commit": "2c09db4"
+        },
+        {
+          "description": "Organization API endpoints require an authenticated caller and, except creating an organization and checking a slug, answer 501 until APIConfig.Authorizer is set",
+          "commit": "7a81c8b"
+        },
+        {
+          "description": "Invite API endpoints require an authenticated caller and organization endpoints answer 501 until APIConfig.Authorizer is set; accepting and declining require the invite to be addressed to the caller's email; inviter_principal_id, principal_id, and the email query are optional, deprecated, and must match the caller",
+          "commit": "61b845e"
+        },
+        {
+          "description": "Invite tokens are stored hashed and invite.Invite no longer has a Token field; the token is only in InviteResult.InviteURL. Existing PostgreSQL databases run migrations/0003_hash_invite_tokens.sql when deploying",
+          "commit": "b52c9a0"
+        },
+        {
+          "description": "spicedb.BaseSchema is now authz.BaseSpiceDBSchema: members hold contribute rather than edit on an organization, and editors are recognized",
+          "commit": "6a9274a"
+        },
+        {
+          "description": "authz.RelationshipSyncer gains AddPrincipalManager and RemovePrincipalManager; credential.Service gains IssueLoginToken and VerifyLoginToken; managedprincipal.Gate implementers also provide LoginTokenPolicy",
+          "commit": "a955205"
+        },
+        {
+          "description": "identity/token reports typed errors (ErrInvalidAccessToken, ErrInvalidRefreshToken, ErrRefreshTokenReused, ErrDPoPMismatch, ErrScopeNotGranted)",
+          "commit": "ba95d9d"
+        },
+        {
+          "description": "marketplace.LicenseService gains GetByStripeSubscriptionID; Stripe webhook endpoints should also subscribe to checkout.session.async_payment_succeeded",
+          "commit": "0ae6e2d"
+        },
+        {
+          "description": "delegation errors are typed and an agent without a delegation is denied; signup's SignupOrGetExisting requires SignupInput.EmailVerified to return an existing account, and SignupWithInvite requires the invited email",
+          "commit": "a3682f3"
+        },
+        {
+          "description": "systemauth.WithUserIDHeader is removed; use WithTrustedUserIDHeader with a RequestGate (TrustedProxyNetworks or TrustAllRequests), social login, or your own SessionProvider. DefaultSessionProvider authenticates nobody by default",
+          "commit": "1da7bde"
+        },
+        {
+          "description": "identity/oauth's authorization endpoint refuses requests until WithUserAuthenticator or WithTrustedUserIDHeader is set, and third-party clients are refused until WithConsent is set",
+          "commit": "487920d"
+        },
+        {
+          "description": "session/ratelimit: IPKey and the Limiter default no longer read X-Forwarded-For or X-Real-IP (use ForwardedIPKey or ForwardedClientIP behind proxies), the middleware answers 503 on storage errors unless WithFailOpen is given, and MemoryStorage returns ErrTooManyKeys when full",
+          "commit": "f6d1a8b"
+        },
+        {
+          "description": "session/bff: TrustProxy and TrustCloudflare do nothing without TrustedProxies or CloudflareIPRanges; session/middleware no longer reads forwarding headers for API key usage addresses unless an IPExtractor is given",
+          "commit": "825b1e8"
+        },
+        {
+          "description": "scim: a provider without WithAuthorizationHook answers 403 to every request; DefaultAuthorizationHook is deprecated for AllowAllAuthorizationHook",
+          "commit": "1afa3b7"
+        },
+        {
+          "description": "systemauth: NewFederationEndpoints registers the sync and lookup routes only with WithFederationAuthenticator; introspection callers need a confidential client or the introspect scope",
+          "commit": "893b79d"
+        },
+        {
+          "description": "session/jwt and contract: tokens without exp are refused, and jwt refuses another issuer when Config.Issuer is set; relyingparty.BearerMiddleware requires an allowed Origin and JSON body for cookie-authenticated POST, PUT, and DELETE",
+          "commit": "2096e27"
+        },
+        {
+          "description": "credential.ValidateClientSecret returns ErrInvalidClientCredentials for every rejection; multiapp.AppAwareDB.ForSchema returns an error",
+          "commit": "3ab264c"
+        },
+        {
+          "description": "identity/apikey: Get, Revoke, and Delete take the owning principal and report other keys as not found; a service with no AllowedScopes grants no scopes unless AllowAnyScope is set; RevokeInOrganization added for organization administrators",
+          "commit": "cbc7171"
+        },
+        {
+          "description": "rls: Helper.SetTenant and SetUser return ErrNotInTransaction for *sql.DB and *sql.Conn; Middleware.SetRLSContext no longer touches the database and Middleware.WithTx scopes a transaction",
+          "commit": "2b7ad39"
+        }
+      ],
+      "security": [
+        {
+          "description": "Marketplace checkout took the purchaser from the request body, so anyone could start a purchase in another principal's name for any organization",
+          "commit": "63b6db8"
+        },
+        {
+          "description": "Marketplace listing, license, and seat endpoints acted on any IDs a request named; they now check the caller's permissions on the owning organization",
+          "commit": "2c09db4"
+        },
+        {
+          "description": "The organization API listed every organization and let any caller read, change, or delete organizations, change members, and transfer ownership; it now authorizes each operation",
+          "commit": "7a81c8b"
+        },
+        {
+          "description": "Invite management needed no permission, and anyone holding an invite link could accept it as any principal; invites are now managed with invite_member and accepted only by the addressee",
+          "commit": "61b845e"
+        },
+        {
+          "description": "Invite tokens were stored in plain text, so a leaked table or backup could accept invites; they are stored as SHA-256 hashes",
+          "commit": "b52c9a0"
+        },
+        {
+          "description": "SpiceDB principal and organization cleanup ignored failures and missed editor and manager relations, leaving access behind while reporting success",
+          "commit": "f9bd91c"
+        },
+        {
+          "description": "Refresh-token rotation was not atomic and its revocation error was discarded, so a refresh token could be used more than once; refreshing near expiry also reset a session to seven days, extending it indefinitely. Rotation is now atomic, a family keeps its first expiry, and reusing a rotated refresh token revokes the family",
+          "commit": "ba95d9d"
+        },
+        {
+          "description": "Stripe checkout granted licenses for sessions completed with an unpaid delayed payment, a malformed seat count produced an unlimited seat-based license, and cancelled subscriptions kept their licenses",
+          "commit": "0ae6e2d"
+        },
+        {
+          "description": "Deactivating a principal left its access tokens valid and let its refresh tokens keep issuing new ones for up to the family's absolute lifetime; SystemAuth and identity/token now refuse an inactive principal's tokens wherever they are used or refreshed, and revoke the family",
+          "commit": "f5369a9"
+        },
+        {
+          "description": "Revoking an agent's delegation gave it unrestricted access, constraints that did not overlap allowed everything, and delegation expiry and action limits were never stored; delegation now fails closed and enforces every constraint",
+          "commit": "a3682f3"
+        },
+        {
+          "description": "UpdateHuman granted or revoked platform administration without syncing it, so a revoked administrator stayed one in SpiceDB",
+          "commit": "c610901"
+        },
+        {
+          "description": "SignupWithInvite let anyone holding an invite link join under any email, and SignupOrGetExisting returned an existing account for an unverified email",
+          "commit": "ce145f0"
+        },
+        {
+          "description": "SystemAuth's default session provider and identity/oauth's authorization endpoint took the user from an X-User-ID request header, so anyone who could reach the endpoint could obtain an authorization code, and tokens, for any user; header identity is now an explicit, gated opt-in and the default authenticates nobody",
+          "commit": "1da7bde"
+        },
+        {
+          "description": "identity/oauth granted every requested scope to every client without consent; non-first-party clients now need a consent check",
+          "commit": "487920d"
+        },
+        {
+          "description": "SCIM listing and search never asked the authorization hook, so any caller with a token could dump every user and group, and the provider's default hook allowed everything; listings are authorized and the default denies",
+          "commit": "1afa3b7"
+        },
+        {
+          "description": "The federation identity sync endpoint trusted any well-formed request and acted on its body, letting an unauthenticated caller link to and then deactivate or rewrite any account by email; it and the lookup endpoint now require a FederationAuthenticator and are not registered without one",
+          "commit": "893b79d"
+        },
+        {
+          "description": "Rate limits keyed on client-supplied X-Forwarded-For and X-Real-IP, so a client could evade a limit by rotating the header or poison a victim's; they key on the direct peer, and forwarded headers are believed only from configured trusted proxies, here and in the BFF client IP handling and the API key middleware",
+          "commit": "f6d1a8b"
+        },
+        {
+          "description": "The in-memory rate-limit store grew without bound from attacker-chosen keys, the middleware failed open on storage errors, and the login token endpoint keyed on raw client_id values; the store is bounded, the middleware fails closed, and only registered clients get a bucket",
+          "commit": "f6d1a8b"
+        },
+        {
+          "description": "Token introspection accepted any valid access token or any client's Basic credentials, public clients included, as the caller's credential; it now requires a confidential client or a token with the introspect scope",
+          "commit": "9d3e9c4"
+        },
+        {
+          "description": "The default storage accepted every client-assertion JWT ID as new, so a captured private_key_jwt assertion could be replayed until it expired",
+          "commit": "27ccd27"
+        },
+        {
+          "description": "BFF cookies lost Secure and HttpOnly when a CookieConfig omitted them; both are now unconditional unless AllowInsecure is set for development",
+          "commit": "5182e80"
+        },
+        {
+          "description": "Cookie-authenticated writes through relyingparty.BearerMiddleware skipped the same-origin check, allowing cross-site requests",
+          "commit": "5a24dd4"
+        },
+        {
+          "description": "JWT validation accepted tokens with no expiry and ignored the issuer; the contract middleware did the same and skipped the audience check without an app ID",
+          "commit": "2096e27"
+        },
+        {
+          "description": "Client secret validation revealed whether a client ID existed by error message and timing, and lockout counted differently spelled identifiers separately, restarting the count",
+          "commit": "3ab264c"
+        },
+        {
+          "description": "multiapp's SchemaDB left a schema's search_path on pooled connections, which could carry one application's schema to unrelated code, and ForSchema interpolated unvalidated names into SQL",
+          "commit": "d483b7a"
+        },
+        {
+          "description": "The BFF proxy forwarded the browser's session cookie upstream when a ProxyConfig was built by hand; Cookie, Authorization, and DPoP headers are now always stripped",
+          "commit": "b6bbb49"
+        },
+        {
+          "description": "multiapp trusted the X-App-ID header, so with a shared signing key a token for one app authenticated requests for another; MiddlewareConfig.AppAudiences binds tokens to the routed app",
+          "commit": "55881bc"
+        },
+        {
+          "description": "API keys could be read, revoked, or deleted by ID alone, requested any scope including the wildcard when no allow-list was set, and ignored MaxKeysPerUser",
+          "commit": "cbc7171"
+        },
+        {
+          "description": "Lockout let a burst of parallel guesses exceed MaxAttempts; Lockout.Begin reserves the attempt before the credential is verified",
+          "commit": "174098f"
+        },
+        {
+          "description": "Concurrent BFF refreshes spent one refresh token several times, which token reuse detection treats as theft; refresh is now serialized per session",
+          "commit": "94fd8e0"
+        }
+      ],
+      "added": [
+        {
+          "description": "identity/requestprincipal: a protocol-neutral RequestPrincipal, an Authenticator interface, and middleware that tries authenticators in order and challenges with every protocol when none recognizes the request",
+          "commit": "780ef1a"
+        },
+        {
+          "description": "relyingparty.NewRequestAuthenticator adapts bearer authentication (SystemAuth access tokens, API keys, BFF sessions) to the request authenticator chain",
+          "commit": "d86c3f0"
+        },
+        {
+          "description": "identity/requestprincipal/aauthrs authenticates AI agents at resource servers with AAuth: message-signature and token verification, an issuer allowlist checked before key discovery, per-route scopes, and AAuth-Requirement challenges",
+          "commit": "afd69bb"
+        },
+        {
+          "description": "migrations/0002 creates the system service principal, reassigns OAuth apps owned by legacy users, and drops the legacy tables and columns on existing PostgreSQL databases",
+          "commit": "a4de9a8"
+        },
+        {
+          "description": "A repository-wide test fails on references to the retired legacy identity model in code or current documentation",
+          "commit": "d82d1c2"
+        },
+        {
+          "description": "identity/clientassertion records used client-assertion JWT IDs in sf_client_assertion_jtis for replay protection",
+          "commit": "f81d670"
+        },
+        {
+          "description": "store.Config.TrustProvisionedEmail, off by default, marks emails written through SCIM as verified so social login can link to provisioned users",
+          "commit": "a5fdbe0"
+        },
+        {
+          "description": "identity/pgschema applies PostgreSQL-only schema objects; the migrate step adds a unique index on lower(email) in sf_humans",
+          "commit": "ded5411"
+        },
+        {
+          "description": "The members endpoint accepts includeInactive to list deactivated memberships",
+          "commit": "5b05d5c"
+        },
+        {
+          "description": "identity/managedprincipal creates managed principals with their managers in one transaction, maintains manager relationships with a last-manager guard, and audits every action",
+          "commit": "e49ccc6"
+        },
+        {
+          "description": "ManagerRelationship (sf_manager_relationships) and ManagerClaim (sf_manager_claims) Ent schemas",
+          "commit": "cd1483e"
+        },
+        {
+          "description": "Deployment managed_principals settings and the per-client managed_principals flag, both off by default, checked through Server.ManagedPrincipalsAllowed",
+          "commit": "0243306"
+        },
+        {
+          "description": "login_token credentials: issued by a manager, hashed, verified in constant time, single-use option, with lifetimes from the request, the client's login_token_ttl, or the deployment default (30 days) under a ceiling (400 days); single-use tokens last 20 minutes",
+          "commit": "81eb9ad"
+        },
+        {
+          "description": "POST /login-token exchanges a login token for a SystemAuth login session, with identical responses for every failure and per-address and per-client rate limits (WithLoginTokenRateLimit)",
+          "commit": "0237ff4"
+        },
+        {
+          "description": "ID token and userinfo claim managed: true for managed principals, and relying parties read it into VerifiedIdentity.Managed",
+          "commit": "0237ff4"
+        },
+        {
+          "description": "Managers list and revoke a managed principal's login tokens, login sessions, and token families, individually or all at once, through managedprincipal.Service or NewHandler",
+          "commit": "6953bc2"
+        },
+        {
+          "description": "Guardian claims: a manager issues a single-use code that makes a human with an email a guardian; AttachVerifiedEmail turns a managed principal into an ordinary human",
+          "commit": "cc7eb6c"
+        },
+        {
+          "description": "Base schema relations guardian and educator on principal with manage_account, manage_credentials, view_profile, and manage_managers; authz.ManagerRolePermissions and simple.WithManagerRoleGetter",
+          "commit": "a955205"
+        },
+        {
+          "description": "authz.OrgRolePermissions and the PermOrg* actions name the base organization permissions both providers evaluate",
+          "commit": "b52c69d"
+        },
+        {
+          "description": "providertest.RunOrgPermissionTests and RunManagerRelationTests hold providers to the base schema's grants",
+          "commit": "4ee182c"
+        },
+        {
+          "description": "marketplace.PurchaserChecker and stripe.WithPurchaserChecker refuse checkout to managed principals",
+          "commit": "6da101b"
+        },
+        {
+          "description": "marketplace.WithAuthorizer, WithPurchaseAuthorizer, OrgRolePurchaseAuthorizer, and WithCallerResolver configure how the marketplace API authorizes callers",
+          "commit": "63b6db8"
+        },
+        {
+          "description": "organization.MembershipRoleGetter backs the simple provider with active memberships; APIConfig.Authorizer and Caller configure the organization and invite APIs",
+          "commit": "7a81c8b"
+        },
+        {
+          "description": "requestprincipal.PrincipalUUID resolves the caller's SystemForge principal ID",
+          "commit": "1c10256"
+        },
+        {
+          "description": "spicedb.Client.DeleteRelationships deletes relationships by filter",
+          "commit": "f9bd91c"
+        },
+        {
+          "description": "migrations/0003 converts stored invite tokens to hashes",
+          "commit": "b52c9a0"
+        },
+        {
+          "description": "CI runs the PostgreSQL tests against a database service and the SpiceDB provider tests with the integration tag; SF_TEST_PG_REQUIRED makes a missing database fail rather than skip",
+          "commit": "13b5d57"
+        },
+        {
+          "description": "systemauth.PrincipalStatus lets storage report whether a token's principal is active; Ent and memory storage implement it",
+          "commit": "f5369a9"
+        },
+        {
+          "description": "Agents store allowed actions, allowed scopes, and a delegation expiry",
+          "commit": "39adbbb"
+        },
+        {
+          "description": "systemauth.RequestGate, TrustAllRequests, and TrustedProxyNetworks; oauth.WithUserAuthenticator, WithTrustedUserIDHeader, WithLoginURL, and WithConsent",
+          "commit": "487920d"
+        },
+        {
+          "description": "jwt.ValidateAccessTokenForAudience and middleware.HTTPAuthForAudience; ratelimit.PeerIP, ForwardedClientIP, ForwardedIPKey, WithMaxKeys, WithFailOpen; systemauth.WithLoginTokenClientIP, FederationAuthenticator, SharedSecretAuthenticator, and AuthorizeIntrospectionCaller; scim.DenyAllAuthorizationHook",
+          "commit": "f6d1a8b"
+        },
+        {
+          "description": "session/jwt: TokenOptions.Audience addresses one token to its own audience",
+          "commit": "da5b98a"
+        },
+        {
+          "description": "multiapp: MiddlewareConfig.AppAudiences binds tokens to the app a request is routed to",
+          "commit": "55881bc"
+        },
+        {
+          "description": "identity/security: Lockout.Begin and Attempt reserve a login attempt before verification",
+          "commit": "174098f"
+        }
+      ],
+      "changed": [
+        {
+          "description": "`authz` providers are named for their mode: role-based `authz/rbac` (formerly `authz/simple`) and relationship-based `authz/rebac/spicedb` (formerly `authz/spicedb`), so another engine can sit beside SpiceDB under the same mode",
+          "commit": "3d9d4e7"
+        },
+        {
+          "description": "Federation sync records the federation identity as an ExternalIdentity; creating an identity for an existing email links it so later updates and deletes resolve to the same principal",
+          "commit": "e0946ab"
+        },
+        {
+          "description": "Human email uniqueness is enforced case-insensitively on create and update in SystemAuth and SCIM, matching the case-insensitive lookups",
+          "commit": "e0946ab"
+        },
+        {
+          "description": "SCIM userName is not case-exact (RFC 7643): lookups, uniqueness, and eq and co filters ignore case",
+          "commit": "5a16f01"
+        },
+        {
+          "description": "SCIM memberships honor the active flag, and deleting a user who belongs to a group removes the memberships instead of failing",
+          "commit": "5a16f01"
+        },
+        {
+          "description": "Creating an organization through the API makes the caller its owner, and every organization with an owner gives it an owner membership",
+          "commit": "87d623d"
+        },
+        {
+          "description": "Listing organizations returns the caller's organizations, or all of them for platform administrators",
+          "commit": "7a81c8b"
+        },
+        {
+          "description": "SCIM no longer lists, reads, changes, deletes, or groups managed principals",
+          "commit": "549cc84"
+        },
+        {
+          "description": "Signup requires a bare email address",
+          "commit": "a13b125"
+        }
+      ],
+      "deprecated": [
+        {
+          "description": "`authz/simple` and `authz/spicedb` forward to `authz/rbac` and `authz/rebac/spicedb` as deprecated packages for one release; importers should move to the new paths",
+          "commit": "3d9d4e7"
+        },
+        {
+          "description": "mixin.HumanMixin, mixin.OAuthAccountMixin, and mixin.RefreshTokenMixin: applications should authenticate through SystemAuth and link local records by sf_principal_id",
+          "commit": "37776a2"
+        },
+        {
+          "description": "spicedb.BaseSchema: use authz.BaseSpiceDBSchema",
+          "commit": "6a9274a"
+        },
+        {
+          "description": "identity/security: Lockout.CheckAndRecord in favor of Begin",
+          "commit": "174098f"
+        },
+        {
+          "description": "rls: EntHook.SetContextFromContext, ContextInjector, ConnWithRLS, NewConnWithRLS, and GetConnWithRLS, which cannot take effect outside a transaction",
+          "commit": "2b7ad39"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "SCIM user and group listing panicked on every ascending sort, including the default order",
+          "commit": "cf556cd"
+        },
+        {
+          "description": "The identity/oauth Fosite storage dropped any subject that was not a UUID; tokens and authorization codes now record the subject",
+          "commit": "519f77c"
+        },
+        {
+          "description": "CreateClient reported every constraint failure, such as a nonexistent owner, as ErrClientExists; it now does so only for a duplicate client ID",
+          "commit": "f835592"
+        },
+        {
+          "description": "Federation sync no longer discards lookup errors, and a delete reports synced only for an identity that was never linked",
+          "commit": "e0946ab"
+        },
+        {
+          "description": "rls.SetupTestTenant and SetupTestUser inserted into tables that no longer existed; they now create organizations, human principals, and principal memberships, and report cleanup failures",
+          "commit": "2ac912a"
+        },
+        {
+          "description": "rls.SystemForgeTables named a table that no longer existed, so MigrateSystemForge failed; it now names sf_principal_memberships",
+          "commit": "67fa61d"
+        },
+        {
+          "description": "identity/oauth.NewProvider panicked on construction because its storage no longer satisfied Fosite's interfaces; it now does, checked at compile time",
+          "commit": "691ad2d"
+        },
+        {
+          "description": "identity/oauth never recorded a token family, so revoking refresh and access tokens had no effect; tokens record their request as the family and rotation retires the exchanged refresh token",
+          "commit": "691ad2d"
+        },
+        {
+          "description": "SystemAuth failed to record client-assertion JWT IDs under foreign-key enforcement, breaking private_key_jwt client authentication and leaving assertions replayable",
+          "commit": "238f035"
+        },
+        {
+          "description": "Changing a user's email through SCIM no longer keeps the previous address's verification",
+          "commit": "a5fdbe0"
+        },
+        {
+          "description": "The marketplace, organization, and invite APIs panicked at registration because list filters used pointer query parameters",
+          "commit": "603d444"
+        },
+        {
+          "description": "The simple provider denied every organization permission check, because its permission names did not match the ones it looked up",
+          "commit": "b52c69d"
+        },
+        {
+          "description": "SpiceDB GetRole reported editors as non-members",
+          "commit": "6a9274a"
+        },
+        {
+          "description": "A managed principal's first sign-in to a relying party failed for lack of a verified email",
+          "commit": "d439f6b"
+        },
+        {
+          "description": "In-memory stores, password login, and federation sync could match or adopt a human by an empty email",
+          "commit": "12c8194"
+        },
+        {
+          "description": "Invite emails are matched case-insensitively",
+          "commit": "61b845e"
+        },
+        {
+          "description": "organization.Service.Create failed for an organization without a plan instead of defaulting to free",
+          "commit": "03bfd60"
+        },
+        {
+          "description": "GetMembership reports a missing membership as organization.ErrMembershipNotFound",
+          "commit": "87d623d"
+        },
+        {
+          "description": "identity/credential reports failures to record a credential's use and corrupt stored hashes (ErrCorruptCredential) instead of discarding them, and CreatePassword no longer creates a second password when its lookup fails",
+          "commit": "7aaf8cb"
+        },
+        {
+          "description": "identity/oauth's authorization code exchange always failed and its tokens lost their subject; its grant storage now delegates to SystemAuth's, enforcing PKCE and redirect URIs and detecting code replay and refresh-token reuse",
+          "commit": "164f47e"
+        },
+        {
+          "description": "A signup that failed after creating the user left an account with no organization whose email could not sign up again",
+          "commit": "ce145f0"
+        },
+        {
+          "description": "principal type-specific updates changed shared fields before checking the type, and CreateAgent accepted a missing or inactive delegating principal",
+          "commit": "c610901"
+        },
+        {
+          "description": "identity/oauth.NewAPI panicked on every call because the Fosite interceptor was added after routes",
+          "commit": "487920d"
+        },
+        {
+          "description": "The federation lookup handler read its path parameter with net/http's PathValue, which chi does not populate",
+          "commit": "893b79d"
+        },
+        {
+          "description": "The memory rate-limit store panicked when used after Close, and discarded windows after a fixed hour whatever their period",
+          "commit": "f6d1a8b"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "ADRs live in `docs/design/adrs/` with an index of statuses, under a Design section in the docs nav; ADR-006 (organization lifecycle), ADR-007 (memberships and entitlements as claims), ADR-008 (resource-scoped collaborators, with rbac/rebac guidance) and ADR-009 (management is a relationship) are added",
+          "commit": "91f593c"
+        },
+        {
+          "description": "ADR-004 (retire legacy User; Principal as the sole identity root) and ADR-005 (managed principals and manager relationships), with specs for INIT-SYSTEMFORGE-007 and INIT-SYSTEMFORGE-008"
+        },
+        {
+          "description": "Identity, OAuth, integration, and getting-started documentation rewritten for the principal model; the schema reference is generated from the Ent schema"
+        },
+        {
+          "description": "The service-accounts page states that the RFC 7523 JWT-bearer grant is not implemented; the migration guide states that only Argon2id password hashes can be imported"
+        },
+        {
+          "description": "Resource servers accepting AI agents via AAuth",
+          "commit": "00b495f"
+        },
+        {
+          "description": "Managed principals guide, with the email exception, login token security, and base manager relations added to the users, account security, and authorization conventions docs",
+          "commit": "35c4961"
+        }
+      ]
+    },
+    {
       "version": "v0.13.0",
       "date": "2026-10-06",
       "highlights": [
@@ -78,7 +1100,7 @@
           "description": "OpenID Connect: ID tokens, optional RS256 JWT access tokens, and the `/oauth/userinfo` endpoint"
         },
         {
-          "description": "`identity/relyingparty`: reusable OIDC relying party with `sub` \u2192 `sf_principal_id` linking, `/bff/*` cookie sessions, and bearer middleware for JWTs and API keys"
+          "description": "`identity/relyingparty`: reusable OIDC relying party with `sub` → `sf_principal_id` linking, `/bff/*` cookie sessions, and bearer middleware for JWTs and API keys"
         },
         {
           "description": "Durable stores: Ent-backed SystemAuth login sessions, login state and consent grants; `identity/relyingparty/pgstore` encrypted PostgreSQL session stores with key rotation"
@@ -317,7 +1339,7 @@
       ],
       "fixed": [
         {
-          "description": "Close a line-anchored regex bypass in SpiceDB schema-definition detection: a fragment packing two `definition`s onto one physical line hid the second from both the `{app}_`-prefix check and the duplicate-shadowing check, while the raw fragment was still concatenated verbatim into the composed schema \u2014 letting an app silently redefine a reserved or foreign definition",
+          "description": "Close a line-anchored regex bypass in SpiceDB schema-definition detection: a fragment packing two `definition`s onto one physical line hid the second from both the `{app}_`-prefix check and the duplicate-shadowing check, while the raw fragment was still concatenated verbatim into the composed schema — letting an app silently redefine a reserved or foreign definition",
           "commit": "3f43040"
         },
         {
@@ -1235,589 +2257,5 @@
         }
       ]
     }
-  ],
-  "unreleased": {
-    "highlights": [
-      {
-        "description": "Managed principals: humans without an email, such as young learners, created and controlled by guardian and educator managers, who sign them in with QR-friendly login tokens; opt-in per deployment and per client (ADR-005)"
-      },
-      {
-        "description": "Principal is the sole identity root: the legacy User model and its dependent tables are removed, so password login, social login, federation sync, and SCIM all resolve a person to the same principal (ADR-004)"
-      },
-      {
-        "description": "Resource servers can authenticate AI agents with AAuth through a protocol-neutral request principal and authenticator chain shared with bearer, API-key, and BFF-session credentials"
-      },
-      {
-        "description": "Fixed a panic on every ascending SCIM list sort, including the default order"
-      },
-      {
-        "description": "Security: the marketplace, organization, and invite APIs act for the authenticated caller and check organization permissions, instead of trusting IDs in the request; invite tokens are stored hashed"
-      },
-      {
-        "description": "The simple and SpiceDB authorization providers grant the same organization and manager permissions, held to the base schema by a parity test and a shared conformance suite"
-      }
-    ],
-    "breaking": [
-      {
-        "description": "Removed Ent schemas and packages user, membership, oauthaccount, refreshtoken, apikey, serviceaccount, and serviceaccountkeypair, with the Organization memberships, api_keys, and service_accounts edges and OAuthToken.service_account_id",
-        "commit": "344af04"
-      },
-      {
-        "description": "systemauth.Storage user methods are replaced by CreateHuman, GetHuman, GetHumanByEmail, GetHumanByExternalIdentity, LinkExternalIdentity, UpdateHuman, and DeleteHuman on one HumanPrincipal type; systemauth.User, LoginPrincipal, ErrUserNotFound, and ErrUserExists are removed in favor of HumanPrincipal, ErrPrincipalNotFound, and ErrPrincipalExists",
-        "commit": "e0946ab"
-      },
-      {
-        "description": "OAuthApp.owner references Principal; statically configured clients are owned by a service principal at the fixed system ID instead of a synthetic user",
-        "commit": "6b8322c"
-      },
-      {
-        "description": "OAuth tokens and authorization codes drop user_id and the user edge in favor of the subject column; OAuthConsent.user_id becomes principal_id",
-        "commit": "519f77c"
-      },
-      {
-        "description": "SCIM users are human principals and group membership uses PrincipalMembership; users provisioned before this release are not visible through SCIM",
-        "commit": "5a16f01"
-      },
-      {
-        "description": "An existing PostgreSQL development database must run migrations/0002_drop_legacy_user_tables.sql before starting this version; fresh databases need no migration",
-        "commit": "a4de9a8"
-      },
-      {
-        "description": "The default BFF session cookie is sf_session instead of the Core-era cf_session; browsers holding the old cookie sign in again. Applications that set CookieConfig.Name are unaffected",
-        "commit": "27b58f2"
-      },
-      {
-        "description": "organization.Service ListMembers and ListMemberships exclude inactive memberships unless IncludeInactive is passed, and take variadic ListOption arguments",
-        "commit": "5b05d5c"
-      },
-      {
-        "description": "mixin.UserBase and mixin.MembershipBase are removed",
-        "commit": "a083a0a"
-      },
-      {
-        "description": "Human.email is optional: a human without one is a managed principal with the identifier human:<id>. HumanPrincipal.Email, principal.Human.Email, and contract identity types treat it as optional; existing creation paths still require an email",
-        "commit": "f6346cb"
-      },
-      {
-        "description": "Marketplace checkout buys as the authenticated caller for an organization the caller may buy for, and answers 501 until marketplace.WithPurchaseAuthorizer or WithAuthorizer is configured; purchaser_id is optional, deprecated, and must equal the caller",
-        "commit": "63b6db8"
-      },
-      {
-        "description": "Marketplace listing and license operations answer 501 until marketplace.WithAuthorizer is configured and require an authenticated caller; only published listings are readable anonymously; owner_id and assigned_by are optional, deprecated, and must equal the caller",
-        "commit": "2c09db4"
-      },
-      {
-        "description": "Organization API endpoints require an authenticated caller and, except creating an organization and checking a slug, answer 501 until APIConfig.Authorizer is set",
-        "commit": "7a81c8b"
-      },
-      {
-        "description": "Invite API endpoints require an authenticated caller and organization endpoints answer 501 until APIConfig.Authorizer is set; accepting and declining require the invite to be addressed to the caller's email; inviter_principal_id, principal_id, and the email query are optional, deprecated, and must match the caller",
-        "commit": "61b845e"
-      },
-      {
-        "description": "Invite tokens are stored hashed and invite.Invite no longer has a Token field; the token is only in InviteResult.InviteURL. Existing PostgreSQL databases run migrations/0003_hash_invite_tokens.sql when deploying",
-        "commit": "b52c9a0"
-      },
-      {
-        "description": "spicedb.BaseSchema is now authz.BaseSpiceDBSchema: members hold contribute rather than edit on an organization, and editors are recognized",
-        "commit": "6a9274a"
-      },
-      {
-        "description": "authz.RelationshipSyncer gains AddPrincipalManager and RemovePrincipalManager; credential.Service gains IssueLoginToken and VerifyLoginToken; managedprincipal.Gate implementers also provide LoginTokenPolicy",
-        "commit": "a955205"
-      },
-      {
-        "description": "identity/token reports typed errors (ErrInvalidAccessToken, ErrInvalidRefreshToken, ErrRefreshTokenReused, ErrDPoPMismatch, ErrScopeNotGranted)",
-        "commit": "ba95d9d"
-      },
-      {
-        "description": "marketplace.LicenseService gains GetByStripeSubscriptionID; Stripe webhook endpoints should also subscribe to checkout.session.async_payment_succeeded",
-        "commit": "0ae6e2d"
-      },
-      {
-        "description": "delegation errors are typed and an agent without a delegation is denied; signup's SignupOrGetExisting requires SignupInput.EmailVerified to return an existing account, and SignupWithInvite requires the invited email",
-        "commit": "a3682f3"
-      },
-      {
-        "description": "systemauth.WithUserIDHeader is removed; use WithTrustedUserIDHeader with a RequestGate (TrustedProxyNetworks or TrustAllRequests), social login, or your own SessionProvider. DefaultSessionProvider authenticates nobody by default",
-        "commit": "1da7bde"
-      },
-      {
-        "description": "identity/oauth's authorization endpoint refuses requests until WithUserAuthenticator or WithTrustedUserIDHeader is set, and third-party clients are refused until WithConsent is set",
-        "commit": "487920d"
-      },
-      {
-        "description": "session/ratelimit: IPKey and the Limiter default no longer read X-Forwarded-For or X-Real-IP (use ForwardedIPKey or ForwardedClientIP behind proxies), the middleware answers 503 on storage errors unless WithFailOpen is given, and MemoryStorage returns ErrTooManyKeys when full",
-        "commit": "f6d1a8b"
-      },
-      {
-        "description": "session/bff: TrustProxy and TrustCloudflare do nothing without TrustedProxies or CloudflareIPRanges; session/middleware no longer reads forwarding headers for API key usage addresses unless an IPExtractor is given",
-        "commit": "825b1e8"
-      },
-      {
-        "description": "scim: a provider without WithAuthorizationHook answers 403 to every request; DefaultAuthorizationHook is deprecated for AllowAllAuthorizationHook",
-        "commit": "1afa3b7"
-      },
-      {
-        "description": "systemauth: NewFederationEndpoints registers the sync and lookup routes only with WithFederationAuthenticator; introspection callers need a confidential client or the introspect scope",
-        "commit": "893b79d"
-      },
-      {
-        "description": "session/jwt and contract: tokens without exp are refused, and jwt refuses another issuer when Config.Issuer is set; relyingparty.BearerMiddleware requires an allowed Origin and JSON body for cookie-authenticated POST, PUT, and DELETE",
-        "commit": "2096e27"
-      },
-      {
-        "description": "credential.ValidateClientSecret returns ErrInvalidClientCredentials for every rejection; multiapp.AppAwareDB.ForSchema returns an error",
-        "commit": "3ab264c"
-      },
-      {
-        "description": "identity/apikey: Get, Revoke, and Delete take the owning principal and report other keys as not found; a service with no AllowedScopes grants no scopes unless AllowAnyScope is set; RevokeInOrganization added for organization administrators",
-        "commit": "cbc7171"
-      },
-      {
-        "description": "rls: Helper.SetTenant and SetUser return ErrNotInTransaction for *sql.DB and *sql.Conn; Middleware.SetRLSContext no longer touches the database and Middleware.WithTx scopes a transaction",
-        "commit": "2b7ad39"
-      }
-    ],
-    "added": [
-      {
-        "description": "A first GitHub or Google login creates the person's personal organization and owner membership in the same transaction as the principal, and an existing principal without one gets it on its next login; the slug is the GitHub username or the email local part, with a numeric suffix on collision (ADR-006). `signup.SlugForLogin`, `signup.CreatePersonalOrgInTx` and `signup.EnsurePersonalOrgInTx` expose the derivation and the in-transaction creation",
-        "commit": "32e0412"
-      },
-      {
-        "description": "identity/requestprincipal: a protocol-neutral RequestPrincipal, an Authenticator interface, and middleware that tries authenticators in order and challenges with every protocol when none recognizes the request",
-        "commit": "780ef1a"
-      },
-      {
-        "description": "relyingparty.NewRequestAuthenticator adapts bearer authentication (SystemAuth access tokens, API keys, BFF sessions) to the request authenticator chain",
-        "commit": "d86c3f0"
-      },
-      {
-        "description": "identity/requestprincipal/aauthrs authenticates AI agents at resource servers with AAuth: message-signature and token verification, an issuer allowlist checked before key discovery, per-route scopes, and AAuth-Requirement challenges",
-        "commit": "afd69bb"
-      },
-      {
-        "description": "migrations/0002 creates the system service principal, reassigns OAuth apps owned by legacy users, and drops the legacy tables and columns on existing PostgreSQL databases",
-        "commit": "a4de9a8"
-      },
-      {
-        "description": "A repository-wide test fails on references to the retired legacy identity model in code or current documentation",
-        "commit": "d82d1c2"
-      },
-      {
-        "description": "identity/clientassertion records used client-assertion JWT IDs in sf_client_assertion_jtis for replay protection",
-        "commit": "f81d670"
-      },
-      {
-        "description": "store.Config.TrustProvisionedEmail, off by default, marks emails written through SCIM as verified so social login can link to provisioned users",
-        "commit": "a5fdbe0"
-      },
-      {
-        "description": "identity/pgschema applies PostgreSQL-only schema objects; the migrate step adds a unique index on lower(email) in sf_humans",
-        "commit": "ded5411"
-      },
-      {
-        "description": "The members endpoint accepts includeInactive to list deactivated memberships",
-        "commit": "5b05d5c"
-      },
-      {
-        "description": "identity/managedprincipal creates managed principals with their managers in one transaction, maintains manager relationships with a last-manager guard, and audits every action",
-        "commit": "e49ccc6"
-      },
-      {
-        "description": "ManagerRelationship (sf_manager_relationships) and ManagerClaim (sf_manager_claims) Ent schemas",
-        "commit": "cd1483e"
-      },
-      {
-        "description": "Deployment managed_principals settings and the per-client managed_principals flag, both off by default, checked through Server.ManagedPrincipalsAllowed",
-        "commit": "0243306"
-      },
-      {
-        "description": "login_token credentials: issued by a manager, hashed, verified in constant time, single-use option, with lifetimes from the request, the client's login_token_ttl, or the deployment default (30 days) under a ceiling (400 days); single-use tokens last 20 minutes",
-        "commit": "81eb9ad"
-      },
-      {
-        "description": "POST /login-token exchanges a login token for a SystemAuth login session, with identical responses for every failure and per-address and per-client rate limits (WithLoginTokenRateLimit)",
-        "commit": "0237ff4"
-      },
-      {
-        "description": "ID token and userinfo claim managed: true for managed principals, and relying parties read it into VerifiedIdentity.Managed",
-        "commit": "0237ff4"
-      },
-      {
-        "description": "Managers list and revoke a managed principal's login tokens, login sessions, and token families, individually or all at once, through managedprincipal.Service or NewHandler",
-        "commit": "6953bc2"
-      },
-      {
-        "description": "Guardian claims: a manager issues a single-use code that makes a human with an email a guardian; AttachVerifiedEmail turns a managed principal into an ordinary human",
-        "commit": "cc7eb6c"
-      },
-      {
-        "description": "Base schema relations guardian and educator on principal with manage_account, manage_credentials, view_profile, and manage_managers; authz.ManagerRolePermissions and simple.WithManagerRoleGetter",
-        "commit": "a955205"
-      },
-      {
-        "description": "authz.OrgRolePermissions and the PermOrg* actions name the base organization permissions both providers evaluate",
-        "commit": "b52c69d"
-      },
-      {
-        "description": "providertest.RunOrgPermissionTests and RunManagerRelationTests hold providers to the base schema's grants",
-        "commit": "4ee182c"
-      },
-      {
-        "description": "marketplace.PurchaserChecker and stripe.WithPurchaserChecker refuse checkout to managed principals",
-        "commit": "6da101b"
-      },
-      {
-        "description": "marketplace.WithAuthorizer, WithPurchaseAuthorizer, OrgRolePurchaseAuthorizer, and WithCallerResolver configure how the marketplace API authorizes callers",
-        "commit": "63b6db8"
-      },
-      {
-        "description": "organization.MembershipRoleGetter backs the simple provider with active memberships; APIConfig.Authorizer and Caller configure the organization and invite APIs",
-        "commit": "7a81c8b"
-      },
-      {
-        "description": "requestprincipal.PrincipalUUID resolves the caller's SystemForge principal ID",
-        "commit": "1c10256"
-      },
-      {
-        "description": "spicedb.Client.DeleteRelationships deletes relationships by filter",
-        "commit": "f9bd91c"
-      },
-      {
-        "description": "migrations/0003 converts stored invite tokens to hashes",
-        "commit": "b52c9a0"
-      },
-      {
-        "description": "CI runs the PostgreSQL tests against a database service and the SpiceDB provider tests with the integration tag; SF_TEST_PG_REQUIRED makes a missing database fail rather than skip",
-        "commit": "13b5d57"
-      },
-      {
-        "description": "systemauth.PrincipalStatus lets storage report whether a token's principal is active; Ent and memory storage implement it",
-        "commit": "f5369a9"
-      },
-      {
-        "description": "Agents store allowed actions, allowed scopes, and a delegation expiry",
-        "commit": "39adbbb"
-      },
-      {
-        "description": "systemauth.RequestGate, TrustAllRequests, and TrustedProxyNetworks; oauth.WithUserAuthenticator, WithTrustedUserIDHeader, WithLoginURL, and WithConsent",
-        "commit": "487920d"
-      },
-      {
-        "description": "jwt.ValidateAccessTokenForAudience and middleware.HTTPAuthForAudience; ratelimit.PeerIP, ForwardedClientIP, ForwardedIPKey, WithMaxKeys, WithFailOpen; systemauth.WithLoginTokenClientIP, FederationAuthenticator, SharedSecretAuthenticator, and AuthorizeIntrospectionCaller; scim.DenyAllAuthorizationHook",
-        "commit": "f6d1a8b"
-      },
-      {
-        "description": "session/jwt: TokenOptions.Audience addresses one token to its own audience",
-        "commit": "da5b98a"
-      },
-      {
-        "description": "multiapp: MiddlewareConfig.AppAudiences binds tokens to the app a request is routed to",
-        "commit": "55881bc"
-      },
-      {
-        "description": "identity/security: Lockout.Begin and Attempt reserve a login attempt before verification",
-        "commit": "174098f"
-      }
-    ],
-    "changed": [
-      { "description": "`authz` providers are named for their mode: role-based `authz/rbac` (formerly `authz/simple`) and relationship-based `authz/rebac/spicedb` (formerly `authz/spicedb`), so another engine can sit beside SpiceDB under the same mode", "commit": "3d9d4e7" },
-      {
-        "description": "Federation sync records the federation identity as an ExternalIdentity; creating an identity for an existing email links it so later updates and deletes resolve to the same principal",
-        "commit": "e0946ab"
-      },
-      {
-        "description": "Human email uniqueness is enforced case-insensitively on create and update in SystemAuth and SCIM, matching the case-insensitive lookups",
-        "commit": "e0946ab"
-      },
-      {
-        "description": "SCIM userName is not case-exact (RFC 7643): lookups, uniqueness, and eq and co filters ignore case",
-        "commit": "5a16f01"
-      },
-      {
-        "description": "SCIM memberships honor the active flag, and deleting a user who belongs to a group removes the memberships instead of failing",
-        "commit": "5a16f01"
-      },
-      {
-        "description": "Creating an organization through the API makes the caller its owner, and every organization with an owner gives it an owner membership",
-        "commit": "87d623d"
-      },
-      {
-        "description": "Listing organizations returns the caller's organizations, or all of them for platform administrators",
-        "commit": "7a81c8b"
-      },
-      {
-        "description": "SCIM no longer lists, reads, changes, deletes, or groups managed principals",
-        "commit": "549cc84"
-      },
-      {
-        "description": "Signup requires a bare email address",
-        "commit": "a13b125"
-      }
-    ],
-    "fixed": [
-      {
-        "description": "SCIM user and group listing panicked on every ascending sort, including the default order",
-        "commit": "cf556cd"
-      },
-      {
-        "description": "The identity/oauth Fosite storage dropped any subject that was not a UUID; tokens and authorization codes now record the subject",
-        "commit": "519f77c"
-      },
-      {
-        "description": "CreateClient reported every constraint failure, such as a nonexistent owner, as ErrClientExists; it now does so only for a duplicate client ID",
-        "commit": "f835592"
-      },
-      {
-        "description": "Federation sync no longer discards lookup errors, and a delete reports synced only for an identity that was never linked",
-        "commit": "e0946ab"
-      },
-      {
-        "description": "rls.SetupTestTenant and SetupTestUser inserted into tables that no longer existed; they now create organizations, human principals, and principal memberships, and report cleanup failures",
-        "commit": "2ac912a"
-      },
-      {
-        "description": "rls.SystemForgeTables named a table that no longer existed, so MigrateSystemForge failed; it now names sf_principal_memberships",
-        "commit": "67fa61d"
-      },
-      {
-        "description": "identity/oauth.NewProvider panicked on construction because its storage no longer satisfied Fosite's interfaces; it now does, checked at compile time",
-        "commit": "691ad2d"
-      },
-      {
-        "description": "identity/oauth never recorded a token family, so revoking refresh and access tokens had no effect; tokens record their request as the family and rotation retires the exchanged refresh token",
-        "commit": "691ad2d"
-      },
-      {
-        "description": "SystemAuth failed to record client-assertion JWT IDs under foreign-key enforcement, breaking private_key_jwt client authentication and leaving assertions replayable",
-        "commit": "238f035"
-      },
-      {
-        "description": "Changing a user's email through SCIM no longer keeps the previous address's verification",
-        "commit": "a5fdbe0"
-      },
-      {
-        "description": "The marketplace, organization, and invite APIs panicked at registration because list filters used pointer query parameters",
-        "commit": "603d444"
-      },
-      {
-        "description": "The simple provider denied every organization permission check, because its permission names did not match the ones it looked up",
-        "commit": "b52c69d"
-      },
-      {
-        "description": "SpiceDB GetRole reported editors as non-members",
-        "commit": "6a9274a"
-      },
-      {
-        "description": "A managed principal's first sign-in to a relying party failed for lack of a verified email",
-        "commit": "d439f6b"
-      },
-      {
-        "description": "In-memory stores, password login, and federation sync could match or adopt a human by an empty email",
-        "commit": "12c8194"
-      },
-      {
-        "description": "Invite emails are matched case-insensitively",
-        "commit": "61b845e"
-      },
-      {
-        "description": "organization.Service.Create failed for an organization without a plan instead of defaulting to free",
-        "commit": "03bfd60"
-      },
-      {
-        "description": "GetMembership reports a missing membership as organization.ErrMembershipNotFound",
-        "commit": "87d623d"
-      },
-      {
-        "description": "identity/credential reports failures to record a credential's use and corrupt stored hashes (ErrCorruptCredential) instead of discarding them, and CreatePassword no longer creates a second password when its lookup fails",
-        "commit": "7aaf8cb"
-      },
-      {
-        "description": "identity/oauth's authorization code exchange always failed and its tokens lost their subject; its grant storage now delegates to SystemAuth's, enforcing PKCE and redirect URIs and detecting code replay and refresh-token reuse",
-        "commit": "164f47e"
-      },
-      {
-        "description": "A signup that failed after creating the user left an account with no organization whose email could not sign up again",
-        "commit": "ce145f0"
-      },
-      {
-        "description": "principal type-specific updates changed shared fields before checking the type, and CreateAgent accepted a missing or inactive delegating principal",
-        "commit": "c610901"
-      },
-      {
-        "description": "identity/oauth.NewAPI panicked on every call because the Fosite interceptor was added after routes",
-        "commit": "487920d"
-      },
-      {
-        "description": "The federation lookup handler read its path parameter with net/http's PathValue, which chi does not populate",
-        "commit": "893b79d"
-      },
-      {
-        "description": "The memory rate-limit store panicked when used after Close, and discarded windows after a fixed hour whatever their period",
-        "commit": "f6d1a8b"
-      }
-    ],
-    "documentation": [
-      { "description": "ADRs live in `docs/design/adrs/` with an index of statuses, under a Design section in the docs nav; ADR-006 (organization lifecycle), ADR-007 (memberships and entitlements as claims), ADR-008 (resource-scoped collaborators, with rbac/rebac guidance) and ADR-009 (management is a relationship) are added", "commit": "91f593c" },
-      {
-        "description": "ADR-004 (retire legacy User; Principal as the sole identity root) and ADR-005 (managed principals and manager relationships), with specs for INIT-SYSTEMFORGE-007 and INIT-SYSTEMFORGE-008"
-      },
-      {
-        "description": "Identity, OAuth, integration, and getting-started documentation rewritten for the principal model; the schema reference is generated from the Ent schema"
-      },
-      {
-        "description": "The service-accounts page states that the RFC 7523 JWT-bearer grant is not implemented; the migration guide states that only Argon2id password hashes can be imported"
-      },
-      {
-        "description": "Resource servers accepting AI agents via AAuth",
-        "commit": "00b495f"
-      },
-      {
-        "description": "Managed principals guide, with the email exception, login token security, and base manager relations added to the users, account security, and authorization conventions docs",
-        "commit": "35c4961"
-      }
-    ],
-    "deprecated": [
-      { "description": "`authz/simple` and `authz/spicedb` forward to `authz/rbac` and `authz/rebac/spicedb` as deprecated packages for one release; importers should move to the new paths", "commit": "3d9d4e7" },
-      {
-        "description": "mixin.HumanMixin, mixin.OAuthAccountMixin, and mixin.RefreshTokenMixin: applications should authenticate through SystemAuth and link local records by sf_principal_id",
-        "commit": "37776a2"
-      },
-      {
-        "description": "spicedb.BaseSchema: use authz.BaseSpiceDBSchema",
-        "commit": "6a9274a"
-      },
-      {
-        "description": "identity/security: Lockout.CheckAndRecord in favor of Begin",
-        "commit": "174098f"
-      },
-      {
-        "description": "rls: EntHook.SetContextFromContext, ContextInjector, ConnWithRLS, NewConnWithRLS, and GetConnWithRLS, which cannot take effect outside a transaction",
-        "commit": "2b7ad39"
-      }
-    ],
-    "security": [
-      {
-        "description": "Marketplace checkout took the purchaser from the request body, so anyone could start a purchase in another principal's name for any organization",
-        "commit": "63b6db8"
-      },
-      {
-        "description": "Marketplace listing, license, and seat endpoints acted on any IDs a request named; they now check the caller's permissions on the owning organization",
-        "commit": "2c09db4"
-      },
-      {
-        "description": "The organization API listed every organization and let any caller read, change, or delete organizations, change members, and transfer ownership; it now authorizes each operation",
-        "commit": "7a81c8b"
-      },
-      {
-        "description": "Invite management needed no permission, and anyone holding an invite link could accept it as any principal; invites are now managed with invite_member and accepted only by the addressee",
-        "commit": "61b845e"
-      },
-      {
-        "description": "Invite tokens were stored in plain text, so a leaked table or backup could accept invites; they are stored as SHA-256 hashes",
-        "commit": "b52c9a0"
-      },
-      {
-        "description": "SpiceDB principal and organization cleanup ignored failures and missed editor and manager relations, leaving access behind while reporting success",
-        "commit": "f9bd91c"
-      },
-      {
-        "description": "Refresh-token rotation was not atomic and its revocation error was discarded, so a refresh token could be used more than once; refreshing near expiry also reset a session to seven days, extending it indefinitely. Rotation is now atomic, a family keeps its first expiry, and reusing a rotated refresh token revokes the family",
-        "commit": "ba95d9d"
-      },
-      {
-        "description": "Stripe checkout granted licenses for sessions completed with an unpaid delayed payment, a malformed seat count produced an unlimited seat-based license, and cancelled subscriptions kept their licenses",
-        "commit": "0ae6e2d"
-      },
-      {
-        "description": "Deactivating a principal left its access tokens valid and let its refresh tokens keep issuing new ones for up to the family's absolute lifetime; SystemAuth and identity/token now refuse an inactive principal's tokens wherever they are used or refreshed, and revoke the family",
-        "commit": "f5369a9"
-      },
-      {
-        "description": "Revoking an agent's delegation gave it unrestricted access, constraints that did not overlap allowed everything, and delegation expiry and action limits were never stored; delegation now fails closed and enforces every constraint",
-        "commit": "a3682f3"
-      },
-      {
-        "description": "UpdateHuman granted or revoked platform administration without syncing it, so a revoked administrator stayed one in SpiceDB",
-        "commit": "c610901"
-      },
-      {
-        "description": "SignupWithInvite let anyone holding an invite link join under any email, and SignupOrGetExisting returned an existing account for an unverified email",
-        "commit": "ce145f0"
-      },
-      {
-        "description": "SystemAuth's default session provider and identity/oauth's authorization endpoint took the user from an X-User-ID request header, so anyone who could reach the endpoint could obtain an authorization code, and tokens, for any user; header identity is now an explicit, gated opt-in and the default authenticates nobody",
-        "commit": "1da7bde"
-      },
-      {
-        "description": "identity/oauth granted every requested scope to every client without consent; non-first-party clients now need a consent check",
-        "commit": "487920d"
-      },
-      {
-        "description": "SCIM listing and search never asked the authorization hook, so any caller with a token could dump every user and group, and the provider's default hook allowed everything; listings are authorized and the default denies",
-        "commit": "1afa3b7"
-      },
-      {
-        "description": "The federation identity sync endpoint trusted any well-formed request and acted on its body, letting an unauthenticated caller link to and then deactivate or rewrite any account by email; it and the lookup endpoint now require a FederationAuthenticator and are not registered without one",
-        "commit": "893b79d"
-      },
-      {
-        "description": "Rate limits keyed on client-supplied X-Forwarded-For and X-Real-IP, so a client could evade a limit by rotating the header or poison a victim's; they key on the direct peer, and forwarded headers are believed only from configured trusted proxies, here and in the BFF client IP handling and the API key middleware",
-        "commit": "f6d1a8b"
-      },
-      {
-        "description": "The in-memory rate-limit store grew without bound from attacker-chosen keys, the middleware failed open on storage errors, and the login token endpoint keyed on raw client_id values; the store is bounded, the middleware fails closed, and only registered clients get a bucket",
-        "commit": "f6d1a8b"
-      },
-      {
-        "description": "Token introspection accepted any valid access token or any client's Basic credentials, public clients included, as the caller's credential; it now requires a confidential client or a token with the introspect scope",
-        "commit": "9d3e9c4"
-      },
-      {
-        "description": "The default storage accepted every client-assertion JWT ID as new, so a captured private_key_jwt assertion could be replayed until it expired",
-        "commit": "27ccd27"
-      },
-      {
-        "description": "BFF cookies lost Secure and HttpOnly when a CookieConfig omitted them; both are now unconditional unless AllowInsecure is set for development",
-        "commit": "5182e80"
-      },
-      {
-        "description": "Cookie-authenticated writes through relyingparty.BearerMiddleware skipped the same-origin check, allowing cross-site requests",
-        "commit": "5a24dd4"
-      },
-      {
-        "description": "JWT validation accepted tokens with no expiry and ignored the issuer; the contract middleware did the same and skipped the audience check without an app ID",
-        "commit": "2096e27"
-      },
-      {
-        "description": "Client secret validation revealed whether a client ID existed by error message and timing, and lockout counted differently spelled identifiers separately, restarting the count",
-        "commit": "3ab264c"
-      },
-      {
-        "description": "multiapp's SchemaDB left a schema's search_path on pooled connections, which could carry one application's schema to unrelated code, and ForSchema interpolated unvalidated names into SQL",
-        "commit": "d483b7a"
-      },
-      {
-        "description": "The BFF proxy forwarded the browser's session cookie upstream when a ProxyConfig was built by hand; Cookie, Authorization, and DPoP headers are now always stripped",
-        "commit": "b6bbb49"
-      },
-      {
-        "description": "multiapp trusted the X-App-ID header, so with a shared signing key a token for one app authenticated requests for another; MiddlewareConfig.AppAudiences binds tokens to the routed app",
-        "commit": "55881bc"
-      },
-      {
-        "description": "API keys could be read, revoked, or deleted by ID alone, requested any scope including the wildcard when no allow-list was set, and ignored MaxKeysPerUser",
-        "commit": "cbc7171"
-      },
-      {
-        "description": "Lockout let a burst of parallel guesses exceed MaxAttempts; Lockout.Begin reserves the attempt before the credential is verified",
-        "commit": "174098f"
-      },
-      {
-        "description": "Concurrent BFF refreshes spent one refresh token several times, which token reuse detection treats as theft; refresh is now serialized per session",
-        "commit": "94fd8e0"
-      }
-    ]
-  }
+  ]
 }
