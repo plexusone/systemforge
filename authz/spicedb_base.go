@@ -32,15 +32,21 @@ definition principal {
 definition organization {
     relation owner: principal
     relation admin: principal
-    relation editor: principal
     relation member: principal
-    relation viewer: principal
+    // A collaborator holds access to individual resources, never to the
+    // organization itself (ADR-008). They gain only "list", so an
+    // application can show the organization in a switcher.
+    relation collaborator: principal
 
-    // Generic ladder mirroring the simple provider's DefaultRoleHierarchy.
+    // The membership ladder mirrors the rbac provider's
+    // DefaultRoleHierarchy. Editor and viewer are not organization roles;
+    // finer access to one resource is a resource role (viewer,
+    // contributor, maintainer) on that resource.
     permission manage = owner + admin
-    permission edit = manage + editor
+    permission edit = manage
     permission contribute = edit + member
-    permission view = contribute + viewer
+    permission view = contribute
+    permission list = view + collaborator
 
     // Org administration.
     permission invite_member = manage

@@ -236,12 +236,10 @@ func formatRoleName(role string) string {
 		return "Owner"
 	case "admin":
 		return "Administrator"
-	case "editor":
-		return "Editor"
 	case "member":
 		return "Member"
-	case "viewer":
-		return "Viewer"
+	case "collaborator":
+		return "Collaborator"
 	case "guest":
 		return "Guest"
 	default:
@@ -256,12 +254,10 @@ func formatRoleDescription(role string) string {
 		return "Full administrative access including organization management"
 	case "admin":
 		return "Administrative access to manage members and resources"
-	case "editor":
-		return "Create, read, update, and delete resources"
 	case "member":
 		return "Create, read, and update resources"
-	case "viewer":
-		return "Read-only access to resources"
+	case "collaborator":
+		return "Access to individual resources only; no organization-wide permissions"
 	case "guest":
 		return "Limited guest access"
 	default:

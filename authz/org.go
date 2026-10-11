@@ -9,6 +9,7 @@ const (
 	PermOrgEdit         Action = "edit"
 	PermOrgContribute   Action = "contribute"
 	PermOrgView         Action = "view"
+	PermOrgList         Action = "list"
 	PermOrgInviteMember Action = "invite_member"
 	PermOrgRemoveMember Action = "remove_member"
 	PermOrgChangeRole   Action = "change_role"
@@ -21,17 +22,19 @@ const (
 // the two equal.
 var OrgRolePermissions = map[string][]Action{
 	"owner": {
-		PermOrgManage, PermOrgEdit, PermOrgContribute, PermOrgView,
+		PermOrgManage, PermOrgEdit, PermOrgContribute, PermOrgView, PermOrgList,
 		PermOrgInviteMember, PermOrgRemoveMember, PermOrgChangeRole, PermOrgSettings,
 		PermOrgDelete,
 	},
 	"admin": {
-		PermOrgManage, PermOrgEdit, PermOrgContribute, PermOrgView,
+		PermOrgManage, PermOrgEdit, PermOrgContribute, PermOrgView, PermOrgList,
 		PermOrgInviteMember, PermOrgRemoveMember, PermOrgChangeRole, PermOrgSettings,
 	},
-	"editor": {PermOrgEdit, PermOrgContribute, PermOrgView},
-	"member": {PermOrgContribute, PermOrgView},
-	"viewer": {PermOrgView},
+	"member": {PermOrgContribute, PermOrgView, PermOrgList},
+	// A collaborator has no permission on the organization but list,
+	// which lets an application show it in the person's organization
+	// switcher (ADR-008).
+	"collaborator": {PermOrgList},
 }
 
 // OrgRoleAllows reports whether an organization role grants a permission

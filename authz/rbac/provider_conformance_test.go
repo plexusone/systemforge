@@ -135,7 +135,7 @@ func TestDecideReturnsDetailedDecision(t *testing.T) {
 
 	roles := map[string]map[string]string{
 		principalID.String(): {
-			orgID.String(): "viewer",
+			orgID.String(): "member",
 		},
 	}
 
@@ -151,13 +151,13 @@ func TestDecideReturnsDetailedDecision(t *testing.T) {
 	principal := authz.NewUserPrincipal(principalID)
 	resource := authz.NewOrgResource(authz.ResourceType("resource"), orgID)
 
-	// Viewer has read permission
+	// Member has read permission
 	decision, err := provider.Decide(context.Background(), principal, authz.ActionRead, resource)
 	if err != nil {
 		t.Fatalf("Decide(read) error: %v", err)
 	}
 	if !decision.Allowed {
-		t.Error("Decide(read).Allowed = false for viewer, want true")
+		t.Error("Decide(read).Allowed = false for member, want true")
 	}
 	if decision.Reason == "" {
 		t.Error("Decide(read).Reason should not be empty")
@@ -166,13 +166,13 @@ func TestDecideReturnsDetailedDecision(t *testing.T) {
 		t.Error("Decide(read).PolicyID should not be empty when allowed")
 	}
 
-	// Viewer does NOT have delete permission
+	// Member does NOT have delete permission
 	decision, err = provider.Decide(context.Background(), principal, authz.ActionDelete, resource)
 	if err != nil {
 		t.Fatalf("Decide(delete) error: %v", err)
 	}
 	if decision.Allowed {
-		t.Error("Decide(delete).Allowed = true for viewer, want false")
+		t.Error("Decide(delete).Allowed = true for member, want false")
 	}
 	if decision.Reason == "" {
 		t.Error("Decide(delete).Reason should not be empty")

@@ -45,8 +45,11 @@ const (
 	RelOwner         = spicedb.RelOwner
 	RelAdmin         = spicedb.RelAdmin
 	RelMember        = spicedb.RelMember
+	RelCollaborator  = spicedb.RelCollaborator
 	RelViewer        = spicedb.RelViewer
-	RelEditor        = spicedb.RelEditor
+	RelContributor   = spicedb.RelContributor
+	RelMaintainer    = spicedb.RelMaintainer
+	PermList         = spicedb.PermList
 )
 
 // Deprecated: use the rebac/spicedb package.

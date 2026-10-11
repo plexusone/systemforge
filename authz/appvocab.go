@@ -19,9 +19,11 @@ import (
 //
 //   - App names are short lowercase identifiers ("actionforge").
 //   - Scopes are "{app}:{resource}:{verb}" plus the blanket "{app}:admin".
-//   - Roles reuse the platform ladder (owner/admin/editor/member/viewer)
-//     wherever it fits; app domain roles (e.g. "approver") are permitted and
-//     must appear in both Roles() and Hierarchy().
+//   - Application roles are the application's own (for example
+//     "viewer", "editor", "approver") and must appear in both Roles() and
+//     Hierarchy(). They are distinct from organization roles (owner, admin,
+//     member, collaborator) and from resource roles (viewer, contributor,
+//     maintainer on a resource).
 //   - SpiceDB fragments define only "{app}_"-prefixed definitions and attach
 //     to the shared base definitions (principal, organization, platform) via
 //     an "{app}_org" facet — never by redefining the base.

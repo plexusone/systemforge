@@ -123,11 +123,12 @@ func (p *Provider) GetRole(ctx context.Context, principal authz.Principal, orgID
 
 // IsMember checks if a principal is a member of an organization.
 func (p *Provider) IsMember(ctx context.Context, principal authz.Principal, orgID uuid.UUID) (bool, error) {
-	// Check if principal has any membership relation (view permission implies membership)
+	// Every membership grants list, collaborators included, so it is the
+	// membership test; view excludes collaborators.
 	return p.client.Check(ctx, &CheckRequest{
 		ResourceType: TypeOrganization,
 		ResourceID:   orgID.String(),
-		Permission:   PermView,
+		Permission:   PermList,
 		SubjectType:  TypePrincipal,
 		SubjectID:    principal.ID.String(),
 	})
@@ -197,27 +198,24 @@ var (
 // edit), so the providers disagreed.
 const BaseSchema = authz.BaseSpiceDBSchema
 
-// ResourceSchema returns a SpiceDB schema definition for a custom resource type.
-// This can be used to define app-specific resources that integrate with organizations.
+// ResourceSchema returns a SpiceDB schema definition for a custom resource
+// type that accepts collaborators (ADR-008). It declares the resource-role
+// ladder (viewer, contributor, maintainer) and attaches the resource to its
+// organization, so members keep their organization-wide access and a
+// collaborator has only the direct grant. Applications prefix resourceType
+// with their identifier ("myapp_project") and write the fragment into their
+// vocabulary.
 func ResourceSchema(resourceType string) string {
 	return fmt.Sprintf(`
 definition %s {
     relation org: organization
-    relation owner: principal
-    relation editor: principal
     relation viewer: principal
+    relation contributor: principal
+    relation maintainer: principal
 
-    // Owners can do everything
-    permission manage = owner + org->admin
-
-    // Editors can edit (includes owners and org admins)
-    permission edit = manage + editor + org->member
-
-    // Viewers can view (includes editors and org viewers)
-    permission view = edit + viewer + org->viewer
-
-    // Only owners and org admins can delete
-    permission delete = owner + org->admin
+    permission view = viewer + contributor + maintainer + org->view
+    permission edit = contributor + maintainer + org->edit
+    permission manage = maintainer + org->manage
 }
 `, resourceType)
 }

@@ -28,7 +28,7 @@ func (s entService) Licenses() LicenseService           { return s.licenses }
 func (s entService) Subscriptions() SubscriptionService { return nil }
 func (s entService) Checkout() CheckoutService          { return s.checkout }
 
-// accessFixture is a seller organization with an owner, editor, and
+// accessFixture is a seller organization with an owner, admin, and
 // member; a buyer organization with an admin and member; and an outsider.
 type accessFixture struct {
 	t        *testing.T
@@ -63,7 +63,7 @@ func newAccessFixture(t *testing.T, opts ...APIOption) *accessFixture {
 		role string
 	}{
 		"seller-owner":  {f.seller, "owner"},
-		"seller-editor": {f.seller, "editor"},
+		"seller-admin":  {f.seller, "admin"},
 		"seller-member": {f.seller, "member"},
 		"buyer-admin":   {f.buyer, "admin"},
 		"buyer-member":  {f.buyer, "member"},
@@ -142,8 +142,8 @@ func TestListingAccess(t *testing.T) {
 		return b
 	}
 
-	// Create: editors and above, as themselves.
-	id := f.createListing("seller-editor")
+	// Create: admins and above, as themselves.
+	id := f.createListing("seller-admin")
 	for who, want := range map[string]int{
 		"":              http.StatusUnauthorized,
 		"seller-member": http.StatusForbidden,
@@ -153,7 +153,7 @@ func TestListingAccess(t *testing.T) {
 			t.Errorf("create as %q: %d, want %d", who, r.code, want)
 		}
 	}
-	if r := f.do(http.MethodPost, "/listings", "seller-owner", body(map[string]any{"owner_id": f.who["seller-editor"].String()})); r.code != http.StatusForbidden {
+	if r := f.do(http.MethodPost, "/listings", "seller-owner", body(map[string]any{"owner_id": f.who["seller-admin"].String()})); r.code != http.StatusForbidden {
 		t.Errorf("create for someone else: %d", r.code)
 	}
 
@@ -189,18 +189,18 @@ func TestListingAccess(t *testing.T) {
 		}
 	}
 
-	// Update: editors; publish, archive, delete: managers.
+	// Update and publish: admins and owners; archive and delete likewise.
 	patch := map[string]any{"title": "Renamed"}
-	for who, want := range map[string]int{"seller-member": 403, "outsider": 403, "": 401, "seller-editor": 200} {
+	for who, want := range map[string]int{"seller-member": 403, "outsider": 403, "": 401, "seller-admin": 200} {
 		if r := f.do(http.MethodPatch, "/listings/"+id, who, patch); r.code != want {
 			t.Errorf("update as %q: %d, want %d", who, r.code, want)
 		}
 	}
-	if r := f.do(http.MethodPost, "/listings/"+id+"/publish", "seller-editor"); r.code != http.StatusForbidden {
-		t.Errorf("publish as editor: %d", r.code)
+	if r := f.do(http.MethodPost, "/listings/"+id+"/publish", "seller-member"); r.code != http.StatusForbidden {
+		t.Errorf("publish as member: %d", r.code)
 	}
-	if r := f.do(http.MethodPost, "/listings/"+id+"/publish", "seller-owner"); r.code != http.StatusOK {
-		t.Fatalf("publish as owner: %d %s", r.code, r.body)
+	if r := f.do(http.MethodPost, "/listings/"+id+"/publish", "seller-admin"); r.code != http.StatusOK {
+		t.Fatalf("publish as admin: %d %s", r.code, r.body)
 	}
 
 	// Published listings are public.
@@ -211,7 +211,7 @@ func TestListingAccess(t *testing.T) {
 		t.Errorf("anonymous sees %d published listings, want 1", n)
 	}
 
-	for who, want := range map[string]int{"seller-editor": 403, "buyer-admin": 403} {
+	for who, want := range map[string]int{"seller-member": 403, "buyer-admin": 403} {
 		if r := f.do(http.MethodPost, "/listings/"+id+"/archive", who); r.code != want {
 			t.Errorf("archive as %q: %d, want %d", who, r.code, want)
 		}

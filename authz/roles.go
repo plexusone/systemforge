@@ -4,14 +4,15 @@ package authz
 // Roles with higher hierarchy values can access resources requiring lower levels.
 type RoleHierarchy map[string]int
 
-// DefaultRoleHierarchy provides a common role hierarchy for multi-tenant SaaS apps.
+// DefaultRoleHierarchy provides the organization role hierarchy of the
+// platform: owner, admin, member and collaborator (plus guest for
+// applications that model one).
 var DefaultRoleHierarchy = RoleHierarchy{
-	"owner":  100,
-	"admin":  80,
-	"editor": 60,
-	"member": 40,
-	"viewer": 20,
-	"guest":  10,
+	"owner":        100,
+	"admin":        80,
+	"member":       40,
+	"collaborator": 20,
+	"guest":        10,
 }
 
 // CanAccess checks if a user role can access resources requiring the target role.
@@ -53,17 +54,13 @@ var DefaultRolePermissions = RolePermissions{
 		"member.invite", "member.remove", "member.role.change", "member.list",
 		"resource.create", "resource.read", "resource.update", "resource.delete",
 	},
-	"editor": {
-		"member.list",
-		"resource.create", "resource.read", "resource.update", "resource.delete",
-	},
 	"member": {
 		"member.list",
 		"resource.create", "resource.read", "resource.update",
 	},
-	"viewer": {
-		"resource.read",
-	},
+	// A collaborator holds no organization-wide permission; access to
+	// individual resources comes from resource grants (ADR-008).
+	"collaborator": {},
 }
 
 // HasPermission checks if a role has a specific permission.

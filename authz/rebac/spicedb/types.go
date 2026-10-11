@@ -70,6 +70,10 @@ const (
 	// PermView allows viewing a resource.
 	PermView = "view"
 
+	// PermList lets a principal see that an organization exists: every
+	// membership grants it, collaborators included.
+	PermList = "list"
+
 	// PermEdit allows editing a resource.
 	PermEdit = "edit"
 
@@ -94,13 +98,24 @@ const (
 	// RelMember represents the member relation.
 	RelMember = "member"
 
-	// RelViewer represents the viewer relation.
+	// RelCollaborator represents the organization collaborator relation: a
+	// principal with access to individual resources only (ADR-008).
+	RelCollaborator = "collaborator"
+)
+
+// Resource-role relations of a collaborator-able resource definition
+// (ADR-008), lowest first.
+const (
+	// RelViewer reads the resource.
 	RelViewer = "viewer"
 
-	// RelEditor represents the editor relation.
-	RelEditor = "editor"
+	// RelContributor also changes the resource and creates items in it.
+	RelContributor = "contributor"
+
+	// RelMaintainer also manages the resource's settings and collaborators.
+	RelMaintainer = "maintainer"
 )
 
 // orgRoles are the organization relations of the base schema, highest
 // privilege first.
-var orgRoles = []string{RelOwner, RelAdmin, RelEditor, RelMember, RelViewer}
+var orgRoles = []string{RelOwner, RelAdmin, RelMember, RelCollaborator}

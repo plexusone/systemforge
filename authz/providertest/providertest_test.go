@@ -168,27 +168,27 @@ func TestMockProvider_RolePermissions(t *testing.T) {
 
 	principalID := uuid.New()
 	orgID := uuid.New()
-	mock.SetRole(principalID, orgID, "viewer")
+	mock.SetRole(principalID, orgID, "member")
 
 	principal := authz.NewUserPrincipal(principalID)
 	resource := authz.NewOrgResource(authz.ResourceType("resource"), orgID)
 
-	// Viewer should have read access
+	// Member should have read access
 	allowed, err := mock.Can(context.Background(), principal, authz.ActionRead, resource)
 	if err != nil {
 		t.Fatalf("Can(read) error: %v", err)
 	}
 	if !allowed {
-		t.Error("Can(read) = false for viewer, want true")
+		t.Error("Can(read) = false for member, want true")
 	}
 
-	// Viewer should NOT have delete access
+	// Member should NOT have delete access
 	allowed, err = mock.Can(context.Background(), principal, authz.ActionDelete, resource)
 	if err != nil {
 		t.Fatalf("Can(delete) error: %v", err)
 	}
 	if allowed {
-		t.Error("Can(delete) = true for viewer, want false")
+		t.Error("Can(delete) = true for member, want false")
 	}
 }
 

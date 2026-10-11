@@ -79,7 +79,7 @@ func TestIntegration_OrgMembership(t *testing.T) {
 			t.Error("member should have view permission")
 		}
 
-		// Members contribute; editing is the editor role's.
+		// Members contribute; editing is for admins and owners.
 		canContribute, err := provider.Can(ctx, memberPrincipal, "contribute", authz.Resource{
 			Type: "organization",
 			ID:   &orgID,
@@ -256,13 +256,13 @@ func TestIntegration_RoleHierarchy(t *testing.T) {
 	ownerID := uuid.New()
 	adminID := uuid.New()
 	memberID := uuid.New()
-	viewerID := uuid.New()
+	collaboratorID := uuid.New()
 
 	// Setup: Create org with different role members
 	_ = syncer.RegisterOrganization(ctx, orgID, ownerID)
 	_ = syncer.AddOrgMembership(ctx, adminID, orgID, spicedb.RelAdmin)
 	_ = syncer.AddOrgMembership(ctx, memberID, orgID, spicedb.RelMember)
-	_ = syncer.AddOrgMembership(ctx, viewerID, orgID, spicedb.RelViewer)
+	_ = syncer.AddOrgMembership(ctx, collaboratorID, orgID, spicedb.RelCollaborator)
 
 	resource := authz.Resource{Type: "organization", ID: &orgID}
 
@@ -291,11 +291,17 @@ func TestIntegration_RoleHierarchy(t *testing.T) {
 		{"member_can_view", memberID, "view", true},
 		{"member_cannot_delete", memberID, "delete", false},
 
-		// Viewer permissions
-		{"viewer_cannot_manage", viewerID, "manage", false},
-		{"viewer_cannot_edit", viewerID, "edit", false},
-		{"viewer_can_view", viewerID, "view", true},
-		{"viewer_cannot_delete", viewerID, "delete", false},
+		// Collaborators see only that the organization exists.
+		{"collaborator_cannot_manage", collaboratorID, "manage", false},
+		{"collaborator_cannot_edit", collaboratorID, "edit", false},
+		{"collaborator_cannot_contribute", collaboratorID, "contribute", false},
+		{"collaborator_cannot_view", collaboratorID, "view", false},
+		{"collaborator_can_list", collaboratorID, "list", true},
+		{"collaborator_cannot_delete", collaboratorID, "delete", false},
+
+		// Every membership lists.
+		{"member_can_list", memberID, "list", true},
+		{"owner_can_list", ownerID, "list", true},
 	}
 
 	for _, tt := range tests {
@@ -388,7 +394,7 @@ func TestIntegration_OrgPermissions(t *testing.T) {
 }
 
 // TestIntegration_UnregisterRemovesEverything verifies that unregistering
-// removes every base relationship, including editors and manager
+// removes every base relationship, including admins and manager
 // relations in both directions, and that failures are reported.
 func TestIntegration_UnregisterRemovesEverything(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -419,29 +425,29 @@ func TestIntegration_UnregisterRemovesEverything(t *testing.T) {
 	}
 
 	org, other := uuid.New(), uuid.New()
-	owner, editor, parent, learner := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	owner, leaving, parent, learner := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	orgRes := authz.NewResourceWithID(authz.ResourceTypeOrganization, org)
 	otherRes := authz.NewResourceWithID(authz.ResourceTypeOrganization, other)
 	must(syncer.RegisterOrganization(ctx, org, owner))
-	must(syncer.AddOrgMembership(ctx, editor, org, spicedb.RelEditor))
-	must(syncer.AddOrgMembership(ctx, editor, other, spicedb.RelMember))
-	must(syncer.SetPlatformAdmin(ctx, editor, true))
-	must(syncer.AddPrincipalManager(ctx, learner, editor, authz.ManagerRoleEducator))
-	must(syncer.AddPrincipalManager(ctx, editor, parent, authz.ManagerRoleGuardian))
+	must(syncer.AddOrgMembership(ctx, leaving, org, spicedb.RelAdmin))
+	must(syncer.AddOrgMembership(ctx, leaving, other, spicedb.RelMember))
+	must(syncer.SetPlatformAdmin(ctx, leaving, true))
+	must(syncer.AddPrincipalManager(ctx, learner, leaving, authz.ManagerRoleEducator))
+	must(syncer.AddPrincipalManager(ctx, leaving, parent, authz.ManagerRoleGuardian))
 
-	// The editor goes: memberships everywhere, platform admin, and manager
+	// The leaving goes: memberships everywhere, platform admin, and manager
 	// relations it holds and that are held over it.
-	must(syncer.UnregisterPrincipal(ctx, editor))
-	if can(editor, authz.PermOrgEdit, orgRes) || can(editor, authz.PermOrgView, otherRes) {
+	must(syncer.UnregisterPrincipal(ctx, leaving))
+	if can(leaving, authz.PermOrgEdit, orgRes) || can(leaving, authz.PermOrgView, otherRes) {
 		t.Error("unregistered principal keeps organization access")
 	}
-	if admin, err := provider.IsPlatformAdmin(ctx, authz.NewUserPrincipal(editor)); err != nil || admin {
+	if admin, err := provider.IsPlatformAdmin(ctx, authz.NewUserPrincipal(leaving)); err != nil || admin {
 		t.Errorf("unregistered principal is platform admin = %v, %v", admin, err)
 	}
-	if can(editor, authz.PermManageCredentials, authz.NewPrincipalResource(learner)) {
+	if can(leaving, authz.PermManageCredentials, authz.NewPrincipalResource(learner)) {
 		t.Error("unregistered principal still manages a learner")
 	}
-	if can(parent, authz.PermManageAccount, authz.NewPrincipalResource(editor)) {
+	if can(parent, authz.PermManageAccount, authz.NewPrincipalResource(leaving)) {
 		t.Error("manager relation over the unregistered principal remains")
 	}
 	if !can(owner, authz.PermOrgManage, orgRes) {

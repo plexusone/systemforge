@@ -80,10 +80,47 @@ func TestManagerRolePermissionsMatchSchema(t *testing.T) {
 }
 
 func TestOrgRoleAllows(t *testing.T) {
-	if !OrgRoleAllows("editor", PermOrgEdit) || OrgRoleAllows("member", PermOrgEdit) || OrgRoleAllows("admin", PermOrgDelete) {
+	if !OrgRoleAllows("admin", PermOrgEdit) || OrgRoleAllows("member", PermOrgEdit) || OrgRoleAllows("admin", PermOrgDelete) {
 		t.Error("organization role grants wrong")
+	}
+	// A collaborator holds list and nothing else on the organization.
+	for _, action := range OrgRolePermissions["owner"] {
+		if got, want := OrgRoleAllows("collaborator", action), action == PermOrgList; got != want {
+			t.Errorf("collaborator %s = %v, want %v", action, got, want)
+		}
+	}
+	// Editor and viewer are not organization roles.
+	for _, role := range []string{"editor", "viewer"} {
+		if _, ok := OrgRolePermissions[role]; ok {
+			t.Errorf("%s is still an organization role", role)
+		}
 	}
 	if !IsOrgPermission(PermOrgView) || IsOrgPermission("read") {
 		t.Error("IsOrgPermission wrong")
+	}
+}
+
+// TestBaseSchemaOrganizationRelations pins the organization relations of
+// the base schema: owner, admin, member and collaborator. Editor and viewer
+// were dropped as organization roles; a regression would silently
+// re-introduce them.
+func TestBaseSchemaOrganizationRelations(t *testing.T) {
+	grants := schemaRoleGrants(t, BaseSpiceDBSchema, "organization")
+	var got []string
+	for relation := range grants {
+		got = append(got, relation)
+	}
+	slices.Sort(got)
+	want := []string{"admin", "collaborator", "member", "owner"}
+	if !slices.Equal(got, want) {
+		t.Errorf("organization relations = %v, want %v", got, want)
+	}
+	var roles []string
+	for role := range OrgRolePermissions {
+		roles = append(roles, role)
+	}
+	slices.Sort(roles)
+	if !slices.Equal(roles, want) {
+		t.Errorf("OrgRolePermissions roles = %v, want %v", roles, want)
 	}
 }

@@ -379,10 +379,11 @@ const (
 	MembershipRoleOwner MembershipRole = "owner"
 	// MembershipRoleAdmin can manage members and most settings.
 	MembershipRoleAdmin MembershipRole = "admin"
-	// MembershipRoleEditor can create and modify content.
-	MembershipRoleEditor MembershipRole = "editor"
-	// MembershipRoleViewer can only view content.
-	MembershipRoleViewer MembershipRole = "viewer"
+	// MembershipRoleMember can create and modify content.
+	MembershipRoleMember MembershipRole = "member"
+	// MembershipRoleCollaborator has access to individual resources only,
+	// through resource grants (ADR-008).
+	MembershipRoleCollaborator MembershipRole = "collaborator"
 )
 
 // MembershipRoles returns all standard membership roles.
@@ -390,8 +391,8 @@ func MembershipRoles() []string {
 	return []string{
 		string(MembershipRoleOwner),
 		string(MembershipRoleAdmin),
-		string(MembershipRoleEditor),
-		string(MembershipRoleViewer),
+		string(MembershipRoleMember),
+		string(MembershipRoleCollaborator),
 	}
 }
 
@@ -405,7 +406,7 @@ func (PrincipalMembershipMixin) Fields() []ent.Field {
 			Comment("Organization ID"),
 		field.Enum("role").
 			Values(MembershipRoles()...).
-			Default(string(MembershipRoleViewer)).
+			Default(string(MembershipRoleMember)).
 			Comment("Role in the organization"),
 		field.Bool("active").
 			Default(true).
