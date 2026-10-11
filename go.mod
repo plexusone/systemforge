@@ -273,5 +273,3 @@ require (
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
 	resenje.org/singleflight v0.4.3 // indirect
 )
-
-replace github.com/aauth-dev/aauth-go => ../../aauth-dev/aauth-go
