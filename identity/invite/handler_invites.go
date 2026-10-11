@@ -21,6 +21,9 @@ type InviteResponse struct {
 	Email                 string            `json:"email"`
 	Role                  string            `json:"role"`
 	AppRoles              map[string]string `json:"app_roles,omitempty"`
+	ResourceType          string            `json:"resource_type,omitempty"`
+	ResourceID            string            `json:"resource_id,omitempty"`
+	ResourceRole          string            `json:"resource_role,omitempty"`
 	Status                string            `json:"status"`
 	Message               *string           `json:"message,omitempty"`
 	ExpiresAt             time.Time         `json:"expires_at"`
@@ -46,6 +49,9 @@ func inviteToResponse(inv *Invite) *InviteResponse {
 		Email:              inv.Email,
 		Role:               inv.Role,
 		AppRoles:           inv.AppRoles,
+		ResourceType:       inv.ResourceType,
+		ResourceID:         inv.ResourceID,
+		ResourceRole:       inv.ResourceRole,
 		Status:             string(inv.Status),
 		Message:            inv.Message,
 		ExpiresAt:          inv.ExpiresAt,
@@ -76,6 +82,9 @@ type CreateInviteRequest struct {
 		Email              string            `json:"email" required:"true" format:"email"`
 		Role               string            `json:"role" required:"true" enum:"owner,admin,member,collaborator"`
 		AppRoles           map[string]string `json:"app_roles,omitempty" doc:"Application roles to grant on acceptance, application identifier to role; none is preselected"`
+		ResourceType       string            `json:"resource_type,omitempty" doc:"Targets the invite at one resource: its type, {app}_{type}; give resource_type, resource_id and resource_role together, with role collaborator"`
+		ResourceID         string            `json:"resource_id,omitempty" doc:"The application's identifier of the resource"`
+		ResourceRole       string            `json:"resource_role,omitempty" enum:"viewer,contributor,maintainer" doc:"The resource role granted on acceptance"`
 		Message            *string           `json:"message,omitempty"`
 		InviterPrincipalID string            `json:"inviter_principal_id,omitempty" required:"false" format:"uuid" doc:"Deprecated: the inviter is the authenticated caller; when present it must equal the caller"`
 		ExpiresInHours     int               `json:"expires_in_hours,omitempty" minimum:"1" maximum:"720"`
@@ -296,6 +305,9 @@ func (a *API) createInvite(ctx context.Context, input *CreateInviteRequest) (*Cr
 		Email:              input.Body.Email,
 		Role:               input.Body.Role,
 		AppRoles:           input.Body.AppRoles,
+		ResourceType:       input.Body.ResourceType,
+		ResourceID:         input.Body.ResourceID,
+		ResourceRole:       input.Body.ResourceRole,
 		Message:            input.Body.Message,
 		ExpiresIn:          expiresIn,
 	})

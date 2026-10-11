@@ -60,6 +60,11 @@ func RequireMembersAllowed(ctx context.Context, client *ent.Client, orgID uuid.U
 	return nil
 }
 
+// IsPersonal reports whether the organization exists and is personal.
+func IsPersonal(ctx context.Context, client *ent.Client, orgID uuid.UUID) (bool, error) {
+	return isPersonal(ctx, client, orgID)
+}
+
 // isPersonal reports whether the organization exists and is personal. An
 // unknown organization is not personal: the caller's own write reports it.
 func isPersonal(ctx context.Context, client *ent.Client, orgID uuid.UUID) (bool, error) {

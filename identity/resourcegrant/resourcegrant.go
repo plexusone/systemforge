@@ -110,8 +110,12 @@ var (
 	_ authz.ResourceGrantReader = (*Service)(nil)
 )
 
-// validate checks a grant's role and reference.
-func (s *Service) validate(ref authz.ResourceRef, role string) error {
+// Validate checks a grant's role and reference as GrantResourceRole does,
+// without writing: the role is a resource role, the reference is well
+// formed and, with WithVocabularies, its type belongs to a registered
+// application and accepts collaborators. Invitations validate with it when
+// they are created.
+func (s *Service) Validate(ref authz.ResourceRef, role string) error {
 	if !authz.ValidResourceRole(role) {
 		return fmt.Errorf("%w: %q (want viewer, contributor or maintainer)", authz.ErrInvalidResourceRole, role)
 	}
@@ -168,7 +172,7 @@ func (s *Service) grantOnce(ctx context.Context, principalID uuid.UUID, resource
 // and writes the membership and grant to the authorization graph; its
 // error is the sync error GrantResourceRole would return.
 func (s *Service) GrantInTx(ctx context.Context, tx *ent.Tx, principalID uuid.UUID, resource authz.ResourceRef, role string, grantedBy uuid.UUID) (func(context.Context) error, error) {
-	if err := s.validate(resource, role); err != nil {
+	if err := s.Validate(resource, role); err != nil {
 		return nil, err
 	}
 	if principalID == uuid.Nil {

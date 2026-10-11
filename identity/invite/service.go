@@ -20,6 +20,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/organization"
+	"github.com/plexusone/systemforge/identity/resourcegrant"
 )
 
 // Service defines the invite service interface.
@@ -66,6 +67,7 @@ type DefaultService struct {
 	syncMode authz.SyncMode
 	logger   *slog.Logger
 	appRoles *approle.Service
+	grants   *resourcegrant.Service
 }
 
 // ServiceOption configures a DefaultService.
@@ -87,6 +89,16 @@ func WithSyncMode(mode authz.SyncMode) ServiceOption {
 // Without it, an invitation's AppRoles are rejected.
 func WithAppRoles(svc *approle.Service) ServiceOption {
 	return func(s *DefaultService) { s.appRoles = svc }
+}
+
+// WithResourceGrants lets invitations target a resource (ADR-008): Create
+// validates the target against the grant service's rules and Accept
+// creates the collaborator membership and the grant in one transaction,
+// through the service's GrantInTx. Without it, a resource target is
+// refused. Memberships are written to the authorization graph through this
+// service's own syncer, grants through the grant service's.
+func WithResourceGrants(svc *resourcegrant.Service) ServiceOption {
+	return func(s *DefaultService) { s.grants = svc }
 }
 
 // WithLogger sets the logger for the service.
@@ -114,13 +126,17 @@ func (s *DefaultService) Create(ctx context.Context, input CreateInviteInput) (*
 	if err := organization.RequireMembersAllowed(ctx, s.client, input.OrganizationID, input.Role); err != nil {
 		return nil, err
 	}
+	if err := s.validateResourceTarget(ctx, input); err != nil {
+		return nil, err
+	}
 
 	if err := s.validateAppRoles(ctx, input); err != nil {
 		return nil, err
 	}
 
-	// Check for existing pending invite
-	hasPending, err := s.HasPendingInvite(ctx, input.OrganizationID, input.Email)
+	// Check for existing pending invite: one per email for the
+	// organization, and one per email for each resource.
+	hasPending, err := s.hasPendingFor(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing invites: %w", err)
 	}
@@ -162,6 +178,11 @@ func (s *DefaultService) Create(ctx context.Context, input CreateInviteInput) (*
 	if len(input.AppRoles) > 0 {
 		create.SetAppRoles(input.AppRoles)
 	}
+	if input.ResourceType != "" {
+		create.SetResourceType(input.ResourceType).
+			SetResourceID(input.ResourceID).
+			SetResourceRole(input.ResourceRole)
+	}
 
 	inv, err := create.Save(ctx)
 	if err != nil {
@@ -172,6 +193,55 @@ func (s *DefaultService) Create(ctx context.Context, input CreateInviteInput) (*
 		Invite:    entInviteToModel(inv),
 		InviteURL: s.buildInviteURL(token),
 	}, nil
+}
+
+// validateResourceTarget checks the resource target of a new invitation:
+// complete, for a collaborator, valid for the grant service, and present
+// when the organization is personal.
+func (s *DefaultService) validateResourceTarget(ctx context.Context, input CreateInviteInput) error {
+	if input.ResourceType == "" && input.ResourceID == "" && input.ResourceRole == "" {
+		if input.Role != organization.RoleCollaborator {
+			return nil
+		}
+		personal, err := organization.IsPersonal(ctx, s.client, input.OrganizationID)
+		if err != nil {
+			return err
+		}
+		if personal {
+			return fmt.Errorf("%w: a personal organization accepts only resource-targeted invites", organization.ErrPersonalOrganization)
+		}
+		return nil
+	}
+	if input.ResourceType == "" || input.ResourceID == "" || input.ResourceRole == "" {
+		return fmt.Errorf("%w: resource type, id and role are given together", ErrResourceInvite)
+	}
+	if input.Role != organization.RoleCollaborator {
+		return fmt.Errorf("%w: a resource invite is for a collaborator, not %q", ErrResourceInvite, input.Role)
+	}
+	if s.grants == nil {
+		return fmt.Errorf("%w: resource grants are not configured", ErrResourceInvite)
+	}
+	return s.grants.Validate(authz.ResourceRef{Type: input.ResourceType, ID: input.ResourceID, OrganizationID: input.OrganizationID}, input.ResourceRole)
+}
+
+// hasPendingFor reports whether a pending invite blocks input: for an
+// organization invite, any pending invite of the email to the
+// organization; for a resource invite, a pending invite of the email to
+// the same resource, since one person may be invited to several.
+func (s *DefaultService) hasPendingFor(ctx context.Context, input CreateInviteInput) (bool, error) {
+	q := s.client.Invite.Query().
+		Where(
+			invite.OrganizationID(input.OrganizationID),
+			invite.EmailEqualFold(input.Email),
+			invite.StatusEQ(invite.StatusPending),
+			invite.ExpiresAtGT(time.Now()),
+		)
+	if input.ResourceType != "" {
+		q = q.Where(invite.ResourceType(input.ResourceType), invite.ResourceID(input.ResourceID))
+	} else {
+		q = q.Where(invite.ResourceTypeIsNil())
+	}
+	return q.Exist(ctx)
 }
 
 // validateAppRoles checks the application roles of a new invitation.
@@ -277,25 +347,46 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to check membership: %w", err)
 	}
-	if exists {
-		return nil, fmt.Errorf("principal is already a member of this organization")
-	}
+	resourceInvite := inv.ResourceType != nil && inv.ResourceID != nil && inv.ResourceRole != nil
+	var afterCommit []func(context.Context) error
+	membershipCreated := !exists
+	if resourceInvite {
+		// The collaborator membership and the grant are written together
+		// by the grant service, in this transaction. A principal who is
+		// already a member keeps their membership and gains the grant.
+		if s.grants == nil {
+			err = fmt.Errorf("%w: resource grants are not configured", ErrResourceInvite)
+			return nil, err
+		}
+		var after func(context.Context) error
+		after, err = s.grants.GrantInTx(ctx, tx, input.PrincipalID,
+			authz.ResourceRef{Type: *inv.ResourceType, ID: *inv.ResourceID, OrganizationID: inv.OrganizationID},
+			*inv.ResourceRole, inv.InviterPrincipalID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to grant %s on %s: %w", *inv.ResourceRole, *inv.ResourceType, err)
+		}
+		afterCommit = append(afterCommit, after)
+	} else {
+		if exists {
+			err = fmt.Errorf("principal is already a member of this organization")
+			return nil, err
+		}
 
-	// Create membership
-	_, err = tx.PrincipalMembership.Create().
-		SetOrganizationID(inv.OrganizationID).
-		SetPrincipalID(input.PrincipalID).
-		SetRole(inv.Role).
-		SetActive(true).
-		Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create membership: %w", err)
+		// Create membership
+		_, err = tx.PrincipalMembership.Create().
+			SetOrganizationID(inv.OrganizationID).
+			SetPrincipalID(input.PrincipalID).
+			SetRole(inv.Role).
+			SetActive(true).
+			Save(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create membership: %w", err)
+		}
 	}
 
 	// Grant the application roles the inviter chose, in the same
 	// transaction: an invitation that cannot grant them (no seat left, the
 	// entitlement gone) is not accepted.
-	var afterCommit []func(context.Context) error
 	if len(inv.AppRoles) > 0 {
 		if s.appRoles == nil {
 			err = errors.New("invite: application roles are not configured")
@@ -333,15 +424,18 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 	}
 
 	// Sync the new membership to the authorization backend after commit.
-	if syncErr := s.syncer.AddOrgMembership(ctx, input.PrincipalID, inv.OrganizationID, inv.Role); syncErr != nil {
-		if s.syncMode == authz.SyncModeStrict {
-			return nil, fmt.Errorf("failed to sync membership to authz: %w", syncErr)
+	// A resource invite to an existing member created none.
+	if membershipCreated {
+		if syncErr := s.syncer.AddOrgMembership(ctx, input.PrincipalID, inv.OrganizationID, inv.Role); syncErr != nil {
+			if s.syncMode == authz.SyncModeStrict {
+				return nil, fmt.Errorf("failed to sync membership to authz: %w", syncErr)
+			}
+			s.logger.Warn("failed to sync membership to authz",
+				"principal_id", input.PrincipalID,
+				"org_id", inv.OrganizationID,
+				"role", inv.Role,
+				"error", syncErr)
 		}
-		s.logger.Warn("failed to sync membership to authz",
-			"principal_id", input.PrincipalID,
-			"org_id", inv.OrganizationID,
-			"role", inv.Role,
-			"error", syncErr)
 	}
 
 	for _, after := range afterCommit {
@@ -553,6 +647,9 @@ func entInviteToModel(inv *ent.Invite) *Invite {
 
 	if inv.AcceptedByPrincipalID != nil {
 		model.AcceptedByPrincipalID = inv.AcceptedByPrincipalID
+	}
+	if inv.ResourceType != nil && inv.ResourceID != nil && inv.ResourceRole != nil {
+		model.ResourceType, model.ResourceID, model.ResourceRole = *inv.ResourceType, *inv.ResourceID, *inv.ResourceRole
 	}
 
 	return model

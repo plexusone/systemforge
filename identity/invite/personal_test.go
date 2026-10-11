@@ -31,7 +31,10 @@ func TestPersonalOrganizationRefusesInvites(t *testing.T) {
 	if !errors.Is(err, organization.ErrPersonalOrganization) {
 		t.Errorf("invite as member = %v, want ErrPersonalOrganization", err)
 	}
-	if _, err := svc.Create(ctx, invite.CreateInviteInput{OrganizationID: personal.ID, InviterPrincipalID: owner, Email: "kim@example.com", Role: organization.RoleCollaborator}); err != nil {
-		t.Errorf("invite as collaborator: %v", err)
+	// A personal organization accepts only resource-targeted invites
+	// (ADR-008): a collaborator with no resource has nothing to reach.
+	_, err = svc.Create(ctx, invite.CreateInviteInput{OrganizationID: personal.ID, InviterPrincipalID: owner, Email: "kim@example.com", Role: organization.RoleCollaborator})
+	if !errors.Is(err, organization.ErrPersonalOrganization) {
+		t.Errorf("collaborator invite with no resource = %v, want ErrPersonalOrganization", err)
 	}
 }

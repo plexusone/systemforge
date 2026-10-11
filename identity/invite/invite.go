@@ -28,7 +28,14 @@ type Invite struct {
 	Role               string
 	// AppRoles are the application roles granted when the invite is
 	// accepted: application identifier to role. Empty means none.
-	AppRoles              map[string]string
+	AppRoles map[string]string
+	// ResourceType, ResourceID and ResourceRole, all set or all empty,
+	// target the invite at one resource (ADR-008): accepting it makes the
+	// invitee a collaborator of the organization and grants ResourceRole on
+	// the resource in one transaction. Role is then "collaborator".
+	ResourceType          string
+	ResourceID            string
+	ResourceRole          string
 	Status                Status
 	Message               *string
 	ExpiresAt             time.Time
@@ -66,9 +73,16 @@ type CreateInviteInput struct {
 	// chooses each. With an approle service configured (WithAppRoles),
 	// an admin or member invitation to an organization entitled to any
 	// application must name at least one (ErrAppRoleRequired).
-	AppRoles  map[string]string
-	Message   *string
-	ExpiresIn time.Duration // How long until expiry (default: 7 days)
+	AppRoles map[string]string
+	// ResourceType, ResourceID and ResourceRole target the invite at one
+	// resource (ADR-008); set all three, or none. They require Role to be
+	// "collaborator" and the service to be built with WithResourceGrants.
+	// A personal organization accepts only resource-targeted invites.
+	ResourceType string
+	ResourceID   string
+	ResourceRole string
+	Message      *string
+	ExpiresIn    time.Duration // How long until expiry (default: 7 days)
 }
 
 // AcceptInviteInput contains input for accepting an invite.
@@ -98,6 +112,10 @@ type InviteResult struct {
 // (ADR-007: nobody gets into an application by being a member alone, and
 // an invitation must open at least one).
 var ErrAppRoleRequired = errors.New("invite: choose an application role for at least one entitled application")
+
+// ErrResourceInvite means an invitation's resource target is incomplete,
+// is not for a collaborator, or cannot be honored by the service.
+var ErrResourceInvite = errors.New("invite: invalid resource target")
 
 // Default invite expiration time.
 const DefaultInviteExpiry = 7 * 24 * time.Hour // 7 days
