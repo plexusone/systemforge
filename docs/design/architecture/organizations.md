@@ -61,8 +61,8 @@ unless the role is `organization.RoleCollaborator` (ADR-008), and
 `TransferOwnership` refuses it outright. The members API answers `409` for
 `ErrPersonalOrganization`, and `POST /organizations` accepts only `team` and
 `enterprise` for `org_type`: personal organizations come from signup. The
-`collaborator` role is accepted by the services but is not yet in the members
-API's role enum, since resource grants (ADR-008) are not implemented.
+`collaborator` role is one of the organization roles and is in the members
+API's role enum.
 
 ### Slug is the identity
 
@@ -186,7 +186,7 @@ its existence is not confirmed to outsiders.
 | Column | Type | Notes |
 |---|---|---|
 | `principal_id`, `organization_id` | UUID | Unique together: one membership per principal per organization |
-| `role` | string | Free-form; the package defines `RoleOwner`, `RoleAdmin`, `RoleMember` (`owner`, `admin`, `member`); the API's role enums are `owner,admin,member` |
+| `role` | string | One of the organization roles `owner`, `admin`, `member`, `collaborator` (`RoleOwner`, `RoleAdmin`, `RoleMember`, `RoleCollaborator`); every service path that writes a membership refuses any other value with `ErrInvalidRole`, and the API's role enums are `owner,admin,member,collaborator`. `editor` and `viewer` were retired as organization roles; migration `0008_drop_editor_viewer_roles.sql` maps stored `editor` to `member` and `viewer` to `collaborator`, recording an access change for each active membership it changes |
 | `permissions` | JSON string array | Optional per-membership permissions; stored and returned, not evaluated by the providers |
 | `active` | bool | Deactivated memberships are kept and excluded from listings unless `organization.IncludeInactive()` is passed |
 
@@ -234,7 +234,7 @@ organization is refused with `ErrPersonalOrganization`.
 |---|---|
 | `organization_id`, `inviter_principal_id` | Who invited, to where |
 | `email` | The invitee; the invite is bound to this address |
-| `role` | Role granted on acceptance; default `member`; the API accepts `owner`, `admin`, `member` |
+| `role` | Role granted on acceptance; default `member`; the API accepts `owner`, `admin`, `member`, `collaborator` |
 | `token` | Hex SHA-256 of the URL token (32 random bytes, base64url); the token itself is never stored |
 | `app_roles` | Optional JSON object, application identifier to role, granted on acceptance (ADR-007); migration `migrations/0006_invite_app_roles.sql` adds the column to an existing database |
 | `status` | `pending`, `accepted`, `declined`, `expired`, `revoked` |

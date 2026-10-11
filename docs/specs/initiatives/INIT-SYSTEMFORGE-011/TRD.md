@@ -471,11 +471,16 @@ sits on.
 #### 4.1 Base schema and conventions (RMI-139)
 
 `BaseSpiceDBSchema.organization` gains `relation collaborator: principal`
-and `permission list = view + collaborator`. Because the base schema
-already has `editor` (which ADR-008's example omits), `list` is defined
-through `view` so every existing role keeps `list` and collaborators gain
-only it; `view`, `edit`, `manage` and the management permissions are
-unchanged and exclude collaborators. `organization.RoleCollaborator =
+and `permission list = view + collaborator`. The owner decided that
+`editor` and `viewer` are dropped as organization roles, leaving `owner`,
+`admin`, `member` and `collaborator`: `edit = manage`, `contribute = edit +
+member`, `view = contribute`, and `list = view + collaborator`, so every
+remaining role keeps `list` and collaborators gain only it; `view`, `edit`,
+`manage` and the management permissions exclude collaborators. Migration
+`0008_drop_editor_viewer_roles.sql` maps stored `editor` to `member` and
+`viewer` to `collaborator` (recording an access change for each active
+membership it changes), and every path that writes a membership refuses
+any other role with `ErrInvalidRole`. `organization.RoleCollaborator =
 "collaborator"` joins the role constants and the API enums;
 `OrgRolePermissions[collaborator] = {PermOrgList}` with the new
 `PermOrgList = "list"`, and `schema_parity_test.go` checks both.
@@ -700,8 +705,9 @@ principals uses `SlugForManaged` only (§1.2).
   questions; the interface has no implementation. Entitlements are
   derived by `marketplace.Entitlements` and the interface is left for a
   later initiative.
-- ADR-008's `list` example omits the base schema's `editor` relation;
-  defining `list = view + collaborator` keeps editors.
+- ADR-008's `list` example omits the base schema's `editor` relation. The
+  owner decided to drop `editor` and `viewer` as organization roles rather
+  than keep them (§4.1); `list = view + collaborator` covers what remains.
 - `marketplace.zed` defines its own `organization`, which the vocabulary
   rules forbid; §4.1 folds it into a facet.
 - `invite.Accept` does not sync memberships to the relationship engine;

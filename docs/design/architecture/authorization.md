@@ -57,12 +57,15 @@ type AppVocabulary interface {
 | `VocabularyRegistry.AllScopes()` | Every registered scope, sorted, for consent screens and `AllowedScopes` |
 | `VocabularyRegistry.ComposeSpiceDBSchema()` | Base schema followed by each registered fragment in registration order; fails on any duplicate definition |
 
-The platform ladder is `owner(100) / admin(80) / editor(60) / member(40) /
-viewer(20) / guest(10)` (`authz.DefaultRoleHierarchy`), with
-`authz.DefaultRolePermissions` mapping the first five to dotted
-`org.*`, `member.*` and `resource.*` permissions. Applications reuse the
-ladder where it fits and add domain roles (for separation of duties) that
-appear in both `Roles()` and `Hierarchy()`.
+The organization roles are `owner(100) / admin(80) / member(40) /
+collaborator(20)`, with `guest(10)` for applications that model one
+(`authz.DefaultRoleHierarchy`), and `authz.DefaultRolePermissions` maps
+the first three to dotted `org.*`, `member.*` and `resource.*`
+permissions; a collaborator has none, since a collaborator's access is
+per resource (below). `editor` and `viewer` are not organization roles.
+An application's own roles are its vocabulary's: they appear in both
+`Roles()` and `Hierarchy()` and are separate from the organization roles
+and from the resource roles.
 
 ### The `{app}_org` facet
 
@@ -94,7 +97,7 @@ Owned by the platform; applications never redefine these definitions.
 | Definition | Relations | Permissions |
 |---|---|---|
 | `principal` | `guardian`, `educator` (ADR-005 manager roles) | `manage_account = guardian`; `manage_credentials = guardian + educator`; `view_profile = guardian + educator`; `manage_managers = guardian` |
-| `organization` | `owner`, `admin`, `editor`, `member`, `viewer` | `manage = owner + admin`; `edit = manage + editor`; `contribute = edit + member`; `view = contribute + viewer`; `invite_member`, `remove_member`, `change_role`, `settings = manage`; `delete = owner` |
+| `organization` | `owner`, `admin`, `member`, `collaborator` | `manage = owner + admin`; `edit = manage`; `contribute = edit + member`; `view = contribute`; `list = view + collaborator`; `invite_member`, `remove_member`, `change_role`, `settings = manage`; `delete = owner` |
 | `platform` | `admin` | `super_admin = admin` |
 
 The same grants exist as Go tables so the role-based provider evaluates
@@ -285,12 +288,11 @@ decides it.
 
 ### Resource-scoped collaborators (ADR-008)
 
-- The base `organization` definition gains a `collaborator` relation and a
-  `list` permission (`list = manage + member + viewer + collaborator`);
-  collaborators have no `view`, `edit` or `manage` on the organization.
-  `authz.OrgRolePermissions`, the parity test and the conventions change
-  with it. A collaborator is a principal with a membership of role
-  `collaborator`; personal organizations accept such memberships.
+- The base `organization` definition, `authz.OrgRolePermissions`, the
+  parity test and the conventions carry the `collaborator` relation and the
+  `list` permission (built). A collaborator is a principal with a membership
+  of role `collaborator`, who has no `view`, `edit` or `manage` on the
+  organization; personal organizations accept such memberships.
 - A standard resource-role ladder, reserved in the conventions:
   `viewer` (read), `contributor` (also change and create within),
   `maintainer` (also manage settings and collaborators). Applications

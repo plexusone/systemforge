@@ -13,16 +13,18 @@ definition organization {
     relation owner: principal
     relation admin: principal
     relation member: principal
-    relation viewer: principal
+    relation collaborator: principal
 
     // Owners and admins can manage the organization
     permission manage = owner + admin
 
-    // Anyone in the org can view it
-    permission view = manage + member + viewer
+    // Owners and admins edit; members contribute and view
+    permission edit = manage
+    permission contribute = edit + member
+    permission view = contribute
 
-    // Editors can edit (owners, admins, members)
-    permission edit = manage + member
+    // Every membership, collaborators included, can see the organization
+    permission list = view + collaborator
 
     // Only owners can delete
     permission delete = owner
@@ -49,18 +51,25 @@ definition platform {
 
 | Role | Relations | Permissions |
 |------|-----------|-------------|
-| **Owner** | `owner` | manage, edit, view, delete |
-| **Admin** | `admin` | manage, edit, view |
-| **Member** | `member` | edit, view |
-| **Viewer** | `viewer` | view |
+| **Owner** | `owner` | manage, edit, contribute, view, list, delete |
+| **Admin** | `admin` | manage, edit, contribute, view, list |
+| **Member** | `member` | contribute, view, list |
+| **Collaborator** | `collaborator` | list |
+
+`editor` and `viewer` are not organization roles. Access to one resource
+without membership of the organization is a collaborator holding a resource
+role (`viewer`, `contributor` or `maintainer`) on that resource; see
+[Authorization conventions](../authz-conventions.md#resource-roles).
 
 ### Permission Inheritance
 
 ```
 owner
   └── manage (owner + admin)
-        └── edit (manage + member)
-              └── view (edit + viewer)
+        └── edit (manage)
+              └── contribute (edit + member)
+                    └── view (contribute)
+                          └── list (view + collaborator)
 ```
 
 ## Custom Resource Schemas
@@ -84,20 +93,21 @@ This produces:
 definition project {
     relation org: organization
     relation owner: principal
-    relation editor: principal
     relation viewer: principal
+    relation contributor: principal
+    relation maintainer: principal
 
-    // Owners can do everything
-    permission manage = owner + org->admin
+    // The owner and maintainers manage; organization admins do too
+    permission manage = owner + maintainer + org->manage
 
-    // Editors can edit (includes owners and org admins)
-    permission edit = manage + editor + org->member
+    // Contributors edit, and so does anyone who manages
+    permission edit = manage + contributor + org->edit
 
-    // Viewers can view (includes editors and org viewers)
-    permission view = edit + viewer + org->viewer
+    // Viewers view, and so does anyone who edits or is a member
+    permission view = edit + viewer + org->view
 
-    // Only owners and org admins can delete
-    permission delete = owner + org->admin
+    // Only the owner and organization managers delete
+    permission delete = owner + org->manage
 }
 ```
 
@@ -105,10 +115,10 @@ definition project {
 
 | Permission | Who Has Access |
 |------------|----------------|
-| `manage` | Resource owner, org admins |
-| `edit` | Manage + explicit editors + org members |
-| `view` | Edit + explicit viewers + org viewers |
-| `delete` | Resource owner + org admins |
+| `manage` | Resource owner, maintainers, org admins and owners |
+| `edit` | Manage + contributors + org admins and owners |
+| `view` | Edit + viewers + org members |
+| `delete` | Resource owner + org admins and owners |
 
 ### Using Custom Resources
 
@@ -153,7 +163,7 @@ organization:acme#owner@principal:user-123
 Permissions can be computed from relationships:
 
 ```zed
-permission view = manage + member + viewer
+permission view = contribute
 ```
 
 If a principal has `manage` permission (via `owner` or `admin` relation), they automatically have `view`.
@@ -165,11 +175,14 @@ Resources linked to organizations inherit permissions:
 ```zed
 definition project {
     relation org: organization
-    permission view = ... + org->viewer
+    permission view = ... + org->view
 }
 ```
 
-Organization viewers automatically get view access to projects in that org.
+Organization members automatically get view access to projects in that org.
+A collaborator does not: the organization grants a collaborator only
+`list`, so a collaborator reaches a project only through a resource role
+on it.
 
 ## Common Patterns
 
@@ -241,11 +254,11 @@ definition document {
 Start with minimal permissions and add explicitly:
 
 ```go
-// Add as viewer first
-syncer.AddOrgMembership(ctx, userID, orgID, "viewer")
+// Add as a collaborator first, with a resource role on what they need
+syncer.AddOrgMembership(ctx, userID, orgID, "collaborator")
 
 // Promote later if needed
-syncer.UpdateOrgMembership(ctx, userID, orgID, "viewer", "member")
+syncer.UpdateOrgMembership(ctx, userID, orgID, "collaborator", "member")
 ```
 
 ### 3. Use Consistent Role Names
@@ -255,7 +268,7 @@ Stick to the standard roles:
 - `owner` - Full control including deletion
 - `admin` - Management except deletion
 - `member` - Standard access
-- `viewer` - Read-only
+- `collaborator` - Access to individual resources only
 
 ### 4. Check Permissions at API Boundaries
 

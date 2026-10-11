@@ -40,15 +40,29 @@ multiple scopes instead.
 
 ## Roles
 
-The platform ladder is `owner(100) / admin(80) / editor(60) / member(40) /
-viewer(20)` — reuse it wherever it fits. Apps may add **domain roles** where
-the domain demands them, slotted into the hierarchy; every role must appear
-in both `Roles()` and `Hierarchy()`.
+There are three kinds of role, and they do not share a ladder.
+
+**Organization roles** are the platform's: `owner(100) / admin(80) /
+member(40) / collaborator(20)`. `owner`, `admin` and `member` are
+organization-wide: they grant the permissions of the base `organization`
+definition (`manage`, `edit`, `contribute`, `view`, `list`, and the
+administrative ones). A `collaborator` has no organization-wide access: it
+holds only `list`, so an application can show the organization in a
+switcher, and reaches individual resources through resource roles (below).
+`editor` and `viewer` are not organization roles; the 0008 migration mapped
+existing ones to `member` and `collaborator`.
+
+**Application roles** are an application's own (ADR-007), assigned per
+organization and declared in its vocabulary. Apps may add **domain roles**
+where the domain demands them, slotted into the hierarchy; every role must
+appear in both `Roles()` and `Hierarchy()`. An application role is not an
+organization role, so an application may name one `viewer` or `editor`.
 
 Domain roles exist for **separation of duties**, and each app must document
 its pairs. The canonical example is ActionForge's approval gate:
 
-- `editor` can change and trigger workflows but **cannot** approve gates;
+- the application's `editor` role can change and trigger workflows but
+  **cannot** approve gates;
 - `approver(50)` can approve gates but **cannot** edit or trigger;
 - only `admin`/`owner` hold both sides.
 
@@ -56,11 +70,46 @@ The same separation applies at the scope level: `actionforge:runs:write`
 deliberately does **not** imply `actionforge:runs:approve`, so a CI bot can
 trigger pipelines but can never release a production gate.
 
+### Resource roles
+
+A resource type that accepts collaborators uses one standard ladder of
+**resource roles**, so every application means the same thing by them. The
+names are reserved:
+
+| Resource role | Grants |
+| --- | --- |
+| `viewer` | read the resource (`view`) |
+| `contributor` | also change it and create items within it (`edit`) |
+| `maintainer` | also manage its settings and its collaborators (`manage`) |
+
+Each role includes the ones below it: `viewer < contributor < maintainer`.
+The permission names a fragment exposes for them are `view`, `edit` and
+`manage`. `admin` on a resource is **not** a resource role: it is an
+application role, held organization-wide.
+
+A resource definition declares all three relations, binds them to
+`principal`, and has an `org` relation to `organization`, so members keep
+their organization-wide access and a collaborator has only the direct
+relations:
+
+```zed
+definition myapp_project {
+    relation org: organization
+    relation viewer: principal
+    relation contributor: principal
+    relation maintainer: principal
+
+    permission view   = viewer + contributor + maintainer + org->view
+    permission edit   = contributor + maintainer + org->edit
+    permission manage = maintainer + org->manage
+}
+```
+
 ## SpiceDB: base + facets
 
 SystemForge owns the base definitions (`authz.BaseSpiceDBSchema`):
 `principal`, `organization` (membership ladder: `manage`/`edit`/`contribute`/
-`view` plus org administration), and `platform`. **Apps never redefine
+`view`/`list` plus org administration), and `platform`. **Apps never redefine
 these.**
 
 The base `principal` definition carries the manager relations of

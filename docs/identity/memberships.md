@@ -24,7 +24,7 @@ The `sf_principal_memberships` table contains:
 
 ## Roles
 
-Roles are strings, so each application defines its own vocabulary. The platform ladder used by the authorization conventions is `owner`, `admin`, `editor`, `member`, `viewer`; see [Authorization conventions](../authz-conventions.md) for registering domain roles.
+Roles are strings, so each application defines its own vocabulary. The organization roles of the platform are `owner`, `admin`, `member` and `collaborator` (`editor` and `viewer` were retired; migration `0008` maps them to `member` and `collaborator`). A collaborator has no organization-wide access and holds roles on individual resources instead; see [Authorization conventions](../authz-conventions.md) for registering domain roles.
 
 ## Managing Memberships
 
@@ -99,11 +99,10 @@ Implement a role hierarchy in your application:
 
 ```go
 var roleLevel = map[string]int{
-    "owner":  100,
-    "admin":  80,
-    "editor": 60,
-    "member": 40,
-    "viewer": 20,
+    "owner":        100,
+    "admin":        80,
+    "member":       40,
+    "collaborator": 20,
 }
 
 func HasMinRole(m *organization.Membership, required string) bool {
