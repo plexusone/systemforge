@@ -65,6 +65,27 @@ type Config struct {
 	// with a manager role, enabling the manager relation tests (ADR-005).
 	GrantManager func(t *testing.T, managedID, managerID uuid.UUID, role string)
 
+	// ResourceGranter is the grant contract under test (ADR-008), enabling
+	// RunResourceGrantTests. It is usually the Provider itself.
+	ResourceGranter authz.ResourceGranter
+
+	// NewPrincipal returns an identifier of a principal the provider can
+	// grant to; a provider backed by a database creates the row. Default:
+	// a random UUID.
+	NewPrincipal func(t *testing.T) uuid.UUID
+
+	// NewOrganization returns an identifier of an organization with no
+	// members; a provider backed by a database creates the row. Default:
+	// a random UUID.
+	NewOrganization func(t *testing.T) uuid.UUID
+
+	// RegisterResource, when set, is called once for each resource before
+	// the test grants on it, for providers that need the resource linked
+	// to its organization (the relationship-based provider writes the
+	// resource's org relation, which the application does when it creates
+	// the resource).
+	RegisterResource func(t *testing.T, resource authz.ResourceRef)
+
 	// SetupFunc is called before each test to configure the provider.
 	// Use this to set up roles, permissions, etc.
 	SetupFunc func(t *testing.T)

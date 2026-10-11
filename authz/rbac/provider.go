@@ -1,8 +1,11 @@
-// Package simple provides a simple role-based authorization provider.
+// Package rbac provides the role-based authorization provider, the "rbac"
+// mode of ADR-008.
 //
-// This provider uses role hierarchy and permission mappings to make authorization
-// decisions. It has no external dependencies and is suitable for applications
-// with straightforward RBAC requirements.
+// This provider uses role hierarchy and permission mappings to make
+// authorization decisions, and, with WithResourceGrants, consults direct
+// grants of resource roles on individual resources. It has no external
+// dependencies and is suitable for applications whose access is
+// organization roles, application roles and direct grants.
 package rbac
 
 import (
@@ -23,6 +26,7 @@ type Provider struct {
 	getRoleFn       func(ctx context.Context, principalID, orgID uuid.UUID) (string, error)
 	isPlatformAdmin func(ctx context.Context, principalID uuid.UUID) (bool, error)
 	managerRoles    authz.ManagerRoleGetter
+	grants          ResourceGrants
 
 	// Options
 	allowOwnerFullAccess bool
@@ -67,6 +71,24 @@ func WithPlatformAdminChecker(fn func(ctx context.Context, principalID uuid.UUID
 func WithManagerRoleGetter(fn authz.ManagerRoleGetter) Option {
 	return func(a *Provider) {
 		a.managerRoles = fn
+	}
+}
+
+// ResourceGrants is the store of resource grants the provider consults and
+// delegates the grant operations to. identity/resourcegrant.Service
+// implements it.
+type ResourceGrants interface {
+	authz.ResourceGranter
+	authz.ResourceGrantReader
+}
+
+// WithResourceGrants gives the provider direct resource grants (ADR-008).
+// Can and Decide then allow view, edit and manage on a resource the
+// principal holds a role on after the organization role has not, and the
+// provider implements authz.ResourceGranter by delegating to g.
+func WithResourceGrants(g ResourceGrants) Option {
+	return func(a *Provider) {
+		a.grants = g
 	}
 }
 
@@ -125,6 +147,18 @@ func (a *Provider) Can(ctx context.Context, principal authz.Principal, action au
 		return authz.OrgRoleAllows(role, action), err
 	}
 
+	allowed, err := a.canByOrgRole(ctx, principal, action, resource)
+	if err != nil || allowed {
+		return allowed, err
+	}
+	role, err := a.grantedRole(ctx, principal, action, resource)
+	return role != "", err
+}
+
+// canByOrgRole evaluates the principal's organization role against the
+// resource: type-level (owner only) without an organization, otherwise the
+// role's permissions keyed as "{resource type}.{action}".
+func (a *Provider) canByOrgRole(ctx context.Context, principal authz.Principal, action authz.Action, resource authz.Resource) (bool, error) {
 	// Get organization ID from resource
 	if resource.OrgID == nil {
 		// No org context - check type-level permission without org role
@@ -148,6 +182,28 @@ func (a *Provider) Can(ctx context.Context, principal authz.Principal, action au
 	permission := buildPermission(resource.Type, action)
 
 	return a.permissions.HasPermission(role, permission), nil
+}
+
+// grantedRole returns the resource role the principal holds directly on
+// the resource when it grants action, or "". Only the ladder's permissions
+// (view, edit, manage) are answered from grants, and only for a resource
+// with an ID.
+func (a *Provider) grantedRole(ctx context.Context, principal authz.Principal, action authz.Action, resource authz.Resource) (string, error) {
+	if a.grants == nil || !authz.IsResourcePermission(action) {
+		return "", nil
+	}
+	ref, ok := authz.ResourceRefOf(resource)
+	if !ok {
+		return "", nil
+	}
+	role, err := a.grants.ResourceRole(ctx, principal.ID, ref)
+	if err != nil {
+		return "", fmt.Errorf("getting resource role: %w", err)
+	}
+	if authz.ResourceRoleAllows(role, action) {
+		return role, nil
+	}
+	return "", nil
 }
 
 // CanAll checks if a principal can perform all specified actions on a resource.
@@ -273,6 +329,26 @@ func (a *Provider) Decide(ctx context.Context, principal authz.Principal, action
 		}, nil
 	}
 
+	decision, err := a.decideByOrgRole(ctx, principal, action, resource)
+	if err != nil || decision.Allowed {
+		return decision, err
+	}
+	role, gerr := a.grantedRole(ctx, principal, action, resource)
+	if gerr != nil {
+		return authz.Decision{Allowed: false, Reason: "error getting resource role"}, gerr
+	}
+	if role != "" {
+		return authz.Decision{
+			Allowed:  true,
+			Reason:   fmt.Sprintf("resource role %s grants %s", role, action),
+			PolicyID: fmt.Sprintf("resource:%s:permission:%s", role, action),
+		}, nil
+	}
+	return decision, nil
+}
+
+// decideByOrgRole is the organization-role part of Decide.
+func (a *Provider) decideByOrgRole(ctx context.Context, principal authz.Principal, action authz.Action, resource authz.Resource) (authz.Decision, error) {
 	// Get organization ID from resource
 	if resource.OrgID == nil {
 		allowed, err := a.checkPermissionWithoutOrg(principal, action, resource)
