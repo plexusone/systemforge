@@ -235,6 +235,34 @@ specification governs the mechanism while this ADR governs the policy.
       error that says so, and the data is migrated by re-encrypting it in a
       `standard` process. A purpose may pin its profile, so data meant for a
       FIPS deployment is never written with a non-approved algorithm.
+17. **keyforge is the single system of record for the platform's
+    cryptographic choices, and it feeds the crypto specification.**
+    - **Authoritative for what it selects and enforces.** The algorithms,
+      profiles, purposes, keys, versions, providers and rotation state that
+      keyforge governs are facts keyforge owns. They are not restated by hand
+      anywhere else.
+    - **Reference for what it does not control.** Cryptography configured
+      elsewhere, such as edge TLS at a CDN or TLS between internal services,
+      may be registered in keyforge as external boundaries, so that there is
+      one place to answer "what cryptography do we rely on". A registered
+      boundary carries the **expectation** (for example minimum protocol
+      version, permitted suites, key exchange groups, certificate key
+      strength), an owner, where the real configuration lives, and a review
+      date. keyforge records the expectation and does not claim to enforce it.
+    - **The system's crypto specification is generated, not written.**
+      keyforge exports the facts it owns and the external boundaries it holds
+      as a `systemspec-crypto` document. Enforced facts carry evidence from
+      keyforge's own configuration and runtime state; declared external facts
+      are marked as attested or awaiting review, with the owner and review
+      date; a declaration past its review date drops out of "verified".
+    - **Verification is a separate step.** Test applications and scanners
+      exercise the deployed system and compare what they observe with the
+      generated specification and the registered expectations. A scan result
+      is evidence attached to a claim, not an edit to the inventory. A
+      mismatch is a finding. keyforge is not a scanner.
+    - **Metadata only.** The export never contains key material or secret
+      values, and a use of a primitive outside keyforge is found by source and
+      dependency analysis rather than assumed absent.
 
 ## Consequences
 
