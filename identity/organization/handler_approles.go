@@ -134,7 +134,8 @@ func (a *API) appRoles() (*approle.Service, error) {
 // appRoleError maps an approle error to an HTTP error.
 func (a *API) appRoleError(ctx context.Context, err error) error {
 	switch {
-	case errors.Is(err, approle.ErrAlreadyAssigned):
+	case errors.Is(err, approle.ErrAlreadyAssigned),
+		errors.Is(err, approle.ErrNoSeats):
 		return huma.Error409Conflict(err.Error())
 	case errors.Is(err, approle.ErrNotAssigned):
 		return huma.Error404NotFound(err.Error())

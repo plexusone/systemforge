@@ -111,3 +111,43 @@ func TestAppRoleEndpoints(t *testing.T) {
 		t.Errorf("second remove: %d, want 404", code)
 	}
 }
+
+func TestAppRoleEndpointsNoSeatsIs409(t *testing.T) {
+	ctx := context.Background()
+	api := newOrgAPI(t)
+	owner := newHuman(t, api.db, "o2@example.com")
+	first := newHuman(t, api.db, "f2@example.com")
+	second := newHuman(t, api.db, "s2@example.com")
+	if _, err := api.svc.Create(ctx, organization.CreateOrganizationInput{Name: "B", Slug: "b-org", OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &owner}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	org, err := api.svc.GetBySlug(ctx, "b-org")
+	if err != nil {
+		t.Fatalf("GetBySlug: %v", err)
+	}
+	for _, id := range []uuid.UUID{first, second} {
+		if _, err := api.svc.AddMember(ctx, organization.AddMemberInput{OrganizationID: org.ID, PrincipalID: id, Role: organization.RoleMember}); err != nil {
+			t.Fatalf("AddMember: %v", err)
+		}
+	}
+	reg := authz.NewVocabularyRegistry()
+	if err := reg.Register(apiVocab{}); err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	one := 1
+	cfg := organization.DefaultAPIConfig()
+	cfg.Authorizer = memberAuthorizer(api.svc)
+	cfg.AppRoles = approle.NewService(api.db, reg, approle.WithEntitlementGrants(
+		func(context.Context, uuid.UUID) (map[string]approle.Grant, error) {
+			return map[string]approle.Grant{"alpha": {SeatLimit: &one}}, nil
+		}))
+	api.h = organization.NewAPI(api.svc, cfg)
+
+	base := "/organizations/b-org/members/"
+	if code, body := api.do(http.MethodPut, base+first.String()+"/app-roles/alpha", owner, map[string]string{"role": "viewer"}); code != http.StatusOK {
+		t.Fatalf("first assign: %d %s", code, body)
+	}
+	if code, body := api.do(http.MethodPut, base+second.String()+"/app-roles/alpha", owner, map[string]string{"role": "viewer"}); code != http.StatusConflict {
+		t.Errorf("assign without a seat: %d %s, want 409", code, body)
+	}
+}
