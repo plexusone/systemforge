@@ -157,16 +157,72 @@ relationship writes and deletes, `LookupSubjects` and `LookupResources`;
 interface. `spicedb.Syncer` implements `authz.RelationshipSyncer` by
 writing and deleting base-schema relationships.
 
+### Resource grants
+
+ADR-008 gives a collaborator access to individual resources through a
+standard ladder of resource roles, reserved in the conventions:
+
+| Resource role | Permissions on the resource | `authz` |
+|---|---|---|
+| `viewer` | `view` | `ResourceRoleViewer` |
+| `contributor` | `view`, `edit` | `ResourceRoleContributor` |
+| `maintainer` | `view`, `edit`, `manage` | `ResourceRoleMaintainer` |
+
+`authz.ResourceRolePermissions` holds the table, and
+`authz.ResourceRoleFragment(type)` generates the standard definition it
+mirrors; `schema_parity_test.go` keeps the two equal. The contract is
+`authz.ResourceGranter`:
+
+```go
+GrantResourceRole(ctx, principalID, ref ResourceRef, role string, grantedBy uuid.UUID) error
+RevokeResourceRole(ctx, principalID, ref ResourceRef) error
+ListResourceGrants(ctx, ref ResourceRef) ([]Grant, error)
+ListResources(ctx, principalID, resourceType string, permission Action) (ResourceSet, error)
+```
+
+`ResourceRef{Type, ID, OrganizationID}` names a resource by its definition
+name (`{app}_{type}`), the application's own string identifier and the
+organization that owns it. A first grant gives a non-member a `collaborator`
+membership; revoking their last grant removes it; a lower role or a revoke
+records a `grant_reduced` access change.
+
+**Role-based provider.** `rbac.WithResourceGrants(store)` takes a store that
+is both a `ResourceGranter` and an `authz.ResourceGrantReader`;
+`identity/resourcegrant.Service` over the Ent client is the store (see
+[Resource grants](organizations.md#resource-grants-identityresourcegrant)).
+The provider delegates `GrantResourceRole`, `RevokeResourceRole` and
+`ListResourceGrants`, and extends the evaluation order of `Decide` and `Can`
+with one step after the organization role:
+
+7. A resource with an ID whose action is `view`, `edit` or `manage`: the
+   principal's grant on it, when its membership in the organization is
+   active, judged by `ResourceRoleAllows`.
+
+`ListResources` returns an `authz.ResourceSet` with two parts, which an
+application applies as `organization_id IN (OrganizationIDs) OR id IN
+(IDs)`: `IDs` are the resources the principal holds a grant on whose role
+grants the permission; `OrganizationIDs` are the organizations in which the
+principal's organization role grants `{resourceType}.{permission}` in the
+provider's permission map, which makes the permission hold on every
+resource of the type there. Platform-admin bypass and resource ownership,
+which `Can` honors, are not enumerated. A provider built without a store
+answers as before and returns `rbac.ErrNoResourceGrants` from the grant
+operations.
+
 ### Conformance (`authz/providertest`)
 
 `providertest.RunAll(t, Config{Provider: p})` runs the interface, behavior
 and integration tiers against any provider; `RunOrgPermissionTests` (with
 `Config.GrantOrgRole`) asserts the organization grants of the base schema,
 and `RunManagerRelationTests` (with `Config.GrantManager`) the manager
-grants. Both providers run the suite
-(`authz/rbac/provider_conformance_test.go`,
-`authz/rebac/spicedb/integration_test.go`), which is what makes the two
-modes interchangeable on the platform contract.
+grants. `RunResourceGrantTests` (with `Config.ResourceGranter`,
+`GrantOrgRole` and, for a database-backed provider, `NewPrincipal` and
+`NewOrganization`) covers the grant contract: the collaborator lifecycle,
+the ladder, reductions, revocation, what a collaborator may do on the
+organization, and `ListResources` for each permission. The role-based
+provider runs it in `authz/rbac/resource_grants_test.go`, on SQLite and on
+PostgreSQL. The suites are what makes the modes interchangeable on the
+platform contract.
 
 ### Capability table
 
@@ -176,7 +232,7 @@ What each provider can answer today, and after ADR-008:
 |---|---|---|---|
 | Does the principal's organization or application role grant this action? | yes | yes | yes |
 | Does the principal own this resource? | yes (`WithOwnerFullAccess`, `Resource.OwnerID` supplied by the caller) | yes | yes |
-| Does the principal hold a direct grant on this specific resource? | no | yes, from `sf_resource_grants` | yes |
+| Does the principal hold a direct grant on this specific resource? | no | yes, from `sf_resource_grants` (built) | yes |
 | Does a permission reach the principal through relationships (team membership, a parent resource, a share with a group)? | no | no | yes, through the schema fragment |
 
 ### Choosing a mode
@@ -279,7 +335,7 @@ to be recorded as a reduced grant.
 | `sessions_revoked` | The principal's sessions or tokens were revoked | `token.RevokeAllForPrincipal`, `EntStorage.RevokeSubjectTokens` for a principal subject, `managedprincipal.RevokeSession` and `RevokeAll` (every organization) |
 | `management_granted` | The principal came under management and gave up the capabilities managed principals do not hold | `managedprincipal.AcceptManagerInvite` (every organization) |
 | `management_ended` | The principal's management ended and its own capabilities were restored | `managedprincipal.Release`; `RemoveManager` removing the last manager of a principal with a verified email (every organization) |
-| `grant_reduced` | A resource grant was reduced or removed | Reserved for resource grants (ADR-008), which do not exist yet |
+| `grant_reduced` | A resource grant was reduced or removed | `resourcegrant.Service.GrantResourceRole` giving a lower role, `RevokeResourceRole` (scoped to the resource's organization); granting or raising a role records nothing. Revoking a collaborator's last grant also records `membership_removed` |
 
 ## Planned changes
 
@@ -293,30 +349,17 @@ decides it.
   `list` permission (built). A collaborator is a principal with a membership
   of role `collaborator`, who has no `view`, `edit` or `manage` on the
   organization; personal organizations accept such memberships.
-- A standard resource-role ladder, reserved in the conventions:
-  `viewer` (read), `contributor` (also change and create within),
-  `maintainer` (also manage settings and collaborators). Applications
-  declare which resource types accept collaborators in their fragment,
-  with `permission view = viewer + contributor + maintainer + org->view`
-  and so on.
-- Substrate operations on both providers: `GrantResourceRole(ctx,
-  principal, resource, role)`, `RevokeResourceRole`, `ListResourceGrants`.
-  `rebac` writes relationships; `rbac` stores grants in a new
-  `sf_resource_grants` table (principal, organization, resource type,
-  resource ID, role) and consults it in `Decide`. Granting to a non-member
-  adds a `collaborator` membership; revoking the last grant removes it.
-- `Authorizer.ListResources(ctx, principal, resourceType, permission)`:
-  SpiceDB `LookupResources` in `rebac`, an indexed query in `rbac`.
-  Applications filter queries by the result rather than trusting the
-  caller; the scope gate still applies.
+- Built: the standard resource-role ladder and the grant contract (see
+  [Resource grants](#resource-grants)) for the role-based provider. The
+  relationship-based provider's implementation, the vocabulary validation of
+  collaborator-able definitions and the shared suite across both modes are
+  still to do.
 - `sf_invites` gains optional resource type, resource ID and resource role;
   accepting such an invite creates the collaborator membership and the
   grant in one transaction.
 - The `orgs` claim (ADR-007) lists a collaborator's organizations with role
   `collaborator`; the resources are the application's to look up.
 - Agents and managed principals are granted the same way.
-- `providertest` grows cases for grants and `ListResources` so both modes
-  stay equivalent on the contract.
 
 ### Application roles (ADR-007)
 

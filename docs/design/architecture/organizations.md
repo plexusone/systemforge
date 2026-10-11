@@ -474,6 +474,53 @@ authorization graph through the optional `authz.AppRoleSyncer` (see
 
 Invites carry application roles (see [Invites](#invites)).
 
+## Resource grants (`identity/resourcegrant`)
+
+A collaborator reaches individual resources, not the organization (ADR-008).
+A grant is a principal's role (`viewer`, `contributor` or `maintainer`) on
+one resource of an organization, stored in `sf_resource_grants` (Ent schema
+`ResourceGrant`):
+
+| Column | Notes |
+|---|---|
+| `principal_id`, `organization_id` | The grantee and the resource's organization; deleting either deletes the grant |
+| `resource_type` | `{app}_{type}`, as declared in the application's vocabulary |
+| `resource_id` | The application's identifier, 1 to 1024 characters of `a-zA-Z0-9/_\|-=+` (the characters SpiceDB object identifiers allow, so both modes accept the same resources) |
+| `role` | A resource role; free text in the column, validated by the service |
+| `granted_by` | The granting principal, when known; cleared if that principal is deleted |
+
+Unique on `(principal_id, resource_type, resource_id)`; indexed on
+`(organization_id, principal_id)`, `(resource_type, principal_id)` and
+`(resource_type, resource_id)`. The table is created by the schema
+migration; no SQL script is needed.
+
+`resourcegrant.Service` (built with `NewService(client, opts...)`)
+implements `authz.ResourceGranter` and `authz.ResourceGrantReader`:
+
+| Method | Behavior |
+|---|---|
+| `GrantResourceRole(principal, ref, role, by)` | Validates the role, the reference and, with `WithVocabularies`, that the type belongs to a registered application. In one transaction: gives the principal a `collaborator` membership when it has none in the organization (reactivating a deactivated collaborator; a deactivated member of another role is refused with `ErrInactiveMembership`), and creates the grant or replaces its role. Lowering a role records `grant_reduced`. A resource belongs to one organization: a grant naming another one for a resource that already has grants is refused with `ErrResourceOrganizationMismatch` |
+| `GrantInTx(tx, ...)` | The same inside the caller's transaction, returning the function to call after commit (publishes the access changes and syncs); for flows that create membership and grant together, such as accepting an invitation |
+| `RevokeResourceRole(principal, ref)` | Deletes the grant and records `grant_reduced`; when it was the principal's last grant in the organization and the membership is a `collaborator`'s, deletes the membership and records `membership_removed`. `ErrGrantNotFound` when there is none |
+| `ListResourceGrants(ref)` | The grants on a resource, highest role first |
+| `ListResources(principal, type, permission)` | Resource identifiers on which a grant gives the principal `view`, `edit` or `manage`, in organizations where its membership is active |
+| `ResourceRole(principal, ref)` | The principal's role through a grant, or empty when it has none or its membership is inactive |
+
+Grants and revocations of one principal in one organization are serialized
+by a PostgreSQL advisory lock, so concurrent first grants create one
+membership and concurrent revokes cannot both miss the last grant.
+`organization.Service.RemoveMember` deletes the member's grants with the
+membership and, with a syncer that implements `authz.ResourceGrantSyncer`,
+removes them from the graph. With `WithAuthzSyncer` the service writes the
+collaborator membership through `AddOrgMembership` and the grant through
+`ResourceGrantSyncer`; `noop` implements it, so any existing syncer keeps
+working.
+
+The role-based provider consults the table: `rbac.WithResourceGrants(svc)`
+makes `Can` and `Decide` allow `view`, `edit` and `manage` on a resource the
+principal holds a role on when the organization role has not (see
+[Authorization](authorization.md#resource-grants)).
+
 ## How relying parties get memberships
 
 A relying party (`identity/relyingparty`) authenticates a SystemAuth session,
@@ -666,7 +713,8 @@ decides it.
   Still to do: `addMember` (adding without an invite) takes no application
   roles; the administration pages for choosing them are the application's to
   build, as this repository ships no UI. Removal from the
-  organization removes every application role (built) and grant.
+  organization removes every application role and every resource grant
+  (built).
 
 ### Real-time invalidation (ADR-010)
 

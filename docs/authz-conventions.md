@@ -105,6 +105,12 @@ definition myapp_project {
 }
 ```
 
+Granting a resource role to a principal who is not a member of the
+resource's organization makes them a `collaborator` of it; revoking their
+last grant there removes the membership. A grant is by `{app}_{type}` and
+the application's own resource identifier, in the organization that owns
+the resource; a resource does not change organization through a grant.
+
 ## SpiceDB: base + facets
 
 SystemForge owns the base definitions (`authz.BaseSpiceDBSchema`):
