@@ -256,15 +256,40 @@ func ResourceApp(resourceType string) string {
 	return m[1]
 }
 
-// ValidateResourceType checks that resourceType belongs to a registered
-// application: its "{app}_" prefix names a vocabulary in the registry.
+// ValidateResourceType checks that resourceType may be granted on: its
+// "{app}_" prefix names a vocabulary in the registry, and, when that
+// vocabulary carries a SpiceDB fragment, the fragment declares the type
+// with the whole resource-role ladder (CollaboratorDefinitions). A
+// vocabulary with no fragment supports only the role-based provider, where
+// any type of the application can be granted on.
 func (r *VocabularyRegistry) ValidateResourceType(resourceType string) error {
 	app := ResourceApp(resourceType)
 	if app == "" || !strings.HasPrefix(resourceType, app+"_") {
 		return fmt.Errorf("%w: type %q is not {app}_{type}", ErrInvalidResource, resourceType)
 	}
-	if _, ok := r.Get(app); !ok {
+	v, ok := r.Get(app)
+	if !ok {
 		return fmt.Errorf("%w: application %q of type %q is not registered", ErrInvalidResource, app, resourceType)
 	}
+	fragment := v.SpiceDBSchema()
+	if strings.TrimSpace(fragment) == "" {
+		return nil
+	}
+	if !slices.Contains(CollaboratorDefinitions(fragment), resourceType) {
+		return fmt.Errorf("%w: %q does not accept collaborators: its definition in the %q fragment must declare viewer, contributor and maintainer", ErrInvalidResource, resourceType, app)
+	}
 	return nil
+}
+
+// CollaboratorResourceTypes returns the resource types of an application
+// that accept collaborators according to its SpiceDB fragment, sorted. It
+// is empty for an unregistered application or one with no fragment.
+func (r *VocabularyRegistry) CollaboratorResourceTypes(app string) []string {
+	v, ok := r.Get(app)
+	if !ok {
+		return nil
+	}
+	types := CollaboratorDefinitions(v.SpiceDBSchema())
+	slices.Sort(types)
+	return types
 }

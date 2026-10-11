@@ -55,19 +55,134 @@ var (
 // b {}") must not let the second one evade detection, since callers rely on
 // this to reject schema fragments that redefine reserved or foreign names.
 func findSchemaDefinitions(schema string) []string {
-	lines := strings.Split(schema, "\n")
-	for i, line := range lines {
-		if idx := strings.Index(line, "//"); idx >= 0 {
-			lines[i] = line[:idx]
-		}
-	}
-	stripped := strings.Join(lines, "\n")
+	stripped := stripSchemaComments(schema)
 
 	var names []string
 	for _, m := range spiceDefRe.FindAllStringSubmatch(stripped, -1) {
 		names = append(names, m[1])
 	}
 	return names
+}
+
+// stripSchemaComments removes "//" line comments from a schema fragment.
+func stripSchemaComments(schema string) string {
+	lines := strings.Split(schema, "\n")
+	for i, line := range lines {
+		if idx := strings.Index(line, "//"); idx >= 0 {
+			lines[i] = line[:idx]
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// schemaDefinition is one definition of a schema fragment: its name and
+// the relations it declares, relation name to the allowed subject types as
+// written ("principal", "principal | team#member").
+type schemaDefinition struct {
+	name      string
+	relations map[string]string
+}
+
+var (
+	relationStartRe = regexp.MustCompile(`\b(relation|permission)\s+\w+\s*[:=]`)
+	relationRe      = regexp.MustCompile(`^relation\s+(\w+)\s*:\s*(.*?)\s*$`)
+)
+
+// parseSchemaDefinitions returns the definitions of a fragment with their
+// relations. It is a scanner for the conventions this package validates,
+// not a SpiceDB parser: bodies are found by brace matching and each
+// relation is read up to the next relation or permission, so fragments
+// that pack several statements on a line are read as written.
+func parseSchemaDefinitions(schema string) []schemaDefinition {
+	stripped := stripSchemaComments(schema)
+	var out []schemaDefinition
+	for _, loc := range spiceDefRe.FindAllStringSubmatchIndex(stripped, -1) {
+		name := stripped[loc[2]:loc[3]]
+		open := strings.Index(stripped[loc[1]:], "{")
+		if open < 0 {
+			continue
+		}
+		start := loc[1] + open + 1
+		depth, end := 1, len(stripped)
+		for i := start; i < len(stripped); i++ {
+			switch stripped[i] {
+			case '{':
+				depth++
+			case '}':
+				depth--
+			}
+			if depth == 0 {
+				end = i
+				break
+			}
+		}
+		body := stripped[start:end]
+		// One statement per line, so a packed body reads like a spread one.
+		body = relationStartRe.ReplaceAllStringFunc(body, func(m string) string { return "\n" + m })
+		def := schemaDefinition{name: name, relations: map[string]string{}}
+		for _, line := range strings.Split(body, "\n") {
+			line = strings.TrimSpace(line)
+			if m := relationRe.FindStringSubmatch(line); m != nil {
+				def.relations[m[1]] = strings.Join(strings.Fields(m[2]), " ")
+			}
+		}
+		out = append(out, def)
+	}
+	return out
+}
+
+// declaresResourceRoles reports which of the resource-role relations a
+// definition declares.
+func (d schemaDefinition) declaresResourceRoles() (declared, missing []string) {
+	for _, role := range resourceRoles {
+		if _, ok := d.relations[role]; ok {
+			declared = append(declared, role)
+		} else {
+			missing = append(missing, role)
+		}
+	}
+	return declared, missing
+}
+
+// CollaboratorDefinitions returns the definitions of a schema fragment that
+// accept collaborators: those declaring the whole resource-role ladder
+// (viewer, contributor, maintainer).
+func CollaboratorDefinitions(schema string) []string {
+	var out []string
+	for _, d := range parseSchemaDefinitions(schema) {
+		if _, missing := d.declaresResourceRoles(); len(missing) == 0 {
+			out = append(out, d.name)
+		}
+	}
+	return out
+}
+
+// validateCollaboratorDefinitions checks the definitions that use the
+// reserved resource-role names (ADR-008): a definition that declares any of
+// viewer, contributor and maintainer declares all three, binds each to
+// principal, and has an org relation to organization, so that every
+// application means the same thing by the ladder and a collaborator's
+// access composes with the organization's.
+func validateCollaboratorDefinitions(schema string) error {
+	for _, d := range parseSchemaDefinitions(schema) {
+		declared, missing := d.declaresResourceRoles()
+		if len(declared) == 0 {
+			continue
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("authz: SpiceDB definition %q declares %s but not %s; the resource roles viewer, contributor and maintainer are reserved and must be declared together",
+				d.name, strings.Join(declared, ", "), strings.Join(missing, ", "))
+		}
+		for _, role := range resourceRoles {
+			if d.relations[role] != "principal" {
+				return fmt.Errorf("authz: SpiceDB definition %q relation %q must be of type principal, not %q", d.name, role, d.relations[role])
+			}
+		}
+		if d.relations["org"] != "organization" {
+			return fmt.Errorf("authz: SpiceDB definition %q accepts collaborators and must declare `relation org: organization`", d.name)
+		}
+	}
+	return nil
 }
 
 // ValidateScope checks one scope against the "{app}:{resource}:{verb}" (or
@@ -91,14 +206,16 @@ func ValidateScope(app, scope string) error {
 
 // ValidateAppSchema checks an app's SpiceDB fragment: every definition it
 // declares must be prefixed "{app}_", so fragments can never collide with the
-// shared base definitions or with another app. An empty schema is valid.
+// shared base definitions or with another app, and a definition using the
+// reserved resource-role names must declare the whole ladder (see
+// validateCollaboratorDefinitions). An empty schema is valid.
 func ValidateAppSchema(app, schema string) error {
 	for _, name := range findSchemaDefinitions(schema) {
 		if !strings.HasPrefix(name, app+"_") {
 			return fmt.Errorf("authz: SpiceDB definition %q must be prefixed %q", name, app+"_")
 		}
 	}
-	return nil
+	return validateCollaboratorDefinitions(schema)
 }
 
 // ValidateVocabulary checks a vocabulary against every convention: app name
