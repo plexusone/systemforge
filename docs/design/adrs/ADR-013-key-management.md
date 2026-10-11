@@ -153,6 +153,11 @@ specification governs the mechanism while this ADR governs the policy.
       the guard allows it; the count is a floor, not a trigger to delete.
     - A failed or overdue rotation raises an alert; a key past its period is
       reported, not silently kept.
+    - Real keys are not rotated weekly. A weekly **rotation drill** runs the
+      full lifecycle on a built-in canary purpose that holds no data, so the
+      mechanism is exercised and its failures surface within a week, without
+      the version churn and keyring-backup burden of rotating real keys that
+      often.
 13. **Emergency rotation is a separate procedure from scheduled rotation.**
     If a KEK is compromised, re-wrapping is not enough: the old KEK version
     is destroyed (subject to holds, with the approval path of ADR-012's
