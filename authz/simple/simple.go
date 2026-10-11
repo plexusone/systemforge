@@ -4,7 +4,9 @@
 // Deprecated: use github.com/plexusone/systemforge/authz/rbac. The provider
 // is unchanged; only the path moved, so that the authorization modes are
 // named for what they evaluate (rbac, rebac). This package forwards to the
-// new one and will be removed in a later release.
+// new one and will be removed in the next major release. Only what existed
+// under this path is forwarded; resource grants and later additions are in
+// authz/rbac.
 package simple
 
 import "github.com/plexusone/systemforge/authz/rbac"

@@ -73,8 +73,8 @@ func WithAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) Optio
 }
 
 // WithAuthorizer sets the authorizer that checks managers' permissions on
-// managed principals, such as a SpiceDB provider or a simple provider with
-// a platform-administrator check. Defaults to a simple provider backed by
+// managed principals, such as a SpiceDB provider or an rbac provider with
+// a platform-administrator check. Defaults to an rbac provider backed by
 // ManagerRoles.
 func WithAuthorizer(a authz.Authorizer) Option {
 	return func(s *Service) { s.authz = a }
@@ -455,7 +455,7 @@ func (s *Service) ListManagers(ctx context.Context, managedID uuid.UUID) ([]Rela
 }
 
 // ManagerRoles returns the roles managerID actively holds over managedID.
-// It matches authz.ManagerRoleGetter, so it can back the simple provider:
+// It matches authz.ManagerRoleGetter, so it can back the rbac provider:
 // rbac.WithManagerRoleGetter(svc.ManagerRoles).
 func (s *Service) ManagerRoles(ctx context.Context, managerID, managedID uuid.UUID) ([]string, error) {
 	rels := s.client.ManagerRelationship

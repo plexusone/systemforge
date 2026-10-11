@@ -4,8 +4,9 @@
 // Deprecated: use github.com/plexusone/systemforge/authz/rebac/spicedb. The
 // engine is unchanged; only the path moved, so that the authorization modes
 // are named for what they evaluate (rbac, rebac) with the engine beneath
-// its mode. This package forwards to the new one and will be removed in a
-// later release.
+// its mode. This package forwards to the new one and will be removed in the
+// next major release. Only what existed under this path is forwarded;
+// resource grants and later additions are in authz/rebac/spicedb.
 package spicedb
 
 import (

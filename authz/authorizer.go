@@ -1,13 +1,20 @@
 // Package authz provides a pluggable authorization interface for SystemForge applications.
 //
 // The package defines a core Authorizer interface that applications use for access control,
-// with multiple backend implementations available:
+// with two modes, named for the model they evaluate (ADR-008):
 //
-//   - simple: Role hierarchy and permission mappings (no external dependencies)
-//   - spicedb: SpiceDB-based ReBAC (Zanzibar-style relationship-based access control)
+//   - rbac (package authz/rbac): role-based. Organization roles, application roles and
+//     direct grants on resources, evaluated in process from the membership, role and grant
+//     tables. No external dependencies.
+//   - rebac (package authz/rebac/spicedb): relationship-based. Permissions derived through
+//     relationships by an engine, SpiceDB today (Zanzibar-style).
 //
-// Applications depend only on the Authorizer interface, allowing backends to be swapped
-// without changing application code.
+// Both implement the same platform contract (Authorizer, OrgAuthorizer, PlatformAuthorizer
+// and ResourceGranter, assembled as Provider) with the same semantics, verified by the
+// authz/providertest suite. ModeConfig selects between them (the `authz` configuration key)
+// and authz/mode builds the provider, so applications depend only on the interfaces and a
+// deployment switches by configuration. The former paths authz/simple and authz/spicedb
+// forward to the new packages and are deprecated.
 package authz
 
 import (

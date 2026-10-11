@@ -37,7 +37,7 @@ type AppVocabulary interface {
 	// Scopes lists every OAuth scope the app defines.
 	Scopes() []string
 	// SpiceDBSchema returns the app's ReBAC schema fragment, or "" if the app
-	// only supports the simple role-hierarchy provider.
+	// only supports the role-based (rbac) provider.
 	SpiceDBSchema() string
 }
 

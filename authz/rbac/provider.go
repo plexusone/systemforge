@@ -106,7 +106,7 @@ func WithPlatformAdminBypass(enabled bool) Option {
 	}
 }
 
-// New creates a new simple Provider with the given options.
+// New creates a role-based Provider with the given options.
 func New(opts ...Option) *Provider {
 	a := &Provider{
 		hierarchy:            authz.DefaultRoleHierarchy,

@@ -8,7 +8,7 @@
 // Example usage:
 //
 //	func TestConformance(t *testing.T) {
-//	    provider := simple.New()
+//	    provider := rbac.New()
 //	    providertest.RunAll(t, providertest.Config{
 //	        Provider: provider,
 //	    })
