@@ -380,9 +380,10 @@ decides it.
   providers' implementations, the vocabulary validation of collaborator-able
   definitions and the shared suite across both modes (see [Resource
   grants](#resource-grants)).
-- `sf_invites` gains optional resource type, resource ID and resource role;
-  accepting such an invite creates the collaborator membership and the
-  grant in one transaction.
+- Built: `sf_invites` carries an optional resource type, resource ID and
+  resource role; accepting such an invite creates the collaborator
+  membership and the grant in one transaction (see
+  [Invites](organizations.md#invites)).
 - The `orgs` claim (ADR-007) lists a collaborator's organizations with role
   `collaborator`; the resources are the application's to look up.
 - Agents and managed principals are granted the same way.
