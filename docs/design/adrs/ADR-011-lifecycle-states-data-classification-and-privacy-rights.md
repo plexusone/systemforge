@@ -12,7 +12,7 @@ release decision of ADR-009), ADR-006 (organization lifecycle), ADR-010
 ## Context
 
 SystemForge holds personal data for every product built on it, and several
-decisions so far assumed an account either exists or is "deactivated". Three
+decisions so far assumed an account either exists or is "deactivated". Four
 needs do not fit that:
 
 - **Hiding without destroying.** An account that should disappear from
@@ -26,6 +26,13 @@ needs do not fit that:
   cross-cutting: every product stores data about the same person. They
   belong in the platform layer so each product does not reimplement them,
   and so there is one place that knows which columns hold personal data.
+- **Dead and unwanted accounts at scale.** A free tier accumulates accounts
+  that were abandoned and accounts created by spammers. Soft deleting every
+  one and keeping a tombstone is the wrong answer for spam, which should
+  leave no personal data and no row behind, and abandoned accounts should not
+  be kept indefinitely, which the storage-limitation principle also requires.
+  Versioned entities, whose history grows with every edit, add unbounded
+  growth of their own.
 
 Managed principals add a related question. ADR-009 says releasing a
 principal removes its managers at once. In practice the end of a management
@@ -37,9 +44,11 @@ code host, correctable or removable before it is final.
 
 ### Lifecycle states
 
-1. **A principal and an organization have a lifecycle state:** `active`,
-   `archived` or `deleted`. Transitions: active ⇄ archived, and
-   active or archived → deleted. Deleted is terminal.
+1. **A principal and an organization have a lifecycle state:**
+   `provisional`, `active`, `archived` or `deleted`. Transitions:
+   provisional → active (graduation, decision 19), active ⇄ archived, and
+   active or archived → deleted. Deleted is terminal. A subject may also be
+   purged (decision 20), which removes it and is not a state it stays in.
 2. **Archived** is reversible and means "not for customers to see":
    - it is excluded from listings, search, mentions and pickers in
      customer-facing applications;
@@ -57,9 +66,11 @@ code host, correctable or removable before it is final.
    tombstone, credentials, external identities, sessions, consents and
    claims are removed, and memberships and relationships are deactivated.
    Deletion of personal data is irreversible; the tombstone is not.
-4. **There is no hard delete in the platform.** An application that must
-   purge rows after a retention period does so on tombstoned rows through
-   its own job.
+4. **The delete transition never removes the row.** `deleted` keeps a
+   tombstone so references hold. Removing rows is a separate operation,
+   `purge` (decision 20), allowed only where nothing depends on them and
+   nothing forbids it. An application that must remove tombstoned rows after
+   a retention period does so through the platform's purge, not its own job.
 5. **Transitions require authority and are recorded:** an actor with the
    account-management permission (or a platform administrator), an
    access-change reason for each transition (ADR-010), and an audit record
@@ -124,13 +135,14 @@ code host, correctable or removable before it is final.
     simple cases). `Erase` runs them, records per-entity results without
     personal data, and can be resumed after a partial failure.
 11. **Retention is a policy input, not a platform constant.** SystemForge
-    records a retention note per field and exposes a purge hook, but does
-    not fix periods: they follow the product's tier and packaging, which the
-    application configures.
+    records retention per field and per entity (decision 24) and runs the
+    purge, dormancy and offload operations below, but does not fix periods:
+    they follow the product's tier and packaging, which the application
+    configures.
 12. **Erasure can be held.** A subject may be covered by one or more legal
     holds (ADR-012). While any hold covers it, `Erase`, the delete
-    transition and edits to `pii` fields refuse with `ErrHeld`, and archive
-    remains available. Holds are placed and released by a legal manager,
+    transition, purge and edits to `pii` fields refuse with `ErrHeld`, and
+    archive remains available. Holds are placed and released by a legal manager,
     not by a platform administrator acting alone. ADR-012 defines holds,
     what they preserve, and how they are enforced. SystemForge models the
     hold and its custodians; legal case management stays outside it.
@@ -165,6 +177,94 @@ code host, correctable or removable before it is final.
     must have a manager, so release still requires a verified email, and
     email remains independent of management.
 
+### Dead accounts, purge and storage tiering
+
+19. **An account that has not proven itself is `provisional`.** A principal
+    created by a signup that has not yet verified an email or taken a first
+    meaningful action is `provisional`. A deployment sets the graduation
+    criterion and a short time to live. A provisional account that does not
+    graduate within it is purged (decision 20), with no tombstone. Spam that
+    never graduates therefore never becomes an identity record that other
+    records reference. A deployment may further restrict what a provisional account can do (for
+    example, it holds no roles and is not referenced as an author), so that
+    graduation is the point at which other records begin to depend on it.
+20. **`purge` removes a subject's rows when everything that depends on them
+    can also be removed.** It differs from `deleted` in that no row, and no
+    personal data, remains. A subject is purgeable when every record that
+    references it, directly or transitively, is itself purgeable: it belongs
+    to the same subject, is declared `cascade` (below), and is not covered by a
+    hold. Otherwise the purge is refused with a **dependency report** and the
+    caller may fall back to the ordinary delete, which keeps a tombstone. The
+    report names the entity, the count and the reason for each blocker and
+    never the contents of another subject's rows.
+21. **Relationships carry a purge disposition in the catalog.** Each edge
+    between registered entities is declared:
+
+    | Disposition | Meaning | Example |
+    |---|---|---|
+    | `cascade` | The dependent is owned by the subject and is purged with it | Sessions, API keys, preferences, memberships of the subject's personal organization |
+    | `detach` | The dependent stays and its reference is cleared or replaced by a placeholder | A comment authored in another organization's workspace |
+    | `restrict` | The dependent blocks the purge | Billing records, a membership in an organization that still exists, another subject's data |
+
+    An edge without a disposition is an error at registration, as an
+    unclassified field is. Where a deployment's product has content shared
+    with other subjects, which of `restrict` and `detach` applies is the
+    product's decision.
+22. **Purge is orchestrated by the platform, not by database cascades.**
+    Executing a purge marks the subject `purging`, which the enforcement
+    hook (ADR-012) uses to refuse new dependent writes, then removes
+    dependents leaf first in batches that can be resumed, and finally the
+    subject. Foreign keys on registered entities stay `RESTRICT`, as a
+    safety net that makes an undeclared dependency fail loudly. Every step
+    runs through the same hook, so hold checks, before-images and audit
+    apply; the audit record carries counts and no personal data. A
+    `versioned` entity's before-images are part of the closure and are purged
+    with it unless a hold covers the subject.
+23. **Purge leaves an abuse fingerprint, not personal data.** So a purged
+    account is not simply recreated, the platform may retain a keyed hash of
+    the verified email (and, if the deployment chooses, network indicators)
+    under a key managed as ADR-013 decides. The fingerprint cannot be
+    reversed, is classified in the catalog, has its own retention period, and
+    is used only to block re-registration and to measure abuse. The lawful
+    basis and the period are the deployment's decision and need review for
+    its jurisdictions.
+24. **Dormant accounts follow a ladder, and retention is structured.**
+    - An account records when it was last active, updated at most once a
+      day so activity does not become a write on every request.
+    - A deployment sets, per tier, a dormancy period after which the owner
+      is notified, then the account is archived (decision 2), then deleted
+      after a further period, and purged where decision 20 allows.
+    - Accounts with active billing, a covering hold, or the sole ownership of
+      an organization that has other members are excluded until that is
+      resolved.
+    - The notice tells the owner how to keep the account: signing in before
+      archive resets the period, and an archived account is restored on
+      request.
+    - Retention in the catalog is structured as `keep` (a duration) and
+      `then` (`purge` or `offload`), per entity, with the periods supplied by
+      configuration (decision 11).
+25. **Archive in storage terms is "offload", and it is a separate tier.**
+    `archived` (decision 2) is a visibility state and stays in the database.
+    Moving rows out of the primary database is **offload**, defined as:
+    - Data eligible for offload is historical and cold: tombstones past
+      their period, before-images of `versioned` entities, snapshots whose
+      holds were released, and old audit records.
+    - Offloaded rows are written to the snapshot store (ADR-012, decision
+      13), a database table set or an S3-compatible object store with
+      Parquet files, with a manifest recording the catalog version, row
+      counts and digest, and a stub left where a reference requires one.
+    - Before-image and audit storage is **partitioned by time** from the
+      first version, so that cold partitions can be detached, exported and
+      purged without rewriting live tables. Hot queries use partial indexes
+      and default scopes that exclude `archived` and `deleted` rows.
+    - Offload is not destruction, so it is allowed under a hold, but it is a
+      custody change and is audited. Offloaded data stays reachable by
+      subject for export, erasure and hold: encryption under per-subject keys
+      (ADR-013) lets erasure destroy a subject's key and cover the offloaded
+      copy without rewriting files.
+    - **Purge is the only deletion.** It is explicit, retention-driven and
+      hold-aware.
+
 ## Consequences
 
 - **Accounts can be hidden without losing history**, and an administrator
@@ -180,6 +280,17 @@ code host, correctable or removable before it is final.
   honor, including the `managed` claim.
 - **ADR-009's "release removes managers" becomes "closing removes
   managers".** Code and docs that equate release with removal change.
+- **Spam and abandoned accounts do not accumulate.** Provisional accounts
+  expire without a trace, the dormancy ladder reclaims the rest, and purge is
+  safe because it refuses whatever still has dependents.
+- **Every relationship needs a disposition.** Adding an edge between
+  registered entities now carries a decision, which is the same discipline as
+  classifying a field and is enforced the same way.
+- **Large histories have somewhere to go.** Time-partitioned history and the
+  offload tier bound the growth of the primary database, at the cost of a
+  second place to look when data is subject to a request or a hold.
+- **ADR-011's earlier "no hard delete" is withdrawn.** Row removal exists, as
+  `purge`, but only where the dependency rule allows it.
 
 ## Open questions
 
@@ -187,6 +298,15 @@ code host, correctable or removable before it is final.
 - Whether organizations get the same `Erase` semantics for their member
   data, or only archive and delete of the organization record.
 - The shape of the export format (one archive per subject, with a manifest).
+- What counts as graduating from `provisional`: a verified email, a first
+  meaningful action, or either.
+- The retention period and lawful basis for the abuse fingerprint, which
+  need legal review per jurisdiction.
+- Whether an account under investigation needs a `suspended` state between
+  `active` and purge, or whether archive covers it.
+- The default disposition for content shared with other subjects, `restrict`
+  or `detach`, per product.
+- The dormancy periods per tier, which follow packaging.
 
 ## References
 

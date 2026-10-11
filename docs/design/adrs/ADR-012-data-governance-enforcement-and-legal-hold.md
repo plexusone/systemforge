@@ -44,9 +44,12 @@ without taking over their data access.
    it". Per entity it records: the owner (product or platform), the data
    subject key, whether it is subject to access and erasure requests (GDPR
    scope), whether it can be placed under hold, whether it is `versioned`,
-   its retention note and its eraser. Per field it records the visibility
+   its structured retention (`keep`, then `purge` or `offload`; ADR-011,
+   decision 24) and its eraser. Per field it records the visibility
    (`public` or `internal`), the `pii` and `secret` tags, the erasure
-   strategy and the export flag.
+   strategy and the export flag. Per relationship to another registered
+   entity it records the purge disposition (`cascade`, `detach` or
+   `restrict`; ADR-011, decision 21).
 2. **The catalog is queryable and published.** It is available through an
    API and a command, and rendered as a documentation page from the same
    source, so a data protection review, a customer questionnaire and the
@@ -80,7 +83,9 @@ without taking over their data access.
    actor and hold. The snapshot answers "what did it say when the hold
    began". A subject added to a hold later is snapshotted at that moment.
 7. **While any hold covers a subject:**
-   - erasure, deletion and purge of its records are refused with `ErrHeld`;
+   - erasure, deletion and purge of its records are refused with `ErrHeld`,
+     and a dependent row covered by a hold blocks the purge of the subject it
+     references (decision 22);
    - edits to `pii` fields are refused with `ErrHeld`, so the snapshot
      remains the true state, except for `versioned` entities (decision 9);
    - archive remains allowed (it destroys nothing) and is how a subject is
@@ -102,7 +107,9 @@ without taking over their data access.
 
 ### Roles and notification
 
-10. **Two platform roles, with privacy under legal.** Organizations place
+10. **Two platform roles for privacy and legal, with privacy under legal.**
+    (A third, `trust_safety_manager`, for purging abusive accounts, is
+    defined in decision 24.) Organizations place
     privacy inside legal, so the roles are separate in permission and nested
     in default assignment:
     - `privacy_manager` handles data subject requests: the catalog (read),
@@ -158,7 +165,8 @@ without taking over their data access.
     file (Parquet for tabular exports) and referenced from the database by
     location and digest. Moving to the object store is a configuration
     change; existing snapshots remain readable through their recorded
-    location.
+    location. The same store, with the same manifest, holds data offloaded
+    from the primary database under ADR-011, decision 25.
 14. **Snapshots are personal data.** They carry the classification of their
     contents, are encrypted at rest under keys managed as ADR-013 decides,
     are excluded from ordinary exports, and are removed only when every hold
@@ -180,8 +188,9 @@ without taking over their data access.
 17. **SystemForge ships the enforcement as an Ent hook.** A mutation hook
     consults the catalog and the holds covering the subject and refuses the
     writes that decision 7 forbids; for versioned entities it writes the
-    before-image. A product installs it once on its client, so enforcement
-    sits in the write path without a data service.
+    before-image; for a subject marked `purging` it refuses new dependent
+    writes (decision 22). A product installs it once on its client, so
+    enforcement sits in the write path without a data service.
 18. **A conformance test is provided.** It fails in CI when a registered
     entity can be mutated without the hook installed, which catches a second
     client or a bulk path that skips it.
@@ -194,6 +203,46 @@ without taking over their data access.
     operational and documented: lint rules against raw SQL in product code,
     `guardsql` for query paths, and control over who holds a database
     credential. The platform promises what a library can promise.
+
+### Purge
+
+21. **Purge planning is a walk of the catalog's relationships.** Given a
+    subject, the platform follows its registered entities and their edges,
+    counts the rows each would remove, and classifies each dependent: it
+    cascades (owned by the subject), it detaches (reference cleared), or it
+    blocks. Anything that blocks produces the dependency report of ADR-011,
+    decision 20: a row of another subject, a `restrict` edge with rows
+    present, a row covered by a hold, an edge in the Ent schema that the
+    catalog does not declare. The same walk is the dry run. The report holds
+    entity names, counts and reasons and never row contents, and is shown only
+    to a holder of the permission in decision 24.
+22. **Execution runs through the hook, in the platform, not in the
+    database.** The plan is executed as ADR-011, decision 22 says: the subject
+    is marked `purging`, new dependent writes are refused by the hook,
+    dependents are removed leaf first in resumable batches, each batch is
+    re-checked against the holds at the moment it runs (a hold placed
+    mid-purge stops it with `ErrHeld`, and the rows removed so far are
+    recorded), and the subject is removed last. Database cascades are not
+    used on registered entities: they run inside the engine and skip the
+    hook, so they would bypass hold checks, before-images and audit. Foreign
+    keys stay `RESTRICT`.
+23. **The catalog's relationships are verified against the schema.** A
+    registration check and the conformance test compare every edge of a
+    registered Ent entity with the catalog and fail on an undeclared edge or
+    a foreign key that is not `RESTRICT`. An entity added without a
+    disposition cannot ship, as a field without a classification cannot.
+24. **Purge is a separate permission and role.** `account.purge.plan` runs
+    the dry run and reads the dependency report; `account.purge` executes.
+    They belong to a platform role, `trust_safety_manager`, separate from
+    `privacy_manager` and `legal_manager`, because removing spam at volume is
+    an abuse-handling duty and carries none of their authority over holds
+    and data subject requests. Purge is a destructive request under decision
+    11, and its policy can differ by origin: expiry of provisional accounts is
+    system-initiated and uses `none`, a single purge by an operator uses the
+    deployment's policy, and a bulk purge by criteria (signup window, email
+    domain, network range) always starts with a dry run and, above a
+    configurable row threshold, requires `approval` where a second principal
+    exists.
 
 ## Consequences
 
@@ -215,6 +264,11 @@ without taking over their data access.
 - **The platform now models holds and custodians.** It still does not model
   matters, deadlines, counsel or discovery; those stay in the legal team's
   systems, referenced by the external reference.
+- **Purge is safe because it is planned and refused.** A subject with
+  dependents the catalog does not mark as owned cannot be removed, and the
+  reason is reported, like a cloud provider's dependency violation.
+- **Dependency edges are one more thing a product declares**, and the
+  verification step keeps that list from rotting.
 
 ## Alternatives considered
 
@@ -227,6 +281,15 @@ without taking over their data access.
   purpose of a hold on mutable data.
 - **Freeze every write under hold.** Rejected: breaks sign-in, rotation and
   membership operations; the account must stay usable and secure.
+- **Rely on `ON DELETE CASCADE` for purge.** Rejected: cascades run inside
+  the database and bypass the hook, so held rows could be removed, before-
+  images skipped and no audit written.
+- **Hard delete as the ordinary delete.** Rejected: references to a deleted
+  principal would break or cascade; the tombstone stays the default and purge
+  is the narrow exception.
+- **Tombstone everything, including spam.** Rejected: it keeps a row, and an
+  identifier, for each junk account at free-tier volumes, and retains data the
+  platform has no reason to keep.
 - **Versioning everywhere by default.** Deferred: a history store on every
   classified table is heavy for a first version; kept as a per-entity
   option and recorded in the catalog.
@@ -239,3 +302,8 @@ without taking over their data access.
 - Whether a deployment with one principal can satisfy `approval` through an
   external approver (for example a named advisor with a scoped, temporary
   role), or must stay on `none` or `delay`.
+- The row threshold above which a bulk purge requires approval, and whether
+  it differs for provisional accounts.
+- Whether a hold placed during a long purge should roll back the rows already
+  removed (it cannot) or only stop and report, which is what decision 22
+  specifies.
