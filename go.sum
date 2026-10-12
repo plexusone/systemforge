@@ -519,8 +519,8 @@ github.com/planetscale/vtprotobuf v0.6.1-0.20240917153116-6f2963f01587 h1:xzZOeC
 github.com/planetscale/vtprotobuf v0.6.1-0.20240917153116-6f2963f01587/go.mod h1:t/avpk3KcrXxUnYOhZhMXJlSEyie6gQbtLq5NM3loB8=
 github.com/plexusone/omniobserve v0.12.0 h1:WT6iIgd/ORWfW14BTBcauYk1asV53TZ4zy3gjrjhens=
 github.com/plexusone/omniobserve v0.12.0/go.mod h1:31Orh80n0p5y6ViK8gdvXu6iSZI++Ok8kngkKk2ty2o=
-github.com/plexusone/omnistorage-core v0.5.1 h1:tvsfTcJln6ZixKL75aE7tMf3yyP94hFDef7ASGlQBe8=
-github.com/plexusone/omnistorage-core v0.5.1/go.mod h1:NADK+H9XbIyYgNL6omq2ugId/uK9EouqF9OrM9BH0d4=
+github.com/plexusone/omnistorage-core v0.5.2 h1:vhascjTnSx3ITquf70d50o/B7cYeIUbJwUwzFVKqwB8=
+github.com/plexusone/omnistorage-core v0.5.2/go.mod h1:YGmwdm36lhgkl+NvQn89QDcteJiC3EGLoUcCO5ZUplg=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 h1:o4JXh1EVt9k/+g42oCprj/FisM4qX9L3sZB3upGN2ZU=
 github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55/go.mod h1:OmDBASR4679mdNQnz2pUhc2G8CO2JrUAVFDRBDP/hJE=
