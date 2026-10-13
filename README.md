@@ -48,6 +48,9 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 - 🧩 **Embeddable SystemAuth** - `identity/systemauthsvc` builds a production-checked SystemAuth `http.Handler` a host binary can mount next to its own apps, with provider metadata for discovery-free in-process relying parties
 - 🤖 **AI Agent Requests** - `identity/requestprincipal`: one protocol-neutral request principal for people and agents; `aauthrs` verifies AAuth-signed agent requests (HTTP message signatures, person/auth tokens from trusted issuers, resource-token challenges) next to the relying-party human paths
 - 🔑 **API Keys** - Scoped machine-to-machine credentials on a principal
+- 💌 **Invite-Only Sign-Up** - A sign-up gate for social login: only verified emails with an invite create accounts, refused people reach a consent-recorded waitlist, and `systemauth invite` and `systemauth waitlist` manage both
+- 🧭 **App Catalog** - Hosts publish the applications they run at `/.well-known/sf-apps`, and `/bff/session` lists the ones a person holds a role in, for a product switcher
+- 🏷️ **Per-Application Roles in Tokens** - Embedded SystemAuth emits the `orgs` claim with each organization's application roles, limited to default entitlements
 
 ### OAuth 2.0 Server (Fosite)
 
@@ -73,6 +76,12 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 - ✨ **Simple Provider** - Lightweight permission checking
 - 🧩 **Query Policy Bridge** - Use `authz.Authorizer` to feed safe query languages such as GrokifyQL
 - 🚧 **HTTP Middleware** - Route protection for Chi and stdlib
+
+### Key Management and Connections
+
+- 🗝️ **Key Management** - `keys` wires [keyforge](https://github.com/plexusone/keyforge) as the platform's one key library: envelope encryption, rotation without re-encrypting, the root key read through [omnivault](https://github.com/plexusone/omnivault), and key events in the audit trail
+- 🔌 **Connections** - `connections` composes [connectionforge](https://github.com/plexusone/connectionforge) so organizations connect accounts at external services; credentials are sealed under managed keys and applications get an authenticated HTTP client, never the secret
+- 🌐 **Connections API** - `/api/v1/organizations/{org}/connections` with `systemforge:connections:read` and `:write` scopes, served by SystemAuth when `connections` is configured
 
 ### Observability
 
@@ -301,6 +310,9 @@ github.com/plexusone/systemforge/
 │   ├── password.go        # Argon2id hashing
 │   └── service.go         # Identity service interfaces
 │
+├── keys/                  # keyforge wired to the platform (omnivault root key, audit trail)
+├── connections/           # connectionforge composed with the platform (store, RLS, authz, audit, HTTP API)
+│
 ├── session/               # Session management
 │   ├── jwt/               # JWT service with DPoP claims
 │   ├── bff/               # Backend for Frontend pattern (DPoP via goauth/dpop)
@@ -426,6 +438,8 @@ Guides for organizations, roles and access invalidation are in `docs/guides/`:
 - `docs/guides/personal-to-team.md`
 - `docs/guides/access-change-invalidation.md`
 - `docs/guides/authorization-mode.md`
+- `docs/guides/connections.md`
+- `docs/guides/key-management.md`
 
 ## Contributing
 
