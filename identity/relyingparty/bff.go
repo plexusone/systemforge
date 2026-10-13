@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/plexusone/systemforge/identity/appcatalog"
+
 	"golang.org/x/oauth2"
 )
 
@@ -44,6 +46,13 @@ type BFFConfig struct {
 	// Memberships supplies organization memberships (with the session's
 	// SystemAuth claims). Default: ClaimsMemberships.
 	Memberships MembershipSource
+
+	// Apps, when set, lists the deployment's application catalog in the
+	// session response ("apps"), for the product switcher. Use
+	// appcatalog.Static when the catalog is in the process, or
+	// appcatalog.Remote to read what SystemAuth publishes. A shell shows the
+	// entries the person holds a role in for the current organization.
+	Apps appcatalog.Source
 
 	// Revocation, when set, makes the BFF refresh a session's tokens and
 	// claims from SystemAuth when a change to the principal's access was
@@ -204,6 +213,9 @@ type SessionStatus struct {
 	UserID        string     `json:"user_id,omitempty"`
 	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
 	User          *User      `json:"user,omitempty"`
+	// Apps is the deployment's application catalog (BFFConfig.Apps), in
+	// order, for a signed-in session.
+	Apps []appcatalog.App `json:"apps,omitempty"`
 }
 
 // User is the frontend's user representation.
@@ -470,12 +482,21 @@ func (b *BFF) handleSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	exp := sess.ExpiresAt
-	writeJSON(w, http.StatusOK, SessionStatus{
+	status := SessionStatus{
 		Authenticated: true,
 		UserID:        p.ID,
 		ExpiresAt:     &exp,
 		User:          toUser(p, memberships),
-	})
+	}
+	if b.cfg.Apps != nil {
+		apps, err := b.cfg.Apps.Apps(r.Context())
+		if err != nil {
+			// The switcher is a convenience: the session stands without it.
+			b.logger.WarnContext(r.Context(), "listing the app catalog", "error", err)
+		}
+		status.Apps = apps
+	}
+	writeJSON(w, http.StatusOK, status)
 }
 
 func (b *BFF) handleMe(w http.ResponseWriter, r *http.Request) {
