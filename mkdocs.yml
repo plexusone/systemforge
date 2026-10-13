@@ -134,6 +134,7 @@ nav:
       - "ADR-013: Key Management (Proposed)": design/adrs/ADR-013-key-management.md
       - "ADR-014: Application Roles and Seat Assignments (Proposed)": design/adrs/ADR-014-application-roles-and-seat-assignments.md
       - "ADR-015: Identifier Policy and Slug Namespaces (Proposed)": design/adrs/ADR-015-identifier-policy-slug-namespaces-and-portability.md
+      - "ADR-016: External Connections (Proposed)": design/adrs/ADR-016-external-connections.md
     - ProductGraph:
       - PRD: design/productgraph/PRD.md
       - TRD: design/productgraph/TRD.md

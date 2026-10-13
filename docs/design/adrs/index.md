@@ -22,6 +22,7 @@ under `docs/specs/` and execute these decisions.
 | [ADR-013](ADR-013-key-management.md) | Key Management | Proposed |
 | [ADR-014](ADR-014-application-roles-and-seat-assignments.md) | Application Roles and Marketplace Seat Assignments Are Separate Records (amends ADR-007 decision 8) | Proposed |
 | [ADR-015](ADR-015-identifier-policy-slug-namespaces-and-portability.md) | Identifier Policy, Slug Namespaces and Portability Across Deployments | Proposed |
+| [ADR-016](ADR-016-external-connections.md) | External Connections | Proposed |
 
 ## Statuses
 
