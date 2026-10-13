@@ -59,6 +59,9 @@ type socialOptions struct {
 
 	signupGate      SignupGate
 	signupDeniedURL string
+
+	waitlist     SignupWaitlist
+	waitlistPage WaitlistPage
 }
 
 // WithSocialAuthzSyncer sets the authorization syncer that registers principals and
@@ -117,12 +120,19 @@ type socialLogin struct {
 	states     oauthclient.StateStore
 	sessions   LoginSessionStore
 	directory  PrincipalDirectory
-	// signupDenied is where a refused sign-up is redirected; nil answers 403.
+	// signupDenied is where a refused sign-up is redirected; nil answers 403
+	// unless a waitlist is served.
 	signupDenied *url.URL
-	consents     ConsentStore
-	redirects    *redirectPolicy
-	cookies      loginCookies
-	now          func() time.Time
+	// waitlist, when set, is served at SignupWaitlistPath and receives
+	// refused sign-ups without signupDenied.
+	waitlist         SignupWaitlist
+	waitlistPage     WaitlistPage
+	waitlistRates    ratelimit.Storage
+	waitlistClientIP func(r *http.Request) string
+	consents         ConsentStore
+	redirects        *redirectPolicy
+	cookies          loginCookies
+	now              func() time.Time
 
 	// loginTokens exchanges managed principals' login tokens for
 	// sessions; nil when managed principals are off.
@@ -246,6 +256,16 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 		return nil, err
 	}
 	sl.signupDenied = denied
+	if w := s.socialOpts.waitlist; w != nil {
+		sl.waitlist, sl.waitlistPage = w, s.socialOpts.waitlistPage
+		sl.waitlistRates, sl.waitlistClientIP = s.socialOpts.loginTokenRate, s.socialOpts.loginTokenClientIP
+		if sl.waitlistRates == nil {
+			sl.waitlistRates = ratelimit.NewMemoryStorage()
+		}
+		if sl.waitlistClientIP == nil {
+			sl.waitlistClientIP = ratelimit.PeerIP
+		}
+	}
 	if gate := s.socialOpts.signupGate; gate != nil {
 		sl.directory = &gatedDirectory{PrincipalDirectory: sl.directory, gate: gate, logger: s.logger}
 	}
@@ -264,6 +284,10 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 	r.Post(LogoutPath, sl.handleLogout)
 	r.Get(ConsentPath, sl.handleConsentPage)
 	r.Post(ConsentPath, sl.handleConsent)
+	if sl.waitlist != nil {
+		r.Get(SignupWaitlistPath, sl.handleWaitlistPage)
+		r.Post(SignupWaitlistPath, sl.handleWaitlistJoin)
+	}
 	if sl.loginTokens != nil {
 		r.Post(LoginTokenPath, sl.handleLoginToken)
 	}
@@ -451,6 +475,10 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 			status, msg = http.StatusForbidden, "account is disabled"
 		case errors.Is(err, ErrSignupNotInvited):
 			logger.Info("sign-up refused: not invited", "provider", provider)
+			if sl.signupDenied == nil && sl.waitlist != nil {
+				http.Redirect(w, r, SignupWaitlistPath+"?error=invite_required", http.StatusSeeOther)
+				return
+			}
 			if sl.signupDenied != nil {
 				u := *sl.signupDenied
 				q := u.Query()
