@@ -114,8 +114,21 @@ installations) where the service offers them.
    GET    /api/v1/organizations/{org}/connections/{id}
    PATCH  /api/v1/organizations/{org}/connections/{id}
    POST   /api/v1/organizations/{org}/connections/{id}/test
+   POST   /api/v1/organizations/{org}/connections/{id}/reconnect
+   GET    /api/v1/organizations/{org}/connections/{id}/bindings
+   PUT    /api/v1/organizations/{org}/connections/{id}/bindings
+   DELETE /api/v1/organizations/{org}/connections/{id}/bindings
+   GET    /api/v1/organizations/{org}/connections/{id}/grants
+   PUT    /api/v1/organizations/{org}/connections/{id}/grants/{principal}
+   DELETE /api/v1/organizations/{org}/connections/{id}/grants/{principal}
    DELETE /api/v1/organizations/{org}/connections/{id}
    ```
+
+   Grants on a connection are the platform's resource grants (ADR-008), not a
+   second authority held by connectionforge: SystemForge registers the
+   resource type `systemforge_connection` with its own vocabulary, so a
+   grant is a role on a resource of that type and the role-based provider
+   reads it.
 
    The organization is in the path: it is the row-level security tenant of
    the request. Reads need the scope `systemforge:connections:read` and

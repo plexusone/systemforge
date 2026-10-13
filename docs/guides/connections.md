@@ -108,25 +108,50 @@ Every request carries a SystemAuth access token. Reads need the
 | `GET /api/v1/organizations/{org}/connections/{id}` | One connection |
 | `PATCH /api/v1/organizations/{org}/connections/{id}` | Rename: `{"displayName"}` |
 | `POST /api/v1/organizations/{org}/connections/{id}/test` | Validate again; the result is in `health` |
+| `POST /api/v1/organizations/{org}/connections/{id}/reconnect` | Replace the credential: `{"fields": {...}}` |
+| `GET /api/v1/organizations/{org}/connections/{id}/bindings` | What depends on the connection |
+| `PUT /api/v1/organizations/{org}/connections/{id}/bindings` | Record a dependency: `{"consumerKind", "consumerId", "purpose"}` |
+| `DELETE /api/v1/organizations/{org}/connections/{id}/bindings?kind=&id=&purpose=` | Remove one |
+| `GET /api/v1/organizations/{org}/connections/{id}/grants` | Who holds a role on the connection |
+| `PUT /api/v1/organizations/{org}/connections/{id}/grants/{principal}` | Give a role: `{"role": "viewer" \| "contributor" \| "maintainer"}` |
+| `DELETE /api/v1/organizations/{org}/connections/{id}/grants/{principal}` | Take it back |
 | `DELETE /api/v1/organizations/{org}/connections/{id}` | Disconnect and destroy the credential |
 
 A connection is validated with its provider before it is stored, and a
 rejected credential stores nothing (`422`). No response contains a
 credential. A connection the caller may not view is reported as `404`.
 
+## Reconnecting
+
+When a token expires or is revoked, replace it in place with `reconnect`. The
+new credential is validated with the provider first and must belong to the
+**same account**; otherwise nothing changes (`422`). Everything bound to the
+connection keeps working.
+
 ## Who may do what
 
 | Role | View | Use | Manage, share, disconnect |
 |---|---|---|---|
 | Organization owner, admin | Yes | Yes | Yes |
-| Member | Yes | No | No |
-| Collaborator | No | No | No |
+| Member | Yes | With a grant | With a grant |
+| Collaborator | With a grant | With a grant | With a grant |
 | The connection's creator | Yes | Yes | Yes |
 
-Creating a connection needs an owner or admin. Resource grants (ADR-008) on
-type `systemforge_connection` will let a member or collaborator view
-(`viewer`), use (`contributor`) or manage (`maintainer`) one connection; the
-grants API for connections is not served yet.
+Creating a connection needs an owner or admin. Grants are resource roles
+(ADR-008) on type `systemforge_connection`:
+
+| Role | Lets the principal |
+|---|---|
+| `viewer` | See the connection |
+| `contributor` | Use it, and record what depends on it |
+| `maintainer` | Manage it: rename, test, reconnect, share, disconnect |
+
+Giving someone a role on a connection who is not in the organization makes
+them a collaborator, with access to that connection only. Granting needs the
+**share** action, which is `maintainer`, an owner or an admin.
+
+Roles are never visible to the connection's provider; they decide who in your
+organization may use the stored credential, not what the credential can do.
 
 ## Credentials and keys
 
@@ -137,9 +162,10 @@ stored credentials cannot be read. See [Key management](key-management.md).
 
 ## Current limits
 
-- Static API tokens only; GitHub App and OAuth connections follow
-  (connectionforge v0.1.0).
+- Static API tokens only; GitHub App and OAuth connections follow.
 - The role-based authorization mode only.
 - The API acts for the token's principal as a user; service principals and
   agents use the broker in process.
 - Connection events go to the server log until an audit store is configured.
+- A disconnect does not yet require acknowledging the bindings it would stop;
+  list them first with `GET .../bindings`.
