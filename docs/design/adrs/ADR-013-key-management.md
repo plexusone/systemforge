@@ -50,6 +50,10 @@ specification governs the mechanism while this ADR governs the policy.
    package that wires keyforge to the platform:
    - **Store:** the keyforge registry runs on SystemForge's database through
      Ent (SQLite or PostgreSQL), in the same deployment as everything else.
+     The first version of `keys` uses keyforge's single-host setup instead:
+     the keyring and a SQLite registry live together in one directory, so
+     they are backed up together. Moving the registry to the platform
+     database needs keyforge to accept an external registry, and follows.
    - **Guard:** keyforge's `DestroyGuard` is implemented from ADR-012: holds
      protect keys (decision 7), and destruction follows the platform's delay
      or approval policy. keyforge does not know about holds.
