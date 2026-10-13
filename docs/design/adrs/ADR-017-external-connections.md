@@ -1,11 +1,12 @@
-# ADR-016: External Connections
+# ADR-017: External Connections
 
 **Status:** Proposed
 **Deciders:** @grokify
 **Relates to:** ADR-013 (credentials are encrypted under keys it manages),
 ADR-008 (resource-scoped grants), ADR-015 (connections are keyed by
 organization ID, never by slug), ADR-002 (social sign-in identities, which
-this ADR keeps separate).
+this ADR keeps separate), ADR-016 (no static API keys for callers of the
+platform; it does not govern the credentials a third-party service issues).
 **Builds on:** [connectionforge](https://github.com/plexusone/connectionforge),
 the generic connection-management library whose
 [specifications](https://github.com/plexusone/connectionforge/tree/main/docs/specs)
@@ -41,10 +42,14 @@ SystemForge, and this ADR records how the platform adopts it, in the same way
 ADR-013 records the adoption of keyforge.
 
 There are already credentials in SystemForge, and they are a different
-thing. `identity/credential` holds what a principal uses to sign **in**
-(passwords, API keys, WebAuthn); `external_identity` links a principal to a
-social sign-in account. A connection is what the platform uses to reach
-**out** to a third-party service on an organization's behalf.
+thing. `identity/credential` holds what a principal uses to sign **in**;
+`external_identity` links a principal to a social sign-in account. A
+connection is what the platform uses to reach **out** to a third-party
+service on an organization's behalf. ADR-016 removes static API keys from
+the first direction. It cannot remove them from the second: many services
+issue only API tokens, and a connection stores what the service issues,
+preferring short-lived or app-based credentials (OAuth, GitHub App
+installations) where the service offers them.
 
 ## Decision
 
