@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/signupgate"
 	"github.com/plexusone/systemforge/identity/systemauthsvc"
 )
@@ -105,11 +106,18 @@ again.`,
 	return invite
 }
 
-// withInvites opens the configured database and runs fn with a store over
-// it. The invite table comes from the schema migration ("systemauth
-// migrate", or the migration serve runs at startup); this command does not
-// change the schema.
-func withInvites(ctx context.Context, opts *options, fn func(context.Context, *signupgate.Store) error) (err error) {
+// withInvites runs fn with the invite store over the configured database.
+func withInvites(ctx context.Context, opts *options, fn func(context.Context, *signupgate.Store) error) error {
+	return withDatabase(ctx, opts, func(ctx context.Context, client *ent.Client) error {
+		return fn(ctx, signupgate.NewStore(client))
+	})
+}
+
+// withDatabase opens the configured database and runs fn with its client.
+// The invite and waitlist tables come from the schema migration
+// ("systemauth migrate", or the migration serve runs at startup); these
+// commands do not change the schema.
+func withDatabase(ctx context.Context, opts *options, fn func(context.Context, *ent.Client) error) (err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -118,7 +126,7 @@ func withInvites(ctx context.Context, opts *options, fn func(context.Context, *s
 		return err
 	}
 	if cfg.Database == nil {
-		return errors.New("invites live in the database: set --db-driver and --db-dsn (or a database in the config file)")
+		return errors.New("this command reads the database: set --db-driver and --db-dsn (or a database in the config file)")
 	}
 	db, err := systemauthsvc.OpenDatabase(cfg.Database)
 	if err != nil {
@@ -129,7 +137,66 @@ func withInvites(ctx context.Context, opts *options, fn func(context.Context, *s
 			err = fmt.Errorf("closing database: %w", cerr)
 		}
 	}()
-	return fn(ctx, signupgate.NewStore(db.Client))
+	return fn(ctx, db.Client)
+}
+
+// newWaitlistCmd builds "systemauth waitlist": the addresses that asked to be
+// told when sign-up opens, collected by the waitlist page an invite-only
+// deployment serves. Nothing is emailed from here; export the list instead.
+func newWaitlistCmd(opts *options) *cobra.Command {
+	waitlist := &cobra.Command{
+		Use:   "waitlist",
+		Short: "List, export and remove waitlist entries",
+	}
+	var asCSV bool
+	list := &cobra.Command{
+		Use:   "list",
+		Short: "List waitlist entries, oldest first (--csv to export)",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return withDatabase(cmd.Context(), opts, func(ctx context.Context, client *ent.Client) error {
+				entries, err := signupgate.NewWaitlist(client).List(ctx)
+				if err != nil {
+					return err
+				}
+				if asCSV {
+					return signupgate.WriteWaitlistCSV(cmd.OutOrStdout(), entries)
+				}
+				tw := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', 0)
+				if _, err := fmt.Fprintln(tw, "EMAIL\tJOINED\tCONSENT"); err != nil {
+					return err
+				}
+				for _, e := range entries {
+					if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\n", e.Email, e.CreatedAt.UTC().Format(time.RFC3339), e.ConsentVersion); err != nil {
+						return err
+					}
+				}
+				return tw.Flush()
+			})
+		},
+	}
+	list.Flags().BoolVar(&asCSV, "csv", false, "Write CSV (email, joined_at, last_submitted_at, consent_version)")
+	remove := &cobra.Command{
+		Use:   "remove <email>...",
+		Short: "Remove addresses from the waitlist, for example on request",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return withDatabase(cmd.Context(), opts, func(ctx context.Context, client *ent.Client) error {
+				w := signupgate.NewWaitlist(client)
+				var errs []error
+				for _, email := range args {
+					if err := w.Remove(ctx, email); err != nil {
+						errs = append(errs, err)
+						continue
+					}
+					cmd.Printf("removed %s\n", email)
+				}
+				return errors.Join(errs...)
+			})
+		},
+	}
+	waitlist.AddCommand(list, remove)
+	return waitlist
 }
 
 func writeInvites(w io.Writer, invites []signupgate.Invite, now time.Time) error {

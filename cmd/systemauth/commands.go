@@ -124,7 +124,7 @@ Run without a subcommand it serves (same as "systemauth serve").
 	pf.StringVar(&opts.logFormat, "log-format", "text", "Log format (text, json)")
 	pf.BoolVar(&opts.migrate, "migrate", true, "Run database migrations at startup")
 	pf.BoolVar(&opts.inviteOnly, "invite-only", false, "Create accounts only for verified emails that hold a sign-up invite (see \"systemauth invite\")")
-	pf.StringVar(&opts.signupDenied, "signup-denied-url", "", "Where to send a refused sign-up (https URL); without it the callback answers 403")
+	pf.StringVar(&opts.signupDenied, "signup-denied-url", "", "Where to send a refused sign-up (https URL); without it, the waitlist page at /signup/waitlist")
 	// --listen is the former name of --addr.
 	pf.StringVarP(&opts.addr, "listen", "l", ":8080", "Address to listen on")
 	if err := pf.MarkDeprecated("listen", "use --addr"); err != nil {
@@ -158,6 +158,7 @@ Run without a subcommand it serves (same as "systemauth serve").
 			},
 		},
 		newInviteCmd(opts),
+		newWaitlistCmd(opts),
 		&cobra.Command{
 			Use:   "version",
 			Short: "Print version information",

@@ -5,6 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/plexusone/systemforge/identity/signupgate"
+	"github.com/plexusone/systemforge/identity/systemauth"
+	"github.com/plexusone/systemforge/identity/systemauthsvc"
 )
 
 // runCLI executes the root command with args and returns its output.
@@ -75,5 +79,42 @@ func TestInviteOnlyFlags(t *testing.T) {
 	t.Setenv("SYSTEMAUTH_INVITE_ONLY", "true")
 	if !parse(t).inviteOnly {
 		t.Error("SYSTEMAUTH_INVITE_ONLY ignored")
+	}
+}
+
+func TestWaitlistCommands(t *testing.T) {
+	dsn := "file:" + filepath.Join(t.TempDir(), "sa.db") + "?_fk=1"
+	db := []string{"--db-driver", "sqlite", "--db-dsn", dsn, "--issuer", "https://auth.example.com"}
+	cli := func(args ...string) (string, error) { return runCLI(t, append(args, db...)...) }
+	if out, err := cli("migrate"); err != nil {
+		t.Fatalf("migrate: %v\n%s", err, out)
+	}
+	conn, err := systemauthsvc.OpenDatabase(&systemauth.DatabaseConfig{Driver: "sqlite", DSN: dsn})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := signupgate.NewWaitlist(conn.Client)
+	for _, e := range []string{"ada@example.com", "grace@example.com"} {
+		if err := w.Join(t.Context(), e, "1", "consent"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := conn.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := cli("waitlist", "list", "--csv")
+	if err != nil || !strings.HasPrefix(out, "email,joined_at,last_submitted_at,consent_version\n") || !strings.Contains(out, "grace@example.com,") {
+		t.Fatalf("list --csv: %v\n%s", err, out)
+	}
+	if out, err := cli("waitlist", "remove", "ada@example.com"); err != nil || !strings.Contains(out, "removed ada@example.com") {
+		t.Fatalf("remove: %v\n%s", err, out)
+	}
+	if _, err := cli("waitlist", "remove", "ada@example.com"); err == nil {
+		t.Error("removing a missing entry succeeded")
+	}
+	out, _ = cli("waitlist", "list")
+	if strings.Contains(out, "ada@example.com") || !strings.Contains(out, "grace@example.com") {
+		t.Errorf("list after remove:\n%s", out)
 	}
 }
