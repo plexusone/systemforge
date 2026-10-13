@@ -37,6 +37,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
+	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 )
@@ -991,6 +992,51 @@ func init() {
 	signupinviteDescID := signupinviteMixinFields0[0].Descriptor()
 	// signupinvite.DefaultID holds the default value on creation for the id field.
 	signupinvite.DefaultID = signupinviteDescID.Default.(func() uuid.UUID)
+	signupwaitlistentryMixin := schema.SignupWaitlistEntry{}.Mixin()
+	signupwaitlistentryMixinFields0 := signupwaitlistentryMixin[0].Fields()
+	_ = signupwaitlistentryMixinFields0
+	signupwaitlistentryFields := schema.SignupWaitlistEntry{}.Fields()
+	_ = signupwaitlistentryFields
+	// signupwaitlistentryDescCreatedAt is the schema descriptor for created_at field.
+	signupwaitlistentryDescCreatedAt := signupwaitlistentryMixinFields0[1].Descriptor()
+	// signupwaitlistentry.DefaultCreatedAt holds the default value on creation for the created_at field.
+	signupwaitlistentry.DefaultCreatedAt = signupwaitlistentryDescCreatedAt.Default.(func() time.Time)
+	// signupwaitlistentryDescUpdatedAt is the schema descriptor for updated_at field.
+	signupwaitlistentryDescUpdatedAt := signupwaitlistentryMixinFields0[2].Descriptor()
+	// signupwaitlistentry.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	signupwaitlistentry.DefaultUpdatedAt = signupwaitlistentryDescUpdatedAt.Default.(func() time.Time)
+	// signupwaitlistentry.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	signupwaitlistentry.UpdateDefaultUpdatedAt = signupwaitlistentryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// signupwaitlistentryDescEmail is the schema descriptor for email field.
+	signupwaitlistentryDescEmail := signupwaitlistentryFields[0].Descriptor()
+	// signupwaitlistentry.EmailValidator is a validator for the "email" field. It is called by the builders before save.
+	signupwaitlistentry.EmailValidator = func() func(string) error {
+		validators := signupwaitlistentryDescEmail.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(email string) error {
+			for _, fn := range fns {
+				if err := fn(email); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// signupwaitlistentryDescConsentVersion is the schema descriptor for consent_version field.
+	signupwaitlistentryDescConsentVersion := signupwaitlistentryFields[1].Descriptor()
+	// signupwaitlistentry.ConsentVersionValidator is a validator for the "consent_version" field. It is called by the builders before save.
+	signupwaitlistentry.ConsentVersionValidator = signupwaitlistentryDescConsentVersion.Validators[0].(func(string) error)
+	// signupwaitlistentryDescConsentText is the schema descriptor for consent_text field.
+	signupwaitlistentryDescConsentText := signupwaitlistentryFields[2].Descriptor()
+	// signupwaitlistentry.ConsentTextValidator is a validator for the "consent_text" field. It is called by the builders before save.
+	signupwaitlistentry.ConsentTextValidator = signupwaitlistentryDescConsentText.Validators[0].(func(string) error)
+	// signupwaitlistentryDescID is the schema descriptor for id field.
+	signupwaitlistentryDescID := signupwaitlistentryMixinFields0[0].Descriptor()
+	// signupwaitlistentry.DefaultID holds the default value on creation for the id field.
+	signupwaitlistentry.DefaultID = signupwaitlistentryDescID.Default.(func() uuid.UUID)
 	slugreservationMixin := schema.SlugReservation{}.Mixin()
 	slugreservationMixinFields0 := slugreservationMixin[0].Fields()
 	_ = slugreservationMixinFields0

@@ -46,6 +46,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
+	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 
@@ -117,6 +118,8 @@ type Client struct {
 	ServicePrincipal *ServicePrincipalClient
 	// SignupInvite is the client for interacting with the SignupInvite builders.
 	SignupInvite *SignupInviteClient
+	// SignupWaitlistEntry is the client for interacting with the SignupWaitlistEntry builders.
+	SignupWaitlistEntry *SignupWaitlistEntryClient
 	// SlugReservation is the client for interacting with the SlugReservation builders.
 	SlugReservation *SlugReservationClient
 	// Subscription is the client for interacting with the Subscription builders.
@@ -162,6 +165,7 @@ func (c *Client) init() {
 	c.SeatAssignment = NewSeatAssignmentClient(c.config)
 	c.ServicePrincipal = NewServicePrincipalClient(c.config)
 	c.SignupInvite = NewSignupInviteClient(c.config)
+	c.SignupWaitlistEntry = NewSignupWaitlistEntryClient(c.config)
 	c.SlugReservation = NewSlugReservationClient(c.config)
 	c.Subscription = NewSubscriptionClient(c.config)
 }
@@ -286,6 +290,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		SeatAssignment:      NewSeatAssignmentClient(cfg),
 		ServicePrincipal:    NewServicePrincipalClient(cfg),
 		SignupInvite:        NewSignupInviteClient(cfg),
+		SignupWaitlistEntry: NewSignupWaitlistEntryClient(cfg),
 		SlugReservation:     NewSlugReservationClient(cfg),
 		Subscription:        NewSubscriptionClient(cfg),
 	}, nil
@@ -337,6 +342,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		SeatAssignment:      NewSeatAssignmentClient(cfg),
 		ServicePrincipal:    NewServicePrincipalClient(cfg),
 		SignupInvite:        NewSignupInviteClient(cfg),
+		SignupWaitlistEntry: NewSignupWaitlistEntryClient(cfg),
 		SlugReservation:     NewSlugReservationClient(cfg),
 		Subscription:        NewSubscriptionClient(cfg),
 	}, nil
@@ -374,7 +380,8 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
 		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
 		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.SeatAssignment,
-		c.ServicePrincipal, c.SignupInvite, c.SlugReservation, c.Subscription,
+		c.ServicePrincipal, c.SignupInvite, c.SignupWaitlistEntry, c.SlugReservation,
+		c.Subscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -390,7 +397,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
 		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
 		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.SeatAssignment,
-		c.ServicePrincipal, c.SignupInvite, c.SlugReservation, c.Subscription,
+		c.ServicePrincipal, c.SignupInvite, c.SignupWaitlistEntry, c.SlugReservation,
+		c.Subscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -459,6 +467,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ServicePrincipal.mutate(ctx, m)
 	case *SignupInviteMutation:
 		return c.SignupInvite.mutate(ctx, m)
+	case *SignupWaitlistEntryMutation:
+		return c.SignupWaitlistEntry.mutate(ctx, m)
 	case *SlugReservationMutation:
 		return c.SlugReservation.mutate(ctx, m)
 	case *SubscriptionMutation:
@@ -5658,6 +5668,139 @@ func (c *SignupInviteClient) mutate(ctx context.Context, m *SignupInviteMutation
 	}
 }
 
+// SignupWaitlistEntryClient is a client for the SignupWaitlistEntry schema.
+type SignupWaitlistEntryClient struct {
+	config
+}
+
+// NewSignupWaitlistEntryClient returns a client for the SignupWaitlistEntry from the given config.
+func NewSignupWaitlistEntryClient(c config) *SignupWaitlistEntryClient {
+	return &SignupWaitlistEntryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `signupwaitlistentry.Hooks(f(g(h())))`.
+func (c *SignupWaitlistEntryClient) Use(hooks ...Hook) {
+	c.hooks.SignupWaitlistEntry = append(c.hooks.SignupWaitlistEntry, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `signupwaitlistentry.Intercept(f(g(h())))`.
+func (c *SignupWaitlistEntryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SignupWaitlistEntry = append(c.inters.SignupWaitlistEntry, interceptors...)
+}
+
+// Create returns a builder for creating a SignupWaitlistEntry entity.
+func (c *SignupWaitlistEntryClient) Create() *SignupWaitlistEntryCreate {
+	mutation := newSignupWaitlistEntryMutation(c.config, OpCreate)
+	return &SignupWaitlistEntryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SignupWaitlistEntry entities.
+func (c *SignupWaitlistEntryClient) CreateBulk(builders ...*SignupWaitlistEntryCreate) *SignupWaitlistEntryCreateBulk {
+	return &SignupWaitlistEntryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SignupWaitlistEntryClient) MapCreateBulk(slice any, setFunc func(*SignupWaitlistEntryCreate, int)) *SignupWaitlistEntryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SignupWaitlistEntryCreateBulk{err: fmt.Errorf("calling to SignupWaitlistEntryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SignupWaitlistEntryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SignupWaitlistEntryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SignupWaitlistEntry.
+func (c *SignupWaitlistEntryClient) Update() *SignupWaitlistEntryUpdate {
+	mutation := newSignupWaitlistEntryMutation(c.config, OpUpdate)
+	return &SignupWaitlistEntryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SignupWaitlistEntryClient) UpdateOne(_m *SignupWaitlistEntry) *SignupWaitlistEntryUpdateOne {
+	mutation := newSignupWaitlistEntryMutation(c.config, OpUpdateOne, withSignupWaitlistEntry(_m))
+	return &SignupWaitlistEntryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SignupWaitlistEntryClient) UpdateOneID(id uuid.UUID) *SignupWaitlistEntryUpdateOne {
+	mutation := newSignupWaitlistEntryMutation(c.config, OpUpdateOne, withSignupWaitlistEntryID(id))
+	return &SignupWaitlistEntryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SignupWaitlistEntry.
+func (c *SignupWaitlistEntryClient) Delete() *SignupWaitlistEntryDelete {
+	mutation := newSignupWaitlistEntryMutation(c.config, OpDelete)
+	return &SignupWaitlistEntryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SignupWaitlistEntryClient) DeleteOne(_m *SignupWaitlistEntry) *SignupWaitlistEntryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SignupWaitlistEntryClient) DeleteOneID(id uuid.UUID) *SignupWaitlistEntryDeleteOne {
+	builder := c.Delete().Where(signupwaitlistentry.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SignupWaitlistEntryDeleteOne{builder}
+}
+
+// Query returns a query builder for SignupWaitlistEntry.
+func (c *SignupWaitlistEntryClient) Query() *SignupWaitlistEntryQuery {
+	return &SignupWaitlistEntryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSignupWaitlistEntry},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a SignupWaitlistEntry entity by its id.
+func (c *SignupWaitlistEntryClient) Get(ctx context.Context, id uuid.UUID) (*SignupWaitlistEntry, error) {
+	return c.Query().Where(signupwaitlistentry.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SignupWaitlistEntryClient) GetX(ctx context.Context, id uuid.UUID) *SignupWaitlistEntry {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *SignupWaitlistEntryClient) Hooks() []Hook {
+	return c.hooks.SignupWaitlistEntry
+}
+
+// Interceptors returns the client interceptors.
+func (c *SignupWaitlistEntryClient) Interceptors() []Interceptor {
+	return c.inters.SignupWaitlistEntry
+}
+
+func (c *SignupWaitlistEntryClient) mutate(ctx context.Context, m *SignupWaitlistEntryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SignupWaitlistEntryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SignupWaitlistEntryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SignupWaitlistEntryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SignupWaitlistEntryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SignupWaitlistEntry mutation op: %q", m.Op())
+	}
+}
+
 // SlugReservationClient is a client for the SlugReservation schema.
 type SlugReservationClient struct {
 	config
@@ -5980,7 +6123,8 @@ type (
 		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
 		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
 		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, SeatAssignment,
-		ServicePrincipal, SignupInvite, SlugReservation, Subscription []ent.Hook
+		ServicePrincipal, SignupInvite, SignupWaitlistEntry, SlugReservation,
+		Subscription []ent.Hook
 	}
 	inters struct {
 		AccessChange, Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant,
@@ -5988,7 +6132,8 @@ type (
 		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
 		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
 		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, SeatAssignment,
-		ServicePrincipal, SignupInvite, SlugReservation, Subscription []ent.Interceptor
+		ServicePrincipal, SignupInvite, SignupWaitlistEntry, SlugReservation,
+		Subscription []ent.Interceptor
 	}
 )
 

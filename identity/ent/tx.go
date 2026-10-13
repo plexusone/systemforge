@@ -74,6 +74,8 @@ type Tx struct {
 	ServicePrincipal *ServicePrincipalClient
 	// SignupInvite is the client for interacting with the SignupInvite builders.
 	SignupInvite *SignupInviteClient
+	// SignupWaitlistEntry is the client for interacting with the SignupWaitlistEntry builders.
+	SignupWaitlistEntry *SignupWaitlistEntryClient
 	// SlugReservation is the client for interacting with the SlugReservation builders.
 	SlugReservation *SlugReservationClient
 	// Subscription is the client for interacting with the Subscription builders.
@@ -239,6 +241,7 @@ func (tx *Tx) init() {
 	tx.SeatAssignment = NewSeatAssignmentClient(tx.config)
 	tx.ServicePrincipal = NewServicePrincipalClient(tx.config)
 	tx.SignupInvite = NewSignupInviteClient(tx.config)
+	tx.SignupWaitlistEntry = NewSignupWaitlistEntryClient(tx.config)
 	tx.SlugReservation = NewSlugReservationClient(tx.config)
 	tx.Subscription = NewSubscriptionClient(tx.config)
 }

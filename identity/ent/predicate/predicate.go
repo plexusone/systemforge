@@ -96,6 +96,9 @@ type ServicePrincipal func(*sql.Selector)
 // SignupInvite is the predicate function for signupinvite builders.
 type SignupInvite func(*sql.Selector)
 
+// SignupWaitlistEntry is the predicate function for signupwaitlistentry builders.
+type SignupWaitlistEntry func(*sql.Selector)
+
 // SlugReservation is the predicate function for slugreservation builders.
 type SlugReservation func(*sql.Selector)
 

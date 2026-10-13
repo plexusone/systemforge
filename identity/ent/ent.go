@@ -42,6 +42,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
+	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 )
@@ -134,6 +135,7 @@ func checkColumn(t, c string) error {
 			seatassignment.Table:      seatassignment.ValidColumn,
 			serviceprincipal.Table:    serviceprincipal.ValidColumn,
 			signupinvite.Table:        signupinvite.ValidColumn,
+			signupwaitlistentry.Table: signupwaitlistentry.ValidColumn,
 			slugreservation.Table:     slugreservation.ValidColumn,
 			subscription.Table:        subscription.ValidColumn,
 		})

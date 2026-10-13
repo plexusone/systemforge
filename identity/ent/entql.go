@@ -34,6 +34,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
+	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 
@@ -45,7 +46,7 @@ import (
 
 // schemaGraph holds a representation of ent/schema at runtime.
 var schemaGraph = func() *sqlgraph.Schema {
-	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 32)}
+	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 33)}
 	graph.Nodes[0] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   accesschange.Table,
@@ -767,6 +768,24 @@ var schemaGraph = func() *sqlgraph.Schema {
 	}
 	graph.Nodes[30] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
+			Table:   signupwaitlistentry.Table,
+			Columns: signupwaitlistentry.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeUUID,
+				Column: signupwaitlistentry.FieldID,
+			},
+		},
+		Type: "SignupWaitlistEntry",
+		Fields: map[string]*sqlgraph.FieldSpec{
+			signupwaitlistentry.FieldCreatedAt:      {Type: field.TypeTime, Column: signupwaitlistentry.FieldCreatedAt},
+			signupwaitlistentry.FieldUpdatedAt:      {Type: field.TypeTime, Column: signupwaitlistentry.FieldUpdatedAt},
+			signupwaitlistentry.FieldEmail:          {Type: field.TypeString, Column: signupwaitlistentry.FieldEmail},
+			signupwaitlistentry.FieldConsentVersion: {Type: field.TypeString, Column: signupwaitlistentry.FieldConsentVersion},
+			signupwaitlistentry.FieldConsentText:    {Type: field.TypeString, Column: signupwaitlistentry.FieldConsentText},
+		},
+	}
+	graph.Nodes[31] = &sqlgraph.Node{
+		NodeSpec: sqlgraph.NodeSpec{
 			Table:   slugreservation.Table,
 			Columns: slugreservation.Columns,
 			ID: &sqlgraph.FieldSpec{
@@ -785,7 +804,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			slugreservation.FieldExpiresAt:                  {Type: field.TypeTime, Column: slugreservation.FieldExpiresAt},
 		},
 	}
-	graph.Nodes[31] = &sqlgraph.Node{
+	graph.Nodes[32] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   subscription.Table,
 			Columns: subscription.Columns,
@@ -5650,6 +5669,71 @@ func (f *SignupInviteFilter) WhereRedeemedBy(p entql.ValueP) {
 }
 
 // addPredicate implements the predicateAdder interface.
+func (_q *SignupWaitlistEntryQuery) addPredicate(pred func(s *sql.Selector)) {
+	_q.predicates = append(_q.predicates, pred)
+}
+
+// Filter returns a Filter implementation to apply filters on the SignupWaitlistEntryQuery builder.
+func (_q *SignupWaitlistEntryQuery) Filter() *SignupWaitlistEntryFilter {
+	return &SignupWaitlistEntryFilter{config: _q.config, predicateAdder: _q}
+}
+
+// addPredicate implements the predicateAdder interface.
+func (m *SignupWaitlistEntryMutation) addPredicate(pred func(s *sql.Selector)) {
+	m.predicates = append(m.predicates, pred)
+}
+
+// Filter returns an entql.Where implementation to apply filters on the SignupWaitlistEntryMutation builder.
+func (m *SignupWaitlistEntryMutation) Filter() *SignupWaitlistEntryFilter {
+	return &SignupWaitlistEntryFilter{config: m.config, predicateAdder: m}
+}
+
+// SignupWaitlistEntryFilter provides a generic filtering capability at runtime for SignupWaitlistEntryQuery.
+type SignupWaitlistEntryFilter struct {
+	predicateAdder
+	config
+}
+
+// Where applies the entql predicate on the query filter.
+func (f *SignupWaitlistEntryFilter) Where(p entql.P) {
+	f.addPredicate(func(s *sql.Selector) {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[30].Type, p, s); err != nil {
+			s.AddError(err)
+		}
+	})
+}
+
+// WhereID applies the entql [16]byte predicate on the id field.
+func (f *SignupWaitlistEntryFilter) WhereID(p entql.ValueP) {
+	f.Where(p.Field(signupwaitlistentry.FieldID))
+}
+
+// WhereCreatedAt applies the entql time.Time predicate on the created_at field.
+func (f *SignupWaitlistEntryFilter) WhereCreatedAt(p entql.TimeP) {
+	f.Where(p.Field(signupwaitlistentry.FieldCreatedAt))
+}
+
+// WhereUpdatedAt applies the entql time.Time predicate on the updated_at field.
+func (f *SignupWaitlistEntryFilter) WhereUpdatedAt(p entql.TimeP) {
+	f.Where(p.Field(signupwaitlistentry.FieldUpdatedAt))
+}
+
+// WhereEmail applies the entql string predicate on the email field.
+func (f *SignupWaitlistEntryFilter) WhereEmail(p entql.StringP) {
+	f.Where(p.Field(signupwaitlistentry.FieldEmail))
+}
+
+// WhereConsentVersion applies the entql string predicate on the consent_version field.
+func (f *SignupWaitlistEntryFilter) WhereConsentVersion(p entql.StringP) {
+	f.Where(p.Field(signupwaitlistentry.FieldConsentVersion))
+}
+
+// WhereConsentText applies the entql string predicate on the consent_text field.
+func (f *SignupWaitlistEntryFilter) WhereConsentText(p entql.StringP) {
+	f.Where(p.Field(signupwaitlistentry.FieldConsentText))
+}
+
+// addPredicate implements the predicateAdder interface.
 func (_q *SlugReservationQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
 }
@@ -5678,7 +5762,7 @@ type SlugReservationFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SlugReservationFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[30].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[31].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5781,7 +5865,7 @@ type SubscriptionFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SubscriptionFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[31].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[32].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})

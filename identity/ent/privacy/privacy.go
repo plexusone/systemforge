@@ -831,6 +831,30 @@ func (f SignupInviteMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mu
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.SignupInviteMutation", m)
 }
 
+// The SignupWaitlistEntryQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type SignupWaitlistEntryQueryRuleFunc func(context.Context, *ent.SignupWaitlistEntryQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f SignupWaitlistEntryQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SignupWaitlistEntryQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.SignupWaitlistEntryQuery", q)
+}
+
+// The SignupWaitlistEntryMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type SignupWaitlistEntryMutationRuleFunc func(context.Context, *ent.SignupWaitlistEntryMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f SignupWaitlistEntryMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.SignupWaitlistEntryMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.SignupWaitlistEntryMutation", m)
+}
+
 // The SlugReservationQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type SlugReservationQueryRuleFunc func(context.Context, *ent.SlugReservationQuery) error
@@ -974,6 +998,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.SignupInviteQuery:
 		return q.Filter(), nil
+	case *ent.SignupWaitlistEntryQuery:
+		return q.Filter(), nil
 	case *ent.SlugReservationQuery:
 		return q.Filter(), nil
 	case *ent.SubscriptionQuery:
@@ -1044,6 +1070,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.ServicePrincipalMutation:
 		return m.Filter(), nil
 	case *ent.SignupInviteMutation:
+		return m.Filter(), nil
+	case *ent.SignupWaitlistEntryMutation:
 		return m.Filter(), nil
 	case *ent.SlugReservationMutation:
 		return m.Filter(), nil

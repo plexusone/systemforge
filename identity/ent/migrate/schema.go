@@ -1590,6 +1590,21 @@ var (
 			},
 		},
 	}
+	// SfSignupWaitlistColumns holds the columns for the "sf_signup_waitlist" table.
+	SfSignupWaitlistColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "email", Type: field.TypeString, Unique: true, Size: 320},
+		{Name: "consent_version", Type: field.TypeString, Size: 64},
+		{Name: "consent_text", Type: field.TypeString, Size: 2000},
+	}
+	// SfSignupWaitlistTable holds the schema information for the "sf_signup_waitlist" table.
+	SfSignupWaitlistTable = &schema.Table{
+		Name:       "sf_signup_waitlist",
+		Columns:    SfSignupWaitlistColumns,
+		PrimaryKey: []*schema.Column{SfSignupWaitlistColumns[0]},
+	}
 	// SfSlugReservationsColumns holds the columns for the "sf_slug_reservations" table.
 	SfSlugReservationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1744,6 +1759,7 @@ var (
 		SfSeatAssignmentsTable,
 		SfServicePrincipalsTable,
 		SfSignupInvitesTable,
+		SfSignupWaitlistTable,
 		SfSlugReservationsTable,
 		SfSubscriptionsTable,
 	}
@@ -1880,6 +1896,9 @@ func init() {
 	}
 	SfSignupInvitesTable.Annotation = &entsql.Annotation{
 		Table: "sf_signup_invites",
+	}
+	SfSignupWaitlistTable.Annotation = &entsql.Annotation{
+		Table: "sf_signup_waitlist",
 	}
 	SfSlugReservationsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfSlugReservationsTable.ForeignKeys[1].RefTable = SfOrganizationsTable
