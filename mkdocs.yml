@@ -58,6 +58,7 @@ nav:
     - Personal to Team Conversion: guides/personal-to-team.md
     - Access-Change Invalidation: guides/access-change-invalidation.md
     - Authorization Mode: guides/authorization-mode.md
+    - Connections to External Services: guides/connections.md
   - Identity:
     - Overview: identity/overview.md
     - Users: identity/users.md

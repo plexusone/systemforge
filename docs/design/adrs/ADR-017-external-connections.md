@@ -108,17 +108,20 @@ installations) where the service offers them.
    in its API and SDK:
 
    ```text
-   GET    /api/v1/connections
-   POST   /api/v1/connections
-   GET    /api/v1/connections/{id}
-   PATCH  /api/v1/connections/{id}
-   POST   /api/v1/connections/{id}/test
-   POST   /api/v1/connections/{id}/authorize
-   GET    /api/v1/connections/callback
-   POST   /api/v1/connections/{id}/credential
-   DELETE /api/v1/connections/{id}
    GET    /api/v1/providers
+   GET    /api/v1/organizations/{org}/connections
+   POST   /api/v1/organizations/{org}/connections
+   GET    /api/v1/organizations/{org}/connections/{id}
+   PATCH  /api/v1/organizations/{org}/connections/{id}
+   POST   /api/v1/organizations/{org}/connections/{id}/test
+   DELETE /api/v1/organizations/{org}/connections/{id}
    ```
+
+   The organization is in the path: it is the row-level security tenant of
+   the request. Reads need the scope `systemforge:connections:read` and
+   changes `systemforge:connections:write`. OAuth authorization, its
+   callback and credential replacement join these routes when connectionforge
+   supports them.
 
    In process, an application asks the `connections` package for an
    authenticated `*http.Client` and hands it to the provider's SDK. No API
