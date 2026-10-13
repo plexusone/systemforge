@@ -4,16 +4,21 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	cf "github.com/plexusone/connectionforge"
 	"github.com/plexusone/connectionforge/provider"
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/connections"
+	"github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/identity/systemauthsvc"
 )
@@ -120,5 +125,99 @@ func TestConnectionsConfigErrors(t *testing.T) {
 	cfg.Database = nil
 	if _, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{Dev: true, Logger: discardLogger()}); err == nil {
 		t.Error("connections without a database accepted")
+	}
+}
+
+// TestConnectionGrantsComposeWithTheAuthorizer checks the whole path with the
+// real grant service and role-based provider: a member may only view a
+// connection until a contributor grant lets them use it, and revoking the
+// grant takes that back.
+func TestConnectionGrantsComposeWithTheAuthorizer(t *testing.T) {
+	ctx := t.Context()
+	cfg := connectionsConfig(t)
+	if err := systemauthsvc.Migrate(ctx, cfg); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	vocab := authz.NewVocabularyRegistry()
+	s, err := systemauthsvc.New(ctx, cfg, systemauthsvc.Options{
+		SigningKey: testKey(t), Logger: discardLogger(), Migrate: true, Vocabularies: vocab,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeService(t, s)
+	conns := s.Connections()
+	if conns == nil || conns.Grants == nil {
+		t.Fatal("connections or the grant service are missing")
+	}
+	if _, ok := vocab.Get(connections.App); !ok {
+		t.Fatal("the connections vocabulary was not registered")
+	}
+
+	db := s.EntClient()
+	person := func() uuid.UUID {
+		p, err := db.Principal.Create().SetType(principal.TypeHuman).
+			SetIdentifier(uuid.NewString() + "@example.com").SetDisplayName("P").Save(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return p.ID
+	}
+	owner, member := person(), person()
+	orgs := organization.NewService(db)
+	org, err := orgs.Create(ctx, organization.CreateOrganizationInput{
+		Name: "Org", Slug: "org-" + uuid.NewString()[:8], OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &owner,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.PrincipalMembership.Create().SetPrincipalID(member).SetOrganizationID(org.ID).
+		SetRole("member").Save(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	connID := uuid.New()
+	conn := cf.Connection{ID: connID.String(), Owner: connections.OwnerFor(org.ID), Revision: 1}
+	who := cf.Principal{Kind: cf.PrincipalUser, ID: member.String()}
+	allowed := func(a cf.Action) bool {
+		t.Helper()
+		err := conns.Authorizer.Allowed(ctx, who, a, conn)
+		switch {
+		case err == nil:
+			return true
+		case errors.Is(err, cf.ErrDenied):
+			return false
+		}
+		t.Fatalf("authorize %s: %v", a, err)
+		return false
+	}
+	if !allowed(cf.ActionView) || allowed(cf.ActionUse) || allowed(cf.ActionManage) {
+		t.Fatal("a member should only view a connection before any grant")
+	}
+
+	ref := authz.ResourceRef{Type: string(connections.ResourceType), ID: connID.String(), OrganizationID: org.ID}
+	if err := conns.Grants.GrantResourceRole(ctx, member, ref, "contributor", owner); err != nil {
+		t.Fatalf("grant: %v", err)
+	}
+	if !allowed(cf.ActionUse) || allowed(cf.ActionManage) {
+		t.Fatal("a contributor grant should allow use, not manage")
+	}
+	if err := conns.Grants.GrantResourceRole(ctx, member, ref, "maintainer", owner); err != nil {
+		t.Fatal(err)
+	}
+	if !allowed(cf.ActionManage) || !allowed(cf.ActionShare) {
+		t.Fatal("a maintainer grant should allow manage and share")
+	}
+	if err := conns.Grants.RevokeResourceRole(ctx, member, ref); err != nil {
+		t.Fatal(err)
+	}
+	if allowed(cf.ActionUse) {
+		t.Fatal("use survived the revoke")
+	}
+
+	// A resource type outside a registered application is refused.
+	bad := authz.ResourceRef{Type: "unregistered_thing", ID: connID.String(), OrganizationID: org.ID}
+	if err := conns.Grants.GrantResourceRole(ctx, member, bad, "viewer", owner); err == nil {
+		t.Fatal("a grant on an unregistered application's type was accepted")
 	}
 }

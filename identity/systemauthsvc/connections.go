@@ -45,6 +45,11 @@ func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) 
 	if err != nil {
 		return err
 	}
+	// Grants on a connection are accepted when the deployment restricts them
+	// to registered applications' resource types, so register ours.
+	if err := connections.RegisterVocabulary(opts.Vocabularies); err != nil {
+		return fmt.Errorf("systemauthsvc: connections vocabulary: %w", err)
+	}
 	s.authz, err = mode.New(ctx, c.Authz, mode.Deps{
 		DB:       s.client,
 		Registry: opts.Vocabularies,
@@ -61,6 +66,7 @@ func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) 
 		Dialect:    sqlstore.Dialect(s.dialect),
 		Keys:       s.keys,
 		Authorizer: s.authz.Provider,
+		Grants:     s.authz.Provider,
 		Vault:      v,
 		Logger:     s.logger,
 		Providers:  opts.Providers,
