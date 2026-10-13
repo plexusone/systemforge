@@ -520,6 +520,34 @@
       "additionalProperties": false,
       "type": "object",
       "description": "Managed principal configuration (humans without an email)"
+    },
+    "connections": {
+      "properties": {
+        "keys_dir": {
+          "type": "string",
+          "description": "Directory holding the key ring and its registry"
+        },
+        "vault": {
+          "type": "string",
+          "description": "omnivault URI of the deployment secret store such as env:// or file:///dir"
+        },
+        "root_key": {
+          "type": "string",
+          "description": "Path in the vault of the key ring's 32-byte root key"
+        },
+        "allow_private_egress": {
+          "type": "boolean",
+          "description": "Development only: allow provider requests to private addresses and plain HTTP"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "keys_dir",
+        "vault",
+        "root_key"
+      ],
+      "description": "Connections to external services (ADR-017)"
     }
   },
   "additionalProperties": false,

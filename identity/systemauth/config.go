@@ -2,6 +2,7 @@ package systemauth
 
 import (
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"time"
 
@@ -50,6 +51,45 @@ type Config struct {
 
 	// ManagedPrincipals configures managed principals; nil disables them.
 	ManagedPrincipals *ManagedPrincipalsConfig `json:"managed_principals,omitempty" yaml:"managed_principals,omitempty" jsonschema:"description=Managed principal configuration (humans without an email)"`
+
+	// Connections enables organizations' connections to external services
+	// (ADR-017); nil disables them. It needs a database.
+	Connections *ConnectionsConfig `json:"connections,omitempty" yaml:"connections,omitempty" jsonschema:"description=Connections to external services (ADR-017)"`
+}
+
+// ConnectionsConfig configures connections to external services. Their
+// credentials are sealed under keys kept in KeysDir, whose root key and the
+// deployment's own secrets (such as OAuth client secrets) are read from the
+// vault.
+type ConnectionsConfig struct {
+	// KeysDir holds the key ring and its registry. Back it up; without it
+	// stored credentials cannot be read.
+	KeysDir string `json:"keys_dir" yaml:"keys_dir" jsonschema:"required,description=Directory holding the key ring and its registry"`
+
+	// Vault is an omnivault URI for the deployment's secret store, for
+	// example env:// or file:///etc/systemauth/secrets.
+	Vault string `json:"vault" yaml:"vault" jsonschema:"required,description=omnivault URI of the deployment secret store such as env:// or file:///dir"`
+
+	// RootKey is the path in the vault of the key ring's root key: 32 bytes
+	// as base64 or hex, for example the output of openssl rand -base64 32.
+	RootKey string `json:"root_key" yaml:"root_key" jsonschema:"required,description=Path in the vault of the key ring's 32-byte root key"`
+
+	// AllowPrivateEgress lets provider requests reach private and loopback
+	// addresses and plain HTTP. For development against local fakes only.
+	AllowPrivateEgress bool `json:"allow_private_egress,omitempty" yaml:"allow_private_egress,omitempty" jsonschema:"description=Development only: allow provider requests to private addresses and plain HTTP"`
+}
+
+// ErrInvalidConnectionsConfig is returned for an incomplete connections
+// section.
+var ErrInvalidConnectionsConfig = errors.New("systemauth: invalid connections configuration")
+
+func (c *ConnectionsConfig) validate() error {
+	for name, v := range map[string]string{"keys_dir": c.KeysDir, "vault": c.Vault, "root_key": c.RootKey} {
+		if v == "" {
+			return fmt.Errorf("%w: %s is required", ErrInvalidConnectionsConfig, name)
+		}
+	}
+	return nil
 }
 
 // SocialLoginConfig configures upstream social login (GitHub, Google).
@@ -382,6 +422,11 @@ func (c *Config) Validate() error {
 	}
 	if c.SocialLogin != nil {
 		if err := c.SocialLogin.validate(); err != nil {
+			return err
+		}
+	}
+	if c.Connections != nil {
+		if err := c.Connections.validate(); err != nil {
 			return err
 		}
 	}
