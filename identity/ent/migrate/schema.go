@@ -1560,6 +1560,36 @@ var (
 			},
 		},
 	}
+	// SfSignupInvitesColumns holds the columns for the "sf_signup_invites" table.
+	SfSignupInvitesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "email", Type: field.TypeString, Unique: true},
+		{Name: "note", Type: field.TypeString, Nullable: true, Size: 500},
+		{Name: "invited_by", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "redeemed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "redeemed_by", Type: field.TypeUUID, Nullable: true},
+	}
+	// SfSignupInvitesTable holds the schema information for the "sf_signup_invites" table.
+	SfSignupInvitesTable = &schema.Table{
+		Name:       "sf_signup_invites",
+		Columns:    SfSignupInvitesColumns,
+		PrimaryKey: []*schema.Column{SfSignupInvitesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "signupinvite_redeemed_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfSignupInvitesColumns[7]},
+			},
+			{
+				Name:    "signupinvite_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfSignupInvitesColumns[6]},
+			},
+		},
+	}
 	// SfSlugReservationsColumns holds the columns for the "sf_slug_reservations" table.
 	SfSlugReservationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1713,6 +1743,7 @@ var (
 		SfResourceGrantsTable,
 		SfSeatAssignmentsTable,
 		SfServicePrincipalsTable,
+		SfSignupInvitesTable,
 		SfSlugReservationsTable,
 		SfSubscriptionsTable,
 	}
@@ -1846,6 +1877,9 @@ func init() {
 	SfServicePrincipalsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfServicePrincipalsTable.Annotation = &entsql.Annotation{
 		Table: "sf_service_principals",
+	}
+	SfSignupInvitesTable.Annotation = &entsql.Annotation{
+		Table: "sf_signup_invites",
 	}
 	SfSlugReservationsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfSlugReservationsTable.ForeignKeys[1].RefTable = SfOrganizationsTable

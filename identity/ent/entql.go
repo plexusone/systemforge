@@ -33,6 +33,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
+	"github.com/plexusone/systemforge/identity/ent/signupinvite"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 
@@ -44,7 +45,7 @@ import (
 
 // schemaGraph holds a representation of ent/schema at runtime.
 var schemaGraph = func() *sqlgraph.Schema {
-	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 31)}
+	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 32)}
 	graph.Nodes[0] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   accesschange.Table,
@@ -745,6 +746,27 @@ var schemaGraph = func() *sqlgraph.Schema {
 	}
 	graph.Nodes[29] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
+			Table:   signupinvite.Table,
+			Columns: signupinvite.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeUUID,
+				Column: signupinvite.FieldID,
+			},
+		},
+		Type: "SignupInvite",
+		Fields: map[string]*sqlgraph.FieldSpec{
+			signupinvite.FieldCreatedAt:  {Type: field.TypeTime, Column: signupinvite.FieldCreatedAt},
+			signupinvite.FieldUpdatedAt:  {Type: field.TypeTime, Column: signupinvite.FieldUpdatedAt},
+			signupinvite.FieldEmail:      {Type: field.TypeString, Column: signupinvite.FieldEmail},
+			signupinvite.FieldNote:       {Type: field.TypeString, Column: signupinvite.FieldNote},
+			signupinvite.FieldInvitedBy:  {Type: field.TypeString, Column: signupinvite.FieldInvitedBy},
+			signupinvite.FieldExpiresAt:  {Type: field.TypeTime, Column: signupinvite.FieldExpiresAt},
+			signupinvite.FieldRedeemedAt: {Type: field.TypeTime, Column: signupinvite.FieldRedeemedAt},
+			signupinvite.FieldRedeemedBy: {Type: field.TypeUUID, Column: signupinvite.FieldRedeemedBy},
+		},
+	}
+	graph.Nodes[30] = &sqlgraph.Node{
+		NodeSpec: sqlgraph.NodeSpec{
 			Table:   slugreservation.Table,
 			Columns: slugreservation.Columns,
 			ID: &sqlgraph.FieldSpec{
@@ -763,7 +785,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			slugreservation.FieldExpiresAt:                  {Type: field.TypeTime, Column: slugreservation.FieldExpiresAt},
 		},
 	}
-	graph.Nodes[30] = &sqlgraph.Node{
+	graph.Nodes[31] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   subscription.Table,
 			Columns: subscription.Columns,
@@ -5548,6 +5570,86 @@ func (f *ServicePrincipalFilter) WhereHasCreatorWith(preds ...predicate.Principa
 }
 
 // addPredicate implements the predicateAdder interface.
+func (_q *SignupInviteQuery) addPredicate(pred func(s *sql.Selector)) {
+	_q.predicates = append(_q.predicates, pred)
+}
+
+// Filter returns a Filter implementation to apply filters on the SignupInviteQuery builder.
+func (_q *SignupInviteQuery) Filter() *SignupInviteFilter {
+	return &SignupInviteFilter{config: _q.config, predicateAdder: _q}
+}
+
+// addPredicate implements the predicateAdder interface.
+func (m *SignupInviteMutation) addPredicate(pred func(s *sql.Selector)) {
+	m.predicates = append(m.predicates, pred)
+}
+
+// Filter returns an entql.Where implementation to apply filters on the SignupInviteMutation builder.
+func (m *SignupInviteMutation) Filter() *SignupInviteFilter {
+	return &SignupInviteFilter{config: m.config, predicateAdder: m}
+}
+
+// SignupInviteFilter provides a generic filtering capability at runtime for SignupInviteQuery.
+type SignupInviteFilter struct {
+	predicateAdder
+	config
+}
+
+// Where applies the entql predicate on the query filter.
+func (f *SignupInviteFilter) Where(p entql.P) {
+	f.addPredicate(func(s *sql.Selector) {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[29].Type, p, s); err != nil {
+			s.AddError(err)
+		}
+	})
+}
+
+// WhereID applies the entql [16]byte predicate on the id field.
+func (f *SignupInviteFilter) WhereID(p entql.ValueP) {
+	f.Where(p.Field(signupinvite.FieldID))
+}
+
+// WhereCreatedAt applies the entql time.Time predicate on the created_at field.
+func (f *SignupInviteFilter) WhereCreatedAt(p entql.TimeP) {
+	f.Where(p.Field(signupinvite.FieldCreatedAt))
+}
+
+// WhereUpdatedAt applies the entql time.Time predicate on the updated_at field.
+func (f *SignupInviteFilter) WhereUpdatedAt(p entql.TimeP) {
+	f.Where(p.Field(signupinvite.FieldUpdatedAt))
+}
+
+// WhereEmail applies the entql string predicate on the email field.
+func (f *SignupInviteFilter) WhereEmail(p entql.StringP) {
+	f.Where(p.Field(signupinvite.FieldEmail))
+}
+
+// WhereNote applies the entql string predicate on the note field.
+func (f *SignupInviteFilter) WhereNote(p entql.StringP) {
+	f.Where(p.Field(signupinvite.FieldNote))
+}
+
+// WhereInvitedBy applies the entql string predicate on the invited_by field.
+func (f *SignupInviteFilter) WhereInvitedBy(p entql.StringP) {
+	f.Where(p.Field(signupinvite.FieldInvitedBy))
+}
+
+// WhereExpiresAt applies the entql time.Time predicate on the expires_at field.
+func (f *SignupInviteFilter) WhereExpiresAt(p entql.TimeP) {
+	f.Where(p.Field(signupinvite.FieldExpiresAt))
+}
+
+// WhereRedeemedAt applies the entql time.Time predicate on the redeemed_at field.
+func (f *SignupInviteFilter) WhereRedeemedAt(p entql.TimeP) {
+	f.Where(p.Field(signupinvite.FieldRedeemedAt))
+}
+
+// WhereRedeemedBy applies the entql [16]byte predicate on the redeemed_by field.
+func (f *SignupInviteFilter) WhereRedeemedBy(p entql.ValueP) {
+	f.Where(p.Field(signupinvite.FieldRedeemedBy))
+}
+
+// addPredicate implements the predicateAdder interface.
 func (_q *SlugReservationQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
 }
@@ -5576,7 +5678,7 @@ type SlugReservationFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SlugReservationFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[29].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[30].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5679,7 +5781,7 @@ type SubscriptionFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SubscriptionFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[30].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[31].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})

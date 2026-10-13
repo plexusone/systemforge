@@ -45,6 +45,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
+	"github.com/plexusone/systemforge/identity/ent/signupinvite"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 
@@ -114,6 +115,8 @@ type Client struct {
 	SeatAssignment *SeatAssignmentClient
 	// ServicePrincipal is the client for interacting with the ServicePrincipal builders.
 	ServicePrincipal *ServicePrincipalClient
+	// SignupInvite is the client for interacting with the SignupInvite builders.
+	SignupInvite *SignupInviteClient
 	// SlugReservation is the client for interacting with the SlugReservation builders.
 	SlugReservation *SlugReservationClient
 	// Subscription is the client for interacting with the Subscription builders.
@@ -158,6 +161,7 @@ func (c *Client) init() {
 	c.ResourceGrant = NewResourceGrantClient(c.config)
 	c.SeatAssignment = NewSeatAssignmentClient(c.config)
 	c.ServicePrincipal = NewServicePrincipalClient(c.config)
+	c.SignupInvite = NewSignupInviteClient(c.config)
 	c.SlugReservation = NewSlugReservationClient(c.config)
 	c.Subscription = NewSubscriptionClient(c.config)
 }
@@ -281,6 +285,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ResourceGrant:       NewResourceGrantClient(cfg),
 		SeatAssignment:      NewSeatAssignmentClient(cfg),
 		ServicePrincipal:    NewServicePrincipalClient(cfg),
+		SignupInvite:        NewSignupInviteClient(cfg),
 		SlugReservation:     NewSlugReservationClient(cfg),
 		Subscription:        NewSubscriptionClient(cfg),
 	}, nil
@@ -331,6 +336,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ResourceGrant:       NewResourceGrantClient(cfg),
 		SeatAssignment:      NewSeatAssignmentClient(cfg),
 		ServicePrincipal:    NewServicePrincipalClient(cfg),
+		SignupInvite:        NewSignupInviteClient(cfg),
 		SlugReservation:     NewSlugReservationClient(cfg),
 		Subscription:        NewSubscriptionClient(cfg),
 	}, nil
@@ -368,7 +374,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
 		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
 		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.SeatAssignment,
-		c.ServicePrincipal, c.SlugReservation, c.Subscription,
+		c.ServicePrincipal, c.SignupInvite, c.SlugReservation, c.Subscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -384,7 +390,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
 		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
 		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.SeatAssignment,
-		c.ServicePrincipal, c.SlugReservation, c.Subscription,
+		c.ServicePrincipal, c.SignupInvite, c.SlugReservation, c.Subscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -451,6 +457,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.SeatAssignment.mutate(ctx, m)
 	case *ServicePrincipalMutation:
 		return c.ServicePrincipal.mutate(ctx, m)
+	case *SignupInviteMutation:
+		return c.SignupInvite.mutate(ctx, m)
 	case *SlugReservationMutation:
 		return c.SlugReservation.mutate(ctx, m)
 	case *SubscriptionMutation:
@@ -5517,6 +5525,139 @@ func (c *ServicePrincipalClient) mutate(ctx context.Context, m *ServicePrincipal
 	}
 }
 
+// SignupInviteClient is a client for the SignupInvite schema.
+type SignupInviteClient struct {
+	config
+}
+
+// NewSignupInviteClient returns a client for the SignupInvite from the given config.
+func NewSignupInviteClient(c config) *SignupInviteClient {
+	return &SignupInviteClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `signupinvite.Hooks(f(g(h())))`.
+func (c *SignupInviteClient) Use(hooks ...Hook) {
+	c.hooks.SignupInvite = append(c.hooks.SignupInvite, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `signupinvite.Intercept(f(g(h())))`.
+func (c *SignupInviteClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SignupInvite = append(c.inters.SignupInvite, interceptors...)
+}
+
+// Create returns a builder for creating a SignupInvite entity.
+func (c *SignupInviteClient) Create() *SignupInviteCreate {
+	mutation := newSignupInviteMutation(c.config, OpCreate)
+	return &SignupInviteCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SignupInvite entities.
+func (c *SignupInviteClient) CreateBulk(builders ...*SignupInviteCreate) *SignupInviteCreateBulk {
+	return &SignupInviteCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SignupInviteClient) MapCreateBulk(slice any, setFunc func(*SignupInviteCreate, int)) *SignupInviteCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SignupInviteCreateBulk{err: fmt.Errorf("calling to SignupInviteClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SignupInviteCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SignupInviteCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SignupInvite.
+func (c *SignupInviteClient) Update() *SignupInviteUpdate {
+	mutation := newSignupInviteMutation(c.config, OpUpdate)
+	return &SignupInviteUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SignupInviteClient) UpdateOne(_m *SignupInvite) *SignupInviteUpdateOne {
+	mutation := newSignupInviteMutation(c.config, OpUpdateOne, withSignupInvite(_m))
+	return &SignupInviteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SignupInviteClient) UpdateOneID(id uuid.UUID) *SignupInviteUpdateOne {
+	mutation := newSignupInviteMutation(c.config, OpUpdateOne, withSignupInviteID(id))
+	return &SignupInviteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SignupInvite.
+func (c *SignupInviteClient) Delete() *SignupInviteDelete {
+	mutation := newSignupInviteMutation(c.config, OpDelete)
+	return &SignupInviteDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SignupInviteClient) DeleteOne(_m *SignupInvite) *SignupInviteDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SignupInviteClient) DeleteOneID(id uuid.UUID) *SignupInviteDeleteOne {
+	builder := c.Delete().Where(signupinvite.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SignupInviteDeleteOne{builder}
+}
+
+// Query returns a query builder for SignupInvite.
+func (c *SignupInviteClient) Query() *SignupInviteQuery {
+	return &SignupInviteQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSignupInvite},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a SignupInvite entity by its id.
+func (c *SignupInviteClient) Get(ctx context.Context, id uuid.UUID) (*SignupInvite, error) {
+	return c.Query().Where(signupinvite.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SignupInviteClient) GetX(ctx context.Context, id uuid.UUID) *SignupInvite {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *SignupInviteClient) Hooks() []Hook {
+	return c.hooks.SignupInvite
+}
+
+// Interceptors returns the client interceptors.
+func (c *SignupInviteClient) Interceptors() []Interceptor {
+	return c.inters.SignupInvite
+}
+
+func (c *SignupInviteClient) mutate(ctx context.Context, m *SignupInviteMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SignupInviteCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SignupInviteUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SignupInviteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SignupInviteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SignupInvite mutation op: %q", m.Op())
+	}
+}
+
 // SlugReservationClient is a client for the SlugReservation schema.
 type SlugReservationClient struct {
 	config
@@ -5839,7 +5980,7 @@ type (
 		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
 		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
 		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, SeatAssignment,
-		ServicePrincipal, SlugReservation, Subscription []ent.Hook
+		ServicePrincipal, SignupInvite, SlugReservation, Subscription []ent.Hook
 	}
 	inters struct {
 		AccessChange, Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant,
@@ -5847,7 +5988,7 @@ type (
 		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
 		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
 		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, SeatAssignment,
-		ServicePrincipal, SlugReservation, Subscription []ent.Interceptor
+		ServicePrincipal, SignupInvite, SlugReservation, Subscription []ent.Interceptor
 	}
 )
 

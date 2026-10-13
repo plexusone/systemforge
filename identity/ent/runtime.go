@@ -36,6 +36,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/schema"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
+	"github.com/plexusone/systemforge/identity/ent/signupinvite"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
 )
@@ -959,6 +960,37 @@ func init() {
 	serviceprincipalDescID := serviceprincipalMixinFields0[0].Descriptor()
 	// serviceprincipal.DefaultID holds the default value on creation for the id field.
 	serviceprincipal.DefaultID = serviceprincipalDescID.Default.(func() uuid.UUID)
+	signupinviteMixin := schema.SignupInvite{}.Mixin()
+	signupinviteMixinFields0 := signupinviteMixin[0].Fields()
+	_ = signupinviteMixinFields0
+	signupinviteFields := schema.SignupInvite{}.Fields()
+	_ = signupinviteFields
+	// signupinviteDescCreatedAt is the schema descriptor for created_at field.
+	signupinviteDescCreatedAt := signupinviteMixinFields0[1].Descriptor()
+	// signupinvite.DefaultCreatedAt holds the default value on creation for the created_at field.
+	signupinvite.DefaultCreatedAt = signupinviteDescCreatedAt.Default.(func() time.Time)
+	// signupinviteDescUpdatedAt is the schema descriptor for updated_at field.
+	signupinviteDescUpdatedAt := signupinviteMixinFields0[2].Descriptor()
+	// signupinvite.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	signupinvite.DefaultUpdatedAt = signupinviteDescUpdatedAt.Default.(func() time.Time)
+	// signupinvite.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	signupinvite.UpdateDefaultUpdatedAt = signupinviteDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// signupinviteDescEmail is the schema descriptor for email field.
+	signupinviteDescEmail := signupinviteFields[0].Descriptor()
+	// signupinvite.EmailValidator is a validator for the "email" field. It is called by the builders before save.
+	signupinvite.EmailValidator = signupinviteDescEmail.Validators[0].(func(string) error)
+	// signupinviteDescNote is the schema descriptor for note field.
+	signupinviteDescNote := signupinviteFields[1].Descriptor()
+	// signupinvite.NoteValidator is a validator for the "note" field. It is called by the builders before save.
+	signupinvite.NoteValidator = signupinviteDescNote.Validators[0].(func(string) error)
+	// signupinviteDescInvitedBy is the schema descriptor for invited_by field.
+	signupinviteDescInvitedBy := signupinviteFields[2].Descriptor()
+	// signupinvite.InvitedByValidator is a validator for the "invited_by" field. It is called by the builders before save.
+	signupinvite.InvitedByValidator = signupinviteDescInvitedBy.Validators[0].(func(string) error)
+	// signupinviteDescID is the schema descriptor for id field.
+	signupinviteDescID := signupinviteMixinFields0[0].Descriptor()
+	// signupinvite.DefaultID holds the default value on creation for the id field.
+	signupinvite.DefaultID = signupinviteDescID.Default.(func() uuid.UUID)
 	slugreservationMixin := schema.SlugReservation{}.Mixin()
 	slugreservationMixinFields0 := slugreservationMixin[0].Fields()
 	_ = slugreservationMixinFields0
