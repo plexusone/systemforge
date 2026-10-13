@@ -97,7 +97,7 @@ The routes match the shared frontend auth package (`BFFClient`):
 
 | Route | Response |
 |-------|----------|
-| `GET /bff/session` | `200 {"authenticated": false}` or `{"authenticated": true, "user_id", "expires_at", "user": User}` |
+| `GET /bff/session` | `200 {"authenticated": false}` or `{"authenticated": true, "user_id", "expires_at", "user": User, "apps"}` (`apps` only when `BFFConfig.Apps` is set) |
 | `GET /bff/api/v1/users/me` | `200 User` or `401 {"code": "UNAUTHENTICATED", "message"}` |
 | `GET /bff/auth/login?return_to=` | `302` to SystemAuth `/oauth/authorize` |
 | `GET /bff/auth/{github,google}?return_to=` | Same, with `idp_hint` so SystemAuth skips its provider chooser |

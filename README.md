@@ -49,7 +49,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 - 🤖 **AI Agent Requests** - `identity/requestprincipal`: one protocol-neutral request principal for people and agents; `aauthrs` verifies AAuth-signed agent requests (HTTP message signatures, person/auth tokens from trusted issuers, resource-token challenges) next to the relying-party human paths
 - 🔑 **API Keys** - Scoped machine-to-machine credentials on a principal
 - 💌 **Invite-Only Sign-Up** - A sign-up gate for social login: only verified emails with an invite create accounts, refused people reach a consent-recorded waitlist, and `systemauth invite` and `systemauth waitlist` manage both
-- 🧭 **App Catalog** - Hosts publish the applications they run at `/.well-known/sf-apps`, and `/bff/session` lists the ones a person holds a role in, for a product switcher
+- 🧭 **App Catalog** - Hosts publish the applications they run at `/.well-known/sf-apps`, and `/bff/session` lists them so each shell shows the ones a person holds a role in, for a product switcher
 - 🏷️ **Per-Application Roles in Tokens** - Embedded SystemAuth emits the `orgs` claim with each organization's application roles, limited to default entitlements
 
 ### OAuth 2.0 Server (Fosite)

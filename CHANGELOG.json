@@ -14,34 +14,34 @@
       "highlights": [
         {
           "description": "Key management: `keys` wires keyforge as the platform's one key library, with envelope encryption, rotation without re-encrypting, the root key read through omnivault, and key events sent to the audit trail (ADR-013)",
-          "commit": "c26e7da"
+          "commit": "1f3095e"
         },
         {
           "description": "Connections to external services: `connections` composes connectionforge so organizations connect accounts at services such as a CDN or analytics product, with credentials sealed under managed keys and applications receiving an authenticated HTTP client, never the secret (ADR-017)",
-          "commit": "46fc25c"
+          "commit": "5975b1e"
         },
         {
           "description": "A connections API at `/api/v1/organizations/{org}/connections`, enabled by the new `connections` configuration section and protected by `systemforge:connections:read` and `:write` scopes",
-          "commit": "01591ab"
+          "commit": "dfcd4ed"
         },
         {
           "description": "Invite-only sign-up: a gate on social login that admits only verified emails holding an invite, a consent-recording waitlist for everyone else, and `systemauth invite` and `systemauth waitlist` commands",
-          "commit": "81c05f0"
+          "commit": "3471a81"
         },
         {
-          "description": "App catalog: a host publishes the applications it runs, and the browser session lists the ones a person holds a role in, for a product switcher",
-          "commit": "cc1bc45",
+          "description": "App catalog: a host publishes the applications it runs, and the browser session lists it so each shell can show the products a person holds a role in, for a product switcher",
+          "commit": "31cc7a9",
           "rmis": [
             "RMI-SYSTEMFORGE-169"
           ]
         },
         {
           "description": "Embedded SystemAuth emits the `orgs` claim with per-application roles, limited to the deployment's default entitlements",
-          "commit": "7a66424"
+          "commit": "cffe439"
         },
         {
           "description": "Fixed `rls.Helper.SetTenant` and `SetUser`, which failed on every PostgreSQL connection because `SET LOCAL` does not accept bind parameters",
-          "commit": "98ab287"
+          "commit": "6149cc1"
         },
         {
           "description": "No breaking changes; run `systemauth migrate` for the new tables"
@@ -50,64 +50,75 @@
       "added": [
         {
           "description": "`keys` package: `Open`, `Seal` and `Open` over keyforge's single-host setup, with `VaultSource` reading the root key from an omnivault vault, and an audit sink that records lifecycle events without key material",
-          "commit": "c26e7da"
+          "commit": "1f3095e"
         },
         {
           "description": "`connections` package: connectionforge's SQL store on the platform database with row-level security keyed on `owner_id`, credentials sealed by `keys`, deployment secrets read from omnivault, authorization through `authz`, and audit events to the platform trail",
-          "commit": "46fc25c"
+          "commit": "5975b1e"
         },
         {
           "description": "`connections.RolePermissions` grants organization owners and admins view, use and manage on connections, and members view",
-          "commit": "01591ab"
+          "commit": "dfcd4ed"
         },
         {
           "description": "`connections.Handler`: the organization-scoped connections HTTP API (providers, list, connect, get, rename, test, disconnect) that never returns a credential and reports a refused view as not found",
-          "commit": "01591ab"
+          "commit": "dfcd4ed"
         },
         {
           "description": "`connections.MigrateSchema` creates the connection tables and enables row-level security without opening the keys, so `systemauth migrate` needs no root key",
-          "commit": "01591ab"
+          "commit": "dfcd4ed"
         },
         {
           "description": "`systemauth.Server.BearerPrincipal` and `WriteBearerError` authenticate API requests by bearer access token and scope with RFC 6750 responses",
-          "commit": "fe0545f"
+          "commit": "ccc1d03"
         },
         {
           "description": "`connections` section of the SystemAuth configuration (`keys_dir`, `vault`, `root_key`, `allow_private_egress`), the `systemauthsvc.Options.Providers` registry, `Service.Connections` and `Service.RunJobs`",
-          "commit": "0be6c77"
+          "commit": "7b51e06"
         },
         {
           "description": "`systemauth serve` runs the key lifecycle jobs while serving",
-          "commit": "badfa6c"
+          "commit": "dfb3597"
         },
         {
           "description": "`systemauth invite add|list|revoke` and the `--invite-only` and `--signup-denied-url` flags, with `SignupInvite` (`sf_signup_invites`), the `signupgate` store and gate, and `systemauth.SignupGate` on social login",
-          "commit": "81c05f0"
+          "commit": "3471a81",
+          "rmis": [
+            "RMI-SYSTEMFORGE-158"
+          ]
+        },
+        {
+          "description": "For host binaries: `systemauthsvc.Options.InviteOnly`, `SignupDeniedURL` and `WaitlistPage`, `Service.SignupInvites` and `Service.SignupWaitlist`, and the `signupgate/signupcmd` package with the `invite` and `waitlist` command groups to mount in a host's own CLI",
+          "commit": "dc2af08",
+          "rmis": [
+            "RMI-SYSTEMFORGE-158",
+            "RMI-SYSTEMFORGE-159"
+          ]
         },
         {
           "description": "Sign-up waitlist: `/signup/waitlist` records an address with the consent text shown and its version, with `SignupWaitlistEntry` (`sf_signup_waitlist`), `signupgate.Waitlist` and `systemauth waitlist list [--csv]` and `remove`",
-          "commit": "629b64f",
+          "commit": "72ac85b",
           "rmis": [
             "RMI-SYSTEMFORGE-159"
           ]
         },
         {
           "description": "`appcatalog` package: `App` and an ordered, validated `Catalog`, with `Static` and `Remote` sources, the last cached and kept through an outage",
-          "commit": "14b6766",
+          "commit": "538133c",
           "rmis": [
             "RMI-SYSTEMFORGE-169"
           ]
         },
         {
-          "description": "`systemauth.WithAppCatalog` serves the catalog at `/.well-known/sf-apps`; `relyingparty.BFFConfig.Apps` adds the entries a person holds a role in to `/bff/session`; `systemauthsvc.Options.Apps` publishes a host's catalog and warns about entries with no registered vocabulary",
-          "commit": "cc1bc45",
+          "description": "`systemauth.WithAppCatalog` serves the catalog at `/.well-known/sf-apps`; `relyingparty.BFFConfig.Apps` adds the catalog to `/bff/session` as `apps`, which a shell filters by the membership's `applications`; `systemauthsvc.Options.Apps` publishes a host's catalog and warns about entries with no registered vocabulary",
+          "commit": "31cc7a9",
           "rmis": [
             "RMI-SYSTEMFORGE-169"
           ]
         },
         {
           "description": "`systemauthsvc.Options.Vocabularies` and `DefaultEntitlements` install an Ent-backed `orgs` claim source with application roles from `approle`",
-          "commit": "7a66424",
+          "commit": "cffe439",
           "rmis": [
             "RMI-SYSTEMFORGE-157"
           ]
@@ -116,21 +127,21 @@
       "fixed": [
         {
           "description": "`rls.Helper.SetTenant` and `SetUser` use `set_config(name, value, true)`, which has the transaction scope of `SET LOCAL` and takes the value as a parameter; the previous `SET LOCAL ... = $1` was a PostgreSQL syntax error",
-          "commit": "98ab287"
+          "commit": "6149cc1"
         }
       ],
       "documentation": [
         {
           "description": "Guides for connections to external services and for key management, and sections for them in the deployment guide and README",
-          "commit": "7429858"
+          "commit": "ee8b6d7"
         },
         {
           "description": "Deployment guide sections for invite-only sign-up with the waitlist, and for the app catalog",
-          "commit": "3c2b576"
+          "commit": "2190863"
         },
         {
           "description": "ADR-017 on external connections, ADR-016 on no static API keys and ADR-015 on identifier policy, slug namespaces and portability",
-          "commit": "9f8a708"
+          "commit": "cac014f"
         },
         {
           "description": "ADR-013 makes keyforge the platform's key library, with the key subsystem, rotation policy, hybrid encryption, FIPS 140-3 and post-quantum positions, rotation and recovery drills, and the crypto specification; ADR-011 and ADR-012 add purge, provisional accounts, dormancy and offload",
@@ -140,21 +151,21 @@
       "dependencies": [
         {
           "description": "Depend on keyforge v0.1.0, omnivault v0.5.0 and connectionforge v0.1.0",
-          "commit": "874c46f"
+          "commit": "0afbf7b"
         },
         {
           "description": "Update dependencies, including go-chi/chi/v5 v5.4.0, grokify/guardsql v0.3.0, omnistorage-core v0.5.2 and golang.org/x/crypto v0.58.0; `yaronf/httpsign` stays at v0.5.2 because v0.6 removed `NewJWSSignerV3`, which aauth-go v0.2.0 uses",
-          "commit": "10e261e"
+          "commit": "2ee29cc"
         }
       ],
       "tests": [
         {
           "description": "`rls` is checked against a real PostgreSQL server, and the connections store is checked as an ordinary database role, which row-level security applies to",
-          "commit": "904f87d"
+          "commit": "77b8d12"
         },
         {
           "description": "The connections API is exercised end to end against a fake provider, including that no response carries a token",
-          "commit": "556a0e0"
+          "commit": "b9bb2db"
         }
       ],
       "upgradeGuide": [
