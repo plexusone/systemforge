@@ -42,7 +42,7 @@ when it is not on the command line:
 | `--db-driver`, `--db-dsn` | `SYSTEMAUTH_DB_DRIVER`, `SYSTEMAUTH_DB_DSN` | config | `postgres` (pgx) or `sqlite` |
 | `--migrate` | `SYSTEMAUTH_MIGRATE` | `true` | Run schema migrations at startup |
 | `--invite-only` | `SYSTEMAUTH_INVITE_ONLY` | `false` | Create accounts only for verified emails that hold a sign-up invite |
-| `--signup-denied-url` | `SYSTEMAUTH_SIGNUP_DENIED_URL` | — | https page a refused sign-up is sent to, with `error=invite_required`; without it the callback answers 403 |
+| `--signup-denied-url` | `SYSTEMAUTH_SIGNUP_DENIED_URL` | — | https page a refused sign-up is sent to, with `error=invite_required`; without it, SystemAuth's own waitlist page |
 | `--dev` | `SYSTEMAUTH_DEV` | `false` | Development mode |
 | `--log-level`, `--log-format` | `SYSTEMAUTH_LOG_LEVEL`, `SYSTEMAUTH_LOG_FORMAT` | `info`, `text` | Use `json` under a log collector |
 
@@ -69,6 +69,23 @@ systemauth invite revoke ada@example.com
   allows the address to be invited again.
 - **No reason is given on refusal.** A visitor cannot tell an address with no
   invite from one whose invite expired.
+- **Waitlist.** A refused sign-up lands on `/signup/waitlist`, served by
+  SystemAuth while invite-only is on: a notify-me form that records the
+  address with the consent text shown and its version. It answers the same
+  whether or not the address was already listed, accepts posts only from
+  SystemAuth's own or an allowed origin, and is rate-limited per client
+  address and per submitted address. Nothing is emailed; operators export
+  the list:
+
+  ```bash
+  systemauth waitlist list          # oldest first; --csv to export
+  systemauth waitlist remove ada@example.com
+  ```
+
+  A host binary sets the page's wording with `Options.WaitlistPage` and
+  reads the list with `Service.SignupWaitlist()`. Behind a proxy, pass the
+  client-address function (`WithLoginTokenClientIP`) so the per-address
+  limit sees real clients.
 - **Database:** the commands read the configured database directly, so they
   work with the server running. The table is created by the schema migration.
 - **In a host binary,** set `Options.InviteOnly` and `Options.SignupDeniedURL`
