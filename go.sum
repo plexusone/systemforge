@@ -529,8 +529,8 @@ github.com/plexusone/keyforge v0.1.0 h1:PGfXCWpFunpFDHH7NpacCSDA9G0Sa1Z19jhzGu7K
 github.com/plexusone/keyforge v0.1.0/go.mod h1:BUmSLdqt85YyvzuV1oLZRjin/BqBuDc2sO/TIewzL3Y=
 github.com/plexusone/omniobserve v0.12.0 h1:WT6iIgd/ORWfW14BTBcauYk1asV53TZ4zy3gjrjhens=
 github.com/plexusone/omniobserve v0.12.0/go.mod h1:31Orh80n0p5y6ViK8gdvXu6iSZI++Ok8kngkKk2ty2o=
-github.com/plexusone/omnistorage-core v0.5.1 h1:tvsfTcJln6ZixKL75aE7tMf3yyP94hFDef7ASGlQBe8=
-github.com/plexusone/omnistorage-core v0.5.1/go.mod h1:NADK+H9XbIyYgNL6omq2ugId/uK9EouqF9OrM9BH0d4=
+github.com/plexusone/omnistorage-core v0.5.2 h1:vhascjTnSx3ITquf70d50o/B7cYeIUbJwUwzFVKqwB8=
+github.com/plexusone/omnistorage-core v0.5.2/go.mod h1:YGmwdm36lhgkl+NvQn89QDcteJiC3EGLoUcCO5ZUplg=
 github.com/plexusone/omnivault v0.5.0 h1:7oZwP1KNS+XQ1ksoZoKnLS9PV0TQ93b5NEuxO0T2Hwg=
 github.com/plexusone/omnivault v0.5.0/go.mod h1:LQNyI6gTygb3ht4yLhLpHIdcOVALOTGnaO1oJn6+2KE=
 github.com/plexusone/omniworkflow v0.1.1 h1:jKE0ZofNUpIzmnJu+0JaalRgm6rMDwGHiFTnVj7fSEI=
