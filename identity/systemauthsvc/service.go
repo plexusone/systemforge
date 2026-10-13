@@ -82,10 +82,16 @@ type Options struct {
 	InviteOnly bool
 
 	// SignupDeniedURL is where a refused sign-up is redirected, with
-	// error=invite_required in the query. Without it the callback answers
-	// 403 with a plain message. It must be absolute https (http only for a
-	// loopback host).
+	// error=invite_required in the query. Without it, an invite-only
+	// deployment sends refused sign-ups to its own waitlist page
+	// (systemauth.SignupWaitlistPath). It must be absolute https (http only
+	// for a loopback host).
 	SignupDeniedURL string
+
+	// WaitlistPage is the wording of the waitlist page an invite-only
+	// deployment serves; empty fields take systemauth.DefaultWaitlistPage.
+	// Submissions are stored in the database (see Service.SignupWaitlist).
+	WaitlistPage systemauth.WaitlistPage
 
 	// ServerOptions are passed to systemauth.NewEmbedded after the storage,
 	// logger and readiness options New sets, e.g. WithObservability or
@@ -200,8 +206,11 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		return nil, errors.New("systemauthsvc: Options.InviteOnly needs a database to hold invites")
 	}
 	if s.client != nil && opts.InviteOnly {
-		serverOpts = append(serverOpts, systemauth.WithSignupGate(signupgate.NewGate(signupgate.NewStore(s.client))))
-		logger.Info("sign-up is by invitation only")
+		serverOpts = append(serverOpts,
+			systemauth.WithSignupGate(signupgate.NewGate(signupgate.NewStore(s.client))),
+			systemauth.WithSignupWaitlist(signupgate.NewWaitlist(s.client), opts.WaitlistPage),
+		)
+		logger.Info("sign-up is by invitation only", "waitlist", systemauth.SignupWaitlistPath)
 	}
 	if opts.SignupDeniedURL != "" {
 		serverOpts = append(serverOpts, systemauth.WithSignupDeniedURL(opts.SignupDeniedURL))
@@ -316,6 +325,17 @@ func (s *Service) SignupInvites() *signupgate.Store {
 		return nil
 	}
 	return signupgate.NewStore(s.client)
+}
+
+// SignupWaitlist returns the waitlist over the service's database, for an
+// operator command to list, export and remove entries. It is nil without a
+// database. The page that fills it is served only when Options.InviteOnly
+// is set.
+func (s *Service) SignupWaitlist() *signupgate.Waitlist {
+	if s.client == nil {
+		return nil
+	}
+	return signupgate.NewWaitlist(s.client)
 }
 
 // Config returns the effective configuration (defaults applied).

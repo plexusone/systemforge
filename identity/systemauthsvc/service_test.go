@@ -671,6 +671,10 @@ func TestSignupInvitesStoreIsBackedByTheDatabase(t *testing.T) {
 	cfg := &systemauthsvc.Config{
 		Issuer:   "https://auth.example.com",
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
+		SocialLogin: &systemauth.SocialLoginConfig{
+			SkipConsent: true,
+			GitHub:      &systemauth.SocialProviderConfig{ClientID: "gh", ClientSecret: "gh-secret"},
+		},
 	}
 	s, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{
 		SigningKey: testKey(t), Logger: discardLogger(), Migrate: true,
@@ -690,6 +694,19 @@ func TestSignupInvitesStoreIsBackedByTheDatabase(t *testing.T) {
 	}
 	if ok, err := store.Allowed(t.Context(), "ada@example.com"); err != nil || !ok {
 		t.Errorf("allowed = %v, %v", ok, err)
+	}
+
+	// Invite-only serves the waitlist page, backed by the same database.
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, systemauth.SignupWaitlistPath, nil))
+	if rec.Code != http.StatusOK {
+		t.Errorf("waitlist page: %d", rec.Code)
+	}
+	if err := s.SignupWaitlist().Join(t.Context(), "grace@example.com", "1", "t"); err != nil {
+		t.Fatal(err)
+	}
+	if list, err := s.SignupWaitlist().List(t.Context()); err != nil || len(list) != 1 {
+		t.Errorf("waitlist = %v, %v", list, err)
 	}
 
 	bad := *cfg
