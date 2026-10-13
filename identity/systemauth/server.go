@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/plexusone/systemforge/identity/appcatalog"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
@@ -39,6 +41,7 @@ type Server struct {
 	social          *socialLogin
 	readiness       []readinessCheck
 	orgs            OrgsSource
+	appCatalog      *appcatalog.Catalog
 	accessChanges   AccessChangeLister
 }
 
@@ -286,6 +289,10 @@ func (s *Server) registerEndpoints() {
 
 	// Register discovery endpoints (these are handled by Huma)
 	s.registerDiscoveryEndpoints()
+
+	if s.appCatalog != nil {
+		s.router.Get(appcatalog.WellKnownPath, s.handleAppCatalog)
+	}
 
 	// Liveness and readiness
 	s.router.Get(HealthzPath, s.handleHealthz)
