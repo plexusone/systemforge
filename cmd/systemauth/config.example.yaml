@@ -102,3 +102,14 @@ clients:
 #   app_id: my-application
 #   client_id: ${SYSTEMAUTH_CLIENT_ID}
 #   client_secret: ${SYSTEMAUTH_CLIENT_SECRET}
+
+# Connections to external services (optional, ADR-017). Organizations connect
+# accounts at services such as a CDN or analytics product; credentials are
+# sealed under keys kept in keys_dir. Needs a database and authz mode rbac.
+# The API is served at /api/v1/organizations/{org}/connections and needs the
+# systemforge:connections:read or systemforge:connections:write scope.
+# connections:
+#   keys_dir: /var/lib/systemauth/keys   # back this up with the database
+#   vault: env://                        # omnivault URI: env://, file:///etc/systemauth/secrets, ...
+#   root_key: SYSTEMAUTH_KEYS_ROOT       # path in the vault; 32 bytes, e.g. openssl rand -base64 32
+#   allow_private_egress: false          # development only: reach local fake providers over HTTP

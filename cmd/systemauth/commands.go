@@ -256,6 +256,14 @@ func runServe(ctx context.Context, opts *options) error {
 		IdleTimeout:       120 * time.Second,
 	}
 
+	jobsCtx, stopJobs := context.WithCancel(ctx)
+	defer stopJobs()
+	go func() {
+		if err := app.RunJobs(jobsCtx); err != nil && !errors.Is(err, context.Canceled) {
+			logger.Error("background jobs stopped", "error", err)
+		}
+	}()
+
 	errChan := make(chan error, 1)
 	go func() {
 		logger.Info("starting SystemAuth server",
