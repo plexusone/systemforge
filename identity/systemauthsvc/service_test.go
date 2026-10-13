@@ -594,7 +594,7 @@ func newVocabularies(t *testing.T, apps ...string) *authz.VocabularyRegistry {
 	return reg
 }
 
-func TestBaseEntitlementsAreChecked(t *testing.T) {
+func TestDefaultEntitlementsAreChecked(t *testing.T) {
 	newConfig := func() *systemauthsvc.Config {
 		return &systemauthsvc.Config{
 			Issuer:   "https://auth.example.com",
@@ -604,31 +604,31 @@ func TestBaseEntitlementsAreChecked(t *testing.T) {
 	base := systemauthsvc.Options{SigningKey: testKey(t), Logger: discardLogger(), Migrate: true}
 
 	noVocab := base
-	noVocab.BaseEntitlements = []string{"build"}
+	noVocab.DefaultEntitlements = []string{"build"}
 	if _, err := systemauthsvc.New(t.Context(), newConfig(), noVocab); err == nil {
-		t.Error("base entitlements without vocabularies accepted")
+		t.Error("default entitlements without vocabularies accepted")
 	}
 
 	unknown := base
 	unknown.Vocabularies = newVocabularies(t, "build")
-	unknown.BaseEntitlements = []string{"agents"}
+	unknown.DefaultEntitlements = []string{"agents"}
 	if _, err := systemauthsvc.New(t.Context(), newConfig(), unknown); err == nil {
-		t.Error("base entitlement without a registered vocabulary accepted")
+		t.Error("default entitlement without a registered vocabulary accepted")
 	}
 }
 
-// TestOrgsClaimCarriesBaseEntitledRoles checks the wiring end to end: an
+// TestOrgsClaimCarriesDefaultEntitledRoles checks the wiring end to end: an
 // owner holds the top role of each base-entitled application, and a
 // registered application outside the base entitlements stays closed.
-func TestOrgsClaimCarriesBaseEntitledRoles(t *testing.T) {
+func TestOrgsClaimCarriesDefaultEntitledRoles(t *testing.T) {
 	cfg := &systemauthsvc.Config{
 		Issuer:   "https://auth.example.com",
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 	}
 	s, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{
 		SigningKey: testKey(t), Logger: discardLogger(), Migrate: true,
-		Vocabularies:     newVocabularies(t, "build", "agents", "portfolio"),
-		BaseEntitlements: []string{"build", "agents"},
+		Vocabularies:        newVocabularies(t, "build", "agents", "portfolio"),
+		DefaultEntitlements: []string{"build", "agents"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -655,7 +655,7 @@ func TestOrgsClaimCarriesBaseEntitledRoles(t *testing.T) {
 	}
 	want := map[string]string{"build": "admin", "agents": "admin"}
 	if !reflect.DeepEqual(got.Apps, want) {
-		t.Errorf("apps = %v, want %v (portfolio is registered but not base-entitled)", got.Apps, want)
+		t.Errorf("apps = %v, want %v (portfolio is registered but not a default entitlement)", got.Apps, want)
 	}
 }
 

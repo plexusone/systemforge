@@ -8,15 +8,16 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/approle"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/signupgate"
 	"github.com/plexusone/systemforge/identity/systemauth"
+	"github.com/plexusone/systemforge/marketplace"
 )
 
 // dbPingTimeout bounds the connectivity check New performs.
@@ -66,12 +67,13 @@ type Options struct {
 	// organizations with empty "apps".
 	Vocabularies *authz.VocabularyRegistry
 
-	// BaseEntitlements names the registered applications every organization
-	// is entitled to without buying anything (the deployment's base
-	// entitlements). An organization's owner holds the top role of each, and
-	// other members hold the roles assigned to them. Applications not named
-	// here are closed to every organization until entitled some other way.
-	BaseEntitlements []string
+	// DefaultEntitlements names the registered applications every
+	// organization is entitled to without buying anything: the deployment's
+	// marketplace default entitlements (marketplace.WithDefaultEntitlements).
+	// An organization's owner holds the top role of each, and other members
+	// hold the roles assigned to them. Applications not named here are
+	// closed to every organization.
+	DefaultEntitlements []string
 
 	// InviteOnly makes social login create accounts only for verified
 	// emails that hold a sign-up invite (see Service.SignupInvites). People
@@ -205,7 +207,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		serverOpts = append(serverOpts, systemauth.WithSignupDeniedURL(opts.SignupDeniedURL))
 	}
 	if s.client != nil {
-		src, err := orgsSource(s.client, opts, logger)
+		src, err := orgsSource(ctx, s.client, opts, logger)
 		if err != nil {
 			s.closeQuietly()
 			return nil, err
@@ -224,36 +226,29 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 }
 
 // orgsSource builds the source of the orgs claim. Application roles come
-// from approle over opts.Vocabularies, limited to opts.BaseEntitlements; with
-// no vocabularies the claim carries organizations only.
-func orgsSource(client *ent.Client, opts Options, logger *slog.Logger) (systemauth.OrgsSource, error) {
+// from approle over opts.Vocabularies, with entitlements from the
+// marketplace's default entitlements; with no vocabularies the claim
+// carries organizations only.
+func orgsSource(ctx context.Context, client *ent.Client, opts Options, logger *slog.Logger) (systemauth.OrgsSource, error) {
 	if opts.Vocabularies == nil {
-		if len(opts.BaseEntitlements) > 0 {
-			return nil, errors.New("systemauthsvc: Options.BaseEntitlements requires Options.Vocabularies")
+		if len(opts.DefaultEntitlements) > 0 {
+			return nil, errors.New("systemauthsvc: Options.DefaultEntitlements requires Options.Vocabularies")
 		}
 		return systemauth.NewEntOrgsSource(client, nil), nil
 	}
-	registered := map[string]bool{}
-	for _, app := range opts.Vocabularies.Apps() {
-		registered[app] = true
-	}
-	base := map[string]approle.Grant{}
-	for _, app := range opts.BaseEntitlements {
-		if !registered[app] {
-			return nil, fmt.Errorf("systemauthsvc: base entitlement %q has no registered vocabulary", app)
+	registered := opts.Vocabularies.Apps()
+	for _, app := range opts.DefaultEntitlements {
+		if !slices.Contains(registered, app) {
+			return nil, fmt.Errorf("systemauthsvc: default entitlement %q has no registered vocabulary", app)
 		}
-		base[app] = approle.Grant{}
 	}
-	if len(base) == 0 {
-		logger.Warn("no base entitlements: a new organization has no application open (ADR-003 in pbhq-cloud)")
+	defaults := marketplace.WithDefaultEntitlements(opts.DefaultEntitlements...)
+	if _, err := marketplace.WarnIfNoEntitlements(ctx, logger, nil, registered, defaults); err != nil {
+		return nil, err
 	}
-	roles := approle.NewService(client, opts.Vocabularies,
-		approle.WithLogger(logger),
-		approle.WithEntitlementGrants(func(context.Context, uuid.UUID) (map[string]approle.Grant, error) {
-			return base, nil
-		}),
-	)
-	return systemauth.NewEntOrgsSource(client, roles), nil
+	entitlements := marketplace.EntitlementSource(nil, nil, nil, defaults)
+	roleOpts := append([]approle.Option{approle.WithLogger(logger)}, marketplace.ApproleOptions(entitlements)...)
+	return systemauth.NewEntOrgsSource(client, approle.NewService(client, opts.Vocabularies, roleOpts...)), nil
 }
 
 // openStorage selects the injected Ent client or connection pool, or
