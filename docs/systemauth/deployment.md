@@ -41,11 +41,38 @@ when it is not on the command line:
 | `--key-id` | `SYSTEMAUTH_KEY_ID` | key thumbprint | JWKS `kid` |
 | `--db-driver`, `--db-dsn` | `SYSTEMAUTH_DB_DRIVER`, `SYSTEMAUTH_DB_DSN` | config | `postgres` (pgx) or `sqlite` |
 | `--migrate` | `SYSTEMAUTH_MIGRATE` | `true` | Run schema migrations at startup |
+| `--invite-only` | `SYSTEMAUTH_INVITE_ONLY` | `false` | Create accounts only for verified emails that hold a sign-up invite |
+| `--signup-denied-url` | `SYSTEMAUTH_SIGNUP_DENIED_URL` | — | https page a refused sign-up is sent to, with `error=invite_required`; without it the callback answers 403 |
 | `--dev` | `SYSTEMAUTH_DEV` | `false` | Development mode |
 | `--log-level`, `--log-format` | `SYSTEMAUTH_LOG_LEVEL`, `SYSTEMAUTH_LOG_FORMAT` | `info`, `text` | Use `json` under a log collector |
 
 `systemauth validate` checks a configuration, including the production
 requirements; `systemauth migrate` runs migrations only.
+
+## Invite-only sign-up
+
+Start with `--invite-only` to let new accounts in only by invitation, for
+example while a deployment is being brought up. An invite is an email address,
+not a code: the person signs in with the upstream provider, and an account is
+created only when the provider's **verified** email holds a pending invite.
+People who already have an account sign in as before, and an unverified
+address never matches.
+
+```bash
+systemauth invite add ada@example.com grace@example.com --note "launch cohort" --expires-in 168h
+systemauth invite list          # pending invites; --all includes redeemed ones
+systemauth invite revoke ada@example.com
+```
+
+- **Redeeming:** the first account created with an address consumes its
+  invite. Revoking a redeemed invite does not touch the account; it only
+  allows the address to be invited again.
+- **No reason is given on refusal.** A visitor cannot tell an address with no
+  invite from one whose invite expired.
+- **Database:** the commands read the configured database directly, so they
+  work with the server running. The table is created by the schema migration.
+- **In a host binary,** set `Options.InviteOnly` and `Options.SignupDeniedURL`
+  on `systemauthsvc.New`, and manage invites with `Service.SignupInvites()`.
 
 ## Signing key
 
