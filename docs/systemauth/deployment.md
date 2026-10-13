@@ -108,6 +108,25 @@ the person holds a role in for the current organization (the membership's
 `applications`), so an application that is not registered or not entitled
 never appears.
 
+## Connections to external services
+
+Setting `connections` in the configuration lets organizations connect
+accounts at services such as a CDN or analytics product. It needs a database
+and the role-based authorization mode, and it adds a keys directory that must
+be backed up with the database:
+
+```yaml
+connections:
+  keys_dir: /var/lib/systemauth/keys
+  vault: env://
+  root_key: SYSTEMAUTH_KEYS_ROOT   # 32 bytes, base64 or hex; keep a copy offline
+```
+
+`systemauth migrate` creates the `connectionforge_*` tables and, on
+PostgreSQL, enables row-level security on them. `systemauth serve` runs the
+key lifecycle jobs. See [Connections](../guides/connections.md) and
+[Key management](../guides/key-management.md).
+
 ## Signing key
 
 Generate a key once and keep it in your secret store:

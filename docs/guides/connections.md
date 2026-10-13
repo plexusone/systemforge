@@ -128,9 +128,17 @@ type `systemforge_connection` will let a member or collaborator view
 (`viewer`), use (`contributor`) or manage (`maintainer`) one connection; the
 grants API for connections is not served yet.
 
+## Credentials and keys
+
+A connection's credential is sealed under keys that SystemAuth manages
+through keyforge, using the `connections.keys_dir` and `connections.root_key`
+settings above. Back up the keys directory with the database: without it,
+stored credentials cannot be read. See [Key management](key-management.md).
+
 ## Current limits
 
-- Static API tokens only; GitHub App and OAuth connections follow.
+- Static API tokens only; GitHub App and OAuth connections follow
+  (connectionforge v0.1.0).
 - The role-based authorization mode only.
 - The API acts for the token's principal as a user; service principals and
   agents use the broker in process.
