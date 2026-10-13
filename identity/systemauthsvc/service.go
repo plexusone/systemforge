@@ -11,12 +11,17 @@ import (
 	"slices"
 	"time"
 
+	"github.com/plexusone/connectionforge/provider"
+
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/authz/mode"
+	"github.com/plexusone/systemforge/connections"
 	"github.com/plexusone/systemforge/identity/approle"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/signupgate"
 	"github.com/plexusone/systemforge/identity/systemauth"
+	"github.com/plexusone/systemforge/keys"
 	"github.com/plexusone/systemforge/marketplace"
 )
 
@@ -93,6 +98,10 @@ type Options struct {
 	// Submissions are stored in the database (see Service.SignupWaitlist).
 	WaitlistPage systemauth.WaitlistPage
 
+	// Providers are the connection providers the hosted applications support,
+	// used when the configuration enables connections. Optional.
+	Providers *provider.Registry
+
 	// ServerOptions are passed to systemauth.NewEmbedded after the storage,
 	// logger and readiness options New sets, e.g. WithObservability or
 	// custom social login stores. They come last, so they can replace the
@@ -112,6 +121,11 @@ type Service struct {
 	// injected Ent client without Options.DBDialect) or in-memory.
 	dialect string
 	logger  *slog.Logger
+
+	// keys, authz and conns are set when connections are enabled.
+	keys  *keys.Keys
+	authz *mode.Result
+	conns *connections.Connections
 }
 
 // New builds a SystemAuth server from cfg. Unless opts.Dev is set it
@@ -162,6 +176,10 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 
 	s := &Service{cfg: c, storageName: "in-memory", logger: logger}
 	if err := s.openStorage(ctx, &c, opts); err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
+	if err := s.openConnections(ctx, &c, opts); err != nil {
 		s.closeQuietly()
 		return nil, err
 	}
@@ -231,6 +249,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		return nil, fmt.Errorf("creating server: %w", err)
 	}
 	s.server = server
+	s.mountConnections()
 	return s, nil
 }
 
@@ -381,7 +400,13 @@ func (s *Service) Migrate(ctx context.Context) error {
 	if s.client == nil {
 		return nil
 	}
-	return migrate(ctx, s.client, s.dialect)
+	if err := migrate(ctx, s.client, s.dialect); err != nil {
+		return err
+	}
+	if s.conns != nil {
+		return s.conns.Migrate(ctx)
+	}
+	return nil
 }
 
 // Ready runs the readiness checks behind GET /readyz (the database ping)
@@ -393,12 +418,13 @@ func (s *Service) Ready(ctx context.Context) error {
 // Close releases the database New opened. Injected handles (Options.DB,
 // Options.EntClient) are left to their owner.
 func (s *Service) Close() error {
+	err := s.closeConnections()
 	if s.owned == nil {
-		return nil
+		return err
 	}
 	d := s.owned
 	s.owned = nil
-	return d.Close()
+	return errors.Join(err, d.Close())
 }
 
 // closeQuietly closes after a failed New; the setup error is what the

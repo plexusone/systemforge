@@ -10,7 +10,9 @@ import (
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/plexusone/connectionforge/sqlstore"
 
+	"github.com/plexusone/systemforge/connections"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/pgschema"
@@ -90,7 +92,13 @@ func Migrate(ctx context.Context, cfg *Config) (err error) {
 			err = fmt.Errorf("closing database: %w", cerr)
 		}
 	}()
-	return migrate(ctx, db.Client, db.Dialect)
+	if err := migrate(ctx, db.Client, db.Dialect); err != nil {
+		return err
+	}
+	if cfg.Connections != nil {
+		return connections.MigrateSchema(ctx, db.DB, sqlstore.Dialect(db.Dialect), nil)
+	}
+	return nil
 }
 
 // migrate creates or updates the Ent schema and, on PostgreSQL, the
