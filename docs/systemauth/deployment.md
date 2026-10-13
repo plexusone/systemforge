@@ -91,6 +91,23 @@ systemauth invite revoke ada@example.com
 - **In a host binary,** set `Options.InviteOnly` and `Options.SignupDeniedURL`
   on `systemauthsvc.New`, and manage invites with `Service.SignupInvites()`.
 
+## App catalog
+
+A deployment that hosts several applications can publish their catalog for
+the product switcher in each application's shell: name, launch URL, icon
+and order, keyed by the same identifier as the application's vocabulary.
+Pass `Options.Apps` (an `appcatalog.Catalog`) to `systemauthsvc.New`;
+SystemAuth serves it at `/.well-known/sf-apps`. It is public, since names
+and URLs are not secret.
+
+A relying party lists it in its browser session (`"apps"` in the
+`/bff/session` response) by setting `BFFConfig.Apps`: `appcatalog.Static`
+when it runs in the same process, or `appcatalog.Remote(issuer, ...)`,
+which fetches and caches the published catalog. A shell shows the entries
+the person holds a role in for the current organization (the membership's
+`applications`), so an application that is not registered or not entitled
+never appears.
+
 ## Signing key
 
 Generate a key once and keep it in your secret store:

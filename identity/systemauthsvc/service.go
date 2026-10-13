@@ -16,6 +16,7 @@ import (
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/mode"
 	"github.com/plexusone/systemforge/connections"
+	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/approle"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/relyingparty"
@@ -79,6 +80,11 @@ type Options struct {
 	// hold the roles assigned to them. Applications not named here are
 	// closed to every organization.
 	DefaultEntitlements []string
+
+	// Apps is the deployment's application catalog (appcatalog), published
+	// at appcatalog.WellKnownPath for the products' switchers. Each entry's
+	// ID should be an application with a registered vocabulary.
+	Apps *appcatalog.Catalog
 
 	// InviteOnly makes social login create accounts only for verified
 	// emails that hold a sign-up invite (see Service.SignupInvites). People
@@ -229,6 +235,16 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 			systemauth.WithSignupWaitlist(signupgate.NewWaitlist(s.client), opts.WaitlistPage),
 		)
 		logger.Info("sign-up is by invitation only", "waitlist", systemauth.SignupWaitlistPath)
+	}
+	if opts.Apps != nil {
+		serverOpts = append(serverOpts, systemauth.WithAppCatalog(opts.Apps))
+		if opts.Vocabularies != nil {
+			for _, a := range opts.Apps.Apps() {
+				if _, ok := opts.Vocabularies.Get(a.ID); !ok {
+					logger.Warn("app catalog lists an application with no registered vocabulary; nobody holds a role in it", "app", a.ID)
+				}
+			}
+		}
 	}
 	if opts.SignupDeniedURL != "" {
 		serverOpts = append(serverOpts, systemauth.WithSignupDeniedURL(opts.SignupDeniedURL))

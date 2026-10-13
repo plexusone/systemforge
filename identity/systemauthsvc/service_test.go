@@ -27,6 +27,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/signupgate"
@@ -629,6 +630,7 @@ func TestOrgsClaimCarriesDefaultEntitledRoles(t *testing.T) {
 		SigningKey: testKey(t), Logger: discardLogger(), Migrate: true,
 		Vocabularies:        newVocabularies(t, "build", "agents", "portfolio"),
 		DefaultEntitlements: []string{"build", "agents"},
+		Apps:                mustCatalog(t),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -716,5 +718,28 @@ func TestSignupInvitesStoreIsBackedByTheDatabase(t *testing.T) {
 		InviteOnly: true, SignupDeniedURL: "http://app.example.com/x",
 	}); err == nil {
 		t.Error("plain-http denial URL to a non-loopback host accepted")
+	}
+}
+
+func mustCatalog(t *testing.T) *appcatalog.Catalog {
+	t.Helper()
+	c, err := appcatalog.New(appcatalog.App{ID: "build", Name: "Build", URL: "https://app.example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
+func TestAppCatalogIsServed(t *testing.T) {
+	cfg := &systemauthsvc.Config{Issuer: "https://auth.example.com", Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)}}
+	s, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{SigningKey: testKey(t), Logger: discardLogger(), Migrate: true, Apps: mustCatalog(t)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeService(t, s)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, appcatalog.WellKnownPath, nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"id":"build"`) {
+		t.Fatalf("catalog: %d %s", rec.Code, rec.Body)
 	}
 }
