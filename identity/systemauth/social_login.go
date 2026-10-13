@@ -56,6 +56,9 @@ type socialOptions struct {
 	loginTokenCli  ratelimit.Limit
 
 	loginTokenClientIP func(r *http.Request) string
+
+	signupGate      SignupGate
+	signupDeniedURL string
 }
 
 // WithSocialAuthzSyncer sets the authorization syncer that registers principals and
@@ -114,10 +117,12 @@ type socialLogin struct {
 	states     oauthclient.StateStore
 	sessions   LoginSessionStore
 	directory  PrincipalDirectory
-	consents   ConsentStore
-	redirects  *redirectPolicy
-	cookies    loginCookies
-	now        func() time.Time
+	// signupDenied is where a refused sign-up is redirected; nil answers 403.
+	signupDenied *url.URL
+	consents     ConsentStore
+	redirects    *redirectPolicy
+	cookies      loginCookies
+	now          func() time.Time
 
 	// loginTokens exchanges managed principals' login tokens for
 	// sessions; nil when managed principals are off.
@@ -235,6 +240,14 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 			s.logger.Warn("social login using in-memory principal directory; principals will not persist")
 			sl.directory = NewMemoryPrincipalDirectory()
 		}
+	}
+	denied, err := parseSignupDeniedURL(s.socialOpts.signupDeniedURL)
+	if err != nil {
+		return nil, err
+	}
+	sl.signupDenied = denied
+	if gate := s.socialOpts.signupGate; gate != nil {
+		sl.directory = &gatedDirectory{PrincipalDirectory: sl.directory, gate: gate, logger: s.logger}
 	}
 	return sl, nil
 }
@@ -436,6 +449,17 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 			status, msg = http.StatusConflict, "an account with this email already exists and cannot be linked automatically"
 		case errors.Is(err, ErrPrincipalInactive):
 			status, msg = http.StatusForbidden, "account is disabled"
+		case errors.Is(err, ErrSignupNotInvited):
+			logger.Info("sign-up refused: not invited", "provider", provider)
+			if sl.signupDenied != nil {
+				u := *sl.signupDenied
+				q := u.Query()
+				q.Set("error", "invite_required")
+				u.RawQuery = q.Encode()
+				http.Redirect(w, r, u.String(), http.StatusSeeOther)
+				return
+			}
+			status, msg = http.StatusForbidden, "sign-up is by invitation only"
 		default:
 			logger.Error("resolving principal for social login", "provider", provider, "error", err)
 		}
