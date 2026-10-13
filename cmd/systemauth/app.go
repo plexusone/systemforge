@@ -36,7 +36,10 @@ func loadConfig(opts *options) (*systemauthsvc.Config, error) {
 
 // serviceOptions maps the command-line options to service options.
 func serviceOptions(opts *options, logger *slog.Logger) systemauthsvc.Options {
-	return systemauthsvc.Options{Dev: opts.dev, Logger: logger, Migrate: opts.migrate}
+	return systemauthsvc.Options{
+		Dev: opts.dev, Logger: logger, Migrate: opts.migrate,
+		InviteOnly: opts.inviteOnly, SignupDeniedURL: opts.signupDenied,
+	}
 }
 
 // checkProduction enforces the deployment requirements that --dev relaxes,

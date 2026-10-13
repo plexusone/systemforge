@@ -32,22 +32,26 @@ type options struct {
 	logLevel       string
 	logFormat      string
 	migrate        bool
+	inviteOnly     bool
+	signupDenied   string
 }
 
 // envVars maps flag names to the environment variables that set them when
 // the flag is not given on the command line.
 var envVars = map[string]string{
-	"config":           "SYSTEMAUTH_CONFIG",
-	"addr":             "SYSTEMAUTH_ADDR",
-	"issuer":           "SYSTEMAUTH_ISSUER",
-	"dev":              "SYSTEMAUTH_DEV",
-	"signing-key-file": "SYSTEMAUTH_SIGNING_KEY_FILE",
-	"key-id":           "SYSTEMAUTH_KEY_ID",
-	"db-driver":        "SYSTEMAUTH_DB_DRIVER",
-	"db-dsn":           "SYSTEMAUTH_DB_DSN",
-	"log-level":        "SYSTEMAUTH_LOG_LEVEL",
-	"log-format":       "SYSTEMAUTH_LOG_FORMAT",
-	"migrate":          "SYSTEMAUTH_MIGRATE",
+	"config":            "SYSTEMAUTH_CONFIG",
+	"addr":              "SYSTEMAUTH_ADDR",
+	"issuer":            "SYSTEMAUTH_ISSUER",
+	"dev":               "SYSTEMAUTH_DEV",
+	"signing-key-file":  "SYSTEMAUTH_SIGNING_KEY_FILE",
+	"key-id":            "SYSTEMAUTH_KEY_ID",
+	"db-driver":         "SYSTEMAUTH_DB_DRIVER",
+	"db-dsn":            "SYSTEMAUTH_DB_DSN",
+	"log-level":         "SYSTEMAUTH_LOG_LEVEL",
+	"log-format":        "SYSTEMAUTH_LOG_FORMAT",
+	"migrate":           "SYSTEMAUTH_MIGRATE",
+	"invite-only":       "SYSTEMAUTH_INVITE_ONLY",
+	"signup-denied-url": "SYSTEMAUTH_SIGNUP_DENIED_URL",
 }
 
 // signingKeyEnv carries a PEM signing key. It is deliberately not a flag:
@@ -119,6 +123,8 @@ Run without a subcommand it serves (same as "systemauth serve").
 	pf.StringVar(&opts.logLevel, "log-level", "info", "Log level (debug, info, warn, error)")
 	pf.StringVar(&opts.logFormat, "log-format", "text", "Log format (text, json)")
 	pf.BoolVar(&opts.migrate, "migrate", true, "Run database migrations at startup")
+	pf.BoolVar(&opts.inviteOnly, "invite-only", false, "Create accounts only for verified emails that hold a sign-up invite (see \"systemauth invite\")")
+	pf.StringVar(&opts.signupDenied, "signup-denied-url", "", "Where to send a refused sign-up (https URL); without it the callback answers 403")
 	// --listen is the former name of --addr.
 	pf.StringVarP(&opts.addr, "listen", "l", ":8080", "Address to listen on")
 	if err := pf.MarkDeprecated("listen", "use --addr"); err != nil {
@@ -151,6 +157,7 @@ Run without a subcommand it serves (same as "systemauth serve").
 				return runValidate(cmd, opts)
 			},
 		},
+		newInviteCmd(opts),
 		&cobra.Command{
 			Use:   "version",
 			Short: "Print version information",
