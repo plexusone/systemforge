@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	cf "github.com/plexusone/connectionforge"
@@ -67,6 +68,22 @@ func permission(a cf.Action) (authz.Action, bool) {
 	return "", false
 }
 
+// RolePermissions returns base with the organization roles' permissions on
+// connections added: owners and admins view, use and manage them; members
+// view them. Use it with the role-based provider (rbac.WithPermissions).
+func RolePermissions(base authz.RolePermissions) authz.RolePermissions {
+	out := make(authz.RolePermissions, len(base))
+	for role, perms := range base {
+		out[role] = append([]string(nil), perms...)
+	}
+	perm := func(a authz.Action) string { return string(ResourceType) + "." + string(a) }
+	all := []string{perm(authz.PermResourceView), perm(authz.PermResourceEdit), perm(authz.PermResourceManage)}
+	out["owner"] = append(out["owner"], all...)
+	out["admin"] = append(out["admin"], all...)
+	out["member"] = append(out["member"], perm(authz.PermResourceView))
+	return out
+}
+
 func principalType(k cf.PrincipalKind) authz.PrincipalType {
 	switch k {
 	case cf.PrincipalService:
@@ -97,11 +114,14 @@ func (a authorizer) Allowed(ctx context.Context, p cf.Principal, act cf.Action, 
 	if err != nil {
 		return fmt.Errorf("%w: owner is not an organization", cf.ErrDenied)
 	}
-	allowed, err := a.az.Can(ctx,
-		authz.Principal{ID: pid, Type: principalType(p.Kind)},
-		perm,
-		authz.Resource{Type: ResourceType, ID: &cid, OrgID: &org},
-	)
+	res := authz.Resource{Type: ResourceType, ID: &cid, OrgID: &org}
+	// The principal who created a stored connection manages it (ADR-017).
+	// A connection not yet stored has no owner, so creating one is decided
+	// by the organization role alone.
+	if creator, err := uuid.Parse(c.CreatedBy.ID); err == nil && c.Revision > 0 && c.CreatedBy.Kind == cf.PrincipalUser {
+		res.OwnerID = &creator
+	}
+	allowed, err := a.az.Can(ctx, authz.Principal{ID: pid, Type: principalType(p.Kind)}, perm, res)
 	if err != nil {
 		return fmt.Errorf("connections: authorization: %w", err)
 	}
@@ -158,3 +178,21 @@ func (a auditor) Record(ctx context.Context, e cf.Event) error {
 type nopAuditor struct{}
 
 func (nopAuditor) Record(context.Context, cf.Event) error { return nil }
+
+// LogAuditor returns an auditor that writes connection events as structured
+// log records, for a deployment without an audit store.
+func LogAuditor(logger *slog.Logger) cf.Auditor { return logAuditor{log: logger} }
+
+type logAuditor struct{ log *slog.Logger }
+
+func (a logAuditor) Record(ctx context.Context, e cf.Event) error {
+	attrs := []any{
+		"event", string(e.Type), "success", e.Success, "owner", string(e.Owner),
+		"actor", string(e.Actor.Kind) + ":" + e.Actor.ID, "connection", e.ConnectionID, "provider", e.Provider,
+	}
+	if e.Reason != "" {
+		attrs = append(attrs, "reason", e.Reason)
+	}
+	a.log.InfoContext(ctx, "connections audit", attrs...)
+	return nil
+}

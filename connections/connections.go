@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	cf "github.com/plexusone/connectionforge"
@@ -53,8 +54,11 @@ type Options struct {
 	// Vault holds deployment secrets such as OAuth client secrets and GitHub
 	// App keys. Optional: without it, [Connections.Secrets] reads nothing.
 	Vault vault.Vault
-	// Audit receives connection events. Optional.
+	// Audit receives connection events. Optional: without it, and with a
+	// Logger, events are logged.
 	Audit sfaudit.Store
+	// Logger receives connection events when there is no audit store.
+	Logger *slog.Logger
 	// RLS configures the session variable that carries the organization. The
 	// zero value uses the platform default.
 	RLS *rls.Config
@@ -118,8 +122,11 @@ func Open(o Options) (*Connections, error) {
 		dialect:    o.Dialect,
 		rls:        cfg,
 	}
-	if o.Audit != nil {
+	switch {
+	case o.Audit != nil:
 		c.Auditor = auditor{store: o.Audit}
+	case o.Logger != nil:
+		c.Auditor = LogAuditor(o.Logger)
 	}
 	c.Providers = o.Providers
 	if c.Providers == nil {
@@ -143,20 +150,35 @@ func Open(o Options) (*Connections, error) {
 }
 
 // Migrate creates or updates connectionforge's tables and, on PostgreSQL,
-// enables row-level security on the owned ones, keyed on [TenantColumn]. Run
-// it with a role allowed to change the schema.
+// enables row-level security on the owned ones. See [MigrateSchema].
 func (c *Connections) Migrate(ctx context.Context) error {
-	if err := c.Store.Migrate(ctx); err != nil {
+	return MigrateSchema(ctx, c.db, c.dialect, c.rls)
+}
+
+// MigrateSchema creates or updates connectionforge's tables and, on
+// PostgreSQL, enables row-level security on the owned ones, keyed on
+// [TenantColumn]. It needs no keys, so a migration command can run it alone.
+// Run it with a role allowed to change the schema. A nil cfg uses the
+// platform default session variable.
+func MigrateSchema(ctx context.Context, db *sql.DB, d sqlstore.Dialect, cfg *rls.Config) error {
+	store, err := sqlstore.New(db, d)
+	if err != nil {
+		return fmt.Errorf("connections: %w", err)
+	}
+	if err := store.Migrate(ctx); err != nil {
 		return err
 	}
-	if c.dialect != sqlstore.Postgres {
+	if d != sqlstore.Postgres {
 		return nil
 	}
-	m := rls.NewMigrator(c.db, &rls.MigrationConfig{
+	if cfg == nil {
+		cfg = rls.DefaultConfig()
+	}
+	m := rls.NewMigrator(db, &rls.MigrationConfig{
 		TenantColumn:    TenantColumn,
-		SessionVariable: c.rls.SessionVariable,
+		SessionVariable: cfg.SessionVariable,
 	})
-	for _, t := range c.Store.Tables() {
+	for _, t := range store.Tables() {
 		if err := m.EnableRLS(ctx, t); err != nil {
 			return fmt.Errorf("connections: row-level security on %s: %w", t, err)
 		}
