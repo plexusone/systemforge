@@ -59,6 +59,7 @@ nav:
     - Access-Change Invalidation: guides/access-change-invalidation.md
     - Authorization Mode: guides/authorization-mode.md
     - Connections to External Services: guides/connections.md
+    - Key Management: guides/key-management.md
   - Identity:
     - Overview: identity/overview.md
     - Users: identity/users.md
@@ -145,6 +146,7 @@ nav:
   - Releases:
     - Overview: releases/index.md
     - Changelog: releases/changelog.md
+    - v0.15.0: releases/v0.15.0.md
     - v0.14.0: releases/v0.14.0.md
     - v0.13.0: releases/v0.13.0.md
     - v0.12.0: releases/v0.12.0.md
