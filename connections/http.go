@@ -11,6 +11,7 @@ import (
 	"github.com/plexusone/connectionforge/provider"
 	"github.com/plexusone/connectionforge/service"
 
+	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/rls"
 )
 
@@ -46,6 +47,13 @@ const maxBody = 64 << 10
 //	GET    /api/v1/organizations/{org}/connections/{id}
 //	PATCH  /api/v1/organizations/{org}/connections/{id}
 //	POST   /api/v1/organizations/{org}/connections/{id}/test
+//	POST   /api/v1/organizations/{org}/connections/{id}/reconnect
+//	GET    /api/v1/organizations/{org}/connections/{id}/bindings
+//	PUT    /api/v1/organizations/{org}/connections/{id}/bindings
+//	DELETE /api/v1/organizations/{org}/connections/{id}/bindings?kind=&id=&purpose=
+//	GET    /api/v1/organizations/{org}/connections/{id}/grants
+//	PUT    /api/v1/organizations/{org}/connections/{id}/grants/{principal}
+//	DELETE /api/v1/organizations/{org}/connections/{id}/grants/{principal}
 //	DELETE /api/v1/organizations/{org}/connections/{id}
 //
 // Each request is authenticated by auth with [ScopeRead] or [ScopeWrite], and
@@ -63,6 +71,13 @@ func (c *Connections) Handler(auth Authenticator, writeAuthErr AuthErrorWriter, 
 	mux.HandleFunc("GET "+ConnectionsPath+"/{id}", h.org(ScopeRead, h.get))
 	mux.HandleFunc("PATCH "+ConnectionsPath+"/{id}", h.org(ScopeWrite, h.rename))
 	mux.HandleFunc("POST "+ConnectionsPath+"/{id}/test", h.org(ScopeWrite, h.test))
+	mux.HandleFunc("POST "+ConnectionsPath+"/{id}/reconnect", h.org(ScopeWrite, h.reconnect))
+	mux.HandleFunc("GET "+ConnectionsPath+"/{id}/bindings", h.org(ScopeRead, h.bindings))
+	mux.HandleFunc("PUT "+ConnectionsPath+"/{id}/bindings", h.org(ScopeWrite, h.bind))
+	mux.HandleFunc("DELETE "+ConnectionsPath+"/{id}/bindings", h.org(ScopeWrite, h.unbind))
+	mux.HandleFunc("GET "+ConnectionsPath+"/{id}/grants", h.org(ScopeRead, h.listGrants))
+	mux.HandleFunc("PUT "+ConnectionsPath+"/{id}/grants/{principal}", h.org(ScopeWrite, h.putGrant))
+	mux.HandleFunc("DELETE "+ConnectionsPath+"/{id}/grants/{principal}", h.org(ScopeWrite, h.deleteGrant))
 	mux.HandleFunc("DELETE "+ConnectionsPath+"/{id}", h.org(ScopeWrite, h.disconnect))
 	return mux
 }
@@ -168,6 +183,172 @@ func (h *api) test(c call) {
 	h.respond(c, http.StatusOK, conn, err)
 }
 
+// reconnect replaces the credential of an existing connection. Its body is
+// the same fields as a create; the new credential must belong to the same
+// account.
+func (h *api) reconnect(c call) {
+	var req struct {
+		Fields map[string]string `json:"fields"`
+	}
+	if !decode(c, &req) {
+		return
+	}
+	fields := make(map[string]cf.Secret, len(req.Fields))
+	for k, v := range req.Fields {
+		fields[k] = cf.SecretString(v)
+	}
+	conn, err := h.c.Service.Reconnect(c.r.Context(), service.ReconnectInput{
+		Owner: c.owner, Actor: c.actor, ID: c.r.PathValue("id"), Fields: fields,
+	})
+	h.respond(c, http.StatusOK, conn, err)
+}
+
+// bindingBody names a consumer and why it uses the connection.
+type bindingBody struct {
+	ConsumerKind string `json:"consumerKind"`
+	ConsumerID   string `json:"consumerId"`
+	Purpose      string `json:"purpose"`
+}
+
+func (h *api) bindings(c call) {
+	bs, err := h.c.Service.Bindings(c.r.Context(), c.owner, c.actor, c.r.PathValue("id"))
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	out := make([]map[string]any, 0, len(bs))
+	for _, b := range bs {
+		out = append(out, map[string]any{
+			"consumerKind": b.Consumer.Kind, "consumerId": b.Consumer.ID,
+			"purpose": b.Purpose, "createdAt": b.CreatedAt,
+		})
+	}
+	writeJSON(c.w, http.StatusOK, map[string]any{"bindings": out})
+}
+
+func (h *api) bind(c call) {
+	var req bindingBody
+	if !decode(c, &req) {
+		return
+	}
+	err := h.c.Service.Bind(c.r.Context(), c.owner, c.actor, c.r.PathValue("id"),
+		cf.Consumer{Kind: req.ConsumerKind, ID: req.ConsumerID}, req.Purpose)
+	h.respondNoContent(c, err)
+}
+
+func (h *api) unbind(c call) {
+	q := c.r.URL.Query()
+	err := h.c.Service.Unbind(c.r.Context(), c.owner, c.actor, c.r.PathValue("id"),
+		cf.Consumer{Kind: q.Get("kind"), ID: q.Get("id")}, q.Get("purpose"))
+	h.respondNoContent(c, err)
+}
+
+// respondNoContent writes 204, or the error. As in respond, a change whose
+// audit event was lost still succeeded.
+func (h *api) respondNoContent(c call, err error) {
+	if errors.Is(err, service.ErrNotAudited) {
+		h.log.ErrorContext(c.r.Context(), "connections: change not audited", "error", err)
+		err = nil
+	}
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.w.WriteHeader(http.StatusNoContent)
+}
+
+// grantTarget loads the connection and checks that the actor may share it,
+// returning the resource the grant is on.
+func (h *api) grantTarget(c call) (authz.ResourceRef, bool) {
+	if h.c.Grants == nil {
+		writeError(c.w, http.StatusNotImplemented, "grants are not configured")
+		return authz.ResourceRef{}, false
+	}
+	conn, err := h.c.Service.Get(c.r.Context(), c.owner, c.actor, c.r.PathValue("id"))
+	if err != nil {
+		h.fail(c, err)
+		return authz.ResourceRef{}, false
+	}
+	if err := h.c.Authorizer.Allowed(c.r.Context(), c.actor, cf.ActionShare, conn); err != nil {
+		h.fail(c, err)
+		return authz.ResourceRef{}, false
+	}
+	org, err := uuid.Parse(string(c.owner))
+	if err != nil {
+		writeError(c.w, http.StatusNotFound, "organization not found")
+		return authz.ResourceRef{}, false
+	}
+	return authz.ResourceRef{Type: string(ResourceType), ID: conn.ID, OrganizationID: org}, true
+}
+
+func (h *api) listGrants(c call) {
+	ref, ok := h.grantTarget(c)
+	if !ok {
+		return
+	}
+	gs, err := h.c.Grants.ListResourceGrants(c.r.Context(), ref)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	out := make([]map[string]any, 0, len(gs))
+	for _, g := range gs {
+		o := map[string]any{"principal": g.PrincipalID.String(), "role": g.Role}
+		if g.GrantedBy != nil {
+			o["grantedBy"] = g.GrantedBy.String()
+		}
+		out = append(out, o)
+	}
+	writeJSON(c.w, http.StatusOK, map[string]any{"grants": out})
+}
+
+// putGrant gives a principal a resource role on the connection: viewer sees
+// it, contributor may use it, maintainer may manage it. A person outside the
+// organization becomes a collaborator (ADR-008).
+func (h *api) putGrant(c call) {
+	pid, err := uuid.Parse(c.r.PathValue("principal"))
+	if err != nil {
+		writeError(c.w, http.StatusBadRequest, "principal must be an identifier")
+		return
+	}
+	var req struct {
+		Role string `json:"role"`
+	}
+	if !decode(c, &req) {
+		return
+	}
+	ref, ok := h.grantTarget(c)
+	if !ok {
+		return
+	}
+	by, err := uuid.Parse(c.actor.ID)
+	if err != nil {
+		by = uuid.Nil
+	}
+	if err := h.c.Grants.GrantResourceRole(c.r.Context(), pid, ref, req.Role, by); err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *api) deleteGrant(c call) {
+	pid, err := uuid.Parse(c.r.PathValue("principal"))
+	if err != nil {
+		writeError(c.w, http.StatusBadRequest, "principal must be an identifier")
+		return
+	}
+	ref, ok := h.grantTarget(c)
+	if !ok {
+		return
+	}
+	if err := h.c.Grants.RevokeResourceRole(c.r.Context(), pid, ref); err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *api) disconnect(c call) {
 	conn, err := h.c.Service.Disconnect(c.r.Context(), c.owner, c.actor, c.r.PathValue("id"))
 	h.respond(c, http.StatusOK, conn, err)
@@ -197,8 +378,13 @@ func (h *api) fail(c call, err error) {
 		writeError(c.w, http.StatusNotFound, "connection not found")
 	case errors.Is(err, cf.ErrDenied):
 		writeError(c.w, http.StatusForbidden, "not allowed")
-	case errors.Is(err, service.ErrInvalidInput), errors.Is(err, provider.ErrUnknownProvider):
+	case errors.Is(err, service.ErrInvalidInput), errors.Is(err, provider.ErrUnknownProvider),
+		errors.Is(err, authz.ErrInvalidResourceRole), errors.Is(err, authz.ErrInvalidResource):
 		writeError(c.w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, authz.ErrGrantNotFound):
+		writeError(c.w, http.StatusNotFound, "grant not found")
+	case errors.Is(err, cf.ErrAccountMismatch):
+		writeError(c.w, http.StatusUnprocessableEntity, "the credential belongs to a different account; connect it as a new connection")
 	case errors.Is(err, cf.ErrInvalidCredential), errors.Is(err, cf.ErrInsufficientScope):
 		// The message is classified: status and request ID, never a body.
 		writeError(c.w, http.StatusUnprocessableEntity, err.Error())

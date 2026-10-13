@@ -68,6 +68,10 @@ type Options struct {
 	// Egress is the outbound policy template. The zero value allows only
 	// HTTPS to each provider's public hosts; development may allow more.
 	Egress egress.Policy
+	// Grants gives and takes resource roles on a connection (ADR-008). It
+	// is the authorization provider's [authz.ResourceGranter]. Without it
+	// the grant routes answer 501.
+	Grants authz.ResourceGranter
 }
 
 // Connections is connectionforge composed with the platform: each field is a
@@ -81,8 +85,11 @@ type Connections struct {
 	Providers  *provider.Registry
 	// Broker hands out authenticated HTTP clients for a connection.
 	Broker *broker.Broker
-	// Service runs create, get, list, rename, test and disconnect.
+	// Service runs create, get, list, rename, test, reconnect, disconnect
+	// and the binding operations.
 	Service *service.Service
+	// Grants is the resource-role granter, or nil.
+	Grants authz.ResourceGranter
 
 	db      *sql.DB
 	dialect sqlstore.Dialect
@@ -118,6 +125,7 @@ func Open(o Options) (*Connections, error) {
 		Secrets:    secretSource{v: o.Vault},
 		Authorizer: authorizer{az: o.Authorizer},
 		Auditor:    nopAuditor{},
+		Grants:     o.Grants,
 		db:         o.DB,
 		dialect:    o.Dialect,
 		rls:        cfg,
