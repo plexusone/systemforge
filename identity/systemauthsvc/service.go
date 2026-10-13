@@ -15,6 +15,7 @@ import (
 	"github.com/plexusone/systemforge/identity/approle"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/relyingparty"
+	"github.com/plexusone/systemforge/identity/signupgate"
 	"github.com/plexusone/systemforge/identity/systemauth"
 )
 
@@ -71,6 +72,18 @@ type Options struct {
 	// other members hold the roles assigned to them. Applications not named
 	// here are closed to every organization until entitled some other way.
 	BaseEntitlements []string
+
+	// InviteOnly makes social login create accounts only for verified
+	// emails that hold a sign-up invite (see Service.SignupInvites). People
+	// who already have an account are unaffected. It needs a database,
+	// since invites are stored there.
+	InviteOnly bool
+
+	// SignupDeniedURL is where a refused sign-up is redirected, with
+	// error=invite_required in the query. Without it the callback answers
+	// 403 with a plain message. It must be absolute https (http only for a
+	// loopback host).
+	SignupDeniedURL string
 
 	// ServerOptions are passed to systemauth.NewEmbedded after the storage,
 	// logger and readiness options New sets, e.g. WithObservability or
@@ -175,6 +188,21 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		}
 	} else {
 		logger.Warn("using in-memory storage (data will not persist)")
+	}
+	if err := systemauth.ValidateSignupDeniedURL(opts.SignupDeniedURL); err != nil {
+		s.closeQuietly()
+		return nil, fmt.Errorf("systemauthsvc: Options.SignupDeniedURL: %w", err)
+	}
+	if opts.InviteOnly && s.client == nil {
+		s.closeQuietly()
+		return nil, errors.New("systemauthsvc: Options.InviteOnly needs a database to hold invites")
+	}
+	if s.client != nil && opts.InviteOnly {
+		serverOpts = append(serverOpts, systemauth.WithSignupGate(signupgate.NewGate(signupgate.NewStore(s.client))))
+		logger.Info("sign-up is by invitation only")
+	}
+	if opts.SignupDeniedURL != "" {
+		serverOpts = append(serverOpts, systemauth.WithSignupDeniedURL(opts.SignupDeniedURL))
 	}
 	if s.client != nil {
 		src, err := orgsSource(s.client, opts, logger)
@@ -283,6 +311,17 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.server.S
 
 // Server returns the underlying SystemAuth server.
 func (s *Service) Server() *systemauth.Server { return s.server }
+
+// SignupInvites returns the store of sign-up invites over the service's
+// database, for an operator command to add, list and revoke them. It is nil
+// without a database. Invites only take effect when Options.InviteOnly is
+// set.
+func (s *Service) SignupInvites() *signupgate.Store {
+	if s.client == nil {
+		return nil
+	}
+	return signupgate.NewStore(s.client)
+}
 
 // Config returns the effective configuration (defaults applied).
 func (s *Service) Config() Config { return s.cfg }

@@ -29,6 +29,7 @@ import (
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/relyingparty"
+	"github.com/plexusone/systemforge/identity/signupgate"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/identity/systemauthsvc"
 	"github.com/plexusone/systemforge/internal/pgtest"
@@ -655,5 +656,48 @@ func TestOrgsClaimCarriesBaseEntitledRoles(t *testing.T) {
 	want := map[string]string{"build": "admin", "agents": "admin"}
 	if !reflect.DeepEqual(got.Apps, want) {
 		t.Errorf("apps = %v, want %v (portfolio is registered but not base-entitled)", got.Apps, want)
+	}
+}
+
+func TestInviteOnlyNeedsADatabase(t *testing.T) {
+	cfg := &systemauthsvc.Config{Issuer: "http://localhost:8080"}
+	_, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{Dev: true, Logger: discardLogger(), InviteOnly: true})
+	if err == nil {
+		t.Fatal("invite-only without a database accepted")
+	}
+}
+
+func TestSignupInvitesStoreIsBackedByTheDatabase(t *testing.T) {
+	cfg := &systemauthsvc.Config{
+		Issuer:   "https://auth.example.com",
+		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
+	}
+	s, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{
+		SigningKey: testKey(t), Logger: discardLogger(), Migrate: true,
+		InviteOnly: true, SignupDeniedURL: "https://app.example.com/invite-only",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeService(t, s)
+
+	store := s.SignupInvites()
+	if store == nil {
+		t.Fatal("no invite store with a database")
+	}
+	if _, err := store.Add(t.Context(), "Ada@Example.com", signupgate.AddOptions{Note: "launch"}); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := store.Allowed(t.Context(), "ada@example.com"); err != nil || !ok {
+		t.Errorf("allowed = %v, %v", ok, err)
+	}
+
+	bad := *cfg
+	bad.Database = &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)}
+	if _, err := systemauthsvc.New(t.Context(), &bad, systemauthsvc.Options{
+		SigningKey: testKey(t), Logger: discardLogger(), Migrate: true,
+		InviteOnly: true, SignupDeniedURL: "http://app.example.com/x",
+	}); err == nil {
+		t.Error("plain-http denial URL to a non-loopback host accepted")
 	}
 }
