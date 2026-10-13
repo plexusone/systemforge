@@ -75,8 +75,9 @@ func (h *Helper) SetTenant(ctx context.Context, db Executor, tenantID string) er
 	if err := requireTransaction(db); err != nil {
 		return err
 	}
-	query := fmt.Sprintf("SET LOCAL %s = $1", h.config.SessionVariable)
-	_, err := db.ExecContext(ctx, query, tenantID)
+	// set_config with is_local true is SET LOCAL; unlike SET it takes bind
+	// parameters, so the value is never interpolated into SQL.
+	_, err := db.ExecContext(ctx, "SELECT set_config($1, $2, true)", h.config.SessionVariable, tenantID)
 	if err != nil {
 		return fmt.Errorf("setting tenant: %w", err)
 	}
@@ -90,8 +91,7 @@ func (h *Helper) SetUser(ctx context.Context, db Executor, userID string) error 
 	if err := requireTransaction(db); err != nil {
 		return err
 	}
-	query := fmt.Sprintf("SET LOCAL %s = $1", h.config.UserSessionVariable)
-	_, err := db.ExecContext(ctx, query, userID)
+	_, err := db.ExecContext(ctx, "SELECT set_config($1, $2, true)", h.config.UserSessionVariable, userID)
 	if err != nil {
 		return fmt.Errorf("setting user: %w", err)
 	}
