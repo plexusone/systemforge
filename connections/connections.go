@@ -13,6 +13,10 @@ import (
 
 	"github.com/google/uuid"
 	cf "github.com/plexusone/connectionforge"
+	"github.com/plexusone/connectionforge/broker"
+	"github.com/plexusone/connectionforge/egress"
+	"github.com/plexusone/connectionforge/provider"
+	"github.com/plexusone/connectionforge/service"
 	"github.com/plexusone/connectionforge/sqlstore"
 	"github.com/plexusone/keyforge"
 	"github.com/plexusone/omnivault/vault"
@@ -54,6 +58,12 @@ type Options struct {
 	// RLS configures the session variable that carries the organization. The
 	// zero value uses the platform default.
 	RLS *rls.Config
+	// Providers are the providers applications registered. The zero value is
+	// an empty registry.
+	Providers *provider.Registry
+	// Egress is the outbound policy template. The zero value allows only
+	// HTTPS to each provider's public hosts; development may allow more.
+	Egress egress.Policy
 }
 
 // Connections is connectionforge composed with the platform: each field is a
@@ -64,6 +74,11 @@ type Connections struct {
 	Secrets    cf.SecretSource
 	Authorizer cf.Authorizer
 	Auditor    cf.Auditor
+	Providers  *provider.Registry
+	// Broker hands out authenticated HTTP clients for a connection.
+	Broker *broker.Broker
+	// Service runs create, get, list, rename, test and disconnect.
+	Service *service.Service
 
 	db      *sql.DB
 	dialect sqlstore.Dialect
@@ -105,6 +120,24 @@ func Open(o Options) (*Connections, error) {
 	}
 	if o.Audit != nil {
 		c.Auditor = auditor{store: o.Audit}
+	}
+	c.Providers = o.Providers
+	if c.Providers == nil {
+		c.Providers = provider.NewRegistry()
+	}
+	c.Broker, err = broker.New(broker.Options{
+		Store: store, Crypto: c.Crypto, Providers: c.Providers,
+		Authorizer: c.Authorizer, Auditor: c.Auditor, Egress: o.Egress,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("connections: %w", err)
+	}
+	c.Service, err = service.New(service.Options{
+		Store: store, Broker: c.Broker, Providers: c.Providers,
+		Authorizer: c.Authorizer, Auditor: c.Auditor,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("connections: %w", err)
 	}
 	return c, nil
 }

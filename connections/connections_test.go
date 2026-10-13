@@ -15,6 +15,8 @@ import (
 	_ "github.com/mattn/go-sqlite3" // registers the "sqlite3" driver
 	cf "github.com/plexusone/connectionforge"
 	"github.com/plexusone/connectionforge/cryptotest"
+	"github.com/plexusone/connectionforge/provider"
+	"github.com/plexusone/connectionforge/service"
 	"github.com/plexusone/connectionforge/sqlstore"
 	"github.com/plexusone/connectionforge/store/storetest"
 	"github.com/plexusone/keyforge"
@@ -234,5 +236,23 @@ func TestOptionsAreRequired(t *testing.T) {
 		if _, err := connections.Open(o); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
+	}
+}
+
+func TestServiceRunsOnThePlatform(t *testing.T) {
+	ctx := context.Background()
+	org, admin := uuid.New(), uuid.New()
+	az := &fakeAuthz{allow: map[string]bool{admin.String() + "/" + string(authz.PermResourceManage): true}}
+	c := open(t, connections.Options{Authorizer: az})
+	if c.Service == nil || c.Broker == nil || c.Providers == nil {
+		t.Fatal("service, broker or providers missing")
+	}
+	// No provider is registered, so creating fails before any network call.
+	_, err := c.Service.Create(ctx, service.CreateInput{
+		Owner: connections.OwnerFor(org), Actor: cf.Principal{Kind: cf.PrincipalUser, ID: admin.String()},
+		Provider: "cloudflare", AuthMethod: "api_token",
+	})
+	if !errors.Is(err, provider.ErrUnknownProvider) {
+		t.Fatalf("unregistered provider: %v", err)
 	}
 }
