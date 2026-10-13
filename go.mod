@@ -27,6 +27,7 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/ory/fosite v0.49.0
+	github.com/plexusone/connectionforge v0.0.0
 	github.com/plexusone/keyforge v0.1.0
 	github.com/plexusone/omniobserve v0.12.0
 	github.com/plexusone/omnistorage-core v0.5.1
@@ -283,3 +284,7 @@ require (
 	modernc.org/sqlite v1.60.1 // indirect
 	resenje.org/singleflight v0.4.3 // indirect
 )
+
+// connectionforge is not published yet. Remove this replace, and require a
+// tagged version, before pushing.
+replace github.com/plexusone/connectionforge => ../connectionforge
