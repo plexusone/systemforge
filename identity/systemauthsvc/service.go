@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/identity/approle"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/systemauth"
@@ -54,9 +57,25 @@ type Options struct {
 	// already exist (run Migrate or "systemauth migrate" first).
 	Migrate bool
 
+	// Vocabularies declares the application roles of the products hosted on
+	// this SystemAuth (ADR-007). With a database, New emits the orgs claim
+	// (organizations, the principal's role in each, and per-application
+	// roles in "apps"), so relying parties read memberships from tokens
+	// instead of keeping their own tables. Without it the claim lists
+	// organizations with empty "apps".
+	Vocabularies *authz.VocabularyRegistry
+
+	// BaseEntitlements names the registered applications every organization
+	// is entitled to without buying anything (the deployment's base
+	// entitlements). An organization's owner holds the top role of each, and
+	// other members hold the roles assigned to them. Applications not named
+	// here are closed to every organization until entitled some other way.
+	BaseEntitlements []string
+
 	// ServerOptions are passed to systemauth.NewEmbedded after the storage,
 	// logger and readiness options New sets, e.g. WithObservability or
-	// custom social login stores.
+	// custom social login stores. They come last, so they can replace the
+	// orgs source New sets.
 	ServerOptions []systemauth.Option
 }
 
@@ -157,6 +176,14 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 	} else {
 		logger.Warn("using in-memory storage (data will not persist)")
 	}
+	if s.client != nil {
+		src, err := orgsSource(s.client, opts, logger)
+		if err != nil {
+			s.closeQuietly()
+			return nil, err
+		}
+		serverOpts = append(serverOpts, systemauth.WithOrgsSource(src))
+	}
 	serverOpts = append(serverOpts, opts.ServerOptions...)
 
 	server, err := systemauth.NewEmbedded(c, serverOpts...)
@@ -166,6 +193,39 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 	}
 	s.server = server
 	return s, nil
+}
+
+// orgsSource builds the source of the orgs claim. Application roles come
+// from approle over opts.Vocabularies, limited to opts.BaseEntitlements; with
+// no vocabularies the claim carries organizations only.
+func orgsSource(client *ent.Client, opts Options, logger *slog.Logger) (systemauth.OrgsSource, error) {
+	if opts.Vocabularies == nil {
+		if len(opts.BaseEntitlements) > 0 {
+			return nil, errors.New("systemauthsvc: Options.BaseEntitlements requires Options.Vocabularies")
+		}
+		return systemauth.NewEntOrgsSource(client, nil), nil
+	}
+	registered := map[string]bool{}
+	for _, app := range opts.Vocabularies.Apps() {
+		registered[app] = true
+	}
+	base := map[string]approle.Grant{}
+	for _, app := range opts.BaseEntitlements {
+		if !registered[app] {
+			return nil, fmt.Errorf("systemauthsvc: base entitlement %q has no registered vocabulary", app)
+		}
+		base[app] = approle.Grant{}
+	}
+	if len(base) == 0 {
+		logger.Warn("no base entitlements: a new organization has no application open (ADR-003 in pbhq-cloud)")
+	}
+	roles := approle.NewService(client, opts.Vocabularies,
+		approle.WithLogger(logger),
+		approle.WithEntitlementGrants(func(context.Context, uuid.UUID) (map[string]approle.Grant, error) {
+			return base, nil
+		}),
+	)
+	return systemauth.NewEntOrgsSource(client, roles), nil
 }
 
 // openStorage selects the injected Ent client or connection pool, or

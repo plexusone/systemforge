@@ -24,6 +24,10 @@ import (
 
 	"golang.org/x/oauth2"
 
+	"github.com/google/uuid"
+
+	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/identity/systemauthsvc"
@@ -562,5 +566,94 @@ func TestEmbedInHostBinary(t *testing.T) {
 	}
 	if len(authPaths) == 0 {
 		t.Error("no requests reached SystemAuth")
+	}
+}
+
+// appVocab declares a two-role application for the orgs claim tests.
+type appVocab struct{ name string }
+
+func (v appVocab) App() string { return v.name }
+func (v appVocab) Roles() authz.RolePermissions {
+	return authz.RolePermissions{"member": {v.name + ".read"}, "admin": {v.name + ".read", v.name + ".admin"}}
+}
+func (appVocab) Hierarchy() authz.RoleHierarchy {
+	return authz.RoleHierarchy{"member": 10, "admin": 40}
+}
+func (v appVocab) Scopes() []string    { return []string{v.name + ":admin"} }
+func (appVocab) SpiceDBSchema() string { return "" }
+
+func newVocabularies(t *testing.T, apps ...string) *authz.VocabularyRegistry {
+	t.Helper()
+	reg := authz.NewVocabularyRegistry()
+	for _, a := range apps {
+		if err := reg.Register(appVocab{name: a}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return reg
+}
+
+func TestBaseEntitlementsAreChecked(t *testing.T) {
+	newConfig := func() *systemauthsvc.Config {
+		return &systemauthsvc.Config{
+			Issuer:   "https://auth.example.com",
+			Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
+		}
+	}
+	base := systemauthsvc.Options{SigningKey: testKey(t), Logger: discardLogger(), Migrate: true}
+
+	noVocab := base
+	noVocab.BaseEntitlements = []string{"build"}
+	if _, err := systemauthsvc.New(t.Context(), newConfig(), noVocab); err == nil {
+		t.Error("base entitlements without vocabularies accepted")
+	}
+
+	unknown := base
+	unknown.Vocabularies = newVocabularies(t, "build")
+	unknown.BaseEntitlements = []string{"agents"}
+	if _, err := systemauthsvc.New(t.Context(), newConfig(), unknown); err == nil {
+		t.Error("base entitlement without a registered vocabulary accepted")
+	}
+}
+
+// TestOrgsClaimCarriesBaseEntitledRoles checks the wiring end to end: an
+// owner holds the top role of each base-entitled application, and a
+// registered application outside the base entitlements stays closed.
+func TestOrgsClaimCarriesBaseEntitledRoles(t *testing.T) {
+	cfg := &systemauthsvc.Config{
+		Issuer:   "https://auth.example.com",
+		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
+	}
+	s, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{
+		SigningKey: testKey(t), Logger: discardLogger(), Migrate: true,
+		Vocabularies:     newVocabularies(t, "build", "agents", "portfolio"),
+		BaseEntitlements: []string{"build", "agents"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeService(t, s)
+
+	ctx := t.Context()
+	client := s.EntClient()
+	pid := uuid.New()
+	org := client.Organization.Create().SetName("Ada").SetSlug("ada").SetOrgType(organization.OrgTypePersonal).SaveX(ctx)
+	client.Principal.Create().SetID(pid).SetType("human").SetIdentifier("ada@example.com").SetDisplayName("Ada").SaveX(ctx)
+	client.PrincipalMembership.Create().SetPrincipalID(pid).SetOrganizationID(org.ID).SetRole("owner").SaveX(ctx)
+
+	res, err := s.Server().OrgsClaim(ctx, pid, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Orgs) != 1 {
+		t.Fatalf("orgs = %+v, want the personal organization", res.Orgs)
+	}
+	got := res.Orgs[0]
+	if got.Slug != "ada" || got.Role != "owner" {
+		t.Errorf("claim = %+v", got)
+	}
+	want := map[string]string{"build": "admin", "agents": "admin"}
+	if !reflect.DeepEqual(got.Apps, want) {
+		t.Errorf("apps = %v, want %v (portfolio is registered but not base-entitled)", got.Apps, want)
 	}
 }
