@@ -97,6 +97,12 @@ installations) where the service offers them.
      resource-scoped grants of ADR-008.
    - Every broker call checks `use` against current authorization; a saved
      job or an agent is re-checked when it runs, not only when it was set up.
+   - The actions map onto ADR-008's resource ladder, on resources of type
+     `systemforge_connection`: `view` is `view`, `use` is `edit`, and
+     `manage`, `share` and `disconnect` are `manage`. So a `viewer` grant lets
+     a principal see a connection, `contributor` lets it use one, and
+     `maintainer` lets it manage one. Organization owners and admins hold
+     `edit` and `manage` through the organization; members hold only `view`.
 7. **Applications reach a connection through SystemForge, not through
    connectionforge directly.** SystemForge exposes the connection operations
    in its API and SDK:
