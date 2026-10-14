@@ -11,7 +11,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/plexusone/connectionforge/provider"
+	"github.com/plexusone/connectforge/provider"
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/mode"

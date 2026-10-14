@@ -7,7 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	cf "github.com/plexusone/connectionforge"
+	cf "github.com/plexusone/connectforge"
 	"github.com/plexusone/keyforge"
 	"github.com/plexusone/omnivault/vault"
 

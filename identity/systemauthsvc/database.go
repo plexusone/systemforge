@@ -10,7 +10,7 @@ import (
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/plexusone/connectionforge/sqlstore"
+	"github.com/plexusone/connectforge/sqlstore"
 
 	"github.com/plexusone/systemforge/connections"
 	"github.com/plexusone/systemforge/identity/ent"

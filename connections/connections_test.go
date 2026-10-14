@@ -13,12 +13,12 @@ import (
 
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3" // registers the "sqlite3" driver
-	cf "github.com/plexusone/connectionforge"
-	"github.com/plexusone/connectionforge/cryptotest"
-	"github.com/plexusone/connectionforge/provider"
-	"github.com/plexusone/connectionforge/service"
-	"github.com/plexusone/connectionforge/sqlstore"
-	"github.com/plexusone/connectionforge/store/storetest"
+	cf "github.com/plexusone/connectforge"
+	"github.com/plexusone/connectforge/cryptotest"
+	"github.com/plexusone/connectforge/provider"
+	"github.com/plexusone/connectforge/service"
+	"github.com/plexusone/connectforge/sqlstore"
+	"github.com/plexusone/connectforge/store/storetest"
 	"github.com/plexusone/keyforge"
 	"github.com/plexusone/keyforge/provider/local"
 	"github.com/plexusone/omnivault/providers/memory"

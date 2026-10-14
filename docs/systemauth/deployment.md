@@ -122,7 +122,7 @@ connections:
   root_key: SYSTEMAUTH_KEYS_ROOT   # 32 bytes, base64 or hex; keep a copy offline
 ```
 
-`systemauth migrate` creates the `connectionforge_*` tables and, on
+`systemauth migrate` creates the `connectforge_*` tables and, on
 PostgreSQL, enables row-level security on them. `systemauth serve` runs the
 key lifecycle jobs. See [Connections](../guides/connections.md) and
 [Key management](../guides/key-management.md).

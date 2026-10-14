@@ -80,7 +80,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 ### Key Management and Connections
 
 - 🗝️ **Key Management** - `keys` wires [keyforge](https://github.com/plexusone/keyforge) as the platform's one key library: envelope encryption, rotation without re-encrypting, the root key read through [omnivault](https://github.com/plexusone/omnivault), and key events in the audit trail
-- 🔌 **Connections** - `connections` composes [connectionforge](https://github.com/plexusone/connectionforge) so organizations connect accounts at external services; credentials are sealed under managed keys and applications get an authenticated HTTP client, never the secret
+- 🔌 **Connections** - `connections` composes [connectforge](https://github.com/plexusone/connectforge) so organizations connect accounts at external services; credentials are sealed under managed keys and applications get an authenticated HTTP client, never the secret
 - 🌐 **Connections API** - `/api/v1/organizations/{org}/connections` with `systemforge:connections:read` and `:write` scopes, served by SystemAuth when `connections` is configured
 
 ### Observability
@@ -311,7 +311,7 @@ github.com/plexusone/systemforge/
 │   └── service.go         # Identity service interfaces
 │
 ├── keys/                  # keyforge wired to the platform (omnivault root key, audit trail)
-├── connections/           # connectionforge composed with the platform (store, RLS, authz, audit, HTTP API)
+├── connections/           # connectforge composed with the platform (store, RLS, authz, audit, HTTP API)
 │
 ├── session/               # Session management
 │   ├── jwt/               # JWT service with DPoP claims

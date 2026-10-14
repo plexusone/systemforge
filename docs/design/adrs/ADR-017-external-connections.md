@@ -7,9 +7,9 @@ ADR-008 (resource-scoped grants), ADR-015 (connections are keyed by
 organization ID, never by slug), ADR-002 (social sign-in identities, which
 this ADR keeps separate), ADR-016 (no static API keys for callers of the
 platform; it does not govern the credentials a third-party service issues).
-**Builds on:** [connectionforge](https://github.com/plexusone/connectionforge),
+**Builds on:** [connectforge](https://github.com/plexusone/connectforge),
 the generic connection-management library whose
-[specifications](https://github.com/plexusone/connectionforge/tree/main/docs/specs)
+[specifications](https://github.com/plexusone/connectforge/tree/main/docs/specs)
 define the mechanism.
 **Updates:** a new `docs/design/architecture/connections.md`.
 
@@ -37,7 +37,7 @@ The needs are the same across applications and providers:
   share or disconnect a connection, and a record of each.
 
 None of this is specific to identity, so the mechanism is its own module,
-connectionforge, usable outside SystemForge. Its primary consumer is
+connectforge, usable outside SystemForge. Its primary consumer is
 SystemForge, and this ADR records how the platform adopts it, in the same way
 ADR-013 records the adoption of keyforge.
 
@@ -53,36 +53,36 @@ installations) where the service offers them.
 
 ## Decision
 
-1. **SystemForge adopts connectionforge as its one mechanism for outbound
+1. **SystemForge adopts connectforge as its one mechanism for outbound
    connections to external services.** Applications do not store
    third-party tokens themselves. SystemForge provides a thin `connections`
-   package that composes connectionforge with the platform, as `keys` does
+   package that composes connectforge with the platform, as `keys` does
    for keyforge (ADR-013 decision 1).
-2. **connectionforge owns the connection domain, including its schema.**
+2. **connectforge owns the connection domain, including its schema.**
    SystemForge imports its Ent-backed `sqlstore`, runs its migration on the
    platform database and does not copy, regenerate or merge the schema into
    SystemForge's Ent client. The two share the database, not code
-   generation. connectionforge's tables are prefixed `connectionforge_`.
-3. **The import direction is one way.** SystemForge imports connectionforge,
-   keyforge and omnivault. connectionforge imports none of them, nor any
+   generation. connectforge's tables are prefixed `connectforge_`.
+3. **The import direction is one way.** SystemForge imports connectforge,
+   keyforge and omnivault. connectforge imports none of them, nor any
    application. The `connections` package holds the adapters between them:
 
-   | connectionforge port | SystemForge implementation |
+   | connectforge port | SystemForge implementation |
    |---|---|
-   | `Cryptographer` | keyforge client, purpose `connectionforge.credential` (ADR-013) |
-   | Stores and `Leaser` | connectionforge `sqlstore` on the platform database |
+   | `Cryptographer` | keyforge client, purpose `connectforge.credential` (ADR-013) |
+   | Stores and `Leaser` | connectforge `sqlstore` on the platform database |
    | `Authorizer` | `authz.Authorizer`, with connections as resources (decision 6) |
    | `Auditor` | the platform audit trail (`contract/audit`) |
    | `SecretSource` | omnivault, for platform-held secrets (decision 8) |
    | Tenant transaction hook | `rls`, setting the organization for each transaction |
 
-4. **Connections belong to an organization.** The connectionforge owner is
+4. **Connections belong to an organization.** The connectforge owner is
    the organization ID, stored as text in `owner_id` (ADR-015: never a slug).
    A personal organization (ADR-006) can hold connections like any other.
 5. **Tenant isolation holds twice.** `sqlstore` filters every query by owner
    in code. On PostgreSQL, SystemForge also enables row-level security on
    every table `sqlstore` reports, with an `rls` migrator configured for the
-   `owner_id` column, and primes each connectionforge transaction through its
+   `owner_id` column, and primes each connectforge transaction through its
    hook so `SET LOCAL` applies. A bug in either layer alone does not expose
    another organization's connections.
 6. **Connections are authorization resources.** A connection is a resource of
@@ -104,7 +104,7 @@ installations) where the service offers them.
      `maintainer` lets it manage one. Organization owners and admins hold
      `edit` and `manage` through the organization; members hold only `view`.
 7. **Applications reach a connection through SystemForge, not through
-   connectionforge directly.** SystemForge exposes the connection operations
+   connectforge directly.** SystemForge exposes the connection operations
    in its API and SDK:
 
    ```text
@@ -125,7 +125,7 @@ installations) where the service offers them.
    ```
 
    Grants on a connection are the platform's resource grants (ADR-008), not a
-   second authority held by connectionforge: SystemForge registers the
+   second authority held by connectforge: SystemForge registers the
    resource type `systemforge_connection` with its own vocabulary, so a
    grant is a role on a resource of that type and the role-based provider
    reads it.
@@ -133,7 +133,7 @@ installations) where the service offers them.
    The organization is in the path: it is the row-level security tenant of
    the request. Reads need the scope `systemforge:connections:read` and
    changes `systemforge:connections:write`. OAuth authorization, its
-   callback and credential replacement join these routes when connectionforge
+   callback and credential replacement join these routes when connectforge
    supports them.
 
    In process, an application asks the `connections` package for an
@@ -145,7 +145,7 @@ installations) where the service offers them.
    their manifests and adapters, at startup. Secrets that belong to the
    deployment rather than to an organization, such as an OAuth client secret
    or a GitHub App private key, are read through omnivault and never stored in
-   connectionforge's tables. A GitHub App connection stores only the
+   connectforge's tables. A GitHub App connection stores only the
    installation ID.
 9. **Sign-in and connections stay separate even when one provider serves
    both.** The same GitHub App may be used for social sign-in (ADR-002) and
@@ -176,7 +176,7 @@ installations) where the service offers them.
   This makes ADR-013's wiring a prerequisite, and keyforge's release v0.1.0
   is the minimum version.
 - **More tables in the platform database,** owned and migrated by another
-  module. A connectionforge upgrade can change the schema; it is applied by
+  module. A connectforge upgrade can change the schema; it is applied by
   SystemForge's migrate command with the rest.
 - **Row-level security covers tables SystemForge did not define,** using a
   tenant column name other than its default. The `rls` migrator runs a
@@ -184,7 +184,7 @@ installations) where the service offers them.
 - **Background jobs need an organization context** to use a connection, so
   jobs run with the organization set, as requests do.
 - **Provider coverage is the applications' work.** SystemForge ships no
-  provider-specific code beyond what connectionforge provides.
+  provider-specific code beyond what connectforge provides.
 
 ## Alternatives considered
 
@@ -198,9 +198,9 @@ installations) where the service offers them.
   principals to the platform; outbound connections have a different owner
   (an organization), lifecycle (refresh, provider revocation, health) and
   threat model.
-- **Generate connectionforge's schema into SystemForge's Ent client.**
+- **Generate connectforge's schema into SystemForge's Ent client.**
   Rejected: it couples the two modules' code generation and Ent versions,
-  and makes connectionforge's schema changes SystemForge edits.
+  and makes connectforge's schema changes SystemForge edits.
 - **Store connection secrets in omnivault.** Rejected for per-organization
   credentials: omnivault holds deployment secrets and returns plaintext;
   per-organization credentials need tenant isolation, versioning and

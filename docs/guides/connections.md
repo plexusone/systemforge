@@ -5,7 +5,7 @@ product analytics or monitoring, and applications use those connections
 without ever holding the credential. SystemAuth stores the connections,
 seals their credentials, tests them, and hands applications authenticated
 HTTP clients. The design is [ADR-017](../design/adrs/ADR-017-external-connections.md);
-the mechanism is [connectionforge](https://github.com/plexusone/connectionforge).
+the mechanism is [connectforge](https://github.com/plexusone/connectforge).
 
 ## Enable connections
 
@@ -80,9 +80,9 @@ broker and hands it to the provider's SDK:
 ctx = rls.ContextWithTenant(ctx, orgID) // row-level security on PostgreSQL
 hc, err := svc.Connections().Broker.HTTPClient(ctx,
 	connections.OwnerFor(orgID),
-	connectionforge.Principal{Kind: connectionforge.PrincipalUser, ID: userID.String()},
+	connectforge.Principal{Kind: connectforge.PrincipalUser, ID: userID.String()},
 	connectionID,
-	connectionforge.Use{Consumer: connectionforge.Consumer{Kind: "application", ID: "dashboards"}, Purpose: "traffic"},
+	connectforge.Use{Consumer: connectforge.Consumer{Kind: "application", ID: "dashboards"}, Purpose: "traffic"},
 )
 if err != nil {
 	return err

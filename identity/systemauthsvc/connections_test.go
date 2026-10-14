@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	cf "github.com/plexusone/connectionforge"
-	"github.com/plexusone/connectionforge/provider"
+	cf "github.com/plexusone/connectforge"
+	"github.com/plexusone/connectforge/provider"
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/connections"

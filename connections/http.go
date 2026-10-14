@@ -7,9 +7,9 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	cf "github.com/plexusone/connectionforge"
-	"github.com/plexusone/connectionforge/provider"
-	"github.com/plexusone/connectionforge/service"
+	cf "github.com/plexusone/connectforge"
+	"github.com/plexusone/connectforge/provider"
+	"github.com/plexusone/connectforge/service"
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/rls"

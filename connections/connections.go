@@ -1,4 +1,4 @@
-// Package connections wires connectionforge into SystemForge (ADR-017): an
+// Package connections wires connectforge into SystemForge (ADR-017): an
 // organization's connections to external services, stored on the platform
 // database with row-level security, their credentials sealed by the keys
 // package (ADR-013), deployment secrets read through omnivault, and
@@ -13,12 +13,12 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	cf "github.com/plexusone/connectionforge"
-	"github.com/plexusone/connectionforge/broker"
-	"github.com/plexusone/connectionforge/egress"
-	"github.com/plexusone/connectionforge/provider"
-	"github.com/plexusone/connectionforge/service"
-	"github.com/plexusone/connectionforge/sqlstore"
+	cf "github.com/plexusone/connectforge"
+	"github.com/plexusone/connectforge/broker"
+	"github.com/plexusone/connectforge/egress"
+	"github.com/plexusone/connectforge/provider"
+	"github.com/plexusone/connectforge/service"
+	"github.com/plexusone/connectforge/sqlstore"
 	"github.com/plexusone/keyforge"
 	"github.com/plexusone/omnivault/vault"
 
@@ -32,7 +32,7 @@ import (
 // lists it in [keys.Options.Purposes].
 const Purpose = keyforge.Purpose(cf.CredentialPurpose)
 
-// TenantColumn is the column of connectionforge's tables that row-level
+// TenantColumn is the column of connectforge's tables that row-level
 // security keys on.
 const TenantColumn = "owner_id"
 
@@ -74,8 +74,8 @@ type Options struct {
 	Grants authz.ResourceGranter
 }
 
-// Connections is connectionforge composed with the platform: each field is a
-// connectionforge port backed by SystemForge.
+// Connections is connectforge composed with the platform: each field is a
+// connectforge port backed by SystemForge.
 type Connections struct {
 	Store      *sqlstore.Store
 	Crypto     cf.Cryptographer
@@ -157,13 +157,13 @@ func Open(o Options) (*Connections, error) {
 	return c, nil
 }
 
-// Migrate creates or updates connectionforge's tables and, on PostgreSQL,
+// Migrate creates or updates connectforge's tables and, on PostgreSQL,
 // enables row-level security on the owned ones. See [MigrateSchema].
 func (c *Connections) Migrate(ctx context.Context) error {
 	return MigrateSchema(ctx, c.db, c.dialect, c.rls)
 }
 
-// MigrateSchema creates or updates connectionforge's tables and, on
+// MigrateSchema creates or updates connectforge's tables and, on
 // PostgreSQL, enables row-level security on the owned ones, keyed on
 // [TenantColumn]. It needs no keys, so a migration command can run it alone.
 // Run it with a role allowed to change the schema. A nil cfg uses the
@@ -194,7 +194,7 @@ func MigrateSchema(ctx context.Context, db *sql.DB, d sqlstore.Dialect, cfg *rls
 	return nil
 }
 
-// OwnerFor returns the connectionforge owner for an organization.
+// OwnerFor returns the connectforge owner for an organization.
 func OwnerFor(orgID uuid.UUID) cf.OwnerID { return cf.OwnerID(orgID.String()) }
 
 // tenantHook sets the organization from the context for each transaction, so

@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/plexusone/connectionforge/egress"
-	"github.com/plexusone/connectionforge/sqlstore"
+	"github.com/plexusone/connectforge/egress"
+	"github.com/plexusone/connectforge/sqlstore"
 	"github.com/plexusone/keyforge"
 	"github.com/plexusone/omnivault"
 

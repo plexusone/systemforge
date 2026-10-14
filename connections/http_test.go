@@ -13,9 +13,9 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/plexusone/connectionforge/egress"
-	"github.com/plexusone/connectionforge/provider"
-	"github.com/plexusone/connectionforge/provider/apikey"
+	"github.com/plexusone/connectforge/egress"
+	"github.com/plexusone/connectforge/provider"
+	"github.com/plexusone/connectforge/provider/apikey"
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/connections"
