@@ -4,19 +4,24 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.15.0](v0.15.0.md), adds key management through
-keyforge, connections to external services through connectionforge,
-invite-only sign-up with a waitlist, an app catalog for product switchers, and
-the `orgs` claim with per-application roles in embedded SystemAuth. It has no
-breaking changes; run `systemauth migrate` for the new tables.
+The latest release, [v0.16.0](v0.16.0.md), adds reconnecting, bindings and
+per-connection grants to the connections API and renames the connection
+library from connectionforge to connectforge. The rename is breaking for
+deployments that enabled connections in v0.15.0; read its upgrade notes first.
 
-The previous release, [v0.14.0](v0.14.0.md), made Principal the sole identity
+The previous release, [v0.15.0](v0.15.0.md), added key management through
+keyforge, connections to external services, invite-only sign-up with a
+waitlist, an app catalog for product switchers, and the `orgs` claim with
+per-application roles in embedded SystemAuth.
+
+The release before it, [v0.14.0](v0.14.0.md), made Principal the sole identity
 root, added managed principals and a security pass over the APIs, and
 completed the organization model. It is a breaking release with migrations
 0002 to 0009; read its upgrade notes first.
 
 | Version | Release date |
 |---|---|
+| [v0.16.0](v0.16.0.md) | 2026-10-14 |
 | [v0.15.0](v0.15.0.md) | 2026-10-13 |
 | [v0.14.0](v0.14.0.md) | 2026-10-11 |
 | [v0.13.0](v0.13.0.md) | 2026-10-06 |

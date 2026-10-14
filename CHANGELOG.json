@@ -9,6 +9,66 @@
   ],
   "releases": [
     {
+      "version": "v0.16.0",
+      "date": "2026-10-14",
+      "highlights": [
+        {
+          "description": "Connections can be reconnected in place, track what depends on them with bindings, and be shared with a principal through per-connection role grants",
+          "commit": "5a4bf33"
+        },
+        {
+          "description": "The connection library is renamed from connectionforge to connectforge; imports, tables (`connectforge_*`) and the key purpose (`connectforge.credential`) change, which is breaking for deployments that enabled connections in v0.15.0",
+          "commit": "7eb410b"
+        }
+      ],
+      "added": [
+        {
+          "description": "`POST .../connections/{id}/reconnect`, `GET`, `PUT` and `DELETE .../connections/{id}/bindings`, and `GET`, `PUT` and `DELETE .../connections/{id}/grants/{principal}`",
+          "commit": "5a4bf33"
+        },
+        {
+          "description": "`systemauthsvc` registers the `systemforge_connection` resource type so connection grants are role grants read by the role-based provider",
+          "commit": "8f501c3"
+        }
+      ],
+      "changed": [
+        {
+          "description": "Depend on connectforge instead of connectionforge; tables are now `connectforge_*` and credentials are sealed under the `connectforge.credential` purpose",
+          "commit": "7eb410b",
+          "breaking": true
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Connections guide covers reconnecting, bindings and grants; ADR-017 updated for the rename and the grant vocabulary",
+          "commit": "0a5c80b"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Depend on connectforge v0.3.0",
+          "commit": "787bb8a"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Cover reconnect, bindings and grants over the API",
+          "commit": "26d6b64"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "Update imports from connectionforge to connectforge"
+        },
+        {
+          "description": "Deployments that enabled connections in v0.15.0 must re-create connections or rename the tables and re-seal credentials; migrate does not copy rows or re-seal"
+        },
+        {
+          "description": "Run `systemauth migrate` to create the `connectforge_*` tables"
+        }
+      ]
+    },
+    {
       "version": "v0.15.0",
       "date": "2026-10-13",
       "highlights": [
