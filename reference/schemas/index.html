@@ -1,0 +1,7566 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Batteries-included Go platform module for multi-tenant SaaS applications">
+      
+      
+      
+        <link rel="canonical" href="https://plexusone.github.io/systemforge/reference/schemas/">
+      
+      
+        <link rel="prev" href="../../releases/v0.1.0/">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Ent Schemas - SystemForge</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="https://plexusone.dev/css/plexusone-mkdocs.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ent-schema-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+<!-- PlexusOne Unified Navigation -->
+<div id="plexus-nav-root"></div>
+<script src="https://plexusone.dev/js/plexus-nav.js"></script>
+
+
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SystemForge" class="md-header__button md-logo" aria-label="SystemForge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SystemForge
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Ent Schemas
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/plexusone/systemforge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    plexusone/systemforge
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SystemForge" class="md-nav__button md-logo" aria-label="SystemForge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    SystemForge
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/plexusone/systemforge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    plexusone/systemforge
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/invites/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Invites
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/application-roles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Application Roles and Entitlements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/collaborators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collaborators and Resource Grants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/organization-slugs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Organization Slugs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/personal-to-team/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Personal to Team Conversion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/access-change-invalidation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Access-Change Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/authorization-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authorization Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/connections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connections to External Services
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/key-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Key Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Identity
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Identity
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../identity/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../identity/users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Users
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../identity/managed-principals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed Principals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../identity/organizations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Organizations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../identity/memberships/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memberships
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../identity/api-keys/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Keys
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../identity/oauthclient/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OAuth Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../identity/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Account Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../identity/ai-agents-aauth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Agents (AAuth)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OAuth 2.0
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    OAuth 2.0
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../oauth/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../oauth/apps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OAuth Apps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../oauth/authorization-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authorization Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../oauth/client-credentials/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Credentials
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../oauth/service-accounts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Service Accounts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../oauth/tokens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Token Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SystemAuth
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SystemAuth
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/social-login/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/relying-party/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Relying Parties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/embedding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Embedding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/production-stores/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Stores
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authorization
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Authorization
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../authorization/spicedb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SpiceDB Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../authorization/spicedb-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SpiceDB Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../authorization/integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../authorization/query-policy-engines/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Query Policy Engines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CoreAPI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CoreAPI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../coreapi/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../coreapi/policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Policies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../coreapi/ratelimit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rate Limiting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BFF
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    BFF
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bff/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bff/audience/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JWT Audience
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bff/ent-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ent Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../session/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_10" id="__nav_10_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Session
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/bff-sessions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BFF Sessions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/invalidation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/systemforge-application-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Application Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-App
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Multi-App
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../multiapp/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marketplace
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Marketplace
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../marketplace/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_14" id="__nav_14_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../observability/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../integration/existing-apps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    With Existing Apps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../integration/migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_16" >
+        
+          
+          <label class="md-nav__link" for="__nav_16" id="__nav_16_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_16_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_16">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_16_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../design/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_16_1" id="__nav_16_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_16_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_16_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/architecture/organizations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Organizations and Membership
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/architecture/managed-principals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed Principals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/architecture/authorization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authorization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_16_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../design/adrs/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_16_2" id="__nav_16_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_16_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_16_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-001-core-era-naming-cleanup-systemauth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-001: Core-era Naming Cleanup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-002-centralized-social-login-systemauth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002: Centralized Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-003-verified-email-via-systemauth-and-omnimail/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003: Verified Email via omnimail
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-004-retire-legacy-user-principal-sole-identity-root/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004: Retire the Legacy User Entity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-005-managed-principals-and-manager-relationships/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-005: Managed Principals and Manager Relationships
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-006-organization-lifecycle-personal-team-slugs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-006: Organization Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-007-memberships-and-entitlements-as-claims/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-007: Memberships and Entitlements as Claims
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-008-resource-scoped-collaborators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-008: Resource-Scoped Collaborators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-009-management-is-a-relationship/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-009: Management Is a Relationship
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-010-real-time-access-invalidation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-010: Real-Time Access Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-011-lifecycle-states-data-classification-and-privacy-rights/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-011: Lifecycle, Data Classification and Privacy Rights (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-012-data-governance-enforcement-and-legal-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-012: Data Catalog, Legal Holds and Enforcement (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-013-key-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-013: Key Management (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-014-application-roles-and-seat-assignments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-014: Application Roles and Seat Assignments (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-015-identifier-policy-slug-namespaces-and-portability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-015: Identifier Policy and Slug Namespaces (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-016-no-static-api-keys/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-016: No Static API Keys (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-017-external-connections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-017: External Connections (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_16_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_16_3" id="__nav_16_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ProductGraph
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_16_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_16_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ProductGraph
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/productgraph/PRD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PRD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/productgraph/TRD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TRD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/productgraph/PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/productgraph/TASKS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_17" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../releases/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_17" id="__nav_17_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_17_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_17">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Releases
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.15.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.15.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.14.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.14.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.13.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.13.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.12.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.12.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.11.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.11.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.10.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.10.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.9.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.8.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.8.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.7.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.7.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.6.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.6.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.5.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.2.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_18" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_18" id="__nav_18_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_18_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_18">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ent Schemas
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ent Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#identity-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity Schemas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Identity Schemas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#principal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Principal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#human" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Human
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serviceprincipal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ServicePrincipal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#application" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Application
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#credential" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credential
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#externalidentity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ExternalIdentity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#principalmembership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrincipalMembership
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invite
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#session-and-token-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session and Token Schemas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Session and Token Schemas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#principaltoken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrincipalToken
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loginsession" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoginSession
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loginstate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoginState
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consentgrant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ConsentGrant
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#oauth-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth Schemas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OAuth Schemas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#oauthapp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuthApp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauthappsecret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuthAppSecret
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauthtoken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuthToken
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauthauthcode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuthAuthCode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauthconsent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuthConsent
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#marketplace-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Marketplace Schemas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Marketplace Schemas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#listing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Listing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subscription" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subscription
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seatassignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SeatAssignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive API Docs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#identity-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity Schemas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Identity Schemas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#principal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Principal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#human" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Human
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serviceprincipal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ServicePrincipal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#application" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Application
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#credential" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credential
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#externalidentity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ExternalIdentity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Organization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#principalmembership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrincipalMembership
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invite
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#session-and-token-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session and Token Schemas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Session and Token Schemas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#principaltoken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrincipalToken
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loginsession" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoginSession
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loginstate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoginState
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consentgrant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ConsentGrant
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#oauth-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth Schemas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OAuth Schemas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#oauthapp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuthApp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauthappsecret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuthAppSecret
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauthtoken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuthToken
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauthauthcode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuthAuthCode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauthconsent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuthConsent
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#marketplace-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Marketplace Schemas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Marketplace Schemas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#listing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Listing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subscription" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subscription
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seatassignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SeatAssignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="ent-schema-reference">Ent Schema Reference<a class="headerlink" href="#ent-schema-reference" title="Permanent link">&para;</a></h1>
+<p>Reference for the SystemForge Ent schemas in <code>identity/ent/schema</code>. Table names come from each schema's <code>entsql</code> annotation; every table uses the <code>sf_</code> prefix. Columns marked "FK" are foreign keys created from the schema's edges.</p>
+<h2 id="identity-schemas">Identity Schemas<a class="headerlink" href="#identity-schemas" title="Permanent link">&para;</a></h2>
+<p>Every actor is a <code>Principal</code>. Its <code>type</code> selects a one-to-one extension: <code>Human</code> for people, <code>ServicePrincipal</code> for backend services, <code>Application</code> for OAuth client applications, and <code>Agent</code> for AI agents. Credentials, upstream login identities, and organization memberships all belong to the principal.</p>
+<h3 id="principal">Principal<a class="headerlink" href="#principal" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_principals</code></p>
+<p>Principal is the unified identity root representing any type of actor: human, application, agent, or service.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>enum</td>
+<td>immutable</td>
+<td>Type of principal: human, application, agent, service</td>
+</tr>
+<tr>
+<td><code>identifier</code></td>
+<td>string</td>
+<td>unique, not empty</td>
+<td>Unique identifier (email, client_id, service@org)</td>
+</tr>
+<tr>
+<td><code>display_name</code></td>
+<td>string</td>
+<td>not empty</td>
+<td>Human-readable display name</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>bool</td>
+<td>default: true</td>
+<td>Whether the principal is active</td>
+</tr>
+<tr>
+<td><code>capabilities</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Principal capabilities (can_access_ui, can_delegate, etc.)</td>
+</tr>
+<tr>
+<td><code>allowed_scopes</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Scopes this principal can request</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>JSON</td>
+<td>nullable</td>
+<td>Custom metadata</td>
+</tr>
+<tr>
+<td><code>organization_id</code></td>
+<td>UUID</td>
+<td>FK → Organization, nullable</td>
+<td>Organization this principal belongs to</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>type</code> values</strong>: <code>human</code>, <code>application</code>, <code>agent</code>, <code>service</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>organization</code> → Organization (M2O)</li>
+<li><code>human</code> → Human (O2O)</li>
+<li><code>application</code> → Application (O2O)</li>
+<li><code>agent</code> → Agent (O2O)</li>
+<li><code>service_principal</code> → ServicePrincipal (O2O)</li>
+<li><code>credentials</code> → Credential (O2M)</li>
+<li><code>external_identities</code> → ExternalIdentity (O2M)</li>
+<li><code>principal_tokens</code> → PrincipalToken (O2M)</li>
+<li><code>principal_memberships</code> → PrincipalMembership (O2M)</li>
+<li><code>owned_organizations</code> → Organization (O2M)</li>
+<li><code>owned_oauth_apps</code> → OAuthApp (O2M)</li>
+<li><code>oauth_consents</code> → OAuthConsent (O2M)</li>
+<li><code>sent_invites</code> → Invite (O2M)</li>
+<li><code>owned_listings</code> → Listing (O2M)</li>
+<li><code>purchased_licenses</code> → License (O2M)</li>
+<li><code>seat_assignments</code> → SeatAssignment (O2M)</li>
+<li><code>assigned_seats</code> → SeatAssignment (O2M)</li>
+</ul>
+<hr />
+<h3 id="human">Human<a class="headerlink" href="#human" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_humans</code></p>
+<p>Human-specific principal data. This is a one-to-one extension of Principal where type="human".</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td>string</td>
+<td>unique, not empty</td>
+<td>Primary email address</td>
+</tr>
+<tr>
+<td><code>given_name</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>First/given name</td>
+</tr>
+<tr>
+<td><code>family_name</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Last/family name</td>
+</tr>
+<tr>
+<td><code>avatar_url</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Profile picture URL</td>
+</tr>
+<tr>
+<td><code>locale</code></td>
+<td>string</td>
+<td>nullable, default: en</td>
+<td>Preferred locale (e.g., en-US)</td>
+</tr>
+<tr>
+<td><code>timezone</code></td>
+<td>string</td>
+<td>nullable, default: UTC</td>
+<td>Preferred timezone (e.g., America/Los_Angeles)</td>
+</tr>
+<tr>
+<td><code>is_platform_admin</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td>Cross-organization admin access</td>
+</tr>
+<tr>
+<td><code>last_login_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>Last successful login timestamp</td>
+</tr>
+<tr>
+<td><code>email_verified_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>When email was verified</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal, unique, immutable</td>
+<td>Reference to parent Principal</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>principal</code> → Principal (O2O)</li>
+</ul>
+<hr />
+<h3 id="serviceprincipal">ServicePrincipal<a class="headerlink" href="#serviceprincipal" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_service_principals</code></p>
+<p>Backend service-specific principal data. This is a one-to-one extension of Principal where type="service".</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>service_type</code></td>
+<td>string</td>
+<td>not empty</td>
+<td>Type of service (e.g., backend, worker, gateway)</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Service description</td>
+</tr>
+<tr>
+<td><code>last_used_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>Last time this service account was used</td>
+</tr>
+<tr>
+<td><code>allowed_ips</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>IP addresses/CIDRs allowed to use this service account</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal, unique, immutable</td>
+<td>Reference to parent Principal</td>
+</tr>
+<tr>
+<td><code>created_by</code></td>
+<td>UUID</td>
+<td>FK → Principal, nullable</td>
+<td>Principal who created this service account</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>principal</code> → Principal (O2O)</li>
+<li><code>creator</code> → Principal (O2O)</li>
+</ul>
+<hr />
+<h3 id="application">Application<a class="headerlink" href="#application" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_applications</code></p>
+<p>OAuth application-specific principal data. This is a one-to-one extension of Principal where type="application".</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>client_id</code></td>
+<td>string</td>
+<td>unique, not empty, immutable</td>
+<td>Public OAuth client identifier</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Application description</td>
+</tr>
+<tr>
+<td><code>logo_url</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Application logo URL</td>
+</tr>
+<tr>
+<td><code>app_type</code></td>
+<td>enum</td>
+<td>default: web</td>
+<td>web=confidential, spa/native=public+PKCE, machine=client_credentials</td>
+</tr>
+<tr>
+<td><code>redirect_uris</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Allowed redirect URIs</td>
+</tr>
+<tr>
+<td><code>allowed_grants</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Allowed grant types</td>
+</tr>
+<tr>
+<td><code>allowed_response_types</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Allowed response types</td>
+</tr>
+<tr>
+<td><code>access_token_ttl</code></td>
+<td>int</td>
+<td>default: 900</td>
+<td>Access token TTL in seconds (default 15 min)</td>
+</tr>
+<tr>
+<td><code>refresh_token_ttl</code></td>
+<td>int</td>
+<td>default: 604800</td>
+<td>Refresh token TTL in seconds (default 7 days)</td>
+</tr>
+<tr>
+<td><code>refresh_token_rotation</code></td>
+<td>bool</td>
+<td>default: true</td>
+<td>Rotate refresh tokens on use</td>
+</tr>
+<tr>
+<td><code>first_party</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td>First-party apps skip consent screen</td>
+</tr>
+<tr>
+<td><code>public</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td>Public clients cannot keep secrets</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal, unique, immutable</td>
+<td>Reference to parent Principal</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>app_type</code> values</strong>: <code>web</code>, <code>spa</code>, <code>native</code>, <code>machine</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>principal</code> → Principal (O2O)</li>
+<li><code>issued_tokens</code> → PrincipalToken (O2M)</li>
+</ul>
+<hr />
+<h3 id="agent">Agent<a class="headerlink" href="#agent" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_agents</code></p>
+<p>AI agent-specific principal data. This is a one-to-one extension of Principal where type="agent".</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>model_id</code></td>
+<td>string</td>
+<td>not empty</td>
+<td>AI model identifier (e.g., claude-3-opus)</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Agent version</td>
+</tr>
+<tr>
+<td><code>capability_constraints</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Capabilities this agent is constrained to</td>
+</tr>
+<tr>
+<td><code>resource_constraints</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Resources this agent can access</td>
+</tr>
+<tr>
+<td><code>max_token_lifetime</code></td>
+<td>int</td>
+<td>default: 3600</td>
+<td>Maximum token lifetime in seconds (default 1 hour)</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Current session identifier</td>
+</tr>
+<tr>
+<td><code>requires_confirmation</code></td>
+<td>bool</td>
+<td>default: true</td>
+<td>Whether actions require human confirmation</td>
+</tr>
+<tr>
+<td><code>delegating_principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal, nullable</td>
+<td>Principal who delegated authority to this agent</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal, unique, immutable</td>
+<td>Reference to parent Principal</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>principal</code> → Principal (O2O)</li>
+<li><code>delegating_principal</code> → Principal (O2O)</li>
+</ul>
+<hr />
+<h3 id="credential">Credential<a class="headerlink" href="#credential" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_credentials</code></p>
+<p>Unified credentials. Credentials can be passwords, API keys, keypairs, WebAuthn credentials, or TOTP secrets.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>enum</td>
+<td>—</td>
+<td>Type of credential</td>
+</tr>
+<tr>
+<td><code>identifier</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Unique identifier for this credential (e.g., key prefix)</td>
+</tr>
+<tr>
+<td><code>secret_hash</code></td>
+<td>string</td>
+<td>nullable, sensitive</td>
+<td>Hashed secret (Argon2id for passwords/secrets, SHA256 for tokens)</td>
+</tr>
+<tr>
+<td><code>public_key</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Public key (PEM format) for keypair credentials</td>
+</tr>
+<tr>
+<td><code>key_algorithm</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Key algorithm (RS256, ES256, etc.)</td>
+</tr>
+<tr>
+<td><code>key_id</code></td>
+<td>string</td>
+<td>unique, nullable</td>
+<td>Key ID for keypair credentials (used in JWT kid header)</td>
+</tr>
+<tr>
+<td><code>webauthn_credential_id</code></td>
+<td>bytes</td>
+<td>nullable</td>
+<td>WebAuthn credential ID</td>
+</tr>
+<tr>
+<td><code>webauthn_public_key</code></td>
+<td>bytes</td>
+<td>nullable</td>
+<td>WebAuthn public key (COSE format)</td>
+</tr>
+<tr>
+<td><code>webauthn_aaguid</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>WebAuthn authenticator AAGUID</td>
+</tr>
+<tr>
+<td><code>webauthn_sign_count</code></td>
+<td>uint32</td>
+<td>nullable, default: 0</td>
+<td>WebAuthn signature counter</td>
+</tr>
+<tr>
+<td><code>scopes</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Scopes this credential grants</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>bool</td>
+<td>default: true</td>
+<td>Whether this credential is active</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>When this credential expires (nil = never)</td>
+</tr>
+<tr>
+<td><code>revoked</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td>Whether this credential has been revoked</td>
+</tr>
+<tr>
+<td><code>revoked_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>When this credential was revoked</td>
+</tr>
+<tr>
+<td><code>revoked_reason</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Reason for revocation</td>
+</tr>
+<tr>
+<td><code>last_used_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>Last time this credential was used</td>
+</tr>
+<tr>
+<td><code>last_used_ip</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>IP address of last use</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Human-readable name for this credential</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>JSON</td>
+<td>nullable</td>
+<td>Custom metadata</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td>Principal that owns this credential</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>type</code> values</strong>: <code>password</code>, <code>api_key</code>, <code>keypair</code>, <code>webauthn</code>, <code>totp</code>, <code>client_secret</code></p>
+<p><strong>Unique constraint</strong>: <code>(type, identifier)</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>principal</code> → Principal (M2O)</li>
+</ul>
+<hr />
+<h3 id="externalidentity">ExternalIdentity<a class="headerlink" href="#externalidentity" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_external_identities</code></p>
+<p>Links a Principal to an upstream login identity (e.g. a GitHub or Google account). The (provider, subject) pair is the stable key used to find the principal on every social login; email is recorded for information and verified-email linking only.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>provider</code></td>
+<td>string</td>
+<td>not empty, immutable</td>
+<td>Upstream provider name (e.g., github, google)</td>
+</tr>
+<tr>
+<td><code>subject</code></td>
+<td>string</td>
+<td>not empty, immutable</td>
+<td>Stable user ID at the provider (GitHub numeric id, Google sub)</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Email last reported by the provider</td>
+</tr>
+<tr>
+<td><code>email_verified</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td>Whether the provider asserted the email is verified</td>
+</tr>
+<tr>
+<td><code>last_login_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>Last successful login through this identity</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td>Principal this upstream identity is linked to</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Unique constraint</strong>: <code>(provider, subject)</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>principal</code> → Principal (M2O)</li>
+</ul>
+<hr />
+<h3 id="organization">Organization<a class="headerlink" href="#organization" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_organizations</code></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>not empty</td>
+<td></td>
+</tr>
+<tr>
+<td><code>slug</code></td>
+<td>string</td>
+<td>unique, not empty</td>
+<td>URL-safe identifier</td>
+</tr>
+<tr>
+<td><code>org_type</code></td>
+<td>enum</td>
+<td>default: team</td>
+<td>personal=user namespace, team=shared org, enterprise=large org</td>
+</tr>
+<tr>
+<td><code>logo_url</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Organization description</td>
+</tr>
+<tr>
+<td><code>website_url</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Organization website</td>
+</tr>
+<tr>
+<td><code>settings</code></td>
+<td>JSON</td>
+<td>nullable</td>
+<td>App-specific configuration</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>bool</td>
+<td>default: true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>owner_principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal, nullable</td>
+<td>For personal orgs, the principal who owns this namespace</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>org_type</code> values</strong>: <code>personal</code>, <code>team</code>, <code>enterprise</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>oauth_apps</code> → OAuthApp (O2M)</li>
+<li><code>principals</code> → Principal (O2M)</li>
+<li><code>principal_memberships</code> → PrincipalMembership (O2M)</li>
+<li><code>owner</code> → Principal (M2O)</li>
+<li><code>invites</code> → Invite (O2M)</li>
+<li><code>listings</code> → Listing (O2M)</li>
+<li><code>licenses</code> → License (O2M)</li>
+<li><code>subscription</code> → Subscription (O2O)</li>
+</ul>
+<hr />
+<h3 id="principalmembership">PrincipalMembership<a class="headerlink" href="#principalmembership" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_principal_memberships</code></p>
+<p>Principal-organization memberships for every principal type, with an app-defined role and an <code>active</code> flag for soft deactivation.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>string</td>
+<td>not empty</td>
+<td>App-defined role (e.g., owner, admin, member)</td>
+</tr>
+<tr>
+<td><code>permissions</code></td>
+<td>JSON</td>
+<td>nullable</td>
+<td>Optional fine-grained permissions</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>bool</td>
+<td>default: true</td>
+<td>Whether this membership is active</td>
+</tr>
+<tr>
+<td><code>organization_id</code></td>
+<td>UUID</td>
+<td>FK → Organization</td>
+<td></td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Unique constraint</strong>: <code>(principal_id, organization_id)</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>principal</code> → Principal (M2O)</li>
+<li><code>organization</code> → Organization (M2O)</li>
+</ul>
+<hr />
+<h3 id="invite">Invite<a class="headerlink" href="#invite" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_invites</code></p>
+<p>Organization invitations. Invites allow existing members to invite new users to join an organization.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td>string</td>
+<td>not empty</td>
+<td>Email address of the invitee</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>string</td>
+<td>not empty, default: member</td>
+<td>Role to assign when invite is accepted</td>
+</tr>
+<tr>
+<td><code>token</code></td>
+<td>string</td>
+<td>unique, not empty, sensitive</td>
+<td>Secure token for invite URL</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>enum</td>
+<td>default: pending</td>
+<td>Current status of the invite</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Personal message from inviter</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>When this invite expires</td>
+</tr>
+<tr>
+<td><code>accepted_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>When the invite was accepted</td>
+</tr>
+<tr>
+<td><code>accepted_by_principal_id</code></td>
+<td>UUID</td>
+<td>nullable</td>
+<td>Principal who accepted the invite</td>
+</tr>
+<tr>
+<td><code>resend_count</code></td>
+<td>int</td>
+<td>default: 0</td>
+<td>Number of times invite was resent</td>
+</tr>
+<tr>
+<td><code>last_sent_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>When invite was last sent/resent</td>
+</tr>
+<tr>
+<td><code>organization_id</code></td>
+<td>UUID</td>
+<td>FK → Organization</td>
+<td>Organization the invite is for</td>
+</tr>
+<tr>
+<td><code>inviter_principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td>Principal who created the invite</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>status</code> values</strong>: <code>pending</code>, <code>accepted</code>, <code>declined</code>, <code>expired</code>, <code>revoked</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>organization</code> → Organization (M2O)</li>
+<li><code>inviter</code> → Principal (M2O)</li>
+</ul>
+<h2 id="session-and-token-schemas">Session and Token Schemas<a class="headerlink" href="#session-and-token-schemas" title="Permanent link">&para;</a></h2>
+<h3 id="principaltoken">PrincipalToken<a class="headerlink" href="#principaltoken" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_principal_tokens</code></p>
+<p>Holds OAuth 2.0 access and refresh tokens for principals. This replaces OAuthToken with principal-centric token management.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>principal_type</code></td>
+<td>enum</td>
+<td>—</td>
+<td>Type of the principal (denormalized for fast lookup)</td>
+</tr>
+<tr>
+<td><code>access_token_signature</code></td>
+<td>string</td>
+<td>unique</td>
+<td>SHA256 signature of access token</td>
+</tr>
+<tr>
+<td><code>refresh_token_signature</code></td>
+<td>string</td>
+<td>unique, nullable</td>
+<td>SHA256 signature of refresh token</td>
+</tr>
+<tr>
+<td><code>family_id</code></td>
+<td>UUID</td>
+<td>—</td>
+<td>Token family for refresh rotation</td>
+</tr>
+<tr>
+<td><code>scopes</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Granted scopes</td>
+</tr>
+<tr>
+<td><code>audience</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Token audience</td>
+</tr>
+<tr>
+<td><code>capabilities</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Capabilities granted to this token</td>
+</tr>
+<tr>
+<td><code>delegation_chain</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Chain of principal IDs in delegation (root to current)</td>
+</tr>
+<tr>
+<td><code>dpop_jkt</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>DPoP JWK thumbprint for proof-of-possession</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>BFF session ID if applicable</td>
+</tr>
+<tr>
+<td><code>request_data</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Serialized Fosite request for introspection</td>
+</tr>
+<tr>
+<td><code>access_expires_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>When access token expires</td>
+</tr>
+<tr>
+<td><code>refresh_expires_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>When refresh token expires</td>
+</tr>
+<tr>
+<td><code>revoked</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>revoked_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>revoked_reason</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>client_ip</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_agent</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>last_used_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>issued_by_app_id</code></td>
+<td>UUID</td>
+<td>FK → Application, nullable</td>
+<td>Application principal that issued this token</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td>Principal this token represents</td>
+</tr>
+<tr>
+<td><code>parent_token_id</code></td>
+<td>UUID</td>
+<td>FK → PrincipalToken, nullable</td>
+<td>Parent token ID (for delegated tokens)</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>principal_type</code> values</strong>: <code>human</code>, <code>application</code>, <code>agent</code>, <code>service</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>principal</code> → Principal (M2O)</li>
+<li><code>issued_by_app</code> → Application (M2O)</li>
+<li><code>child_tokens</code> → PrincipalToken (O2O)</li>
+</ul>
+<hr />
+<h3 id="loginsession">LoginSession<a class="headerlink" href="#loginsession" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_login_sessions</code></p>
+<p>Holds SystemAuth browser login sessions (the __Host-sf_login cookie). Only a SHA-256 hash of the opaque session token is stored.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>token_hash</code></td>
+<td>string</td>
+<td>unique, immutable</td>
+<td>Hex SHA-256 of the session token; the token itself is never stored</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>immutable</td>
+<td>Authenticated principal</td>
+</tr>
+<tr>
+<td><code>provider</code></td>
+<td>string</td>
+<td>nullable, immutable</td>
+<td>Upstream provider used to sign in</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>When the session was established</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Absolute session expiry</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="loginstate">LoginState<a class="headerlink" href="#loginstate" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_login_states</code></p>
+<p>Holds in-flight upstream OAuth logins started by SystemAuth social login. Rows are single-use and short-lived; only a SHA-256 hash of the OAuth state value is stored.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>state_hash</code></td>
+<td>string</td>
+<td>unique, immutable</td>
+<td>Hex SHA-256 of the OAuth state value</td>
+</tr>
+<tr>
+<td><code>provider</code></td>
+<td>string</td>
+<td>immutable</td>
+<td>Upstream provider the flow was started for</td>
+</tr>
+<tr>
+<td><code>redirect_url</code></td>
+<td>string</td>
+<td>nullable, immutable</td>
+<td>Validated post-login destination</td>
+</tr>
+<tr>
+<td><code>nonce</code></td>
+<td>string</td>
+<td>nullable, immutable, sensitive</td>
+<td>OpenID Connect nonce</td>
+</tr>
+<tr>
+<td><code>pkce_verifier</code></td>
+<td>string</td>
+<td>nullable, immutable, sensitive</td>
+<td>PKCE code verifier for the upstream token exchange</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>When the in-flight login expires</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="consentgrant">ConsentGrant<a class="headerlink" href="#consentgrant" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_consent_grants</code></p>
+<p>Records one scope a principal granted to an OAuth client on the SystemAuth consent page. One row per (principal, client, scope) keeps concurrent grants race-free without read-modify-write.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>string</td>
+<td>immutable</td>
+<td>Principal that granted consent</td>
+</tr>
+<tr>
+<td><code>client_id</code></td>
+<td>string</td>
+<td>immutable</td>
+<td>OAuth client ID that received consent</td>
+</tr>
+<tr>
+<td><code>scope</code></td>
+<td>string</td>
+<td>immutable</td>
+<td>Granted scope</td>
+</tr>
+<tr>
+<td><code>granted_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Unique constraint</strong>: <code>(principal_id, client_id, scope)</code></p>
+<h2 id="oauth-schemas">OAuth Schemas<a class="headerlink" href="#oauth-schemas" title="Permanent link">&para;</a></h2>
+<p>Tables used by the embedded OAuth 2.0 / OpenID Connect server. Tokens and authorization codes record the authenticated principal in <code>subject</code>; it is empty for <code>client_credentials</code> tokens.</p>
+<h3 id="oauthapp">OAuthApp<a class="headerlink" href="#oauthapp" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_oauth_apps</code></p>
+<p>OAuth 2.0 applications/clients.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>client_id</code></td>
+<td>string</td>
+<td>unique, not empty, immutable</td>
+<td>Public client identifier</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>not empty</td>
+<td>Human-readable app name</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>logo_url</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>app_type</code></td>
+<td>enum</td>
+<td>default: web</td>
+<td>web=confidential, spa/native=public+PKCE, service/machine=client_credentials</td>
+</tr>
+<tr>
+<td><code>redirect_uris</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Allowed redirect URIs</td>
+</tr>
+<tr>
+<td><code>allowed_scopes</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Scopes this app can request</td>
+</tr>
+<tr>
+<td><code>allowed_grants</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Allowed grant types</td>
+</tr>
+<tr>
+<td><code>allowed_response_types</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Allowed response types</td>
+</tr>
+<tr>
+<td><code>access_token_ttl</code></td>
+<td>int</td>
+<td>default: 900</td>
+<td>Access token TTL in seconds (default 15 min)</td>
+</tr>
+<tr>
+<td><code>refresh_token_ttl</code></td>
+<td>int</td>
+<td>default: 604800</td>
+<td>Refresh token TTL in seconds (default 7 days)</td>
+</tr>
+<tr>
+<td><code>refresh_token_rotation</code></td>
+<td>bool</td>
+<td>default: true</td>
+<td>Rotate refresh tokens on use</td>
+</tr>
+<tr>
+<td><code>first_party</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td>First-party apps skip consent screen</td>
+</tr>
+<tr>
+<td><code>public</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td>Public clients cannot keep secrets</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>bool</td>
+<td>default: true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>revoked_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>JSON</td>
+<td>nullable</td>
+<td>Custom metadata</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>organization_id</code></td>
+<td>UUID</td>
+<td>FK → Organization, nullable</td>
+<td>Organization scope (optional)</td>
+</tr>
+<tr>
+<td><code>owner_id</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td>Principal that owns this app</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>app_type</code> values</strong>: <code>web</code>, <code>spa</code>, <code>native</code>, <code>service</code>, <code>machine</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>owner</code> → Principal (M2O)</li>
+<li><code>organization</code> → Organization (M2O)</li>
+<li><code>secrets</code> → OAuthAppSecret (O2M)</li>
+<li><code>tokens</code> → OAuthToken (O2M)</li>
+<li><code>auth_codes</code> → OAuthAuthCode (O2M)</li>
+<li><code>consents</code> → OAuthConsent (O2M)</li>
+</ul>
+<hr />
+<h3 id="oauthappsecret">OAuthAppSecret<a class="headerlink" href="#oauthappsecret" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_oauth_app_secrets</code></p>
+<p>Holds client secrets for OAuth apps. Multiple secrets can exist for rotation purposes.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>secret_hash</code></td>
+<td>string</td>
+<td>not empty, sensitive</td>
+<td>Argon2id hash of the secret</td>
+</tr>
+<tr>
+<td><code>secret_prefix</code></td>
+<td>string</td>
+<td>—</td>
+<td>First few chars for identification</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>When this secret expires</td>
+</tr>
+<tr>
+<td><code>last_used_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>revoked</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>revoked_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>app_id</code></td>
+<td>UUID</td>
+<td>FK → OAuthApp</td>
+<td>OAuth app this secret belongs to</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>app</code> → OAuthApp (M2O)</li>
+</ul>
+<hr />
+<h3 id="oauthtoken">OAuthToken<a class="headerlink" href="#oauthtoken" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_oauth_tokens</code></p>
+<p>Holds OAuth 2.0 access and refresh tokens.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>subject</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Authenticated subject (principal ID); empty for client_credentials</td>
+</tr>
+<tr>
+<td><code>access_token_signature</code></td>
+<td>string</td>
+<td>unique</td>
+<td>SHA256 signature of access token</td>
+</tr>
+<tr>
+<td><code>refresh_token_signature</code></td>
+<td>string</td>
+<td>unique, nullable</td>
+<td>SHA256 signature of refresh token</td>
+</tr>
+<tr>
+<td><code>family_id</code></td>
+<td>UUID</td>
+<td>—</td>
+<td>Token family for refresh rotation</td>
+</tr>
+<tr>
+<td><code>scopes</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Granted scopes</td>
+</tr>
+<tr>
+<td><code>audience</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Token audience</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>BFF session ID if applicable</td>
+</tr>
+<tr>
+<td><code>request_data</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Serialized Fosite request for introspection</td>
+</tr>
+<tr>
+<td><code>access_expires_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>When access token expires</td>
+</tr>
+<tr>
+<td><code>refresh_expires_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>When refresh token expires</td>
+</tr>
+<tr>
+<td><code>revoked</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>revoked_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>revoked_reason</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>client_ip</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_agent</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>last_used_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>app_id</code></td>
+<td>UUID</td>
+<td>FK → OAuthApp</td>
+<td>OAuth app that issued this token</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>app</code> → OAuthApp (M2O)</li>
+</ul>
+<hr />
+<h3 id="oauthauthcode">OAuthAuthCode<a class="headerlink" href="#oauthauthcode" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_oauth_auth_codes</code></p>
+<p>Holds OAuth 2.0 authorization codes.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>code_signature</code></td>
+<td>string</td>
+<td>unique</td>
+<td>SHA256 signature of the authorization code</td>
+</tr>
+<tr>
+<td><code>subject</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Authenticated subject (principal ID) the code was issued for</td>
+</tr>
+<tr>
+<td><code>code_challenge</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>PKCE code challenge</td>
+</tr>
+<tr>
+<td><code>code_challenge_method</code></td>
+<td>string</td>
+<td>nullable, default: S256</td>
+<td>PKCE challenge method (S256)</td>
+</tr>
+<tr>
+<td><code>redirect_uri</code></td>
+<td>string</td>
+<td>—</td>
+<td>Redirect URI from authorization request</td>
+</tr>
+<tr>
+<td><code>scopes</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Requested scopes</td>
+</tr>
+<tr>
+<td><code>state</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>State parameter from request</td>
+</tr>
+<tr>
+<td><code>nonce</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>OIDC nonce</td>
+</tr>
+<tr>
+<td><code>request_data</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Serialized Fosite request</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>When this code expires (short-lived, ~10 min)</td>
+</tr>
+<tr>
+<td><code>used</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td>Whether code has been exchanged</td>
+</tr>
+<tr>
+<td><code>used_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>client_ip</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_agent</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>app_id</code></td>
+<td>UUID</td>
+<td>FK → OAuthApp</td>
+<td>OAuth app this code was issued to</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>app</code> → OAuthApp (M2O)</li>
+</ul>
+<hr />
+<h3 id="oauthconsent">OAuthConsent<a class="headerlink" href="#oauthconsent" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_oauth_consents</code></p>
+<p>Tracks user consent for OAuth apps. First-party apps skip consent; third-party apps require explicit approval.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>scopes</code></td>
+<td>JSON</td>
+<td>—</td>
+<td>Scopes the user consented to</td>
+</tr>
+<tr>
+<td><code>granted</code></td>
+<td>bool</td>
+<td>default: true</td>
+<td>Whether consent is currently active</td>
+</tr>
+<tr>
+<td><code>granted_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>When consent was first granted</td>
+</tr>
+<tr>
+<td><code>last_used_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>Last time this consent was used for authorization</td>
+</tr>
+<tr>
+<td><code>revoked</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>revoked_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>revoked_reason</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>user_initiated, admin_revoked, app_deleted, etc.</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>app_id</code></td>
+<td>UUID</td>
+<td>FK → OAuthApp</td>
+<td>OAuth app that received consent</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td>Principal who granted consent</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Unique constraint</strong>: <code>(principal_id, app_id)</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>principal</code> → Principal (M2O)</li>
+<li><code>app</code> → OAuthApp (M2O)</li>
+</ul>
+<h2 id="marketplace-schemas">Marketplace Schemas<a class="headerlink" href="#marketplace-schemas" title="Permanent link">&para;</a></h2>
+<h3 id="listing">Listing<a class="headerlink" href="#listing" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_listings</code></p>
+<p>A marketplace product listing.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>product_type</code></td>
+<td>string</td>
+<td>not empty</td>
+<td>Type of product: course, dashboard_template, etc.</td>
+</tr>
+<tr>
+<td><code>product_id</code></td>
+<td>UUID</td>
+<td>nullable</td>
+<td>Reference to the actual product (optional for drafts)</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>string</td>
+<td>not empty</td>
+<td></td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>pricing_model</code></td>
+<td>enum</td>
+<td>default: free</td>
+<td></td>
+</tr>
+<tr>
+<td><code>price_cents</code></td>
+<td>int64</td>
+<td>default: 0</td>
+<td>Price in cents (0 for free)</td>
+</tr>
+<tr>
+<td><code>currency</code></td>
+<td>string</td>
+<td>default: USD</td>
+<td>ISO 4217 currency code</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>enum</td>
+<td>default: draft</td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>JSON</td>
+<td>nullable</td>
+<td>App-specific metadata</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>published_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>When the listing was published</td>
+</tr>
+<tr>
+<td><code>creator_org_id</code></td>
+<td>UUID</td>
+<td>FK → Organization</td>
+<td>Organization that created this listing</td>
+</tr>
+<tr>
+<td><code>owner_id</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td>Principal who owns this listing</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>pricing_model</code> values</strong>: <code>free</code>, <code>one_time</code>, <code>subscription</code>, <code>per_seat</code></p>
+<p><strong><code>status</code> values</strong>: <code>draft</code>, <code>pending_review</code>, <code>published</code>, <code>archived</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>creator_org</code> → Organization (M2O)</li>
+<li><code>owner</code> → Principal (M2O)</li>
+<li><code>licenses</code> → License (O2M)</li>
+</ul>
+<hr />
+<h3 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_licenses</code></p>
+<p>A marketplace license entitlement.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>license_type</code></td>
+<td>enum</td>
+<td>default: unlimited</td>
+<td></td>
+</tr>
+<tr>
+<td><code>seats</code></td>
+<td>int</td>
+<td>nullable</td>
+<td>Number of seats (nil for unlimited)</td>
+</tr>
+<tr>
+<td><code>used_seats</code></td>
+<td>int</td>
+<td>default: 0</td>
+<td>Currently assigned seats</td>
+</tr>
+<tr>
+<td><code>valid_from</code></td>
+<td>time</td>
+<td>—</td>
+<td>When the license becomes active</td>
+</tr>
+<tr>
+<td><code>valid_until</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>When the license expires (nil for perpetual)</td>
+</tr>
+<tr>
+<td><code>stripe_subscription_id</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Stripe subscription ID for recurring licenses</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>listing_id</code></td>
+<td>UUID</td>
+<td>FK → Listing</td>
+<td>The marketplace listing this license grants access to</td>
+</tr>
+<tr>
+<td><code>organization_id</code></td>
+<td>UUID</td>
+<td>FK → Organization</td>
+<td>The organization that holds this license</td>
+</tr>
+<tr>
+<td><code>purchased_by</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td>Principal who purchased this license</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>license_type</code> values</strong>: <code>seat_based</code>, <code>team</code>, <code>unlimited</code></p>
+<p><strong>Unique constraint</strong>: <code>(listing_id, organization_id)</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>listing</code> → Listing (M2O)</li>
+<li><code>organization</code> → Organization (M2O)</li>
+<li><code>purchaser</code> → Principal (M2O)</li>
+<li><code>seat_assignments</code> → SeatAssignment (O2M)</li>
+</ul>
+<hr />
+<h3 id="subscription">Subscription<a class="headerlink" href="#subscription" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_subscriptions</code></p>
+<p>A platform subscription.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>plan_tier</code></td>
+<td>string</td>
+<td>not empty, default: free</td>
+<td>Plan name: free, starter, pro, enterprise</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>enum</td>
+<td>default: active</td>
+<td></td>
+</tr>
+<tr>
+<td><code>current_period_start</code></td>
+<td>time</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td><code>current_period_end</code></td>
+<td>time</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td><code>stripe_subscription_id</code></td>
+<td>string</td>
+<td>unique, nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>stripe_customer_id</code></td>
+<td>string</td>
+<td>nullable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>cancel_at_period_end</code></td>
+<td>bool</td>
+<td>default: false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td>Creation time</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>time</td>
+<td>—</td>
+<td>Last modification time</td>
+</tr>
+<tr>
+<td><code>organization_id</code></td>
+<td>UUID</td>
+<td>FK → Organization, unique</td>
+<td>The subscribing organization</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>status</code> values</strong>: <code>active</code>, <code>trialing</code>, <code>past_due</code>, <code>canceled</code>, <code>unpaid</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>organization</code> → Organization (O2O)</li>
+</ul>
+<hr />
+<h3 id="seatassignment">SeatAssignment<a class="headerlink" href="#seatassignment" title="Permanent link">&para;</a></h3>
+<p><strong>Table</strong>: <code>sf_seat_assignments</code></p>
+<p>A license seat assignment.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>PK, immutable</td>
+<td>Primary key</td>
+</tr>
+<tr>
+<td><code>assigned_at</code></td>
+<td>time</td>
+<td>immutable</td>
+<td></td>
+</tr>
+<tr>
+<td><code>license_id</code></td>
+<td>UUID</td>
+<td>FK → License</td>
+<td>The license this seat belongs to</td>
+</tr>
+<tr>
+<td><code>principal_id</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td>The principal assigned to this seat</td>
+</tr>
+<tr>
+<td><code>assigned_by</code></td>
+<td>UUID</td>
+<td>FK → Principal</td>
+<td>Principal who made this assignment</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Unique constraint</strong>: <code>(license_id, principal_id)</code></p>
+<p><strong>Edges</strong>:</p>
+<ul>
+<li><code>license</code> → License (M2O)</li>
+<li><code>principal</code> → Principal (M2O)</li>
+<li><code>assigner</code> → Principal (M2O)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/plexusone/systemforge" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

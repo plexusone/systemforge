@@ -1,0 +1,5738 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Batteries-included Go platform module for multi-tenant SaaS applications">
+      
+      
+      
+        <link rel="canonical" href="https://plexusone.github.io/systemforge/design/architecture/managed-principals/">
+      
+      
+        <link rel="prev" href="../organizations/">
+      
+      
+        <link rel="next" href="../authorization/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Managed Principals - SystemForge</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="https://plexusone.dev/css/plexusone-mkdocs.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#managed-principals-and-manager-relationships" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+<!-- PlexusOne Unified Navigation -->
+<div id="plexus-nav-root"></div>
+<script src="https://plexusone.dev/js/plexus-nav.js"></script>
+
+
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="SystemForge" class="md-header__button md-logo" aria-label="SystemForge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SystemForge
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Managed Principals
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/plexusone/systemforge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    plexusone/systemforge
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="SystemForge" class="md-nav__button md-logo" aria-label="SystemForge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    SystemForge
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/plexusone/systemforge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    plexusone/systemforge
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/invites/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Invites
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/application-roles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Application Roles and Entitlements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/collaborators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collaborators and Resource Grants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/organization-slugs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Organization Slugs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/personal-to-team/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Personal to Team Conversion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/access-change-invalidation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Access-Change Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/authorization-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authorization Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/connections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connections to External Services
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/key-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Key Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Identity
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Identity
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../identity/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../identity/users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Users
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../identity/managed-principals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed Principals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../identity/organizations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Organizations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../identity/memberships/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memberships
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../identity/api-keys/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Keys
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../identity/oauthclient/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OAuth Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../identity/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Account Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../identity/ai-agents-aauth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Agents (AAuth)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OAuth 2.0
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    OAuth 2.0
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../oauth/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../oauth/apps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OAuth Apps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../oauth/authorization-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authorization Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../oauth/client-credentials/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Credentials
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../oauth/service-accounts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Service Accounts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../oauth/tokens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Token Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SystemAuth
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SystemAuth
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../systemauth/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../systemauth/providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../systemauth/social-login/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../systemauth/relying-party/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Relying Parties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../systemauth/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../systemauth/embedding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Embedding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../systemauth/production-stores/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Stores
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authorization
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Authorization
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../authorization/spicedb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SpiceDB Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../authorization/spicedb-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SpiceDB Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../authorization/integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../authorization/query-policy-engines/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Query Policy Engines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CoreAPI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CoreAPI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../coreapi/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../coreapi/policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Policies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../coreapi/ratelimit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rate Limiting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BFF
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    BFF
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../bff/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../bff/audience/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JWT Audience
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../bff/ent-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ent Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../session/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_10" id="__nav_10_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Session
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../session/bff-sessions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BFF Sessions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../session/invalidation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/systemforge-application-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Application Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-App
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Multi-App
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../multiapp/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marketplace
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Marketplace
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../marketplace/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_14" id="__nav_14_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../observability/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../integration/existing-apps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    With Existing Apps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../integration/migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_16" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_16" id="__nav_16_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_16_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_16">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_16_1" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_16_1" id="__nav_16_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_16_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_16_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../organizations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Organizations and Membership
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed Principals
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed Principals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#definition-as-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Definition as implemented
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Definition as implemented">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enabling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enabling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sf_manager_relationships-identityentschemamanager_relationshipgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sf_manager_relationships (identity/ent/schema/manager_relationship.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sf_manager_claims-identityentschemamanager_claimgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sf_manager_claims (identity/ent/schema/manager_claim.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sf_manager_invites-identityentschemamanager_invitego" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sf_manager_invites (identity/ent/schema/manager_invite.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sf_credentials-type-login_token-identityentschemacredentialgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sf_credentials type login_token (identity/ent/schema/credential.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invariants-enforced-by-managedprincipalservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invariants enforced by managedprincipal.Service
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manager-roles-and-permissions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manager roles and permissions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-and-maintaining-managers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating and maintaining managers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sign-in-the-login_token-credential" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sign-in: the login_token credential
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sign-in: the login_token credential">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exchange-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exchange endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#claims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claims
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sessions-and-manager-visibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions and manager visibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#attaching-an-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attaching an email
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#other-surfaces-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other surfaces today
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#releasing-a-principal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Releasing a principal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manager-invitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manager invitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slugs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slugs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-managed-principal-may-do-for-itself" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a managed principal may do for itself
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authorization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authorization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_16_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../adrs/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_16_2" id="__nav_16_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_16_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_16_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-001-core-era-naming-cleanup-systemauth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-001: Core-era Naming Cleanup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-002-centralized-social-login-systemauth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002: Centralized Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-003-verified-email-via-systemauth-and-omnimail/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003: Verified Email via omnimail
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-004-retire-legacy-user-principal-sole-identity-root/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004: Retire the Legacy User Entity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-005-managed-principals-and-manager-relationships/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-005: Managed Principals and Manager Relationships
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-006-organization-lifecycle-personal-team-slugs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-006: Organization Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-007-memberships-and-entitlements-as-claims/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-007: Memberships and Entitlements as Claims
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-008-resource-scoped-collaborators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-008: Resource-Scoped Collaborators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-009-management-is-a-relationship/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-009: Management Is a Relationship
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-010-real-time-access-invalidation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-010: Real-Time Access Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-011-lifecycle-states-data-classification-and-privacy-rights/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-011: Lifecycle, Data Classification and Privacy Rights (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-012-data-governance-enforcement-and-legal-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-012: Data Catalog, Legal Holds and Enforcement (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-013-key-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-013: Key Management (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-014-application-roles-and-seat-assignments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-014: Application Roles and Seat Assignments (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-015-identifier-policy-slug-namespaces-and-portability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-015: Identifier Policy and Slug Namespaces (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-016-no-static-api-keys/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-016: No Static API Keys (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-017-external-connections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-017: External Connections (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_16_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_16_3" id="__nav_16_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ProductGraph
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_16_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_16_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ProductGraph
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../productgraph/PRD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PRD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../productgraph/TRD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TRD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../productgraph/PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../productgraph/TASKS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_17" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../releases/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_17" id="__nav_17_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_17_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_17">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Releases
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.15.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.15.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.14.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.14.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.13.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.13.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.12.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.12.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.11.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.11.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.10.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.10.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.9.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.8.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.8.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.7.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.7.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.6.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.6.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.5.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.2.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_18" >
+        
+          
+          <label class="md-nav__link" for="__nav_18" id="__nav_18_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_18_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_18">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ent Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/api-reference.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive API Docs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#definition-as-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Definition as implemented
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Definition as implemented">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enabling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enabling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sf_manager_relationships-identityentschemamanager_relationshipgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sf_manager_relationships (identity/ent/schema/manager_relationship.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sf_manager_claims-identityentschemamanager_claimgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sf_manager_claims (identity/ent/schema/manager_claim.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sf_manager_invites-identityentschemamanager_invitego" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sf_manager_invites (identity/ent/schema/manager_invite.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sf_credentials-type-login_token-identityentschemacredentialgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sf_credentials type login_token (identity/ent/schema/credential.go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invariants-enforced-by-managedprincipalservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invariants enforced by managedprincipal.Service
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manager-roles-and-permissions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manager roles and permissions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-and-maintaining-managers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating and maintaining managers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sign-in-the-login_token-credential" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sign-in: the login_token credential
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sign-in: the login_token credential">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exchange-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exchange endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#claims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claims
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sessions-and-manager-visibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions and manager visibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#attaching-an-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attaching an email
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#other-surfaces-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other surfaces today
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#releasing-a-principal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Releasing a principal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manager-invitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manager invitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slugs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slugs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-managed-principal-may-do-for-itself" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a managed principal may do for itself
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="managed-principals-and-manager-relationships">Managed Principals and Manager Relationships<a class="headerlink" href="#managed-principals-and-manager-relationships" title="Permanent link">&para;</a></h1>
+<p>This page describes managed principals as implemented in
+<code>identity/managedprincipal</code>, <code>identity/credential</code> and SystemAuth
+(<code>identity/systemauth</code>): what makes a principal managed, the invariants the
+service enforces, the built-in manager roles, the <code>login_token</code> credential
+and its exchange, the claims a managed session carries, what managers can
+see and revoke, how an email is attached, how management ends (release),
+how a self-managed human consents to be managed (manager invitations), and
+how a managed principal's slug is chosen. The user-facing guide is
+<a href="../../../identity/managed-principals/">Managed Principals</a>.</p>
+<p><strong>Decisions:</strong>
+<a href="../../adrs/ADR-005-managed-principals-and-manager-relationships/">ADR-005</a>
+(managed principals and manager relationships),
+<a href="../../adrs/ADR-009-management-is-a-relationship/">ADR-009</a>
+(management is a relationship, not the absence of an email; amends
+ADR-005),
+<a href="../../adrs/ADR-006-organization-lifecycle-personal-team-slugs/">ADR-006</a>
+(how a managed principal's slug is chosen),
+<a href="../../adrs/ADR-010-real-time-access-invalidation/">ADR-010</a>
+(access changes recorded when management starts or ends).</p>
+<h2 id="definition-as-implemented">Definition as implemented<a class="headerlink" href="#definition-as-implemented" title="Permanent link">&para;</a></h2>
+<p>A managed principal is a <code>Principal(type=human)</code> with at least one active
+row in <code>sf_manager_relationships</code> as the managed side (ADR-009). The email
+plays no part: a managed principal may have none, an unverified one, or a
+verified one. That is the test everywhere in the code:</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Service.IsManaged(principalID)</code></td>
+<td>An active manager relationship exists (<code>hasActiveManager</code>)</td>
+</tr>
+<tr>
+<td>Manager authority checks (<code>authorizeCredentials</code>, <code>authorizeAccount</code>, <code>checkIssuer</code>)</td>
+<td>Require the target to be an active human with an active manager relationship before consulting the authorizer; otherwise <code>ErrNotManaged</code></td>
+</tr>
+<tr>
+<td>Login-token exchange (<code>verifyLoginToken</code>)</td>
+<td>Requires the principal to be active and <code>HumanPrincipal.Managed</code>; an email does not matter</td>
+</tr>
+<tr>
+<td><code>managed</code> claim</td>
+<td>Emitted when the session's principal has an active manager relationship (<code>HumanPrincipal.Managed</code>, loaded with the principal)</td>
+</tr>
+</tbody>
+</table>
+<p>A managed principal is created with <code>principal.ManagedHumanCapabilities()</code>
+(<code>CanAccessUI</code> only: <code>CanManageProfile</code> and <code>CanDelegate</code> are false) and
+<code>sf_principals.identifier = "human:&lt;principal-id&gt;"</code>, a lookup key rather
+than an address. <code>signup.validateEmail</code> requires a plain address, so a
+managed identifier can never be looked up as an email.</p>
+<h3 id="enabling">Enabling<a class="headerlink" href="#enabling" title="Permanent link">&para;</a></h3>
+<p>Managed principals exist only when both gates are open:</p>
+<table>
+<thead>
+<tr>
+<th>Gate</th>
+<th>Setting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deployment</td>
+<td><code>systemauth</code> config <code>managed_principals.enabled</code> (<code>ManagedPrincipalsConfig.Enabled</code>), default off</td>
+</tr>
+<tr>
+<td>Client</td>
+<td><code>sf_oauth_apps.managed_principals_enabled</code> or config <code>clients[].managed_principals</code>, default off</td>
+</tr>
+</tbody>
+</table>
+<p><code>systemauth.Server.ManagedPrincipalsAllowed(ctx, clientID)</code> evaluates both
+and is the <code>managedprincipal.Gate</code> the service consults; <code>Server.LoginTokenPolicy(ctx, clientID)</code> supplies lifetimes (below).</p>
+<h2 id="tables">Tables<a class="headerlink" href="#tables" title="Permanent link">&para;</a></h2>
+<h3 id="sf_manager_relationships-identityentschemamanager_relationshipgo"><code>sf_manager_relationships</code> (<code>identity/ent/schema/manager_relationship.go</code>)<a class="headerlink" href="#sf_manager_relationships-identityentschemamanager_relationshipgo" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>managed_principal_id</code></td>
+<td>The principal being managed; immutable</td>
+</tr>
+<tr>
+<td><code>manager_principal_id</code></td>
+<td>The manager; immutable</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td><code>guardian</code>, <code>educator</code>, or a role registered with <code>managedprincipal.WithRoles</code>; immutable</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>Removal deactivates rather than deletes; re-adding reactivates</td>
+</tr>
+<tr>
+<td><code>created_by</code></td>
+<td>The actor that established the relationship</td>
+</tr>
+</tbody>
+</table>
+<p>Unique on <code>(managed_principal_id, manager_principal_id, role)</code>.</p>
+<h3 id="sf_manager_claims-identityentschemamanager_claimgo"><code>sf_manager_claims</code> (<code>identity/ent/schema/manager_claim.go</code>)<a class="headerlink" href="#sf_manager_claims-identityentschemamanager_claimgo" title="Permanent link">&para;</a></h3>
+<p>A single-use code with which a human with an email becomes guardian of a
+managed principal. Kept apart from <code>sf_credentials</code> so a claim code can
+never sign anyone in.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>managed_principal_id</code></td>
+<td>The principal the claim grants guardianship of</td>
+</tr>
+<tr>
+<td><code>code_prefix</code></td>
+<td><code>SFMC</code> plus 8 characters, unique, used to look the claim up</td>
+</tr>
+<tr>
+<td><code>code_hash</code></td>
+<td>SHA-256 of the full code (<code>SFMC</code> + 160 random bits, base32)</td>
+</tr>
+<tr>
+<td><code>issued_by</code>, <code>expires_at</code></td>
+<td>Issuer and expiry (<code>DefaultClaimTTL</code> 7 days, <code>WithClaimTTL</code>)</td>
+</tr>
+<tr>
+<td><code>redeemed_at</code>, <code>redeemed_by</code></td>
+<td>Set once; a redeemed or expired claim is refused</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sf_manager_invites-identityentschemamanager_invitego"><code>sf_manager_invites</code> (<code>identity/ent/schema/manager_invite.go</code>)<a class="headerlink" href="#sf_manager_invites-identityentschemamanager_invitego" title="Permanent link">&para;</a></h3>
+<p>A single-use invitation with which a human with a verified email offers to
+manage a self-managed human. Kept apart from organization invites
+(<code>sf_invites</code>), which grant membership rather than authority over a person.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>manager_principal_id</code></td>
+<td>The inviter, who becomes a manager on acceptance</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td>Verified address of the invited human; only a principal whose verified email matches (case-insensitive) can accept</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>The manager role the inviter will hold</td>
+</tr>
+<tr>
+<td><code>token_prefix</code>, <code>token_hash</code></td>
+<td><code>SFMI</code> plus 8 characters, unique, used to look it up; SHA-256 of the full token (<code>SFMI</code> + 160 random bits, base32)</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td><code>DefaultInviteTTL</code> 7 days, <code>WithInviteTTL</code></td>
+</tr>
+<tr>
+<td><code>accepted_at</code>, <code>accepted_by</code>, <code>revoked_at</code>, <code>declined_at</code>, <code>declined_by</code></td>
+<td>Set once; an accepted, revoked, declined or expired invitation is refused</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sf_credentials-type-login_token-identityentschemacredentialgo"><code>sf_credentials</code> type <code>login_token</code> (<code>identity/ent/schema/credential.go</code>)<a class="headerlink" href="#sf_credentials-type-login_token-identityentschemacredentialgo" title="Permanent link">&para;</a></h3>
+<p>The manager-issued sign-in secret is a credential like any other:
+<code>identifier</code> holds the displayable prefix (<code>SFLT</code> plus 8 characters),
+<code>secret_hash</code> the SHA-256 of the token (<code>SFLT</code> + 32 random bytes, base32),
+<code>metadata</code> records <code>issued_by</code> and <code>single_use</code>, and <code>expires_at</code>,
+<code>active</code>, <code>revoked</code>, <code>revoked_at</code>, <code>revoked_reason</code>, <code>last_used_at</code> and
+<code>last_used_ip</code> give it the standard lifecycle.</p>
+<h2 id="invariants-enforced-by-managedprincipalservice">Invariants enforced by <code>managedprincipal.Service</code><a class="headerlink" href="#invariants-enforced-by-managedprincipalservice" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Invariant</th>
+<th>Enforcement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>At least one active manager unless the principal has a verified email</td>
+<td><code>Create</code> refuses <code>len(Managers) == 0</code> (<code>ErrNoManagers</code>); <code>RemoveManager</code> refuses to deactivate the last active relationship of a principal whose email is missing or unverified (<code>ErrLastManager</code>). <code>lockHuman</code> takes a row lock on the principal for the transaction so concurrent removals serialize</td>
+</tr>
+<tr>
+<td>2</td>
+<td>A manager is an active human with an email</td>
+<td><code>validateManager</code> requires <code>type = human</code>, <code>active</code>, <code>email IS NOT NULL</code>; a managed principal, having no email, cannot manage. A principal cannot manage itself</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Both the deployment and the client allow managed principals</td>
+<td><code>Create</code> and <code>IssueLoginToken</code> call <code>Gate.ManagedPrincipalsAllowed(clientID)</code> and return <code>ErrNotAllowed</code> otherwise</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Email is independent of management, but decides whether management may end</td>
+<td>A managed principal may have an email from <code>Create</code> or <code>AttachVerifiedEmail</code> and keeps its managers and managed capabilities. Once the email is verified (<code>VerifyEmail</code>, or attached verified), <code>RemoveManager</code> may remove the last manager; with no active manager the principal is no longer managed and login tokens stop signing it in</td>
+</tr>
+<tr>
+<td>5</td>
+<td>A principal with no manager cannot be given one by a manager</td>
+<td><code>AddManager</code> and <code>RedeemClaim</code> return <code>ErrNotManaged</code> for a principal with no active manager: entering management takes the principal's own consent (<code>AcceptManagerInvite</code>, below)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>A managed principal is never a manager</td>
+<td><code>validateManager</code> also requires the candidate to have no active manager of its own, whether or not it has an email; accepting an invitation is refused with <code>ErrManagesOthers</code> for a principal that manages others</td>
+</tr>
+</tbody>
+</table>
+<p>Roles are checked against the registered set (<code>ErrInvalidRole</code>); the
+built-ins are <code>managedprincipal.RoleGuardian</code> and <code>RoleEducator</code>.</p>
+<h2 id="manager-roles-and-permissions">Manager roles and permissions<a class="headerlink" href="#manager-roles-and-permissions" title="Permanent link">&para;</a></h2>
+<p>The platform permissions a manager holds over a principal are defined in
+<code>authz</code> (<code>authz/manager.go</code>) and in the base SpiceDB schema
+(<code>definition principal</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Permission</th>
+<th><code>guardian</code></th>
+<th><code>educator</code></th>
+<th>Covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>manage_account</code></td>
+<td>yes</td>
+<td>no</td>
+<td>Consent, deletion, billing; attaching an email</td>
+</tr>
+<tr>
+<td><code>manage_credentials</code></td>
+<td>yes</td>
+<td>yes</td>
+<td>Issuing claims; listing and revoking login tokens and sessions</td>
+</tr>
+<tr>
+<td><code>view_profile</code></td>
+<td>yes</td>
+<td>yes</td>
+<td>Reading the profile</td>
+</tr>
+<tr>
+<td><code>manage_managers</code></td>
+<td>yes</td>
+<td>no</td>
+<td>Adding and removing other managers</td>
+</tr>
+</tbody>
+</table>
+<p><code>authz.ManagerRolePermissions</code> and <code>ManagerRoleAllows</code> mirror the schema;
+the parity test keeps them equal. The role-based provider evaluates a check
+on <code>authz.NewPrincipalResource(managedID)</code> through
+<code>rbac.WithManagerRoleGetter</code>, for which <code>Service.ManagerRoles(managerID,
+managedID)</code> is the getter; the service's default authorizer is exactly
+<code>rbac.New(rbac.WithManagerRoleGetter(svc.ManagerRoles))</code>, replaceable with
+<code>WithAuthorizer</code>. The relationship-based provider reads the <code>guardian</code> and
+<code>educator</code> relations that <code>Syncer.AddPrincipalManager</code> writes.</p>
+<p>Which service operations consult the authorizer:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Permission checked</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IssueClaim</code>, <code>ListLoginTokens</code>, <code>RevokeLoginToken</code>, <code>ListSessions</code>, <code>RevokeSession</code>, <code>RevokeAll</code></td>
+<td><code>manage_credentials</code></td>
+</tr>
+<tr>
+<td><code>AttachVerifiedEmail</code>, <code>Delete</code></td>
+<td><code>manage_account</code></td>
+</tr>
+<tr>
+<td><code>AddManager</code>, <code>RemoveManager</code>, <code>Release</code></td>
+<td><code>manage_managers</code></td>
+</tr>
+<tr>
+<td><code>ListManagersFor</code></td>
+<td><code>view_profile</code></td>
+</tr>
+<tr>
+<td><code>IssueLoginToken</code></td>
+<td>None through the authorizer: <code>checkIssuer</code> requires the issuer to be an active manager of the principal, in any role</td>
+</tr>
+<tr>
+<td><code>Create</code></td>
+<td>No principal exists to check a permission against, so the actor must be one of the managers being named (the manager creating the principal) or a platform administrator (<code>authz.PlatformAuthorizer.IsPlatformAdmin</code>); otherwise <code>ErrForbidden</code>. A missing actor is refused</td>
+</tr>
+<tr>
+<td><code>RedeemClaim</code></td>
+<td>The claim carries its issuer's authority: redemption is refused (<code>ErrInvalidClaim</code>) unless the issuer still holds <code>manage_credentials</code> on the principal, so removing a manager withdraws the claims they issued. The claimant must be a valid manager</td>
+</tr>
+<tr>
+<td><code>InviteManager</code></td>
+<td>The inviter must be a valid manager and the client must allow managed principals; consent is given by the invitee in <code>AcceptManagerInvite</code>, which checks the principal's own verified email, not a permission</td>
+</tr>
+</tbody>
+</table>
+<p>The service accepts <code>WithRoles</code> for application-defined manager roles, but
+<code>authz.ManagerRolePermissions</code> grants nothing to them in the role-based
+provider; an application maps them in its own vocabulary.</p>
+<h2 id="creating-and-maintaining-managers">Creating and maintaining managers<a class="headerlink" href="#creating-and-maintaining-managers" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Create(in CreateInput)</code></td>
+<td>Requires <code>DisplayName</code>, at least one <code>ManagerInput{PrincipalID, Role}</code>, a client that allows managed principals. In one transaction validates each manager, creates <code>sf_principals</code> (identifier <code>human:&lt;id&gt;</code>, managed capabilities), <code>sf_humans</code>, and the relationships. <code>CreateInput.Email</code> is optional: when set it is stored unverified, becomes the identifier, and <code>ErrEmailInUse</code> refuses a taken address. Emits <code>managed_principal.created</code>, then syncs <code>RegisterPrincipal</code> and <code>AddPrincipalManager</code> for each manager</td>
+</tr>
+<tr>
+<td><code>AddManager(managedID, m, actorID)</code></td>
+<td>Needs <code>manage_managers</code>, checked under the principal's row lock in the writing transaction. Idempotent: no-op when active, reactivates when inactive; emits <code>managed_principal.manager_added</code>; syncs</td>
+</tr>
+<tr>
+<td><code>RemoveManager(managedID, m, actorID)</code></td>
+<td>Needs <code>manage_managers</code>, checked under the principal's row lock in the writing transaction. Deactivates; refuses the last manager of a principal without a verified email (<code>ErrLastManager</code>); emits <code>managed_principal.manager_removed</code>; syncs</td>
+</tr>
+<tr>
+<td><code>ListManagers(managedID)</code></td>
+<td>Active relationships, oldest first; unchecked, for callers that already hold authority. <code>ListManagersFor(actorID, managedID)</code> checks <code>view_profile</code></td>
+</tr>
+<tr>
+<td><code>Delete(actorID, managedID)</code></td>
+<td>Needs <code>manage_account</code>. Soft delete with erasure in one transaction: the principal is deactivated, its identifier becomes <code>deleted:&lt;id&gt;</code> and its display name "Deleted account"; email, verification, names and avatar are cleared (freeing the address); credentials, external identities, login sessions, OAuth consents and claims are deleted; OAuth and principal token families are revoked; memberships and manager relationships are deactivated; pending manager invitations to its address are withdrawn; an access change <code>deactivated</code> is recorded and announced (ADR-010); the authorization backend loses its relations and the principal. <code>managed_principal.deleted</code>. The row stays so identifiers elsewhere keep resolving; application data and any personal organization are the application's to remove</td>
+</tr>
+<tr>
+<td><code>Release(actorID, managedID)</code></td>
+<td>Ends management of a principal with a verified email: deactivates every remaining relationship, restores <code>DefaultCapabilitiesForType(human)</code> and records an access change (<code>management_ended</code>), in one transaction. Needs <code>manage_managers</code>, checked under the principal's row lock; <code>ErrEmailNotVerified</code> without a verified email; <code>managed_principal.released</code>; syncs each removal. <code>RemoveManager</code> of the last manager of a verified principal does the same</td>
+</tr>
+<tr>
+<td><code>InviteManager(in)</code></td>
+<td>A manager-to-be offers to manage the human with a verified <code>Email</code>. Needs a client that allows managed principals and a valid manager; returns the token once; <code>managed_principal.manager_invited</code></td>
+</tr>
+<tr>
+<td><code>AcceptManagerInvite(token, principalID)</code></td>
+<td>The signed-in principal's consent. Spends the invitation conditionally, creates the relationship, sets <code>ManagedHumanCapabilities</code>, records an access change (<code>management_granted</code>), <code>managed_principal.manager_invite_accepted</code>, syncs. <code>ErrInvalidInvite</code> for any mismatch, <code>ErrAlreadyManaged</code>, <code>ErrManagesOthers</code></td>
+</tr>
+<tr>
+<td><code>DeclineManagerInvite(token, principalID)</code></td>
+<td>The invitee's refusal, with the same identity match as acceptance (an active principal whose verified email is the invited address; <code>ErrInvalidInvite</code> for any mismatch, unknown, expired, revoked, accepted or already declined token). Single use: it marks the invitation declined (<code>declined_at</code>, <code>declined_by</code>) conditionally, so a concurrent acceptance or decline wins exactly once, and a declined invitation can be neither accepted nor revoked. Touches no relationship, capability or access change. <code>managed_principal.manager_invite_declined</code>, whose details carry the inviter and the invitation, is the inviter's notification: the service sends none itself, so the application delivers it</td>
+</tr>
+<tr>
+<td><code>RevokeManagerInvite(actorID, inviteID)</code></td>
+<td>The inviter withdraws a pending invitation; <code>ErrNotFound</code> otherwise, including after the invitee accepted or declined</td>
+</tr>
+<tr>
+<td><code>VerifyEmail(managedID, verifiedAt)</code></td>
+<td>Records that the principal controls the email it was created with; called by the verification flow, not by a manager. <code>managed_principal.email_verified</code></td>
+</tr>
+<tr>
+<td><code>IssueClaim(actorID, managedID)</code></td>
+<td>Returns the plain code once; <code>managed_principal.claim_issued</code></td>
+</tr>
+<tr>
+<td><code>RedeemClaim(code, claimantID)</code></td>
+<td>Normalizes the code (case, spaces, hyphens), compares the hash in constant time, spends the claim with a conditional update so two redemptions cannot both succeed, validates the claimant as a manager, and makes them <code>guardian</code>; <code>managed_principal.claim_redeemed</code>; syncs</td>
+</tr>
+</tbody>
+</table>
+<p>Audit events go through <code>contract/audit.Emitter</code> when
+<code>WithAuditEmitter</code> is set; authorization sync follows <code>authz.SyncMode</code>
+(<code>WithAuthzSyncer</code>): a sync failure after the commit is returned in
+<code>strict</code> mode and logged in <code>eventual</code> mode.</p>
+<h2 id="sign-in-the-login_token-credential">Sign-in: the <code>login_token</code> credential<a class="headerlink" href="#sign-in-the-login_token-credential" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Default</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reusable token lifetime</td>
+<td>30 days (<code>credential.DefaultLoginTokenTTL</code>)</td>
+<td><code>managed_principals.login_token_ttl</code>; a client's <code>login_token_ttl</code> (<code>sf_oauth_apps.login_token_ttl</code>) overrides it</td>
+</tr>
+<tr>
+<td>Ceiling</td>
+<td>400 days (<code>DefaultLoginTokenMaxTTL</code>)</td>
+<td><code>managed_principals.login_token_max_ttl</code>; longer requests are clamped and logged</td>
+</tr>
+<tr>
+<td>Single-use lifetime</td>
+<td>20 minutes (<code>DefaultSingleUseLoginTokenTTL</code>)</td>
+<td><code>managed_principals.single_use_token_ttl</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>Service.IssueLoginToken(in)</code> checks the client gate, requires the issuer to
+be an active manager with an email and the subject to be an active managed
+principal, resolves the expiry with <code>credential.LoginTokenPolicy.ExpiresAt</code>,
+and calls <code>credential.Service.IssueLoginToken</code>, which stores the hashed
+credential and returns the plain token once
+(<code>credential.GeneratedLoginToken</code>). The event
+<code>managed_principal.login_token_issued</code> records the prefix, expiry and
+whether the lifetime was clamped. Tokens use uppercase letters and digits
+so a QR code can encode them in alphanumeric mode; how an application
+renders them is its own choice.</p>
+<p><code>credential.Service.VerifyLoginToken(plain, ip)</code> looks the token up by
+prefix, compares the hash in constant time, requires it active, unrevoked
+and unexpired, records <code>last_used_at</code> and <code>last_used_ip</code>, and revokes a
+single-use token in the same conditional update (<code>revoked_reason = "used"</code>).
+Every failure is <code>credential.ErrInvalidLoginToken</code>.</p>
+<h3 id="exchange-endpoint">Exchange endpoint<a class="headerlink" href="#exchange-endpoint" title="Permanent link">&para;</a></h3>
+<p>SystemAuth mounts <code>POST /login-token</code> (<code>systemauth.LoginTokenPath</code>) when
+managed principals are enabled and a <code>credential.Service</code> is available
+(<code>WithCredentialService</code>, or the Ent storage's database). It takes form
+fields <code>token</code>, <code>client_id</code> and optional <code>return_to</code>, and:</p>
+<ol>
+<li>rate-limits per source address (<code>DefaultLoginTokenAddressLimit</code>, 60 per
+   minute) and per registered client (<code>DefaultLoginTokenClientLimit</code>, 600
+   per minute; unregistered client IDs share one bucket), with
+   <code>WithLoginTokenRateLimit</code> and <code>WithLoginTokenClientIP</code> for shared
+   storage and proxy-aware addressing;</li>
+<li>resolves <code>return_to</code> against the redirect allowlist;</li>
+<li>requires the client to allow managed principals, verifies the token, and
+   requires the principal to be active and managed (an email does not
+   matter);</li>
+<li>establishes a browser login session (<code>sf_login_sessions</code> with
+   <code>provider = login_token</code>) and redirects.</li>
+</ol>
+<p>Every rejection is the same 401 <code>invalid login token</code>; the response never
+says which condition failed.</p>
+<h2 id="claims">Claims<a class="headerlink" href="#claims" title="Permanent link">&para;</a></h2>
+<p><code>GetUserClaims</code> adds <code>"managed": true</code> for a session whose principal has an
+active manager, whatever scopes were granted; <code>email</code> and <code>email_verified</code>
+appear only when the principal has an email and the <code>email</code> scope is
+granted. The claim appears in the ID token and at
+<code>/oauth/userinfo</code> (<code>systemauth.ManagedClaim</code>). The relying-party layer reads
+it into <code>relyingparty.VerifiedIdentity.Managed</code> from either source
+(<code>IdentityFromClaims</code>), and <code>ResolvePrincipal</code> creates a managed principal
+locally, with the email when the claims carry one but never linking by
+email; the BFF reports
+<code>managed</code> on the current user.</p>
+<h2 id="sessions-and-manager-visibility">Sessions and manager visibility<a class="headerlink" href="#sessions-and-manager-visibility" title="Permanent link">&para;</a></h2>
+<p><code>Service.ListSessions(actorID, managedID)</code> returns every way the principal
+is signed in now, as <code>managedprincipal.Session{ID, Kind, Provider,
+ClientID, CreatedAt, ExpiresAt, LastUsedAt, ClientIP}</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Source</th>
+<th>Revocation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>login</code></td>
+<td><code>sf_login_sessions</code> (browser sessions, <code>provider</code> such as <code>login_token</code>)</td>
+<td>Row deleted</td>
+</tr>
+<tr>
+<td><code>oauth</code></td>
+<td><code>sf_oauth_tokens</code>, one entry per token family</td>
+<td>Family marked revoked (<code>revoked_reason = "revoked by manager"</code>), so its refresh token cannot renew it</td>
+</tr>
+<tr>
+<td><code>principal_token</code></td>
+<td><code>sf_principal_tokens</code>, one entry per family</td>
+<td>Family marked revoked</td>
+</tr>
+</tbody>
+</table>
+<p><code>ListLoginTokens</code> returns live login tokens without their values;
+<code>RevokeLoginToken</code> revokes one; <code>RevokeSession(kind, id)</code> ends one session;
+<code>RevokeAll</code> revokes every login token and ends every session in one
+transaction. Each emits an audit event (<code>login_token_revoked</code>,
+<code>session_revoked</code>, <code>all_revoked</code>). <code>managedprincipal.NewHandler(svc)</code>
+exposes these and the managing operations as a chi router to mount behind
+<code>requestprincipal.Middleware</code>, which identifies the calling principal. The
+caller is always the actor; every route runs the service operation and so
+its authorizer check:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>POST   /                                          Create (JSON: client_id, display_name, email?, managers[])
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>GET    /{principalID}/managers                    ListManagersFor
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>POST   /{principalID}/managers                    AddManager (JSON: principal_id, role)
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>DELETE /{principalID}/managers/{managerID}/{role} RemoveManager
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>POST   /{principalID}/release                     Release
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>DELETE /{principalID}                             Delete
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>POST   /{principalID}/claims                      IssueClaim
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>POST   /claims/redeem                             RedeemClaim (JSON: code)
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>POST   /manager-invites                           InviteManager (JSON: client_id, email, role)
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>POST   /manager-invites/accept                    AcceptManagerInvite (JSON: token)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>POST   /manager-invites/decline                   DeclineManagerInvite (JSON: token); 204, 400 for any mismatch
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>DELETE /manager-invites/{inviteID}                RevokeManagerInvite
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>GET    /{principalID}/login-tokens
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>DELETE /{principalID}/login-tokens/{credentialID}
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>GET    /{principalID}/sessions
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>DELETE /{principalID}/sessions/{kind}/{sessionID}
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>POST   /{principalID}/revoke-all
+</code></pre></div>
+<p>Responses: 401 without a principal, 403 for a missing permission (or a
+client that does not allow managed principals), 404 for an unknown or
+unmanaged principal, 400 for malformed input or any unusable code, 409 for
+conflicts (<code>ErrLastManager</code>, <code>ErrEmailInUse</code>, <code>ErrEmailNotVerified</code>,
+<code>ErrAlreadyManaged</code>). Bodies are bounded and refuse unknown fields.
+<code>client_id</code> in a create or invite body is the caller's assertion; the
+deployment and that client's opt-in still gate it (<code>ManagedPrincipalsAllowed</code>).</p>
+<h2 id="attaching-an-email">Attaching an email<a class="headerlink" href="#attaching-an-email" title="Permanent link">&para;</a></h2>
+<p><code>Service.AttachVerifiedEmail(actorID, managedID, email, verifiedAt)</code>
+requires <code>manage_account</code>, and in one transaction sets <code>sf_humans.email</code> and
+<code>email_verified_at</code> on a managed principal that has no email, and makes the
+email the <code>sf_principals.identifier</code>. Management is unchanged (ADR-009):
+the relationships and the managed capabilities stay, and the verified email
+is what allows the last manager to be removed. A taken address is
+<code>ErrEmailInUse</code>; a principal that already has an email is <code>ErrHasEmail</code>.
+Proving control of the address is the caller's job (ADR-003 verification is
+not wired into this step). A principal created with an unverified email is
+verified with <code>Service.VerifyEmail</code> instead.</p>
+<h2 id="other-surfaces-today">Other surfaces today<a class="headerlink" href="#other-surfaces-today" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Invites</td>
+<td>Accepting or listing invites requires a caller with an email; a managed principal gets 403</td>
+</tr>
+<tr>
+<td>Signup and social login</td>
+<td>Look principals up by email; a managed identifier never matches</td>
+</tr>
+<tr>
+<td>Marketplace</td>
+<td><code>marketplace.PurchaserChecker</code> (<code>Service.IsManaged</code>) refuses checkout for managed principals</td>
+</tr>
+<tr>
+<td>Deletion</td>
+<td><code>Service.Delete</code> (above), restricted by <code>manage_account</code> to guardians, which ADR-005 requires</td>
+</tr>
+</tbody>
+</table>
+<h2 id="releasing-a-principal">Releasing a principal<a class="headerlink" href="#releasing-a-principal" title="Permanent link">&para;</a></h2>
+<p>Management ends only for a principal that can be reached and has proven it
+controls its address (ADR-009). <code>Release</code> and the removal of the last
+manager of such a principal are the same event: the relationships are
+deactivated and the human capabilities that management withheld
+(<code>CanManageProfile</code>, <code>CanDelegate</code>) are restored in the transaction, and
+<code>managed_principal.released</code> is emitted. The platform records the release;
+whether the person must confirm first is the application's decision. Once
+released the principal is self-managed: managers lose their authority, the
+<code>managed</code> claim is no longer emitted, login tokens stop signing it in, and
+re-entering management takes a new invitation.</p>
+<h2 id="manager-invitations">Manager invitations<a class="headerlink" href="#manager-invitations" title="Permanent link">&para;</a></h2>
+<p>A manager relationship with an existing principal gives up control of its
+own profile, so it is created only by that principal accepting an
+invitation while signed in (<code>AcceptManagerInvite</code>). The caller passes its
+own authenticated principal ID, and the invitation matches only when the
+principal's verified email is the invited address, so a leaked token alone
+does not enter anyone into management. The invitee may instead decline
+(<code>DeclineManagerInvite</code>), with the same identity match: the invitation is
+then spent, the inviter cannot withdraw it and nothing about the invitee
+changes. Creation by a manager (<code>Create</code>,
+<code>RedeemClaim</code>) remains the path for principals the manager creates or
+whose guardian claims them. How the token is delivered (email, link, QR)
+is the application's choice.</p>
+<h2 id="slugs">Slugs<a class="headerlink" href="#slugs" title="Permanent link">&para;</a></h2>
+<p>A managed principal's personal organization (ADR-006) is never slugged from
+an email. <code>signup.SlugForManaged</code> produces the manager-entered value or a
+generated <code>adjective-noun-NN</code>; SystemAuth uses it, with the managers'
+display name and no provider avatar, when a managed principal signs in with
+an email of its own (<code>personalOrgParamsFor</code>). A handle therefore never
+reveals a child's address.</p>
+<h2 id="what-a-managed-principal-may-do-for-itself">What a managed principal may do for itself<a class="headerlink" href="#what-a-managed-principal-may-do-for-itself" title="Permanent link">&para;</a></h2>
+<p>That is the application's decision, expressed in its authorization
+vocabulary (ADR-009 decision 7): the platform supplies the relationship,
+the roles and the <code>managed</code> claim. A managed principal may hold its own
+credentials (a password, a social login linked to its email, login
+tokens); manager authority (consent, deletion, credential and session
+revocation) is unchanged by the principal signing in itself.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/plexusone/systemforge" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,1433 @@
+openapi: 3.1.0
+info:
+  title: SystemForge API
+  version: 0.8.0
+  description: |
+    SystemForge provides batteries-included Go platform modules for multi-tenant SaaS applications.
+
+    This API reference covers:
+    - **OAuth 2.0 / OpenID Connect** - Authorization server endpoints
+    - **SCIM 2.0** - User and group provisioning (RFC 7643/7644)
+    - **Organizations** - Multi-tenant organization management
+    - **Sessions** - BFF session management
+  contact:
+    name: SystemForge
+    url: https://github.com/plexusone/systemforge
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.example.com
+    description: Production API
+
+tags:
+  - name: OAuth
+    description: OAuth 2.0 / OpenID Connect endpoints
+  - name: Discovery
+    description: OAuth discovery endpoints
+  - name: Users
+    description: SCIM 2.0 User management
+  - name: Groups
+    description: SCIM 2.0 Group management
+  - name: SCIM Discovery
+    description: SCIM service provider configuration
+  - name: Organizations
+    description: Organization management
+  - name: Sessions
+    description: BFF session management
+
+paths:
+  # =============================================================================
+  # OAuth 2.0 / OpenID Connect
+  # =============================================================================
+
+  /oauth/authorize:
+    get:
+      operationId: authorize
+      summary: OAuth 2.0 Authorization Endpoint
+      description: |
+        Initiates the authorization flow. Redirects to login if not authenticated,
+        then to consent, and finally back to the client with an authorization code or token.
+      tags: [OAuth]
+      parameters:
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [code]
+          description: Must be `code` for authorization code flow
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: OAuth app client ID
+        - name: redirect_uri
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Registered redirect URI
+        - name: scope
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Space-separated list of scopes
+        - name: state
+          in: query
+          schema:
+            type: string
+          description: CSRF protection token (recommended)
+        - name: code_challenge
+          in: query
+          schema:
+            type: string
+          description: PKCE code challenge (required for public clients)
+        - name: code_challenge_method
+          in: query
+          schema:
+            type: string
+            enum: [S256]
+          description: Must be S256 when using code_challenge
+        - name: nonce
+          in: query
+          schema:
+            type: string
+          description: OpenID Connect nonce
+      responses:
+        '302':
+          description: Redirect to redirect_uri with authorization code
+        '400':
+          description: Invalid request parameters
+
+    post:
+      operationId: authorizePost
+      summary: OAuth 2.0 Authorization Endpoint (POST)
+      description: Handles authorization form submission (consent approval).
+      tags: [OAuth]
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                response_type:
+                  type: string
+                client_id:
+                  type: string
+                redirect_uri:
+                  type: string
+                scope:
+                  type: string
+                state:
+                  type: string
+      responses:
+        '302':
+          description: Redirect to redirect_uri with authorization code
+
+  /oauth/token:
+    post:
+      operationId: token
+      summary: OAuth 2.0 Token Endpoint
+      description: |
+        Exchanges authorization codes for tokens, refreshes tokens,
+        or issues tokens for client credentials.
+      tags: [OAuth]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [grant_type]
+              properties:
+                grant_type:
+                  type: string
+                  enum: [authorization_code, refresh_token, client_credentials]
+                code:
+                  type: string
+                  description: Authorization code (for authorization_code grant)
+                redirect_uri:
+                  type: string
+                  description: Must match the original redirect_uri
+                client_id:
+                  type: string
+                client_secret:
+                  type: string
+                code_verifier:
+                  type: string
+                  description: PKCE code verifier
+                refresh_token:
+                  type: string
+                  description: Refresh token (for refresh_token grant)
+                scope:
+                  type: string
+                  description: Requested scopes (for client_credentials grant)
+      responses:
+        '200':
+          description: Token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthError'
+
+  /oauth/introspect:
+    post:
+      operationId: introspect
+      summary: OAuth 2.0 Token Introspection
+      description: Returns metadata about a token, including whether it is active (RFC 7662).
+      tags: [OAuth]
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: The token to introspect
+                token_type_hint:
+                  type: string
+                  enum: [access_token, refresh_token]
+      responses:
+        '200':
+          description: Introspection response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntrospectionResponse'
+
+  /oauth/revoke:
+    post:
+      operationId: revoke
+      summary: OAuth 2.0 Token Revocation
+      description: Revokes an access token or refresh token (RFC 7009).
+      tags: [OAuth]
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                token_type_hint:
+                  type: string
+                  enum: [access_token, refresh_token]
+      responses:
+        '200':
+          description: Token revoked successfully
+
+  /.well-known/openid-configuration:
+    get:
+      operationId: openidConfiguration
+      summary: OpenID Connect Discovery
+      description: Returns OpenID Connect configuration metadata.
+      tags: [Discovery]
+      responses:
+        '200':
+          description: OpenID configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenIDConfiguration'
+
+  /.well-known/jwks.json:
+    get:
+      operationId: jwks
+      summary: JSON Web Key Set
+      description: Returns the public keys used to verify JWT signatures.
+      tags: [Discovery]
+      responses:
+        '200':
+          description: JWKS response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JWKS'
+
+  # =============================================================================
+  # SCIM 2.0 Users
+  # =============================================================================
+
+  /scim/v2/Users:
+    get:
+      operationId: listUsers
+      summary: List users
+      description: Returns a list of users with optional filtering and pagination (RFC 7644 Section 3.4.2)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scimFilter'
+        - $ref: '#/components/parameters/scimStartIndex'
+        - $ref: '#/components/parameters/scimCount'
+        - $ref: '#/components/parameters/scimAttributes'
+        - $ref: '#/components/parameters/scimExcludedAttributes'
+        - $ref: '#/components/parameters/scimSortBy'
+        - $ref: '#/components/parameters/scimSortOrder'
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMListResponse'
+
+    post:
+      operationId: createUser
+      summary: Create a user
+      description: Creates a new user resource (RFC 7644 Section 3.3)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/SCIMUser'
+      responses:
+        '201':
+          description: User created
+          headers:
+            Location:
+              schema:
+                type: string
+            ETag:
+              schema:
+                type: string
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMUser'
+        '400':
+          $ref: '#/components/responses/SCIMError'
+        '409':
+          $ref: '#/components/responses/SCIMError'
+
+  /scim/v2/Users/{id}:
+    get:
+      operationId: getUser
+      summary: Get a user by ID
+      description: Returns a specific user by ID (RFC 7644 Section 3.4.1)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/scimAttributes'
+        - $ref: '#/components/parameters/scimExcludedAttributes'
+      responses:
+        '200':
+          description: User found
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMUser'
+        '404':
+          $ref: '#/components/responses/SCIMError'
+
+    put:
+      operationId: replaceUser
+      summary: Replace a user
+      description: Replaces an existing user resource (RFC 7644 Section 3.5.1)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: If-Match
+          in: header
+          schema:
+            type: string
+          description: ETag for optimistic concurrency
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/SCIMUser'
+      responses:
+        '200':
+          description: User replaced
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMUser'
+        '404':
+          $ref: '#/components/responses/SCIMError'
+        '412':
+          $ref: '#/components/responses/SCIMError'
+
+    patch:
+      operationId: patchUser
+      summary: Patch a user
+      description: Applies partial updates to a user resource (RFC 7644 Section 3.5.2)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: If-Match
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/SCIMPatchRequest'
+      responses:
+        '200':
+          description: User patched
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMUser'
+        '404':
+          $ref: '#/components/responses/SCIMError'
+
+    delete:
+      operationId: deleteUser
+      summary: Delete a user
+      description: Deletes a user resource (RFC 7644 Section 3.6)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: User deleted
+        '404':
+          $ref: '#/components/responses/SCIMError'
+
+  /scim/v2/Users/.search:
+    post:
+      operationId: searchUsers
+      summary: Search users
+      description: Searches for users using POST with a search request body (RFC 7644 Section 3.4.3)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/SCIMSearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMListResponse'
+
+  # =============================================================================
+  # SCIM 2.0 Groups
+  # =============================================================================
+
+  /scim/v2/Groups:
+    get:
+      operationId: listGroups
+      summary: List groups
+      description: Returns a list of groups with optional filtering and pagination (RFC 7644 Section 3.4.2)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/scimFilter'
+        - $ref: '#/components/parameters/scimStartIndex'
+        - $ref: '#/components/parameters/scimCount'
+        - $ref: '#/components/parameters/scimAttributes'
+        - $ref: '#/components/parameters/scimExcludedAttributes'
+      responses:
+        '200':
+          description: List of groups
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMListResponse'
+
+    post:
+      operationId: createGroup
+      summary: Create a group
+      description: Creates a new group resource (RFC 7644 Section 3.3)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/SCIMGroup'
+      responses:
+        '201':
+          description: Group created
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMGroup'
+
+  /scim/v2/Groups/{id}:
+    get:
+      operationId: getGroup
+      summary: Get a group by ID
+      description: Returns a specific group by ID (RFC 7644 Section 3.4.1)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Group found
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMGroup'
+        '404':
+          $ref: '#/components/responses/SCIMError'
+
+    put:
+      operationId: replaceGroup
+      summary: Replace a group
+      description: Replaces an existing group resource (RFC 7644 Section 3.5.1)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/SCIMGroup'
+      responses:
+        '200':
+          description: Group replaced
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMGroup'
+
+    patch:
+      operationId: patchGroup
+      summary: Patch a group
+      description: Applies partial updates to a group resource (RFC 7644 Section 3.5.2)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/SCIMPatchRequest'
+      responses:
+        '200':
+          description: Group patched
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMGroup'
+
+    delete:
+      operationId: deleteGroup
+      summary: Delete a group
+      description: Deletes a group resource (RFC 7644 Section 3.6)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Group deleted
+
+  # =============================================================================
+  # SCIM 2.0 Me Endpoint
+  # =============================================================================
+
+  /scim/v2/Me:
+    get:
+      operationId: getMe
+      summary: Get current user
+      description: Returns the currently authenticated user's profile
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMUser'
+
+    patch:
+      operationId: patchMe
+      summary: Update current user
+      description: Updates the currently authenticated user's profile
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: '#/components/schemas/SCIMPatchRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMUser'
+
+  # =============================================================================
+  # SCIM 2.0 Service Provider Configuration
+  # =============================================================================
+
+  /scim/v2/ServiceProviderConfig:
+    get:
+      operationId: getServiceProviderConfig
+      summary: Get service provider configuration
+      description: Returns SCIM service provider configuration (RFC 7643 Section 5)
+      tags: [SCIM Discovery]
+      responses:
+        '200':
+          description: Service provider configuration
+          content:
+            application/scim+json:
+              schema:
+                $ref: '#/components/schemas/SCIMServiceProviderConfig'
+
+  /scim/v2/ResourceTypes:
+    get:
+      operationId: getResourceTypes
+      summary: Get resource types
+      description: Returns supported SCIM resource types
+      tags: [SCIM Discovery]
+      responses:
+        '200':
+          description: Resource types
+          content:
+            application/scim+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SCIMResourceType'
+
+  /scim/v2/Schemas:
+    get:
+      operationId: getSchemas
+      summary: Get schemas
+      description: Returns SCIM schemas
+      tags: [SCIM Discovery]
+      responses:
+        '200':
+          description: Schemas
+          content:
+            application/scim+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SCIMSchema'
+
+  # =============================================================================
+  # Organizations
+  # =============================================================================
+
+  /api/v1/organizations:
+    get:
+      operationId: listOrganizations
+      summary: List organizations
+      description: Returns a list of organizations with optional filtering
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: org_type
+          in: query
+          schema:
+            type: string
+            enum: [personal, team, enterprise]
+        - name: plan
+          in: query
+          schema:
+            type: string
+            enum: [free, starter, pro, enterprise]
+        - name: active
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: List of organizations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organizations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Organization'
+                  total:
+                    type: integer
+
+    post:
+      operationId: createOrganization
+      summary: Create an organization
+      description: Creates a new organization
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Invalid request
+
+  /api/v1/organizations/{slug}:
+    get:
+      operationId: getOrganization
+      summary: Get an organization
+      description: Returns an organization by slug
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Organization found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '404':
+          description: Organization not found
+
+    patch:
+      operationId: updateOrganization
+      summary: Update an organization
+      description: Updates an existing organization
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrganizationRequest'
+      responses:
+        '200':
+          description: Organization updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+
+    delete:
+      operationId: deleteOrganization
+      summary: Delete an organization
+      description: Soft-deletes an organization
+      tags: [Organizations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Organization deleted
+
+  /api/v1/organizations/check-slug/{slug}:
+    get:
+      operationId: checkSlugAvailability
+      summary: Check slug availability
+      description: Checks if an organization slug is available
+      tags: [Organizations]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Availability check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  available:
+                    type: boolean
+                  slug:
+                    type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    basicAuth:
+      type: http
+      scheme: basic
+
+  parameters:
+    scimFilter:
+      name: filter
+      in: query
+      schema:
+        type: string
+      description: SCIM filter expression
+    scimStartIndex:
+      name: startIndex
+      in: query
+      schema:
+        type: integer
+        default: 1
+      description: 1-based index of the first result
+    scimCount:
+      name: count
+      in: query
+      schema:
+        type: integer
+        default: 100
+      description: Maximum number of results to return
+    scimAttributes:
+      name: attributes
+      in: query
+      schema:
+        type: string
+      description: Comma-separated list of attributes to include
+    scimExcludedAttributes:
+      name: excludedAttributes
+      in: query
+      schema:
+        type: string
+      description: Comma-separated list of attributes to exclude
+    scimSortBy:
+      name: sortBy
+      in: query
+      schema:
+        type: string
+      description: Attribute to sort by
+    scimSortOrder:
+      name: sortOrder
+      in: query
+      schema:
+        type: string
+        enum: [ascending, descending]
+      description: Sort order
+
+  responses:
+    SCIMError:
+      description: SCIM error response
+      content:
+        application/scim+json:
+          schema:
+            $ref: '#/components/schemas/SCIMError'
+
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+        refresh_token:
+          type: string
+        scope:
+          type: string
+        id_token:
+          type: string
+
+    OAuthError:
+      type: object
+      properties:
+        error:
+          type: string
+          enum:
+            - invalid_request
+            - invalid_client
+            - invalid_grant
+            - unauthorized_client
+            - unsupported_grant_type
+            - invalid_scope
+            - access_denied
+            - server_error
+        error_description:
+          type: string
+
+    IntrospectionResponse:
+      type: object
+      properties:
+        active:
+          type: boolean
+        scope:
+          type: string
+        client_id:
+          type: string
+        username:
+          type: string
+        token_type:
+          type: string
+        exp:
+          type: integer
+        iat:
+          type: integer
+        sub:
+          type: string
+        aud:
+          type: array
+          items:
+            type: string
+
+    OpenIDConfiguration:
+      type: object
+      properties:
+        issuer:
+          type: string
+        authorization_endpoint:
+          type: string
+        token_endpoint:
+          type: string
+        introspection_endpoint:
+          type: string
+        revocation_endpoint:
+          type: string
+        jwks_uri:
+          type: string
+        response_types_supported:
+          type: array
+          items:
+            type: string
+        grant_types_supported:
+          type: array
+          items:
+            type: string
+        token_endpoint_auth_methods_supported:
+          type: array
+          items:
+            type: string
+        code_challenge_methods_supported:
+          type: array
+          items:
+            type: string
+
+    JWKS:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            properties:
+              kty:
+                type: string
+              kid:
+                type: string
+              use:
+                type: string
+              alg:
+                type: string
+              n:
+                type: string
+              e:
+                type: string
+
+    SCIMUser:
+      type: object
+      required: [schemas, userName]
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+          example: ["urn:ietf:params:scim:schemas:core:2.0:User"]
+        id:
+          type: string
+          readOnly: true
+        externalId:
+          type: string
+        userName:
+          type: string
+        name:
+          type: object
+          properties:
+            formatted:
+              type: string
+            familyName:
+              type: string
+            givenName:
+              type: string
+            middleName:
+              type: string
+            honorificPrefix:
+              type: string
+            honorificSuffix:
+              type: string
+        displayName:
+          type: string
+        nickName:
+          type: string
+        profileUrl:
+          type: string
+        title:
+          type: string
+        userType:
+          type: string
+        preferredLanguage:
+          type: string
+        locale:
+          type: string
+        timezone:
+          type: string
+        active:
+          type: boolean
+        emails:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              type:
+                type: string
+              primary:
+                type: boolean
+        phoneNumbers:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              type:
+                type: string
+        groups:
+          type: array
+          readOnly: true
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              $ref:
+                type: string
+              display:
+                type: string
+        meta:
+          $ref: '#/components/schemas/SCIMMeta'
+
+    SCIMGroup:
+      type: object
+      required: [schemas, displayName]
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+          example: ["urn:ietf:params:scim:schemas:core:2.0:Group"]
+        id:
+          type: string
+          readOnly: true
+        externalId:
+          type: string
+        displayName:
+          type: string
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              $ref:
+                type: string
+              display:
+                type: string
+        meta:
+          $ref: '#/components/schemas/SCIMMeta'
+
+    SCIMMeta:
+      type: object
+      properties:
+        resourceType:
+          type: string
+        created:
+          type: string
+          format: date-time
+        lastModified:
+          type: string
+          format: date-time
+        location:
+          type: string
+        version:
+          type: string
+
+    SCIMListResponse:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+        totalResults:
+          type: integer
+        startIndex:
+          type: integer
+        itemsPerPage:
+          type: integer
+        Resources:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/SCIMUser'
+              - $ref: '#/components/schemas/SCIMGroup'
+
+    SCIMPatchRequest:
+      type: object
+      required: [schemas, Operations]
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+          example: ["urn:ietf:params:scim:api:messages:2.0:PatchOp"]
+        Operations:
+          type: array
+          items:
+            type: object
+            required: [op]
+            properties:
+              op:
+                type: string
+                enum: [add, remove, replace]
+              path:
+                type: string
+              value:
+                oneOf:
+                  - type: string
+                  - type: object
+                  - type: array
+
+    SCIMSearchRequest:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+        attributes:
+          type: array
+          items:
+            type: string
+        excludedAttributes:
+          type: array
+          items:
+            type: string
+        filter:
+          type: string
+        sortBy:
+          type: string
+        sortOrder:
+          type: string
+          enum: [ascending, descending]
+        startIndex:
+          type: integer
+        count:
+          type: integer
+
+    SCIMError:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        scimType:
+          type: string
+        detail:
+          type: string
+
+    SCIMServiceProviderConfig:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+        documentationUri:
+          type: string
+        patch:
+          type: object
+          properties:
+            supported:
+              type: boolean
+        bulk:
+          type: object
+          properties:
+            supported:
+              type: boolean
+            maxOperations:
+              type: integer
+            maxPayloadSize:
+              type: integer
+        filter:
+          type: object
+          properties:
+            supported:
+              type: boolean
+            maxResults:
+              type: integer
+        changePassword:
+          type: object
+          properties:
+            supported:
+              type: boolean
+        sort:
+          type: object
+          properties:
+            supported:
+              type: boolean
+        etag:
+          type: object
+          properties:
+            supported:
+              type: boolean
+        authenticationSchemes:
+          type: array
+          items:
+            type: object
+
+    SCIMResourceType:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+        id:
+          type: string
+        name:
+          type: string
+        endpoint:
+          type: string
+        description:
+          type: string
+        schema:
+          type: string
+
+    SCIMSchema:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            type: string
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        attributes:
+          type: array
+          items:
+            type: object
+
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        org_type:
+          type: string
+          enum: [personal, team, enterprise]
+        owner_principal_id:
+          type: string
+          format: uuid
+        logo_url:
+          type: string
+        description:
+          type: string
+        website_url:
+          type: string
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        active:
+          type: boolean
+        settings:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateOrganizationRequest:
+      type: object
+      required: [name, slug]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 3
+          maxLength: 63
+          pattern: '^[a-z][a-z0-9-]*[a-z0-9]$'
+        org_type:
+          type: string
+          enum: [personal, team, enterprise]
+          default: team
+        logo_url:
+          type: string
+        description:
+          type: string
+        website_url:
+          type: string
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+          default: free
+        settings:
+          type: object
+
+    UpdateOrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        logo_url:
+          type: string
+        description:
+          type: string
+        website_url:
+          type: string
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        settings:
+          type: object
