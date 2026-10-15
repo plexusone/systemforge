@@ -101,6 +101,16 @@ Customer-embedded mode (embedding one capability into a third-party SaaS) is
 explicitly a different mechanism — iframe/web-component + scoped token — and
 is specced per-app as follow-on, not via the shell.
 
+**Contract as specified.** The registration contract is specified in
+`INIT-SYSTEMFORGEWEB-001` as `AppModule` and `Shell` in `@plexusone/host`.
+`ForgeApp`'s fields map onto it: `id` and `title` are `id` and `name`,
+`navSections` is `navigation(context)`, and `routes` are the module's routes
+under `/orgs/:org`. Role gating is per application, from the session's
+membership roles, rather than by scopes. Instead of registering into one
+shell, a stack composes modules with its own `Shell` through
+`createHost({ apps })` for one build, or `createHost({ app })` per host, so
+the same application also runs on its own in a neutral `DevShell`.
+
 ## Risks
 
 - **DashForge schema migration is breaking** for any existing SpiceDB data

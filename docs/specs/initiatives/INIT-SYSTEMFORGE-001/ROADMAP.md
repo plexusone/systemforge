@@ -34,7 +34,12 @@ default repository, cross-repo RMIs are corrected after import).
 
 **Theme:** One menu, one login, one session; Forge UIs plug in
 
-- [ ] `RMI-SYSTEMFORGEWEB-002` ForgeApp registration contract in @plexusone/shell: nav, routes, role/scope gating, versioned docs
 - [ ] `RMI-SYSTEMFORGEWEB-003` Reference composed host app: shell plus two Forge UI surfaces under one login, menu, and session
   - Depends on: `RMI-SYSTEMFORGEWEB-002`
   - Depends on: `RMI-SYSTEMFORGEWEB-001`
+  - Depends on: `RMI-SYSTEMFORGEWEB-023`
+
+The registration contract, `RMI-SYSTEMFORGEWEB-002`, is tracked in
+`INIT-SYSTEMFORGEWEB-001` (Phase 4, App Contract and Hosting) as the
+`AppModule` and `Shell` contracts in `@plexusone/host`. The reference host
+composes Forge UIs as `AppModule`s with `createHost({ apps })`.
