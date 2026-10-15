@@ -13,7 +13,7 @@ on the final import path.
 
 **Theme:** Move the module identity, clean the history, tag at the new path
 
-- [ ] `RMI-SYSTEMFORGE-007` History hygiene: purge the stray 62 MB `coreauth` binary from the repository (history rewrite via git-filter-repo), verify clone size, add ignore rule
+- [ ] `RMI-SYSTEMFORGE-007` History hygiene: purge the stray 62 MB `coreauth` binary from the repository, verify clone size, add ignore rule
 - [ ] `RMI-SYSTEMFORGE-008` GitHub transfer grokify→plexusone and module path change to github.com/plexusone/systemforge: rewrite internal imports, docs, badges, mkdocs URLs; verify old-path git redirect; tag next minor (v0.10.0)
   - Depends on: `RMI-SYSTEMFORGE-007`
 - [ ] `RMI-SYSTEMFORGE-009` Deprecation notice at the old path: final grokify-path tag with Deprecated module comment pointing to github.com/plexusone/systemforge; README migration note
