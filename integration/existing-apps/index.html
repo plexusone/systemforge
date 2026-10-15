@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -4967,8 +4967,8 @@
 <p>Every actor in SystemForge is a <strong>principal</strong>. A person is a principal of type <code>human</code> plus a one-to-one <code>Human</code> row with their email and profile. Passwords are credentials, organizations are organizations, and membership links a principal to an organization with a role:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>existing tables          SystemForge tables
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>─────────────────       ──────────────────────────────────────
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>users            ←──→   sf_principals (type = 'human') + sf_humans
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                        sf_credentials (type = 'password')
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>users            ←──→   sf_principals (type = &#39;human&#39;) + sf_humans
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                        sf_credentials (type = &#39;password&#39;)
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>organizations    ←──→   sf_organizations
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>user_orgs        ←──→   sf_principal_memberships
 </code></pre></div>
@@ -4984,9 +4984,9 @@
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">UserProfile</span><span class="p">)</span><span class="w"> </span><span class="nx">Fields</span><span class="p">()</span><span class="w"> </span><span class="p">[]</span><span class="nx">ent</span><span class="p">.</span><span class="nx">Field</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">[]</span><span class="nx">ent</span><span class="p">.</span><span class="nx">Field</span><span class="p">{</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">        </span><span class="nx">field</span><span class="p">.</span><span class="nx">UUID</span><span class="p">(</span><span class="s">"principal_id"</span><span class="p">,</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">{}).</span><span class="nx">Unique</span><span class="p">(),</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">        </span><span class="nx">field</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="s">"username"</span><span class="p">).</span><span class="nx">Unique</span><span class="p">(),</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="nx">field</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="s">"bio"</span><span class="p">).</span><span class="nx">Optional</span><span class="p">(),</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">        </span><span class="nx">field</span><span class="p">.</span><span class="nx">UUID</span><span class="p">(</span><span class="s">&quot;principal_id&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">{}).</span><span class="nx">Unique</span><span class="p">(),</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">        </span><span class="nx">field</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="s">&quot;username&quot;</span><span class="p">).</span><span class="nx">Unique</span><span class="p">(),</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="nx">field</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="s">&quot;bio&quot;</span><span class="p">).</span><span class="nx">Optional</span><span class="p">(),</span>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="p">}</span>
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">}</span>
 </code></pre></div>
@@ -4998,17 +4998,17 @@
 <h3 id="step-2-create-the-systemforge-tables">Step 2: Create the SystemForge Tables<a class="headerlink" href="#step-2-create-the-systemforge-tables" title="Permanent link">&para;</a></h3>
 <p>Run <code>systemauth migrate</code>, or create the schema from your own code:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="s">"database/sql"</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="s">&quot;database/sql&quot;</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="s">"entgo.io/ent/dialect"</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nx">entsql</span><span class="w"> </span><span class="s">"entgo.io/ent/dialect/sql"</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="s">"github.com/jackc/pgx/v5/stdlib"</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="s">&quot;entgo.io/ent/dialect&quot;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nx">entsql</span><span class="w"> </span><span class="s">&quot;entgo.io/ent/dialect/sql&quot;</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="s">&quot;github.com/jackc/pgx/v5/stdlib&quot;</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="s">"github.com/plexusone/systemforge/identity/ent"</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/identity/ent&quot;</span>
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">)</span>
 <a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
 <a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="kd">func</span><span class="w"> </span><span class="nx">migrate</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">dsn</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">ent</span><span class="p">.</span><span class="nx">Client</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nx">db</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sql</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="s">"pgx"</span><span class="p">,</span><span class="w"> </span><span class="nx">dsn</span><span class="p">)</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nx">db</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sql</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="s">&quot;pgx&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">dsn</span><span class="p">)</span>
 <a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span>
 <a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">    </span><span class="p">}</span>
@@ -5024,8 +5024,8 @@
 <h3 id="step-4-set-up-dual-write">Step 4: Set Up Dual-Write<a class="headerlink" href="#step-4-set-up-dual-write" title="Permanent link">&para;</a></h3>
 <p>Create people through the principal service, which writes the principal and its human row together and uses the email as the principal's identifier. Then write your own row with the returned principal ID:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="s">"github.com/plexusone/systemforge/identity/credential"</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="s">"github.com/plexusone/systemforge/identity/principal"</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/identity/credential&quot;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/identity/principal&quot;</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">)</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="kd">type</span><span class="w"> </span><span class="nx">UserService</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
@@ -5051,7 +5051,7 @@
 <a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
 <a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="w">    </span><span class="p">}</span>
 <a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>
-<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">password</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">""</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">password</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">creds</span><span class="p">.</span><span class="nx">CreatePassword</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">credential</span><span class="p">.</span><span class="nx">CreatePasswordInput</span><span class="p">{</span>
 <a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a><span class="w">            </span><span class="nx">PrincipalID</span><span class="p">:</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
 <a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a><span class="w">            </span><span class="nx">Password</span><span class="p">:</span><span class="w">    </span><span class="nx">password</span><span class="p">,</span>
@@ -5061,7 +5061,7 @@
 <a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a><span class="w">    </span><span class="p">}</span>
 <a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a>
 <a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a><span class="w">    </span><span class="c1">// Write to app tables with the same ID.</span>
-<a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a><span class="w">    </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">appClient</span><span class="p">.</span><span class="nx">User</span><span class="p">.</span><span class="nx">Create</span><span class="p">().</span>
+<a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a><span class="w">    </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">appClient</span><span class="p">.</span><span class="nx">User</span><span class="p">.</span><span class="nx">Create</span><span class="p">().</span>
 <a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a><span class="w">        </span><span class="nx">SetID</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">ID</span><span class="p">).</span>
 <a id="__codelineno-4-41" name="__codelineno-4-41" href="#__codelineno-4-41"></a><span class="w">        </span><span class="nx">SetEmail</span><span class="p">(</span><span class="nx">email</span><span class="p">).</span>
 <a id="__codelineno-4-42" name="__codelineno-4-42" href="#__codelineno-4-42"></a><span class="w">        </span><span class="nx">SetName</span><span class="p">(</span><span class="nx">name</span><span class="p">).</span>
@@ -5081,7 +5081,7 @@
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nx">profile</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">appClient</span><span class="p">.</span><span class="nx">UserProfile</span><span class="p">.</span><span class="nx">Query</span><span class="p">().</span>
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="nx">Where</span><span class="p">(</span><span class="nx">userprofile</span><span class="p">.</span><span class="nx">PrincipalIDEQ</span><span class="p">(</span><span class="nx">id</span><span class="p">)).</span>
 <a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="nx">Only</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="nx">appent</span><span class="p">.</span><span class="nx">IsNotFound</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">!</span><span class="nx">appent</span><span class="p">.</span><span class="nx">IsNotFound</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span>
 <a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="p">}</span>
 <a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
@@ -5236,7 +5236,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

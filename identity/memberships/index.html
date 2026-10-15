@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -4986,30 +4986,30 @@
 <p>Roles are strings, so each application defines its own vocabulary. The organization roles of the platform are <code>owner</code>, <code>admin</code>, <code>member</code> and <code>collaborator</code> (<code>editor</code> and <code>viewer</code> were retired; migration <code>0008</code> maps them to <code>member</code> and <code>collaborator</code>). A collaborator has no organization-wide access and holds roles on individual resources instead; see <a href="../../authz-conventions/">Authorization conventions</a> for registering domain roles.</p>
 <h2 id="managing-memberships">Managing Memberships<a class="headerlink" href="#managing-memberships" title="Permanent link">&para;</a></h2>
 <p>Use the organization service, which also syncs membership changes to the authorization backend:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/plexusone/systemforge/identity/organization"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/organization&quot;</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nx">orgs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">)</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orgs</span><span class="p">.</span><span class="nx">AddMember</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">AddMemberInput</span><span class="p">{</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">OrganizationID</span><span class="p">:</span><span class="w"> </span><span class="nx">orgID</span><span class="p">,</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">PrincipalID</span><span class="p">:</span><span class="w">    </span><span class="nx">principalID</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">Role</span><span class="p">:</span><span class="w">           </span><span class="s">"member"</span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nx">Permissions</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">"projects:export"</span><span class="p">},</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">Role</span><span class="p">:</span><span class="w">           </span><span class="s">&quot;member&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nx">Permissions</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;projects:export&quot;</span><span class="p">},</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">})</span>
 </code></pre></div>
 <p><code>AddMember</code> returns an error if the principal is already a member.</p>
 <h3 id="change-role-or-suspend">Change Role or Suspend<a class="headerlink" href="#change-role-or-suspend" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">role</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">"admin"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">role</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">&quot;admin&quot;</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orgs</span><span class="p">.</span><span class="nx">UpdateMember</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">membershipID</span><span class="p">,</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">UpdateMemberInput</span><span class="p">{</span><span class="nx">Role</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">role</span><span class="p">})</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nx">inactive</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="kc">false</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">orgs</span><span class="p">.</span><span class="nx">UpdateMember</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">membershipID</span><span class="p">,</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">UpdateMemberInput</span><span class="p">{</span><span class="nx">Active</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">inactive</span><span class="p">})</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">orgs</span><span class="p">.</span><span class="nx">UpdateMember</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">membershipID</span><span class="p">,</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">UpdateMemberInput</span><span class="p">{</span><span class="nx">Active</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">inactive</span><span class="p">})</span>
 </code></pre></div>
 <h3 id="remove">Remove<a class="headerlink" href="#remove" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orgs</span><span class="p">.</span><span class="nx">RemoveMember</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">orgID</span><span class="p">,</span><span class="w"> </span><span class="nx">principalID</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="querying-memberships">Querying Memberships<a class="headerlink" href="#querying-memberships" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// One principal's membership in one organization.</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// One principal&#39;s membership in one organization.</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orgs</span><span class="p">.</span><span class="nx">GetMembership</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">orgID</span><span class="p">,</span><span class="w"> </span><span class="nx">principalID</span><span class="p">)</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1">// Everyone in an organization.</span>
@@ -5019,28 +5019,28 @@
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="nx">memberships</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orgs</span><span class="p">.</span><span class="nx">ListMemberships</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">principalID</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="with-ent-directly">With Ent Directly<a class="headerlink" href="#with-ent-directly" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/plexusone/systemforge/identity/ent/principalmembership"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/ent/principalmembership&quot;</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nx">admins</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">PrincipalMembership</span><span class="p">.</span><span class="nx">Query</span><span class="p">().</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">Where</span><span class="p">(</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="nx">principalmembership</span><span class="p">.</span><span class="nx">OrganizationIDEQ</span><span class="p">(</span><span class="nx">orgID</span><span class="p">),</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="nx">principalmembership</span><span class="p">.</span><span class="nx">ActiveEQ</span><span class="p">(</span><span class="kc">true</span><span class="p">),</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="nx">principalmembership</span><span class="p">.</span><span class="nx">RoleIn</span><span class="p">(</span><span class="s">"owner"</span><span class="p">,</span><span class="w"> </span><span class="s">"admin"</span><span class="p">),</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="nx">principalmembership</span><span class="p">.</span><span class="nx">RoleIn</span><span class="p">(</span><span class="s">&quot;owner&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p">),</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="p">).</span>
 <a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nx">WithPrincipal</span><span class="p">().</span>
 <a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="nx">All</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 <a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
 <a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">admins</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">"Admin: %s\n"</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Edges</span><span class="p">.</span><span class="nx">Principal</span><span class="p">.</span><span class="nx">DisplayName</span><span class="p">)</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Admin: %s\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Edges</span><span class="p">.</span><span class="nx">Principal</span><span class="p">.</span><span class="nx">DisplayName</span><span class="p">)</span>
 <a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="role-hierarchy">Role Hierarchy<a class="headerlink" href="#role-hierarchy" title="Permanent link">&para;</a></h2>
 <p>Implement a role hierarchy in your application:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">var</span><span class="w"> </span><span class="nx">roleLevel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="s">"owner"</span><span class="p">:</span><span class="w">        </span><span class="mi">100</span><span class="p">,</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="s">"admin"</span><span class="p">:</span><span class="w">        </span><span class="mi">80</span><span class="p">,</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="s">"member"</span><span class="p">:</span><span class="w">       </span><span class="mi">40</span><span class="p">,</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="s">"collaborator"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">var</span><span class="w"> </span><span class="nx">roleLevel</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="s">&quot;owner&quot;</span><span class="p">:</span><span class="w">        </span><span class="mi">100</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="s">&quot;admin&quot;</span><span class="p">:</span><span class="w">        </span><span class="mi">80</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="s">&quot;member&quot;</span><span class="p">:</span><span class="w">       </span><span class="mi">40</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="s">&quot;collaborator&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">}</span>
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="kd">func</span><span class="w"> </span><span class="nx">HasMinRole</span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">organization</span><span class="p">.</span><span class="nx">Membership</span><span class="p">,</span><span class="w"> </span><span class="nx">required</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
@@ -5049,10 +5049,10 @@
 </code></pre></div>
 <h2 id="permission-checks">Permission Checks<a class="headerlink" href="#permission-checks" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">HasPermission</span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">organization</span><span class="p">.</span><span class="nx">Membership</span><span class="p">,</span><span class="w"> </span><span class="nx">permission</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">!</span><span class="nx">m</span><span class="p">.</span><span class="nx">Active</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">m</span><span class="p">.</span><span class="nx">Active</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Role</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"owner"</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Role</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;owner&quot;</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span>
 <a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="p">}</span>
 <a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">slices</span><span class="p">.</span><span class="nx">Contains</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Permissions</span><span class="p">,</span><span class="w"> </span><span class="nx">permission</span><span class="p">)</span>
@@ -5064,7 +5064,7 @@
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">OrganizationID</span><span class="p">:</span><span class="w"> </span><span class="nx">orgID</span><span class="p">,</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nx">FromPrincipal</span><span class="p">:</span><span class="w">  </span><span class="nx">currentOwnerID</span><span class="p">,</span>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">ToPrincipal</span><span class="p">:</span><span class="w">    </span><span class="nx">newOwnerID</span><span class="p">,</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nx">NewRoleForOld</span><span class="p">:</span><span class="w">  </span><span class="s">"admin"</span><span class="p">,</span><span class="w"> </span><span class="c1">// or "member"; defaults to "admin"</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nx">NewRoleForOld</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;admin&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// or &quot;member&quot;; defaults to &quot;admin&quot;</span>
 <a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">})</span>
 </code></pre></div>
 <h3 id="validation-rules">Validation Rules<a class="headerlink" href="#validation-rules" title="Permanent link">&para;</a></h3>
@@ -5087,13 +5087,13 @@
 </code></pre></div>
 <p><strong>Request body:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">"new_owner_principal_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"uuid"</span><span class="p">,</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">"new_role_for_old_owner"</span><span class="p">:</span><span class="w"> </span><span class="s2">"admin"</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;new_owner_principal_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">&quot;new_role_for_old_owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;admin&quot;</span>
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="p">}</span>
 </code></pre></div>
 <p><strong>Response:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Ownership transferred successfully"</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Ownership transferred successfully&quot;</span>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="p">}</span>
 </code></pre></div>
 <p>Only the current owner can transfer ownership.</p>
@@ -5171,7 +5171,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

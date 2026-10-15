@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -4829,16 +4829,16 @@
 <h3 id="module-path-moved-to-githubcomplexusonesystemforge">Module path moved to <code>github.com/plexusone/systemforge</code><a class="headerlink" href="#module-path-moved-to-githubcomplexusonesystemforge" title="Permanent link">&para;</a></h3>
 <p>The GitHub repository was transferred from the <code>grokify</code> org to <code>plexusone</code>. Update your imports:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// Old</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/grokify/systemforge/session/bff"</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/grokify/systemforge/session/bff&quot;</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">// New</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/plexusone/systemforge/session/bff"</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/session/bff&quot;</span>
 </code></pre></div>
 <p>The package <strong>API is unchanged</strong> — only the module path moved. The old <code>github.com/grokify/systemforge</code> path still resolves via GitHub's repository-transfer redirect, but will not receive new tags going forward.</p>
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="cross-app-authorization-vocabulary-authzappvocabulary">Cross-App Authorization Vocabulary (<code>authz.AppVocabulary</code>)<a class="headerlink" href="#cross-app-authorization-vocabulary-authzappvocabulary" title="Permanent link">&para;</a></h3>
 <p>Every Forge application implements the same authorization contract — its roles, permissions, OAuth scopes, and an optional SpiceDB fragment:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/plexusone/systemforge/authz"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/authz&quot;</span>
 </code></pre></div>
 <p><code>VocabularyRegistry</code> validates on registration: app-name format, <code>{app}:{resource}:{verb}</code> scope naming (with the <code>{app}:admin</code> blanket scope), role-hierarchy coverage, and <code>{app}_</code>-prefixed SpiceDB definitions — so convention drift fails at startup instead of surfacing as an authorization bug. The registry also drives IAM introspection (roles/permissions/scopes per app, <code>AllScopes</code> for consent screens). See <code>docs/authz-conventions.md</code> for the normative two-gate model (role permission <strong>and</strong> token scope both required) and separation-of-duties guidance.</p>
 <h3 id="shared-spicedb-base-schema">Shared SpiceDB Base Schema<a class="headerlink" href="#shared-spicedb-base-schema" title="Permanent link">&para;</a></h3>
@@ -4936,7 +4936,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

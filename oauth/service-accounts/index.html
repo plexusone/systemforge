@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -4648,21 +4648,21 @@
 <h2 id="service-principals">Service Principals<a class="headerlink" href="#service-principals" title="Permanent link">&para;</a></h2>
 <p>A service principal is created through the <code>identity/principal</code> service:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="s">"github.com/plexusone/systemforge/identity/principal"</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/identity/principal&quot;</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nx">svc</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">principal</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">)</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nx">desc</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">"Deploys builds to staging and production"</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nx">desc</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">&quot;Deploys builds to staging and production&quot;</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nx">sp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">CreateService</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">principal</span><span class="p">.</span><span class="nx">CreateServiceInput</span><span class="p">{</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nx">Identifier</span><span class="p">:</span><span class="w">     </span><span class="s">"cicd@myorg"</span><span class="p">,</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w">    </span><span class="s">"CI/CD Pipeline"</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nx">ServiceType</span><span class="p">:</span><span class="w">    </span><span class="s">"worker"</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nx">Identifier</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;cicd@myorg&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;CI/CD Pipeline&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nx">ServiceType</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;worker&quot;</span><span class="p">,</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nx">Description</span><span class="p">:</span><span class="w">    </span><span class="o">&amp;</span><span class="nx">desc</span><span class="p">,</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nx">OrganizationID</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">orgID</span><span class="p">,</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="nx">CreatedBy</span><span class="p">:</span><span class="w">      </span><span class="o">&amp;</span><span class="nx">adminPrincipalID</span><span class="p">,</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="nx">AllowedScopes</span><span class="p">:</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">"deploy:staging"</span><span class="p">,</span><span class="w"> </span><span class="s">"deploy:production"</span><span class="p">},</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="nx">AllowedIPs</span><span class="p">:</span><span class="w">     </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">"10.0.0.0/8"</span><span class="p">},</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="nx">AllowedScopes</span><span class="p">:</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;deploy:staging&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;deploy:production&quot;</span><span class="p">},</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="nx">AllowedIPs</span><span class="p">:</span><span class="w">     </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;10.0.0.0/8&quot;</span><span class="p">},</span>
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">})</span>
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
@@ -4673,12 +4673,12 @@
 <h2 id="keypair-credentials">Keypair Credentials<a class="headerlink" href="#keypair-credentials" title="Permanent link">&para;</a></h2>
 <p>Public keys are stored as credentials of type <code>keypair</code> in <code>sf_credentials</code>, owned by the principal. The private key never reaches SystemForge: generate the key pair where the service runs and register only the public key.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="s">"crypto/rand"</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="s">"crypto/rsa"</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="s">"crypto/x509"</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="s">"encoding/pem"</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="s">&quot;crypto/rand&quot;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="s">&quot;crypto/rsa&quot;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="s">&quot;crypto/x509&quot;</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="s">&quot;encoding/pem&quot;</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="s">"github.com/plexusone/systemforge/identity/credential"</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/identity/credential&quot;</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">)</span>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nx">privateKey</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">rsa</span><span class="p">.</span><span class="nx">GenerateKey</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nx">Reader</span><span class="p">,</span><span class="w"> </span><span class="mi">2048</span><span class="p">)</span>
@@ -4689,23 +4689,23 @@
 <a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
 <a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="p">}</span>
-<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="nx">pubPEM</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">pem</span><span class="p">.</span><span class="nx">EncodeToMemory</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">pem</span><span class="p">.</span><span class="nx">Block</span><span class="p">{</span><span class="nx">Type</span><span class="p">:</span><span class="w"> </span><span class="s">"PUBLIC KEY"</span><span class="p">,</span><span class="w"> </span><span class="nx">Bytes</span><span class="p">:</span><span class="w"> </span><span class="nx">pubBytes</span><span class="p">})</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="nx">pubPEM</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">pem</span><span class="p">.</span><span class="nx">EncodeToMemory</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">pem</span><span class="p">.</span><span class="nx">Block</span><span class="p">{</span><span class="nx">Type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;PUBLIC KEY&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">Bytes</span><span class="p">:</span><span class="w"> </span><span class="nx">pubBytes</span><span class="p">})</span>
 <a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>
 <a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="nx">creds</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credential</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">)</span>
 <a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="nx">expires</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">Add</span><span class="p">(</span><span class="mi">365</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">)</span>
 <a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="nx">kp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">creds</span><span class="p">.</span><span class="nx">CreateKeypair</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">credential</span><span class="p">.</span><span class="nx">CreateKeypairInput</span><span class="p">{</span>
 <a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">    </span><span class="nx">PrincipalID</span><span class="p">:</span><span class="w">  </span><span class="nx">sp</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
-<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">    </span><span class="nx">Name</span><span class="p">:</span><span class="w">         </span><span class="s">"deploy key"</span><span class="p">,</span>
-<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">    </span><span class="nx">KeyAlgorithm</span><span class="p">:</span><span class="w"> </span><span class="s">"RS256"</span><span class="p">,</span>
-<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">    </span><span class="nx">PublicKeyPEM</span><span class="p">:</span><span class="w"> </span><span class="kt">string</span><span class="p">(</span><span class="nx">pubPEM</span><span class="p">),</span>
-<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="w">    </span><span class="nx">Scopes</span><span class="p">:</span><span class="w">       </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">"deploy:staging"</span><span class="p">},</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">    </span><span class="nx">Name</span><span class="p">:</span><span class="w">         </span><span class="s">&quot;deploy key&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">    </span><span class="nx">KeyAlgorithm</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;RS256&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">    </span><span class="nx">PublicKeyPEM</span><span class="p">:</span><span class="w"> </span><span class="nb">string</span><span class="p">(</span><span class="nx">pubPEM</span><span class="p">),</span>
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="w">    </span><span class="nx">Scopes</span><span class="p">:</span><span class="w">       </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;deploy:staging&quot;</span><span class="p">},</span>
 <a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="w">    </span><span class="nx">ExpiresAt</span><span class="p">:</span><span class="w">    </span><span class="o">&amp;</span><span class="nx">expires</span><span class="p">,</span>
 <a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="p">})</span>
 <a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
 <a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="p">}</span>
 <a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>
-<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="c1">// kp.KeyID is generated by SystemForge; use it as the JWT "kid" header.</span>
+<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="c1">// kp.KeyID is generated by SystemForge; use it as the JWT &quot;kid&quot; header.</span>
 </code></pre></div>
 <p>Keys are looked up and managed through the same service:</p>
 <table>
@@ -4831,7 +4831,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

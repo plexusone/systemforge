@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -4866,33 +4866,33 @@
 <h2 id="core-concepts">Core Concepts<a class="headerlink" href="#core-concepts" title="Permanent link">&para;</a></h2>
 <h3 id="principals">Principals<a class="headerlink" href="#principals" title="Permanent link">&para;</a></h3>
 <p>A <strong>principal</strong> is any actor that can authenticate: a human, an OAuth application, an AI agent, or a backend service. Every principal is a row in <code>sf_principals</code>, with a one-to-one extension table for its type. A person is a human principal; there is no separate user table. See <a href="../users/">Humans</a>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/plexusone/systemforge/identity/principal"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/principal&quot;</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nx">principals</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">principal</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">)</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nx">p</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">principals</span><span class="p">.</span><span class="nx">CreateHuman</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">principal</span><span class="p">.</span><span class="nx">CreateHumanInput</span><span class="p">{</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">Email</span><span class="p">:</span><span class="w">       </span><span class="s">"user@example.com"</span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w"> </span><span class="s">"Jane Doe"</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">Email</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;user@example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jane Doe&quot;</span><span class="p">,</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">})</span>
 </code></pre></div>
 <h3 id="organizations">Organizations<a class="headerlink" href="#organizations" title="Permanent link">&para;</a></h3>
 <p>Organizations (tenants) group principals with shared resources. Each organization has its own settings, members, and data.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">org</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">Organization</span><span class="p">.</span><span class="nx">Create</span><span class="p">().</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">SetName</span><span class="p">(</span><span class="s">"Acme Corp"</span><span class="p">).</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">SetSlug</span><span class="p">(</span><span class="s">"acme-corp"</span><span class="p">).</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">SetPlan</span><span class="p">(</span><span class="s">"pro"</span><span class="p">).</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">SetName</span><span class="p">(</span><span class="s">&quot;Acme Corp&quot;</span><span class="p">).</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">SetSlug</span><span class="p">(</span><span class="s">&quot;acme-corp&quot;</span><span class="p">).</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">SetPlan</span><span class="p">(</span><span class="s">&quot;pro&quot;</span><span class="p">).</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">Save</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="memberships">Memberships<a class="headerlink" href="#memberships" title="Permanent link">&para;</a></h3>
 <p>Memberships link principals to organizations with a role, and can be suspended with their <code>active</code> flag. See <a href="../memberships/">Memberships</a>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/plexusone/systemforge/identity/organization"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/organization&quot;</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nx">orgs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">)</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orgs</span><span class="p">.</span><span class="nx">AddMember</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">AddMemberInput</span><span class="p">{</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nx">OrganizationID</span><span class="p">:</span><span class="w"> </span><span class="nx">org</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nx">PrincipalID</span><span class="p">:</span><span class="w">    </span><span class="nx">p</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nx">Role</span><span class="p">:</span><span class="w">           </span><span class="s">"admin"</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nx">Role</span><span class="p">:</span><span class="w">           </span><span class="s">&quot;admin&quot;</span><span class="p">,</span>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">})</span>
 </code></pre></div>
 <h3 id="credentials">Credentials<a class="headerlink" href="#credentials" title="Permanent link">&para;</a></h3>
@@ -4970,8 +4970,8 @@
 <h3 id="multi-tenancy">Multi-Tenancy<a class="headerlink" href="#multi-tenancy" title="Permanent link">&para;</a></h3>
 <p>Every resource can be scoped to an organization. To find the human members of an organization:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">entprincipal</span><span class="w"> </span><span class="s">"github.com/plexusone/systemforge/identity/ent/principal"</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="s">"github.com/plexusone/systemforge/identity/ent/principalmembership"</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">entprincipal</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/ent/principal&quot;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/identity/ent/principalmembership&quot;</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">)</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nx">members</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">Principal</span><span class="p">.</span><span class="nx">Query</span><span class="p">().</span>
@@ -4994,9 +4994,9 @@
 </code></pre></div>
 <h3 id="upstream-logins">Upstream Logins<a class="headerlink" href="#upstream-logins" title="Permanent link">&para;</a></h3>
 <p>Humans can authenticate through upstream OAuth providers (GitHub, Google, SystemAuth). The <a href="../oauthclient/">OAuth Client</a> package handles the OAuth flow:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nx">cfoauth</span><span class="w"> </span><span class="s">"github.com/plexusone/systemforge/identity/oauthclient"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nx">cfoauth</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/oauthclient&quot;</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1">// Exchange an OAuth code for the provider's user info.</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1">// Exchange an OAuth code for the provider&#39;s user info.</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nx">info</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">cfoauth</span><span class="p">.</span><span class="nx">FetchGitHubUser</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">githubConfig</span><span class="p">,</span><span class="w"> </span><span class="nx">code</span><span class="p">)</span>
 </code></pre></div>
 <p>The upstream identity is recorded as an external identity on the human principal, keyed by provider and subject, so later logins from the same provider resolve to the same person. SystemAuth's social login does this automatically.</p>
@@ -5082,7 +5082,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

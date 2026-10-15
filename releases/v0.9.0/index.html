@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -4830,16 +4830,16 @@
 <p>The <code>session/dpop</code> package has been <strong>removed</strong>. DPoP now lives in the standalone <a href="https://github.com/grokify/goauth"><code>github.com/grokify/goauth/dpop</code></a> package (released as goauth v0.24.0), so it can be consumed independently of the SystemForge session layer.</p>
 <p>Update your imports:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// Old</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/grokify/systemforge/session/dpop"</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/grokify/systemforge/session/dpop&quot;</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">// New</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/grokify/goauth/dpop"</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/grokify/goauth/dpop&quot;</span>
 </code></pre></div>
 <p>The package <strong>API is unchanged</strong> — only the import path moved. The <code>session/bff</code> layer that binds DPoP to sessions (proof injection on the proxy, per-session key pairs) remains in SystemForge and now depends on <code>goauth/dpop</code>.</p>
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="guardsql-authorization-adapter-authzguardsql">GuardSQL Authorization Adapter (<code>authzguardsql</code>)<a class="headerlink" href="#guardsql-authorization-adapter-authzguardsql" title="Permanent link">&para;</a></h3>
 <p>A new adapter maps GuardSQL schemas and policies to SystemForge authorization:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/grokify/systemforge/authzguardsql"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/grokify/systemforge/authzguardsql&quot;</span>
 </code></pre></div>
 <p>It builds SystemForge <code>PolicyBuilder</code>, <code>ResourceBuilder</code>, and <code>DefaultResourceBuilder</code> values from GuardSQL definitions. The dependency direction is <strong>systemforge → guardsql</strong> (GuardSQL stays dependency-light and never imports SystemForge). This was previously the nested <code>guardsql/authzsystemforge</code> module; consolidating it into SystemForge removes the fragile cross-module tagging burden.</p>
 <h3 id="openapi-31-interactive-api-reference">OpenAPI 3.1 + Interactive API Reference<a class="headerlink" href="#openapi-31-interactive-api-reference" title="Permanent link">&para;</a></h3>
@@ -4935,7 +4935,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

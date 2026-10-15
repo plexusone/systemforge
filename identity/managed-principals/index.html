@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -4982,7 +4982,7 @@ relationship, not from the email
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">clients</span><span class="p">:</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">learning-app</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">managed_principals</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">login_token_ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7200h</span><span class="w">     </span><span class="c1"># optional: this client's own default</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">login_token_ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7200h</span><span class="w">     </span><span class="c1"># optional: this client&#39;s own default</span>
 </code></pre></div>
 <p>Dynamically registered clients carry the same settings on <code>OAuthApp</code>
 (<code>managed_principals_enabled</code>, <code>login_token_ttl</code>). The single check every
@@ -5047,8 +5047,8 @@ authorization facets (see <a href="#authorization">Authorization</a>).</p>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">)</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">CreateInput</span><span class="p">{</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">    </span><span class="s">"learning-app"</span><span class="p">,</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w"> </span><span class="s">"Robin"</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;learning-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Robin&quot;</span><span class="p">,</span>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nx">Managers</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">ManagerInput</span><span class="p">{</span>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="p">{</span><span class="nx">PrincipalID</span><span class="p">:</span><span class="w"> </span><span class="nx">teacherID</span><span class="p">,</span><span class="w"> </span><span class="nx">Role</span><span class="p">:</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">RoleEducator</span><span class="p">},</span>
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="p">},</span>
@@ -5065,9 +5065,9 @@ Applications render it as a QR code, a printed card, or a link; SystemForge
 does not care which.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">tok</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">IssueLoginToken</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">IssueLoginTokenInput</span><span class="p">{</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">ManagedID</span><span class="p">:</span><span class="w"> </span><span class="nx">learnerID</span><span class="p">,</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">  </span><span class="s">"learning-app"</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;learning-app&quot;</span><span class="p">,</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nx">IssuedBy</span><span class="p">:</span><span class="w">  </span><span class="nx">teacherID</span><span class="p">,</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nx">Name</span><span class="p">:</span><span class="w">      </span><span class="s">"Robin's card"</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nx">Name</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;Robin&#39;s card&quot;</span><span class="p">,</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">})</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1">// tok.PlainToken is shown once; only its hash is stored.</span>
 </code></pre></div>
@@ -5123,8 +5123,8 @@ removing the last manager of a principal with one has the same effect.</p>
 manager invites its verified address, and the person accepts while signed
 in:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">inv</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">InviteManager</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">InviteManagerInput</span><span class="p">{</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w"> </span><span class="s">"match-app"</span><span class="p">,</span><span class="w"> </span><span class="nx">ManagerID</span><span class="p">:</span><span class="w"> </span><span class="nx">familyMemberID</span><span class="p">,</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">Email</span><span class="p">:</span><span class="w"> </span><span class="s">"adult@example.com"</span><span class="p">,</span><span class="w"> </span><span class="nx">Role</span><span class="p">:</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">RoleGuardian</span><span class="p">,</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;match-app&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">ManagerID</span><span class="p">:</span><span class="w"> </span><span class="nx">familyMemberID</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">Email</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;adult@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">Role</span><span class="p">:</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">RoleGuardian</span><span class="p">,</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">})</span>
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1">// deliver inv.Token; then, as the signed-in invitee:</span>
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nx">managerID</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">AcceptManagerInvite</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">token</span><span class="p">,</span><span class="w"> </span><span class="nx">signedInPrincipalID</span><span class="p">)</span>
@@ -5199,8 +5199,8 @@ principal is signed in:</p>
 <p>Revoking a token family revokes all its tokens, so a refresh token cannot
 renew it. <code>managedprincipal.NewHandler</code> serves these as JSON for the
 manager identified by <code>requestprincipal</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">router</span><span class="p">.</span><span class="nx">With</span><span class="p">(</span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">(</span><span class="nx">opts</span><span class="p">,</span><span class="w"> </span><span class="nx">authenticators</span><span class="p">...)).</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">Mount</span><span class="p">(</span><span class="s">"/managed-principals"</span><span class="p">,</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">NewHandler</span><span class="p">(</span><span class="nx">svc</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">router</span><span class="p">.</span><span class="nx">With</span><span class="p">(</span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">(</span><span class="nx">opts</span><span class="p">,</span><span class="w"> </span><span class="nx">authenticators</span><span class="o">...</span><span class="p">)).</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">Mount</span><span class="p">(</span><span class="s">&quot;/managed-principals&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">NewHandler</span><span class="p">(</span><span class="nx">svc</span><span class="p">))</span>
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>GET    /managed-principals/{id}/login-tokens
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>DELETE /managed-principals/{id}/login-tokens/{credentialID}
@@ -5219,7 +5219,7 @@ handed to the parent on paper or as a QR code:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">claim</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">IssueClaim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">teacherID</span><span class="p">,</span><span class="w"> </span><span class="nx">learnerID</span><span class="p">)</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1">// claim.Code is shown once; claim.ExpiresAt is seven days out by default.</span>
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">RedeemClaim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">code</span><span class="p">,</span><span class="w"> </span><span class="nx">parentID</span><span class="p">)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">RedeemClaim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">code</span><span class="p">,</span><span class="w"> </span><span class="nx">parentID</span><span class="p">)</span>
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1">// The parent is now a guardian of the learner.</span>
 </code></pre></div>
 <p>The claimant must be an active human with an email who is not managed.
@@ -5228,7 +5228,7 @@ claim code can never sign anyone in. <code>WithClaimTTL</code> changes the lifet
 <h2 id="attaching-an-email">Attaching an Email<a class="headerlink" href="#attaching-an-email" title="Permanent link">&para;</a></h2>
 <p>When a managed principal is ready for its own account, a guardian attaches
 an email:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">AttachVerifiedEmail</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">parentID</span><span class="p">,</span><span class="w"> </span><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="s">"robin@example.com"</span><span class="p">,</span><span class="w"> </span><span class="nx">verifiedAt</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">AttachVerifiedEmail</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">parentID</span><span class="p">,</span><span class="w"> </span><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;robin@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">verifiedAt</span><span class="p">)</span>
 </code></pre></div>
 <p>The email becomes the identifier and default human capabilities are
 restored, so the principal can set a password and manage its own profile.
@@ -5364,7 +5364,7 @@ records what its jurisdiction requires.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -4784,14 +4784,14 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="organization-ownership-transfer">Organization Ownership Transfer<a class="headerlink" href="#organization-ownership-transfer" title="Permanent link">&para;</a></h3>
 <p>New <code>TransferOwnership</code> method in the organization service for secure ownership transfers:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/grokify/systemforge/identity/organization"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/grokify/systemforge/identity/organization&quot;</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">// Transfer ownership to another member</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orgService</span><span class="p">.</span><span class="nx">TransferOwnership</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">TransferOwnershipInput</span><span class="p">{</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">OrganizationID</span><span class="p">:</span><span class="w"> </span><span class="nx">orgID</span><span class="p">,</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">FromPrincipal</span><span class="p">:</span><span class="w">  </span><span class="nx">currentOwnerID</span><span class="p">,</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">ToPrincipal</span><span class="p">:</span><span class="w">    </span><span class="nx">newOwnerID</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">NewRoleForOld</span><span class="p">:</span><span class="w">  </span><span class="s">"admin"</span><span class="p">,</span><span class="w"> </span><span class="c1">// or "member"</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">NewRoleForOld</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;admin&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// or &quot;member&quot;</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">})</span>
 </code></pre></div>
 <p><strong>Features:</strong></p>
@@ -4804,15 +4804,15 @@
 <p>See <a href="../../identity/memberships/#ownership-transfer">Memberships - Ownership Transfer</a> for details.</p>
 <h3 id="omnistorage-session-store">OmniStorage Session Store<a class="headerlink" href="#omnistorage-session-store" title="Permanent link">&para;</a></h3>
 <p>New session store backend powered by <a href="https://github.com/plexusone/omnistorage-core">omnistorage-core</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/grokify/systemforge/session/bff"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/grokify/systemforge/session/bff&quot;</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewOmniStorageStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">OmniStorageConfig</span><span class="p">{</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">Backend</span><span class="p">:</span><span class="w">            </span><span class="s">"redis"</span><span class="p">,</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">RedisURL</span><span class="p">:</span><span class="w">           </span><span class="s">"redis://localhost:6379"</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">Backend</span><span class="p">:</span><span class="w">            </span><span class="s">&quot;redis&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">RedisURL</span><span class="p">:</span><span class="w">           </span><span class="s">&quot;redis://localhost:6379&quot;</span><span class="p">,</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nx">MaxSessionSize</span><span class="p">:</span><span class="w">     </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w"> </span><span class="c1">// 1MB</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">MaxSessionsPerUser</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">           </span><span class="c1">// Auto-evict oldest</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">DefaultTTL</span><span class="p">:</span><span class="w">         </span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">,</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nx">SiteID</span><span class="p">:</span><span class="w">             </span><span class="s">"myapp"</span><span class="p">,</span><span class="w">     </span><span class="c1">// Multi-site isolation</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nx">SiteID</span><span class="p">:</span><span class="w">             </span><span class="s">&quot;myapp&quot;</span><span class="p">,</span><span class="w">     </span><span class="c1">// Multi-site isolation</span>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">})</span>
 </code></pre></div>
 <p><strong>Features:</strong></p>
@@ -4966,7 +4966,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

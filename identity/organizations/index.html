@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -4977,29 +4977,29 @@ from its marketplace subscriptions and licenses; see
 Existing databases drop the column with <code>migrations/0004_drop_organization_plan.sql</code>.</p>
 <h2 id="creating-organizations">Creating Organizations<a class="headerlink" href="#creating-organizations" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nx">org</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">Organization</span><span class="p">.</span><span class="nx">Create</span><span class="p">().</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nx">SetName</span><span class="p">(</span><span class="s">"Acme Corporation"</span><span class="p">).</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">SetSlug</span><span class="p">(</span><span class="s">"acme-corp"</span><span class="p">).</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">SetSettings</span><span class="p">(</span><span class="kt">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">{</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="s">"timezone"</span><span class="p">:</span><span class="w"> </span><span class="s">"America/New_York"</span><span class="p">,</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="s">"features"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">"advanced_analytics"</span><span class="p">},</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nx">SetName</span><span class="p">(</span><span class="s">&quot;Acme Corporation&quot;</span><span class="p">).</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">SetSlug</span><span class="p">(</span><span class="s">&quot;acme-corp&quot;</span><span class="p">).</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">SetSettings</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">{</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="s">&quot;timezone&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;America/New_York&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="s">&quot;features&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;advanced_analytics&quot;</span><span class="p">},</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="p">}).</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">Save</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="slugs">Slugs<a class="headerlink" href="#slugs" title="Permanent link">&para;</a></h2>
 <p>Slugs must be unique and URL-safe:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">"github.com/gosimple/slug"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/gosimple/slug&quot;</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nx">orgSlug</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">slug</span><span class="p">.</span><span class="nx">Make</span><span class="p">(</span><span class="s">"Acme Corporation"</span><span class="p">)</span><span class="w"> </span><span class="c1">// "acme-corporation"</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nx">orgSlug</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">slug</span><span class="p">.</span><span class="nx">Make</span><span class="p">(</span><span class="s">&quot;Acme Corporation&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// &quot;acme-corporation&quot;</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nx">org</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">Organization</span><span class="p">.</span><span class="nx">Create</span><span class="p">().</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nx">SetName</span><span class="p">(</span><span class="s">"Acme Corporation"</span><span class="p">).</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nx">SetName</span><span class="p">(</span><span class="s">&quot;Acme Corporation&quot;</span><span class="p">).</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">SetSlug</span><span class="p">(</span><span class="nx">orgSlug</span><span class="p">).</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">Save</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="querying-organizations">Querying Organizations<a class="headerlink" href="#querying-organizations" title="Permanent link">&para;</a></h2>
 <h3 id="by-slug">By Slug<a class="headerlink" href="#by-slug" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">org</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">Organization</span><span class="p">.</span><span class="nx">Query</span><span class="p">().</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">Where</span><span class="p">(</span><span class="nx">organization</span><span class="p">.</span><span class="nx">SlugEQ</span><span class="p">(</span><span class="s">"acme-corp"</span><span class="p">)).</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">Where</span><span class="p">(</span><span class="nx">organization</span><span class="p">.</span><span class="nx">SlugEQ</span><span class="p">(</span><span class="s">&quot;acme-corp&quot;</span><span class="p">)).</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">Only</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="a-principals-organizations">A Principal's Organizations<a class="headerlink" href="#a-principals-organizations" title="Permanent link">&para;</a></h3>
@@ -5019,24 +5019,24 @@ Existing databases drop the column with <code>migrations/0004_drop_organization_
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">Only</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">org</span><span class="p">.</span><span class="nx">Edges</span><span class="p">.</span><span class="nx">PrincipalMemberships</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">"Member: %s, Role: %s\n"</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Edges</span><span class="p">.</span><span class="nx">Principal</span><span class="p">.</span><span class="nx">DisplayName</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Role</span><span class="p">)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Member: %s, Role: %s\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Edges</span><span class="p">.</span><span class="nx">Principal</span><span class="p">.</span><span class="nx">DisplayName</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Role</span><span class="p">)</span>
 <a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">&para;</a></h2>
 <p>Organization settings store custom configuration:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Update settings</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">org</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">Organization</span><span class="p">.</span><span class="nx">UpdateOneID</span><span class="p">(</span><span class="nx">orgID</span><span class="p">).</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">SetSettings</span><span class="p">(</span><span class="kt">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">{</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="s">"timezone"</span><span class="p">:</span><span class="w"> </span><span class="s">"Europe/London"</span><span class="p">,</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="s">"branding"</span><span class="p">:</span><span class="w"> </span><span class="kt">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">{</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">            </span><span class="s">"primary_color"</span><span class="p">:</span><span class="w"> </span><span class="s">"#3B82F6"</span><span class="p">,</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">            </span><span class="s">"logo_url"</span><span class="p">:</span><span class="w"> </span><span class="s">"https://example.com/logo.png"</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">SetSettings</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="s">&quot;timezone&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Europe/London&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="s">&quot;branding&quot;</span><span class="p">:</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">{</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">            </span><span class="s">&quot;primary_color&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#3B82F6&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">            </span><span class="s">&quot;logo_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://example.com/logo.png&quot;</span><span class="p">,</span>
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="p">},</span>
 <a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="p">}).</span>
 <a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="nx">Save</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 <a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
 <a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c1">// Read settings</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="nx">timezone</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">org</span><span class="p">.</span><span class="nx">Settings</span><span class="p">[</span><span class="s">"timezone"</span><span class="p">].(</span><span class="kt">string</span><span class="p">)</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="nx">timezone</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">org</span><span class="p">.</span><span class="nx">Settings</span><span class="p">[</span><span class="s">&quot;timezone&quot;</span><span class="p">].(</span><span class="kt">string</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="feature-checks">Feature Checks<a class="headerlink" href="#feature-checks" title="Permanent link">&para;</a></h2>
 <p>Gate a feature on the organization's entitlements, not on a plan value. Each
@@ -5095,7 +5095,7 @@ granted only for entitled applications; see
 <p>Store organization ID in context for automatic scoping:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">contextKey</span><span class="w"> </span><span class="kt">string</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">orgKey</span><span class="w"> </span><span class="nx">contextKey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"organization_id"</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">orgKey</span><span class="w"> </span><span class="nx">contextKey</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;organization_id&quot;</span>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
 <a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="kd">func</span><span class="w"> </span><span class="nx">WithOrganization</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">orgID</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">)</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithValue</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">orgKey</span><span class="p">,</span><span class="w"> </span><span class="nx">orgID</span><span class="p">)</span>
@@ -5180,7 +5180,7 @@ granted only for entitled applications; see
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

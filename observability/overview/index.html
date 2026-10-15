@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -5374,20 +5374,20 @@
 <h3 id="1-import-the-provider">1. Import the Provider<a class="headerlink" href="#1-import-the-provider" title="Permanent link">&para;</a></h3>
 <p>Import the observability package and the provider you want to use:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="s">"github.com/plexusone/systemforge/observability"</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="s">"github.com/plexusone/omniobserve/observops/otlp"</span><span class="w">     </span><span class="c1">// OTLP</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/observability&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/omniobserve/observops/otlp&quot;</span><span class="w">     </span><span class="c1">// OTLP</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="c1">// or</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="s">"github.com/plexusone/omniobserve/observops/datadog"</span><span class="w">  </span><span class="c1">// Datadog</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/omniobserve/observops/datadog&quot;</span><span class="w">  </span><span class="c1">// Datadog</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="c1">// or</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="s">"github.com/plexusone/omniobserve/observops/newrelic"</span><span class="w"> </span><span class="c1">// New Relic</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">_</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/omniobserve/observops/newrelic&quot;</span><span class="w"> </span><span class="c1">// New Relic</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
 </code></pre></div>
 <h3 id="2-create-observability-instance">2. Create Observability Instance<a class="headerlink" href="#2-create-observability-instance" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">obs</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">observability</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">observability</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">Provider</span><span class="p">:</span><span class="w">       </span><span class="s">"otlp"</span><span class="p">,</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">ServiceName</span><span class="p">:</span><span class="w">    </span><span class="s">"my-app"</span><span class="p">,</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">ServiceVersion</span><span class="p">:</span><span class="w"> </span><span class="s">"1.0.0"</span><span class="p">,</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">Endpoint</span><span class="p">:</span><span class="w">       </span><span class="s">"localhost:4317"</span><span class="p">,</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">Provider</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;otlp&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">ServiceName</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;my-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">ServiceVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0.0&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">Endpoint</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;localhost:4317&quot;</span><span class="p">,</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">})</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
@@ -5411,8 +5411,8 @@
 </code></pre></div>
 <h4 id="api-key-middleware">API Key Middleware<a class="headerlink" href="#api-key-middleware" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">config</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">middleware</span><span class="p">.</span><span class="nx">DefaultAPIKeyMiddlewareConfig</span><span class="p">()</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">config</span><span class="p">.</span><span class="nx">Service</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">apikeyService</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nx">config</span><span class="p">.</span><span class="nx">Observability</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">obs</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">config</span><span class="p">.</span><span class="nx">Service</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">apikeyService</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nx">config</span><span class="p">.</span><span class="nx">Observability</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">obs</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">middleware</span><span class="p">.</span><span class="nx">APIKeyMiddleware</span><span class="p">(</span><span class="nx">config</span><span class="p">))</span>
 </code></pre></div>
 <h4 id="http-request-tracing">HTTP Request Tracing<a class="headerlink" href="#http-request-tracing" title="Permanent link">&para;</a></h4>
@@ -5642,19 +5642,19 @@
 <p>Use the underlying observops.Provider for custom metrics:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">meter</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">obs</span><span class="p">.</span><span class="nx">Meter</span><span class="p">()</span>
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nx">counter</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">meter</span><span class="p">.</span><span class="nx">Counter</span><span class="p">(</span><span class="s">"my_custom_counter"</span><span class="p">,</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nx">observops</span><span class="p">.</span><span class="nx">WithDescription</span><span class="p">(</span><span class="s">"My custom counter"</span><span class="p">),</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nx">counter</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">meter</span><span class="p">.</span><span class="nx">Counter</span><span class="p">(</span><span class="s">&quot;my_custom_counter&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nx">observops</span><span class="p">.</span><span class="nx">WithDescription</span><span class="p">(</span><span class="s">&quot;My custom counter&quot;</span><span class="p">),</span>
 <a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="p">)</span>
 <a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
 <a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="nx">counter</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nx">observops</span><span class="p">.</span><span class="nx">WithAttributes</span><span class="p">(</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span><span class="nx">observops</span><span class="p">.</span><span class="nx">Attribute</span><span class="p">(</span><span class="s">"key"</span><span class="p">,</span><span class="w"> </span><span class="s">"value"</span><span class="p">),</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span><span class="nx">observops</span><span class="p">.</span><span class="nx">Attribute</span><span class="p">(</span><span class="s">&quot;key&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;value&quot;</span><span class="p">),</span>
 <a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="p">))</span>
 </code></pre></div>
 <h2 id="creating-custom-spans">Creating Custom Spans<a class="headerlink" href="#creating-custom-spans" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">span</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">obs</span><span class="p">.</span><span class="nx">StartSpan</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">"my.custom.operation"</span><span class="p">,</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">span</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">obs</span><span class="p">.</span><span class="nx">StartSpan</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;my.custom.operation&quot;</span><span class="p">,</span>
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="nx">observops</span><span class="p">.</span><span class="nx">WithSpanKind</span><span class="p">(</span><span class="nx">observops</span><span class="p">.</span><span class="nx">SpanKindInternal</span><span class="p">),</span>
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nx">observops</span><span class="p">.</span><span class="nx">WithSpanAttributes</span><span class="p">(</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">        </span><span class="nx">observops</span><span class="p">.</span><span class="nx">Attribute</span><span class="p">(</span><span class="s">"user.id"</span><span class="p">,</span><span class="w"> </span><span class="nx">userID</span><span class="p">),</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">        </span><span class="nx">observops</span><span class="p">.</span><span class="nx">Attribute</span><span class="p">(</span><span class="s">&quot;user.id&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">userID</span><span class="p">),</span>
 <a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="p">),</span>
 <a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="p">)</span>
 <a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="k">defer</span><span class="w"> </span><span class="nx">span</span><span class="p">.</span><span class="nx">End</span><span class="p">()</span>
@@ -5680,8 +5680,8 @@
 <p>SystemForge integrates with <a href="https://github.com/plexusone/productgraph">ProductGraph</a> for product analytics, enabling frontend-backend correlation and user journey tracking.</p>
 <h3 id="quick-start_1">Quick Start<a class="headerlink" href="#quick-start_1" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="s">"github.com/plexusone/systemforge/observability"</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="s">"github.com/plexusone/systemforge/productgraph"</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/observability&quot;</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/productgraph&quot;</span>
 <a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="p">)</span>
 <a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>
 <a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="c1">// Create observability instance</span>
@@ -5691,10 +5691,10 @@
 <a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="p">}</span>
 <a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>
 <a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="c1">// Configure ProductGraph</span>
-<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="nx">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">obs</span><span class="p">.</span><span class="nx">SetProductGraph</span><span class="p">(</span><span class="nx">productgraph</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="w">    </span><span class="nx">ProjectID</span><span class="p">:</span><span class="w"> </span><span class="s">"my-project"</span><span class="p">,</span>
-<a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a><span class="w">    </span><span class="nx">Endpoint</span><span class="p">:</span><span class="w">  </span><span class="s">"https://api.productgraph.io/v1/events"</span><span class="p">,</span>
-<a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="w">    </span><span class="nx">APIKey</span><span class="p">:</span><span class="w">    </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">"PRODUCTGRAPH_API_KEY"</span><span class="p">),</span>
+<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">obs</span><span class="p">.</span><span class="nx">SetProductGraph</span><span class="p">(</span><span class="nx">productgraph</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="w">    </span><span class="nx">ProjectID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;my-project&quot;</span><span class="p">,</span>
+<a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a><span class="w">    </span><span class="nx">Endpoint</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;https://api.productgraph.io/v1/events&quot;</span><span class="p">,</span>
+<a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="w">    </span><span class="nx">APIKey</span><span class="p">:</span><span class="w">    </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;PRODUCTGRAPH_API_KEY&quot;</span><span class="p">),</span>
 <a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a><span class="p">})</span>
 <a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a><span class="c1">// Or from environment:</span>
 <a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a><span class="c1">// err = obs.SetProductGraphFromEnv()</span>
@@ -5746,18 +5746,18 @@
 </code></pre></div>
 <h3 id="manual-event-tracking">Manual Event Tracking<a class="headerlink" href="#manual-event-tracking" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1">// Track API calls</span>
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="nx">obs</span><span class="p">.</span><span class="nx">TrackAPICall</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">"POST"</span><span class="p">,</span><span class="w"> </span><span class="s">"/api/checkout"</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="nx">obs</span><span class="p">.</span><span class="nx">TrackAPICall</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;POST&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/api/checkout&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
 <a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
 <a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1">// Track errors</span>
-<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="nx">obs</span><span class="p">.</span><span class="nx">TrackError</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">"ValidationError"</span><span class="p">,</span><span class="w"> </span><span class="s">"invalid card number"</span><span class="p">)</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="nx">obs</span><span class="p">.</span><span class="nx">TrackError</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ValidationError&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid card number&quot;</span><span class="p">)</span>
 <a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
 <a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c1">// Track user journey steps</span>
-<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="nx">obs</span><span class="p">.</span><span class="nx">TrackJourneyStep</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">"checkout_flow"</span><span class="p">,</span><span class="w"> </span><span class="s">"payment"</span><span class="p">,</span><span class="w"> </span><span class="s">"Enter Payment"</span><span class="p">)</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="nx">obs</span><span class="p">.</span><span class="nx">TrackJourneyStep</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;checkout_flow&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;payment&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Enter Payment&quot;</span><span class="p">)</span>
 <a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>
 <a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="c1">// Track custom events</span>
 <a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="nx">obs</span><span class="p">.</span><span class="nx">TrackProductGraphEvent</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">productgraph</span><span class="p">.</span><span class="nx">Event</span><span class="p">{</span>
 <a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="w">    </span><span class="nx">EventType</span><span class="p">:</span><span class="w"> </span><span class="nx">productgraph</span><span class="p">.</span><span class="nx">EventTypeUIClick</span><span class="p">,</span>
-<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="w">    </span><span class="nx">UIElement</span><span class="p">:</span><span class="w"> </span><span class="s">"checkout_button"</span><span class="p">,</span>
+<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="w">    </span><span class="nx">UIElement</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;checkout_button&quot;</span><span class="p">,</span>
 <a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a><span class="p">})</span>
 </code></pre></div>
 <h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
@@ -5914,7 +5914,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
