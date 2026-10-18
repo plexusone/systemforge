@@ -16,14 +16,17 @@ import (
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/mode"
 	"github.com/plexusone/systemforge/connections"
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/approle"
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/managedprincipal"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/signupgate"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/keys"
 	"github.com/plexusone/systemforge/marketplace"
+	"github.com/plexusone/systemforge/session/ratelimit"
 )
 
 // dbPingTimeout bounds the connectivity check New performs.
@@ -108,6 +111,21 @@ type Options struct {
 	// used when the configuration enables connections. Optional.
 	Providers *provider.Registry
 
+	// AuditEmitter records the managed-principal API's actions when the
+	// configuration enables managed principals. Optional.
+	AuditEmitter audit.Emitter
+
+	// ManagedPrincipalRates stores the per-caller limit on redeeming claim
+	// codes and answering manager invitations. Default: in-memory storage,
+	// which suits one instance; pass shared storage, such as Redis, when
+	// several instances serve SystemAuth.
+	ManagedPrincipalRates ratelimit.Storage
+
+	// ManagedPrincipalOptions are passed to managedprincipal.NewService
+	// after the logger and audit emitter, e.g. WithRoles, WithAuthorizer or
+	// WithAuthzSyncer.
+	ManagedPrincipalOptions []managedprincipal.Option
+
 	// ServerOptions are passed to systemauth.NewEmbedded after the storage,
 	// logger and readiness options New sets, e.g. WithObservability or
 	// custom social login stores. They come last, so they can replace the
@@ -132,6 +150,11 @@ type Service struct {
 	keys  *keys.Keys
 	authz *mode.Result
 	conns *connections.Connections
+
+	// mp is set when managed principals are enabled; mpRates is the
+	// rate-limit storage New created for it, if any.
+	mp      *managedprincipal.Service
+	mpRates ratelimit.Storage
 }
 
 // New builds a SystemAuth server from cfg. Unless opts.Dev is set it
@@ -266,6 +289,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 	}
 	s.server = server
 	s.mountConnections()
+	s.openManagedPrincipals(&c, opts)
 	return s, nil
 }
 
@@ -434,7 +458,7 @@ func (s *Service) Ready(ctx context.Context) error {
 // Close releases the database New opened. Injected handles (Options.DB,
 // Options.EntClient) are left to their owner.
 func (s *Service) Close() error {
-	err := s.closeConnections()
+	err := errors.Join(s.closeConnections(), s.closeManagedPrincipals())
 	if s.owned == nil {
 		return err
 	}
