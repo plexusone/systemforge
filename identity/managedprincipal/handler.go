@@ -13,6 +13,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
+	"github.com/plexusone/systemforge/session/ratelimit"
 )
 
 // LoginTokenView is a login token as a manager sees it; it never carries
@@ -36,6 +37,7 @@ type LoginTokenView struct {
 //
 // Managing a principal:
 //
+//	GET    /                                         the caller's managed principals (?after=&limit=)
 //	POST   /                                         create (actor must be a manager)
 //	GET    /{principalID}/managers                   view_profile
 //	POST   /{principalID}/managers                   add a manager; manage_managers
@@ -56,13 +58,21 @@ type LoginTokenView struct {
 // managed principal:
 //
 //	GET    /{principalID}/login-tokens
+//	POST   /{principalID}/login-tokens               issue; the caller is an active manager
 //	DELETE /{principalID}/login-tokens/{credentialID}
 //	GET    /{principalID}/sessions
 //	DELETE /{principalID}/sessions/{kind}/{sessionID}
 //	POST   /{principalID}/revoke-all
-func NewHandler(svc *Service) http.Handler {
+//
+// Options put the handler in relying-party mode (WithRequestClient) and
+// rate limit the code routes (WithCodeRateLimit).
+func NewHandler(svc *Service, opts ...HandlerOption) http.Handler {
 	h := &handler{svc: svc}
+	for _, opt := range opts {
+		opt(h)
+	}
 	r := chi.NewRouter()
+	r.Get("/", h.listManaged)
 	r.Post("/", h.create)
 	r.Post("/claims/redeem", h.redeemClaim)
 	r.Post("/manager-invites", h.inviteManager)
@@ -76,6 +86,7 @@ func NewHandler(svc *Service) http.Handler {
 	r.Post("/{principalID}/release", h.release)
 	r.Post("/{principalID}/claims", h.issueClaim)
 	r.Get("/{principalID}/login-tokens", h.listLoginTokens)
+	r.Post("/{principalID}/login-tokens", h.issueLoginToken)
 	r.Delete("/{principalID}/login-tokens/{credentialID}", h.revokeLoginToken)
 	r.Get("/{principalID}/sessions", h.listSessions)
 	r.Delete("/{principalID}/sessions/{kind}/{sessionID}", h.revokeSession)
@@ -84,7 +95,10 @@ func NewHandler(svc *Service) http.Handler {
 }
 
 type handler struct {
-	svc *Service
+	svc       *Service
+	clientOf  func(*http.Request) (string, bool)
+	codeRates ratelimit.Storage
+	codeLimit ratelimit.Limit
 }
 
 // caller returns the calling principal, writing an error response when
@@ -210,6 +224,13 @@ func (h *handler) revokeAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) fail(w http.ResponseWriter, r *http.Request, err error) {
+	if h.remote() && (errors.Is(err, ErrNotFound) || errors.Is(err, ErrNotManaged)) {
+		// Callers from other applications get one answer whether a
+		// principal does not exist, is not managed, or is not theirs, so
+		// the API cannot be asked who is a managed principal.
+		writeError(w, http.StatusForbidden, "forbidden")
+		return
+	}
 	switch {
 	case errors.Is(err, ErrForbidden), errors.Is(err, ErrNotAllowed), errors.Is(err, ErrNotManager):
 		writeError(w, http.StatusForbidden, "forbidden")
@@ -219,7 +240,8 @@ func (h *handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 		// One answer for every reason a code cannot be used.
 		writeError(w, http.StatusBadRequest, "invalid code")
 	case errors.Is(err, ErrDisplayNameRequired), errors.Is(err, ErrNoManagers), errors.Is(err, ErrInvalidManager),
-		errors.Is(err, ErrInvalidRole), errors.Is(err, ErrEmailRequired), errors.Is(err, ErrInviteEmailRequired):
+		errors.Is(err, ErrInvalidRole), errors.Is(err, ErrEmailRequired), errors.Is(err, ErrInviteEmailRequired),
+		errors.Is(err, credential.ErrInvalidExpiry):
 		writeError(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), "managedprincipal: "))
 	case errors.Is(err, ErrLastManager), errors.Is(err, ErrEmailInUse), errors.Is(err, ErrHasEmail),
 		errors.Is(err, ErrEmailNotVerified), errors.Is(err, ErrAlreadyManaged), errors.Is(err, ErrManagesOthers):

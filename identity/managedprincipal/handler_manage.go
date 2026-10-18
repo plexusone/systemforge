@@ -39,10 +39,10 @@ func (h *handler) decode(w http.ResponseWriter, r *http.Request, v any) bool {
 	return true
 }
 
-func (h *handler) writeStatusJSON(w http.ResponseWriter, r *http.Request, status int, v any) {
+func (h *handler) writeCreated(w http.ResponseWriter, r *http.Request, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(status)
+	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		// The status is already sent; the client sees a truncated body.
 		h.svc.logger.ErrorContext(r.Context(), "managedprincipal: write response", "error", err)
@@ -58,7 +58,15 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if !h.decode(w, r, &req) {
 		return
 	}
-	in := CreateInput{ClientID: req.ClientID, DisplayName: req.DisplayName, Email: req.Email, ActorID: actor}
+	clientID, ok := h.client(w, r, req.ClientID)
+	if !ok {
+		return
+	}
+	if h.remote() && (len(req.Managers) != 1 || req.Managers[0].PrincipalID != actor) {
+		writeError(w, http.StatusBadRequest, "managers must name only the caller; invite further managers")
+		return
+	}
+	in := CreateInput{ClientID: clientID, DisplayName: req.DisplayName, Email: req.Email, ActorID: actor}
 	for _, m := range req.Managers {
 		in.Managers = append(in.Managers, ManagerInput(m))
 	}
@@ -67,7 +75,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, err)
 		return
 	}
-	h.writeStatusJSON(w, r, http.StatusCreated, map[string]any{"id": id})
+	h.writeCreated(w, r, map[string]any{"id": id})
 }
 
 func (h *handler) listManagers(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +98,11 @@ func (h *handler) listManagers(w http.ResponseWriter, r *http.Request) {
 func (h *handler) addManager(w http.ResponseWriter, r *http.Request) {
 	actor, managed, ok := h.ids(w, r)
 	if !ok {
+		return
+	}
+	if h.remote() {
+		// A manager joins with consent: through an invitation or a claim.
+		writeError(w, http.StatusForbidden, "add managers through an invitation or a claim")
 		return
 	}
 	var req ManagerView
@@ -155,7 +168,7 @@ func (h *handler) issueClaim(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, err)
 		return
 	}
-	h.writeStatusJSON(w, r, http.StatusCreated, map[string]any{
+	h.writeCreated(w, r, map[string]any{
 		"id": claim.ID, "code": claim.Code, "expires_at": claim.ExpiresAt,
 	})
 }
@@ -163,6 +176,9 @@ func (h *handler) issueClaim(w http.ResponseWriter, r *http.Request) {
 func (h *handler) redeemClaim(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.caller(w, r)
 	if !ok {
+		return
+	}
+	if !h.allowCode(w, r, actor) {
 		return
 	}
 	var req struct {
@@ -192,12 +208,16 @@ func (h *handler) inviteManager(w http.ResponseWriter, r *http.Request) {
 	if !h.decode(w, r, &req) {
 		return
 	}
-	inv, err := h.svc.InviteManager(r.Context(), InviteManagerInput{ClientID: req.ClientID, ManagerID: actor, Email: req.Email, Role: req.Role})
+	clientID, ok := h.client(w, r, req.ClientID)
+	if !ok {
+		return
+	}
+	inv, err := h.svc.InviteManager(r.Context(), InviteManagerInput{ClientID: clientID, ManagerID: actor, Email: req.Email, Role: req.Role})
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	h.writeStatusJSON(w, r, http.StatusCreated, map[string]any{
+	h.writeCreated(w, r, map[string]any{
 		"id": inv.ID, "token": inv.Token, "email": inv.Email, "role": inv.Role, "expires_at": inv.ExpiresAt.Format(time.RFC3339),
 	})
 }
@@ -205,6 +225,9 @@ func (h *handler) inviteManager(w http.ResponseWriter, r *http.Request) {
 func (h *handler) acceptInvite(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.caller(w, r)
 	if !ok {
+		return
+	}
+	if !h.allowCode(w, r, actor) {
 		return
 	}
 	var req struct {
@@ -224,6 +247,9 @@ func (h *handler) acceptInvite(w http.ResponseWriter, r *http.Request) {
 func (h *handler) declineInvite(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.caller(w, r)
 	if !ok {
+		return
+	}
+	if !h.allowCode(w, r, actor) {
 		return
 	}
 	var req struct {
