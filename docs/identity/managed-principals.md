@@ -229,6 +229,70 @@ application keeps is its own to remove.
 the route list in the
 [architecture page](../design/architecture/managed-principals.md#sessions-and-manager-visibility).
 
+## Relying Parties: the API on SystemAuth
+
+When a host builds SystemAuth with `systemauthsvc` and enables managed
+principals, SystemAuth serves the API to applications composed beside it,
+in the same process or another, at `/managed-principals`
+(`systemauthsvc.ManagedPrincipalsPath`). The principals stay in SystemAuth's
+database; an application keeps only their IDs.
+
+Each call carries the signed-in manager's SystemAuth access token, granted
+the `systemforge:managed_principals` scope (`managedprincipal.Scope`). The
+manager is the actor, and the application is the client the token was
+issued to: that client must allow managed principals, and a body naming
+another client is refused. Give the client the scope and the opt-in:
+
+```yaml
+managed_principals:
+  enabled: true
+
+clients:
+  - id: learning-app
+    managed_principals: true
+    scopes: [openid, profile, email, systemforge:managed_principals]
+```
+
+The API differs from the in-process handler in a few ways:
+
+- **Creation** names only the caller as manager, by `role`. Further managers
+  join with their consent, through an invitation or a claim;
+  `POST /{id}/managers` is refused.
+- **One answer for strangers.** An unknown principal, one that is not
+  managed, and one the caller does not manage all answer 403, so the API
+  cannot be asked who is a managed principal.
+- **Codes are rate limited** per caller: 10 a minute by default across claim
+  redemption and invitation answers (`managedprincipal.DefaultCodeLimit`).
+  Pass shared storage in `systemauthsvc.Options.ManagedPrincipalRates` when
+  several instances serve SystemAuth.
+- **No email attachment.** A relying party cannot prove an address belongs to
+  the principal, so `AttachVerifiedEmail` stays an in-process operation.
+
+`systemauthsvc.Options.AuditEmitter` records every write, and
+`Options.ManagedPrincipalOptions` passes roles, an authorizer or an authz
+syncer to the service. A host in the same process can call
+`Service.ManagedPrincipals()` directly.
+
+Applications call the API with `managedprincipal/mpclient`, which depends on
+the standard library and `uuid` only:
+
+```go
+mp := mpclient.New("https://auth.example.com/managed-principals", httpClient)
+
+id, err := mp.Create(ctx, managerToken, mpclient.CreateInput{
+    DisplayName: "Robin",
+    Role:        mpclient.RoleEducator,
+})
+card, err := mp.IssueLoginToken(ctx, managerToken, id, mpclient.IssueLoginTokenInput{Name: "Robin's card"})
+// card.Token is shown once; render it as a QR code or a printed card.
+```
+
+Errors match `mpclient.ErrUnauthorized`, `ErrForbidden`, `ErrNotFound`,
+`ErrInvalidCode`, `ErrInvalidRequest`, `ErrConflict`, and `ErrRateLimited`
+with `errors.Is`, and unwrap to `*mpclient.APIError` for the status, message
+and `RetryAfter`. The managed principal then signs in at
+`POST /login-token` as described in [Exchanging a Token](#exchanging-a-token).
+
 ## Manager Visibility and Revocation
 
 Managers holding `manage_credentials` can see and end every way a managed
@@ -251,6 +315,7 @@ router.With(requestprincipal.Middleware(opts, authenticators...)).
 
 ```text
 GET    /managed-principals/{id}/login-tokens
+POST   /managed-principals/{id}/login-tokens
 DELETE /managed-principals/{id}/login-tokens/{credentialID}
 GET    /managed-principals/{id}/sessions
 DELETE /managed-principals/{id}/sessions/{kind}/{sessionID}

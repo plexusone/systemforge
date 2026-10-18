@@ -264,7 +264,8 @@ caller is always the actor; every route runs the service operation and so
 its authorizer check:
 
 ```
-POST   /                                          Create (JSON: client_id, display_name, email?, managers[])
+GET    /                                          ListManagedBy (?after=&limit=, at most 200)
+POST   /                                          Create (JSON: client_id, display_name, email?, managers[] or role)
 GET    /{principalID}/managers                    ListManagersFor
 POST   /{principalID}/managers                    AddManager (JSON: principal_id, role)
 DELETE /{principalID}/managers/{managerID}/{role} RemoveManager
@@ -277,6 +278,7 @@ POST   /manager-invites/accept                    AcceptManagerInvite (JSON: tok
 POST   /manager-invites/decline                   DeclineManagerInvite (JSON: token); 204, 400 for any mismatch
 DELETE /manager-invites/{inviteID}                RevokeManagerInvite
 GET    /{principalID}/login-tokens
+POST   /{principalID}/login-tokens                IssueLoginToken (JSON: client_id, name?, single_use?, expires_at?)
 DELETE /{principalID}/login-tokens/{credentialID}
 GET    /{principalID}/sessions
 DELETE /{principalID}/sessions/{kind}/{sessionID}
@@ -288,8 +290,17 @@ client that does not allow managed principals), 404 for an unknown or
 unmanaged principal, 400 for malformed input or any unusable code, 409 for
 conflicts (`ErrLastManager`, `ErrEmailInUse`, `ErrEmailNotVerified`,
 `ErrAlreadyManaged`). Bodies are bounded and refuse unknown fields.
-`client_id` in a create or invite body is the caller's assertion; the
-deployment and that client's opt-in still gate it (`ManagedPrincipalsAllowed`).
+`client_id` in a create, invite or login-token body is the caller's
+assertion; the deployment and that client's opt-in still gate it
+(`ManagedPrincipalsAllowed`).
+
+In relying-party mode (`WithRequestClient`), which `systemauthsvc` uses to
+serve the API on SystemAuth, the client is the authenticated access token's
+and a different body `client_id` is a 400; create names only the caller as
+manager; `POST /{principalID}/managers` is refused (managers join through
+invitations and claims); and an unknown or unmanaged principal answers 403,
+like a principal the caller does not manage. `WithCodeRateLimit` adds a
+per-caller 429 on the routes that present a code.
 
 ## Attaching an email
 
