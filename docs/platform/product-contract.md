@@ -18,7 +18,7 @@ Applications implementing this contract can:
 
 ### 1. Federation is Optional
 
-All contract endpoints are optional for standalone operation. Applications must function fully without implementing federation endpoints.
+Applications must function fully without joining a federation. The contract endpoints themselves are not a standalone feature: their identity, policy and audit operations authenticate callers with SystemAuth tokens, so they are refused until the application is federated (see [Standalone Mode](#standalone-mode)).
 
 ### 2. Additive Integration
 
@@ -509,11 +509,24 @@ Applications must emit audit events in this standardized format:
 
 ### Standalone Mode
 
-When not federated:
+When not federated, there is no SystemAuth issuer to authenticate callers against:
 
-1. All endpoints return local data only
-2. `/systemforge/health/federation` returns `federation_status: "standalone"`
-3. Sync endpoints return `501 Not Implemented`
+1. The identity, policy and audit operations return `403 Forbidden`
+2. `/systemforge/meta`, `/systemforge/health` and `/systemforge/health/federation` stay open; the last returns `federation_status: "standalone"`
+3. Sync endpoints return `503 Service Unavailable`
+
+This holds whenever the application has no federation ID: before it first joins, and after it leaves or is detached.
+
+To serve the operations without credentials while standalone, set `Config.AllowUnauthenticatedStandalone`. It is off by default. Enable it only where untrusted callers cannot reach the endpoints, such as local development and tests.
+
+```go
+provider, err := contract.NewProvider(&contract.Config{
+    AppID:                          "my-app",
+    DisplayName:                    "My App",
+    Version:                        "1.0.0",
+    AllowUnauthenticatedStandalone: true, // local development only
+}, nil)
+```
 
 ### Federation Attachment
 

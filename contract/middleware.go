@@ -20,12 +20,14 @@ type SystemAuthClaims struct {
 }
 
 // Middleware returns HTTP middleware for SystemAuth authentication.
-// In standalone mode, requests are allowed without authentication.
 // In federated mode, SystemAuth JWTs are validated.
+// In standalone mode there is nothing to validate against, so requests pass
+// through; the operations themselves refuse them unless
+// Config.AllowUnauthenticatedStandalone is set (see checkPermission).
 func (a *API) Middleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// In standalone mode, allow all requests
+			// Standalone: no issuer to validate against; the operations decide
 			if !a.provider.FederationState().IsFederated() {
 				next.ServeHTTP(w, r)
 				return

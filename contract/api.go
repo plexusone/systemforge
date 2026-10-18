@@ -156,15 +156,17 @@ func (a *API) registerEndpoints() {
 }
 
 // checkPermission verifies the request has the required permission.
-// In standalone mode, all permissions are granted.
 // In federated mode, permissions come from the SystemAuth JWT.
+// In standalone mode there is no issuer to authenticate against, so the
+// operation is refused unless Config.AllowUnauthenticatedStandalone is set.
 func (a *API) checkPermission(ctx context.Context, permission string) error {
-	// In standalone mode, allow all operations
 	if !a.provider.FederationState().IsFederated() {
-		return nil
+		if a.provider.Config().AllowUnauthenticatedStandalone {
+			return nil
+		}
+		return huma.Error403Forbidden("this operation is unavailable until the application is federated")
 	}
 
-	// In federated mode, check permissions from context
 	if !HasPermission(ctx, permission) {
 		return huma.Error403Forbidden("missing required permission: " + permission)
 	}

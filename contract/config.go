@@ -53,6 +53,14 @@ type Config struct {
 	// SystemAuthPublicKey is the public key for validating SystemAuth JWTs.
 	// Can be *rsa.PublicKey, *ecdsa.PublicKey, or ed25519.PublicKey.
 	SystemAuthPublicKey any
+
+	// AllowUnauthenticatedStandalone lets the identity, policy and audit
+	// operations answer without credentials while the application is not
+	// federated. It is false by default, so those operations refuse every
+	// request until the application joins a federation. Set it only where
+	// the endpoints are not reachable by untrusted callers, such as local
+	// development and tests. The meta and health endpoints are always open.
+	AllowUnauthenticatedStandalone bool
 }
 
 // DefaultConfig returns a Config with sensible defaults.
