@@ -25,6 +25,9 @@ type CreateRequest struct {
 	DisplayName string        `json:"display_name"`
 	Email       string        `json:"email,omitempty"`
 	Managers    []ManagerView `json:"managers"`
+	// Role, in place of Managers, makes the caller the only manager in
+	// that role.
+	Role string `json:"role,omitempty"`
 }
 
 // decode reads a JSON body into v, writing an error response on failure.
@@ -61,6 +64,13 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	clientID, ok := h.client(w, r, req.ClientID)
 	if !ok {
 		return
+	}
+	if req.Role != "" {
+		if len(req.Managers) > 0 {
+			writeError(w, http.StatusBadRequest, "give managers or role, not both")
+			return
+		}
+		req.Managers = []ManagerView{{PrincipalID: actor, Role: req.Role}}
 	}
 	if h.remote() && (len(req.Managers) != 1 || req.Managers[0].PrincipalID != actor) {
 		writeError(w, http.StatusBadRequest, "managers must name only the caller; invite further managers")

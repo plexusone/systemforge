@@ -78,6 +78,10 @@ func TestRemoteCreateUsesTheTokensClient(t *testing.T) {
 	expectStatus(t, c.do(teacher, client, http.MethodPost, "/", CreateRequest{DisplayName: "Robin",
 		Managers: []ManagerView{{PrincipalID: other, Role: RoleGuardian}}}), http.StatusBadRequest)
 
+	expectStatus(t, c.do(teacher, client, http.MethodPost, "/", CreateRequest{DisplayName: "Robin", Managers: self, Role: RoleEducator}), http.StatusBadRequest)
+	// Role alone makes the caller the manager.
+	expectStatus(t, c.do(teacher, client, http.MethodPost, "/", CreateRequest{DisplayName: "Sam", Role: RoleGuardian}), http.StatusCreated)
+
 	w := c.do(teacher, client, http.MethodPost, "/", CreateRequest{DisplayName: "Robin", Managers: self})
 	expectStatus(t, w, http.StatusCreated)
 	var created struct {
