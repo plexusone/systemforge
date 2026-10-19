@@ -109,9 +109,16 @@ learnerID, err := svc.Create(ctx, managedprincipal.CreateInput{
 ```
 
 The principal, its human row, and its manager relationships are written in
-one transaction. `AddManager` is idempotent and reactivates a removed
-relationship; `RemoveManager` deactivates one. Every action is audited
-through `contract/audit`.
+one transaction. Nobody becomes a manager without agreeing: `Create` names
+only the acting manager, and other managers join by accepting an
+invitation or redeeming a claim. `RemoveManager` deactivates a
+relationship. Every action is audited through `contract/audit`.
+
+Trusted administrator tooling, such as a migration, can build the service
+with `managedprincipal.WithDirectManagerAdds()`. `Create` may then name
+other managers, and `AddManager` attaches one directly; it is idempotent
+and reactivates a removed relationship. Without the option both return
+`ErrConsentRequired`.
 
 ## Sign-in with Login Tokens
 
@@ -214,10 +221,11 @@ HTTP handler are held to the same rules:
 
 | Operation | Needs |
 |-----------|-------|
-| `Create` | The actor is one of the named managers, or a platform administrator |
-| `AddManager`, `RemoveManager`, `Release` | `manage_managers` (guardians) |
+| `Create` | The actor is the only named manager, or a platform administrator; other managers need `WithDirectManagerAdds` |
+| `AddManager` | `WithDirectManagerAdds`, and `manage_managers` (guardians) |
+| `RemoveManager`, `Release` | `manage_managers` (guardians) |
 | `Delete`, `AttachVerifiedEmail` | `manage_account` (guardians) |
-| `IssueClaim`, tokens, sessions | `manage_credentials` (guardians, educators) |
+| `IssueClaim`, `IssueLoginToken`, tokens, sessions | `manage_credentials` (guardians, educators); a role registered with `WithRoles` cannot issue a login token |
 | `RedeemClaim` | A valid manager claimant, and an issuer that still holds `manage_credentials` |
 
 `Delete` deactivates the principal and erases what identifies or

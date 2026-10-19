@@ -26,6 +26,26 @@
         "commit": "c0c4e8d"
       }
     ],
+    "changed": [
+      {
+        "description": "The contract's identity, policy and audit operations answer 403 until the application is federated; `Config.AllowUnauthenticatedStandalone` restores the open behavior for development and tests",
+        "commit": "9883be5",
+        "breaking": true
+      },
+      {
+        "description": "`managedprincipal.Service.Create` accepts only the actor as manager and `AddManager` is refused with `ErrConsentRequired`, so managers join by invitation or claim; `WithDirectManagerAdds` keeps direct adds for administrator tooling",
+        "commit": "53a2655",
+        "breaking": true
+      },
+      {
+        "description": "Issuing a login token requires `manage_credentials`",
+        "commit": "bf1c347"
+      },
+      {
+        "description": "The managed-principal handler answers 403 for an unknown or unmanaged principal, as for one the caller does not manage",
+        "commit": "0124078"
+      }
+    ],
     "documentation": [
       {
         "description": "Managed principals guide covers the API on SystemAuth, its configuration and scope, and the client"
