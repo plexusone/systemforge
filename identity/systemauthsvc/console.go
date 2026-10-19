@@ -24,6 +24,7 @@ func (s *Service) mountConsole(c *Config) error {
 		Principal:     s.consolePrincipal,
 		Organizations: s.consoleOrganizations,
 		ReturnTo:      s.server.ValidateReturnTo,
+		SignOut:       s.server.EndLoginSession,
 		Connections:   s.conns,
 		WebDir:        c.Console.WebDir,
 		LoginPath:     systemauth.LoginPath,

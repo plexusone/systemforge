@@ -1,8 +1,9 @@
 // Package console serves the organization console (ADR-018): organization
 // administration on the SystemAuth host, signed in with the SystemAuth login
 // session. It mounts existing handlers, such as the connections API, under
-// /console/api with a session authenticator, and serves the console's built
-// pages under /console/.
+// /console/api with a session authenticator, describes the session under
+// /console/bff in the format @plexusone/host reads, and serves the console's
+// built pages under /console/.
 //
 // The console delegates nothing, so OAuth scopes do not apply to it; every
 // request is authorized by the person's organization role and grants, as any
@@ -33,10 +34,17 @@ const (
 	Prefix = "/console"
 	// APIPrefix is the console's API.
 	APIPrefix = Prefix + "/api"
-	// SessionPath describes the signed-in person and their organizations.
-	SessionPath = APIPrefix + "/v1/session"
 	// ReturnToPath checks a return address from an application's link.
 	ReturnToPath = APIPrefix + "/v1/return-to"
+	// BFFPrefix serves the session routes a @plexusone/host SessionClient
+	// reads: GET session, GET auth/login and auth/{provider}, POST
+	// auth/logout.
+	BFFPrefix = Prefix + "/bff"
+	// SessionPath describes the signed-in person and their organizations.
+	SessionPath = BFFPrefix + "/session"
+	// AppID is the console's application ID in the session's memberships:
+	// each organization grants the person their organization role in it.
+	AppID = "console"
 )
 
 // ErrNoSession is returned by [Options.Principal] when the request carries
@@ -66,6 +74,8 @@ type Options struct {
 	// ReturnTo validates a return address, returning the URL to use or an
 	// error. Required.
 	ReturnTo func(raw string) (string, error)
+	// SignOut ends the login session on r. Required.
+	SignOut func(w http.ResponseWriter, r *http.Request) error
 	// Connections, if set, serves the connections section.
 	Connections *connections.Connections
 	// WebDir holds the built console pages. Empty serves only the API.
@@ -83,8 +93,8 @@ type Console struct {
 
 // New returns a console for o.
 func New(o Options) (*Console, error) {
-	if o.Principal == nil || o.Organizations == nil || o.ReturnTo == nil {
-		return nil, errors.New("console: Principal, Organizations and ReturnTo are required")
+	if o.Principal == nil || o.Organizations == nil || o.ReturnTo == nil || o.SignOut == nil {
+		return nil, errors.New("console: Principal, Organizations, ReturnTo and SignOut are required")
 	}
 	if o.LoginPath == "" {
 		o.LoginPath = "/login"
@@ -95,6 +105,11 @@ func New(o Options) (*Console, error) {
 	c := &console{o: o}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+SessionPath, c.session)
+	mux.HandleFunc("GET "+BFFPrefix+"/auth/{provider}", c.signIn)
+	mux.HandleFunc("POST "+BFFPrefix+"/auth/logout", c.signOut)
+	mux.HandleFunc(BFFPrefix+"/", func(w http.ResponseWriter, _ *http.Request) {
+		writeError(w, http.StatusNotFound, "not found")
+	})
 	mux.HandleFunc("GET "+ReturnToPath, c.returnTo)
 	if o.Connections != nil {
 		h := http.StripPrefix(Prefix, o.Connections.Handler(c.authenticate, c.writeAuthError, o.Logger))
@@ -145,22 +160,44 @@ func (c *console) writeAuthError(w http.ResponseWriter, err error, _ string) {
 	writeError(w, http.StatusInternalServerError, "internal error")
 }
 
-type sessionResponse struct {
-	Principal     sessionPrincipal `json:"principal"`
-	Organizations []Organization   `json:"organizations"`
-	Sections      sections         `json:"sections"`
+// wireSession is the session in the format @plexusone/auth's SessionClient
+// reads from a backend-for-frontend.
+type wireSession struct {
+	Authenticated bool      `json:"authenticated"`
+	UserID        string    `json:"user_id,omitempty"`
+	User          *wireUser `json:"user,omitempty"`
+	Apps          []wireApp `json:"apps"`
 }
 
-type sessionPrincipal struct {
-	ID string `json:"id"`
+type wireUser struct {
+	ID          string           `json:"id"`
+	Memberships []wireMembership `json:"memberships"`
 }
 
-type sections struct {
-	Connections bool `json:"connections"`
+type wireMembership struct {
+	OrganizationID   string            `json:"organization_id"`
+	OrganizationName string            `json:"organization_name,omitempty"`
+	OrganizationSlug string            `json:"organization_slug,omitempty"`
+	OrganizationType string            `json:"organization_type,omitempty"`
+	Role             string            `json:"role,omitempty"`
+	Applications     map[string]string `json:"applications"`
 }
 
+type wireApp struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+// session describes the signed-in person: each organization they belong to,
+// with their organization role as their role in the console. Without a
+// session it answers authenticated false, which is a result, not an error.
 func (c *console) session(w http.ResponseWriter, r *http.Request) {
 	pid, err := c.o.Principal(r)
+	if errors.Is(err, ErrNoSession) {
+		writeJSON(w, http.StatusOK, wireSession{Apps: []wireApp{}})
+		return
+	}
 	if err != nil {
 		c.writeAuthError(w, err, "")
 		return
@@ -171,14 +208,46 @@ func (c *console) session(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
-	if orgs == nil {
-		orgs = []Organization{}
+	ms := make([]wireMembership, 0, len(orgs))
+	for _, o := range orgs {
+		ms = append(ms, wireMembership{
+			OrganizationID: o.ID, OrganizationName: o.Name, OrganizationSlug: o.Slug,
+			OrganizationType: o.Type, Role: o.Role, Applications: map[string]string{AppID: o.Role},
+		})
 	}
-	writeJSON(w, http.StatusOK, sessionResponse{
-		Principal:     sessionPrincipal{ID: pid.String()},
-		Organizations: orgs,
-		Sections:      sections{Connections: c.o.Connections != nil},
+	writeJSON(w, http.StatusOK, wireSession{
+		Authenticated: true, UserID: pid.String(),
+		User: &wireUser{ID: pid.String(), Memberships: ms},
+		Apps: []wireApp{},
 	})
+}
+
+// signIn sends the person to SystemAuth's sign-in, with any provider chosen,
+// and back to return_to, which must be a path on this host.
+func (c *console) signIn(w http.ResponseWriter, r *http.Request) {
+	target := c.o.LoginPath
+	if p := r.PathValue("provider"); p != "login" {
+		target += "/" + url.PathEscape(p)
+	}
+	if rt := r.URL.Query().Get("return_to"); rt != "" {
+		if !strings.HasPrefix(rt, "/") || strings.HasPrefix(rt, "//") {
+			writeError(w, http.StatusBadRequest, "return_to must be a path on this host")
+			return
+		}
+		target += "?return_to=" + url.QueryEscape(rt)
+	}
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+// signOut ends the login session. Cross-origin protection has already
+// refused a request from another site.
+func (c *console) signOut(w http.ResponseWriter, r *http.Request) {
+	if err := c.o.SignOut(w, r); err != nil {
+		c.o.Logger.Error("console: signing out", "error", err)
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // returnTo checks the return address an application's link carries, so the
@@ -270,7 +339,7 @@ func headers(next http.Handler) http.Handler {
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "same-origin")
-		if strings.HasPrefix(r.URL.Path, APIPrefix+"/") {
+		if strings.HasPrefix(r.URL.Path, APIPrefix+"/") || strings.HasPrefix(r.URL.Path, BFFPrefix+"/") {
 			h.Set("Cache-Control", "no-store")
 		}
 		next.ServeHTTP(w, r)
