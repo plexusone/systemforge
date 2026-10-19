@@ -40,6 +40,9 @@ tables. On PostgreSQL it also enables row-level security on them, keyed on
 `systemauth serve` runs the key lifecycle jobs. A host that embeds SystemAuth
 calls `Service.RunJobs` itself.
 
+People manage connections in the [organization console](console.md),
+which SystemAuth serves under `/console` when it is enabled.
+
 ## Register providers
 
 Providers are registered by the application that embeds SystemAuth, through

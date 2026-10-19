@@ -59,6 +59,7 @@ nav:
     - Access-Change Invalidation: guides/access-change-invalidation.md
     - Authorization Mode: guides/authorization-mode.md
     - Connections to External Services: guides/connections.md
+    - The Organization Console: guides/console.md
     - Key Management: guides/key-management.md
   - Identity:
     - Overview: identity/overview.md
