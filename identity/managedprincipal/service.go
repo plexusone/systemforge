@@ -365,7 +365,8 @@ func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m Mana
 }
 
 // IssueLoginToken issues a login token for a managed principal on behalf
-// of one of its active managers. The plain token is returned once.
+// of one of its active managers holding manage_credentials, which
+// guardians and educators do. The plain token is returned once.
 func (s *Service) IssueLoginToken(ctx context.Context, in IssueLoginTokenInput) (*credential.GeneratedLoginToken, error) {
 	allowed, err := s.gate.ManagedPrincipalsAllowed(ctx, in.ClientID)
 	if err != nil {
@@ -375,6 +376,12 @@ func (s *Service) IssueLoginToken(ctx context.Context, in IssueLoginTokenInput) 
 		return nil, ErrNotAllowed
 	}
 	if err := s.checkIssuer(ctx, in.ManagedID, in.IssuedBy); err != nil {
+		return nil, err
+	}
+	// A login token signs the principal in, so issuing one is a credential
+	// action: an active manager whose role lacks manage_credentials, such
+	// as an application-defined role, cannot issue one.
+	if err := s.authorizeCredentials(ctx, in.IssuedBy, in.ManagedID); err != nil {
 		return nil, err
 	}
 	policy, err := s.gate.LoginTokenPolicy(ctx, in.ClientID)

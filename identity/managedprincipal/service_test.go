@@ -698,6 +698,29 @@ func TestManagedPrincipalCannotManage(t *testing.T) {
 	}
 }
 
+// TestIssueLoginTokenRequiresCredentialPermission verifies that a manager
+// whose role grants no platform permissions, such as an application-defined
+// role, cannot issue a login token.
+func TestIssueLoginTokenRequiresCredentialPermission(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	svc := NewService(db, gate{client: true, schoolClient: true}, WithRoles("coach"), WithDirectManagerAdds())
+	teacher := addHuman(t, db, "teacher@example.com", true)
+	coach := addHuman(t, db, "coach@example.com", true)
+	id, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client,
+		Managers: []ManagerInput{{teacher, RoleGuardian}, {coach, "coach"}}})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	_, err = svc.IssueLoginToken(ctx, IssueLoginTokenInput{ManagedID: id, ClientID: client, IssuedBy: coach, Name: "card"})
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("custom-role issue = %v, want ErrForbidden", err)
+	}
+	if _, err := svc.IssueLoginToken(ctx, IssueLoginTokenInput{ManagedID: id, ClientID: client, IssuedBy: teacher, Name: "card"}); err != nil {
+		t.Fatalf("guardian issue: %v", err)
+	}
+}
+
 // TestManagersJoinWithConsentByDefault verifies that, without
 // WithDirectManagerAdds, nobody is made a manager without agreeing: Create
 // names only the actor and AddManager is refused.
