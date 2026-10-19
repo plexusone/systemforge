@@ -717,3 +717,33 @@ func TestMemoryLoginSessionStoreExpiry(t *testing.T) {
 		t.Fatalf("delete missing: %v", err)
 	}
 }
+
+func TestValidateReturnTo(t *testing.T) {
+	f := newFakeGitHub(t)
+	s := newSocialTestServer(t, f, NewMemoryPrincipalDirectory())
+	for raw, want := range map[string]bool{
+		"/console/orgs/1/connections":       true,
+		"https://app.example.com/sites/new": true,
+		"https://evil.example.com/":         false,
+		"//evil.example.com/":               false,
+		"javascript:alert(1)":               false,
+		"/\\evil.example.com":               false,
+		"":                                  false,
+	} {
+		got, err := s.ValidateReturnTo(raw)
+		if (err == nil) != want {
+			t.Errorf("ValidateReturnTo(%q) = %q, %v; want allowed %v", raw, got, err, want)
+		}
+		if err != nil && !errors.Is(err, ErrRedirectNotAllowed) {
+			t.Errorf("ValidateReturnTo(%q): %v, want ErrRedirectNotAllowed", raw, err)
+		}
+	}
+
+	plain, err := NewEmbedded(Config{Issuer: testIssuer})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := plain.ValidateReturnTo("/console"); !errors.Is(err, ErrRedirectNotAllowed) {
+		t.Errorf("without social login: %v, want ErrRedirectNotAllowed", err)
+	}
+}
