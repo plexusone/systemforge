@@ -50,7 +50,10 @@ func fakeProvider(t *testing.T) (*httptest.Server, *apikey.Provider) {
 	p, err := apikey.New(apikey.Config{
 		Manifest: provider.Manifest{
 			Key: "fakecdn", DisplayName: "Fake CDN", BaseURLs: []string{srv.URL},
-			AuthMethods: []provider.AuthMethod{{Key: "api_token", Fields: []provider.Field{{Name: "token", Secret: true, Required: true}}}},
+			AuthMethods: []provider.AuthMethod{{
+				Key: "api_token", Fields: []provider.Field{{Name: "token", Secret: true, Required: true}},
+				Rotation: []provider.RotationMode{{Key: provider.RotationManual, Label: "Manual"}},
+			}},
 		},
 		Verify: apikey.Request{Path: "/verify", AccountIDPath: "result.id", AccountLabelPath: "result.name"},
 	})
@@ -447,5 +450,24 @@ func TestVocabularyAcceptsConnectionGrants(t *testing.T) {
 	}
 	if err := connections.RegisterVocabulary(nil); err != nil {
 		t.Fatalf("nil registry: %v", err)
+	}
+}
+
+func TestConnectionsAPIRecordsTheRotationMode(t *testing.T) {
+	e := newAPI(t)
+	base := strings.Replace(connections.ConnectionsPath, "{org}", e.org.String(), 1)
+	create := func(rotation string) (int, map[string]any) {
+		body := map[string]any{"provider": "fakecdn", "authMethod": "api_token", "displayName": "Prod",
+			"fields": map[string]string{"token": goodToken}, "rotation": rotation}
+		code, out, _ := e.do(t, e.admin.String(), http.MethodPost, base, body)
+		return code, out
+	}
+	code, out := create(provider.RotationManual)
+	meta, _ := out["metadata"].(map[string]any)
+	if code != http.StatusCreated || meta[connections.MetadataRotation] != provider.RotationManual {
+		t.Fatalf("manual: %d %v", code, out)
+	}
+	if code, out := create("weekly"); code != http.StatusBadRequest {
+		t.Fatalf("an unlisted mode: %d %v", code, out)
 	}
 }
