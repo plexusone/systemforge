@@ -24,6 +24,7 @@ under `docs/specs/` and execute these decisions.
 | [ADR-015](ADR-015-identifier-policy-slug-namespaces-and-portability.md) | Identifier Policy, Slug Namespaces and Portability Across Deployments | Proposed |
 | [ADR-016](ADR-016-no-static-api-keys.md) | No Static API Keys: OAuth Grants for Non-Interactive Access | Proposed |
 | [ADR-017](ADR-017-external-connections.md) | External Connections | Proposed |
+| [ADR-018](ADR-018-organization-console.md) | The Organization Console on the SystemAuth Host | Proposed |
 
 ## Statuses
 

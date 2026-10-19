@@ -138,6 +138,7 @@ nav:
       - "ADR-015: Identifier Policy and Slug Namespaces (Proposed)": design/adrs/ADR-015-identifier-policy-slug-namespaces-and-portability.md
       - "ADR-016: No Static API Keys (Proposed)": design/adrs/ADR-016-no-static-api-keys.md
       - "ADR-017: External Connections (Proposed)": design/adrs/ADR-017-external-connections.md
+      - "ADR-018: The Organization Console (Proposed)": design/adrs/ADR-018-organization-console.md
     - ProductGraph:
       - PRD: design/productgraph/PRD.md
       - TRD: design/productgraph/TRD.md
