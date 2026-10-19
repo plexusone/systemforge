@@ -548,6 +548,17 @@
         "root_key"
       ],
       "description": "Connections to external services (ADR-017)"
+    },
+    "console": {
+      "properties": {
+        "web_dir": {
+          "type": "string",
+          "description": "Directory of the console's built pages; empty serves only its API"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Organization console under /console (ADR-018)"
     }
   },
   "additionalProperties": false,

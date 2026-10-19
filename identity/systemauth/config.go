@@ -55,7 +55,21 @@ type Config struct {
 	// Connections enables organizations' connections to external services
 	// (ADR-017); nil disables them. It needs a database.
 	Connections *ConnectionsConfig `json:"connections,omitempty" yaml:"connections,omitempty" jsonschema:"description=Connections to external services (ADR-017)"`
+
+	// Console serves the organization console under /console (ADR-018);
+	// nil disables it. It signs in with social login's session.
+	Console *ConsoleConfig `json:"console,omitempty" yaml:"console,omitempty" jsonschema:"description=Organization console under /console (ADR-018)"`
 }
+
+// ConsoleConfig configures the organization console (ADR-018).
+type ConsoleConfig struct {
+	// WebDir holds the console's built pages, such as the output of
+	// @plexusone/console. Empty serves only the console's API.
+	WebDir string `json:"web_dir,omitempty" yaml:"web_dir,omitempty" jsonschema:"description=Directory of the console's built pages; empty serves only its API"`
+}
+
+// ErrInvalidConsoleConfig is returned for a console that cannot work.
+var ErrInvalidConsoleConfig = errors.New("systemauth: invalid console configuration")
 
 // ConnectionsConfig configures connections to external services. Their
 // credentials are sealed under keys kept in KeysDir, whose root key and the
@@ -429,6 +443,9 @@ func (c *Config) Validate() error {
 		if err := c.Connections.validate(); err != nil {
 			return err
 		}
+	}
+	if c.Console != nil && c.SocialLogin == nil {
+		return fmt.Errorf("%w: the console signs in with social login, which is not configured", ErrInvalidConsoleConfig)
 	}
 	// A configuration that never called ApplyDefaults has no mode, which
 	// means rbac; a stated mode is checked as written.
