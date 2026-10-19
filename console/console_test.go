@@ -72,7 +72,11 @@ func newEnv(t *testing.T, webDir string, withConnections bool) *env {
 			if p == e.admin {
 				role = "admin"
 			}
-			return []console.Organization{{ID: e.org.String(), Slug: "acme", Name: "Acme", Type: "team", Role: role}}, nil
+			return []console.Organization{{ID: e.org.String(), Slug: "acme", Name: "Acme", Type: "team", Role: role,
+				Apps: map[string]string{"portfolio": "editor"}}}, nil
+		},
+		Apps: func(context.Context) ([]console.App, error) {
+			return []console.App{{ID: "portfolio", Name: "Portfolio", URL: "https://portfolio.example.com", Order: 3}}, nil
 		},
 		ReturnTo: func(raw string) (string, error) {
 			if strings.HasPrefix(raw, "/") && !strings.HasPrefix(raw, "//") || strings.HasPrefix(raw, "https://app.example.com/") {
@@ -155,6 +159,7 @@ func TestSession(t *testing.T) {
 	}
 	var s struct {
 		Authenticated bool
+		Apps          []console.App
 		User          struct {
 			ID          string
 			Memberships []struct {
@@ -174,6 +179,11 @@ func TestSession(t *testing.T) {
 	m := s.User.Memberships[0]
 	if m.OrganizationID != e.org.String() || m.OrganizationName != "Acme" || m.Role != "admin" || m.Applications[console.AppID] != "admin" {
 		t.Fatalf("membership: %+v", m)
+	}
+	// The products the person may open, and the catalog, for the console's
+	// product switcher.
+	if m.Applications["portfolio"] != "editor" || len(s.Apps) != 1 || s.Apps[0].URL != "https://portfolio.example.com" {
+		t.Fatalf("products: %+v, catalog %+v", m.Applications, s.Apps)
 	}
 
 	e.sessionError = errors.New("store down")
