@@ -169,6 +169,7 @@ const (
 | Policy scope | Full control | Within federation bounds |
 | Audit destination | Local | Local + streamed |
 | SSO configuration | Local IdP | Federation IdP |
+| Contract operations (identity, policy, audit) | Refused unless `AllowUnauthenticatedStandalone` is set ([Product Contract](product-contract.md#standalone-mode)) | SystemAuth tokens and their permissions |
 
 ### Tier 4: Tenant Owner
 

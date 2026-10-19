@@ -139,6 +139,7 @@ The upstream identity is recorded as an external identity on the human principal
 ## Next Steps
 
 - [Humans](users.md) - Human principals, passwords, and SystemAuth storage
+- [Managed Principals](managed-principals.md) - People without an email, controlled by guardians and educators
 - [Organizations](organizations.md) - Organization setup
 - [Memberships](memberships.md) - Role-based membership
 - [API Keys](api-keys.md) - Server-to-server authentication

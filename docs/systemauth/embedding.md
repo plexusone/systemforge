@@ -109,9 +109,11 @@ itself (normally through the same reverse proxy).
 | `Options.DB` + `DBDialect`, `Options.EntClient` | Use an existing pool or Ent client (the caller keeps ownership; `Close` leaves it open). |
 | `Options.Migrate` | Create or update the schema before the system user and static clients are written. |
 | `Options.ServerOptions` | Extra `systemauth.Option`s, e.g. `WithObservability`. |
+| `Options.AuditEmitter` | Records managed-principal actions served by the `/managed-principals` API. |
+| `Options.ManagedPrincipalRates`, `Options.ManagedPrincipalOptions` | Shared rate-limit storage for the API's code routes (the default is in memory, for one instance) and extra `managedprincipal` options. |
 | `CheckProduction(cfg, opts)` | The checks `New` enforces, for a `validate` command. |
 | `Migrate(ctx, cfg)` | Open, migrate and close (for a separate migration step). |
-| `Service.Handler`, `Ready`, `Migrate`, `Close`, `Issuer`, `KeyID`, `Metadata`, `Discovery`, `Server` | The running service. |
+| `Service.Handler`, `Ready`, `Migrate`, `Close`, `Issuer`, `KeyID`, `Metadata`, `Discovery`, `Server`, `ManagedPrincipals` | The running service. `ManagedPrincipals` is the managed-principal service, nil unless managed principals are enabled; the API is then mounted at `ManagedPrincipalsPath`. |
 
 `New` enforces the [production requirements](deployment.md#production-requirements)
 whenever `Options.Dev` is false: a signing key, a public https issuer, a

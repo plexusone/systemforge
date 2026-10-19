@@ -360,6 +360,31 @@ func (s entPrincipals) FindBySubject(ctx context.Context, sub string) (*relyingp
 Failures return `401` with `WWW-Authenticate: Bearer realm="api"` (plus
 `error="invalid_token"` for bad credentials).
 
+## Managed principals
+
+A relying party can create and manage managed principals, people without an
+email whose accounts are controlled by managers, without holding SystemAuth's
+database. SystemAuth serves the manager API at `/managed-principals` when
+managed principals are enabled, and the application calls it with the
+signed-in manager's access token through `managedprincipal/mpclient`:
+
+```go
+import "github.com/plexusone/systemforge/identity/managedprincipal/mpclient"
+
+mp := mpclient.New(issuer+"/managed-principals", httpClient)
+learnerID, err := mp.Create(ctx, managerToken, mpclient.CreateInput{
+    DisplayName: "Robin",
+    Role:        "educator",
+})
+```
+
+The client must have `managed_principals: true` and the
+`systemforge:managed_principals` scope, and the manager's token must be
+granted it. The client is taken from the token, the caller is the only
+initial manager, and further managers join by invitation or claim. See
+[Managed Principals](../identity/managed-principals.md#relying-parties-the-api-on-systemauth)
+for the routes, their permissions, and configuration.
+
 ## Limitations
 
 - JWT access tokens are verified statelessly: a revoked token stays usable
