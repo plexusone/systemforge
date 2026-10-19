@@ -110,7 +110,9 @@ func TestManagementEndpoints(t *testing.T) {
 	// Delete: an educator cannot; the new guardian can.
 	expect(do(teacher, http.MethodDelete, base, nil), http.StatusForbidden)
 	expect(do(adult, http.MethodDelete, base, nil), http.StatusNoContent)
-	expect(do(adult, http.MethodDelete, base, nil), http.StatusNotFound)
+	// The principal is gone, which is answered as for any principal that
+	// is not the caller's.
+	expect(do(adult, http.MethodDelete, base, nil), http.StatusForbidden)
 }
 
 // TestInviteEndpoints drives the consent flow over HTTP and the release

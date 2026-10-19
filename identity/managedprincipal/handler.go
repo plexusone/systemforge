@@ -224,17 +224,23 @@ func (h *handler) revokeAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) fail(w http.ResponseWriter, r *http.Request, err error) {
-	if h.remote() && (errors.Is(err, ErrNotFound) || errors.Is(err, ErrNotManaged)) {
-		// Callers from other applications get one answer whether a
-		// principal does not exist, is not managed, or is not theirs, so
-		// the API cannot be asked who is a managed principal.
+	if h.remote() && errors.Is(err, ErrNotFound) {
+		// Callers from other applications also get 403 for a missing
+		// relationship, token, or invitation.
 		writeError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	switch {
-	case errors.Is(err, ErrForbidden), errors.Is(err, ErrNotAllowed), errors.Is(err, ErrNotManager), errors.Is(err, ErrConsentRequired):
+	case errors.Is(err, ErrForbidden), errors.Is(err, ErrNotAllowed), errors.Is(err, ErrNotManager),
+		errors.Is(err, ErrNotManaged), errors.Is(err, ErrConsentRequired):
+		// One answer whether a principal does not exist, is not managed,
+		// or is not the caller's (an unknown principal surfaces as
+		// ErrNotManaged), so the API cannot be asked who is a managed
+		// principal.
 		writeError(w, http.StatusForbidden, "forbidden")
-	case errors.Is(err, ErrNotFound), errors.Is(err, ErrNotManaged):
+	case errors.Is(err, ErrNotFound):
+		// Reached only after the caller is authorized on the principal:
+		// a missing relationship, token, or invitation.
 		writeError(w, http.StatusNotFound, "not found")
 	case errors.Is(err, ErrInvalidClaim), errors.Is(err, ErrInvalidInvite):
 		// One answer for every reason a code cannot be used.

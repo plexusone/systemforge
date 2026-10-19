@@ -274,6 +274,9 @@ func TestHandler(t *testing.T) {
 		{"foreign subject", http.MethodGet, base + "/sessions", "https://issuer.example|abc", http.StatusForbidden},
 		{"stranger", http.MethodGet, base + "/sessions", f.stranger.String(), http.StatusForbidden},
 		{"bad principal", http.MethodGet, "/not-a-uuid/sessions", f.parent.String(), http.StatusNotFound},
+		// An unknown principal is answered as one that is not the caller's,
+		// so the handler cannot be asked which principals are managed.
+		{"unknown principal", http.MethodGet, "/" + uuid.NewString() + "/sessions", f.parent.String(), http.StatusForbidden},
 		{"unknown token", http.MethodDelete, base + "/login-tokens/" + uuid.NewString(), f.parent.String(), http.StatusNotFound},
 		{"revoke session", http.MethodDelete, base + "/sessions/login/" + f.loginSess.String(), f.teacher.String(), http.StatusNoContent},
 		{"revoke token", http.MethodDelete, base + "/login-tokens/" + tokens.LoginTokens[0].ID.String(), f.teacher.String(), http.StatusNoContent},
