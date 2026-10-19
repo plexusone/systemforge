@@ -7,52 +7,96 @@
   "maintainers": [
     "grokify"
   ],
-  "unreleased": {
-    "added": [
-      {
-        "description": "SystemAuth built by `systemauthsvc` serves the managed-principal API at `/managed-principals` when managed principals are enabled, for relying parties calling with a manager's access token granted `systemforge:managed_principals`; `Options.AuditEmitter`, `ManagedPrincipalRates` and `ManagedPrincipalOptions`, and `Service.ManagedPrincipals()`",
-        "commit": "a76d041"
-      },
-      {
-        "description": "`managedprincipal.NewHandler` relying-party mode (`WithRequestClient`): the client is the access token's, creation names only the caller, unknown and unmanaged principals answer 403; `WithCodeRateLimit` for code routes; `GET /` (`Service.ListManagedBy`) and `POST /{id}/login-tokens`",
-        "commit": "af30b5b"
-      },
-      {
-        "description": "`managedprincipal/mpclient`, a typed client for the managed-principal API with errors wrapped in `*APIError`",
-        "commit": "eaca813"
-      },
-      {
-        "description": "`systemauth.Server.BearerAccess` and `BearerAuthenticator`: bearer access that carries the token's client, scopes and grant, adapted to `requestprincipal`",
-        "commit": "c0c4e8d"
-      }
-    ],
-    "changed": [
-      {
-        "description": "The contract's identity, policy and audit operations answer 403 until the application is federated; `Config.AllowUnauthenticatedStandalone` restores the open behavior for development and tests",
-        "commit": "9883be5",
-        "breaking": true
-      },
-      {
-        "description": "`managedprincipal.Service.Create` accepts only the actor as manager and `AddManager` is refused with `ErrConsentRequired`, so managers join by invitation or claim; `WithDirectManagerAdds` keeps direct adds for administrator tooling",
-        "commit": "53a2655",
-        "breaking": true
-      },
-      {
-        "description": "Issuing a login token requires `manage_credentials`",
-        "commit": "bf1c347"
-      },
-      {
-        "description": "The managed-principal handler answers 403 for an unknown or unmanaged principal, as for one the caller does not manage",
-        "commit": "0124078"
-      }
-    ],
-    "documentation": [
-      {
-        "description": "Managed principals guide covers the API on SystemAuth, its configuration and scope, and the client"
-      }
-    ]
-  },
+  "unreleased": {},
   "releases": [
+    {
+      "version": "v0.17.0",
+      "date": "2026-10-18",
+      "highlights": [
+        {
+          "description": "Relying-party applications manage managed principals through SystemAuth: a `/managed-principals` API served by `systemauthsvc`, called with the manager's access token, and the `mpclient` Go client",
+          "commit": "a76d041"
+        },
+        {
+          "description": "Nobody becomes a manager without agreeing: managers other than the creator join by invitation or claim",
+          "commit": "53a2655"
+        },
+        {
+          "description": "The contract's identity, policy and audit operations refuse requests until the application is federated",
+          "commit": "9883be5"
+        }
+      ],
+      "added": [
+        {
+          "description": "SystemAuth built by `systemauthsvc` serves the managed-principal API at `/managed-principals` when managed principals are enabled, for relying parties calling with a manager's access token granted `systemforge:managed_principals`; `Options.AuditEmitter`, `ManagedPrincipalRates` and `ManagedPrincipalOptions`, and `Service.ManagedPrincipals()`",
+          "commit": "a76d041"
+        },
+        {
+          "description": "`managedprincipal.NewHandler` relying-party mode (`WithRequestClient`): the client is the access token's, creation names only the caller, unknown and unmanaged principals answer 403; `WithCodeRateLimit` for code routes; `GET /` (`Service.ListManagedBy`) and `POST /{id}/login-tokens`",
+          "commit": "af30b5b"
+        },
+        {
+          "description": "`managedprincipal/mpclient`, a typed client for the managed-principal API with errors wrapped in `*APIError`",
+          "commit": "eaca813"
+        },
+        {
+          "description": "`systemauth.Server.BearerAccess` and `BearerAuthenticator`: bearer access that carries the token's client, scopes and grant, adapted to `requestprincipal`",
+          "commit": "c0c4e8d"
+        }
+      ],
+      "changed": [
+        {
+          "description": "The contract's identity, policy and audit operations answer 403 until the application is federated; `Config.AllowUnauthenticatedStandalone` restores the open behavior for development and tests",
+          "commit": "9883be5",
+          "breaking": true
+        },
+        {
+          "description": "`managedprincipal.Service.Create` accepts only the actor as manager and `AddManager` is refused with `ErrConsentRequired`, so managers join by invitation or claim; `WithDirectManagerAdds` keeps direct adds for administrator tooling",
+          "commit": "53a2655",
+          "breaking": true
+        },
+        {
+          "description": "Issuing a login token requires `manage_credentials`",
+          "commit": "bf1c347"
+        },
+        {
+          "description": "The managed-principal handler answers 403 for an unknown or unmanaged principal, as for one the caller does not manage",
+          "commit": "0124078"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Managed principals guide covers the API on SystemAuth, its configuration and scope, and the client"
+        },
+        {
+          "description": "INIT-SYSTEMFORGE-012 specification for managed principals in relying-party applications",
+          "commit": "a18e9f1"
+        },
+        {
+          "description": "v0.17.0 release notes; relying-party, embedding and README updates for the managed-principal API"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The connections test checks the error `RunJobs` returns when its context ends",
+          "commit": "078231b"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "Standalone applications that serve the contract API: set `Config.AllowUnauthenticatedStandalone` in development and tests, or federate the application; identity, policy and audit operations otherwise answer 403"
+        },
+        {
+          "description": "Code calling `managedprincipal.Service.Create` with managers other than the actor, or `AddManager`: invite those managers or issue a claim, or build the service with `WithDirectManagerAdds` for administrator tooling"
+        },
+        {
+          "description": "Managers in roles registered with `WithRoles` can no longer issue login tokens; issue them as a guardian or educator"
+        },
+        {
+          "description": "To let a relying party manage managed principals, enable `managed_principals` for the deployment and its client and add `systemforge:managed_principals` to the client's scopes"
+        }
+      ]
+    },
     {
       "version": "v0.16.0",
       "date": "2026-10-14",
