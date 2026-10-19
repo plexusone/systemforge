@@ -2,6 +2,7 @@ package systemauth
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 )
@@ -70,33 +71,51 @@ func (sl *socialLogin) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := sl.endSession(w, r); err != nil {
+		logger.Error("ending login session", "error", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	//nolint:gosec // G710: target was validated against the redirect allowlist
+	http.Redirect(w, r, target, http.StatusSeeOther)
+}
+
+// endSession deletes r's login session, revokes the tokens issued to its
+// principal and clears the cookie. A request without a session only has its
+// cookie cleared. The caller checks where the request came from.
+func (sl *socialLogin) endSession(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 	if token := cookieValue(r, sl.cookies.sessionName); token != "" {
 		sess, err := sl.sessions.Get(ctx, token)
 		switch {
 		case err == nil:
 			if err := sl.sessions.Delete(ctx, token); err != nil {
-				logger.Error("deleting login session", "error", err)
-				http.Error(w, "internal error", http.StatusInternalServerError)
-				return
+				return fmt.Errorf("deleting login session: %w", err)
 			}
 			if err := sl.revokePrincipalTokens(r, sess.PrincipalID.String()); err != nil {
-				logger.Error("revoking tokens on logout", "principal_id", sess.PrincipalID, "error", err)
-				http.Error(w, "internal error", http.StatusInternalServerError)
-				return
+				return fmt.Errorf("revoking tokens of %s: %w", sess.PrincipalID, err)
 			}
-			logger.Info("logout", "principal_id", sess.PrincipalID)
+			LoggerFromContext(ctx).Info("logout", "principal_id", sess.PrincipalID)
 		case errors.Is(err, ErrLoginSessionNotFound):
 			// Already signed out or expired; still clear the cookie.
 		default:
-			logger.Error("reading login session", "error", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
+			return fmt.Errorf("reading login session: %w", err)
 		}
 	}
 	sl.cookies.clearSession(w)
+	return nil
+}
 
-	//nolint:gosec // G710: target was validated against the redirect allowlist
-	http.Redirect(w, r, target, http.StatusSeeOther)
+// EndLoginSession signs the person on r out of SystemAuth, as POST /logout
+// does: it deletes the login session, revokes the tokens issued to its
+// principal and clears the cookie. The caller must have checked that the
+// request is same-origin.
+func (s *Server) EndLoginSession(w http.ResponseWriter, r *http.Request) error {
+	if s.social == nil {
+		return nil
+	}
+	return s.social.endSession(w, r)
 }
 
 // revokePrincipalTokens revokes every access and refresh token issued to
