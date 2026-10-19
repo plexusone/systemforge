@@ -25,6 +25,7 @@ func (s *Service) mountConsole(c *Config) error {
 		Organizations: s.consoleOrganizations,
 		ReturnTo:      s.server.ValidateReturnTo,
 		SignOut:       s.server.EndLoginSession,
+		Apps:          s.consoleApps,
 		Connections:   s.conns,
 		WebDir:        c.Console.WebDir,
 		LoginPath:     systemauth.LoginPath,
@@ -58,7 +59,16 @@ func (s *Service) consoleOrganizations(ctx context.Context, principal uuid.UUID)
 	}
 	out := make([]console.Organization, 0, len(res.Orgs))
 	for _, o := range res.Orgs {
-		out = append(out, console.Organization{ID: o.ID, Slug: o.Slug, Name: o.Name, Type: o.Type, Role: o.Role})
+		out = append(out, console.Organization{ID: o.ID, Slug: o.Slug, Name: o.Name, Type: o.Type, Role: o.Role, Apps: o.Apps})
+	}
+	return out, nil
+}
+
+func (s *Service) consoleApps(context.Context) ([]console.App, error) {
+	apps := s.apps.Apps()
+	out := make([]console.App, 0, len(apps))
+	for _, a := range apps {
+		out = append(out, console.App{ID: a.ID, Name: a.Name, URL: a.URL, Icon: a.Icon, Order: a.Order})
 	}
 	return out, nil
 }

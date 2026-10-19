@@ -16,6 +16,7 @@ import (
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/mode"
 	"github.com/plexusone/systemforge/connections"
+	"github.com/plexusone/systemforge/console"
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/approle"
@@ -136,6 +137,7 @@ type Options struct {
 // Service is a configured SystemAuth server ready to be mounted.
 type Service struct {
 	cfg         Config
+	apps        *appcatalog.Catalog
 	server      *systemauth.Server
 	client      *ent.Client
 	db          *sql.DB
@@ -203,7 +205,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		logger.Warn("development mode: production safeguards are disabled")
 	}
 
-	s := &Service{cfg: c, storageName: "in-memory", logger: logger}
+	s := &Service{cfg: c, storageName: "in-memory", logger: logger, apps: opts.Apps}
 	if err := s.openStorage(ctx, &c, opts); err != nil {
 		s.closeQuietly()
 		return nil, err
@@ -263,7 +265,8 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		serverOpts = append(serverOpts, systemauth.WithAppCatalog(opts.Apps))
 		if opts.Vocabularies != nil {
 			for _, a := range opts.Apps.Apps() {
-				if _, ok := opts.Vocabularies.Get(a.ID); !ok {
+				// The console is SystemAuth's own; roles in it are organization roles.
+				if _, ok := opts.Vocabularies.Get(a.ID); !ok && a.ID != console.AppID {
 					logger.Warn("app catalog lists an application with no registered vocabulary; nobody holds a role in it", "app", a.ID)
 				}
 			}

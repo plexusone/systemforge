@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -61,6 +62,18 @@ type Organization struct {
 	// Role is the person's organization role: owner, admin, member or
 	// collaborator.
 	Role string `json:"role"`
+	// Apps maps each application the person may open in the organization
+	// to their role in it, so the console's product switcher can list them.
+	Apps map[string]string `json:"apps,omitempty"`
+}
+
+// App is an application in the deployment's catalog.
+type App struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	URL   string `json:"url"`
+	Icon  string `json:"icon,omitempty"`
+	Order int    `json:"order,omitempty"`
 }
 
 // Options configures a console.
@@ -76,6 +89,9 @@ type Options struct {
 	ReturnTo func(raw string) (string, error)
 	// SignOut ends the login session on r. Required.
 	SignOut func(w http.ResponseWriter, r *http.Request) error
+	// Apps lists the deployment's application catalog, for the console's
+	// product switcher. Nil lists none.
+	Apps func(ctx context.Context) ([]App, error)
 	// Connections, if set, serves the connections section.
 	Connections *connections.Connections
 	// WebDir holds the built console pages. Empty serves only the API.
@@ -166,7 +182,7 @@ type wireSession struct {
 	Authenticated bool      `json:"authenticated"`
 	UserID        string    `json:"user_id,omitempty"`
 	User          *wireUser `json:"user,omitempty"`
-	Apps          []wireApp `json:"apps"`
+	Apps          []App     `json:"apps"`
 }
 
 type wireUser struct {
@@ -183,19 +199,13 @@ type wireMembership struct {
 	Applications     map[string]string `json:"applications"`
 }
 
-type wireApp struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	URL  string `json:"url"`
-}
-
 // session describes the signed-in person: each organization they belong to,
 // with their organization role as their role in the console. Without a
 // session it answers authenticated false, which is a result, not an error.
 func (c *console) session(w http.ResponseWriter, r *http.Request) {
 	pid, err := c.o.Principal(r)
 	if errors.Is(err, ErrNoSession) {
-		writeJSON(w, http.StatusOK, wireSession{Apps: []wireApp{}})
+		writeJSON(w, http.StatusOK, wireSession{Apps: []App{}})
 		return
 	}
 	if err != nil {
@@ -210,15 +220,27 @@ func (c *console) session(w http.ResponseWriter, r *http.Request) {
 	}
 	ms := make([]wireMembership, 0, len(orgs))
 	for _, o := range orgs {
+		apps := make(map[string]string, len(o.Apps)+1)
+		maps.Copy(apps, o.Apps)
+		apps[AppID] = o.Role
 		ms = append(ms, wireMembership{
 			OrganizationID: o.ID, OrganizationName: o.Name, OrganizationSlug: o.Slug,
-			OrganizationType: o.Type, Role: o.Role, Applications: map[string]string{AppID: o.Role},
+			OrganizationType: o.Type, Role: o.Role, Applications: apps,
 		})
+	}
+	catalog := []App{}
+	if c.o.Apps != nil {
+		apps, err := c.o.Apps(r.Context())
+		if err != nil {
+			// The switcher then lists the console alone; the console still works.
+			c.o.Logger.Error("console: reading the app catalog", "error", err)
+		}
+		catalog = append(catalog, apps...)
 	}
 	writeJSON(w, http.StatusOK, wireSession{
 		Authenticated: true, UserID: pid.String(),
 		User: &wireUser{ID: pid.String(), Memberships: ms},
-		Apps: []wireApp{},
+		Apps: catalog,
 	})
 }
 
