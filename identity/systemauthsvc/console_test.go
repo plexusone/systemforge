@@ -38,10 +38,11 @@ func TestConsoleIsServed(t *testing.T) {
 	}
 	closeService(t, s)
 
-	// The API asks for a session; a page sends the person to sign in.
+	// Without a session, the session says so and a page sends the person to
+	// sign in.
 	rec := httptest.NewRecorder()
 	s.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, console.SessionPath, nil))
-	if rec.Code != http.StatusUnauthorized || !strings.Contains(rec.Body.String(), "sign in required") {
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"authenticated":false`) {
 		t.Fatalf("session: %d %s", rec.Code, rec.Body)
 	}
 	rec = httptest.NewRecorder()

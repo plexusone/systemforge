@@ -42,6 +42,7 @@ type env struct {
 	admin        uuid.UUID
 	member       uuid.UUID
 	sessionError error
+	signedOut    bool
 }
 
 func principalFromCookie(e *env) func(*http.Request) (uuid.UUID, error) {
@@ -78,6 +79,10 @@ func newEnv(t *testing.T, webDir string, withConnections bool) *env {
 				return raw, nil
 			}
 			return "", errors.New("not allowed")
+		},
+		SignOut: func(http.ResponseWriter, *http.Request) error {
+			e.signedOut = true
+			return nil
 		},
 		WebDir: webDir,
 	}
@@ -129,6 +134,7 @@ func TestNewChecksOptions(t *testing.T) {
 		Principal:     principalFromCookie(e),
 		Organizations: func(context.Context, uuid.UUID) ([]console.Organization, error) { return nil, nil },
 		ReturnTo:      func(string) (string, error) { return "", nil },
+		SignOut:       func(http.ResponseWriter, *http.Request) error { return nil },
 		WebDir:        t.TempDir(), // no index.html
 	}
 	if _, err := console.New(o); err == nil {
@@ -138,8 +144,9 @@ func TestNewChecksOptions(t *testing.T) {
 
 func TestSession(t *testing.T) {
 	e := newEnv(t, "", false)
+	// No session is a result, in the format @plexusone/host reads.
 	resp, body := e.do(t, uuid.Nil, http.MethodGet, console.SessionPath, nil, nil)
-	if resp.StatusCode != http.StatusUnauthorized || !strings.Contains(body, "sign in required") {
+	if resp.StatusCode != http.StatusOK || !strings.Contains(body, `"authenticated":false`) {
 		t.Fatalf("without a session: %d %s", resp.StatusCode, body)
 	}
 	resp, body = e.do(t, e.admin, http.MethodGet, console.SessionPath, nil, nil)
@@ -147,20 +154,62 @@ func TestSession(t *testing.T) {
 		t.Fatalf("session: %d %v", resp.StatusCode, resp.Header)
 	}
 	var s struct {
-		Principal     struct{ ID string }
-		Organizations []console.Organization
-		Sections      struct{ Connections bool }
+		Authenticated bool
+		User          struct {
+			ID          string
+			Memberships []struct {
+				OrganizationID   string `json:"organization_id"`
+				OrganizationName string `json:"organization_name"`
+				Role             string
+				Applications     map[string]string
+			}
+		}
 	}
 	if err := json.Unmarshal([]byte(body), &s); err != nil {
 		t.Fatal(err)
 	}
-	if s.Principal.ID != e.admin.String() || len(s.Organizations) != 1 || s.Organizations[0].Role != "admin" || s.Sections.Connections {
+	if !s.Authenticated || s.User.ID != e.admin.String() || len(s.User.Memberships) != 1 {
 		t.Fatalf("session: %+v", s)
+	}
+	m := s.User.Memberships[0]
+	if m.OrganizationID != e.org.String() || m.OrganizationName != "Acme" || m.Role != "admin" || m.Applications[console.AppID] != "admin" {
+		t.Fatalf("membership: %+v", m)
 	}
 
 	e.sessionError = errors.New("store down")
 	if resp, _ := e.do(t, e.admin, http.MethodGet, console.SessionPath, nil, nil); resp.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("a failing session store: %d", resp.StatusCode)
+	}
+}
+
+func TestSignInAndOut(t *testing.T) {
+	e := newEnv(t, "", false)
+	for target, want := range map[string]string{
+		console.BFFPrefix + "/auth/login?return_to=%2Fconsole%2Forgs":  "/login?return_to=%2Fconsole%2Forgs",
+		console.BFFPrefix + "/auth/github?return_to=%2Fconsole%2Forgs": "/login/github?return_to=%2Fconsole%2Forgs",
+		console.BFFPrefix + "/auth/login":                              "/login",
+	} {
+		resp, _ := e.do(t, uuid.Nil, http.MethodGet, target, nil, nil)
+		if resp.StatusCode != http.StatusFound || resp.Header.Get("Location") != want {
+			t.Errorf("%s: %d %s, want %s", target, resp.StatusCode, resp.Header.Get("Location"), want)
+		}
+	}
+	for _, rt := range []string{"https://evil.example.com/", "//evil.example.com/"} {
+		resp, _ := e.do(t, uuid.Nil, http.MethodGet, console.BFFPrefix+"/auth/login?return_to="+url.QueryEscape(rt), nil, nil)
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("return_to %s: %d", rt, resp.StatusCode)
+		}
+	}
+
+	// Signing out must be same-origin.
+	if resp, _ := e.do(t, e.admin, http.MethodPost, console.BFFPrefix+"/auth/logout", nil, map[string]string{"Sec-Fetch-Site": "cross-site"}); resp.StatusCode != http.StatusForbidden || e.signedOut {
+		t.Fatalf("cross-site sign-out: %d, signed out %v", resp.StatusCode, e.signedOut)
+	}
+	if resp, _ := e.do(t, e.admin, http.MethodPost, console.BFFPrefix+"/auth/logout", nil, sameOrigin); resp.StatusCode != http.StatusNoContent || !e.signedOut {
+		t.Fatalf("sign-out: %d, signed out %v", resp.StatusCode, e.signedOut)
+	}
+	if resp, _ := e.do(t, e.admin, http.MethodGet, console.BFFPrefix+"/nothing", nil, nil); resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("unknown session route: %d", resp.StatusCode)
 	}
 }
 
@@ -353,12 +402,9 @@ func TestConnections(t *testing.T) {
 	base := console.Prefix + strings.Replace(connections.ConnectionsPath, "{org}", e.org.String(), 1)
 	create := map[string]any{"provider": "fakecdn", "authMethod": "api_token", "displayName": "Prod", "fields": map[string]string{"token": goodToken}}
 
-	// The providers and the session say connections are on.
+	// The providers are served.
 	if resp, body := e.do(t, e.member, http.MethodGet, console.Prefix+connections.ProvidersPath, nil, nil); resp.StatusCode != http.StatusOK || !strings.Contains(body, "fakecdn") {
 		t.Fatalf("providers: %d %s", resp.StatusCode, body)
-	}
-	if _, body := e.do(t, e.member, http.MethodGet, console.SessionPath, nil, nil); !strings.Contains(body, `"connections":true`) {
-		t.Fatalf("session: %s", body)
 	}
 
 	// A cross-site request is refused before it reaches the API.
