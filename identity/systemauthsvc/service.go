@@ -289,6 +289,10 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 	}
 	s.server = server
 	s.mountConnections()
+	if err := s.mountConsole(&c); err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
 	s.openManagedPrincipals(&c, opts)
 	return s, nil
 }
