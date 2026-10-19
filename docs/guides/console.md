@@ -51,7 +51,7 @@ The session routes under `/console/bff` speak the format `@plexusone/auth`'s
 
 | Call | Does |
 |---|---|
-| `GET /console/bff/session` | The person and their organizations, personal first. Each grants the application `console` with the person's organization role. Without a session: `{"authenticated":false}` |
+| `GET /console/bff/session` | The person and their organizations, personal first, and the deployment's app catalog. Each organization grants the application `console` with the person's organization role, besides their roles in the products, so the console's product switcher links back to them. Without a session: `{"authenticated":false}` |
 | `GET /console/bff/auth/login?return_to=` | Sends the person to `/login`, and back to `return_to`, a path on this host |
 | `GET /console/bff/auth/{provider}?return_to=` | The same, straight to that provider's sign-in |
 | `POST /console/bff/auth/logout` | Signs the person out of SystemAuth, as `POST /logout` does, and answers `204` |
@@ -87,3 +87,8 @@ https://auth.example.com/console/orgs/{org}/connections/new?provider=cloudflare&
 
 `return_to` passes when it is a path on the SystemAuth host or a URL on one
 of `social_login.allowed_redirect_origins`.
+
+An application can link to the console from its chrome by listing it in the
+app catalog with the ID `console` and the console's URL. Nobody holds a role
+"in" it as a product, so product switchers leave it out; a shell can offer it
+as an organization settings entry instead.
