@@ -45,14 +45,24 @@ console's own scripts and connections, and refuses framing.
 
 ## API
 
+The session routes under `/console/bff` speak the format `@plexusone/auth`'s
+`SessionClient` reads from a backend-for-frontend, so the pages run in
+`createHost` from `@plexusone/host` like any application:
+
+| Call | Does |
+|---|---|
+| `GET /console/bff/session` | The person and their organizations, personal first. Each grants the application `console` with the person's organization role. Without a session: `{"authenticated":false}` |
+| `GET /console/bff/auth/login?return_to=` | Sends the person to `/login`, and back to `return_to`, a path on this host |
+| `GET /console/bff/auth/{provider}?return_to=` | The same, straight to that provider's sign-in |
+| `POST /console/bff/auth/logout` | Signs the person out of SystemAuth, as `POST /logout` does, and answers `204` |
+
 The console's API is under `/console/api`, authenticated by the login
 session. A request without one gets `401 {"error":"sign in required"}`.
 
 | Call | Returns |
 |---|---|
-| `GET /console/api/v1/session` | The person's ID, their organizations (personal first, each with the person's role), and which sections are enabled |
 | `GET /console/api/v1/return-to?url=` | The return address, when sign-in's redirect policy allows it, else `400` |
-| `/console/api/v1/providers` and `/console/api/v1/organizations/{org}/connections/...` | The [connections API](connections.md#http-api), unchanged |
+| `/console/api/v1/providers` and `/console/api/v1/organizations/{org}/connections/...` | The [connections API](connections.md#http-api), unchanged; `404` when connections are not enabled |
 
 OAuth scopes do not apply to the console: it is SystemAuth's own interface
 acting as the signed-in person. Every call is authorized by the person's
