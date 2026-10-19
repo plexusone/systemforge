@@ -22,6 +22,10 @@ const (
 	ScopeWrite = "systemforge:connections:write"
 )
 
+// MetadataRotation is the connection metadata key holding the rotation mode
+// a person chose when connecting, such as "manual".
+const MetadataRotation = "rotation"
+
 // API paths.
 const (
 	ConnectionsPath = "/api/v1/organizations/{org}/connections"
@@ -144,6 +148,9 @@ type createRequest struct {
 	AuthMethod  string            `json:"authMethod"`
 	DisplayName string            `json:"displayName"`
 	Fields      map[string]string `json:"fields"`
+	// Rotation is the rotation mode chosen from the method's manifest,
+	// recorded in the connection's metadata. Optional.
+	Rotation string `json:"rotation,omitempty"`
 }
 
 func (h *api) create(c call) {
@@ -155,11 +162,34 @@ func (h *api) create(c call) {
 	for k, v := range req.Fields {
 		fields[k] = cf.SecretString(v)
 	}
+	var meta map[string]string
+	if req.Rotation != "" {
+		if !h.offersRotation(req.Provider, req.AuthMethod, req.Rotation) {
+			writeError(c.w, http.StatusBadRequest, "the provider does not offer rotation mode "+req.Rotation)
+			return
+		}
+		meta = map[string]string{MetadataRotation: req.Rotation}
+	}
 	conn, err := h.c.Service.Create(c.r.Context(), service.CreateInput{
 		Owner: c.owner, Actor: c.actor, Provider: req.Provider, AuthMethod: req.AuthMethod,
-		DisplayName: req.DisplayName, Fields: fields,
+		DisplayName: req.DisplayName, Fields: fields, Metadata: meta,
 	})
 	h.respond(c, http.StatusCreated, conn, err)
+}
+
+// offersRotation reports whether the provider's auth method lists the
+// rotation mode. An unknown provider or method is left to the service.
+func (h *api) offersRotation(prov, method, mode string) bool {
+	p, err := h.c.Providers.Get(prov)
+	if err != nil {
+		return true
+	}
+	m, ok := p.Manifest().Method(method)
+	if !ok {
+		return true
+	}
+	_, ok = m.RotationMode(mode)
+	return ok
 }
 
 func (h *api) get(c call) {
