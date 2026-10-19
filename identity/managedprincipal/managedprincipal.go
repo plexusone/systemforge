@@ -60,6 +60,11 @@ var (
 	// ErrForbidden is returned when the acting principal lacks the
 	// permission an operation requires.
 	ErrForbidden = errors.New("managedprincipal: forbidden")
+
+	// ErrConsentRequired means a manager would be added without agreeing;
+	// managers join by invitation or claim unless the service was built
+	// with WithDirectManagerAdds.
+	ErrConsentRequired = errors.New("managedprincipal: a manager must accept an invitation or redeem a claim")
 	// ErrNotFound is returned when a principal or relationship does not exist.
 	ErrNotFound = errors.New("managedprincipal: not found")
 )

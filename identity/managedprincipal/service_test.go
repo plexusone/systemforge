@@ -86,7 +86,7 @@ func openSQLite(t *testing.T) *ent.Client {
 func newService(t *testing.T, db *ent.Client) (*Service, *recorder) {
 	t.Helper()
 	rec := &recorder{}
-	return NewService(db, gate{client: true, schoolClient: true}, WithAuditEmitter(rec)), rec
+	return NewService(db, gate{client: true, schoolClient: true}, WithAuditEmitter(rec), WithDirectManagerAdds()), rec
 }
 
 // addHuman creates a human principal; an empty email creates one without.
@@ -695,5 +695,30 @@ func TestManagedPrincipalCannotManage(t *testing.T) {
 	}
 	if err := svc.AddManager(ctx, other, ManagerInput{student, RoleEducator}, teacher); !errors.Is(err, ErrInvalidManager) {
 		t.Errorf("AddManager with a managed manager = %v, want ErrInvalidManager", err)
+	}
+}
+
+// TestManagersJoinWithConsentByDefault verifies that, without
+// WithDirectManagerAdds, nobody is made a manager without agreeing: Create
+// names only the actor and AddManager is refused.
+func TestManagersJoinWithConsentByDefault(t *testing.T) {
+	ctx := context.Background()
+	db := openSQLite(t)
+	svc := NewService(db, gate{client: true})
+	teacher := addHuman(t, db, "teacher@example.com", true)
+	parent := addHuman(t, db, "parent@example.com", true)
+
+	_, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client,
+		Managers: []ManagerInput{{teacher, RoleEducator}, {parent, RoleGuardian}}})
+	if !errors.Is(err, ErrConsentRequired) {
+		t.Fatalf("Create naming another manager = %v, want ErrConsentRequired", err)
+	}
+	id, err := svc.Create(ctx, CreateInput{ActorID: teacher, DisplayName: "Learner", ClientID: client,
+		Managers: []ManagerInput{{teacher, RoleGuardian}}})
+	if err != nil {
+		t.Fatalf("Create by the only manager: %v", err)
+	}
+	if err := svc.AddManager(ctx, id, ManagerInput{parent, RoleGuardian}, teacher); !errors.Is(err, ErrConsentRequired) {
+		t.Fatalf("AddManager = %v, want ErrConsentRequired", err)
 	}
 }

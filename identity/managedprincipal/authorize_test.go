@@ -22,7 +22,7 @@ func TestMutationsGoThroughTheAuthorizer(t *testing.T) {
 			return svc.ManagerRoles(ctx, managerID, managedID)
 		}),
 		rbac.WithPlatformAdminChecker(func(_ context.Context, id uuid.UUID) (bool, error) { return id == admin, nil }),
-	)))
+	)), WithDirectManagerAdds())
 	guardian := addHuman(t, db, "guardian@example.com", true)
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	outsider := addHuman(t, db, "outsider@example.com", true)

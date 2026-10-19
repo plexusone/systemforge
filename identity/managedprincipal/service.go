@@ -51,10 +51,23 @@ type Service struct {
 	roles     []string
 
 	accessSink accesschange.Sink
+	// directAdds lets Create name managers other than the actor and lets
+	// AddManager attach a manager without the manager's consent.
+	directAdds bool
 }
 
 // Option configures a Service.
 type Option func(*Service)
+
+// WithDirectManagerAdds lets Create name managers other than the acting
+// principal and lets AddManager make a human a manager directly, without
+// that human accepting an invitation or redeeming a claim. Without it both
+// return ErrConsentRequired, so nobody is made responsible for an account
+// without agreeing. Use it only for trusted administrator tooling and
+// migrations, never for a path an ordinary manager can reach.
+func WithDirectManagerAdds() Option {
+	return func(s *Service) { s.directAdds = true }
+}
 
 // WithAuditEmitter records every action through the given emitter.
 func WithAuditEmitter(e audit.Emitter) Option {
@@ -137,7 +150,9 @@ func (s *Service) Roles() []string {
 // Create creates a managed principal with its managers in one transaction.
 // It returns the new principal's ID. The actor must be one of the managers,
 // the manager creating the principal, or a platform administrator
-// (ErrForbidden otherwise).
+// (ErrForbidden otherwise). Without WithDirectManagerAdds the actor must be
+// the only manager (ErrConsentRequired otherwise); others join later by
+// invitation or claim.
 func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error) {
 	if in.DisplayName == "" {
 		return uuid.Nil, ErrDisplayNameRequired
@@ -152,6 +167,13 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 	}
 	if err := s.authorizeCreate(ctx, in.ActorID, in.Managers); err != nil {
 		return uuid.Nil, err
+	}
+	if !s.directAdds {
+		for _, m := range in.Managers {
+			if m.PrincipalID != in.ActorID {
+				return uuid.Nil, ErrConsentRequired
+			}
+		}
 	}
 	allowed, err := s.gate.ManagedPrincipalsAllowed(ctx, in.ClientID)
 	if err != nil {
@@ -224,12 +246,17 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 	return id, nil
 }
 
-// AddManager makes manager a manager of managed with the given role. It is
-// a no-op when the relationship is already active and reactivates it when
+// AddManager makes manager a manager of managed with the given role. It
+// requires WithDirectManagerAdds and returns ErrConsentRequired otherwise;
+// managers ordinarily join by accepting an invitation or redeeming a claim.
+// It is a no-op when the relationship is already active and reactivates it when
 // inactive. The actor needs manage_managers on the managed principal,
 // which guardians hold; the permission is checked under the principal's
 // row lock, in the transaction that writes.
 func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m ManagerInput, actorID uuid.UUID) error {
+	if !s.directAdds {
+		return ErrConsentRequired
+	}
 	if err := s.checkRole(m.Role); err != nil {
 		return err
 	}

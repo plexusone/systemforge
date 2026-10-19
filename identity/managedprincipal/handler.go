@@ -232,7 +232,7 @@ func (h *handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	switch {
-	case errors.Is(err, ErrForbidden), errors.Is(err, ErrNotAllowed), errors.Is(err, ErrNotManager):
+	case errors.Is(err, ErrForbidden), errors.Is(err, ErrNotAllowed), errors.Is(err, ErrNotManager), errors.Is(err, ErrConsentRequired):
 		writeError(w, http.StatusForbidden, "forbidden")
 	case errors.Is(err, ErrNotFound), errors.Is(err, ErrNotManaged):
 		writeError(w, http.StatusNotFound, "not found")

@@ -43,7 +43,7 @@ func TestManagerRelationsSync(t *testing.T) {
 	ctx := context.Background()
 	db := openSQLite(t)
 	rec := &syncRecorder{}
-	svc := NewService(db, gate{client: true}, WithAuthzSyncer(rec, authz.SyncModeStrict))
+	svc := NewService(db, gate{client: true}, WithAuthzSyncer(rec, authz.SyncModeStrict), WithDirectManagerAdds())
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	parent := addHuman(t, db, "parent@example.com", true)
 
@@ -83,7 +83,7 @@ func TestManagerRelationsSync(t *testing.T) {
 	}
 
 	// Eventual mode logs it instead.
-	eventual := NewService(db, gate{client: true}, WithAuthzSyncer(rec, authz.SyncModeEventual))
+	eventual := NewService(db, gate{client: true}, WithAuthzSyncer(rec, authz.SyncModeEventual), WithDirectManagerAdds())
 	if err := eventual.AddManager(ctx, id, ManagerInput{teacher, RoleGuardian}, parent); err != nil {
 		t.Errorf("eventual sync failure returned: %v", err)
 	}
@@ -136,7 +136,7 @@ func TestReleaseSyncsEveryManagerRemoval(t *testing.T) {
 	ctx := context.Background()
 	db := openSQLite(t)
 	rec := &syncRecorder{}
-	svc := NewService(db, gate{client: true}, WithAuthzSyncer(rec, authz.SyncModeStrict))
+	svc := NewService(db, gate{client: true}, WithAuthzSyncer(rec, authz.SyncModeStrict), WithDirectManagerAdds())
 	teacher := addHuman(t, db, "teacher@example.com", true)
 	parent := addHuman(t, db, "parent@example.com", true)
 	id, err := svc.Create(ctx, CreateInput{ActorID: parent, DisplayName: "Learner", ClientID: client, Email: "learner@example.com",
