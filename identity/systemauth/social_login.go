@@ -571,6 +571,18 @@ func (s *Server) CurrentLoginSession(r *http.Request) (*LoginSession, error) {
 	return s.social.currentSession(r)
 }
 
+// ValidateReturnTo checks a place to send a person after an action, by the
+// policy sign-in uses for return_to: an absolute path on this host, or a URL
+// on an allowed redirect origin. It returns the URL to use, or
+// ErrRedirectNotAllowed, which it also returns when social login is not
+// enabled.
+func (s *Server) ValidateReturnTo(raw string) (string, error) {
+	if s.social == nil {
+		return "", ErrRedirectNotAllowed
+	}
+	return s.social.redirects.validate(raw)
+}
+
 // socialSessionProvider makes the authorization endpoint recognize the
 // social login session and send unauthenticated users to /login.
 type socialSessionProvider struct {
