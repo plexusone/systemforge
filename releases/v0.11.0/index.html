@@ -3790,6 +3790,8 @@
       
         
       
+        
+      
     
     
     
@@ -3859,6 +3861,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v0.17.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.17.0
   
 
     
@@ -4781,7 +4811,7 @@
 </code></pre></div>
 <p>The binary is now <code>systemauth</code> (was <code>coreauth</code>); the bootstrap user is <code>system@systemauth.local</code>; the JWKS key id is <code>systemauth-1</code>; the config env var is <code>SYSTEMAUTH_SECRET</code>; observability metrics/spans are under the <code>systemauth.*</code> namespace. <code>CoreControlConfig</code> and related types in <code>identity/oauthclient</code> are now <code>SystemAuthConfig</code>, etc.</p>
 <h3 id="table-prefix-cf_-sf_">Table prefix <code>cf_</code> → <code>sf_</code><a class="headerlink" href="#table-prefix-cf_-sf_" title="Permanent link">&para;</a></h3>
-<p>Every identity table is renamed, e.g. <code>cf_principals</code> → <code>sf_principals</code>, <code>cf_oauth_tokens</code> → <code>sf_oauth_tokens</code>. No production data exists at the old prefix. An existing Postgres dev database with <code>cf_*</code> data can be migrated in place with <a href="../../migrations/0001_rename_cf_to_sf.sql"><code>migrations/0001_rename_cf_to_sf.sql</code></a>; a fresh database needs no migration — just run <code>systemauth migrate</code>.</p>
+<p>Every identity table is renamed, e.g. <code>cf_principals</code> → <code>sf_principals</code>, <code>cf_oauth_tokens</code> → <code>sf_oauth_tokens</code>. No production data exists at the old prefix. An existing Postgres dev database with <code>cf_*</code> data can be migrated in place with <a href="https://github.com/plexusone/systemforge/blob/main/migrations/0001_rename_cf_to_sf.sql"><code>migrations/0001_rename_cf_to_sf.sql</code></a>; a fresh database needs no migration — just run <code>systemauth migrate</code>.</p>
 <h3 id="api-key-prefix-cf_-sf_">API-key prefix <code>cf_</code> → <code>sf_</code><a class="headerlink" href="#api-key-prefix-cf_-sf_" title="Permanent link">&para;</a></h3>
 <p><code>identity/apikey.DefaultPrefix</code> and the legacy <code>identity/credential.APIKeyPrefix</code> both move from <code>cf_</code>/<code>cf_</code> to <code>sf_</code>/<code>sf_</code>. Newly issued keys carry the new prefix; any dev-issued <code>cf_</code>-prefixed key must be reissued.</p>
 <h3 id="principal-link-field-renamed-to-sf_principal_id">Principal-link field renamed to <code>sf_principal_id</code><a class="headerlink" href="#principal-link-field-renamed-to-sf_principal_id" title="Permanent link">&para;</a></h3>

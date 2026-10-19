@@ -4073,6 +4073,8 @@
       
         
       
+        
+      
     
     
     
@@ -4144,6 +4146,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.17.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.17.0
   
 
     
@@ -5556,31 +5586,41 @@ exposes these and the managing operations as a chi router to mount behind
 <code>requestprincipal.Middleware</code>, which identifies the calling principal. The
 caller is always the actor; every route runs the service operation and so
 its authorizer check:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>POST   /                                          Create (JSON: client_id, display_name, email?, managers[])
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>GET    /{principalID}/managers                    ListManagersFor
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>POST   /{principalID}/managers                    AddManager (JSON: principal_id, role)
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>DELETE /{principalID}/managers/{managerID}/{role} RemoveManager
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>POST   /{principalID}/release                     Release
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>DELETE /{principalID}                             Delete
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>POST   /{principalID}/claims                      IssueClaim
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>POST   /claims/redeem                             RedeemClaim (JSON: code)
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>POST   /manager-invites                           InviteManager (JSON: client_id, email, role)
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>POST   /manager-invites/accept                    AcceptManagerInvite (JSON: token)
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>POST   /manager-invites/decline                   DeclineManagerInvite (JSON: token); 204, 400 for any mismatch
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>DELETE /manager-invites/{inviteID}                RevokeManagerInvite
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>GET    /{principalID}/login-tokens
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>DELETE /{principalID}/login-tokens/{credentialID}
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>GET    /{principalID}/sessions
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>DELETE /{principalID}/sessions/{kind}/{sessionID}
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>POST   /{principalID}/revoke-all
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>GET    /                                          ListManagedBy (?after=&amp;limit=, at most 200)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>POST   /                                          Create (JSON: client_id, display_name, email?, managers[] or role)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>GET    /{principalID}/managers                    ListManagersFor
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>POST   /{principalID}/managers                    AddManager (JSON: principal_id, role)
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>DELETE /{principalID}/managers/{managerID}/{role} RemoveManager
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>POST   /{principalID}/release                     Release
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>DELETE /{principalID}                             Delete
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>POST   /{principalID}/claims                      IssueClaim
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>POST   /claims/redeem                             RedeemClaim (JSON: code)
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>POST   /manager-invites                           InviteManager (JSON: client_id, email, role)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>POST   /manager-invites/accept                    AcceptManagerInvite (JSON: token)
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>POST   /manager-invites/decline                   DeclineManagerInvite (JSON: token); 204, 400 for any mismatch
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>DELETE /manager-invites/{inviteID}                RevokeManagerInvite
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>GET    /{principalID}/login-tokens
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>POST   /{principalID}/login-tokens                IssueLoginToken (JSON: client_id, name?, single_use?, expires_at?)
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>DELETE /{principalID}/login-tokens/{credentialID}
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>GET    /{principalID}/sessions
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>DELETE /{principalID}/sessions/{kind}/{sessionID}
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>POST   /{principalID}/revoke-all
 </code></pre></div>
 <p>Responses: 401 without a principal, 403 for a missing permission (or a
 client that does not allow managed principals), 404 for an unknown or
 unmanaged principal, 400 for malformed input or any unusable code, 409 for
 conflicts (<code>ErrLastManager</code>, <code>ErrEmailInUse</code>, <code>ErrEmailNotVerified</code>,
 <code>ErrAlreadyManaged</code>). Bodies are bounded and refuse unknown fields.
-<code>client_id</code> in a create or invite body is the caller's assertion; the
-deployment and that client's opt-in still gate it (<code>ManagedPrincipalsAllowed</code>).</p>
+<code>client_id</code> in a create, invite or login-token body is the caller's
+assertion; the deployment and that client's opt-in still gate it
+(<code>ManagedPrincipalsAllowed</code>).</p>
+<p>In relying-party mode (<code>WithRequestClient</code>), which <code>systemauthsvc</code> uses to
+serve the API on SystemAuth, the client is the authenticated access token's
+and a different body <code>client_id</code> is a 400; create names only the caller as
+manager; <code>POST /{principalID}/managers</code> is refused (managers join through
+invitations and claims); and an unknown or unmanaged principal answers 403,
+like a principal the caller does not manage. <code>WithCodeRateLimit</code> adds a
+per-caller 429 on the routes that present a code.</p>
 <h2 id="attaching-an-email">Attaching an email<a class="headerlink" href="#attaching-an-email" title="Permanent link">&para;</a></h2>
 <p><code>Service.AttachVerifiedEmail(actorID, managedID, email, verifiedAt)</code>
 requires <code>manage_account</code>, and in one transaction sets <code>sf_humans.email</code> and

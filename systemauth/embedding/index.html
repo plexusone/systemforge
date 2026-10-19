@@ -3879,6 +3879,8 @@
       
         
       
+        
+      
     
     
     
@@ -3950,6 +3952,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.17.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.17.0
   
 
     
@@ -4796,6 +4826,14 @@ itself (normally through the same reverse proxy).</p>
 <td>Extra <code>systemauth.Option</code>s, e.g. <code>WithObservability</code>.</td>
 </tr>
 <tr>
+<td><code>Options.AuditEmitter</code></td>
+<td>Records managed-principal actions served by the <code>/managed-principals</code> API.</td>
+</tr>
+<tr>
+<td><code>Options.ManagedPrincipalRates</code>, <code>Options.ManagedPrincipalOptions</code></td>
+<td>Shared rate-limit storage for the API's code routes (the default is in memory, for one instance) and extra <code>managedprincipal</code> options.</td>
+</tr>
+<tr>
 <td><code>CheckProduction(cfg, opts)</code></td>
 <td>The checks <code>New</code> enforces, for a <code>validate</code> command.</td>
 </tr>
@@ -4804,8 +4842,8 @@ itself (normally through the same reverse proxy).</p>
 <td>Open, migrate and close (for a separate migration step).</td>
 </tr>
 <tr>
-<td><code>Service.Handler</code>, <code>Ready</code>, <code>Migrate</code>, <code>Close</code>, <code>Issuer</code>, <code>KeyID</code>, <code>Metadata</code>, <code>Discovery</code>, <code>Server</code></td>
-<td>The running service.</td>
+<td><code>Service.Handler</code>, <code>Ready</code>, <code>Migrate</code>, <code>Close</code>, <code>Issuer</code>, <code>KeyID</code>, <code>Metadata</code>, <code>Discovery</code>, <code>Server</code>, <code>ManagedPrincipals</code></td>
+<td>The running service. <code>ManagedPrincipals</code> is the managed-principal service, nil unless managed principals are enabled; the API is then mounted at <code>ManagedPrincipalsPath</code>.</td>
 </tr>
 </tbody>
 </table>

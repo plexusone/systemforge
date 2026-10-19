@@ -3790,6 +3790,8 @@
       
         
       
+        
+      
     
     
     
@@ -3859,6 +3861,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="v0.17.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.17.0
   
 
     
@@ -4522,15 +4552,20 @@
 <p>Release notes, one file per version, newest first. The
 <a href="changelog/">changelog</a> is generated from <code>CHANGELOG.json</code> and lists every
 change with its commit.</p>
-<p>The latest release, <a href="v0.16.0/">v0.16.0</a>, adds reconnecting, bindings and
-per-connection grants to the connections API and renames the connection
+<p>The latest release, <a href="v0.17.0/">v0.17.0</a>, lets relying-party applications
+manage managed principals through an API on SystemAuth and a Go client,
+requires consent before anyone becomes a manager, and refuses contract
+operations until an application is federated. The last two are breaking;
+read its upgrade notes first.</p>
+<p>The previous release, <a href="v0.16.0/">v0.16.0</a>, added reconnecting, bindings and
+per-connection grants to the connections API and renamed the connection
 library from connectionforge to connectforge. The rename is breaking for
-deployments that enabled connections in v0.15.0; read its upgrade notes first.</p>
-<p>The previous release, <a href="v0.15.0/">v0.15.0</a>, added key management through
+deployments that enabled connections in v0.15.0.</p>
+<p>The release before it, <a href="v0.15.0/">v0.15.0</a>, added key management through
 keyforge, connections to external services, invite-only sign-up with a
 waitlist, an app catalog for product switchers, and the <code>orgs</code> claim with
 per-application roles in embedded SystemAuth.</p>
-<p>The release before it, <a href="v0.14.0/">v0.14.0</a>, made Principal the sole identity
+<p>Earlier, <a href="v0.14.0/">v0.14.0</a>, made Principal the sole identity
 root, added managed principals and a security pass over the APIs, and
 completed the organization model. It is a breaking release with migrations
 0002 to 0009; read its upgrade notes first.</p>
@@ -4542,6 +4577,10 @@ completed the organization model. It is a breaking release with migrations
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><a href="v0.17.0/">v0.17.0</a></td>
+<td>2026-10-18</td>
+</tr>
 <tr>
 <td><a href="v0.16.0/">v0.16.0</a></td>
 <td>2026-10-14</td>
