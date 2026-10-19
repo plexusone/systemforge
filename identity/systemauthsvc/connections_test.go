@@ -74,7 +74,12 @@ func TestConnectionsAreServedWhenConfigured(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- s.RunJobs(ctx) }()
 	select {
-	case <-done:
+	case err := <-done:
+		// Ending the context is how RunJobs is stopped, so its context
+		// error is the expected result; anything else is a failure.
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
+			t.Fatalf("RunJobs: %v", err)
+		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("RunJobs did not stop when its context ended")
 	}
