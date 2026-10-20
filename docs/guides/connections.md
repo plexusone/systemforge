@@ -105,9 +105,9 @@ Every request carries a SystemAuth access token. Reads need the
 
 | Method and path | Action |
 |---|---|
-| `GET /api/v1/providers` | Provider manifests: methods, fields, scopes |
+| `GET /api/v1/providers` | Provider manifests: methods, fields, scopes, setup steps and rotation modes |
 | `GET /api/v1/organizations/{org}/connections` | Connections the caller may view (`?provider=`, `?state=`) |
-| `POST /api/v1/organizations/{org}/connections` | Connect: `{"provider", "authMethod", "displayName", "fields": {...}}` |
+| `POST /api/v1/organizations/{org}/connections` | Connect: `{"provider", "authMethod", "displayName", "fields": {...}, "rotation"}`; `rotation` is optional |
 | `GET /api/v1/organizations/{org}/connections/{id}` | One connection |
 | `PATCH /api/v1/organizations/{org}/connections/{id}` | Rename: `{"displayName"}` |
 | `POST /api/v1/organizations/{org}/connections/{id}/test` | Validate again; the result is in `health` |
@@ -123,6 +123,27 @@ Every request carries a SystemAuth access token. Reads need the
 A connection is validated with its provider before it is stored, and a
 rejected credential stores nothing (`422`). No response contains a
 credential. A connection the caller may not view is reported as `404`.
+
+### Setup and rotation
+
+Each auth method in a provider manifest may describe how to get the
+credential and how it is replaced over its life:
+
+- `setup` lists the steps a person takes at the service to create the
+  credential, each with a `title` and optionally a `detail` and a `url`. A
+  step with `rotation` applies only to those rotation modes.
+- `rotation` lists the rotation modes the method offers, such as `manual`
+  (a person replaces the credential) or `automatic`.
+
+A connect may name one of the method's rotation modes in `rotation`. It is
+kept in the connection's `metadata` under `rotation`, so a page can say how
+the credential is replaced. A mode the method does not list is refused with
+`400`. SystemAuth records the mode; it does not rotate credentials itself.
+
+When the provider reports when the credential expires, the connection's
+`health.credentialExpiresAt` carries it, recorded each time the credential
+is validated: on connect, test and reconnect. Use it to
+warn people before the credential stops working, and reconnect before then.
 
 ## Reconnecting
 
