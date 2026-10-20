@@ -34,11 +34,22 @@ func (s *Service) mountConsole(c *Config) error {
 	if err != nil {
 		return fmt.Errorf("systemauthsvc: %w", err)
 	}
+	s.console = con
 	router := s.server.Router()
 	router.Handle(console.Prefix, con)
 	router.Handle(console.Prefix+"/*", con)
 	s.logger.Info("console enabled", "web_dir", c.Console.WebDir, "connections", s.conns != nil)
 	return nil
+}
+
+// closeConsole releases the console's built pages.
+func (s *Service) closeConsole() error {
+	if s.console == nil {
+		return nil
+	}
+	con := s.console
+	s.console = nil
+	return con.Close()
 }
 
 func (s *Service) consolePrincipal(r *http.Request) (uuid.UUID, error) {

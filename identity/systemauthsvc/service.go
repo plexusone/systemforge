@@ -153,6 +153,9 @@ type Service struct {
 	authz *mode.Result
 	conns *connections.Connections
 
+	// console is set when the organization console is enabled.
+	console *console.Console
+
 	// mp is set when managed principals are enabled; mpRates is the
 	// rate-limit storage New created for it, if any.
 	mp      *managedprincipal.Service
@@ -465,7 +468,7 @@ func (s *Service) Ready(ctx context.Context) error {
 // Close releases the database New opened. Injected handles (Options.DB,
 // Options.EntClient) are left to their owner.
 func (s *Service) Close() error {
-	err := errors.Join(s.closeConnections(), s.closeManagedPrincipals())
+	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeManagedPrincipals())
 	if s.owned == nil {
 		return err
 	}

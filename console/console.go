@@ -104,7 +104,8 @@ type Options struct {
 
 // Console is the organization console's handler.
 type Console struct {
-	h http.Handler
+	h     http.Handler
+	pages *os.Root
 }
 
 // New returns a console for o.
@@ -142,6 +143,7 @@ func New(o Options) (*Console, error) {
 			return nil, fmt.Errorf("console: web directory: %w", err)
 		}
 		if _, err := root.Stat("index.html"); err != nil {
+			_ = root.Close() // the directory is not used; nothing to add to the error
 			return nil, fmt.Errorf("console: web directory has no index.html: %w", err)
 		}
 		c.pages = root
@@ -150,7 +152,16 @@ func New(o Options) (*Console, error) {
 		mux.HandleFunc(Prefix+"/", c.page)
 		mux.Handle(Prefix, http.RedirectHandler(Prefix+"/", http.StatusMovedPermanently))
 	}
-	return &Console{h: headers(http.NewCrossOriginProtection().Handler(mux))}, nil
+	return &Console{h: headers(http.NewCrossOriginProtection().Handler(mux)), pages: c.pages}, nil
+}
+
+// Close releases the built pages' directory. A console without WebDir has
+// nothing to release. The console must not serve requests afterwards.
+func (c *Console) Close() error {
+	if c.pages == nil {
+		return nil
+	}
+	return c.pages.Close()
 }
 
 // ServeHTTP implements [http.Handler].

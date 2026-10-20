@@ -97,6 +97,12 @@ func newEnv(t *testing.T, webDir string, withConnections bool) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Windows cannot remove a directory that is still open.
+	t.Cleanup(func() {
+		if err := c.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 	e.h = c
 	return e
 }
