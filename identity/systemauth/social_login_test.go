@@ -747,3 +747,55 @@ func TestValidateReturnTo(t *testing.T) {
 		t.Errorf("without social login: %v, want ErrRedirectNotAllowed", err)
 	}
 }
+
+func TestEndLoginSession(t *testing.T) {
+	f := newFakeGitHub(t)
+	s := newSocialTestServer(t, f, NewMemoryPrincipalDirectory())
+	state, stateCookie := startLogin(t, s, "")
+	sess := findCookie(t, callback(s, state, stateCookie).Result(), LoginCookieName)
+	if sess == nil {
+		t.Fatal("login cookie not set")
+	}
+	signedIn := func() *http.Request {
+		req := httptest.NewRequest(http.MethodPost, "/console/bff/auth/logout", nil)
+		req.AddCookie(sess)
+		return req
+	}
+	cleared := func(w *httptest.ResponseRecorder) bool {
+		c := findCookie(t, w.Result(), LoginCookieName)
+		return c != nil && c.Value == "" && c.MaxAge < 0
+	}
+
+	w := httptest.NewRecorder()
+	if err := s.EndLoginSession(w, signedIn()); err != nil {
+		t.Fatal(err)
+	}
+	if !cleared(w) {
+		t.Error("login cookie not cleared")
+	}
+	if _, err := s.CurrentLoginSession(signedIn()); !errors.Is(err, ErrLoginSessionNotFound) {
+		t.Errorf("session still valid: %v", err)
+	}
+
+	// Signing out again, or without a session, only clears the cookie.
+	for name, req := range map[string]*http.Request{
+		"ended session": signedIn(),
+		"no cookie":     httptest.NewRequest(http.MethodPost, "/console/bff/auth/logout", nil),
+	} {
+		w := httptest.NewRecorder()
+		if err := s.EndLoginSession(w, req); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+		if !cleared(w) {
+			t.Errorf("%s: login cookie not cleared", name)
+		}
+	}
+
+	plain, err := NewEmbedded(Config{Issuer: testIssuer})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := plain.EndLoginSession(httptest.NewRecorder(), signedIn()); err != nil {
+		t.Errorf("without social login: %v", err)
+	}
+}
