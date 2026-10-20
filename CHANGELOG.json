@@ -10,6 +10,101 @@
   "unreleased": {},
   "releases": [
     {
+      "version": "v0.18.0",
+      "date": "2026-10-20",
+      "highlights": [
+        {
+          "description": "SystemAuth serves the organization console under `/console`, where organizations manage their connections to external services, signed in with the SystemAuth login session",
+          "commit": "e901768"
+        },
+        {
+          "description": "The connections API records the rotation mode chosen when connecting, from the provider manifest's guidance",
+          "commit": "15f4b5d"
+        }
+      ],
+      "added": [
+        {
+          "description": "`console` package: the connections API under `/console/api` with a login-session authenticator, session routes, return-address checks, and built pages served with a sign-in redirect; state-changing requests must be same-origin and every response carries a restrictive content security policy",
+          "commit": "e901768"
+        },
+        {
+          "description": "`console.web_dir` in the SystemAuth configuration; a console without social login is refused",
+          "commit": "fbf6773"
+        },
+        {
+          "description": "`systemauthsvc` mounts the organization console when configured, listing organizations from the `orgs` claim and including connections when they are enabled",
+          "commit": "5e7f85e"
+        },
+        {
+          "description": "Console session routes under `/console/bff` in the format `@plexusone/host` reads: `GET session`, sign-in redirects and `POST auth/logout`; each organization grants the `console` application the person's organization role",
+          "commit": "25fc039"
+        },
+        {
+          "description": "The console's session lists each organization's product roles and carries the app catalog, so the console's product switcher links back to the products",
+          "commit": "4e2609a"
+        },
+        {
+          "description": "`systemauth.Server.ValidateReturnTo` accepts a return address only where the sign-in redirect policy allows",
+          "commit": "57307ca"
+        },
+        {
+          "description": "`systemauth.Server.EndLoginSession` signs a person out as `POST /logout` does, for handlers that check the request's origin themselves",
+          "commit": "4c74b57"
+        },
+        {
+          "description": "Connect requests accept an optional `rotation` mode from the auth method's manifest, kept in the connection's metadata under `rotation`; an unlisted mode is refused",
+          "commit": "15f4b5d"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Require `github.com/plexusone/connectforge` v0.4.0, whose manifests describe setup steps and rotation modes",
+          "commit": "26aa9cb"
+        },
+        {
+          "description": "Update dependencies",
+          "commit": "bc28a82"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "ADR-018: the organization console on the SystemAuth host",
+          "commit": "bc54dc6"
+        },
+        {
+          "description": "Organization console guide: configuration, pages, session routes, API and linking from the app catalog",
+          "commit": "a8fefa5"
+        },
+        {
+          "description": "Connections guide covers setup steps, rotation modes and credential expiry"
+        },
+        {
+          "description": "v0.18.0 release notes"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Cover the organization console, return-address checks, the session format, sign-in and sign-out, and product roles and the catalog in the session",
+          "commit": "59a6a62"
+        },
+        {
+          "description": "Cover recording the rotation mode",
+          "commit": "194db85"
+        },
+        {
+          "description": "Cover ending a login session from another handler"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "To enable the organization console, set `console.web_dir` to a build of `@plexusone/console`; social login must be configured"
+        },
+        {
+          "description": "To offer the console from an application's chrome, list it in the app catalog with the ID `console`"
+        }
+      ]
+    },
+    {
       "version": "v0.17.0",
       "date": "2026-10-18",
       "highlights": [

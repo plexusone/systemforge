@@ -148,6 +148,7 @@ nav:
   - Releases:
     - Overview: releases/index.md
     - Changelog: releases/changelog.md
+    - v0.18.0: releases/v0.18.0.md
     - v0.17.0: releases/v0.17.0.md
     - v0.16.0: releases/v0.16.0.md
     - v0.15.0: releases/v0.15.0.md

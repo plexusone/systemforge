@@ -4,13 +4,18 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.17.0](v0.17.0.md), lets relying-party applications
+The latest release, [v0.18.0](v0.18.0.md), adds the organization console,
+served by SystemAuth under `/console`, where organizations manage their
+connections, and records each connection's rotation mode. Nothing is
+breaking.
+
+The previous release, [v0.17.0](v0.17.0.md), let relying-party applications
 manage managed principals through an API on SystemAuth and a Go client,
-requires consent before anyone becomes a manager, and refuses contract
+required consent before anyone becomes a manager, and refused contract
 operations until an application is federated. The last two are breaking;
 read its upgrade notes first.
 
-The previous release, [v0.16.0](v0.16.0.md), added reconnecting, bindings and
+Before it, [v0.16.0](v0.16.0.md) added reconnecting, bindings and
 per-connection grants to the connections API and renamed the connection
 library from connectionforge to connectforge. The rename is breaking for
 deployments that enabled connections in v0.15.0.
@@ -27,6 +32,7 @@ completed the organization model. It is a breaking release with migrations
 
 | Version | Release date |
 |---|---|
+| [v0.18.0](v0.18.0.md) | 2026-10-20 |
 | [v0.17.0](v0.17.0.md) | 2026-10-18 |
 | [v0.16.0](v0.16.0.md) | 2026-10-14 |
 | [v0.15.0](v0.15.0.md) | 2026-10-13 |
