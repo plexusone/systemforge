@@ -27,7 +27,7 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/ory/fosite v0.49.0
-	github.com/plexusone/connectforge v0.3.0
+	github.com/plexusone/connectforge v0.4.0
 	github.com/plexusone/keyforge v0.1.0
 	github.com/plexusone/omniobserve v0.12.0
 	github.com/plexusone/omnistorage-core v0.5.2
