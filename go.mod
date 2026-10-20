@@ -1,6 +1,6 @@
 module github.com/plexusone/systemforge
 
-go 1.27.0
+go 1.26.0
 
 // github.com/authzed/cel-go v0.30.0 rewrote cel.NewStaticOptimizer to return
 // (*StaticOptimizer, error) instead of *StaticOptimizer, breaking the build
