@@ -16,7 +16,7 @@
         <link rel="prev" href="../authorization-mode/">
       
       
-        <link rel="next" href="../key-management/">
+        <link rel="next" href="../console/">
       
       
         
@@ -470,6 +470,8 @@
       
         
       
+        
+      
     
     
     
@@ -819,6 +821,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="HTTP API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup-and-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup and rotation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -869,6 +888,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../console/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Organization Console
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -3151,6 +3198,8 @@
       
         
       
+        
+      
     
     
     
@@ -3680,6 +3729,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-018-organization-console/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-018: The Organization Console (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3925,6 +4002,8 @@
       
         
       
+        
+      
     
     
     
@@ -3996,6 +4075,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.18.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.18.0
   
 
     
@@ -4713,6 +4820,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="HTTP API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup-and-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup and rotation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4829,6 +4953,8 @@ tables. On PostgreSQL it also enables row-level security on them, keyed on
 <code>owner_id</code>, the organization.</p>
 <p><code>systemauth serve</code> runs the key lifecycle jobs. A host that embeds SystemAuth
 calls <code>Service.RunJobs</code> itself.</p>
+<p>People manage connections in the <a href="../console/">organization console</a>,
+which SystemAuth serves under <code>/console</code> when it is enabled.</p>
 <h2 id="register-providers">Register providers<a class="headerlink" href="#register-providers" title="Permanent link">&para;</a></h2>
 <p>Providers are registered by the application that embeds SystemAuth, through
 <code>systemauthsvc.Options.Providers</code>. A static-token service needs only a
@@ -4887,7 +5013,7 @@ client.</p>
 <tbody>
 <tr>
 <td><code>GET /api/v1/providers</code></td>
-<td>Provider manifests: methods, fields, scopes</td>
+<td>Provider manifests: methods, fields, scopes, setup steps and rotation modes</td>
 </tr>
 <tr>
 <td><code>GET /api/v1/organizations/{org}/connections</code></td>
@@ -4895,7 +5021,7 @@ client.</p>
 </tr>
 <tr>
 <td><code>POST /api/v1/organizations/{org}/connections</code></td>
-<td>Connect: <code>{"provider", "authMethod", "displayName", "fields": {...}}</code></td>
+<td>Connect: <code>{"provider", "authMethod", "displayName", "fields": {...}, "rotation"}</code>; <code>rotation</code> is optional</td>
 </tr>
 <tr>
 <td><code>GET /api/v1/organizations/{org}/connections/{id}</code></td>
@@ -4946,6 +5072,24 @@ client.</p>
 <p>A connection is validated with its provider before it is stored, and a
 rejected credential stores nothing (<code>422</code>). No response contains a
 credential. A connection the caller may not view is reported as <code>404</code>.</p>
+<h3 id="setup-and-rotation">Setup and rotation<a class="headerlink" href="#setup-and-rotation" title="Permanent link">&para;</a></h3>
+<p>Each auth method in a provider manifest may describe how to get the
+credential and how it is replaced over its life:</p>
+<ul>
+<li><code>setup</code> lists the steps a person takes at the service to create the
+  credential, each with a <code>title</code> and optionally a <code>detail</code> and a <code>url</code>. A
+  step with <code>rotation</code> applies only to those rotation modes.</li>
+<li><code>rotation</code> lists the rotation modes the method offers, such as <code>manual</code>
+  (a person replaces the credential) or <code>automatic</code>.</li>
+</ul>
+<p>A connect may name one of the method's rotation modes in <code>rotation</code>. It is
+kept in the connection's <code>metadata</code> under <code>rotation</code>, so a page can say how
+the credential is replaced. A mode the method does not list is refused with
+<code>400</code>. SystemAuth records the mode; it does not rotate credentials itself.</p>
+<p>When the provider reports when the credential expires, the connection's
+<code>health.credentialExpiresAt</code> carries it, recorded each time the credential
+is validated: on connect, test and reconnect. Use it to
+warn people before the credential stops working, and reconnect before then.</p>
 <h2 id="reconnecting">Reconnecting<a class="headerlink" href="#reconnecting" title="Permanent link">&para;</a></h2>
 <p>When a token expires or is revoked, replace it in place with <code>reconnect</code>. The
 new credential is validated with the provider first and must belong to the
