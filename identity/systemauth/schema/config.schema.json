@@ -394,6 +394,13 @@
           "description": "Auto-grant consent for first-party clients",
           "default": false
         },
+        "signup_minimum_age": {
+          "type": "integer",
+          "maximum": 120,
+          "minimum": 0,
+          "description": "Minimum age to create an account; 0 asks no age",
+          "default": 0
+        },
         "insecure_cookies": {
           "type": "boolean",
           "description": "Development only: allow login cookies over plain HTTP",

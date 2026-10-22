@@ -108,6 +108,12 @@ type Options struct {
 	// Submissions are stored in the database (see Service.SignupWaitlist).
 	WaitlistPage systemauth.WaitlistPage
 
+	// SignupAgePage is the wording of the age question asked before an
+	// account is created when the configuration sets
+	// social_login.signup_minimum_age; empty fields take
+	// systemauth.DefaultSignupAgePage.
+	SignupAgePage systemauth.SignupAgePage
+
 	// Providers are the connection providers the hosted applications support,
 	// used when the configuration enables connections. Optional.
 	Providers *provider.Registry
@@ -264,6 +270,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		)
 		logger.Info("sign-up is by invitation only", "waitlist", systemauth.SignupWaitlistPath)
 	}
+	serverOpts = append(serverOpts, systemauth.WithSignupAgePage(opts.SignupAgePage))
 	if opts.Apps != nil {
 		serverOpts = append(serverOpts, systemauth.WithAppCatalog(opts.Apps))
 		if opts.Vocabularies != nil {

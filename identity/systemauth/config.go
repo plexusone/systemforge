@@ -133,6 +133,12 @@ type SocialLoginConfig struct {
 	// is first-party.
 	SkipConsent bool `json:"skip_consent,omitempty" yaml:"skip_consent,omitempty" jsonschema:"default=false,description=Auto-grant consent for first-party clients"`
 
+	// SignupMinimumAge, when set, asks a person their birth month and year
+	// before an upstream login creates their account, and refuses anyone
+	// younger, keeping nothing about them. Existing accounts are not asked.
+	// Default: 0, no question.
+	SignupMinimumAge int `json:"signup_minimum_age,omitempty" yaml:"signup_minimum_age,omitempty" jsonschema:"default=0,minimum=0,maximum=120,description=Minimum age to create an account; 0 asks no age"`
+
 	// InsecureCookies drops the __Host- prefix and the Secure flag so the
 	// login works over plain HTTP. Local development only.
 	InsecureCookies bool `json:"insecure_cookies,omitempty" yaml:"insecure_cookies,omitempty" jsonschema:"default=false,description=Development only: allow login cookies over plain HTTP"`

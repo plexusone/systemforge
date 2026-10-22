@@ -59,6 +59,7 @@ type socialOptions struct {
 
 	signupGate      SignupGate
 	signupDeniedURL string
+	agePage         SignupAgePage
 
 	waitlist     SignupWaitlist
 	waitlistPage WaitlistPage
@@ -123,6 +124,9 @@ type socialLogin struct {
 	// signupDenied is where a refused sign-up is redirected; nil answers 403
 	// unless a waitlist is served.
 	signupDenied *url.URL
+	// agePage is the age question's wording, used when
+	// cfg.SignupMinimumAge is set.
+	agePage SignupAgePage
 	// waitlist, when set, is served at SignupWaitlistPath and receives
 	// refused sign-ups without signupDenied.
 	waitlist         SignupWaitlist
@@ -266,6 +270,13 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 			sl.waitlistClientIP = ratelimit.PeerIP
 		}
 	}
+	if err := validateSignupMinimumAge(cfg.SignupMinimumAge); err != nil {
+		return nil, err
+	}
+	if cfg.SignupMinimumAge > 0 {
+		sl.agePage = s.socialOpts.agePage.withDefaults()
+		sl.directory = &ageCheckedDirectory{PrincipalDirectory: sl.directory}
+	}
 	if gate := s.socialOpts.signupGate; gate != nil {
 		sl.directory = &gatedDirectory{PrincipalDirectory: sl.directory, gate: gate, logger: s.logger}
 	}
@@ -279,6 +290,10 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 		r.Get(LoginPath, sl.handleChooser)
 		r.Get(loginStartPattern, sl.handleStart)
 		r.Get(loginCallbackPattern, sl.handleCallback)
+		if sl.cfg.SignupMinimumAge > 0 {
+			r.Get(SignupAgePath, sl.handleAgePage)
+			r.Post(SignupAgePath, sl.handleAgeAnswer)
+		}
 	}
 	r.Get(LogoutPath, sl.handleLogoutPage)
 	r.Post(LogoutPath, sl.handleLogout)
@@ -432,7 +447,9 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid login state", http.StatusBadRequest)
 		return
 	}
-	if data.Provider != provider {
+	// Entries the age question keeps share the store; they are never
+	// upstream state.
+	if data.Provider != provider || data.Nonce == signupAgePending || data.Nonce == signupAgeConfirmed {
 		http.Error(w, "invalid login state", http.StatusBadRequest)
 		return
 	}
@@ -455,6 +472,9 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if sl.cfg.SignupMinimumAge > 0 {
+		ctx = sl.takeAgeConfirmation(ctx, w, r, provider)
+	}
 	p, err := ResolveExternalLogin(ctx, sl.directory, ExternalLogin{
 		Provider:      provider,
 		Subject:       user.ProviderID,
@@ -473,6 +493,13 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 			status, msg = http.StatusConflict, "an account with this email already exists and cannot be linked automatically"
 		case errors.Is(err, ErrPrincipalInactive):
 			status, msg = http.StatusForbidden, "account is disabled"
+		case errors.Is(err, errSignupAgeRequired):
+			target, rErr := sl.redirects.resolve(data.RedirectURL)
+			if rErr != nil {
+				target = sl.redirects.defaultTarget
+			}
+			sl.askAge(w, r, provider, target)
+			return
 		case errors.Is(err, ErrSignupNotInvited):
 			logger.Info("sign-up refused: not invited", "provider", provider)
 			if sl.signupDenied == nil && sl.waitlist != nil {
