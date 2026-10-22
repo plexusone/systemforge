@@ -91,6 +91,35 @@ systemauth invite revoke ada@example.com
 - **In a host binary,** set `Options.InviteOnly` and `Options.SignupDeniedURL`
   on `systemauthsvc.New`, and manage invites with `Service.SignupInvites()`.
 
+## Minimum sign-up age
+
+Set `social_login.signup_minimum_age` to ask a person their birth month and
+year before their first upstream login creates an account:
+
+```yaml
+social_login:
+  signup_minimum_age: 18
+```
+
+- **Nothing is kept before the answer.** The login is parked with only its
+  provider and destination; the provider's email and profile are not stored.
+  The person answers on `/signup/age`, served by SystemAuth.
+- **At or over the age,** SystemAuth restarts the upstream login, which then
+  creates the account. The provider usually returns at once without asking
+  again.
+- **Under the age,** the parked login is discarded, no account exists, and
+  the browser is not asked again for a day. Only the refusal is logged, with
+  the provider and no answer.
+- **The question is neutral.** Month and year start empty, and the year list
+  includes years too recent to pass, so it does not hint at the answer.
+  Without the day, the last day of the birth month counts, so nobody younger
+  passes.
+- **Only new accounts are asked.** Existing accounts, and children signing in
+  with login tokens, sign in as before. With invite-only sign-up, an
+  uninvited login is refused before it is asked, and the invite is used only
+  once the age is confirmed.
+- **In a host binary,** set the wording with `Options.SignupAgePage`.
+
 ## App catalog
 
 A deployment that hosts several applications can publish their catalog for

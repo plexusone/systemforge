@@ -88,6 +88,7 @@ social_login:
   default_redirect: /
   session_lifetime: 12h
   skip_consent: false
+  signup_minimum_age: 0
   insecure_cookies: false
 ```
 
@@ -98,6 +99,7 @@ social_login:
 | `default_redirect` | `/` | Used when no `return_to` is given. Must itself pass the allowlist. |
 | `session_lifetime` | `12h` | Absolute lifetime of the login session. |
 | `skip_consent` | `false` | Auto-grant consent for users signed in via social login. Only for deployments where every client is first-party; otherwise users see the `/consent` page. |
+| `signup_minimum_age` | `0` | Asks a person's birth month and year before their first login creates an account, and refuses anyone younger, keeping nothing. See [Deploying SystemAuth](deployment.md#minimum-sign-up-age). |
 | `insecure_cookies` | `false` | Drops the `__Host-` prefix and `Secure` flag for local HTTP development. Never enable in production. |
 
 Programmatic setup:

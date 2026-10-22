@@ -79,6 +79,7 @@ clients:
 #   default_redirect: /
 #   session_lifetime: 12h
 #   skip_consent: false      # true only if every client is first-party; otherwise /consent is shown
+#   signup_minimum_age: 0    # ask birth month and year before creating an account; 0 asks nothing
 #   insecure_cookies: false  # true only for local development over plain HTTP
 
 # Database configuration (optional - uses in-memory storage if not specified)
