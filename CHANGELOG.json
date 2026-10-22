@@ -7,7 +7,26 @@
   "maintainers": [
     "grokify"
   ],
-  "unreleased": {},
+  "unreleased": {
+    "added": [
+      {
+        "description": "`social_login.signup_minimum_age`: SystemAuth asks a person's birth month and year on `/signup/age` before a first upstream login creates their account, refuses anyone younger while keeping nothing about them, and asks after the invite gate so an invite is used only once the age is confirmed; hosts set the wording with `Options.SignupAgePage`",
+        "commit": "34ae846"
+      }
+    ],
+    "documentation": [
+      {
+        "description": "Minimum sign-up age in the deployment and social login guides",
+        "commit": "b8f07f8"
+      }
+    ],
+    "tests": [
+      {
+        "description": "Minimum sign-up age: the birth-month boundary, refusal, single use, cross-origin answers and the invite gate",
+        "commit": "3fde13c"
+      }
+    ]
+  },
   "releases": [
     {
       "version": "v0.18.0",
