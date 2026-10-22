@@ -120,6 +120,9 @@ social_login:
   once the age is confirmed.
 - **In a host binary,** set the wording with `Options.SignupAgePage`.
 
+See [Minimum Sign-Up Age](../guides/signup-age.md) for what a person sees
+and how the answer is decided.
+
 ## App catalog
 
 A deployment that hosts several applications can publish their catalog for

@@ -61,6 +61,7 @@ nav:
     - Connections to External Services: guides/connections.md
     - The Organization Console: guides/console.md
     - Key Management: guides/key-management.md
+    - Minimum Sign-Up Age: guides/signup-age.md
   - Identity:
     - Overview: identity/overview.md
     - Users: identity/users.md
