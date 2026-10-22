@@ -470,6 +470,8 @@
       
         
       
+        
+      
     
     
     
@@ -784,6 +786,34 @@
     
   
     Key Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/signup-age/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Minimum Sign-Up Age
   
 
     
@@ -1655,6 +1685,17 @@
     <span class="md-ellipsis">
       
         Invite-only sign-up
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimum-sign-up-age" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum sign-up age
       
     </span>
   </a>
@@ -3998,6 +4039,8 @@
       
         
       
+        
+      
     
     
     
@@ -4069,6 +4112,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.19.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.19.0
   
 
     
@@ -4806,6 +4877,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#minimum-sign-up-age" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum sign-up age
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#app-catalog" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5039,6 +5121,34 @@ address never matches.</p>
   work with the server running. The table is created by the schema migration.
 - <strong>In a host binary,</strong> set <code>Options.InviteOnly</code> and <code>Options.SignupDeniedURL</code>
   on <code>systemauthsvc.New</code>, and manage invites with <code>Service.SignupInvites()</code>.</p>
+<h2 id="minimum-sign-up-age">Minimum sign-up age<a class="headerlink" href="#minimum-sign-up-age" title="Permanent link">&para;</a></h2>
+<p>Set <code>social_login.signup_minimum_age</code> to ask a person their birth month and
+year before their first upstream login creates an account:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">social_login</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">signup_minimum_age</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">18</span>
+</code></pre></div>
+<ul>
+<li><strong>Nothing is kept before the answer.</strong> The login is parked with only its
+  provider and destination; the provider's email and profile are not stored.
+  The person answers on <code>/signup/age</code>, served by SystemAuth.</li>
+<li><strong>At or over the age,</strong> SystemAuth restarts the upstream login, which then
+  creates the account. The provider usually returns at once without asking
+  again.</li>
+<li><strong>Under the age,</strong> the parked login is discarded, no account exists, and
+  the browser is not asked again for a day. Only the refusal is logged, with
+  the provider and no answer.</li>
+<li><strong>The question is neutral.</strong> Month and year start empty, and the year list
+  includes years too recent to pass, so it does not hint at the answer.
+  Without the day, the last day of the birth month counts, so nobody younger
+  passes.</li>
+<li><strong>Only new accounts are asked.</strong> Existing accounts, and children signing in
+  with login tokens, sign in as before. With invite-only sign-up, an
+  uninvited login is refused before it is asked, and the invite is used only
+  once the age is confirmed.</li>
+<li><strong>In a host binary,</strong> set the wording with <code>Options.SignupAgePage</code>.</li>
+</ul>
+<p>See <a href="../../guides/signup-age/">Minimum Sign-Up Age</a> for what a person sees
+and how the answer is decided.</p>
 <h2 id="app-catalog">App catalog<a class="headerlink" href="#app-catalog" title="Permanent link">&para;</a></h2>
 <p>A deployment that hosts several applications can publish their catalog for
 the product switcher in each application's shell: name, launch URL, icon
@@ -5058,10 +5168,10 @@ never appears.</p>
 accounts at services such as a CDN or analytics product. It needs a database
 and the role-based authorization mode, and it adds a keys directory that must
 be backed up with the database:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">connections</span><span class="p">:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">keys_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/lib/systemauth/keys</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">vault</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">env://</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">root_key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SYSTEMAUTH_KEYS_ROOT</span><span class="w">   </span><span class="c1"># 32 bytes, base64 or hex; keep a copy offline</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">connections</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">keys_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/lib/systemauth/keys</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">vault</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">env://</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">root_key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SYSTEMAUTH_KEYS_ROOT</span><span class="w">   </span><span class="c1"># 32 bytes, base64 or hex; keep a copy offline</span>
 </code></pre></div>
 <p><code>systemauth migrate</code> creates the <code>connectforge_*</code> tables and, on
 PostgreSQL, enables row-level security on them. <code>systemauth serve</code> runs the
@@ -5069,7 +5179,7 @@ key lifecycle jobs. See <a href="../../guides/connections/">Connections</a> and
 <a href="../../guides/key-management/">Key management</a>.</p>
 <h2 id="signing-key">Signing key<a class="headerlink" href="#signing-key" title="Permanent link">&para;</a></h2>
 <p>Generate a key once and keep it in your secret store:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>openssl<span class="w"> </span>genpkey<span class="w"> </span>-algorithm<span class="w"> </span>RSA<span class="w"> </span>-pkeyopt<span class="w"> </span>rsa_keygen_bits:3072<span class="w"> </span>-out<span class="w"> </span>systemauth-signing.pem
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>openssl<span class="w"> </span>genpkey<span class="w"> </span>-algorithm<span class="w"> </span>RSA<span class="w"> </span>-pkeyopt<span class="w"> </span>rsa_keygen_bits:3072<span class="w"> </span>-out<span class="w"> </span>systemauth-signing.pem
 </code></pre></div>
 <p>Provide it as a file readable only by the service user, or as PEM content in
 <code>SYSTEMAUTH_SIGNING_KEY</code>. The JWKS <code>kid</code> defaults to the key's RFC 7638
@@ -5078,51 +5188,51 @@ new JWKS on the first token signed with it. Tokens signed with the old key stop
 verifying once it is replaced (overlapping keys are not supported yet).</p>
 <h2 id="example-systemd-caddy">Example: systemd + Caddy<a class="headerlink" href="#example-systemd-caddy" title="Permanent link">&para;</a></h2>
 <p><code>/etc/systemauth/env</code> (mode <code>0600</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">SYSTEMAUTH_ARGS</span><span class="o">=</span>-addr<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>-config<span class="w"> </span>/etc/systemauth/config.yaml<span class="w"> </span>-log-format<span class="w"> </span>json
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">SYSTEMAUTH_SIGNING_KEY_FILE</span><span class="o">=</span>/etc/systemauth/signing.pem
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://systemauth:secret@127.0.0.1:5432/systemauth?sslmode<span class="o">=</span>disable
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nv">GITHUB_CLIENT_ID</span><span class="o">=</span>...
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nv">GITHUB_CLIENT_SECRET</span><span class="o">=</span>...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">SYSTEMAUTH_ARGS</span><span class="o">=</span>-addr<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>-config<span class="w"> </span>/etc/systemauth/config.yaml<span class="w"> </span>-log-format<span class="w"> </span>json
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nv">SYSTEMAUTH_SIGNING_KEY_FILE</span><span class="o">=</span>/etc/systemauth/signing.pem
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://systemauth:secret@127.0.0.1:5432/systemauth?sslmode<span class="o">=</span>disable
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nv">GITHUB_CLIENT_ID</span><span class="o">=</span>...
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nv">GITHUB_CLIENT_SECRET</span><span class="o">=</span>...
 </code></pre></div>
 <p><code>/etc/systemd/system/systemauth.service</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">[Unit]</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="na">Description</span><span class="o">=</span><span class="s">SystemAuth OAuth 2.0 / OpenID Connect server</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="na">After</span><span class="o">=</span><span class="s">network-online.target postgresql.service</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="na">Wants</span><span class="o">=</span><span class="s">network-online.target</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="k">[Service]</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="na">EnvironmentFile</span><span class="o">=</span><span class="s">/etc/systemauth/env</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/local/bin/systemauth $SYSTEMAUTH_ARGS</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="na">User</span><span class="o">=</span><span class="s">systemauth</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="na">NoNewPrivileges</span><span class="o">=</span><span class="s">true</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="na">ProtectSystem</span><span class="o">=</span><span class="s">strict</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="k">[Install]</span>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">[Unit]</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="na">Description</span><span class="o">=</span><span class="s">SystemAuth OAuth 2.0 / OpenID Connect server</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="na">After</span><span class="o">=</span><span class="s">network-online.target postgresql.service</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="na">Wants</span><span class="o">=</span><span class="s">network-online.target</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="k">[Service]</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="na">EnvironmentFile</span><span class="o">=</span><span class="s">/etc/systemauth/env</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/local/bin/systemauth $SYSTEMAUTH_ARGS</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="na">User</span><span class="o">=</span><span class="s">systemauth</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="na">NoNewPrivileges</span><span class="o">=</span><span class="s">true</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="na">ProtectSystem</span><span class="o">=</span><span class="s">strict</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="k">[Install]</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
 </code></pre></div>
 <p>systemd splits <code>$SYSTEMAUTH_ARGS</code> into words, so the flags can live in the
 environment file. <code>/etc/systemauth/config.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">issuer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://auth.example.com</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">database</span><span class="p">:</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">dsn</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${DATABASE_URL}</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nt">keys</span><span class="p">:</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_SIGNING_KEY_FILE}</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nt">features</span><span class="p">:</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">require_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="nt">enable_jwt_access_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="nt">social_login</span><span class="p">:</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="nt">github</span><span class="p">:</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="nt">client_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_ID}</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_SECRET}</span>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span><span class="nt">allowed_redirect_origins</span><span class="p">:</span>
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://app.example.com</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">issuer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://auth.example.com</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">database</span><span class="p">:</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">dsn</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${DATABASE_URL}</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nt">keys</span><span class="p">:</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nt">private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_SIGNING_KEY_FILE}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="nt">features</span><span class="p">:</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nt">require_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span><span class="nt">enable_jwt_access_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="nt">social_login</span><span class="p">:</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span><span class="nt">github</span><span class="p">:</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">    </span><span class="nt">client_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_ID}</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">    </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_SECRET}</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">  </span><span class="nt">allowed_redirect_origins</span><span class="p">:</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://app.example.com</span>
 </code></pre></div>
 <p>Caddy terminates TLS and proxies to the loopback listener:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>auth.example.com {
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    reverse_proxy 127.0.0.1:8081
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>auth.example.com {
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    reverse_proxy 127.0.0.1:8081
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>}
 </code></pre></div>
 <h2 id="health-checks">Health checks<a class="headerlink" href="#health-checks" title="Permanent link">&para;</a></h2>
 <table>

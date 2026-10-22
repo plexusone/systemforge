@@ -470,6 +470,8 @@
       
         
       
+        
+      
     
     
     
@@ -784,6 +786,34 @@
     
   
     Key Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/signup-age/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Minimum Sign-Up Age
   
 
     
@@ -3854,6 +3884,8 @@
       
         
       
+        
+      
     
     
     
@@ -3923,6 +3955,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="v0.19.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.19.0
   
 
     
@@ -4642,16 +4702,19 @@
 <p>Release notes, one file per version, newest first. The
 <a href="changelog/">changelog</a> is generated from <code>CHANGELOG.json</code> and lists every
 change with its commit.</p>
-<p>The latest release, <a href="v0.18.0/">v0.18.0</a>, adds the organization console,
-served by SystemAuth under <code>/console</code>, where organizations manage their
-connections, and records each connection's rotation mode. Nothing is
+<p>The latest release, <a href="v0.19.0/">v0.19.0</a>, adds a minimum sign-up age:
+SystemAuth asks a person's birth month and year before it creates their
+account and refuses anyone younger, keeping nothing about them. Nothing is
 breaking.</p>
-<p>The previous release, <a href="v0.17.0/">v0.17.0</a>, let relying-party applications
+<p>The previous release, <a href="v0.18.0/">v0.18.0</a>, added the organization console,
+served by SystemAuth under <code>/console</code>, where organizations manage their
+connections, and recorded each connection's rotation mode.</p>
+<p>Before it, <a href="v0.17.0/">v0.17.0</a> let relying-party applications
 manage managed principals through an API on SystemAuth and a Go client,
 required consent before anyone becomes a manager, and refused contract
 operations until an application is federated. The last two are breaking;
 read its upgrade notes first.</p>
-<p>Before it, <a href="v0.16.0/">v0.16.0</a> added reconnecting, bindings and
+<p>Before that, <a href="v0.16.0/">v0.16.0</a> added reconnecting, bindings and
 per-connection grants to the connections API and renamed the connection
 library from connectionforge to connectforge. The rename is breaking for
 deployments that enabled connections in v0.15.0.</p>
