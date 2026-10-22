@@ -7,27 +7,47 @@
   "maintainers": [
     "grokify"
   ],
-  "unreleased": {
-    "added": [
-      {
-        "description": "`social_login.signup_minimum_age`: SystemAuth asks a person's birth month and year on `/signup/age` before a first upstream login creates their account, refuses anyone younger while keeping nothing about them, and asks after the invite gate so an invite is used only once the age is confirmed; hosts set the wording with `Options.SignupAgePage`",
-        "commit": "34ae846"
-      }
-    ],
-    "documentation": [
-      {
-        "description": "Minimum sign-up age in the deployment and social login guides",
-        "commit": "b8f07f8"
-      }
-    ],
-    "tests": [
-      {
-        "description": "Minimum sign-up age: the birth-month boundary, refusal, single use, cross-origin answers and the invite gate",
-        "commit": "3fde13c"
-      }
-    ]
-  },
+  "unreleased": {},
   "releases": [
+    {
+      "version": "v0.19.0",
+      "date": "2026-10-22",
+      "highlights": [
+        {
+          "description": "SystemAuth asks a minimum sign-up age before a first upstream login creates an account, refusing anyone younger while keeping nothing about them",
+          "commit": "34ae846"
+        }
+      ],
+      "added": [
+        {
+          "description": "`social_login.signup_minimum_age`: SystemAuth asks a person's birth month and year on `/signup/age` before a first upstream login creates their account, refuses anyone younger while keeping nothing about them, and asks after the invite gate so an invite is used only once the age is confirmed; hosts set the wording with `Options.SignupAgePage`",
+          "commit": "34ae846"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Minimum sign-up age in the deployment and social login guides",
+          "commit": "b8f07f8"
+        },
+        {
+          "description": "Minimum Sign-Up Age guide: what a person sees, configuration, how the answer is decided, invite-only sign-up and limits"
+        },
+        {
+          "description": "v0.19.0 release notes"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Minimum sign-up age: the birth-month boundary, refusal, single use, cross-origin answers and the invite gate",
+          "commit": "3fde13c"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "To ask a minimum age at sign-up, set `social_login.signup_minimum_age`; `0`, the default, asks nothing, and accounts created before it are not asked"
+        }
+      ]
+    },
     {
       "version": "v0.18.0",
       "date": "2026-10-20",

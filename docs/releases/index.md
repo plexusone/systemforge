@@ -4,18 +4,22 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.18.0](v0.18.0.md), adds the organization console,
-served by SystemAuth under `/console`, where organizations manage their
-connections, and records each connection's rotation mode. Nothing is
+The latest release, [v0.19.0](v0.19.0.md), adds a minimum sign-up age:
+SystemAuth asks a person's birth month and year before it creates their
+account and refuses anyone younger, keeping nothing about them. Nothing is
 breaking.
 
-The previous release, [v0.17.0](v0.17.0.md), let relying-party applications
+The previous release, [v0.18.0](v0.18.0.md), added the organization console,
+served by SystemAuth under `/console`, where organizations manage their
+connections, and recorded each connection's rotation mode.
+
+Before it, [v0.17.0](v0.17.0.md) let relying-party applications
 manage managed principals through an API on SystemAuth and a Go client,
 required consent before anyone becomes a manager, and refused contract
 operations until an application is federated. The last two are breaking;
 read its upgrade notes first.
 
-Before it, [v0.16.0](v0.16.0.md) added reconnecting, bindings and
+Before that, [v0.16.0](v0.16.0.md) added reconnecting, bindings and
 per-connection grants to the connections API and renamed the connection
 library from connectionforge to connectforge. The rename is breaking for
 deployments that enabled connections in v0.15.0.
