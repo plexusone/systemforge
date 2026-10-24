@@ -79,6 +79,12 @@ resource-targeted collaborator invites. See
 Signing up through an invite (`signup.SignupWithInvite`) applies the same
 email match (`signup.ErrInviteEmailMismatch`).
 
+Every change of an invite's status (accept, decline, revoke, resend, expiry)
+applies only to a pending invite, as one conditional update. An invite
+revoked while it is being accepted is not accepted, and revoking an accepted
+invite fails rather than marking it revoked (`invite.ErrNotPending`); remove
+the member through the organization instead.
+
 ## Permissions
 
 | Operation | Needs |

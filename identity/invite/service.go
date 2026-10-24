@@ -295,6 +295,11 @@ func (s *DefaultService) GetByID(ctx context.Context, id uuid.UUID) (*Invite, er
 }
 
 // Accept accepts an invite and creates the membership.
+//
+// The invite must still be pending and unexpired when the acceptance is
+// written: the status change is a conditional update in the same
+// transaction as the membership, so an invite revoked or declined while it
+// is being accepted is not accepted.
 func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*Invite, error) {
 	// Get invite
 	inv, err := s.client.Invite.Query().
@@ -309,16 +314,15 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 
 	// Check status
 	if inv.Status != invite.StatusPending {
-		return nil, fmt.Errorf("invite is no longer pending (status: %s)", inv.Status)
+		return nil, fmt.Errorf("%w (status: %s)", ErrNotPending, inv.Status)
 	}
 
 	// Check expiry
 	if time.Now().After(inv.ExpiresAt) {
-		// Mark as expired
-		_, _ = s.client.Invite.UpdateOne(inv).
-			SetStatus(invite.StatusExpired).
-			Save(ctx)
-		return nil, fmt.Errorf("invite has expired")
+		if err := s.markExpired(ctx, inv.ID); err != nil {
+			return nil, err
+		}
+		return nil, ErrExpired
 	}
 
 	// An organization may have become personal after the invite was sent.
@@ -333,7 +337,9 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 	}
 	defer func() {
 		if err != nil {
-			_ = tx.Rollback()
+			if rerr := tx.Rollback(); rerr != nil {
+				s.logger.ErrorContext(ctx, "invite: rolling back acceptance", "invite_id", inv.ID, "error", rerr)
+			}
 		}
 	}()
 
@@ -408,15 +414,30 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 		}
 	}
 
-	// Update invite status
+	// Update invite status, only while it is still pending and
+	// unexpired: a revoke, decline or acceptance that committed first
+	// wins.
 	now := time.Now()
-	inv, err = tx.Invite.UpdateOne(inv).
+	n, err := tx.Invite.Update().
+		Where(
+			invite.ID(inv.ID),
+			invite.StatusEQ(invite.StatusPending),
+			invite.ExpiresAtGT(now),
+		).
 		SetStatus(invite.StatusAccepted).
 		SetAcceptedAt(now).
 		SetAcceptedByPrincipalID(input.PrincipalID).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update invite: %w", err)
+	}
+	if n != 1 {
+		err = ErrNotPending
+		return nil, err
+	}
+	inv, err = tx.Invite.Get(ctx, inv.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read invite: %w", err)
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -456,7 +477,7 @@ func sortedApps(roles map[string]string) []string {
 	return apps
 }
 
-// Decline declines an invite.
+// Decline declines an invite. Only a pending invite can be declined.
 func (s *DefaultService) Decline(ctx context.Context, token string) (*Invite, error) {
 	inv, err := s.client.Invite.Query().
 		Where(invite.Token(hashToken(token))).
@@ -468,30 +489,48 @@ func (s *DefaultService) Decline(ctx context.Context, token string) (*Invite, er
 		return nil, fmt.Errorf("failed to get invite: %w", err)
 	}
 
-	if inv.Status != invite.StatusPending {
-		return nil, fmt.Errorf("invite is no longer pending")
+	if err := s.transition(ctx, inv.ID, invite.StatusDeclined); err != nil {
+		return nil, err
 	}
-
-	inv, err = s.client.Invite.UpdateOne(inv).
-		SetStatus(invite.StatusDeclined).
-		Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decline invite: %w", err)
-	}
-
-	return entInviteToModel(inv), nil
+	return s.GetByID(ctx, inv.ID)
 }
 
-// Revoke revokes an invite.
+// Revoke revokes an invite. Only a pending invite can be revoked; an
+// accepted invite's membership is removed through the organization.
 func (s *DefaultService) Revoke(ctx context.Context, id uuid.UUID) error {
-	_, err := s.client.Invite.UpdateOneID(id).
-		SetStatus(invite.StatusRevoked).
+	return s.transition(ctx, id, invite.StatusRevoked)
+}
+
+// transition moves a pending invite to status with a conditional update,
+// so it never overwrites a transition that committed first.
+func (s *DefaultService) transition(ctx context.Context, id uuid.UUID, status invite.Status) error {
+	n, err := s.client.Invite.Update().
+		Where(invite.ID(id), invite.StatusEQ(invite.StatusPending)).
+		SetStatus(status).
 		Save(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("invite not found: %s", id)
-		}
-		return fmt.Errorf("failed to revoke invite: %w", err)
+		return fmt.Errorf("failed to set invite %s: %w", status, err)
+	}
+	if n == 1 {
+		return nil
+	}
+	exists, err := s.client.Invite.Query().Where(invite.ID(id)).Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get invite: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("invite not found: %s", id)
+	}
+	return ErrNotPending
+}
+
+// markExpired records that a pending invite has expired.
+func (s *DefaultService) markExpired(ctx context.Context, id uuid.UUID) error {
+	if _, err := s.client.Invite.Update().
+		Where(invite.ID(id), invite.StatusEQ(invite.StatusPending)).
+		SetStatus(invite.StatusExpired).
+		Save(ctx); err != nil {
+		return fmt.Errorf("failed to mark invite expired: %w", err)
 	}
 	return nil
 }
@@ -516,8 +555,9 @@ func (s *DefaultService) Resend(ctx context.Context, id uuid.UUID) (*InviteResul
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	// Update invite
-	inv, err = s.client.Invite.UpdateOne(inv).
+	// Update invite, only while it is still pending.
+	n, err := s.client.Invite.Update().
+		Where(invite.ID(inv.ID), invite.StatusEQ(invite.StatusPending)).
 		SetToken(hashToken(token)).
 		SetResendCount(inv.ResendCount + 1).
 		SetLastSentAt(time.Now()).
@@ -525,6 +565,13 @@ func (s *DefaultService) Resend(ctx context.Context, id uuid.UUID) (*InviteResul
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update invite: %w", err)
+	}
+	if n != 1 {
+		return nil, ErrNotPending
+	}
+	inv, err = s.client.Invite.Get(ctx, inv.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get invite: %w", err)
 	}
 
 	return &InviteResult{
