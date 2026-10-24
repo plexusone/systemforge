@@ -69,6 +69,7 @@ nav:
     - Organizations: identity/organizations.md
     - Memberships: identity/memberships.md
     - API Keys: identity/api-keys.md
+    - SCIM Provisioning: identity/scim.md
     - OAuth Client: identity/oauthclient.md
     - Account Security: identity/security.md
     - AI Agents (AAuth): identity/ai-agents-aauth.md

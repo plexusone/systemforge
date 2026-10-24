@@ -11,6 +11,9 @@
     "highlights": [
       {
         "description": "Access tokens are bound to the application they were issued for: relying parties, the session JWT service, and multi-app routing each refuse tokens minted for another application that shares the signing key"
+      },
+      {
+        "description": "SCIM credentials are bound to one organization: a customer's identity provider provisions only its own members and cannot change the identity of users who also belong elsewhere"
       }
     ],
     "security": [
@@ -28,6 +31,12 @@
       },
       {
         "description": "authz `RequireResourceAction` checked a resource named in the request against the caller's role in the organization from their token, so a member of one organization passed resource checks for another organization's resources; the resource's organization now comes only from the extractor"
+      },
+      {
+        "description": "The SCIM store had no tenant scoping, so any SCIM credential could read, change, delete and regroup every user and organization on the platform; each request is now bound to the credential's organization, and requests without a scope are refused"
+      },
+      {
+        "description": "SCIM could rewrite the login email of a user who also belonged to other organizations, enabling account takeover; a tenant now changes email, name and photo only for users it provisioned that belong to no other organization, and manages only the membership of others"
       }
     ],
     "added": [
@@ -48,6 +57,9 @@
       },
       {
         "description": "authz: `WithResourceLookup` and `ResourceOrgLookup` load a resource's owning organization for `RequireResourceAction`, and `ErrResourceNotFound`"
+      },
+      {
+        "description": "scim: `Scope`, `WithScope`, `WithTenant`, `WithPlatformScope`, `ScopeFromContext`, and `API.CredentialMiddleware` with `Credential` to bind SCIM requests to an organization or the platform"
       }
     ],
     "breaking": [
@@ -62,6 +74,9 @@
       },
       {
         "description": "authz: `RequireResourceAction` no longer sets a resource's organization from the caller's token; extractor errors answer 400 for a missing or malformed ID, 403 for `ErrResourceNotFound`, and 500 otherwise"
+      },
+      {
+        "description": "scim/store: the Ent store refuses requests without a provisioning scope. For a tenant, `active` is the membership's state, creating a user who exists elsewhere links them as a member, deleting a shared user removes only the membership, and groups cannot be created, renamed or deleted"
       }
     ],
     "upgradeGuide": [
@@ -79,6 +94,19 @@
       },
       {
         "description": "authz: replace `WithResourceID` with `WithResourceLookup` on routes whose access depends on the organization role, passing a lookup that returns the resource's owning organization"
+      },
+      {
+        "description": "scim: authenticate with `CredentialMiddleware` and bind each SCIM credential to its organization (`Scope{OrganizationID: ...}`); give `Scope{Platform: true}` only to platform operator credentials"
+      }
+    ],
+    "deprecated": [
+      {
+        "description": "scim: `API.Middleware`, which binds no provisioning scope; use `CredentialMiddleware`"
+      }
+    ],
+    "documentation": [
+      {
+        "description": "SCIM provisioning guide"
       }
     ]
   },
