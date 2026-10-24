@@ -2,8 +2,10 @@ package bff
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/plexusone/omnistorage-core/kvs"
@@ -49,6 +51,18 @@ type OmniStorageConfig struct {
 	// ControlOptions are optional settings for the controlled store wrapper.
 	// Use omnisession.WithLogger() and omnisession.WithViolationHandler().
 	ControlOptions []omnisession.ControlOption
+
+	// Sealer encrypts the session's tokens, DPoP key pair and other
+	// BFF fields before they are written, bound to the session ID and
+	// SiteID. Required for the redis backend and NewOmniStorageStoreWithKVS
+	// unless InsecurePlaintext is set; optional for the in-process memory
+	// backend. Once set, sessions stored in plaintext are rejected.
+	Sealer SessionSealer
+
+	// InsecurePlaintext stores tokens and DPoP private keys unencrypted
+	// when no Sealer is set, so anyone who can read the backend (or its
+	// snapshots and replicas) can use them. For local development only.
+	InsecurePlaintext bool
 }
 
 // DefaultOmniStorageConfig returns sensible defaults.
@@ -66,10 +80,24 @@ func DefaultOmniStorageConfig() OmniStorageConfig {
 // backend (redis) configured without OmniStorageConfig.SiteID.
 var ErrSiteIDRequired = errors.New("bff: OmniStorageConfig.SiteID is required for a shared session backend")
 
+// ErrSealerRequired is returned for a persistent session backend configured
+// without OmniStorageConfig.Sealer or InsecurePlaintext.
+var ErrSealerRequired = errors.New("bff: OmniStorageConfig.Sealer is required for a persistent session backend")
+
+const (
+	// omniDataPlain holds the BFF fields as JSON when no sealer is set.
+	omniDataPlain = "_bff"
+	// omniDataSealed holds the sealed BFF fields, base64-encoded.
+	omniDataSealed = "_bff_sealed"
+	// omniSealAADPrefix versions the associated data of sealed sessions.
+	omniSealAADPrefix = "systemforge/bff-session/v1"
+)
+
 // OmniStorageStore adapts omnistorage session storage to the systemforge Store interface.
 type OmniStorageStore struct {
 	store  omnisession.Store
 	siteID string
+	sealer SessionSealer
 }
 
 // NewOmniStorageStore creates a new omnistorage-backed session store.
@@ -93,6 +121,9 @@ func NewOmniStorageStore(cfg OmniStorageConfig) (*OmniStorageStore, error) {
 		if cfg.SiteID == "" {
 			return nil, ErrSiteIDRequired
 		}
+		if cfg.Sealer == nil && !cfg.InsecurePlaintext {
+			return nil, ErrSealerRequired
+		}
 
 		// Create Redis KVS backend
 		redisStore, err := kvsredis.New(kvsredis.Config{
@@ -113,11 +144,20 @@ func NewOmniStorageStore(cfg OmniStorageConfig) (*OmniStorageStore, error) {
 		return nil, ErrInvalidSession
 	}
 
-	return &OmniStorageStore{store: store, siteID: cfg.SiteID}, nil
+	return &OmniStorageStore{store: store, siteID: cfg.SiteID, sealer: cfg.Sealer}, nil
 }
 
-// NewOmniStorageStoreWithKVS creates a store using a pre-configured KVS backend.
-func NewOmniStorageStoreWithKVS(backend kvs.ListableStore, cfg OmniStorageConfig) *OmniStorageStore {
+// NewOmniStorageStoreWithKVS creates a store using a pre-configured KVS
+// backend. Since the backend may be shared and persistent, it requires
+// SiteID (ErrSiteIDRequired) and a Sealer unless InsecurePlaintext is set
+// (ErrSealerRequired).
+func NewOmniStorageStoreWithKVS(backend kvs.ListableStore, cfg OmniStorageConfig) (*OmniStorageStore, error) {
+	if cfg.SiteID == "" {
+		return nil, ErrSiteIDRequired
+	}
+	if cfg.Sealer == nil && !cfg.InsecurePlaintext {
+		return nil, ErrSealerRequired
+	}
 	omniCfg := omnisession.Config{
 		SiteID:             cfg.SiteID,
 		MaxSessionSize:     cfg.MaxSessionSize,
@@ -127,12 +167,12 @@ func NewOmniStorageStoreWithKVS(backend kvs.ListableStore, cfg OmniStorageConfig
 		KeyPrefix:          cfg.KeyPrefix,
 	}
 	store := sessionkvs.NewWithControls(backend, omniCfg, cfg.ControlOptions...)
-	return &OmniStorageStore{store: store, siteID: cfg.SiteID}
+	return &OmniStorageStore{store: store, siteID: cfg.SiteID, sealer: cfg.Sealer}, nil
 }
 
 // Create stores a new session.
 func (s *OmniStorageStore) Create(ctx context.Context, session *Session) error {
-	omniSession, err := s.toOmniSession(session)
+	omniSession, err := s.toOmniSession(ctx, session)
 	if err != nil {
 		return err
 	}
@@ -145,12 +185,12 @@ func (s *OmniStorageStore) Get(ctx context.Context, id string) (*Session, error)
 	if err != nil {
 		return nil, mapError(err)
 	}
-	return fromOmniSession(omniSession)
+	return s.fromOmniSession(ctx, omniSession)
 }
 
 // Update updates an existing session.
 func (s *OmniStorageStore) Update(ctx context.Context, session *Session) error {
-	omniSession, err := s.toOmniSession(session)
+	omniSession, err := s.toOmniSession(ctx, session)
 	if err != nil {
 		return err
 	}
@@ -198,10 +238,17 @@ type sessionData struct {
 	UserAgent             string            `json:"user_agent,omitempty"`
 }
 
+// sealAAD binds sealed data to one session of one site, so a ciphertext
+// copied to another session's record does not open.
+func (st *OmniStorageStore) sealAAD(sessionID string) []byte {
+	return []byte(omniSealAADPrefix + "\x00" + st.siteID + "\x00" + sessionID)
+}
+
 // toOmniSession converts a systemforge Session to omnistorage Session,
 // tagged with the store's SiteID: every write must carry it, or the next
-// Get under site isolation would treat the session as another site's.
-func (st *OmniStorageStore) toOmniSession(s *Session) (*omnisession.Session, error) {
+// Get under site isolation would treat the session as another site's. The
+// BFF fields are sealed when the store has a sealer.
+func (st *OmniStorageStore) toOmniSession(ctx context.Context, s *Session) (*omnisession.Session, error) {
 	// Store systemforge-specific fields in Data
 	data := sessionData{
 		AccessToken:           s.AccessToken,
@@ -220,14 +267,21 @@ func (st *OmniStorageStore) toOmniSession(s *Session) (*omnisession.Session, err
 		return nil, err
 	}
 
+	stored := map[string]any{omniDataPlain: string(dataBytes)}
+	if st.sealer != nil {
+		sealed, err := st.sealer.Seal(ctx, dataBytes, st.sealAAD(s.ID))
+		if err != nil {
+			return nil, fmt.Errorf("bff: sealing session: %w", err)
+		}
+		stored = map[string]any{omniDataSealed: base64.StdEncoding.EncodeToString(sealed)}
+	}
+
 	return &omnisession.Session{
 		ID:             s.ID,
 		UserID:         s.UserID,
 		OrganizationID: s.OrganizationID,
 		SiteID:         st.siteID,
-		Data: map[string]any{
-			"_bff": string(dataBytes),
-		},
+		Data:           stored,
 		CreatedAt:      s.CreatedAt,
 		UpdatedAt:      s.UpdatedAt,
 		LastAccessedAt: s.LastAccessedAt,
@@ -236,7 +290,10 @@ func (st *OmniStorageStore) toOmniSession(s *Session) (*omnisession.Session, err
 }
 
 // fromOmniSession converts an omnistorage Session to systemforge Session.
-func fromOmniSession(os *omnisession.Session) (*Session, error) {
+// With a sealer, only sealed BFF fields are accepted: a plaintext record
+// (written before sealing was enabled, or planted in the backend) is
+// rejected with ErrInvalidSession.
+func (st *OmniStorageStore) fromOmniSession(ctx context.Context, os *omnisession.Session) (*Session, error) {
 	s := &Session{
 		ID:             os.ID,
 		UserID:         os.UserID,
@@ -247,25 +304,49 @@ func fromOmniSession(os *omnisession.Session) (*Session, error) {
 		ExpiresAt:      os.ExpiresAt,
 	}
 
-	// Extract systemforge-specific fields from Data
-	if os.Data != nil {
-		if bffData, ok := os.Data["_bff"].(string); ok {
-			var data sessionData
-			if err := json.Unmarshal([]byte(bffData), &data); err == nil {
-				s.AccessToken = data.AccessToken
-				s.RefreshToken = data.RefreshToken
-				s.AccessTokenExpiresAt = data.AccessTokenExpiresAt
-				s.RefreshTokenExpiresAt = data.RefreshTokenExpiresAt
-				s.DPoPKeyPairJSON = data.DPoPKeyPairJSON
-				s.DPoPThumbprint = data.DPoPThumbprint
-				s.Metadata = data.Metadata
-				s.IPAddress = data.IPAddress
-				s.UserAgent = data.UserAgent
-			}
-		}
+	raw, err := st.bffData(ctx, os)
+	if err != nil {
+		return nil, err
 	}
+	var data sessionData
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return nil, fmt.Errorf("%w: decoding session data: %v", ErrInvalidSession, err)
+	}
+	s.AccessToken = data.AccessToken
+	s.RefreshToken = data.RefreshToken
+	s.AccessTokenExpiresAt = data.AccessTokenExpiresAt
+	s.RefreshTokenExpiresAt = data.RefreshTokenExpiresAt
+	s.DPoPKeyPairJSON = data.DPoPKeyPairJSON
+	s.DPoPThumbprint = data.DPoPThumbprint
+	s.Metadata = data.Metadata
+	s.IPAddress = data.IPAddress
+	s.UserAgent = data.UserAgent
 
 	return s, nil
+}
+
+// bffData returns the stored BFF fields as JSON, opening them if sealed.
+func (st *OmniStorageStore) bffData(ctx context.Context, os *omnisession.Session) ([]byte, error) {
+	if st.sealer == nil {
+		plain, ok := os.Data[omniDataPlain].(string)
+		if !ok {
+			return nil, fmt.Errorf("%w: no session data (sealed data needs a Sealer)", ErrInvalidSession)
+		}
+		return []byte(plain), nil
+	}
+	encoded, ok := os.Data[omniDataSealed].(string)
+	if !ok {
+		return nil, fmt.Errorf("%w: session data is not sealed", ErrInvalidSession)
+	}
+	sealed, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("%w: decoding sealed session data: %v", ErrInvalidSession, err)
+	}
+	raw, err := st.sealer.Open(ctx, sealed, st.sealAAD(os.ID))
+	if err != nil {
+		return nil, fmt.Errorf("%w: opening sealed session data: %v", ErrInvalidSession, err)
+	}
+	return raw, nil
 }
 
 // mapError maps omnistorage errors to systemforge errors.

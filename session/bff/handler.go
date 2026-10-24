@@ -394,7 +394,10 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 	// session indexes) in the same key space.
 	session, err := h.store.Get(ctx, sessionID)
 	if err != nil {
-		if errors.Is(err, ErrSessionNotFound) || errors.Is(err, ErrSessionExpired) {
+		// A session that is gone, expired or unreadable (for example
+		// stored before sealing was enabled) cannot be used either, so
+		// only the cookie is left to clear.
+		if errors.Is(err, ErrSessionNotFound) || errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrInvalidSession) {
 			h.cookieManager.ClearSessionCookie(w)
 			h.writeJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 			return

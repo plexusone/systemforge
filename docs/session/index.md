@@ -77,6 +77,7 @@ import (
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:        "redis",
     SiteID:         "myapp", // required for redis
+    Sealer:         sealer,  // required for redis: encrypts tokens at rest
     RedisURL:       "redis://localhost:6379",
     MaxSessionSize: 1024 * 1024, // 1MB
     DefaultTTL:     24 * time.Hour,
@@ -133,6 +134,7 @@ The OmniStorage backend provides:
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:        "redis",
     SiteID:         "myapp", // required for redis
+    Sealer:         sealer,  // required for redis: encrypts tokens at rest
     RedisURL:       os.Getenv("REDIS_URL"),
     MaxSessionSize: 1024 * 1024,
     ControlOptions: []omnisession.ControlOption{

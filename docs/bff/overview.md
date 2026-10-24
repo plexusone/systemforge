@@ -287,19 +287,24 @@ store := bff.NewMemoryStore(bff.DefaultStoreConfig())
 // - Not suitable for multi-instance deployments
 ```
 
-### RedisStore (Production)
+### OmniStorageStore with Redis (Production)
 
 ```go
-store, err := bff.NewRedisStore(bff.RedisStoreConfig{
-    Addr:     "localhost:6379",
-    Password: "",
-    DB:       0,
-    Prefix:   "bff:session:",
+sealer, err := bff.NewKeyringSealer("k1", map[string][]byte{"k1": sessionKey})
+// handle err
+
+store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
+    Backend:  "redis",
+    RedisURL: "redis://localhost:6379",
+    SiteID:   "myapp", // required: isolates this app's sessions
+    Sealer:   sealer,  // required: encrypts tokens and DPoP keys at rest
 })
 // - Persistent across restarts
 // - Shared across multiple instances
 // - Recommended for production
 ```
+
+See [BFF Sessions](../session/bff-sessions.md) for the full configuration.
 
 ## Frontend Integration
 

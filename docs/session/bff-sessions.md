@@ -68,6 +68,7 @@ For production with Redis and security controls:
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:         "redis",
     SiteID:          "myapp", // required for redis
+    Sealer:          sealer,  // required for redis; see below
     RedisURL:        "redis://localhost:6379",
     MaxSessionSize:  1024 * 1024, // 1MB
     DefaultTTL:      24 * time.Hour,
@@ -76,6 +77,28 @@ store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
 })
 ```
 
+Tokens and DPoP private keys are sealed before they reach Redis. `Sealer` is
+required for the redis backend (`bff.ErrSealerRequired` otherwise). Each
+session's data is encrypted with AES-256-GCM and bound to its session ID and
+`SiteID`, so a ciphertext copied to another record does not open. Two sealers
+are provided:
+
+```go
+// Application-held keys, with key IDs for rotation: add the new key, make it
+// active, and drop the old one once sessions sealed with it have expired.
+sealer, err := bff.NewKeyringSealer("k1", map[string][]byte{
+    "k1": sessionKey, // 32 bytes, from your secret store
+})
+
+// Or a keyforge purpose key from the keys package, which versions and
+// rotates keys itself.
+sealer := bff.NewKeysSealer(sysKeys, "bff-session")
+```
+
+Once a sealer is configured, sessions stored in plaintext are rejected and
+their users sign in again. `InsecurePlaintext: true` disables the requirement
+for local development only.
+
 #### OmniStorage Configuration
 
 | Field | Description | Default |
@@ -83,6 +106,8 @@ store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
 | `Backend` | `"memory"` or `"redis"` | `"memory"` |
 | `RedisURL` | Redis connection URL | Required for redis |
 | `SiteID` | Tags every session with this application; a session tagged for another site is not found | Required for redis |
+| `Sealer` | Encrypts tokens and DPoP keys at rest (`NewKeyringSealer`, `NewKeysSealer`) | Required for redis |
+| `InsecurePlaintext` | Store secrets unencrypted without a `Sealer` (development only) | `false` |
 | `MaxSessionSize` | Max session size in bytes | 1MB |
 | `DefaultTTL` | Session lifetime | 24 hours |
 | `CleanupInterval` | Cleanup frequency | 5 minutes |
@@ -97,6 +122,7 @@ import omnisession "github.com/plexusone/omnistorage-core/session"
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:        "redis",
     SiteID:         "myapp", // required for redis
+    Sealer:         sealer,  // required for redis
     RedisURL:       os.Getenv("REDIS_URL"),
     MaxSessionSize: 1024 * 1024,
     ControlOptions: []omnisession.ControlOption{

@@ -15,7 +15,11 @@ func newTestOmniStore(t *testing.T, backend *kvsmemory.Store, siteID string) *Om
 	cfg := DefaultOmniStorageConfig()
 	cfg.SiteID = siteID
 	cfg.CleanupInterval = 0
-	store := NewOmniStorageStoreWithKVS(backend, cfg)
+	cfg.Sealer = testSealer(t)
+	store, err := NewOmniStorageStoreWithKVS(backend, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() {
 		if err := store.Close(); err != nil {
 			t.Errorf("closing store: %v", err)
