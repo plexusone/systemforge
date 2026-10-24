@@ -640,6 +640,10 @@ func (s *MemoryStorage) UpdateHuman(_ context.Context, h *HumanPrincipal) error 
 		return ErrPrincipalExists
 	}
 	stored := copyHuman(h)
+	if !strings.EqualFold(current.Email, h.Email) {
+		// A new address is unverified until it is proven.
+		stored.EmailVerified = false
+	}
 	stored.CreatedAt = current.CreatedAt
 	stored.UpdatedAt = time.Now()
 	s.humans[h.ID] = stored

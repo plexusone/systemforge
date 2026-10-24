@@ -173,6 +173,10 @@ A person who first signed in with a social provider and later sets a password au
 
 Identities synced from a federation hub are linked as external identities with the provider `systemauth.FederationProvider` and the federation identity ID as the subject. Creating an identity whose email already exists links the existing human instead of creating a second one.
 
+### Changing an Email
+
+Verification belongs to an address. `Storage.UpdateHuman` (and so `UpdateIdentity` and federation `update` syncs) leaves a changed email unverified, whatever the caller's `EmailVerified` says; a change of case only keeps it. An unverified address is not used to link social logins to the account and is reported as `email_verified: false`. After proving the new address, record it with a second update that sets `EmailVerified`.
+
 ## Platform Admins
 
 `is_platform_admin` on the human extension grants cross-organization access:

@@ -64,6 +64,10 @@ type Storage interface {
 	// the same identity to the same principal again is a no-op; linking it
 	// to a different principal returns ErrExternalIdentityExists.
 	LinkExternalIdentity(ctx context.Context, principalID uuid.UUID, provider, subject string) error
+	// UpdateHuman replaces a human's profile fields. An update that
+	// changes the email (other than its case) leaves the new address
+	// unverified whatever h.EmailVerified says; once the new address is
+	// proven, a second update with EmailVerified set records it.
 	UpdateHuman(ctx context.Context, h *HumanPrincipal) error
 	DeleteHuman(ctx context.Context, id uuid.UUID) error
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -225,8 +226,15 @@ func (s *EntStorage) LinkExternalIdentity(ctx context.Context, principalID uuid.
 	return nil
 }
 
+// emailChanged reports whether an update from stored to next changes the
+// address, as opposed to its case.
+func emailChanged(stored *string, next string) bool {
+	return stored == nil || !strings.EqualFold(*stored, next)
+}
+
 // UpdateHuman implements Storage. It replaces the profile fields of an
-// existing human principal with those in h.
+// existing human principal with those in h. Changing the email clears its
+// verification.
 func (s *EntStorage) UpdateHuman(ctx context.Context, h *HumanPrincipal) error {
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		p, err := tx.Principal.Query().
@@ -277,6 +285,11 @@ func (s *EntStorage) UpdateHuman(ctx context.Context, h *HumanPrincipal) error {
 			hu.SetLocale(h.Locale)
 		}
 		switch {
+		case emailChanged(p.Edges.Human.Email, h.Email):
+			// Verification belongs to an address, not to the account: a
+			// new address is unverified until it is proven, however the
+			// caller's copy of the flag reads.
+			hu.ClearEmailVerifiedAt()
 		case h.EmailVerified && p.Edges.Human.EmailVerifiedAt == nil:
 			hu.SetEmailVerifiedAt(time.Now())
 		case !h.EmailVerified:

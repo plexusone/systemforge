@@ -156,6 +156,70 @@ func TestSocialThenPasswordLoginIsOnePrincipal(t *testing.T) {
 	}
 }
 
+// emailChangeContract verifies that verification belongs to an address:
+// changing a human's email leaves the new one unverified even when the
+// caller's copy still says verified, so it is neither found by
+// FindByVerifiedEmail nor claimed as verified, while a case-only change
+// keeps it.
+func emailChangeContract(t *testing.T, s Storage, dir PrincipalDirectory) {
+	t.Helper()
+	ctx := context.Background()
+	h := &HumanPrincipal{Email: "ada@example.com", DisplayName: "Ada", Active: true, EmailVerified: true}
+	if err := s.CreateHuman(ctx, h); err != nil {
+		t.Fatalf("CreateHuman: %v", err)
+	}
+
+	loaded, err := s.GetHuman(ctx, h.ID)
+	if err != nil {
+		t.Fatalf("GetHuman: %v", err)
+	}
+	loaded.Email = "Ada@Example.com"
+	if err := s.UpdateHuman(ctx, loaded); err != nil {
+		t.Fatalf("case-only UpdateHuman: %v", err)
+	}
+	if got, err := s.GetHuman(ctx, h.ID); err != nil || !got.EmailVerified {
+		t.Errorf("after a case-only change = %+v, %v; want still verified", got, err)
+	}
+
+	loaded.Email = "victim@example.com"
+	if !loaded.EmailVerified {
+		t.Fatal("loaded copy is not verified")
+	}
+	if err := s.UpdateHuman(ctx, loaded); err != nil {
+		t.Fatalf("UpdateHuman: %v", err)
+	}
+	got, err := s.GetHuman(ctx, h.ID)
+	if err != nil {
+		t.Fatalf("GetHuman: %v", err)
+	}
+	if got.Email != "victim@example.com" || got.EmailVerified {
+		t.Errorf("after an email change = %+v; want the new email, unverified", got)
+	}
+	if dir != nil {
+		if p, err := dir.FindByVerifiedEmail(ctx, "victim@example.com"); !errors.Is(err, ErrPrincipalNotFound) {
+			t.Errorf("FindByVerifiedEmail(new address) = %+v, %v; want ErrPrincipalNotFound", p, err)
+		}
+	}
+
+	// Once proven, the new address is marked verified with a second update.
+	got.EmailVerified = true
+	if err := s.UpdateHuman(ctx, got); err != nil {
+		t.Fatalf("UpdateHuman verifying: %v", err)
+	}
+	if got, err := s.GetHuman(ctx, h.ID); err != nil || !got.EmailVerified {
+		t.Errorf("after verifying = %+v, %v; want verified", got, err)
+	}
+}
+
+func TestEmailChangeClearsVerificationMemory(t *testing.T) {
+	emailChangeContract(t, NewMemoryStorage(), nil)
+}
+
+func TestEmailChangeClearsVerificationEnt(t *testing.T) {
+	db := newHumanTestDB(t)
+	emailChangeContract(t, NewEntStorage(db), NewEntPrincipalDirectory(db))
+}
+
 func TestFederationSyncLinksAndResolves(t *testing.T) {
 	ctx := context.Background()
 	s := NewEntStorage(newHumanTestDB(t))
