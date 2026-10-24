@@ -2,8 +2,10 @@ package oauth
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -71,9 +73,9 @@ func TestOpenIDConfiguration(t *testing.T) {
 		t.Errorf("expected jwks_uri %q, got %q", expectedJWKSURI, oidc.JWKSURI)
 	}
 
-	// Verify response types supported
-	if len(oidc.ResponseTypesSupported) != 2 {
-		t.Errorf("expected 2 response types, got %d", len(oidc.ResponseTypesSupported))
+	// Only the authorization code flow is supported.
+	if len(oidc.ResponseTypesSupported) != 1 || oidc.ResponseTypesSupported[0] != "code" {
+		t.Errorf("expected response_types_supported [code], got %v", oidc.ResponseTypesSupported)
 	}
 
 	// Verify grant types supported
@@ -110,9 +112,29 @@ func TestJWKS(t *testing.T) {
 
 	jwks := output.Body
 
-	// Currently returns empty JWKS
+	// A provider without a key publishes an empty set.
 	if jwks.Keys == nil {
 		t.Error("expected Keys to be non-nil (empty slice)")
+	}
+
+	p, err := NewProvider(nil, DefaultConfig("https://auth.example.com", []byte("test-secret-32-bytes-long-xxxxx")))
+	if err != nil {
+		t.Fatalf("NewProvider: %v", err)
+	}
+	output, err = (&API{provider: p}).getJWKS(context.Background(), &struct{}{})
+	if err != nil {
+		t.Fatalf("getJWKS returned error: %v", err)
+	}
+	if len(output.Body.Keys) != 1 {
+		t.Fatalf("expected the provider's key, got %d keys", len(output.Body.Keys))
+	}
+	k := output.Body.Keys[0]
+	n, err := base64.RawURLEncoding.DecodeString(k.N)
+	if err != nil {
+		t.Fatalf("decode n: %v", err)
+	}
+	if k.Kty != "RSA" || k.Alg != "RS256" || k.Kid == "" || new(big.Int).SetBytes(n).Cmp(p.key.N) != 0 {
+		t.Errorf("JWK does not describe the provider key: %+v", k)
 	}
 }
 

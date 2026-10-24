@@ -2,9 +2,13 @@ package oauth
 
 import (
 	"context"
+	"encoding/base64"
+	"math/big"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/plexusone/systemforge/identity/systemauth"
 )
 
 // OpenIDConfiguration represents the OpenID Connect discovery document.
@@ -82,9 +86,10 @@ func (a *API) getOpenIDConfiguration(ctx context.Context, input *struct{}) (*Ope
 		IntrospectionEndpoint: issuer + "/oauth/introspect",
 		RevocationEndpoint:    issuer + "/oauth/revoke",
 		JWKSURI:               issuer + "/.well-known/jwks.json",
+		// Only the authorization code flow is composed; there is no
+		// implicit grant.
 		ResponseTypesSupported: []string{
 			"code",
-			"token",
 		},
 		GrantTypesSupported: []string{
 			"authorization_code",
@@ -104,9 +109,23 @@ func (a *API) getOpenIDConfiguration(ctx context.Context, input *struct{}) (*Ope
 	return &OpenIDConfigOutput{Body: config}, nil
 }
 
-// getJWKS returns the JSON Web Key Set for token verification.
+// getJWKS returns the JSON Web Key Set with the provider's RSA public key.
 func (a *API) getJWKS(ctx context.Context, input *struct{}) (*JWKSOutput, error) {
-	// Return empty JWKS for now - in production, this would return actual public keys
-	// TODO: Add actual JWK generation from the provider's RSA key
-	return &JWKSOutput{Body: JWKS{Keys: []JWK{}}}, nil
+	key := a.provider.key
+	if key == nil {
+		return &JWKSOutput{Body: JWKS{Keys: []JWK{}}}, nil
+	}
+	kid, err := systemauth.KeyThumbprint(key)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("signing key unavailable")
+	}
+	jwk := JWK{
+		Kty: "RSA",
+		Use: "sig",
+		Kid: kid,
+		Alg: "RS256",
+		N:   base64.RawURLEncoding.EncodeToString(key.N.Bytes()),
+		E:   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.E)).Bytes()),
+	}
+	return &JWKSOutput{Body: JWKS{Keys: []JWK{jwk}}}, nil
 }
