@@ -43,6 +43,9 @@
       },
       {
         "description": "bff `RegisterHumaRoutes` registered stub handlers for logout, session and refresh; on a router shared with Huma, as documented, they took precedence over the mounted BFF handler, so logout answered success without ending the session and the stubs skipped the Origin check and rate limiter. It now only documents the routes"
+      },
+      {
+        "description": "A connection's creator kept view, use, manage and share rights on it after leaving or being removed from the organization, and could grant themselves back in; creator rights now require current membership of the owning organization"
       }
     ],
     "added": [
@@ -83,6 +86,9 @@
       },
       {
         "description": "scim/store: the Ent store refuses requests without a provisioning scope. For a tenant, `active` is the membership's state, creating a user who exists elsewhere links them as a member, deleting a shared user removes only the membership, and groups cannot be created, renamed or deleted"
+      },
+      {
+        "description": "connections: creator rights need an `Options.Authorizer` that implements `authz.OrgAuthorizer` (the rbac and SpiceDB providers do); with another authorizer, creators are decided by role and grants alone"
       }
     ],
     "upgradeGuide": [
