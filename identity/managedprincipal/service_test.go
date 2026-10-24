@@ -362,7 +362,7 @@ func TestConcurrentRemoveKeepsAManager(t *testing.T) {
 		}),
 		rbac.WithPlatformAdminChecker(func(_ context.Context, id uuid.UUID) (bool, error) { return id == root, nil }),
 		rbac.WithPlatformAdminBypass(true),
-	)))
+	)), WithDirectManagerAdds())
 
 	for range 10 {
 		a := addHuman(t, db, uuid.NewString()+"@example.com", true)
