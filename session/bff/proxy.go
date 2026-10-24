@@ -2,11 +2,13 @@ package bff
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -15,7 +17,10 @@ import (
 
 // ProxyConfig contains configuration for the API proxy.
 type ProxyConfig struct {
-	// TargetURL is the base URL of the API backend.
+	// TargetURL is the base URL of the API backend. Proxied paths always
+	// stay under its path: requests with "." or ".." segments, encoded
+	// slashes or backslashes, or a PathRewrite result outside the base are
+	// rejected with 400 (ErrInvalidProxyPath).
 	TargetURL string
 
 	// UseDPoP enables DPoP proof injection.
@@ -54,6 +59,17 @@ type ProxyConfig struct {
 	// ResponseHeadersToRemove specifies headers to remove from the response.
 	ResponseHeadersToRemove []string
 }
+
+// ErrInvalidProxyPath is returned for a request path the proxy refuses to
+// forward: one with "." or ".." segments, an encoded slash or backslash, or
+// one that would resolve outside the upstream base path (the path of
+// ProxyConfig.TargetURL). Proxied requests carry the user's credentials, so
+// the upstream must only ever see paths under the configured base.
+var ErrInvalidProxyPath = errors.New("invalid proxy path")
+
+// upstreamPathKey carries the validated upstream path from Handler to
+// rewriteRequest.
+type upstreamPathKey struct{}
 
 // alwaysStripHeaders are removed from every proxied request regardless of
 // ProxyConfig.HeadersToRemove.
@@ -143,9 +159,23 @@ func (p *Proxy) Handler() http.Handler {
 			return
 		}
 
+		// Resolve the upstream path before anything is forwarded, so a
+		// path that would escape the upstream base never leaves the BFF.
+		if hasEncodedSeparator(r.URL.EscapedPath()) {
+			p.handleError(w, r, ErrInvalidProxyPath)
+			return
+		}
+		upstreamPath, err := p.upstreamPath(r.URL.Path)
+		if err != nil {
+			p.handleError(w, r, err)
+			return
+		}
+
 		// Clone the request and add to context for director
 		req := r.Clone(r.Context())
-		req = req.WithContext(contextWithSession(req.Context(), session))
+		ctx := contextWithSession(req.Context(), session)
+		ctx = context.WithValue(ctx, upstreamPathKey{}, upstreamPath)
+		req = req.WithContext(ctx)
 
 		// Use reverse proxy
 		p.reverseProxy.ServeHTTP(w, req) //nolint:gosec // G704: proxy is designed to forward to configured backend URL
@@ -160,18 +190,14 @@ func (p *Proxy) rewriteRequest(req *http.Request) {
 	req.URL.Scheme = p.targetURL.Scheme
 	req.URL.Host = p.targetURL.Host
 
-	// Apply path transformations
-	path := req.URL.Path
-	if p.config.StripPrefix != "" {
-		path = strings.TrimPrefix(path, p.config.StripPrefix)
-		if path == "" {
-			path = "/"
-		}
+	// Handler validated and resolved the path; reaching here without it
+	// means the reverse proxy was invoked some other way.
+	upstreamPath, ok := req.Context().Value(upstreamPathKey{}).(string)
+	if !ok {
+		panic("bff: proxy request reached rewrite without a validated path")
 	}
-	if p.config.PathRewrite != nil {
-		path = p.config.PathRewrite(path)
-	}
-	req.URL.Path = singleJoiningSlash(p.targetURL.Path, path)
+	req.URL.Path = upstreamPath
+	req.URL.RawPath = ""
 
 	// Set host header
 	req.Host = p.targetURL.Host
@@ -258,6 +284,11 @@ func (p *Proxy) handleError(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 
+	if err == ErrInvalidProxyPath {
+		http.Error(w, "Bad Request: Invalid path", http.StatusBadRequest)
+		return
+	}
+
 	http.Error(w, "Bad Gateway", http.StatusBadGateway)
 }
 
@@ -273,16 +304,14 @@ func (p *Proxy) ProxyRequest(ctx context.Context, method, path string, body io.R
 	}
 
 	// Build target URL
-	targetPath := path
-	if p.config.StripPrefix != "" {
-		targetPath = strings.TrimPrefix(targetPath, p.config.StripPrefix)
-	}
-	if p.config.PathRewrite != nil {
-		targetPath = p.config.PathRewrite(targetPath)
+	targetPath, err := p.upstreamPath(path)
+	if err != nil {
+		return nil, err
 	}
 
 	u := *p.targetURL
-	u.Path = singleJoiningSlash(p.targetURL.Path, targetPath)
+	u.Path = targetPath
+	u.RawPath = ""
 
 	// Create request
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
@@ -307,6 +336,57 @@ func (p *Proxy) ProxyRequest(ctx context.Context, method, path string, body io.R
 
 	// Send request
 	return p.client.Do(req) //nolint:gosec // G704: requests to token endpoint with configured URL
+}
+
+// upstreamPath maps a request path (decoded) onto the upstream: it applies
+// StripPrefix and PathRewrite, joins the result onto the TargetURL path, and
+// returns ErrInvalidProxyPath if the path has dot segments, a backslash or a
+// NUL, or does not stay under the TargetURL path.
+func (p *Proxy) upstreamPath(reqPath string) (string, error) {
+	rel := reqPath
+	if p.config.StripPrefix != "" {
+		rel = strings.TrimPrefix(rel, p.config.StripPrefix)
+		if rel == "" {
+			rel = "/"
+		}
+	}
+	if p.config.PathRewrite != nil {
+		rel = p.config.PathRewrite(rel)
+	}
+	if hasUnsafeSegment(rel) {
+		return "", ErrInvalidProxyPath
+	}
+
+	joined := singleJoiningSlash(p.targetURL.Path, rel)
+
+	base := path.Clean("/" + p.targetURL.Path)
+	cleaned := path.Clean("/" + joined)
+	if base != "/" && cleaned != base && !strings.HasPrefix(cleaned, base+"/") {
+		return "", ErrInvalidProxyPath
+	}
+	return joined, nil
+}
+
+// hasUnsafeSegment reports whether p contains a "." or ".." segment, a
+// backslash (which some servers treat as a separator) or a NUL byte.
+func hasUnsafeSegment(p string) bool {
+	if strings.ContainsAny(p, "\\\x00") {
+		return true
+	}
+	for seg := range strings.SplitSeq(p, "/") {
+		if seg == "." || seg == ".." {
+			return true
+		}
+	}
+	return false
+}
+
+// hasEncodedSeparator reports whether an escaped path contains an encoded
+// slash or backslash, which the upstream might decode into a separator the
+// BFF never saw.
+func hasEncodedSeparator(escaped string) bool {
+	lower := strings.ToLower(escaped)
+	return strings.Contains(lower, "%2f") || strings.Contains(lower, "%5c")
 }
 
 // contextWithSession adds the session to the context.
