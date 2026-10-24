@@ -49,8 +49,19 @@ type ProxyConfig struct {
 	// StripPrefix removes a prefix from the request path before proxying.
 	StripPrefix string
 
-	// HeadersToForward specifies which request headers to forward.
-	// If empty, forwards all headers except hop-by-hop headers.
+	// HeadersToForward is an allow-list of request headers to forward.
+	// When set, every other browser header is dropped before the session
+	// credentials are injected; Content-Type, Content-Encoding and
+	// Content-Length are always kept so request bodies stay intact. If
+	// empty, all headers are forwarded except hop-by-hop headers.
+	//
+	// Either way the proxy strips the browser's credentials (Cookie,
+	// Authorization, DPoP, X-API-Key) and client identity and routing
+	// headers (X-App-ID, X-Real-IP, X-Remote-User, True-Client-IP,
+	// CF-Connecting-IP, Forwarded, and any X-User-*, X-Principal-*,
+	// X-Organization-*, X-Org-*, X-Tenant-*, X-Authenticated-* or
+	// X-Forwarded-* header), even if listed here. Set such headers from
+	// the session in OnRequestRewrite, which runs afterwards.
 	HeadersToForward []string
 
 	// HeadersToRemove specifies headers to remove from the proxied request.
@@ -73,7 +84,38 @@ type upstreamPathKey struct{}
 
 // alwaysStripHeaders are removed from every proxied request regardless of
 // ProxyConfig.HeadersToRemove.
-var alwaysStripHeaders = []string{"Cookie", "Authorization", "DPoP"}
+var alwaysStripHeaders = []string{"Cookie", "Authorization", "DPoP", "X-Api-Key"}
+
+// clientIdentityHeaders are request headers that upstreams commonly trust to
+// identify the user, tenant, app or client address. The proxy strips them,
+// and any header starting with one of clientIdentityHeaderPrefixes, from
+// every browser request, even when HeadersToForward lists them: the browser
+// must not be able to assert an identity next to the session's credentials.
+// OnRequestRewrite runs afterwards and can set them from the session.
+var clientIdentityHeaders = []string{
+	"X-App-Id",
+	"X-Real-Ip",
+	"X-Remote-User",
+	"True-Client-Ip",
+	"Cf-Connecting-Ip",
+	"Forwarded",
+}
+
+// clientIdentityHeaderPrefixes are header-name prefixes stripped like
+// clientIdentityHeaders. Header names are compared in canonical form.
+var clientIdentityHeaderPrefixes = []string{
+	"X-User-",
+	"X-Principal-",
+	"X-Organization-",
+	"X-Org-",
+	"X-Tenant-",
+	"X-Authenticated-",
+	"X-Forwarded-",
+}
+
+// alwaysForwardHeaders survive a HeadersToForward allow-list because the
+// request body cannot be interpreted without them.
+var alwaysForwardHeaders = []string{"Content-Type", "Content-Encoding", "Content-Length"}
 
 // DefaultProxyConfig returns default proxy configuration.
 func DefaultProxyConfig() ProxyConfig {
@@ -209,6 +251,7 @@ func (p *Proxy) rewriteRequest(req *http.Request) {
 	for _, h := range alwaysStripHeaders {
 		req.Header.Del(h)
 	}
+	p.filterClientHeaders(req.Header)
 
 	// Remove specified headers
 	for _, h := range p.config.HeadersToRemove {
@@ -237,6 +280,38 @@ func (p *Proxy) rewriteRequest(req *http.Request) {
 		// Call custom rewrite hook
 		if p.config.OnRequestRewrite != nil {
 			p.config.OnRequestRewrite(req, session)
+		}
+	}
+}
+
+// filterClientHeaders applies the HeadersToForward allow-list and strips
+// client identity headers from a proxied request.
+func (p *Proxy) filterClientHeaders(h http.Header) {
+	if len(p.config.HeadersToForward) > 0 {
+		allowed := make(map[string]bool, len(p.config.HeadersToForward)+len(alwaysForwardHeaders))
+		for _, name := range p.config.HeadersToForward {
+			allowed[http.CanonicalHeaderKey(name)] = true
+		}
+		for _, name := range alwaysForwardHeaders {
+			allowed[name] = true
+		}
+		for name := range h {
+			if !allowed[http.CanonicalHeaderKey(name)] {
+				delete(h, name)
+			}
+		}
+	}
+
+	for _, name := range clientIdentityHeaders {
+		h.Del(name)
+	}
+	for name := range h {
+		canonical := http.CanonicalHeaderKey(name)
+		for _, prefix := range clientIdentityHeaderPrefixes {
+			if strings.HasPrefix(canonical, prefix) {
+				delete(h, name)
+				break
+			}
 		}
 	}
 }
