@@ -88,6 +88,10 @@ func TestBearerMiddlewareJWT(t *testing.T) {
 		t.Errorf("client token accepted by default: %d", w.Code)
 	}
 	cfg.AllowClientTokens = true
+	if w, _ := runBearer(t, cfg, withBearer(clientTok)); w.Code != http.StatusUnauthorized {
+		t.Errorf("token issued to a client not in AcceptedClientIDs accepted: %d", w.Code)
+	}
+	cfg.Tokens = fake.clientWith(t, func(c *Config) { c.AcceptedClientIDs = []string{testClientID, "svc"} })
 	w, got = runBearer(t, cfg, withBearer(clientTok))
 	if w.Code != http.StatusOK || got.Type != "client" || got.ID != "svc" {
 		t.Errorf("client token: %d %+v", w.Code, got)

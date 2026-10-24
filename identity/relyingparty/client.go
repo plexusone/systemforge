@@ -43,8 +43,18 @@ type Config struct {
 	Scopes []string
 
 	// AccessTokenAudience, when set, is required in the "aud" of JWT access
-	// tokens accepted by VerifyAccessToken.
+	// tokens accepted by VerifyAccessToken. Set it when this application is
+	// an API that clients request tokens for with an audience parameter;
+	// tokens from any client carrying the audience are then accepted.
 	AccessTokenAudience string
+
+	// AcceptedClientIDs lists the OAuth clients whose JWT access tokens
+	// VerifyAccessToken accepts, by the token's client_id claim. Default:
+	// ClientID alone when AccessTokenAudience is empty, and any client when
+	// it is set. List other clients here, for example service clients that
+	// call this API with client-credentials tokens; include ClientID to keep
+	// accepting this application's own tokens.
+	AcceptedClientIDs []string
 
 	// HTTPClient is used for all calls to SystemAuth. Default:
 	// http.DefaultClient.
@@ -232,11 +242,19 @@ type IDTokenClaims struct {
 // rawClaims decodes the payload of a token whose signature was already
 // verified.
 func rawClaims(raw string) (map[string]any, error) {
+	_, mc, err := unverified(raw)
+	return mc, err
+}
+
+// unverified parses a JWT without verifying it, for reading the header
+// and every claim of a token whose signature was already checked.
+func unverified(raw string) (*gojwt.Token, gojwt.MapClaims, error) {
 	mc := gojwt.MapClaims{}
-	if _, _, err := gojwt.NewParser().ParseUnverified(raw, mc); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
+	tok, _, err := gojwt.NewParser().ParseUnverified(raw, mc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
 	}
-	return mc, nil
+	return tok, mc, nil
 }
 
 // VerifyIDToken verifies an ID token per OIDC Core §3.1.3.7: RS256
@@ -286,26 +304,62 @@ func (c *AccessTokenClaims) HasScope(scope string) bool {
 }
 
 // VerifyAccessToken verifies a SystemAuth JWT access token: RS256 signature
-// against the JWKS, issuer, expiry, and Config.AccessTokenAudience when
-// set. Revocation is not checked (JWTs are self-contained; keep their
-// lifetime short).
+// against the JWKS, issuer, expiry, a client_id claim (ID tokens and other
+// SystemAuth JWTs carry none), a JOSE typ of at+jwt or JWT when present,
+// Config.AccessTokenAudience when set, and the client the token was issued
+// to (see Config.AcceptedClientIDs). Revocation is not checked (JWTs are
+// self-contained; keep their lifetime short).
 func (c *Client) VerifyAccessToken(ctx context.Context, raw string) (*AccessTokenClaims, error) {
 	claims := &AccessTokenClaims{}
 	if err := c.keys.Verify(ctx, raw, c.cfg.Issuer, claims); err != nil {
 		return nil, err
 	}
+	tok, rc, err := unverified(raw)
+	if err != nil {
+		return nil, err
+	}
+	if typ, _ := tok.Header["typ"].(string); typ != "" && !isAccessTokenType(typ) {
+		return nil, fmt.Errorf("%w: typ %q is not an access token type", ErrInvalidToken, typ)
+	}
 	if claims.Subject == "" {
 		return nil, fmt.Errorf("%w: missing sub", ErrInvalidToken)
+	}
+	if claims.ClientID == "" {
+		return nil, fmt.Errorf("%w: missing client_id; not an access token", ErrInvalidToken)
 	}
 	if aud := c.cfg.AccessTokenAudience; aud != "" && !slices.Contains(claims.Audience, aud) {
 		return nil, fmt.Errorf("%w: audience %v does not include %q", ErrInvalidToken, claims.Audience, aud)
 	}
-	rc, err := rawClaims(raw)
-	if err != nil {
-		return nil, err
+	if accepted := c.acceptedClientIDs(); accepted != nil && !slices.Contains(accepted, claims.ClientID) {
+		return nil, fmt.Errorf("%w: token was issued to client %q", ErrInvalidToken, claims.ClientID)
 	}
 	claims.Raw = rc
 	return claims, nil
+}
+
+// acceptedClientIDs returns the client_id values VerifyAccessToken
+// accepts, or nil when any client is accepted.
+func (c *Client) acceptedClientIDs() []string {
+	switch {
+	case len(c.cfg.AcceptedClientIDs) > 0:
+		return c.cfg.AcceptedClientIDs
+	case c.cfg.AccessTokenAudience != "":
+		return nil
+	default:
+		return []string{c.cfg.ClientID}
+	}
+}
+
+// isAccessTokenType reports whether a JOSE typ header names a JWT access
+// token (RFC 9068) or a plain JWT, as SystemAuth issued before it set
+// at+jwt.
+func isAccessTokenType(typ string) bool {
+	switch strings.ToLower(typ) {
+	case "at+jwt", "application/at+jwt", "jwt":
+		return true
+	default:
+		return false
+	}
 }
 
 // UserInfo is the SystemAuth UserInfo response.

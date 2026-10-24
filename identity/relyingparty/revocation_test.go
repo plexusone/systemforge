@@ -203,7 +203,7 @@ func TestRecordChangeAdapter(t *testing.T) {
 // signedAccessJWT returns a SystemAuth-style access token issued at iat.
 func (f *fakeSystemAuth) signedAccessJWT(sub string, iat time.Time) string {
 	return f.sign(gojwt.MapClaims{
-		"iss": f.srv.URL, "sub": sub, "scp": []string{"things:read"},
+		"iss": f.srv.URL, "sub": sub, "client_id": testClientID, "scp": []string{"things:read"},
 		"exp": iat.Add(time.Hour).Unix(), "iat": iat.Unix(), "jti": fmt.Sprint(iat.UnixNano()),
 	})
 }

@@ -208,9 +208,19 @@ func (f *fakeSystemAuth) handleUserInfo(w http.ResponseWriter, r *http.Request) 
 
 func (f *fakeSystemAuth) client(t *testing.T) *Client {
 	t.Helper()
-	c, err := NewClient(t.Context(), Config{
+	return f.clientWith(t, nil)
+}
+
+// clientWith is client with a config adjustment.
+func (f *fakeSystemAuth) clientWith(t *testing.T, adjust func(*Config)) *Client {
+	t.Helper()
+	cfg := Config{
 		Issuer: f.srv.URL, ClientID: testClientID, RedirectURL: testCallback, HTTPClient: f.srv.Client(),
-	})
+	}
+	if adjust != nil {
+		adjust(&cfg)
+	}
+	c, err := NewClient(t.Context(), cfg)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
