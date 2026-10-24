@@ -38,6 +38,7 @@ a clock-skew margin (30 seconds by default, never below 15).
 cache := relyingparty.NewRevocationCache()
 mw := relyingparty.BearerMiddleware(relyingparty.BearerConfig{
     Tokens: client, Principals: principals, Revocation: cache,
+    DPoP: &relyingparty.DPoPConfig{ReplayCache: replayCache},
 })
 ```
 

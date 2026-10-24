@@ -290,6 +290,27 @@ auth.example.com {
 Embedding applications add their own checks with
 `systemauth.WithReadinessCheck(name, func(ctx) error)`.
 
+## DPoP
+
+SystemAuth issues DPoP-bound tokens (RFC 9449): every client must send a DPoP
+proof with its token requests unless its registration sets the legacy
+`allow_bearer_tokens` exception. See [DPoP Enforcement](../session/dpop.md).
+When several instances serve SystemAuth, share the replay cache that rejects
+reused proofs:
+
+```yaml
+dpop:
+  replay_cache_redis_url: ${SYSTEMAUTH_DPOP_REDIS_URL}   # redis://host:6379/0
+  # Optional server nonces (RFC 9449 §8):
+  # require_nonce: true
+  # nonce_secret: ${SYSTEMAUTH_DPOP_NONCE_SECRET}         # 32+ bytes, same on every instance
+```
+
+Without `replay_cache_redis_url` the cache is in memory, which suits a single
+instance. An existing database gains the `sf_oauth_apps.allow_bearer_tokens`
+column on startup migration (or with `migrations/0010_oauth_app_allow_bearer_tokens.sql`);
+every existing application then requires DPoP until the column is set for it.
+
 ## Upgrading
 
 Startup migrations (`--migrate`, default on) add new columns automatically —

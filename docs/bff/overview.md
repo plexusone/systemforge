@@ -181,6 +181,9 @@ func handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
         UserID:                userID,
         AccessToken:           tokens.AccessToken,
         RefreshToken:          tokens.RefreshToken,
+        TokenType:             tokens.TokenType, // "DPoP" for a DPoP-bound token
+        DPoPKeyPairJSON:       keyPairJSON,      // the key the token request proved
+        DPoPThumbprint:        keyPair.Thumbprint,
         AccessTokenExpiresIn:  15 * time.Minute,
         RefreshTokenExpiresIn: 7 * 24 * time.Hour,
         Metadata: map[string]string{

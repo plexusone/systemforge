@@ -77,7 +77,8 @@ r.With(bff.RequireSession).Get("/app/api/projects", listProjects)
 // API used by browsers and programmatic clients alike.
 r.Route("/api/v1", func(r chi.Router) {
     r.Use(relyingparty.BearerMiddleware(relyingparty.BearerConfig{
-        Tokens:     client,         // SystemAuth JWT access tokens
+        Tokens:     client,         // SystemAuth JWT access tokens (DPoP-bound)
+        DPoP:       &relyingparty.DPoPConfig{ReplayCache: replayCache, BaseURL: "https://app.example.com"},
         APIKeys:    apiKeyService,  // *apikey.Service
         Principals: principals,
         Sessions:   bff,            // also accept the BFF cookie
@@ -200,6 +201,7 @@ orgs := organization.NewService(db, organization.WithAccessChangeSink(accesschan
 
 mw := relyingparty.BearerMiddleware(relyingparty.BearerConfig{
     Tokens: client, Principals: principals,
+    DPoP:         &relyingparty.DPoPConfig{ReplayCache: replayCache, BaseURL: "https://api.example.com"},
     Revocation:   cache,
     Organization: func(r *http.Request) string { return r.PathValue("org") }, // optional
 })
@@ -352,7 +354,13 @@ func (s entPrincipals) FindBySubject(ctx context.Context, sub string) (*relyingp
 
 `BearerMiddleware` accepts, in order:
 
-- `Authorization: Bearer <JWT>` — a SystemAuth JWT access token, verified
+- `Authorization: DPoP <JWT>` with a `DPoP` proof header — a SystemAuth JWT
+  access token bound to a DPoP key (`cnf.jkt`) and a proof signed by that key
+  for this request (see [DPoP Enforcement](../session/dpop.md)). SystemAuth
+  binds every token it issues, so `DPoP` is required whenever `Tokens` is set;
+  the token is then checked as below.
+- `Authorization: Bearer <JWT>`, only with `AllowBearerTokens` — an unbound
+  SystemAuth JWT access token (a legacy client's), verified
   against the JWKS (`iss`, `exp`, a `typ` of `at+jwt` or `JWT`, and
   `Config.AccessTokenAudience` when set). The token must have been issued to
   an accepted client (see below); ID tokens are refused. Its `sub` must
@@ -362,17 +370,20 @@ func (s entPrincipals) FindBySubject(ctx context.Context, sub string) (*relyingp
 - `Authorization: Bearer <api key>` or `X-API-Key` — validated by an
   `APIKeyValidator` (`*apikey.Service`); the key's owner is the principal and
   an organization-scoped key only carries that organization's membership.
-- `Authorization: DPoP <JWT>` with a `DPoP` proof header, when `DPoP` is
-  set — an access token bound to a DPoP key (`cnf.jkt`) and a proof signed by
-  that key for this request (see [DPoP Enforcement](../session/dpop.md)).
 - The BFF session cookie, when `Sessions` is set.
 
 A DPoP-bound access token presented as `Bearer` is always refused, so a
 stolen bound token cannot be replayed as a bearer token.
 
-Failures return `401` with `WWW-Authenticate: Bearer realm="api"` (plus
-`error="invalid_token"` for bad credentials, and a `DPoP` challenge when
-`DPoP` is set).
+Failures return `401` with a `DPoP` challenge (carrying the error of a
+failed DPoP request) and `WWW-Authenticate: Bearer realm="api"` (plus
+`error="invalid_token"` for bad bearer credentials).
+
+The `Client` itself proves possession of `Config.DPoPKey` in every token
+request, so the tokens it obtains for the BFF are bound to that key, and it
+presents them to SystemAuth with the DPoP scheme. Several instances that
+share sessions must share the key (`dpop.DeserializeKeyPairJSON` from a
+secret); otherwise a refresh on another instance is refused.
 
 ### Which clients' tokens are accepted
 

@@ -157,10 +157,11 @@ type Session struct {
     // OAuth tokens (stored server-side)
     AccessToken           string
     RefreshToken          string
+    TokenType             string // "DPoP": sent with the DPoP scheme and a proof; "Bearer": as Bearer
     AccessTokenExpiresAt  time.Time
     RefreshTokenExpiresAt time.Time
 
-    // DPoP (if using OAuth 2.1)
+    // DPoP key pair the tokens are bound to
     DPoPKeyPairJSON       []byte
     DPoPThumbprint        string
 

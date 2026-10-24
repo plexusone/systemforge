@@ -245,23 +245,25 @@ proof, err := dpop.CreateProofWithOptions(keyPair, "POST", "https://api.example.
 })
 
 // Enforce DPoP on the API side
-auth, err := middleware.HTTPAuthDPoP(jwtService, middleware.DPoPConfig{
+auth, err := middleware.HTTPAuth(jwtService, middleware.DPoPConfig{
     ReplayCache: middleware.NewRedisReplayCache(redisClient, "dpop-jti:"), // or NewMemoryReplayCache()
     BaseURL:     "https://api.example.com", // the scheme and host clients use
 })
 r.Use(auth)
 ```
 
-`HTTPAuthDPoP` accepts a DPoP-bound access token (one with a `cnf.jkt` claim)
-only with the `DPoP` authorization scheme and a proof signed by the bound key
-that matches the request method and URI, carries the token hash (`ath`), is
-fresh, and has not been seen before. Tokens without `cnf.jkt` are accepted as
-Bearer tokens. `HTTPAuth`, `HTTPAuthForAudience` and `HTTPAuthOptional` refuse
-DPoP-bound tokens, since without a verified proof they would work as plain
-bearer tokens. Relying parties of SystemAuth get the same checks from
-`relyingparty.BearerConfig.DPoP`. SystemAuth itself issues bearer tokens; see
-[DPoP Enforcement](docs/session/dpop.md) for where DPoP is and is not
-enforced.
+DPoP is the default. SystemAuth issues DPoP-bound tokens to every client:
+token requests must carry a DPoP proof, access tokens carry `cnf.jkt`, and
+refresh tokens work only with a proof by the same key. A client gets bearer
+tokens only when its registration sets the legacy `allow_bearer_tokens`
+exception. `HTTPAuth` accepts a DPoP-bound access token only with the `DPoP`
+authorization scheme and a proof signed by the bound key that matches the
+request method and URI, carries the token hash (`ath`), is fresh, and has not
+been seen before; unbound tokens are refused unless `DPoPConfig.AllowBearer`
+is set. The legacy `HTTPAuthBearer` middlewares accept only unbound tokens.
+Relying parties of SystemAuth get the same checks from
+`relyingparty.BearerConfig.DPoP`, and `relyingparty.Client` binds the tokens
+it obtains to its `DPoPKey`. See [DPoP Enforcement](docs/session/dpop.md).
 
 ### BFF Pattern
 

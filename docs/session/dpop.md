@@ -3,40 +3,92 @@
 DPoP (RFC 9449) binds an access token to a key pair: the token carries the
 key's thumbprint in its `cnf.jkt` claim, and every request must carry a proof
 signed by that key. A stolen DPoP-bound token is useless without the private
-key. This page lists where SystemForge creates, binds and verifies DPoP, and
-where it does not.
+key, and so is a token moved to another system. SystemForge uses DPoP by
+default: SystemAuth issues DPoP-bound tokens, and the middlewares require
+them. Unbound bearer tokens are a legacy exception that must be switched on
+explicitly, per client at SystemAuth and per API in the middleware.
 
-## Where DPoP is enforced
+## SystemAuth issues DPoP-bound tokens
+
+Every token request to `/oauth/token` must carry a `DPoP` header with a proof
+for `POST` at the token endpoint URL (the issuer plus `/oauth/token`, as
+discovery advertises it), signed with ES256, ES384 or ES512, fresh (`iat`
+within `dpop.proof_max_age`, default 5 minutes, plus `dpop.clock_skew`), and
+with a `jti` not used before. On success:
+
+- the access token is bound to the proof's key: a JWT access token carries
+  `cnf.jkt`, introspection returns `cnf.jkt` and `token_type: DPoP`, and the
+  token response says `token_type: DPoP`;
+- the refresh token is bound to the same key: a refresh needs a proof by
+  that key (RFC 9449 §5), and a refresh token presented without one, or with
+  another key's, is refused without being spent;
+- an authorization request may name the key in `dpop_jkt` (RFC 9449 §10):
+  the code is then redeemed only with a proof by that key.
+
+This applies to every grant SystemAuth supports: `authorization_code`,
+`refresh_token` and `client_credentials`. A request without a valid proof
+gets `400` with `error=invalid_dpop_proof`; a refresh or code bound to
+another key gets `invalid_grant`.
+
+| Setting | Default | Meaning |
+|---------|---------|---------|
+| `dpop.proof_max_age` | `5m` | How old a proof's `iat` may be |
+| `dpop.clock_skew` | `30s` | How far in the future `iat` may be |
+| `dpop.require_nonce` | `false` | Require server nonces (RFC 9449 §8): a proof without a current nonce gets `use_dpop_nonce` and a `DPoP-Nonce` header to retry with |
+| `dpop.nonce_secret` | | Key of the nonces, at least 32 bytes, the same on every instance; required with `require_nonce` |
+| `dpop.nonce_lifetime` | `5m` | How long a nonce is accepted |
+| `dpop.replay_cache_redis_url` | | Redis shared by every instance for replay detection (`systemauthsvc`); embedded servers pass `systemauth.WithDPoPReplayCache` |
+
+Without a shared replay cache SystemAuth keeps an in-memory one, which only
+suits a single instance.
+
+### The bearer-token exception
+
+A client that cannot do DPoP yet may be registered with
+`allow_bearer_tokens: true` (`ClientConfig.AllowBearerTokens`, the
+`sf_oauth_apps.allow_bearer_tokens` column). It is a legacy exception:
+such a client may call the token endpoint without a proof and gets unbound
+tokens with `token_type: Bearer`; if it does send a proof, its tokens are
+bound as usual. Every other client has RFC 9449's
+`dpop_bound_access_tokens` set (`Client.DPoPBoundAccessTokens`). Prefer
+moving the client to DPoP: a bearer token works for whoever holds it.
+
+### SystemAuth's own resources
+
+The userinfo endpoint, the memberships endpoint, the access-changes
+endpoint, the introspection endpoint's token callers, `Server.Middleware`,
+`BearerAccess`/`BearerPrincipal` and `TokenAuthenticator` accept a
+DPoP-bound token only with `Authorization: DPoP <token>` and a proof by its
+key for the request's method and URL (SystemAuth's own endpoints are
+checked against the issuer URL; other routes against the issuer's origin
+plus the request path), carrying the token's hash (`ath`). An unbound token
+is accepted only with the Bearer scheme, and never in a form body when it is
+bound. Errors carry a `WWW-Authenticate: DPoP` challenge with
+`error="invalid_dpop_proof"`, `invalid_token` or `use_dpop_nonce`.
+Discovery advertises `dpop_signing_alg_values_supported`.
+
+## Relying parties and APIs
 
 | Component | Behavior |
 |-----------|----------|
-| `session/middleware.HTTPAuthDPoP` / `NewDPoPAuth` | Accepts a token with `cnf.jkt` only with the `DPoP` authorization scheme and one proof that matches the request method and URI, carries the token hash (`ath`), is fresh, is signed by the bound key, and has a `jti` not seen before (`ReplayCache`). Unbound tokens are accepted with the `Bearer` scheme. |
-| `session/middleware.HTTPAuth`, `HTTPAuthForAudience`, `HTTPAuthOptional` | Refuse any token with `cnf.jkt`; they verify no proofs. |
+| `session/middleware.HTTPAuth`, `HTTPAuthForAudience`, `HTTPAuthOptional`, `ChiAuth`, `NewDPoPAuth` | Accept a token with `cnf.jkt` only with the `DPoP` scheme and one proof that matches the request method and URI, carries the token hash (`ath`), is fresh, is signed by the bound key, and has a `jti` not seen before (`DPoPConfig.ReplayCache`). Unbound tokens are refused unless `DPoPConfig.AllowBearer` is set. |
+| `session/middleware.HTTPAuthBearer`, `HTTPAuthBearerForAudience`, `HTTPAuthBearerOptional` | Legacy, explicit opt-in: accept unbound bearer tokens only, and refuse any token with `cnf.jkt`; they verify no proofs. |
 | `multiapp.AuthMiddleware` | Refuses any token with `cnf.jkt`; it verifies no proofs. |
-| `identity/relyingparty.BearerMiddleware` and `RequestAuthenticator` | Refuse a SystemAuth access token with `cnf.jkt` presented as `Bearer`. With `BearerConfig.DPoP` set, accept it with the `DPoP` scheme and a valid proof, under the same checks as `HTTPAuthDPoP`. |
+| `identity/relyingparty.BearerMiddleware` and `RequestAuthenticator` | Accept a SystemAuth access token with `cnf.jkt` only with the `DPoP` scheme and a valid proof (`BearerConfig.DPoP`, required when `Tokens` is set). A bound token presented as `Bearer` is always refused. Unbound tokens are refused unless `BearerConfig.AllowBearerTokens` is set. |
+| `identity/relyingparty.Client` | Sends a proof by `Config.DPoPKey` with every token request (code exchange, refresh, client credentials), so its tokens are bound to that key, and presents them to SystemAuth's userinfo, memberships and access-changes endpoints with the DPoP scheme. It retries once with a server nonce. Give every instance that shares sessions the same key; the default is a key generated per process. |
+| `session/bff` | Holds a DPoP key pair per session. The proxy sends a token issued with `token_type: DPoP` (`Session.TokenType`) with the DPoP scheme and a proof, and a token issued as `Bearer` with the Bearer scheme. The refresher proves possession of the session's existing key, since a bound refresh token needs it. |
+| `identity/token.DefaultService` | Binds tokens only to a `dpopproof.Proof`, which only a `dpopproof.Checker` yields after verifying a proof, never to a thumbprint its caller supplies. A bound refresh token needs a proof by the same key. |
 
-## Where DPoP is not enforced
-
-- **SystemAuth does not issue DPoP-bound tokens.** Its token endpoint does
-  not verify DPoP proofs and does not put `cnf.jkt` in access tokens, so
-  SystemAuth access and refresh tokens are bearer tokens. The BFF sends DPoP
-  proofs to the token endpoint, but they are not checked there.
-- **`identity/token.DefaultService`** stores a `DPoPJKT` given by its caller
-  and returns it from `Validate`, but checks no proof. `Refresh` compares the
-  caller-supplied thumbprint with the stored one; the caller must have
-  verified a proof for that thumbprint first.
-- **`session/jwt.Service`** mints DPoP-bound tokens
-  (`TokenOptions.DPoPThumbprint`) and validates their signature and claims,
-  but only the middleware above verifies proofs.
-- **The BFF proxy** (`session/bff`, `UseDPoP`) creates proofs for upstream
-  calls with the session's key pair; verification is the upstream API's job.
+`identity/dpopproof` is the proof checker SystemAuth and `identity/token`
+use: signature, `typ`, algorithm, `htm`, `htu`, `iat`, `ath`, replay, server
+nonces, and a refusal of proofs whose `jwk` carries a private key.
 
 ## Protecting an API
 
 For tokens minted by `session/jwt`:
 
 ```go
-auth, err := middleware.HTTPAuthDPoP(jwtService, middleware.DPoPConfig{
+auth, err := middleware.HTTPAuth(jwtService, middleware.DPoPConfig{
     ReplayCache: middleware.NewRedisReplayCache(redisClient, "dpop-jti:"),
     BaseURL:     "https://api.example.com", // the scheme and host clients use
 })
@@ -60,3 +112,8 @@ Use a replay cache shared by every instance that serves the API
 instance. Set `BaseURL` behind a proxy that terminates TLS: the proof's
 `htu` is compared with `BaseURL` plus the request path, and forwarded
 headers are never trusted.
+
+A relying party cannot forward a caller's DPoP-bound token to SystemAuth
+(for example to read memberships): only the caller holds the key.
+`RemoteMemberships` then fails with `relyingparty.ErrForeignDPoPToken`, and
+`ClaimsOrRemoteMemberships` falls back to the token's claims.
