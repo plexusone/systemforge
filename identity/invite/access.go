@@ -12,6 +12,7 @@ import (
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/human"
+	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
 )
@@ -34,6 +35,55 @@ func (s *DefaultService) PrincipalEmail(ctx context.Context, principalID uuid.UU
 		return "", nil
 	}
 	return *h.Email, nil
+}
+
+// inviterActions are the organization permissions an invite's inviter must
+// still hold for it to be accepted: those the API required to create it.
+func inviterActions(inv *ent.Invite) []authz.Action {
+	actions := []authz.Action{authz.PermOrgInviteMember}
+	if inv.Role == organization.RoleOwner {
+		actions = append(actions, authz.PermOrgDelete)
+	}
+	return actions
+}
+
+// requireInviterMembership checks, through c, that the inviter of inv holds
+// an active membership in the invite's organization whose role grants
+// inviterActions.
+func requireInviterMembership(ctx context.Context, c *ent.Client, inv *ent.Invite) error {
+	m, err := c.PrincipalMembership.Query().
+		Where(
+			principalmembership.OrganizationID(inv.OrganizationID),
+			principalmembership.PrincipalID(inv.InviterPrincipalID),
+			principalmembership.Active(true),
+		).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return ErrInviterNotAuthorized
+	}
+	if err != nil {
+		return fmt.Errorf("invite: reading the inviter's membership: %w", err)
+	}
+	for _, action := range inviterActions(inv) {
+		if !authz.OrgRoleAllows(m.Role, action) {
+			return ErrInviterNotAuthorized
+		}
+	}
+	return nil
+}
+
+// checkInviterWithAuthorizer asks the configured authorizer whether the
+// inviter of inv still holds inviterActions on the organization.
+func (s *DefaultService) checkInviterWithAuthorizer(ctx context.Context, inv *ent.Invite) error {
+	ok, err := s.authorizer.CanAll(ctx, authz.NewUserPrincipal(inv.InviterPrincipalID), inviterActions(inv),
+		authz.NewResourceWithID(authz.ResourceTypeOrganization, inv.OrganizationID))
+	if err != nil {
+		return fmt.Errorf("invite: checking the inviter's authority: %w", err)
+	}
+	if !ok {
+		return ErrInviterNotAuthorized
+	}
+	return nil
 }
 
 // callerID returns the authenticated caller, or a 401.

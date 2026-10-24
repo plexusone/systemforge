@@ -68,6 +68,9 @@ type DefaultService struct {
 	logger   *slog.Logger
 	appRoles *approle.Service
 	grants   *resourcegrant.Service
+	// authorizer, when set, decides whether an invite's inviter still
+	// holds the authority the invite carries.
+	authorizer authz.Authorizer
 }
 
 // ServiceOption configures a DefaultService.
@@ -99,6 +102,17 @@ func WithAppRoles(svc *approle.Service) ServiceOption {
 // service's own syncer, grants through the grant service's.
 func WithResourceGrants(svc *resourcegrant.Service) ServiceOption {
 	return func(s *DefaultService) { s.grants = svc }
+}
+
+// WithAuthorizer makes Accept ask authorizer whether an invite's inviter
+// still holds authz.PermOrgInviteMember on the organization (and the
+// owner-only authz.PermOrgDelete for an owner invite), the permissions the
+// API required to create it. Use it when invitations may be created by
+// principals whose authority is not an organization membership, such as
+// platform administrators. Without it, the inviter must hold an active
+// membership whose role grants those permissions (authz.OrgRoleAllows).
+func WithAuthorizer(a authz.Authorizer) ServiceOption {
+	return func(s *DefaultService) { s.authorizer = a }
 }
 
 // WithLogger sets the logger for the service.
@@ -299,7 +313,9 @@ func (s *DefaultService) GetByID(ctx context.Context, id uuid.UUID) (*Invite, er
 // The invite must still be pending and unexpired when the acceptance is
 // written: the status change is a conditional update in the same
 // transaction as the membership, so an invite revoked or declined while it
-// is being accepted is not accepted.
+// is being accepted is not accepted. The inviter must still be allowed to
+// invite to the organization, and to invite an owner when the invite is
+// for one; otherwise Accept returns ErrInviterNotAuthorized.
 func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*Invite, error) {
 	// Get invite
 	inv, err := s.client.Invite.Query().
@@ -330,6 +346,13 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 		return nil, err
 	}
 
+	// With an authorizer, the inviter's authority is asked of it.
+	if s.authorizer != nil {
+		if err = s.checkInviterWithAuthorizer(ctx, inv); err != nil {
+			return nil, err
+		}
+	}
+
 	// Start transaction
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
@@ -342,6 +365,14 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 			}
 		}
 	}()
+
+	// Without an authorizer, the inviter's authority is its active
+	// membership role, read in this transaction.
+	if s.authorizer == nil {
+		if err = requireInviterMembership(ctx, tx.Client(), inv); err != nil {
+			return nil, err
+		}
+	}
 
 	// Check if already a member
 	exists, err := tx.PrincipalMembership.Query().

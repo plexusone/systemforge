@@ -15,6 +15,7 @@ import (
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/approle"
+	entinvite "github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
@@ -560,6 +561,10 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 	if err != nil {
 		return nil, errors.Join(err, tx.Rollback())
 	}
+	// Invitations the member sent and may no longer send are revoked.
+	if err = revokeInvitesBeyond(ctx, tx, orgID, membership.PrincipalID, membership.Role, membership.Active); err != nil {
+		return nil, errors.Join(err, tx.Rollback())
+	}
 	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to update membership: %w", err)
 	}
@@ -665,6 +670,10 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 	if err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
+	// So do the invitations the member sent and has not seen accepted.
+	if err = revokeInvitesBeyond(ctx, tx, organizationID, principalID, "", false); err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to remove membership: %w", err)
 	}
@@ -673,6 +682,31 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 	// Sync to authorization backend: the membership, and the deleted
 	// application roles and resource grants.
 	return s.syncAccess(ctx, false, principalID, organizationID, membership.Role, heldRoles, heldGrants)
+}
+
+// revokeInvitesBeyond revokes, in tx, the pending invitations inviterID
+// sent to the organization that its membership (role, active) no longer
+// allows it to send: all of them when it may not invite at all (removed,
+// deactivated, or demoted below invite_member), and owner invitations
+// when it is no longer an owner. An invitation does not outlive its
+// inviter's authority.
+func revokeInvitesBeyond(ctx context.Context, tx *ent.Tx, orgID, inviterID uuid.UUID, role string, active bool) error {
+	q := tx.Invite.Update().Where(
+		entinvite.OrganizationID(orgID),
+		entinvite.InviterPrincipalID(inviterID),
+		entinvite.StatusEQ(entinvite.StatusPending),
+	)
+	switch {
+	case !active || !authz.OrgRoleAllows(role, authz.PermOrgInviteMember):
+	case !authz.OrgRoleAllows(role, authz.PermOrgDelete):
+		q = q.Where(entinvite.Role(RoleOwner))
+	default:
+		return nil
+	}
+	if _, err := q.SetStatus(entinvite.StatusRevoked).Save(ctx); err != nil {
+		return fmt.Errorf("failed to revoke the member's invitations: %w", err)
+	}
+	return nil
 }
 
 // syncAccess adds (add true) or removes a member's organization role,

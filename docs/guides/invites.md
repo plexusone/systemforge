@@ -79,6 +79,17 @@ resource-targeted collaborator invites. See
 Signing up through an invite (`signup.SignupWithInvite`) applies the same
 email match (`signup.ErrInviteEmailMismatch`).
 
+An invite carries its inviter's current authority, not the authority it had
+when it was sent. Accepting requires the inviter to still hold
+`invite_member` on the organization, and the owner-only `delete` for an
+owner invite; otherwise acceptance fails with
+`invite.ErrInviterNotAuthorized`. By default the inviter's active membership
+role is checked; `invite.WithAuthorizer(authorizer)` asks an authorizer
+instead, for deployments where principals who are not members (platform
+administrators) send invites. Removing or deactivating a member revokes the
+pending invites it sent, and demoting it revokes those it may no longer send
+(owner invites when it stops being an owner).
+
 Every change of an invite's status (accept, decline, revoke, resend, expiry)
 applies only to a pending invite, as one conditional update. An invite
 revoked while it is being accepted is not accepted, and revoking an accepted
@@ -97,7 +108,7 @@ the member through the organization instead.
 
 | Status | Cause |
 |---|---|
-| `400` | The service refused the request. The message names the cause: `pending invite already exists for this email`; `invite: choose an application role for at least one entitled application`; `invite: collaborators hold no application roles`; `invite: application roles are not configured`; `invite: invalid resource target` (incomplete target, role not `collaborator`, grants not configured, or a type or role the vocabulary rejects); a collaborator invite without a target to a personal organization; `invite is no longer pending`; `invite has expired`; `principal is already a member of this organization`; an application role that cannot be granted (`approle: no seats available for the application`, `approle: organization is not entitled to the application`) |
+| `400` | The service refused the request. The message names the cause: `pending invite already exists for this email`; `invite: choose an application role for at least one entitled application`; `invite: collaborators hold no application roles`; `invite: application roles are not configured`; `invite: invalid resource target` (incomplete target, role not `collaborator`, grants not configured, or a type or role the vocabulary rejects); a collaborator invite without a target to a personal organization; `invite is no longer pending`; `invite has expired`; `invite: the inviter may no longer invite to this organization`; `principal is already a member of this organization`; an application role that cannot be granted (`approle: no seats available for the application`, `approle: organization is not entitled to the application`) |
 | `403` | `inviter_principal_id` is not the caller; an admin inviting an owner; a principal without an email (a managed principal) answering an invite; listing another address's invites; the caller can view the organization but may not invite |
 | `404` | Unknown organization or invite; a caller who cannot even view the organization; an invite addressed to a different email (a mismatch looks like an unknown token) |
 | `501` | No `Authorizer`, or no principal email lookup, is configured |
