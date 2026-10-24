@@ -7,155 +7,157 @@
   "maintainers": [
     "grokify"
   ],
-  "unreleased": {
-    "highlights": [
-      {
-        "description": "Access tokens are bound to the application they were issued for: relying parties, the session JWT service, and multi-app routing each refuse tokens minted for another application that shares the signing key"
-      },
-      {
-        "description": "SCIM credentials are bound to one organization: a customer's identity provider provisions only its own members and cannot change the identity of users who also belong elsewhere"
-      }
-    ],
-    "security": [
-      {
-        "description": "Relying-party bearer authentication accepted a SystemAuth access token issued to any other OAuth client, and an ID token, as an access token for the application, taking the organization memberships in its claims; `VerifyAccessToken` now requires a `client_id` claim from an accepted client and refuses typed non-access JWTs"
-      },
-      {
-        "description": "The session JWT service's default validation (`ValidateAccessToken`, `HTTPAuth`, `HTTPAuthOptional`) accepted tokens for any audience, so applications sharing a signing key accepted each other's access and refresh tokens; tokens must now carry the service's `Config.Audience`"
-      },
-      {
-        "description": "multiapp `AuthMiddleware` accepted a token minted for one app on every other app unless `AppAudiences` was set; a token on an app route must now be addressed to that app's ID by default"
-      },
-      {
-        "description": "authzguardsql `PolicyBuilder.Build` turned a principal authorized for no entity into a GuardSQL policy with empty allowlists, which GuardSQL reads as unrestricted, so the least-privileged principals could query every entity and field; it now returns `ErrNoAuthorizedEntities`"
-      },
-      {
-        "description": "authz `RequireResourceAction` checked a resource named in the request against the caller's role in the organization from their token, so a member of one organization passed resource checks for another organization's resources; the resource's organization now comes only from the extractor"
-      },
-      {
-        "description": "The SCIM store had no tenant scoping, so any SCIM credential could read, change, delete and regroup every user and organization on the platform; each request is now bound to the credential's organization, and requests without a scope are refused"
-      },
-      {
-        "description": "SCIM could rewrite the login email of a user who also belonged to other organizations, enabling account takeover; a tenant now changes email, name and photo only for users it provisioned that belong to no other organization, and manages only the membership of others"
-      },
-      {
-        "description": "Deactivating an organization membership left the member's organization role, application roles and resource grants in the SpiceDB graph, so under the ReBAC authorizer a deactivated admin kept every permission; deactivation now removes them from the graph and reactivation writes them back"
-      },
-      {
-        "description": "bff `RegisterHumaRoutes` registered stub handlers for logout, session and refresh; on a router shared with Huma, as documented, they took precedence over the mounted BFF handler, so logout answered success without ending the session and the stubs skipped the Origin check and rate limiter. It now only documents the routes"
-      },
-      {
-        "description": "A connection's creator kept view, use, manage and share rights on it after leaving or being removed from the organization, and could grant themselves back in; creator rights now require current membership of the owning organization"
-      },
-      {
-        "description": "BFF logout passed the client's cookie value to the session store's Delete even when no session matched; with the omnistorage kvs store, the value `user:<id>` deleted a user's session index, so \"log out everywhere\" and revoke-on-password-change missed that user's sessions. Logout now deletes only a session the store returns, and malformed cookie values are treated as no session"
-      },
-      {
-        "description": "aauthrs accepted an agent token from any agent provider for any agent identifier, so a provider controlled by anyone could claim another domain's agents (for example `aauth:billing-bot@victim.example`); an agent token is now accepted only when the agent's domain is its issuer's host"
-      },
-      {
-        "description": "SCIM wrote memberships directly, so suspending, removing or deleting a user skipped the authorization-graph sync, the access-change record that revokes existing tokens, and cleanup of application roles and resource grants; SCIM now changes memberships through the organization service and deactivates accounts through the principal service"
-      },
-      {
-        "description": "SCIM could suspend, remove or delete an organization's owner, letting an identity provider lock a customer out of its own organization; it now refuses with 403"
-      },
-      {
-        "description": "Re-adding a suspended member through SCIM restored their previous role, possibly owner or admin; a restored membership now gets the default role"
-      }
-    ],
-    "added": [
-      {
-        "description": "relyingparty: `Config.AcceptedClientIDs` lists the OAuth clients whose access tokens an application accepts"
-      },
-      {
-        "description": "systemauth: JWT access tokens carry the JOSE `typ` header `at+jwt` (RFC 9068)"
-      },
-      {
-        "description": "multiapp: `MiddlewareConfig.AllowCrossAppTokens` accepts tokens for every app when that is intended"
-      },
-      {
-        "description": "session/jwt: `Claims.HasAnyAudience` and `ErrMissingAudience`"
-      },
-      {
-        "description": "authzguardsql: `ErrNoAuthorizedEntities`"
-      },
-      {
-        "description": "authz: `WithResourceLookup` and `ResourceOrgLookup` load a resource's owning organization for `RequireResourceAction`, and `ErrResourceNotFound`"
-      },
-      {
-        "description": "scim: `Scope`, `WithScope`, `WithTenant`, `WithPlatformScope`, `ScopeFromContext`, and `API.CredentialMiddleware` with `Credential` to bind SCIM requests to an organization or the platform"
-      },
-      {
-        "description": "bff: `ValidSessionID` and `MaxSessionIDLength`"
-      },
-      {
-        "description": "aauthrs: `Config.TrustedAgentIssuers` restricts which agent providers' tokens a resource accepts"
-      },
-      {
-        "description": "scim/store: `Config.Memberships` and `Config.Principals` take the application's organization and principal services"
-      }
-    ],
-    "breaking": [
-      {
-        "description": "session/jwt: `Config.Audience` is required; `NewService` returns `ErrMissingAudience` without it. Client-kind audiences (`bff`, `api`, custom) are added in front of the application audience instead of replacing it, and `ValidateAccessTokenWithAudience` with an empty audience checks `Config.Audience` instead of skipping the check"
-      },
-      {
-        "description": "relyingparty: `VerifyAccessToken` accepts only tokens issued to `Config.ClientID` unless `AcceptedClientIDs` or `AccessTokenAudience` is set; client-credentials tokens from other clients must be listed"
-      },
-      {
-        "description": "multiapp: without `AppAudiences`, tokens on app routes must carry the app's `AppID` as an audience"
-      },
-      {
-        "description": "authz: `RequireResourceAction` no longer sets a resource's organization from the caller's token; extractor errors answer 400 for a missing or malformed ID, 403 for `ErrResourceNotFound`, and 500 otherwise"
-      },
-      {
-        "description": "scim/store: the Ent store refuses requests without a provisioning scope. For a tenant, `active` is the membership's state, creating a user who exists elsewhere links them as a member, deleting a shared user removes only the membership, and groups cannot be created, renamed or deleted"
-      },
-      {
-        "description": "connections: creator rights need an `Options.Authorizer` that implements `authz.OrgAuthorizer` (the rbac and SpiceDB providers do); with another authorizer, creators are decided by role and grants alone"
-      },
-      {
-        "description": "bff: a custom `HandlerConfig.SessionIDGenerator` must produce IDs that `ValidSessionID` accepts (URL-safe characters, at most 256)"
-      },
-      {
-        "description": "scim/store: SCIM refuses to deprovision an organization owner, restores memberships with the default role, and for a platform credential `active` deactivates the account through the principal service"
-      }
-    ],
-    "upgradeGuide": [
-      {
-        "description": "session/jwt: set `Config.Audience` to a value naming the application. Access tokens issued before the upgrade are refused and clients refresh; refresh tokens issued without the audience require signing in again"
-      },
-      {
-        "description": "relyingparty: list in `AcceptedClientIDs` every client, including the application's own `ClientID`, whose tokens the API must accept, such as service clients using client credentials; or set `AccessTokenAudience` for an API that many clients call with an audience"
-      },
-      {
-        "description": "multiapp: mint tokens with `jwt.TokenOptions{Audience: []string{appID}}`, or set `AppAudiences` to the audiences your tokens already carry"
-      },
-      {
-        "description": "authzguardsql: handle `ErrNoAuthorizedEntities` from `PolicyBuilder.Build` by refusing the query (for example with 403)"
-      },
-      {
-        "description": "authz: replace `WithResourceID` with `WithResourceLookup` on routes whose access depends on the organization role, passing a lookup that returns the resource's owning organization"
-      },
-      {
-        "description": "scim: authenticate with `CredentialMiddleware` and bind each SCIM credential to its organization (`Scope{OrganizationID: ...}`); give `Scope{Platform: true}` only to platform operator credentials"
-      },
-      {
-        "description": "scim/store: pass the application's organization service (with its authz syncer) as `Config.Memberships` and its principal service as `Config.Principals`, so SCIM changes sync the authorization graph"
-      }
-    ],
-    "deprecated": [
-      {
-        "description": "scim: `API.Middleware`, which binds no provisioning scope; use `CredentialMiddleware`"
-      }
-    ],
-    "documentation": [
-      {
-        "description": "SCIM provisioning guide"
-      }
-    ]
-  },
   "releases": [
+    {
+      "version": "v0.20.0",
+      "date": "2026-10-23",
+      "highlights": [
+        {
+          "description": "Access tokens are bound to the application they were issued for: relying parties, the session JWT service, and multi-app routing each refuse tokens minted for another application that shares the signing key"
+        },
+        {
+          "description": "SCIM credentials are bound to one organization: a customer's identity provider provisions only its own members and cannot change the identity of users who also belong elsewhere"
+        }
+      ],
+      "security": [
+        {
+          "description": "Relying-party bearer authentication accepted a SystemAuth access token issued to any other OAuth client, and an ID token, as an access token for the application, taking the organization memberships in its claims; `VerifyAccessToken` now requires a `client_id` claim from an accepted client and refuses typed non-access JWTs"
+        },
+        {
+          "description": "The session JWT service's default validation (`ValidateAccessToken`, `HTTPAuth`, `HTTPAuthOptional`) accepted tokens for any audience, so applications sharing a signing key accepted each other's access and refresh tokens; tokens must now carry the service's `Config.Audience`"
+        },
+        {
+          "description": "multiapp `AuthMiddleware` accepted a token minted for one app on every other app unless `AppAudiences` was set; a token on an app route must now be addressed to that app's ID by default"
+        },
+        {
+          "description": "authzguardsql `PolicyBuilder.Build` turned a principal authorized for no entity into a GuardSQL policy with empty allowlists, which GuardSQL reads as unrestricted, so the least-privileged principals could query every entity and field; it now returns `ErrNoAuthorizedEntities`"
+        },
+        {
+          "description": "authz `RequireResourceAction` checked a resource named in the request against the caller's role in the organization from their token, so a member of one organization passed resource checks for another organization's resources; the resource's organization now comes only from the extractor"
+        },
+        {
+          "description": "The SCIM store had no tenant scoping, so any SCIM credential could read, change, delete and regroup every user and organization on the platform; each request is now bound to the credential's organization, and requests without a scope are refused"
+        },
+        {
+          "description": "SCIM could rewrite the login email of a user who also belonged to other organizations, enabling account takeover; a tenant now changes email, name and photo only for users it provisioned that belong to no other organization, and manages only the membership of others"
+        },
+        {
+          "description": "Deactivating an organization membership left the member's organization role, application roles and resource grants in the SpiceDB graph, so under the ReBAC authorizer a deactivated admin kept every permission; deactivation now removes them from the graph and reactivation writes them back"
+        },
+        {
+          "description": "bff `RegisterHumaRoutes` registered stub handlers for logout, session and refresh; on a router shared with Huma, as documented, they took precedence over the mounted BFF handler, so logout answered success without ending the session and the stubs skipped the Origin check and rate limiter. It now only documents the routes"
+        },
+        {
+          "description": "A connection's creator kept view, use, manage and share rights on it after leaving or being removed from the organization, and could grant themselves back in; creator rights now require current membership of the owning organization"
+        },
+        {
+          "description": "BFF logout passed the client's cookie value to the session store's Delete even when no session matched; with the omnistorage kvs store, the value `user:<id>` deleted a user's session index, so \"log out everywhere\" and revoke-on-password-change missed that user's sessions. Logout now deletes only a session the store returns, and malformed cookie values are treated as no session"
+        },
+        {
+          "description": "aauthrs accepted an agent token from any agent provider for any agent identifier, so a provider controlled by anyone could claim another domain's agents (for example `aauth:billing-bot@victim.example`); an agent token is now accepted only when the agent's domain is its issuer's host"
+        },
+        {
+          "description": "SCIM wrote memberships directly, so suspending, removing or deleting a user skipped the authorization-graph sync, the access-change record that revokes existing tokens, and cleanup of application roles and resource grants; SCIM now changes memberships through the organization service and deactivates accounts through the principal service"
+        },
+        {
+          "description": "SCIM could suspend, remove or delete an organization's owner, letting an identity provider lock a customer out of its own organization; it now refuses with 403"
+        },
+        {
+          "description": "Re-adding a suspended member through SCIM restored their previous role, possibly owner or admin; a restored membership now gets the default role"
+        }
+      ],
+      "added": [
+        {
+          "description": "relyingparty: `Config.AcceptedClientIDs` lists the OAuth clients whose access tokens an application accepts"
+        },
+        {
+          "description": "systemauth: JWT access tokens carry the JOSE `typ` header `at+jwt` (RFC 9068)"
+        },
+        {
+          "description": "multiapp: `MiddlewareConfig.AllowCrossAppTokens` accepts tokens for every app when that is intended"
+        },
+        {
+          "description": "session/jwt: `Claims.HasAnyAudience` and `ErrMissingAudience`"
+        },
+        {
+          "description": "authzguardsql: `ErrNoAuthorizedEntities`"
+        },
+        {
+          "description": "authz: `WithResourceLookup` and `ResourceOrgLookup` load a resource's owning organization for `RequireResourceAction`, and `ErrResourceNotFound`"
+        },
+        {
+          "description": "scim: `Scope`, `WithScope`, `WithTenant`, `WithPlatformScope`, `ScopeFromContext`, and `API.CredentialMiddleware` with `Credential` to bind SCIM requests to an organization or the platform"
+        },
+        {
+          "description": "bff: `ValidSessionID` and `MaxSessionIDLength`"
+        },
+        {
+          "description": "aauthrs: `Config.TrustedAgentIssuers` restricts which agent providers' tokens a resource accepts"
+        },
+        {
+          "description": "scim/store: `Config.Memberships` and `Config.Principals` take the application's organization and principal services"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "session/jwt: `Config.Audience` is required; `NewService` returns `ErrMissingAudience` without it. Client-kind audiences (`bff`, `api`, custom) are added in front of the application audience instead of replacing it, and `ValidateAccessTokenWithAudience` with an empty audience checks `Config.Audience` instead of skipping the check"
+        },
+        {
+          "description": "relyingparty: `VerifyAccessToken` accepts only tokens issued to `Config.ClientID` unless `AcceptedClientIDs` or `AccessTokenAudience` is set; client-credentials tokens from other clients must be listed"
+        },
+        {
+          "description": "multiapp: without `AppAudiences`, tokens on app routes must carry the app's `AppID` as an audience"
+        },
+        {
+          "description": "authz: `RequireResourceAction` no longer sets a resource's organization from the caller's token; extractor errors answer 400 for a missing or malformed ID, 403 for `ErrResourceNotFound`, and 500 otherwise"
+        },
+        {
+          "description": "scim/store: the Ent store refuses requests without a provisioning scope. For a tenant, `active` is the membership's state, creating a user who exists elsewhere links them as a member, deleting a shared user removes only the membership, and groups cannot be created, renamed or deleted"
+        },
+        {
+          "description": "connections: creator rights need an `Options.Authorizer` that implements `authz.OrgAuthorizer` (the rbac and SpiceDB providers do); with another authorizer, creators are decided by role and grants alone"
+        },
+        {
+          "description": "bff: a custom `HandlerConfig.SessionIDGenerator` must produce IDs that `ValidSessionID` accepts (URL-safe characters, at most 256)"
+        },
+        {
+          "description": "scim/store: SCIM refuses to deprovision an organization owner, restores memberships with the default role, and for a platform credential `active` deactivates the account through the principal service"
+        }
+      ],
+      "deprecated": [
+        {
+          "description": "scim: `API.Middleware`, which binds no provisioning scope; use `CredentialMiddleware`"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "SCIM provisioning guide"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "session/jwt: set `Config.Audience` to a value naming the application. Access tokens issued before the upgrade are refused and clients refresh; refresh tokens issued without the audience require signing in again"
+        },
+        {
+          "description": "relyingparty: list in `AcceptedClientIDs` every client, including the application's own `ClientID`, whose tokens the API must accept, such as service clients using client credentials; or set `AccessTokenAudience` for an API that many clients call with an audience"
+        },
+        {
+          "description": "multiapp: mint tokens with `jwt.TokenOptions{Audience: []string{appID}}`, or set `AppAudiences` to the audiences your tokens already carry"
+        },
+        {
+          "description": "authzguardsql: handle `ErrNoAuthorizedEntities` from `PolicyBuilder.Build` by refusing the query (for example with 403)"
+        },
+        {
+          "description": "authz: replace `WithResourceID` with `WithResourceLookup` on routes whose access depends on the organization role, passing a lookup that returns the resource's owning organization"
+        },
+        {
+          "description": "scim: authenticate with `CredentialMiddleware` and bind each SCIM credential to its organization (`Scope{OrganizationID: ...}`); give `Scope{Platform: true}` only to platform operator credentials"
+        },
+        {
+          "description": "scim/store: pass the application's organization service (with its authz syncer) as `Config.Memberships` and its principal service as `Config.Principals`, so SCIM changes sync the authorization graph"
+        }
+      ]
+    },
     {
       "version": "v0.19.0",
       "date": "2026-10-22",

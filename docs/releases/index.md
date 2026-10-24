@@ -4,22 +4,26 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.19.0](v0.19.0.md), adds a minimum sign-up age:
-SystemAuth asks a person's birth month and year before it creates their
-account and refuses anyone younger, keeping nothing about them. Nothing is
-breaking.
+The latest release, [v0.20.0](v0.20.0.md), is a security release: tokens are
+bound to the application they were issued for, SCIM credentials to one
+organization, revocation removes access everywhere, and authorization checks
+fail closed. It is breaking; read its upgrade notes first.
 
-The previous release, [v0.18.0](v0.18.0.md), added the organization console,
+The previous release, [v0.19.0](v0.19.0.md), added a minimum sign-up age:
+SystemAuth asks a person's birth month and year before it creates their
+account and refuses anyone younger, keeping nothing about them.
+
+Before it, [v0.18.0](v0.18.0.md) added the organization console,
 served by SystemAuth under `/console`, where organizations manage their
 connections, and recorded each connection's rotation mode.
 
-Before it, [v0.17.0](v0.17.0.md) let relying-party applications
+Before that, [v0.17.0](v0.17.0.md) let relying-party applications
 manage managed principals through an API on SystemAuth and a Go client,
 required consent before anyone becomes a manager, and refused contract
 operations until an application is federated. The last two are breaking;
 read its upgrade notes first.
 
-Before that, [v0.16.0](v0.16.0.md) added reconnecting, bindings and
+Then [v0.16.0](v0.16.0.md) added reconnecting, bindings and
 per-connection grants to the connections API and renamed the connection
 library from connectionforge to connectforge. The rename is breaking for
 deployments that enabled connections in v0.15.0.
@@ -36,6 +40,8 @@ completed the organization model. It is a breaking release with migrations
 
 | Version | Release date |
 |---|---|
+| [v0.20.0](v0.20.0.md) | 2026-10-23 |
+| [v0.19.0](v0.19.0.md) | 2026-10-22 |
 | [v0.18.0](v0.18.0.md) | 2026-10-20 |
 | [v0.17.0](v0.17.0.md) | 2026-10-18 |
 | [v0.16.0](v0.16.0.md) | 2026-10-14 |
