@@ -44,6 +44,8 @@ func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) 
 		Dir:      cc.KeysDir,
 		Root:     keys.VaultSource(v, cc.RootKey),
 		Purposes: []keyforge.Purpose{connections.Purpose},
+		Audit:    opts.AuditStore,
+		Logger:   s.logger,
 	})
 	if err != nil {
 		return err
@@ -71,6 +73,7 @@ func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) 
 		Authorizer: s.authz.Provider,
 		Grants:     s.authz.Provider,
 		Vault:      v,
+		Audit:      opts.AuditStore,
 		Logger:     s.logger,
 		Providers:  opts.Providers,
 		Egress:     egress.Policy{AllowPrivate: cc.AllowPrivateEgress, AllowHTTP: cc.AllowPrivateEgress},

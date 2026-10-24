@@ -1,13 +1,17 @@
 package keys_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/plexusone/keyforge"
 	"github.com/plexusone/keyforge/provider/local"
+	"github.com/plexusone/omnivault/providers/memory"
 
 	"github.com/plexusone/systemforge/keys"
 )
@@ -45,4 +49,31 @@ func TestOpenRefusesRootKeyFileInDir(t *testing.T) {
 	if !errors.Is(err, keys.ErrRootKeyInKeysDir) {
 		t.Fatalf("err = %v, want ErrRootKeyInKeysDir", err)
 	}
+}
+
+// Without an audit store, lifecycle events are logged rather than dropped.
+func TestLifecycleEventsAreLoggedWithoutAStore(t *testing.T) {
+	var buf bytes.Buffer
+	v := vaultWithRoot()
+	k, err := keys.Open(context.Background(), keys.Options{
+		Dir:      t.TempDir(),
+		Root:     keys.VaultSource(v, "keyforge/root"),
+		Purposes: []keyforge.Purpose{purpose},
+		Logger:   slog.New(slog.NewTextHandler(&buf, nil)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := k.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	if !strings.Contains(buf.String(), "key lifecycle event") {
+		t.Errorf("no lifecycle event logged; log: %q", buf.String())
+	}
+}
+
+func vaultWithRoot() *memory.Provider {
+	return memory.NewWithSecrets(map[string]string{"keyforge/root": rootKeyText(7)})
 }

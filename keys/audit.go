@@ -3,6 +3,7 @@ package keys
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	kfaudit "github.com/plexusone/keyforge/audit"
 
@@ -57,4 +58,30 @@ func outcome(o kfaudit.Outcome) string {
 		return "success"
 	}
 	return "failure"
+}
+
+// logSink logs keyforge lifecycle events when no audit store is configured,
+// so they are not discarded.
+type logSink struct {
+	logger *slog.Logger
+}
+
+func (s logSink) Emit(ctx context.Context, e kfaudit.Event) error {
+	attrs := []any{
+		"action", string(e.Action),
+		"outcome", string(e.Outcome),
+		"purpose", e.Purpose,
+		"event_id", e.ID,
+	}
+	if e.Actor != "" {
+		attrs = append(attrs, "actor", e.Actor)
+	}
+	if e.DEKID != "" {
+		attrs = append(attrs, "dek_id", e.DEKID)
+	}
+	if e.Reason != "" {
+		attrs = append(attrs, "reason", e.Reason)
+	}
+	s.logger.InfoContext(ctx, "key lifecycle event", attrs...)
+	return nil
 }

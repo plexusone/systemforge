@@ -122,6 +122,10 @@ type Options struct {
 	// configuration enables managed principals. Optional.
 	AuditEmitter audit.Emitter
 
+	// AuditStore records key lifecycle and connection events when the
+	// configuration enables connections. When nil they are logged. Optional.
+	AuditStore audit.Store
+
 	// ManagedPrincipalRates stores the per-caller limit on redeeming claim
 	// codes and answering manager invitations. Default: in-memory storage,
 	// which suits one instance; pass shared storage, such as Redis, when
