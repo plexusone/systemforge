@@ -1,6 +1,7 @@
 package systemauth
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -29,10 +30,11 @@ type Client struct {
 	// Secret is the client secret (never serialized).
 	Secret string `json:"-"`
 
-	// SecretHash is the bcrypt hash of the secret.
+	// SecretHash is the hash of the secret (bcrypt, or Argon2id in PHC
+	// string format; see ClientSecretHasher).
 	SecretHash string `json:"secret_hash,omitempty"`
 
-	// RotatedSecretHashes are the bcrypt hashes of other secrets that are
+	// RotatedSecretHashes are the hashes of other secrets that are
 	// still active, accepted during a secret rotation.
 	RotatedSecretHashes []string `json:"-"`
 
@@ -230,7 +232,7 @@ func (c *Client) ValidateSecret(secret string) bool {
 		return true // Public clients don't have secrets
 	}
 	for _, h := range append([]string{c.SecretHash}, c.RotatedSecretHashes...) {
-		if h != "" && bcrypt.CompareHashAndPassword([]byte(h), []byte(secret)) == nil {
+		if h != "" && (ClientSecretHasher{}).Compare(context.Background(), []byte(h), []byte(secret)) == nil {
 			return true
 		}
 	}

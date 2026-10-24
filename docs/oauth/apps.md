@@ -133,22 +133,21 @@ func generateSecret() string {
 
 ### Hash Secret
 
+The token endpoint verifies a client secret against its stored hash with
+`systemauth.ClientSecretHasher`, which accepts bcrypt hashes and Argon2id
+hashes in PHC string format (`$argon2id$...`). Use either:
+
 ```go
-import "golang.org/x/crypto/argon2"
+import "github.com/plexusone/systemforge/identity"
 
-func hashSecret(secret string) string {
-    salt := make([]byte, 16)
-    rand.Read(salt)
-
-    hash := argon2.IDKey([]byte(secret), salt, 3, 64*1024, 4, 32)
-
-    // Return encoded hash with parameters
-    return fmt.Sprintf("$argon2id$v=19$m=65536,t=3,p=4$%s$%s",
-        base64.RawStdEncoding.EncodeToString(salt),
-        base64.RawStdEncoding.EncodeToString(hash),
-    )
+func hashSecret(secret string) (string, error) {
+    return identity.HashPassword(secret, identity.DefaultArgon2idParams())
 }
 ```
+
+A confidential client authenticates with `client_secret_basic` or
+`client_secret_post`. Only secrets that are neither revoked nor expired
+are accepted.
 
 ### Rotate Secret
 

@@ -17,7 +17,6 @@ import (
 	"github.com/plexusone/systemforge/identity/clientassertion"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
-	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
 )
@@ -96,30 +95,23 @@ func (s *EntStorage) GetClient(ctx context.Context, clientID string) (fosite.Cli
 }
 
 // loadSecrets sets the client's secret hashes from its active secrets
-// (not revoked, not expired): the newest is SecretHash, which new client
-// authentication is checked against first, and the others are accepted as
-// rotated secrets. A public client has none.
+// (see ActiveClientSecretHashes): the newest is SecretHash, which new
+// client authentication is checked against first, and the others are
+// accepted as rotated secrets. A public client has none.
 func (s *EntStorage) loadSecrets(ctx context.Context, app *ent.OAuthApp, client *Client) error {
 	if app.Public {
 		return nil
 	}
-	secrets, err := s.db.OAuthAppSecret.Query().
-		Where(
-			oauthappsecret.AppIDEQ(app.ID),
-			oauthappsecret.RevokedEQ(false),
-			oauthappsecret.Or(oauthappsecret.ExpiresAtIsNil(), oauthappsecret.ExpiresAtGT(time.Now())),
-		).
-		Order(ent.Desc(oauthappsecret.FieldCreatedAt)).
-		All(ctx)
+	hashes, err := ActiveClientSecretHashes(ctx, s.db, app.ID)
 	if err != nil {
-		return fmt.Errorf("load client secrets: %w", err)
+		return err
 	}
-	for i, sec := range secrets {
+	for i, h := range hashes {
 		if i == 0 {
-			client.SecretHash = sec.SecretHash
+			client.SecretHash = h
 			continue
 		}
-		client.RotatedSecretHashes = append(client.RotatedSecretHashes, sec.SecretHash)
+		client.RotatedSecretHashes = append(client.RotatedSecretHashes, h)
 	}
 	return nil
 }

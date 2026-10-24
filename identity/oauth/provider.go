@@ -12,6 +12,7 @@ import (
 	"github.com/ory/fosite/token/jwt"
 
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/systemauth"
 )
 
 // Config holds OAuth 2.0 server configuration.
@@ -78,6 +79,8 @@ func NewProvider(db *ent.Client, cfg *Config) (*Provider, error) {
 		SendDebugMessagesToClients:  false,
 		EnforcePKCE:                 true,
 		EnforcePKCEForPublicClients: true,
+		// Client secrets are stored as bcrypt or Argon2id hashes.
+		ClientSecretsHasher: systemauth.ClientSecretHasher{},
 	}
 
 	// Key getter function for JWT signing

@@ -187,6 +187,7 @@ func (s *Server) setupFosite() error {
 		EnforcePKCE:                    s.config.Features.RequirePKCE,
 		EnforcePKCEForPublicClients:    true,
 		EnablePKCEPlainChallengeMethod: false,
+		ClientSecretsHasher:            ClientSecretHasher{},
 	}
 
 	// Key getter function for JWT signing

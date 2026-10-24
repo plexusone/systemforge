@@ -40,7 +40,8 @@ func hashToken(token string) string {
 
 // --- ClientManager Interface ---
 
-// GetClient loads an active OAuth client by its client_id.
+// GetClient loads an active OAuth client by its client_id, with the
+// hashes of its active secrets for client authentication.
 func (s *Storage) GetClient(ctx context.Context, clientID string) (fosite.Client, error) {
 	app, err := s.db.OAuthApp.Query().
 		Where(oauthapp.ClientIDEQ(clientID)).
@@ -53,7 +54,15 @@ func (s *Storage) GetClient(ctx context.Context, clientID string) (fosite.Client
 		return nil, fosite.ErrServerError.WithWrap(err)
 	}
 
-	return &Client{app: app, storage: s}, nil
+	c := &Client{app: app, storage: s}
+	if !app.Public {
+		hashes, err := systemauth.ActiveClientSecretHashes(ctx, s.db, app.ID)
+		if err != nil {
+			return nil, fosite.ErrServerError.WithWrap(err)
+		}
+		c.secretHashes = hashes
+	}
+	return c, nil
 }
 
 // ClientAssertionJWTValid reports fosite.ErrJTIKnown for a
