@@ -111,3 +111,93 @@ func TestUnknownKidRejected(t *testing.T) {
 		t.Errorf("unknown kid: err = %v, want ErrInvalidToken", err)
 	}
 }
+
+// TestKeyRotationRollback walks the documented rotation: pre-stage the new
+// key N for verification only, promote it to signing with N-1 kept for
+// verification, and roll the promotion back. Every token issued along the
+// way must verify at every step, including tokens signed by N after the
+// rollback. Only the next promotion drops the key that is then N-2.
+func TestKeyRotationRollback(t *testing.T) {
+	k1 := bytes.Repeat([]byte{1}, 32)
+	k2 := bytes.Repeat([]byte{2}, 32)
+	k3 := bytes.Repeat([]byte{3}, 32)
+
+	steady := keyConfig(k1, "k1", nil)
+	preStage := keyConfig(k1, "k1", map[string]any{"k2": k2})
+	promote := keyConfig(k2, "k2", map[string]any{"k1": k1})
+	nextPreStage := keyConfig(k2, "k2", map[string]any{"k1": k1, "k3": k3})
+	nextPromote := keyConfig(k3, "k3", map[string]any{"k2": k2})
+
+	var tokens []string
+	issue := func(cfg *Config) *Service {
+		t.Helper()
+		svc, err := NewService(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pair, err := svc.GenerateTokenPair(uuid.New(), "u@example.com", "U")
+		if err != nil {
+			t.Fatal(err)
+		}
+		tokens = append(tokens, pair.AccessToken, pair.RefreshToken)
+		return svc
+	}
+	verifyAll := func(step string, svc *Service, toks []string) {
+		t.Helper()
+		for i, tok := range toks {
+			var err error
+			if i%2 == 0 {
+				_, err = svc.ValidateAccessToken(tok)
+			} else {
+				_, err = svc.ValidateRefreshToken(tok)
+			}
+			if err != nil {
+				t.Errorf("%s: token %d rejected: %v", step, i, err)
+			}
+		}
+	}
+
+	issue(steady)
+	verifyAll("pre-stage", issue(preStage), tokens)
+	verifyAll("promote", issue(promote), tokens)
+	// Roll the promotion back: the pre-stage configuration still verifies
+	// the tokens N signed while it was promoted.
+	verifyAll("roll back", issue(preStage), tokens)
+	verifyAll("promote again", issue(promote), tokens)
+
+	// The next rotation keeps k1 through its pre-stage and drops it, now
+	// N-2, only when k3 is promoted.
+	verifyAll("next pre-stage", issue(nextPreStage), tokens)
+	last, err := NewService(nextPromote)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, tok := range tokens {
+		kid := tokenKID(t, tok)
+		var err error
+		if i%2 == 0 {
+			_, err = last.ValidateAccessToken(tok)
+		} else {
+			_, err = last.ValidateRefreshToken(tok)
+		}
+		switch {
+		case kid == "k1" && !errors.Is(err, ErrInvalidToken):
+			t.Errorf("next promote: k1 token %d: err = %v, want ErrInvalidToken", i, err)
+		case kid != "k1" && err != nil:
+			t.Errorf("next promote: %s token %d rejected: %v", kid, i, err)
+		}
+	}
+}
+
+func tokenKID(t *testing.T, tok string) string {
+	t.Helper()
+	parsed, _, err := gojwt.NewParser().ParseUnverified(tok, &Claims{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kid, ok := parsed.Header["kid"].(string)
+	if !ok {
+		t.Fatalf("token has no string kid: %v", parsed.Header["kid"])
+	}
+	return kid
+}

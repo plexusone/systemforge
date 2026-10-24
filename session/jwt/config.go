@@ -39,15 +39,23 @@ type Config struct {
 	// key, a key in VerificationKeys selects that key, and any other kid is
 	// rejected. Tokens without a kid are verified with the signing key.
 	//
-	// To rotate: give the current key a KeyID and deploy; later make the
-	// new key the signing key with a new KeyID and move the old one into
-	// VerificationKeys under its KeyID; remove it once tokens signed with
-	// it have expired.
+	// Rotation keeps the current key N and the previous key N-1 valid, so
+	// any deploy can be rolled back to a configuration that still verifies
+	// every outstanding token:
+	//
+	//  1. Pre-stage: add the new key N to VerificationKeys while N-1 still
+	//     signs, and deploy everywhere.
+	//  2. Promote: make N the signing key (Secret or PrivateKey and KeyID),
+	//     move N-1 into VerificationKeys, and drop N-2. Rolling this deploy
+	//     back returns to step 1, which still verifies tokens N signed.
+	//
+	// Never introduce N and drop N-1 in the same deploy.
 	KeyID string
 
 	// VerificationKeys are additional keys, by kid, accepted for
-	// verification only, such as a key being rotated out: an HMAC secret
-	// ([]byte) for HS algorithms, a public key for RS and ES algorithms.
+	// verification only: the previous key N-1 and, while it is pre-staged,
+	// the next key. Each is an HMAC secret ([]byte) for HS algorithms or a
+	// public key for RS and ES algorithms.
 	VerificationKeys map[string]any
 
 	// Audience identifies the application this service issues tokens for

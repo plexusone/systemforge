@@ -56,16 +56,44 @@ at least as long as the hash output (`ErrWeakSecret`).
 Set `KeyID` to put a `kid` header on every token. A token's `kid` selects the
 verification key: `KeyID` selects the signing key, an entry in
 `VerificationKeys` selects that key, and any other `kid` is rejected. Tokens
-without a `kid` are verified with the signing key. To rotate, first give the
-current key a `KeyID`; later make the new key the signing key under a new
-`KeyID` and move the old one into `VerificationKeys`, removing it once the
-tokens it signed have expired:
+without a `kid` are verified with the signing key, so give the current key a
+`KeyID` first and wait until tokens issued without one have expired (the
+refresh token lifetime) before the first rotation.
 
-```go
-cfg.Secret = newSecret
-cfg.KeyID = "k2"
-cfg.VerificationKeys = map[string]any{"k1": oldSecret}
-```
+Rotation keeps two keys valid: the signing key N and the previous key N-1 in
+`VerificationKeys`. Only N-2 is removed. Each step is its own deploy, so
+rolling back any deploy returns to a configuration that verifies every token
+issued so far:
+
+1. **Steady state.** `k1` signs.
+
+    ```go
+    cfg.Secret, cfg.KeyID = k1, "k1"
+    ```
+
+2. **Pre-stage `k2`.** Deploy `k2` for verification only while `k1` still
+   signs, and wait until every instance runs it.
+
+    ```go
+    cfg.Secret, cfg.KeyID = k1, "k1"
+    cfg.VerificationKeys = map[string]any{"k2": k2}
+    ```
+
+3. **Promote `k2`.** `k2` signs and `k1` (now N-1) stays for verification.
+   Rolling this deploy back returns to step 2, which still verifies the
+   tokens `k2` signed in the meantime.
+
+    ```go
+    cfg.Secret, cfg.KeyID = k2, "k2"
+    cfg.VerificationKeys = map[string]any{"k1": k1}
+    ```
+
+4. **Next rotation.** Pre-stage `k3` with `k1` still listed
+   (`{"k1": k1, "k3": k3}`), then promote `k3` with `{"k2": k2}`. `k1` is
+   N-2 at that point and is the only key removed.
+
+Never introduce a new signing key and drop the previous one in the same
+deploy: a rollback would then reject every token the new key signed.
 
 The client-kind audiences below (`bff`, `api`) are added in front of the
 application audience rather than replacing it, so a BFF token for `my-app`
