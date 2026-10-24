@@ -83,6 +83,19 @@ Creating a user adds the account first and the membership after. If adding
 the membership fails, the request fails; the identity provider's retry finds
 the account by email and links it.
 
+## Filters
+
+The Ent store evaluates `filter` on these attributes, and answers `400
+invalidFilter` for anything else (another attribute, an operator the
+attribute does not support, a value of the wrong type, a value-path filter
+such as `emails[type eq "work"]`, trailing input, or nesting deeper than
+`filter.MaxDepth`), so a filter never returns more resources than it names:
+
+| Resource | Attributes |
+|----------|------------|
+| Users | `id`, `userName` and `emails.value` (case-insensitive), `displayName` and `name.formatted`, `active` (`eq`, `ne`), `meta.created` and `meta.lastModified` (`gt`, `ge`, `lt`, `le`), `externalId` (`eq`, `pr`; users carry none, so it matches nobody) |
+| Groups | `id`, `displayName`, `externalId` (the organization slug), `meta.created`, `meta.lastModified` |
+
 ## Platform Operator Credentials
 
 A credential with `scim.Scope{Platform: true}` provisions every user and
