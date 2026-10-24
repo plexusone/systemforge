@@ -2,6 +2,7 @@ package authzguardsql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -55,6 +56,11 @@ func (DefaultResourceBuilder) FieldResource(entity, field string) authz.Resource
 		WithAttr("field", strings.ToLower(field))
 }
 
+// ErrNoAuthorizedEntities is returned by PolicyBuilder.Build when the
+// principal may read no entity of the schema. A policy with nothing allowed
+// must not be built, because guardsql reads empty allowlists as unrestricted.
+var ErrNoAuthorizedEntities = errors.New("authzguardsql: principal may read no entity")
+
 // PolicyBuilder checks SystemForge authorization for schema entities/fields and
 // compiles the result into a GuardSQL policy.
 type PolicyBuilder struct {
@@ -71,6 +77,8 @@ type PolicyBuilder struct {
 }
 
 // Build returns a read-only GuardSQL policy derived from SystemForge authz.
+// It returns ErrNoAuthorizedEntities when the principal may read no entity;
+// callers should refuse the query.
 func (b PolicyBuilder) Build(ctx context.Context) (guardsql.Policy, error) {
 	if b.Authorizer == nil {
 		return guardsql.Policy{}, fmt.Errorf("authorizer is required")
@@ -122,6 +130,9 @@ func (b PolicyBuilder) Build(ctx context.Context) (guardsql.Policy, error) {
 			}
 		}
 		decision.Fields[entityName] = fieldPolicies
+	}
+	if len(decision.AllowedEntities) == 0 {
+		return guardsql.Policy{}, ErrNoAuthorizedEntities
 	}
 	return gqlauthz.PolicyFromDecision(decision), nil
 }

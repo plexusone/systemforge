@@ -2,6 +2,7 @@ package authzguardsql
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/grokify/guardsql"
@@ -88,6 +89,39 @@ func TestPolicyBuilderBuildsGuardSQLPolicy(t *testing.T) {
 	}
 	if !policy.Fields["items"]["score"].Sortable {
 		t.Fatalf("score should be sortable: %#v", policy.Fields)
+	}
+}
+
+func salariesSchema() guardsql.Schema {
+	return guardsql.Schema{Entities: map[string]guardsql.Entity{
+		"salaries": {Fields: map[string]guardsql.Field{
+			"salary": {Type: guardsql.FieldNumber, Selectable: true},
+		}},
+	}}
+}
+
+// A principal authorized for nothing must not get a policy, since guardsql
+// reads empty allowlists as unrestricted.
+func TestPolicyBuilderRefusesWhenNothingIsAuthorized(t *testing.T) {
+	_, err := PolicyBuilder{Authorizer: mockAuthorizer{}, Schema: salariesSchema()}.Build(context.Background())
+	if !errors.Is(err, ErrNoAuthorizedEntities) {
+		t.Fatalf("err = %v, want ErrNoAuthorizedEntities", err)
+	}
+}
+
+// An entity is readable but none of its fields: the policy must expose no
+// field of it.
+func TestPolicyBuilderEntityWithoutFieldGrants(t *testing.T) {
+	policy, err := PolicyBuilder{
+		Authorizer: mockAuthorizer{allowed: map[string]bool{"guardsql_entity:read:salaries:": true}},
+		Schema:     salariesSchema(),
+	}.Build(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := guardsql.Config{Schema: salariesSchema(), Policy: policy}
+	if _, err := cfg.Check("SELECT salary FROM salaries"); err == nil {
+		t.Fatal("salary selectable without a field grant")
 	}
 }
 
