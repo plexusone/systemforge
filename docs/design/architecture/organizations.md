@@ -214,7 +214,7 @@ only `role = owner` plus `sf_organizations.owner_principal_id`.
 | Operation | Route | Rule |
 |---|---|---|
 | `listMembers`, `getMember` | `GET /organizations/{slug}/members[/{principal_id}]` | `view` |
-| `addMember` | `POST /organizations/{slug}/members` | `invite_member`; granting `owner` additionally needs the owner-only permission (`delete`) |
+| `addMember` | `POST /organizations/{slug}/members` | `invite_member`, and the caller must be allowed to enroll the principal without its consent: by default only a platform administrator; `APIConfig.DirectAdd` can allow principals the organization governs (for example managed principals the caller manages). Everyone else joins by invitation. Granting `owner` additionally needs the owner-only permission (`delete`) |
 | `updateMember` | `PATCH /organizations/{slug}/members/{principal_id}` | `change_role`; touching an owner's role, or granting `owner`, needs the owner-only permission; deactivating needs `remove_member` |
 | `removeMember` | `DELETE /organizations/{slug}/members/{principal_id}` | A member may remove themself with `view`; removing someone else needs `remove_member`, and removing the owner needs the owner-only permission |
 | `transferOwnership` | `POST /organizations/{slug}/transfer-ownership` | `delete`, and the caller must be `owner_principal_id` |
