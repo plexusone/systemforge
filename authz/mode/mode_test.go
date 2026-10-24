@@ -131,6 +131,12 @@ func TestNewRBAC(t *testing.T) {
 	if res.Grants == nil {
 		t.Error("no grant store")
 	}
+	if res.Reconciler != nil {
+		t.Error("mode rbac has a graph reconciler")
+	}
+	if err := res.RunReconciler(context.Background()); err != nil {
+		t.Errorf("RunReconciler in mode rbac = %v", err)
+	}
 	// The member's access to the resource reaches through the permission
 	// map; this test grants only directly.
 	exerciseContract(t, db, res, func(uuid.UUID, string) {})
@@ -143,10 +149,12 @@ func TestNewRejects(t *testing.T) {
 	}
 	db := newDB(t)
 	for name, cfg := range map[string]authz.ModeConfig{
-		"unknown mode":       {Mode: "abac"},
-		"engine with rbac":   {Mode: authz.ModeRBAC, Engine: authz.EngineSpiceDB},
-		"unknown engine":     {Mode: authz.ModeReBAC, Engine: "openfga"},
-		"remote no endpoint": {Mode: authz.ModeReBAC, SpiceDB: &authz.SpiceDBConfig{Mode: "remote"}},
+		"unknown mode":        {Mode: "abac"},
+		"engine with rbac":    {Mode: authz.ModeRBAC, Engine: authz.EngineSpiceDB},
+		"unknown engine":      {Mode: authz.ModeReBAC, Engine: "openfga"},
+		"remote no endpoint":  {Mode: authz.ModeReBAC, SpiceDB: &authz.SpiceDBConfig{Mode: "remote"}},
+		"reconcile with rbac": {Mode: authz.ModeRBAC, Reconcile: &authz.ReconcileConfig{}},
+		"bad interval":        {Mode: authz.ModeReBAC, Reconcile: &authz.ReconcileConfig{Interval: "soon"}},
 	} {
 		if res, err := mode.New(ctx, cfg, mode.Deps{DB: db}); err == nil {
 			_ = res.Close()

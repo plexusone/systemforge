@@ -475,6 +475,38 @@
           "additionalProperties": false,
           "type": "object",
           "description": "SpiceDB engine settings for mode rebac"
+        },
+        "reconcile": {
+          "properties": {
+            "disabled": {
+              "type": "boolean",
+              "description": "Turn the graph reconciler off",
+              "default": false
+            },
+            "skip_startup": {
+              "type": "boolean",
+              "description": "Do not reconcile at startup",
+              "default": false
+            },
+            "interval": {
+              "type": "string",
+              "description": "Time between periodic reconciliations (Go duration; 0 for startup only)",
+              "default": "15m"
+            },
+            "jitter": {
+              "type": "string",
+              "description": "Most added at random to each interval (Go duration; default a tenth of the interval)"
+            },
+            "page_size": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Rows or relationships read per request",
+              "default": 500
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Repair of the relationship graph from the identity tables in mode rebac"
         }
       },
       "additionalProperties": false,

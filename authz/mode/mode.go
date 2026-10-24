@@ -17,6 +17,16 @@
 // application roles, resource grants, ListResources) with the same
 // semantics, so switching modes is a configuration change; the membership,
 // role and grant tables remain the record in both.
+//
+// In mode rebac the services remove a relationship from the graph before
+// the change that revokes it commits, and write granted relationships
+// after their change commits. The Result's Reconciler repairs what a
+// failed write leaves behind; run it on the configured schedule beside
+// the application:
+//
+//	go func() {
+//		if err := res.RunReconciler(ctx); err != nil { ... }
+//	}()
 package mode
 
 import (
@@ -48,11 +58,13 @@ type Deps struct {
 	// the schema fragments composed into the engine's schema. Optional.
 	Registry *authz.VocabularyRegistry
 
-	// SyncMode decides what a failed write to the relationship engine
-	// does: authz.SyncModeStrict returns it, SyncModeEventual (the default)
-	// logs it. Mode rbac writes nothing. Nothing retries a failed write, so
-	// under rebac a failed revocation leaves the access in the graph; see
-	// authz.SyncMode.
+	// SyncMode decides what a failed write of granted access to the
+	// relationship engine does: authz.SyncModeStrict returns it,
+	// SyncModeEventual (the default) logs it. Revocations remove the
+	// relationship before their transaction commits and fail when the
+	// engine refuses, whatever the mode; the reconciler (Result.Reconciler)
+	// repairs what a failed write leaves behind. Mode rbac writes nothing.
+	// See authz.SyncMode.
 	SyncMode authz.SyncMode
 
 	// AccessChangeSink announces the access changes grants record
@@ -95,7 +107,27 @@ type Result struct {
 	// grant inside their own transactions (invite.WithResourceGrants).
 	Grants *resourcegrant.Service
 
+	// Reconciler repairs the relationship graph from the identity tables
+	// in mode rebac; nil in mode rbac, which has no graph. Call its
+	// Reconcile for an on-demand run, and RunReconciler to run it on the
+	// configured schedule.
+	Reconciler *Reconciler
+
+	// Schedule is when RunReconciler reconciles, from the configuration's
+	// reconcile settings. Disabled reconciler: the zero schedule.
+	Schedule ReconcileSchedule
+
 	closeFn func() error
+}
+
+// RunReconciler runs the reconciler on Schedule until ctx is cancelled and
+// returns nil then. It returns at once in mode rbac, when the reconciler is
+// disabled, and after the startup run when no interval is configured.
+func (r *Result) RunReconciler(ctx context.Context) error {
+	if r == nil || r.Reconciler == nil {
+		return nil
+	}
+	return r.Reconciler.Run(ctx, r.Schedule)
 }
 
 // Close releases what the mode holds: the engine's connection, and, for an
@@ -201,11 +233,39 @@ func newSpiceDB(ctx context.Context, cfg authz.ModeConfig, deps Deps) (*Result, 
 
 	syncer := spicedb.NewSyncer(client)
 	store := resourcegrant.NewService(deps.DB, deps.storeOptions(syncer)...)
-	return &Result{
+	res := &Result{
 		Mode:     authz.ModeReBAC,
 		Provider: spicedb.NewProvider(client, spicedb.WithResourceGrants(store)),
 		Syncer:   syncer,
 		Grants:   store,
 		closeFn:  client.Close,
-	}, nil
+	}
+	rc := cfg.Reconcile
+	if rc == nil || !rc.Disabled {
+		if res.Schedule, err = schedule(rc); err != nil {
+			return fail(err)
+		}
+		pageSize := authz.DefaultReconcilePageSize
+		if rc != nil && rc.PageSize > 0 {
+			pageSize = rc.PageSize
+		}
+		res.Reconciler = NewReconciler(deps.DB, client,
+			WithReconcileRegistry(deps.Registry),
+			WithReconcilePageSize(pageSize),
+			WithReconcileLogger(deps.Logger))
+	}
+	return res, nil
+}
+
+// schedule converts the reconcile configuration to a schedule.
+func schedule(rc *authz.ReconcileConfig) (ReconcileSchedule, error) {
+	interval, err := rc.IntervalDuration()
+	if err != nil {
+		return ReconcileSchedule{}, err
+	}
+	jitter, err := rc.JitterDuration()
+	if err != nil {
+		return ReconcileSchedule{}, err
+	}
+	return ReconcileSchedule{OnStartup: rc == nil || !rc.SkipStartup, Interval: interval, Jitter: jitter}, nil
 }
