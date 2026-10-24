@@ -40,6 +40,9 @@
       },
       {
         "description": "Deactivating an organization membership left the member's organization role, application roles and resource grants in the SpiceDB graph, so under the ReBAC authorizer a deactivated admin kept every permission; deactivation now removes them from the graph and reactivation writes them back"
+      },
+      {
+        "description": "bff `RegisterHumaRoutes` registered stub handlers for logout, session and refresh; on a router shared with Huma, as documented, they took precedence over the mounted BFF handler, so logout answered success without ending the session and the stubs skipped the Origin check and rate limiter. It now only documents the routes"
       }
     ],
     "added": [
