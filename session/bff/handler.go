@@ -3,6 +3,7 @@ package bff
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -45,8 +46,11 @@ type HandlerConfig struct {
 	// If nil, the /refresh endpoint returns 501 Not Implemented.
 	OnRefresh func(ctx context.Context, session *Session) (*TokenRefreshResult, error)
 
-	// OnLogout is called when a session is logged out.
-	// Can be used to revoke refresh tokens in the database.
+	// OnLogout is called when a session is logged out, before it is
+	// deleted. The BFF does not revoke tokens itself: set OnLogout to
+	// revoke the refresh token (and access token, if supported) at the
+	// authorization server. If it returns an error the session is still
+	// deleted, but /logout responds 500.
 	OnLogout func(ctx context.Context, session *Session) error
 
 	// OnSessionLoad is called after a session is loaded from the store.
@@ -325,29 +329,61 @@ type SessionInfoResponse struct {
 	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
 }
 
-// handleLogout clears the session.
+// handleLogout ends the session. It fails closed: if the session cannot be
+// loaded or deleted it responds 500 and keeps the cookie, so the client
+// still holds the session and can retry, instead of reporting success while
+// the server-side session stays valid. If the OnLogout hook fails the
+// session is still deleted and the cookie cleared, but the response is 500
+// so the client knows token revocation did not complete.
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	sessionID := h.cookieManager.GetSessionID(r)
+	if sessionID == "" {
+		h.cookieManager.ClearSessionCookie(w)
+		h.writeJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
+		return
+	}
+
 	// Delete only a session the store returns for the cookie: the cookie
 	// value is client-controlled and must never be passed to Delete
 	// unchecked, since a store may keep other records (such as per-user
 	// session indexes) in the same key space.
-	ctx := r.Context()
-	if sessionID := h.cookieManager.GetSessionID(r); sessionID != "" {
-		if session, err := h.store.Get(ctx, sessionID); err == nil {
-			if h.config.OnLogout != nil {
-				// Call logout hook (e.g., to revoke refresh token in DB)
-				if err := h.config.OnLogout(ctx, session); err != nil {
-					slog.ErrorContext(ctx, "bff: logout hook failed", "error", err)
-				}
-			}
-			if err := h.store.Delete(ctx, session.ID); err != nil {
-				slog.ErrorContext(ctx, "bff: deleting session at logout failed", "error", err)
-			}
+	session, err := h.store.Get(ctx, sessionID)
+	if err != nil {
+		if errors.Is(err, ErrSessionNotFound) || errors.Is(err, ErrSessionExpired) {
+			h.cookieManager.ClearSessionCookie(w)
+			h.writeJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
+			return
+		}
+		slog.ErrorContext(ctx, "bff: loading session at logout failed", "error", err)
+		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "logout_failed", "message": "Logout failed; retry"})
+		return
+	}
+
+	revokeFailed := false
+	if h.config.OnLogout != nil {
+		// Call logout hook (e.g., to revoke refresh token in DB)
+		if err := h.config.OnLogout(ctx, session); err != nil {
+			slog.ErrorContext(ctx, "bff: logout hook failed", "error", err)
+			revokeFailed = true
 		}
 	}
 
-	// Clear cookie
+	if err := h.store.Delete(ctx, session.ID); err != nil && !errors.Is(err, ErrSessionNotFound) {
+		slog.ErrorContext(ctx, "bff: deleting session at logout failed", "error", err)
+		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "logout_failed", "message": "Logout failed; retry"})
+		return
+	}
+
 	h.cookieManager.ClearSessionCookie(w)
+
+	if revokeFailed {
+		h.writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error":   "revocation_failed",
+			"message": "Session ended, but token revocation failed",
+		})
+		return
+	}
 
 	h.writeJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 }
@@ -374,7 +410,9 @@ func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 
 	// Check if refresh token is still valid
 	if session.IsRefreshTokenExpired() {
-		_ = h.store.Delete(r.Context(), sessionID)
+		if err := h.store.Delete(r.Context(), session.ID); err != nil && !errors.Is(err, ErrSessionNotFound) {
+			slog.ErrorContext(r.Context(), "bff: deleting expired session failed", "error", err)
+		}
 		h.cookieManager.ClearSessionCookie(w)
 		http.Error(w, "Unauthorized: Session expired", http.StatusUnauthorized)
 		return

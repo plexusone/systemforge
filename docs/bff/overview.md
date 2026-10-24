@@ -65,7 +65,7 @@ The BFF handler provides these endpoints:
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/session` | GET | Cookie | Check session status |
-| `/logout` | POST | Cookie | Clear session and revoke tokens |
+| `/logout` | POST | Cookie | Delete the session, clear the cookie, and run `OnLogout` |
 | `/refresh` | POST | Cookie | Refresh access token |
 | `/api/*` | ANY | Cookie | Proxy to API backend |
 
@@ -299,6 +299,13 @@ await fetch('/bff/logout', {
 });
 // Session cleared, cookie removed
 ```
+
+Logout fails closed. If the session store cannot load or delete the session,
+`/logout` responds `500` with `{"error": "logout_failed"}` and leaves the
+cookie in place so the frontend can retry. The BFF does not revoke tokens on
+its own; revoke them at the authorization server in `OnLogout`. If `OnLogout`
+returns an error, the session is still deleted and the cookie cleared, but the
+response is `500` with `{"error": "revocation_failed"}`.
 
 ### Refresh Session
 
