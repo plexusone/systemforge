@@ -144,9 +144,8 @@ func toHumaError(err *Error) error {
 
 // toHumaErrorFromErr converts a standard error to a Huma error.
 // If the error is a SCIM error, it preserves the status code.
-func toHumaErrorFromErr(err error) error {
-	if scimErr, ok := err.(*Error); ok {
-		return toHumaError(scimErr)
-	}
-	return huma.Error500InternalServerError(err.Error())
+// An error that is not a SCIM error is logged and answered with a generic
+// 500, so database and other internal error text never reaches the client.
+func toHumaErrorFromErr(ctx context.Context, err error) error {
+	return toHumaError(toSCIMError(ctx, err))
 }

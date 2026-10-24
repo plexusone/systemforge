@@ -219,7 +219,7 @@ func (s *providerService) CreateUser(ctx context.Context, user *User) (*User, er
 	}
 
 	// Hash password if provided
-	if err := s.hashPassword(user); err != nil {
+	if err := s.hashPassword(ctx, user); err != nil {
 		return nil, err
 	}
 
@@ -245,13 +245,13 @@ func (s *providerService) CreateUser(ctx context.Context, user *User) (*User, er
 
 // hashPassword replaces a password supplied in a write with its hash, so a
 // store never receives a plaintext password.
-func (s *providerService) hashPassword(user *User) error {
+func (s *providerService) hashPassword(ctx context.Context, user *User) error {
 	if user.Password == "" {
 		return nil
 	}
 	hashed, err := s.p.passwordHasher.Hash(user.Password)
 	if err != nil {
-		return ErrInternal("failed to hash password: " + err.Error())
+		return InternalError(ctx, err)
 	}
 	user.Password = hashed
 	return nil
@@ -279,7 +279,7 @@ func (s *providerService) UpdateUser(ctx context.Context, id string, user *User,
 	user.ID = id
 	// A password in the replacement is hashed before the store sees it,
 	// as on create.
-	if err := s.hashPassword(user); err != nil {
+	if err := s.hashPassword(ctx, user); err != nil {
 		return nil, err
 	}
 	updated, err := s.p.store.UpdateUser(ctx, id, user)
@@ -334,7 +334,7 @@ func (s *providerService) PatchUser(ctx context.Context, id string, patch *Patch
 		return nil, err
 	}
 	if patched.Password != "" {
-		if err := s.hashPassword(patched); err != nil {
+		if err := s.hashPassword(ctx, patched); err != nil {
 			return nil, err
 		}
 	} else {
@@ -773,8 +773,8 @@ func (s *providerService) processBulkCreate(ctx context.Context, resourceType st
 		}
 		created, err := s.CreateUser(ctx, user)
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "201"
@@ -789,8 +789,8 @@ func (s *providerService) processBulkCreate(ctx context.Context, resourceType st
 		}
 		created, err := s.CreateGroup(ctx, group)
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "201"
@@ -820,8 +820,8 @@ func (s *providerService) processBulkUpdate(ctx context.Context, resourceType, i
 		}
 		updated, err := s.UpdateUser(ctx, id, user, "")
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "200"
@@ -836,8 +836,8 @@ func (s *providerService) processBulkUpdate(ctx context.Context, resourceType, i
 		}
 		updated, err := s.UpdateGroup(ctx, id, group, "")
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "200"
@@ -868,8 +868,8 @@ func (s *providerService) processBulkPatch(ctx context.Context, resourceType, id
 	case "Users":
 		updated, err := s.PatchUser(ctx, id, patch, "")
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "200"
@@ -878,8 +878,8 @@ func (s *providerService) processBulkPatch(ctx context.Context, resourceType, id
 	case "Groups":
 		updated, err := s.PatchGroup(ctx, id, patch, "")
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "200"
@@ -902,15 +902,15 @@ func (s *providerService) processBulkDelete(ctx context.Context, resourceType, i
 	switch resourceType {
 	case "Users":
 		if err := s.DeleteUser(ctx, id); err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "204"
 	case "Groups":
 		if err := s.DeleteGroup(ctx, id); err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "204"

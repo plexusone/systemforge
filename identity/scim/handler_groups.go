@@ -98,7 +98,7 @@ func (a *API) listGroups(ctx context.Context, input *ListResourcesInput) (*ListG
 
 	response, err := service.ListGroups(ctx, opts)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	return &ListGroupsOutput{Body: attrFilter.FilterListResponse(response)}, nil
@@ -111,7 +111,7 @@ func (a *API) getGroup(ctx context.Context, input *GetResourceInput) (*GetGroupO
 
 	group, err := service.GetGroup(ctx, input.ID)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	etag := ""
@@ -131,7 +131,7 @@ func (a *API) createGroup(ctx context.Context, input *CreateGroupInput) (*Create
 
 	created, err := service.CreateGroup(ctx, input.Body)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	etag := ""
@@ -152,7 +152,7 @@ func (a *API) replaceGroup(ctx context.Context, input *UpdateGroupInput) (*Updat
 
 	updated, err := service.UpdateGroup(ctx, input.ID, input.Body, input.IfMatch)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	etag := ""
@@ -172,7 +172,7 @@ func (a *API) patchGroup(ctx context.Context, input *PatchResourceInput) (*Updat
 
 	updated, err := service.PatchGroup(ctx, input.ID, input.Body, input.IfMatch)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	etag := ""
@@ -191,7 +191,7 @@ func (a *API) deleteGroup(ctx context.Context, input *DeleteResourceInput) (*str
 	service := a.provider.Service()
 
 	if err := service.DeleteGroup(ctx, input.ID); err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	return nil, nil
@@ -205,7 +205,7 @@ func (a *API) searchGroups(ctx context.Context, input *SearchInput) (*SearchOutp
 
 	response, err := service.ListGroups(ctx, opts)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	return &SearchOutput{Body: attrFilter.FilterListResponse(response)}, nil

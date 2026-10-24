@@ -105,6 +105,17 @@ such as `emails[type eq "work"]`, trailing input, or nesting deeper than
 | Users | `id`, `userName` and `emails.value` (case-insensitive), `displayName` and `name.formatted`, `active` (`eq`, `ne`), `meta.created` and `meta.lastModified` (`gt`, `ge`, `lt`, `le`), `externalId` (`eq`, `pr`; users carry none, so it matches nobody) |
 | Groups | `id`, `displayName`, `externalId` (the organization slug), `meta.created`, `meta.lastModified` |
 
+## Errors
+
+A database or other unexpected error is logged with the API's logger and
+answered with a generic `500` whose detail is `internal error`, so SQL,
+driver and schema text never reaches the identity provider. A custom store
+should return `scim.InternalError(ctx, err)` for such errors and a
+`*scim.Error` for anything the client can act on. Likewise, an error from
+the credential function given to `CredentialMiddleware` is logged and
+answered with a generic `401`, unless it is a `*scim.Error`, which is
+returned as it is.
+
 ## Platform Operator Credentials
 
 A credential with `scim.Scope{Platform: true}` provisions every user and

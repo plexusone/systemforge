@@ -29,7 +29,7 @@ func (a *API) processBulk(ctx context.Context, input *BulkInput) (*BulkOutput, e
 
 	response, err := service.ProcessBulk(ctx, input.Body)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	return &BulkOutput{Body: response}, nil

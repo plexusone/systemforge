@@ -98,7 +98,7 @@ func (a *API) listUsers(ctx context.Context, input *ListResourcesInput) (*ListUs
 
 	response, err := service.ListUsers(ctx, opts)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	return &ListUsersOutput{Body: attrFilter.FilterListResponse(response)}, nil
@@ -111,7 +111,7 @@ func (a *API) getUser(ctx context.Context, input *GetResourceInput) (*GetUserOut
 
 	user, err := service.GetUser(ctx, input.ID)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	etag := ""
@@ -131,7 +131,7 @@ func (a *API) createUser(ctx context.Context, input *CreateUserInput) (*CreateUs
 
 	created, err := service.CreateUser(ctx, input.Body)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	etag := ""
@@ -152,7 +152,7 @@ func (a *API) replaceUser(ctx context.Context, input *UpdateUserInput) (*UpdateU
 
 	updated, err := service.UpdateUser(ctx, input.ID, input.Body, input.IfMatch)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	etag := ""
@@ -172,7 +172,7 @@ func (a *API) patchUser(ctx context.Context, input *PatchResourceInput) (*Update
 
 	updated, err := service.PatchUser(ctx, input.ID, input.Body, input.IfMatch)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	etag := ""
@@ -191,7 +191,7 @@ func (a *API) deleteUser(ctx context.Context, input *DeleteResourceInput) (*stru
 	service := a.provider.Service()
 
 	if err := service.DeleteUser(ctx, input.ID); err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	return nil, nil
@@ -205,7 +205,7 @@ func (a *API) searchUsers(ctx context.Context, input *SearchInput) (*SearchOutpu
 
 	response, err := service.ListUsers(ctx, opts)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	return &SearchOutput{Body: attrFilter.FilterListResponse(response)}, nil

@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -114,5 +115,19 @@ func TestDeleteGroupSoftDeletes(t *testing.T) {
 	}
 	if err := s.DeleteGroup(ctx, g.ID); scimStatus(t, err) != http.StatusNotFound {
 		t.Errorf("delete twice: %v", err)
+	}
+}
+
+// A database error reaches the client as a generic 500, without its text.
+func TestStoreErrorsDoNotCarryDatabaseText(t *testing.T) {
+	ctx := scim.WithPlatformScope(context.Background())
+	s, db := newStoreWithDB(t)
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := s.ListUsers(ctx, scim.ListOptions{StartIndex: 1, Count: 10})
+	var se *scim.Error
+	if !errors.As(err, &se) || se.Status != http.StatusInternalServerError || se.Detail != "internal error" {
+		t.Errorf("ListUsers on a closed database = %v", err)
 	}
 }

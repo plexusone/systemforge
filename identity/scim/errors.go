@@ -1,7 +1,9 @@
 package scim
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -149,12 +151,37 @@ func WriteError(w http.ResponseWriter, err *Error) {
 	_ = json.NewEncoder(w).Encode(err)
 }
 
+// internalErrorDetail is the detail of every 500 error built from an
+// unexpected error: the underlying text, which may carry SQL, driver or
+// schema details, is logged, never sent to the client.
+const internalErrorDetail = "internal error"
+
+// InternalError logs err with the request's logger (LoggerFromContext) and
+// returns a 500 SCIM error whose detail does not carry err's text. Stores
+// should use it for database and other unexpected errors.
+func InternalError(ctx context.Context, err error) *Error {
+	LoggerFromContext(ctx).Error("scim: internal error", "error", err)
+	return ErrInternal(internalErrorDetail)
+}
+
 // ToSCIMError converts a standard error to a SCIM error.
-// If the error is already a SCIM error, it is returned as-is.
-// Otherwise, a 500 Internal Server Error is returned.
+// If the error is, or wraps, a SCIM error, that error is returned.
+// Otherwise, a 500 Internal Server Error without the error's text is
+// returned; use toSCIMError where a request context is available, so the
+// error is also logged.
 func ToSCIMError(err error) *Error {
-	if scimErr, ok := err.(*Error); ok {
+	var scimErr *Error
+	if errors.As(err, &scimErr) {
 		return scimErr
 	}
-	return ErrInternal(err.Error())
+	return ErrInternal(internalErrorDetail)
+}
+
+// toSCIMError is ToSCIMError that logs an error it does not pass through.
+func toSCIMError(ctx context.Context, err error) *Error {
+	var scimErr *Error
+	if errors.As(err, &scimErr) {
+		return scimErr
+	}
+	return InternalError(ctx, err)
 }

@@ -209,7 +209,7 @@ func (s *EntStore) onlyUser(ctx context.Context, q *ent.PrincipalQuery) (*scim.U
 		if ent.IsNotFound(err) {
 			return nil, scim.ErrNotFound("user not found")
 		}
-		return nil, scim.ErrInternal(err.Error())
+		return nil, internalError(ctx, err)
 	}
 	return s.principalToSCIMUser(p), nil
 }
@@ -267,7 +267,7 @@ func (s *EntStore) ListUsers(ctx context.Context, opts scim.ListOptions) ([]*sci
 	// Get total count
 	total, err := query.Clone().Count(ctx)
 	if err != nil {
-		return nil, 0, scim.ErrInternal(err.Error())
+		return nil, 0, internalError(ctx, err)
 	}
 
 	// Apply sorting
@@ -282,7 +282,7 @@ func (s *EntStore) ListUsers(ctx context.Context, opts scim.ListOptions) ([]*sci
 
 	principals, err := query.All(ctx)
 	if err != nil {
-		return nil, 0, scim.ErrInternal(err.Error())
+		return nil, 0, internalError(ctx, err)
 	}
 
 	result := make([]*scim.User, len(principals))
@@ -315,29 +315,27 @@ func primaryPhoto(photos []scim.MultiValue) (string, bool) {
 func (s *EntStore) withTx(ctx context.Context, fn func(tx *ent.Tx) error) error {
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
-		return scim.ErrInternal(err.Error())
+		return internalError(ctx, err)
 	}
 	if err := fn(tx); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return scim.ErrInternal(errors.Join(err, rbErr).Error())
+			return internalError(ctx, errors.Join(err, rbErr))
 		}
 		return err
 	}
 	if err := tx.Commit(); err != nil {
-		return scim.ErrInternal(err.Error())
+		return internalError(ctx, err)
 	}
 	return nil
 }
 
-// internalError logs err with the request's logger and returns a 500 SCIM
-// error that does not carry err's text to the client.
+// internalError logs err and returns a 500 SCIM error without its text.
 func internalError(ctx context.Context, err error) error {
-	scim.LoggerFromContext(ctx).Error("scim store: internal error", "error", err)
-	return scim.ErrInternal("internal error")
+	return scim.InternalError(ctx, err)
 }
 
 // asSCIMError passes SCIM errors through and wraps anything else as internal.
-func asSCIMError(err error) error {
+func asSCIMError(ctx context.Context, err error) error {
 	var se *scim.Error
 	if errors.As(err, &se) {
 		return se
@@ -345,7 +343,7 @@ func asSCIMError(err error) error {
 	if ent.IsConstraintError(err) {
 		return scim.ErrConflict("user already exists")
 	}
-	return scim.ErrInternal(err.Error())
+	return internalError(ctx, err)
 }
 
 // CreateUser creates a new user as a human principal. For a tenant, the
@@ -453,7 +451,7 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		return err
 	})
 	if err != nil {
-		return nil, asSCIMError(err)
+		return nil, asSCIMError(ctx, err)
 	}
 	if !sc.Platform {
 		if err := s.addMember(ctx, sc.OrganizationID, id); err != nil {
@@ -528,7 +526,7 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 		return s.updateIdentity(ctx, tx, p, scimUser)
 	})
 	if err != nil {
-		return nil, asSCIMError(err)
+		return nil, asSCIMError(ctx, err)
 	}
 
 	if scimUser.Active != nil {
@@ -541,7 +539,7 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 			err = s.config.Principals.Deactivate(ctx, uid)
 		}
 		if err != nil {
-			return nil, asSCIMError(err)
+			return nil, asSCIMError(ctx, err)
 		}
 	}
 	return s.GetUserByID(ctx, id)
@@ -610,7 +608,7 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	}
 	exists, err := s.client.Principal.Query().Where(where...).Exist(ctx)
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	if !exists {
 		return scim.ErrNotFound("user not found")
@@ -618,7 +616,7 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	if !sc.Platform {
 		owned, err := ownedBy(ctx, s.client, uid, sc.OrganizationID)
 		if err != nil {
-			return asSCIMError(err)
+			return asSCIMError(ctx, err)
 		}
 		if !owned {
 			return s.removeMember(ctx, sc.OrganizationID, uid)
@@ -629,7 +627,7 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 		Where(principalmembership.PrincipalIDEQ(uid)).
 		All(ctx)
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	for _, m := range memberships {
 		if m.Role == orgsvc.RoleOwner {
@@ -642,7 +640,7 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 		}
 	}
 	if err := s.config.Principals.Deactivate(ctx, uid); err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 
 	err = s.withTx(ctx, func(tx *ent.Tx) error {
@@ -661,7 +659,7 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 		return tx.Principal.DeleteOneID(uid).Exec(ctx)
 	})
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	return nil
 }
@@ -697,7 +695,7 @@ func (s *EntStore) membership(ctx context.Context, orgID, id uuid.UUID) (*ent.Pr
 func (s *EntStore) addMember(ctx context.Context, orgID, id uuid.UUID) error {
 	m, err := s.membership(ctx, orgID, id)
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	if m != nil {
 		return s.setMemberActive(ctx, orgID, id, true)
@@ -707,7 +705,7 @@ func (s *EntStore) addMember(ctx context.Context, orgID, id uuid.UUID) error {
 		PrincipalID:    id,
 		Role:           s.config.DefaultRole,
 	})
-	return membershipError(err)
+	return membershipError(ctx, err)
 }
 
 // setMemberActive suspends or restores principal id's membership in orgID.
@@ -715,7 +713,7 @@ func (s *EntStore) addMember(ctx context.Context, orgID, id uuid.UUID) error {
 func (s *EntStore) setMemberActive(ctx context.Context, orgID, id uuid.UUID, active bool) error {
 	m, err := s.membership(ctx, orgID, id)
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	if m == nil {
 		return scim.ErrNotFound("user not found")
@@ -731,7 +729,7 @@ func (s *EntStore) setMemberActive(ctx context.Context, orgID, id uuid.UUID, act
 		return errOwnerDeprovision()
 	}
 	_, err = s.config.Memberships.UpdateMember(ctx, m.ID, in)
-	return membershipError(err)
+	return membershipError(ctx, err)
 }
 
 // removeMember removes principal id from orgID; removing a non-member is a
@@ -739,7 +737,7 @@ func (s *EntStore) setMemberActive(ctx context.Context, orgID, id uuid.UUID, act
 func (s *EntStore) removeMember(ctx context.Context, orgID, id uuid.UUID) error {
 	m, err := s.membership(ctx, orgID, id)
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	if m == nil {
 		return nil
@@ -751,18 +749,18 @@ func (s *EntStore) removeMember(ctx context.Context, orgID, id uuid.UUID) error 
 	if errors.Is(err, orgsvc.ErrMembershipNotFound) {
 		return nil
 	}
-	return membershipError(err)
+	return membershipError(ctx, err)
 }
 
 // membershipError maps a membership service error to a SCIM error.
-func membershipError(err error) error {
+func membershipError(ctx context.Context, err error) error {
 	switch {
 	case err == nil:
 		return nil
 	case errors.Is(err, orgsvc.ErrPersonalOrganization):
 		return scim.ErrInvalidValue("a personal organization cannot have members")
 	default:
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 }
 
@@ -790,7 +788,7 @@ func onlyGroup(ctx context.Context, s *EntStore, q *ent.OrganizationQuery) (*sci
 		if ent.IsNotFound(err) {
 			return nil, scim.ErrNotFound("group not found")
 		}
-		return nil, scim.ErrInternal(err.Error())
+		return nil, internalError(ctx, err)
 	}
 	return s.entOrgToSCIM(org), nil
 }
@@ -851,7 +849,7 @@ func (s *EntStore) ListGroups(ctx context.Context, opts scim.ListOptions) ([]*sc
 	// Get total count
 	total, err := query.Clone().Count(ctx)
 	if err != nil {
-		return nil, 0, scim.ErrInternal(err.Error())
+		return nil, 0, internalError(ctx, err)
 	}
 
 	// Apply sorting
@@ -866,7 +864,7 @@ func (s *EntStore) ListGroups(ctx context.Context, opts scim.ListOptions) ([]*sc
 
 	orgs, err := query.All(ctx)
 	if err != nil {
-		return nil, 0, scim.ErrInternal(err.Error())
+		return nil, 0, internalError(ctx, err)
 	}
 
 	result := make([]*scim.Group, len(orgs))
@@ -1055,7 +1053,7 @@ func (s *EntStore) GetGroupsForUser(ctx context.Context, userID string) ([]scim.
 	}
 	memberships, err := q.WithOrganization().All(ctx)
 	if err != nil {
-		return nil, scim.ErrInternal(err.Error())
+		return nil, internalError(ctx, err)
 	}
 
 	groups := make([]scim.GroupRef, 0, len(memberships))
@@ -1095,7 +1093,7 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 		WithPrincipal().
 		All(ctx)
 	if err != nil {
-		return nil, scim.ErrInternal(err.Error())
+		return nil, internalError(ctx, err)
 	}
 
 	members := make([]scim.MemberRef, 0, len(memberships))
@@ -1136,7 +1134,7 @@ func (s *EntStore) AddMemberToGroup(ctx context.Context, groupID, userID string)
 	}
 	known, err := s.client.Principal.Query().Where(where...).Exist(ctx)
 	if err != nil {
-		return scim.ErrInternal(err.Error())
+		return internalError(ctx, err)
 	}
 	if !known {
 		return scim.ErrNotFound("user not found")

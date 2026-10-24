@@ -40,7 +40,7 @@ func (a *API) getMe(ctx context.Context, input *struct{}) (*MeOutput, error) {
 
 	user, err := service.GetMe(ctx)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	etag := ""
@@ -60,7 +60,7 @@ func (a *API) patchMe(ctx context.Context, input *MePatchInput) (*MeOutput, erro
 
 	updated, err := service.PatchMe(ctx, input.Body, input.IfMatch)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	etag := ""
