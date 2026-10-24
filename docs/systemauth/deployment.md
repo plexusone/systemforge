@@ -118,6 +118,10 @@ social_login:
   with login tokens, sign in as before. With invite-only sign-up, an
   uninvited login is refused before it is asked, and the invite is used only
   once the age is confirmed.
+- **It is a stated age, screened at social sign-up only.** The refusal is
+  remembered per browser, so a person who clears cookies can answer again.
+  Accounts created through `signup.Service`, federation sync or SCIM are not
+  asked; see [Minimum Sign-Up Age](../guides/signup-age.md#limits).
 - **In a host binary,** set the wording with `Options.SignupAgePage`.
 
 See [Minimum Sign-Up Age](../guides/signup-age.md) for what a person sees

@@ -1,4 +1,9 @@
 // Package signup provides user signup and personal organization creation.
+//
+// The service applies no sign-up policy of SystemAuth's social login, such
+// as social_login.signup_minimum_age or invite-only sign-up: an application
+// that offers self-service sign-up through it enforces its own policy
+// before calling it.
 package signup
 
 import (
