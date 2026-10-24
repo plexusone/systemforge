@@ -69,16 +69,44 @@ func TestAuthMiddleware_AppAudiencesBindTokenToApp(t *testing.T) {
 	}
 }
 
-// Without AppAudiences the middleware keeps its previous behavior, relying on
-// per-app signing keys for isolation.
-func TestAuthMiddleware_NoAppAudiencesAcceptsAnyValidToken(t *testing.T) {
+// Without AppAudiences a token is bound to the routed app's ID by default.
+func TestAuthMiddleware_DefaultBindsTokenToAppID(t *testing.T) {
 	svc := newAppTokenService(t)
-	token, err := svc.GenerateAccessToken(uuid.New(), "u@example.com", "U")
+	cfg := MiddlewareConfig{JWTService: svc, RequireAuth: true}
+
+	forA, err := svc.GenerateAccessTokenWithOptions(uuid.New(), "u@example.com", "U",
+		jwt.TokenOptions{Audience: []string{"a"}})
+	if err != nil {
+		t.Fatalf("GenerateAccessTokenWithOptions: %v", err)
+	}
+	if got := serveAs(t, cfg, "a", forA); got != http.StatusOK {
+		t.Errorf("token for app a on app a: status %d, want 200", got)
+	}
+	if got := serveAs(t, cfg, "b", forA); got != http.StatusUnauthorized {
+		t.Errorf("token for app a on app b: status %d, want 401", got)
+	}
+
+	// A token addressed only to the shared service is not bound to an app.
+	platform, err := svc.GenerateAccessToken(uuid.New(), "u@example.com", "U")
 	if err != nil {
 		t.Fatalf("GenerateAccessToken: %v", err)
 	}
-	cfg := MiddlewareConfig{JWTService: svc, RequireAuth: true}
-	if got := serveAs(t, cfg, "a", token); got != http.StatusOK {
-		t.Errorf("status %d, want 200", got)
+	if got := serveAs(t, cfg, "a", platform); got != http.StatusUnauthorized {
+		t.Errorf("unbound token on app a: status %d, want 401", got)
+	}
+}
+
+// AllowCrossAppTokens accepts a token addressed to the service in any app.
+func TestAuthMiddleware_AllowCrossAppTokens(t *testing.T) {
+	svc := newAppTokenService(t)
+	cfg := MiddlewareConfig{JWTService: svc, RequireAuth: true, AllowCrossAppTokens: true}
+	platform, err := svc.GenerateAccessToken(uuid.New(), "u@example.com", "U")
+	if err != nil {
+		t.Fatalf("GenerateAccessToken: %v", err)
+	}
+	for _, app := range []string{"a", "b"} {
+		if got := serveAs(t, cfg, app, platform); got != http.StatusOK {
+			t.Errorf("app %s: status %d, want 200", app, got)
+		}
 	}
 }

@@ -20,15 +20,18 @@ type MiddlewareConfig struct {
 	// SetRLSContext automatically sets RLS context from JWT claims.
 	SetRLSContext bool
 
-	// AppAudiences binds a token to the app a request is routed to. When set
-	// and the request has an app context, the token must carry one of the
-	// audiences returned for that app, so a token minted for one app cannot be
-	// replayed against another by changing the X-App-ID header.
-	//
-	// Leave it nil only when each app verifies with its own signing key, which
-	// isolates the apps by itself. Apps that share a key and an issuer must set
-	// it, and mint tokens with the matching audience.
+	// AppAudiences binds a token to the app a request is routed to: when the
+	// request has an app context, the token must carry one of the audiences
+	// returned for that app, so a token minted for one app cannot be replayed
+	// against another by changing the X-App-ID header. Default: the app's
+	// AppID, so mint tokens with jwt.TokenOptions{Audience: []string{appID}}.
 	AppAudiences func(app *AppContext) []string
+
+	// AllowCrossAppTokens turns app binding off: a request with an app
+	// context accepts any token addressed to the JWT service's own
+	// Config.Audience, whichever app it was minted for. Set it only when a
+	// token is meant to be valid in every app.
+	AllowCrossAppTokens bool
 
 	// OnError is called when authentication fails.
 	// If nil, a default error response is sent.
@@ -68,8 +71,8 @@ func AuthMiddleware(cfg MiddlewareConfig) func(http.Handler) http.Handler {
 
 			var claims *jwt.Claims
 			var err error
-			if appCtx := AppContextFromContext(ctx); appCtx != nil && cfg.AppAudiences != nil {
-				claims, err = cfg.JWTService.ValidateAccessTokenForAudience(token, cfg.AppAudiences(appCtx)...)
+			if appCtx := AppContextFromContext(ctx); appCtx != nil && !cfg.AllowCrossAppTokens {
+				claims, err = cfg.JWTService.ValidateAccessTokenForAudience(token, cfg.appAudiences(appCtx)...)
 			} else {
 				claims, err = cfg.JWTService.ValidateAccessToken(token)
 			}
@@ -89,6 +92,17 @@ func AuthMiddleware(cfg MiddlewareConfig) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// appAudiences returns the audiences a token must carry for app.
+func (cfg MiddlewareConfig) appAudiences(app *AppContext) []string {
+	if cfg.AppAudiences != nil {
+		return cfg.AppAudiences(app)
+	}
+	if app.AppID == "" {
+		return nil
+	}
+	return []string{app.AppID}
 }
 
 // extractBearerToken extracts the Bearer token from the Authorization header.
