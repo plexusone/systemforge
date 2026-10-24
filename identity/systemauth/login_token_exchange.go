@@ -125,7 +125,9 @@ func (sl *socialLogin) setupLoginTokens(s *Server) {
 
 // handleLoginToken exchanges a login token for a login session. It takes
 // the form fields token, client_id, and optionally return_to, and
-// redirects to return_to or the default target. Unknown, malformed,
+// redirects to return_to or the default target. The form must be posted
+// from a page on the issuer's origin or an allowed redirect origin
+// (Origin/Referer check), or it is refused with 403. Unknown, malformed,
 // expired, revoked, and used tokens, a client that does not allow managed
 // principals, and a principal that is inactive or not managed all receive
 // the same response.
@@ -134,6 +136,13 @@ func (sl *socialLogin) handleLoginToken(w http.ResponseWriter, r *http.Request) 
 	ctx := r.Context()
 	logger := LoggerFromContext(ctx)
 	x := sl.loginTokens
+
+	// The exchange replaces the browser's login session, so a cross-site
+	// form must not be able to sign a visitor in as someone else.
+	if !sl.redirects.fromTrustedOrigin(r) {
+		http.Error(w, "cross-origin request rejected", http.StatusForbidden)
+		return
+	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	if err := r.ParseForm(); err != nil {

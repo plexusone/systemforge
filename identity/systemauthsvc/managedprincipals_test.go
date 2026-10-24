@@ -189,6 +189,7 @@ func TestManagedPrincipalsAPIEndToEnd(t *testing.T) {
 		form := url.Values{"token": {issued.Token}, "client_id": {"app"}}
 		r := httptest.NewRequest(http.MethodPost, mpIssuer+systemauth.LoginTokenPath, strings.NewReader(form.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.Header.Set("Origin", mpIssuer)
 		w := httptest.NewRecorder()
 		svc.Handler().ServeHTTP(w, r)
 		return w
@@ -234,6 +235,7 @@ func TestManagedPrincipalsAPIIsOffByDefault(t *testing.T) {
 	form := url.Values{"token": {"SFLTX"}, "client_id": {"app"}}
 	r := httptest.NewRequest(http.MethodPost, mpIssuer+systemauth.LoginTokenPath, strings.NewReader(form.Encode()))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Set("Origin", mpIssuer)
 	w := httptest.NewRecorder()
 	svc.Handler().ServeHTTP(w, r)
 	if w.Code == http.StatusSeeOther || w.Code == http.StatusUnauthorized {

@@ -176,6 +176,13 @@ answers `303 See Other` to `return_to` (checked against the redirect
 allowlist) or the default target. The authorization-code flow then proceeds
 as for any signed-in user.
 
+The exchange replaces the browser's login session, so it accepts only a form
+posted from a page on the issuer's origin or one of
+`social_login.allowed_redirect_origins`, judged by the `Origin` header (or
+`Referer`). A post from any other site, or with neither header, receives
+`403`; an application that hosts the sign-in form on its own origin lists that
+origin in `allowed_redirect_origins`.
+
 Unknown, malformed, expired, revoked, and used tokens, a client that does
 not allow managed principals, and an inactive principal all receive the
 same `401`. The endpoint is rate limited per source address (60 a minute
