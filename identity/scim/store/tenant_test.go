@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/scim"
 	"github.com/plexusone/systemforge/identity/scim/store"
@@ -252,5 +253,12 @@ func TestTenantGroupIsItsOrganization(t *testing.T) {
 	refs, err := tn.s.GetGroupsForUser(tn.ctxA, alice.ID)
 	if err != nil || len(refs) != 1 || refs[0].Value != a {
 		t.Errorf("groups for user: %+v %v", refs, err)
+	}
+}
+
+func memberIn(userID string, org uuid.UUID) []predicate.PrincipalMembership {
+	return []predicate.PrincipalMembership{
+		principalmembership.PrincipalIDEQ(uuid.MustParse(userID)),
+		principalmembership.OrganizationIDEQ(org),
 	}
 }

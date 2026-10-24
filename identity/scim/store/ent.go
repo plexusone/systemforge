@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/ent"
-	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
@@ -20,6 +19,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	orgsvc "github.com/plexusone/systemforge/identity/organization"
+	principalsvc "github.com/plexusone/systemforge/identity/principal"
 	"github.com/plexusone/systemforge/identity/scim"
 	"github.com/plexusone/systemforge/identity/scim/filter"
 )
@@ -45,6 +45,32 @@ type Config struct {
 	// default), provisioned and changed emails are unverified, and social
 	// login refuses to link rather than creating a second identity.
 	TrustProvisionedEmail bool
+
+	// Memberships adds, changes and removes organization memberships for
+	// SCIM, with their side effects: authorization-graph sync, access-change
+	// records, and cleanup of application roles and resource grants. Pass
+	// the application's organization service so the graph sync uses its
+	// syncer. Default: organization.NewService on the store's client, which
+	// records access changes but syncs no authorization graph.
+	Memberships Memberships
+
+	// Principals deactivates and reactivates accounts, recording the access
+	// change that stops existing tokens being honored. Default:
+	// principal.NewService on the store's client.
+	Principals Principals
+}
+
+// Memberships is the part of organization.Service the SCIM store uses.
+type Memberships interface {
+	AddMember(ctx context.Context, input orgsvc.AddMemberInput) (*orgsvc.Membership, error)
+	UpdateMember(ctx context.Context, membershipID uuid.UUID, input orgsvc.UpdateMemberInput) (*orgsvc.Membership, error)
+	RemoveMember(ctx context.Context, organizationID, principalID uuid.UUID) error
+}
+
+// Principals is the part of principal.Service the SCIM store uses.
+type Principals interface {
+	Deactivate(ctx context.Context, id uuid.UUID) error
+	Reactivate(ctx context.Context, id uuid.UUID) error
 }
 
 // DefaultConfig returns the default store configuration.
@@ -57,12 +83,20 @@ func DefaultConfig() *Config {
 
 // NewEntStore creates a new Ent-backed SCIM store.
 func NewEntStore(client *ent.Client, config *Config) *EntStore {
-	if config == nil {
-		config = DefaultConfig()
+	cfg := DefaultConfig()
+	if config != nil {
+		c := *config
+		cfg = &c
+	}
+	if cfg.Memberships == nil {
+		cfg.Memberships = orgsvc.NewService(client)
+	}
+	if cfg.Principals == nil {
+		cfg.Principals = principalsvc.NewService(client)
 	}
 	return &EntStore{
 		client: client,
-		config: config,
+		config: cfg,
 	}
 }
 
@@ -290,6 +324,10 @@ func asSCIMError(err error) error {
 // is recorded as having provisioned it. A user who already exists
 // elsewhere is linked by adding the membership; their identity is not
 // changed.
+//
+// The account is created first and the membership is added after through
+// the membership service. If adding it fails, the request fails and the
+// identity provider's retry finds the account by email and links it.
 func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.User, error) {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -315,7 +353,7 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		active = *scimUser.Active
 	}
 
-	id := uuid.New()
+	var id uuid.UUID
 	err = s.withTx(ctx, func(tx *ent.Tx) error {
 		existing, err := tx.Principal.Query().
 			Where(append(scimHuman(), principal.HasHumanWith(human.EmailEqualFold(email)))...).
@@ -325,8 +363,17 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 			if sc.Platform {
 				return scim.ErrConflict("user with this email already exists")
 			}
+			member, err := tx.PrincipalMembership.Query().
+				Where(principalmembership.PrincipalIDEQ(existing.ID), principalmembership.OrganizationIDEQ(sc.OrganizationID)).
+				Exist(ctx)
+			if err != nil {
+				return err
+			}
+			if member {
+				return scim.ErrConflict("user already exists in this organization")
+			}
 			id = existing.ID
-			return s.linkMember(ctx, tx, sc.OrganizationID, existing.ID, active)
+			return nil
 		case !ent.IsNotFound(err):
 			return err
 		}
@@ -337,6 +384,7 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		if taken {
 			return scim.ErrConflict("user with this email already exists")
 		}
+		id = uuid.New()
 		principalActive := active
 		if !sc.Platform {
 			// For a tenant, active is the membership's state.
@@ -366,19 +414,27 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		if sc.Platform {
 			return nil
 		}
-		if _, err := tx.ExternalIdentity.Create().
+		_, err = tx.ExternalIdentity.Create().
 			SetPrincipalID(id).
 			SetProvider(provisionedBy(sc.OrganizationID)).
 			SetSubject(id.String()).
 			SetEmail(email).
 			SetEmailVerified(s.config.TrustProvisionedEmail).
-			Save(ctx); err != nil {
-			return err
-		}
-		return s.linkMember(ctx, tx, sc.OrganizationID, id, active)
+			Save(ctx)
+		return err
 	})
 	if err != nil {
 		return nil, asSCIMError(err)
+	}
+	if !sc.Platform {
+		if err := s.addMember(ctx, sc.OrganizationID, id); err != nil {
+			return nil, err
+		}
+		if !active {
+			if err := s.setMemberActive(ctx, sc.OrganizationID, id, false); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return s.GetUserByID(ctx, id.String())
 }
@@ -400,37 +456,11 @@ func userEmail(u *scim.User) string {
 	return ""
 }
 
-// linkMember adds principal id to organization orgID with the default role.
-// A user who is already a member is a conflict, as SCIM requires for a
-// duplicate create.
-func (s *EntStore) linkMember(ctx context.Context, tx *ent.Tx, orgID, id uuid.UUID, active bool) error {
-	exists, err := tx.PrincipalMembership.Query().
-		Where(principalmembership.PrincipalIDEQ(id), principalmembership.OrganizationIDEQ(orgID)).
-		Exist(ctx)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return scim.ErrConflict("user already exists in this organization")
-	}
-	if err := orgsvc.RequireMembersAllowed(ctx, tx.Client(), orgID, s.config.DefaultRole); err != nil {
-		if errors.Is(err, orgsvc.ErrPersonalOrganization) {
-			return scim.ErrInvalidValue("a personal organization cannot have members")
-		}
-		return err
-	}
-	_, err = tx.PrincipalMembership.Create().
-		SetPrincipalID(id).
-		SetOrganizationID(orgID).
-		SetRole(s.config.DefaultRole).
-		SetActive(active).
-		Save(ctx)
-	return err
-}
-
-// UpdateUser updates an existing user. For a tenant, active sets the
-// membership in the tenant's organization, and identity fields change only
-// for users the tenant owns; for other users they are left as they are.
+// UpdateUser updates an existing user. For a platform scope, active
+// deactivates or reactivates the account. For a tenant, active suspends or
+// restores the membership in the tenant's organization, and identity
+// fields change only for users the tenant owns; for other users they are
+// left as they are.
 func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.User) (*scim.User, error) {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -441,6 +471,7 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 		return nil, scim.ErrNotFound("invalid user ID")
 	}
 
+	var wasActive bool
 	err = s.withTx(ctx, func(tx *ent.Tx) error {
 		q := tx.Principal.Query().
 			Where(append(scimHuman(), principal.IDEQ(uid))...).
@@ -458,32 +489,31 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 		if p.Edges.Human == nil {
 			return scim.ErrInternal("user has no human record")
 		}
-
-		if sc.Platform {
-			if scimUser.Active != nil {
-				if err := tx.Principal.UpdateOne(p).SetActive(*scimUser.Active).Exec(ctx); err != nil {
-					return err
-				}
-			}
-			return s.updateIdentity(ctx, tx, p, scimUser)
-		}
-
-		if scimUser.Active != nil {
-			if _, err := tx.PrincipalMembership.Update().
-				Where(principalmembership.PrincipalIDEQ(uid), principalmembership.OrganizationIDEQ(sc.OrganizationID)).
-				SetActive(*scimUser.Active).
-				Save(ctx); err != nil {
+		wasActive = p.Active
+		if !sc.Platform {
+			owned, err := ownedBy(ctx, tx.Client(), uid, sc.OrganizationID)
+			if err != nil || !owned {
 				return err
 			}
-		}
-		owned, err := ownedBy(ctx, tx.Client(), uid, sc.OrganizationID)
-		if err != nil || !owned {
-			return err
 		}
 		return s.updateIdentity(ctx, tx, p, scimUser)
 	})
 	if err != nil {
 		return nil, asSCIMError(err)
+	}
+
+	if scimUser.Active != nil {
+		switch {
+		case !sc.Platform:
+			err = s.setMemberActive(ctx, sc.OrganizationID, uid, *scimUser.Active)
+		case *scimUser.Active && !wasActive:
+			err = s.config.Principals.Reactivate(ctx, uid)
+		case !*scimUser.Active && wasActive:
+			err = s.config.Principals.Deactivate(ctx, uid)
+		}
+		if err != nil {
+			return nil, asSCIMError(err)
+		}
 	}
 	return s.GetUserByID(ctx, id)
 }
@@ -529,9 +559,12 @@ func (s *EntStore) updateIdentity(ctx context.Context, tx *ent.Tx, p *ent.Princi
 	return err
 }
 
-// DeleteUser deletes a user together with its group memberships and the
-// records that belong only to it. For a tenant, a user the tenant does not
-// own only loses the membership in the tenant's organization.
+// DeleteUser deletes a user. For a tenant, a user the tenant does not own
+// only loses the membership in the tenant's organization. Otherwise every
+// membership is removed through the membership service, the account is
+// deactivated so existing tokens stop being honored, and the account and
+// the records that belong only to it are deleted. An organization owner
+// is never deleted through SCIM.
 func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -542,27 +575,48 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 		return scim.ErrNotFound("invalid user ID")
 	}
 
-	err = s.withTx(ctx, func(tx *ent.Tx) error {
-		where := append(scimHuman(), principal.IDEQ(uid))
-		if !sc.Platform {
-			where = append(where, memberOf(sc.OrganizationID))
-		}
-		exists, err := tx.Principal.Query().Where(where...).Exist(ctx)
+	where := append(scimHuman(), principal.IDEQ(uid))
+	if !sc.Platform {
+		where = append(where, memberOf(sc.OrganizationID))
+	}
+	exists, err := s.client.Principal.Query().Where(where...).Exist(ctx)
+	if err != nil {
+		return asSCIMError(err)
+	}
+	if !exists {
+		return scim.ErrNotFound("user not found")
+	}
+	if !sc.Platform {
+		owned, err := ownedBy(ctx, s.client, uid, sc.OrganizationID)
 		if err != nil {
+			return asSCIMError(err)
+		}
+		if !owned {
+			return s.removeMember(ctx, sc.OrganizationID, uid)
+		}
+	}
+
+	memberships, err := s.client.PrincipalMembership.Query().
+		Where(principalmembership.PrincipalIDEQ(uid)).
+		All(ctx)
+	if err != nil {
+		return asSCIMError(err)
+	}
+	for _, m := range memberships {
+		if m.Role == orgsvc.RoleOwner {
+			return errOwnerDeprovision()
+		}
+	}
+	for _, m := range memberships {
+		if err := s.removeMember(ctx, m.OrganizationID, uid); err != nil {
 			return err
 		}
-		if !exists {
-			return scim.ErrNotFound("user not found")
-		}
-		if !sc.Platform {
-			owned, err := ownedBy(ctx, tx.Client(), uid, sc.OrganizationID)
-			if err != nil {
-				return err
-			}
-			if !owned {
-				return removeMember(ctx, tx, sc.OrganizationID, uid)
-			}
-		}
+	}
+	if err := s.config.Principals.Deactivate(ctx, uid); err != nil {
+		return asSCIMError(err)
+	}
+
+	err = s.withTx(ctx, func(tx *ent.Tx) error {
 		if _, err := tx.PrincipalMembership.Delete().Where(principalmembership.PrincipalIDEQ(uid)).Exec(ctx); err != nil {
 			return err
 		}
@@ -578,30 +632,109 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 		return tx.Principal.DeleteOneID(uid).Exec(ctx)
 	})
 	if err != nil {
-		var se *scim.Error
-		if errors.As(err, &se) {
-			return se
-		}
-		return scim.ErrInternal(err.Error())
+		return asSCIMError(err)
 	}
 	return nil
 }
 
-// removeMember removes principal id from organization orgID, with its
-// application roles there.
-func removeMember(ctx context.Context, tx *ent.Tx, orgID, id uuid.UUID) error {
-	if _, err := tx.AppRole.Delete().
-		Where(approle.PrincipalID(id), approle.OrganizationID(orgID)).
-		Exec(ctx); err != nil {
-		return err
+// Memberships
+//
+// SCIM changes memberships only through Config.Memberships, so they carry
+// the same side effects as any other membership change. Two rules apply
+// on top: an organization owner is never suspended or removed through
+// SCIM, so an identity provider cannot lock a customer out of its own
+// organization; and a restored membership gets the default role rather
+// than the role it had before, since the identity provider does not manage
+// roles.
+
+// errOwnerDeprovision refuses to suspend or remove an organization owner.
+func errOwnerDeprovision() error {
+	return scim.ErrForbidden("an organization owner cannot be deprovisioned through SCIM; transfer ownership first")
+}
+
+// membership returns principal id's membership in orgID, or nil.
+func (s *EntStore) membership(ctx context.Context, orgID, id uuid.UUID) (*ent.PrincipalMembership, error) {
+	m, err := s.client.PrincipalMembership.Query().
+		Where(principalmembership.PrincipalIDEQ(id), principalmembership.OrganizationIDEQ(orgID)).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return nil, nil
 	}
-	_, err := tx.PrincipalMembership.Delete().
-		Where(
-			principalmembership.PrincipalIDEQ(id),
-			principalmembership.OrganizationIDEQ(orgID),
-		).
-		Exec(ctx)
-	return err
+	return m, err
+}
+
+// addMember makes principal id an active member of orgID: a new membership
+// with the default role, or a restored one (see setMemberActive).
+func (s *EntStore) addMember(ctx context.Context, orgID, id uuid.UUID) error {
+	m, err := s.membership(ctx, orgID, id)
+	if err != nil {
+		return asSCIMError(err)
+	}
+	if m != nil {
+		return s.setMemberActive(ctx, orgID, id, true)
+	}
+	_, err = s.config.Memberships.AddMember(ctx, orgsvc.AddMemberInput{
+		OrganizationID: orgID,
+		PrincipalID:    id,
+		Role:           s.config.DefaultRole,
+	})
+	return membershipError(err)
+}
+
+// setMemberActive suspends or restores principal id's membership in orgID.
+// A restored membership gets the default role.
+func (s *EntStore) setMemberActive(ctx context.Context, orgID, id uuid.UUID, active bool) error {
+	m, err := s.membership(ctx, orgID, id)
+	if err != nil {
+		return asSCIMError(err)
+	}
+	if m == nil {
+		return scim.ErrNotFound("user not found")
+	}
+	if m.Active == active {
+		return nil
+	}
+	in := orgsvc.UpdateMemberInput{Active: &active}
+	if active {
+		role := s.config.DefaultRole
+		in.Role = &role
+	} else if m.Role == orgsvc.RoleOwner {
+		return errOwnerDeprovision()
+	}
+	_, err = s.config.Memberships.UpdateMember(ctx, m.ID, in)
+	return membershipError(err)
+}
+
+// removeMember removes principal id from orgID; removing a non-member is a
+// no-op.
+func (s *EntStore) removeMember(ctx context.Context, orgID, id uuid.UUID) error {
+	m, err := s.membership(ctx, orgID, id)
+	if err != nil {
+		return asSCIMError(err)
+	}
+	if m == nil {
+		return nil
+	}
+	if m.Role == orgsvc.RoleOwner {
+		return errOwnerDeprovision()
+	}
+	err = s.config.Memberships.RemoveMember(ctx, orgID, id)
+	if errors.Is(err, orgsvc.ErrMembershipNotFound) {
+		return nil
+	}
+	return membershipError(err)
+}
+
+// membershipError maps a membership service error to a SCIM error.
+func membershipError(err error) error {
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, orgsvc.ErrPersonalOrganization):
+		return scim.ErrInvalidValue("a personal organization cannot have members")
+	default:
+		return asSCIMError(err)
+	}
 }
 
 // Group Operations
@@ -919,9 +1052,9 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 }
 
 // AddMemberToGroup adds a user to a group. Adding an existing member is a
-// no-op; re-adding a deactivated member reactivates the membership. A
-// tenant may add only users it already sees: members of its organization,
-// active or not.
+// no-op; re-adding a deactivated member restores the membership with the
+// default role. A tenant may add only users it already sees: members of
+// its organization, active or not.
 func (s *EntStore) AddMemberToGroup(ctx context.Context, groupID, userID string) error {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -947,45 +1080,11 @@ func (s *EntStore) AddMemberToGroup(ctx context.Context, groupID, userID string)
 		return scim.ErrNotFound("user not found")
 	}
 
-	if err := orgsvc.RequireMembersAllowed(ctx, s.client, gid, s.config.DefaultRole); err != nil {
-		if errors.Is(err, orgsvc.ErrPersonalOrganization) {
-			return scim.ErrInvalidValue("a personal organization cannot have group members")
-		}
-		return scim.ErrInternal(err.Error())
-	}
-
-	existing, err := s.client.PrincipalMembership.Query().
-		Where(
-			principalmembership.PrincipalIDEQ(uid),
-			principalmembership.OrganizationIDEQ(gid),
-		).
-		Only(ctx)
-	switch {
-	case err == nil:
-		if existing.Active {
-			return nil
-		}
-		if _, err := s.client.PrincipalMembership.UpdateOne(existing).SetActive(true).Save(ctx); err != nil {
-			return scim.ErrInternal(err.Error())
-		}
-		return nil
-	case !ent.IsNotFound(err):
-		return scim.ErrInternal(err.Error())
-	}
-
-	_, err = s.client.PrincipalMembership.Create().
-		SetPrincipalID(uid).
-		SetOrganizationID(gid).
-		SetRole(s.config.DefaultRole).
-		Save(ctx)
-	if err != nil {
-		return scim.ErrInternal(err.Error())
-	}
-
-	return nil
+	return s.addMember(ctx, gid, uid)
 }
 
-// RemoveMemberFromGroup removes a user from a group.
+// RemoveMemberFromGroup removes a user from a group. An organization owner
+// cannot be removed through SCIM.
 func (s *EntStore) RemoveMemberFromGroup(ctx context.Context, groupID, userID string) error {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -1000,14 +1099,7 @@ func (s *EntStore) RemoveMemberFromGroup(ctx context.Context, groupID, userID st
 		return scim.ErrNotFound("invalid user ID")
 	}
 
-	// The member's application roles go with the membership.
-	if err := s.withTx(ctx, func(tx *ent.Tx) error {
-		return removeMember(ctx, tx, gid, uid)
-	}); err != nil {
-		return scim.ErrInternal(err.Error())
-	}
-
-	return nil
+	return s.removeMember(ctx, gid, uid)
 }
 
 // Helper methods
