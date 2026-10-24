@@ -18,6 +18,12 @@ var (
 	ErrSessionNotFound    = errors.New("session not found")
 	ErrSessionExpired     = errors.New("session expired")
 	ErrSessionRevoked     = errors.New("session revoked")
+
+	// ErrUnsupportedAuthMethod is returned by EmbeddedAuthProvider for an
+	// authentication method it cannot verify. Only AuthMethodPassword is
+	// supported; OIDC sign-in goes through social login or federation,
+	// which verify the upstream token themselves.
+	ErrUnsupportedAuthMethod = errors.New("unsupported authentication method")
 )
 
 // EmbeddedAuthProvider implements AuthenticationProvider with in-memory session storage.
@@ -102,12 +108,11 @@ func (p *EmbeddedAuthProvider) Authenticate(ctx context.Context, req *Authentica
 			return nil, ErrInvalidCredentials
 		}
 
-	case AuthMethodOIDC:
-		// OIDC tokens are validated externally; if we get here, trust the token
-		// In a real implementation, verify the OIDC token
-
 	default:
-		return nil, errors.New("unsupported authentication method")
+		// Every other method, AuthMethodOIDC included, has no verifier
+		// here. Accepting one without checking a credential would sign in
+		// anyone who names an email address.
+		return nil, ErrUnsupportedAuthMethod
 	}
 
 	// Create session

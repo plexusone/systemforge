@@ -88,6 +88,11 @@ const (
 )
 ```
 
+The embedded provider verifies only `AuthMethodPassword`, with the verifier
+passed to `WithProviderPasswordVerifier`. Every other method, `AuthMethodOIDC`
+included, returns `ErrUnsupportedAuthMethod`: OIDC sign-in goes through social
+login or federation, which verify the upstream token themselves.
+
 ### Example Usage
 
 ```go
