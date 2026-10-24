@@ -45,7 +45,11 @@ type OmniStorageConfig struct {
 	// CleanupInterval is how often to run automatic cleanup.
 	CleanupInterval time.Duration
 
-	// KeyPrefix is the prefix for session keys.
+	// KeyPrefix is the prefix for session keys and the per-user session
+	// index. If empty, it is "session:<SiteID>:" (or "session:" without a
+	// SiteID), so applications that share a backend keep separate keys and
+	// separate user indexes: one application's DeleteByUserID or
+	// MaxSessionsPerUser does not reach another's sessions.
 	KeyPrefix string
 
 	// ControlOptions are optional settings for the controlled store wrapper.
@@ -72,7 +76,19 @@ func DefaultOmniStorageConfig() OmniStorageConfig {
 		MaxSessionSize:  1024 * 1024, // 1MB
 		DefaultTTL:      24 * time.Hour,
 		CleanupInterval: 5 * time.Minute,
-		KeyPrefix:       "session:",
+	}
+}
+
+// sessionKeyPrefix is the session key prefix for cfg: KeyPrefix when set,
+// otherwise one scoped to the SiteID.
+func sessionKeyPrefix(cfg OmniStorageConfig) string {
+	switch {
+	case cfg.KeyPrefix != "":
+		return cfg.KeyPrefix
+	case cfg.SiteID != "":
+		return "session:" + cfg.SiteID + ":"
+	default:
+		return "session:"
 	}
 }
 
@@ -110,7 +126,7 @@ func NewOmniStorageStore(cfg OmniStorageConfig) (*OmniStorageStore, error) {
 		MaxSessionsPerUser: cfg.MaxSessionsPerUser,
 		DefaultTTL:         cfg.DefaultTTL,
 		CleanupInterval:    cfg.CleanupInterval,
-		KeyPrefix:          cfg.KeyPrefix,
+		KeyPrefix:          sessionKeyPrefix(cfg),
 	}
 
 	var store omnisession.Store
@@ -166,7 +182,7 @@ func NewOmniStorageStoreWithKVS(backend kvs.ListableStore, cfg OmniStorageConfig
 		MaxSessionsPerUser: cfg.MaxSessionsPerUser,
 		DefaultTTL:         cfg.DefaultTTL,
 		CleanupInterval:    cfg.CleanupInterval,
-		KeyPrefix:          cfg.KeyPrefix,
+		KeyPrefix:          sessionKeyPrefix(cfg),
 	}
 	store := sessionkvs.NewWithControls(backend, omniCfg, cfg.ControlOptions...)
 	return &OmniStorageStore{store: store, siteID: cfg.SiteID, sealer: cfg.Sealer}, nil

@@ -132,7 +132,7 @@ for local development only.
 | `MaxSessionSize` | Max session size in bytes | 1MB |
 | `DefaultTTL` | Session lifetime | 24 hours |
 | `CleanupInterval` | Cleanup frequency | 5 minutes |
-| `KeyPrefix` | Redis key prefix | `"session:"` |
+| `KeyPrefix` | Prefix of session keys and the per-user session index | `"session:<SiteID>:"` |
 | `ControlOptions` | Logger, violation handler | None |
 
 #### With Observability

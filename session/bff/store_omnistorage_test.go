@@ -84,3 +84,38 @@ func TestNewOmniStorageStore_RedisRequiresSiteID(t *testing.T) {
 		t.Fatalf("NewOmniStorageStore() error = %v, want ErrSiteIDRequired", err)
 	}
 }
+
+// Applications sharing one backend under the default configuration keep
+// separate keys and user indexes, so one application's DeleteByUserID does
+// not remove another's sessions.
+func TestOmniStorageStore_DefaultKeyPrefixIsPerSite(t *testing.T) {
+	ctx := context.Background()
+	backend := kvsmemory.New()
+	siteA := newTestOmniStore(t, backend, "site-a")
+	siteB := newTestOmniStore(t, backend, "site-b")
+
+	userID := uuid.New()
+	sess, err := NewSession(userID, "at", "rt", time.Hour, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := siteA.Create(ctx, sess); err != nil {
+		t.Fatal(err)
+	}
+	keys, err := backend.List(ctx, "session:site-a:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) == 0 {
+		t.Fatal(`no keys under "session:site-a:"`)
+	}
+	if _, err := siteB.DeleteByUserID(ctx, userID.String()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := siteA.Get(ctx, sess.ID); err != nil {
+		t.Errorf("site-b DeleteByUserID removed a site-a session: %v", err)
+	}
+	if sessionKeyPrefix(OmniStorageConfig{SiteID: "s", KeyPrefix: "custom:"}) != "custom:" {
+		t.Error("an explicit KeyPrefix was not kept")
+	}
+}
