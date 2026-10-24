@@ -264,6 +264,7 @@ func (h *Handler) CreateSession(ctx context.Context, w http.ResponseWriter, r *h
 		UserID:                params.UserID,
 		OrganizationID:        params.OrganizationID,
 		AccessToken:           params.AccessToken,
+		TokenType:             normalizeTokenType(params.TokenType),
 		RefreshToken:          params.RefreshToken,
 		AccessTokenExpiresAt:  now.Add(params.AccessTokenExpiresIn),
 		RefreshTokenExpiresAt: now.Add(params.RefreshTokenExpiresIn),
@@ -324,7 +325,11 @@ type CreateSessionParams struct {
 	RefreshTokenExpiresIn time.Duration
 	DPoPKeyPairJSON       []byte // Serialized DPoP key pair (from dpop.KeyPair.SerializeJSON())
 	DPoPThumbprint        string // JWK thumbprint of the DPoP key pair
-	Metadata              map[string]string
+	// TokenType is the token_type the token endpoint returned: "DPoP"
+	// for a token bound to the DPoP key pair above (sent with the DPoP
+	// scheme and a proof), "Bearer" for an unbound one.
+	TokenType string
+	Metadata  map[string]string
 }
 
 // handleGetSession returns the current session status.

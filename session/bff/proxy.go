@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -23,8 +24,11 @@ type ProxyConfig struct {
 	// rejected with 400 (ErrInvalidProxyPath).
 	TargetURL string
 
-	// UseDPoP enables DPoP proof injection.
-	// Default: true
+	// UseDPoP enables DPoP proofs for sessions whose access token was
+	// issued DPoP-bound (Session.TokenType "DPoP"): such a token is sent
+	// with the DPoP scheme and a proof by the session's key. A token
+	// issued as Bearer is always sent as Bearer. With UseDPoP off, a
+	// DPoP-bound session cannot be proxied. Default: true.
 	UseDPoP bool
 
 	// Client is the HTTP client to use for proxied requests.
@@ -262,19 +266,11 @@ func (p *Proxy) rewriteRequest(req *http.Request) {
 	removeHopByHopHeaders(req.Header)
 
 	if session != nil {
-		// Inject Authorization header
-		authScheme := "Bearer"
-		if p.config.UseDPoP && session.HasDPoP() {
-			authScheme = "DPoP"
-		}
-		req.Header.Set("Authorization", authScheme+" "+session.AccessToken)
-
-		// Inject DPoP proof if enabled
-		if p.config.UseDPoP && session.HasDPoP() {
-			proof, err := p.createDPoPProof(session, req.Method, req.URL)
-			if err == nil {
-				req.Header.Set("DPoP", proof)
-			}
+		// Inject the credentials. A failure leaves the request without
+		// them, so the API refuses it rather than seeing a token used
+		// without its proof.
+		if err := p.authorize(req, session); err != nil {
+			slog.Default().ErrorContext(req.Context(), "bff: presenting the session's access token", "error", err)
 		}
 
 		// Call custom rewrite hook
@@ -314,6 +310,33 @@ func (p *Proxy) filterClientHeaders(h http.Header) {
 			}
 		}
 	}
+}
+
+// ErrDPoPUnavailable is returned when a session's access token was issued
+// as DPoP-bound but the proxy cannot make a proof for it: DPoP is off
+// (ProxyConfig.UseDPoP) or the session has no key pair.
+var ErrDPoPUnavailable = errors.New("bff: the access token is DPoP-bound but no DPoP proof can be made")
+
+// authorize sets the credentials of a proxied request by how the token
+// endpoint issued the session's access token: a DPoP token (token_type
+// DPoP) with the DPoP scheme and a proof by the session's key, a bearer
+// token with the Bearer scheme and no proof. Sending a DPoP-bound token as
+// Bearer, or a bearer token as DPoP, would be refused.
+func (p *Proxy) authorize(req *http.Request, session *Session) error {
+	if !session.UsesDPoP() {
+		req.Header.Set("Authorization", "Bearer "+session.AccessToken)
+		return nil
+	}
+	if !p.config.UseDPoP || !session.HasDPoP() {
+		return ErrDPoPUnavailable
+	}
+	proof, err := p.createDPoPProof(session, req.Method, req.URL)
+	if err != nil {
+		return fmt.Errorf("bff: creating a DPoP proof: %w", err)
+	}
+	req.Header.Set("Authorization", "DPoP "+session.AccessToken)
+	req.Header.Set("DPoP", proof)
+	return nil
 }
 
 // createDPoPProof creates a DPoP proof for the proxied request.
@@ -395,18 +418,8 @@ func (p *Proxy) ProxyRequest(ctx context.Context, method, path string, body io.R
 	}
 
 	// Inject auth
-	authScheme := "Bearer"
-	if p.config.UseDPoP && session.HasDPoP() {
-		authScheme = "DPoP"
-	}
-	req.Header.Set("Authorization", authScheme+" "+session.AccessToken)
-
-	// Inject DPoP proof if enabled
-	if p.config.UseDPoP && session.HasDPoP() {
-		proof, err := p.createDPoPProof(session, method, &u)
-		if err == nil {
-			req.Header.Set("DPoP", proof)
-		}
+	if err := p.authorize(req, session); err != nil {
+		return nil, err
 	}
 
 	// Send request

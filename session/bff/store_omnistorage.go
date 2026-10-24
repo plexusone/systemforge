@@ -246,6 +246,7 @@ func (s *OmniStorageStore) Close() error {
 // sessionData holds the systemforge-specific session fields as JSON.
 type sessionData struct {
 	AccessToken           string            `json:"access_token,omitempty"`
+	TokenType             string            `json:"token_type,omitempty"`
 	RefreshToken          string            `json:"refresh_token,omitempty"`
 	AccessTokenExpiresAt  time.Time         `json:"access_token_expires_at,omitempty"`
 	RefreshTokenExpiresAt time.Time         `json:"refresh_token_expires_at,omitempty"`
@@ -270,6 +271,7 @@ func (st *OmniStorageStore) toOmniSession(ctx context.Context, s *Session) (*omn
 	// Store systemforge-specific fields in Data
 	data := sessionData{
 		AccessToken:           s.AccessToken,
+		TokenType:             s.TokenType,
 		RefreshToken:          s.RefreshToken,
 		AccessTokenExpiresAt:  s.AccessTokenExpiresAt,
 		RefreshTokenExpiresAt: s.RefreshTokenExpiresAt,
@@ -331,6 +333,7 @@ func (st *OmniStorageStore) fromOmniSession(ctx context.Context, os *omnisession
 		return nil, fmt.Errorf("%w: decoding session data: %v", ErrInvalidSession, err)
 	}
 	s.AccessToken = data.AccessToken
+	s.TokenType = data.TokenType
 	s.RefreshToken = data.RefreshToken
 	s.AccessTokenExpiresAt = data.AccessTokenExpiresAt
 	s.RefreshTokenExpiresAt = data.RefreshTokenExpiresAt

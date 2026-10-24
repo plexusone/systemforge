@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,6 +32,12 @@ type Session struct {
 
 	// RefreshToken is the OAuth refresh token.
 	RefreshToken string `json:"refresh_token"`
+
+	// TokenType is the token_type the token endpoint returned with
+	// AccessToken: "DPoP" for a token bound to the session's DPoP key,
+	// which the proxy presents with the DPoP scheme and a proof, or
+	// "Bearer" for an unbound token, presented as Bearer.
+	TokenType string `json:"token_type,omitempty"`
 
 	// AccessTokenExpiresAt is when the access token expires.
 	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
@@ -151,6 +158,30 @@ func (s *Session) capExpiry(expiry time.Time, maxLifetime time.Duration) time.Ti
 		return limit
 	}
 	return expiry
+}
+
+// UsesDPoP reports whether the session's access token was issued as a
+// DPoP-bound token (token_type DPoP), so it must be presented with the
+// DPoP scheme and a proof by the session's key.
+func (s *Session) UsesDPoP() bool {
+	return strings.EqualFold(s.TokenType, TokenTypeDPoP)
+}
+
+// Token types of the token endpoint (RFC 9449, RFC 6750).
+const (
+	TokenTypeDPoP   = "DPoP"
+	TokenTypeBearer = "Bearer"
+)
+
+// normalizeTokenType returns the canonical spelling of a token_type.
+func normalizeTokenType(t string) string {
+	switch {
+	case strings.EqualFold(t, TokenTypeDPoP):
+		return TokenTypeDPoP
+	case strings.EqualFold(t, TokenTypeBearer):
+		return TokenTypeBearer
+	}
+	return t
 }
 
 // HasDPoP returns true if the session has a DPoP key pair.

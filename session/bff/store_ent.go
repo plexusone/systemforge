@@ -12,6 +12,9 @@ import (
 
 // EntClientInterface abstracts the Ent client to avoid import cycles.
 // Apps implement this interface wrapping their generated Ent client.
+// The wrapper must persist every field of Session it is given, including
+// TokenType, which decides whether the proxy presents the access token
+// with the DPoP or the Bearer scheme.
 //
 // Example implementation:
 //
