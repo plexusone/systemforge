@@ -15,7 +15,10 @@ SystemForge uses [SpiceDB](https://authzed.com/spicedb) for fine-grained, relati
 
 ### Embedded Mode (Development)
 
-For development and testing, SystemForge can run an embedded SpiceDB instance:
+For development and testing, SystemForge can run an embedded SpiceDB instance.
+The embedded server listens in memory inside the application process, so it
+opens no network port, and it is guarded by a random preshared key generated at
+startup:
 
 ```go
 import (

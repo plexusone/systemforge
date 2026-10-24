@@ -2,13 +2,13 @@ package spicedb
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"slices"
-	"time"
 
 	pb "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
@@ -79,23 +79,19 @@ func newEmbeddedClient(ctx context.Context, cfg Config, logger *slog.Logger) (*C
 		return nil, fmt.Errorf("failed to create datastore: %w", err)
 	}
 
-	// Use a random preshared key for embedded mode
-	presharedKey := "embedded-dev-key-" + fmt.Sprintf("%d", time.Now().UnixNano())
-
-	// Find an available port
-	port, err := findAvailablePort()
+	// The embedded server listens in memory, so it opens no network port
+	// another process could reach. It is still guarded by a random
+	// preshared key.
+	presharedKey, err := newPresharedKey()
 	if err != nil {
-		return nil, fmt.Errorf("failed to find available port: %w", err)
+		return nil, err
 	}
-	address := fmt.Sprintf("127.0.0.1:%d", port)
 
-	// Create server configuration with TCP on the available port
 	serverCfg := server.NewConfigWithOptionsAndDefaults(
 		server.WithDatastore(ds),
 		server.WithPresharedSecureKey(presharedKey),
 		server.WithGRPCServer(util.GRPCServerConfig{
-			Network: "tcp",
-			Address: address,
+			Network: util.BufferedNetwork,
 			Enabled: true,
 		}),
 		server.WithDispatchServer(util.GRPCServerConfig{
@@ -119,20 +115,14 @@ func newEmbeddedClient(ctx context.Context, cfg Config, logger *slog.Logger) (*C
 		}
 	}()
 
-	// Give server time to start
-	time.Sleep(100 * time.Millisecond)
-
-	// Connect to the running server via gRPC
-	conn, err := grpc.NewClient(address,
+	// Connect to the server through its in-memory listener.
+	conn, err := runnableServer.NewClient(
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpcutil.WithInsecureBearerToken(presharedKey),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial embedded SpiceDB: %w", err)
 	}
-
-	// Suppress unused variable warning - server runs in background goroutine
-	_ = runnableServer
 
 	logger.Info("started embedded SpiceDB", "engine", engine)
 
@@ -473,15 +463,12 @@ func (c *Client) LookupResources(ctx context.Context, req *LookupResourcesReques
 	return resources, nil
 }
 
-// findAvailablePort finds an available TCP port by listening on :0 and then closing.
-func findAvailablePort() (int, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
+// newPresharedKey returns 32 random bytes, hex encoded, for the embedded
+// server's preshared key.
+func newPresharedKey() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generating embedded SpiceDB key: %w", err)
 	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	if err := listener.Close(); err != nil {
-		return 0, fmt.Errorf("releasing port %d: %w", port, err)
-	}
-	return port, nil
+	return hex.EncodeToString(b), nil
 }
