@@ -46,6 +46,9 @@
       },
       {
         "description": "A connection's creator kept view, use, manage and share rights on it after leaving or being removed from the organization, and could grant themselves back in; creator rights now require current membership of the owning organization"
+      },
+      {
+        "description": "BFF logout passed the client's cookie value to the session store's Delete even when no session matched; with the omnistorage kvs store, the value `user:<id>` deleted a user's session index, so \"log out everywhere\" and revoke-on-password-change missed that user's sessions. Logout now deletes only a session the store returns, and malformed cookie values are treated as no session"
       }
     ],
     "added": [
@@ -69,6 +72,9 @@
       },
       {
         "description": "scim: `Scope`, `WithScope`, `WithTenant`, `WithPlatformScope`, `ScopeFromContext`, and `API.CredentialMiddleware` with `Credential` to bind SCIM requests to an organization or the platform"
+      },
+      {
+        "description": "bff: `ValidSessionID` and `MaxSessionIDLength`"
       }
     ],
     "breaking": [
@@ -89,6 +95,9 @@
       },
       {
         "description": "connections: creator rights need an `Options.Authorizer` that implements `authz.OrgAuthorizer` (the rbac and SpiceDB providers do); with another authorizer, creators are decided by role and grants alone"
+      },
+      {
+        "description": "bff: a custom `HandlerConfig.SessionIDGenerator` must produce IDs that `ValidSessionID` accepts (URL-safe characters, at most 256)"
       }
     ],
     "upgradeGuide": [
