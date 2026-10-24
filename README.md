@@ -242,16 +242,21 @@ proof, err := dpop.CreateProofWithOptions(keyPair, "POST", "https://api.example.
     AccessToken: accessToken,
 })
 
-// Verify proof (API side)
-verifier := dpop.NewVerifier(dpop.VerificationConfig{
-    MaxAge: 5 * time.Minute,
+// Enforce DPoP on the API side
+auth, err := middleware.HTTPAuthDPoP(jwtService, middleware.DPoPConfig{
+    ReplayCache: middleware.NewRedisReplayCache(redisClient, "dpop-jti:"), // or NewMemoryReplayCache()
+    BaseURL:     "https://api.example.com", // the scheme and host clients use
 })
-result, err := verifier.Verify(proofJWT, dpop.VerificationRequest{
-    Method:      "POST",
-    URI:         "https://api.example.com/data",
-    AccessToken: accessToken,
-})
+r.Use(auth)
 ```
+
+`HTTPAuthDPoP` accepts a DPoP-bound access token (one with a `cnf.jkt` claim)
+only with the `DPoP` authorization scheme and a proof signed by the bound key
+that matches the request method and URI, carries the token hash (`ath`), is
+fresh, and has not been seen before. Tokens without `cnf.jkt` are accepted as
+Bearer tokens. `HTTPAuth`, `HTTPAuthForAudience` and `HTTPAuthOptional` refuse
+DPoP-bound tokens, since without a verified proof they would work as plain
+bearer tokens.
 
 ### BFF Pattern
 

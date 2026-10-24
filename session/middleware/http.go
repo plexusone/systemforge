@@ -13,7 +13,10 @@ import (
 // HTTPAuth returns a standard http.Handler middleware that validates JWT tokens.
 // It extracts the token from the Authorization header (Bearer scheme) and
 // attaches the claims to the request context. Only access tokens addressed
-// to the service's Config.Audience are accepted.
+// to the service's Config.Audience are accepted. A DPoP-bound token (one
+// with a cnf.jkt claim) is refused, since without a verified proof it would
+// work as a plain bearer token; use HTTPAuthDPoP on routes that accept
+// DPoP-bound tokens.
 func HTTPAuth(jwtService *jwt.Service) func(http.Handler) http.Handler {
 	return HTTPAuthWithObservability(jwtService, nil)
 }
@@ -35,6 +38,10 @@ func HTTPAuthForAudience(jwtService *jwt.Service, audiences ...string) func(http
 			claims, err := jwtService.ValidateAccessTokenForAudience(token, audiences...)
 			if err != nil {
 				writeUnauthorized(w, err.Error())
+				return
+			}
+			if claims.IsDPoPBound() {
+				writeUnauthorized(w, ErrDPoPProofRequired.Error())
 				return
 			}
 			next.ServeHTTP(w, r.WithContext(ContextWithClaims(r.Context(), claims)))
@@ -60,6 +67,9 @@ func HTTPAuthWithObservability(jwtService *jwt.Service, obs *observability.Obser
 			}
 
 			claims, err := jwtService.ValidateAccessToken(token)
+			if err == nil && claims.IsDPoPBound() {
+				err = ErrDPoPProofRequired
+			}
 			if err != nil {
 				if obs != nil {
 					obs.RecordJWTValidation(ctx, observability.ResultInvalid)
@@ -97,6 +107,9 @@ func HTTPAuthOptionalWithObservability(jwtService *jwt.Service, obs *observabili
 			token := extractBearerToken(r)
 			if token != "" {
 				claims, err := jwtService.ValidateAccessToken(token)
+				if err == nil && claims.IsDPoPBound() {
+					err = ErrDPoPProofRequired
+				}
 				if err == nil {
 					if obs != nil {
 						obs.RecordJWTValidation(ctx, observability.ResultValid)
