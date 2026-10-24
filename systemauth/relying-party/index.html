@@ -861,6 +861,8 @@
       
         
       
+        
+      
     
     
     
@@ -1063,6 +1065,34 @@
     
   
     API Keys
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../identity/scim/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SCIM Provisioning
   
 
     
@@ -1754,6 +1784,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Programmatic clients">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#which-clients-tokens-are-accepted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which clients' tokens are accepted
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -4080,6 +4127,8 @@
       
         
       
+        
+      
     
     
     
@@ -4151,6 +4200,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.20.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.20.0
   
 
     
@@ -5007,6 +5084,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Programmatic clients">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#which-clients-tokens-are-accepted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which clients' tokens are accepted
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -5421,10 +5515,12 @@ implements <code>PrincipalStore</code> over it; a principal entity using
 <p><code>BearerMiddleware</code> accepts, in order:</p>
 <ul>
 <li><code>Authorization: Bearer &lt;JWT&gt;</code> — a SystemAuth JWT access token, verified
-  against the JWKS (<code>iss</code>, <code>exp</code>, and <code>Config.AccessTokenAudience</code> when set).
-  Its <code>sub</code> must already be linked to a local principal (the user signed in to
-  the app once). Client-credentials tokens (<code>sub</code> = <code>client_id</code>) are accepted
-  as a <code>client</code> principal only with <code>AllowClientTokens</code>.</li>
+  against the JWKS (<code>iss</code>, <code>exp</code>, a <code>typ</code> of <code>at+jwt</code> or <code>JWT</code>, and
+  <code>Config.AccessTokenAudience</code> when set). The token must have been issued to
+  an accepted client (see below); ID tokens are refused. Its <code>sub</code> must
+  already be linked to a local principal (the user signed in to the app
+  once). Client-credentials tokens (<code>sub</code> = <code>client_id</code>) are accepted as a
+  <code>client</code> principal only with <code>AllowClientTokens</code>.</li>
 <li><code>Authorization: Bearer &lt;api key&gt;</code> or <code>X-API-Key</code> — validated by an
   <code>APIKeyValidator</code> (<code>*apikey.Service</code>); the key's owner is the principal and
   an organization-scoped key only carries that organization's membership.</li>
@@ -5432,19 +5528,54 @@ implements <code>PrincipalStore</code> over it; a principal entity using
 </ul>
 <p>Failures return <code>401</code> with <code>WWW-Authenticate: Bearer realm="api"</code> (plus
 <code>error="invalid_token"</code> for bad credentials).</p>
+<h3 id="which-clients-tokens-are-accepted">Which clients' tokens are accepted<a class="headerlink" href="#which-clients-tokens-are-accepted" title="Permanent link">&para;</a></h3>
+<p>Every app that uses SystemAuth receives tokens signed with the same key, so
+the verifier checks which client a token was issued to (its <code>client_id</code>
+claim):</p>
+<table>
+<thead>
+<tr>
+<th>Configuration</th>
+<th>Accepted access tokens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Default</td>
+<td>Issued to this app's <code>ClientID</code> only</td>
+</tr>
+<tr>
+<td><code>AcceptedClientIDs</code></td>
+<td>Issued to one of the listed clients (list <code>ClientID</code> too to keep the app's own)</td>
+</tr>
+<tr>
+<td><code>AccessTokenAudience</code></td>
+<td>Carrying that <code>aud</code>, from any client; combine with <code>AcceptedClientIDs</code> to restrict clients too</td>
+</tr>
+</tbody>
+</table>
+<p>A service client that calls the API with client-credentials tokens must be
+listed in <code>AcceptedClientIDs</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewClient</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">Issuer</span><span class="p">:</span><span class="w">            </span><span class="s">&quot;https://auth.example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">          </span><span class="s">&quot;my-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">RedirectURL</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;https://app.example.com/bff/auth/callback&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nx">AcceptedClientIDs</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;my-app&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;reporting-service&quot;</span><span class="p">},</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">})</span>
+</code></pre></div>
 <h2 id="managed-principals">Managed principals<a class="headerlink" href="#managed-principals" title="Permanent link">&para;</a></h2>
 <p>A relying party can create and manage managed principals, people without an
 email whose accounts are controlled by managers, without holding SystemAuth's
 database. SystemAuth serves the manager API at <code>/managed-principals</code> when
 managed principals are enabled, and the application calls it with the
 signed-in manager's access token through <code>managedprincipal/mpclient</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/managedprincipal/mpclient&quot;</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nx">mp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">issuer</span><span class="o">+</span><span class="s">&quot;/managed-principals&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">httpClient</span><span class="p">)</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mp</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managerToken</span><span class="p">,</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">CreateInput</span><span class="p">{</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Robin&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nx">Role</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;educator&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/managedprincipal/mpclient&quot;</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nx">mp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">issuer</span><span class="o">+</span><span class="s">&quot;/managed-principals&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">httpClient</span><span class="p">)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mp</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managerToken</span><span class="p">,</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">CreateInput</span><span class="p">{</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Robin&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nx">Role</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;educator&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">})</span>
 </code></pre></div>
 <p>The client must have <code>managed_principals: true</code> and the
 <code>systemforge:managed_principals</code> scope, and the manager's token must be
