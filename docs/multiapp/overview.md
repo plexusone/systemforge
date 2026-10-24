@@ -1,6 +1,6 @@
 # Multi-App Framework
 
-The multiapp package enables multiple apps to share backend infrastructure while maintaining complete data isolation. Apps can be deployed in two modes:
+The multiapp package enables multiple apps to share backend infrastructure while keeping each app's data in its own PostgreSQL schema. Apps can be deployed in two modes:
 
 - **Multi-app mode**: Multiple apps share a server, routed by `X-App-ID` header
 - **Single-app mode**: One app runs on dedicated infrastructure
@@ -92,7 +92,7 @@ curl http://localhost:8080/api/health
 
 Each app gets its own PostgreSQL schema (e.g., `app_app1`). This provides:
 
-- Complete data isolation between apps
+- Separate tables per app, chosen per transaction with `SET LOCAL search_path` (see [Isolation limits](#isolation-limits))
 - Independent migrations per app
 - Shared database infrastructure
 
@@ -114,6 +114,27 @@ PostgreSQL Database
     ├── proofs
     └── ...
 ```
+
+### Isolation limits
+
+Schema-per-app isolation separates each app's tables by name; it is not a
+security boundary inside the database. Every app's `SchemaDB` uses the same
+connection pool and database role, and `SET LOCAL search_path` only picks
+which schema unqualified names resolve to:
+
+- Code running for one app (or SQL injected into it) can read and write
+  another app's tables with a schema-qualified name, `app_other.users`.
+- `public` follows the app's schema on every search path, so an unqualified
+  name the app's schema lacks resolves to a shared table in `public`.
+
+When apps must not reach each other's data even if one of them is
+compromised, give each app its own database role with `USAGE` (and the
+table privileges it needs) on its own schema only, and connect each app with
+its own credentials and pool (for example `EntClientFactory.StdDBForSchema`
+over a per-app DSN). Keep shared tables out of `public`, or grant the app
+roles read-only access to them. A role switch inside the shared pool
+(`SET LOCAL ROLE`) is weaker: SQL that runs in the transaction can switch
+back.
 
 ## AppBackend Interface
 

@@ -114,7 +114,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 ### Multi-App Platform
 
 - 🏗️ **Multi-App Server** - Run multiple SaaS apps on shared infrastructure
-- 📦 **Schema Isolation** - Each app gets its own PostgreSQL schema
+- 📦 **Schema per App** - Each app gets its own PostgreSQL schema
 - 🔀 **X-App-ID Routing** - Header-based request routing to app backends
 - 🔌 **AppBackend Interface** - Composable app registration with lifecycle hooks
 - 💾 **Shared Caching** - Redis or in-memory with app-scoped prefixes

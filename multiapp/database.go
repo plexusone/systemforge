@@ -14,7 +14,9 @@ import (
 )
 
 // AppAwareDB manages database connections with schema-per-app isolation.
-// Each app gets its own PostgreSQL schema, providing complete data isolation.
+// Each app gets its own PostgreSQL schema. All schemas share one pool and
+// database role, so the separation is by name, not a privilege boundary:
+// see "Isolation limits" in the package README.
 type AppAwareDB struct {
 	pool    *pgxpool.Pool
 	schemas map[string]*SchemaDB
