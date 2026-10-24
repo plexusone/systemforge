@@ -62,6 +62,7 @@ func newOrgsFixture(t *testing.T) *orgsFixture {
 		Features:    FeatureConfig{EnableJWTAccessTokens: true, RequirePKCE: true},
 		SocialLogin: &SocialLoginConfig{SkipConsent: true},
 	}, WithSocialConnector(f.connector()), WithPrincipalDirectory(NewEntPrincipalDirectory(db)),
+		WithStorage(NewEntStorage(db, WithDefaultOwner(createTestOwner(t, db)))),
 		WithOrgsSource(NewEntOrgsSource(db, roles)))
 	if err != nil {
 		t.Fatal(err)

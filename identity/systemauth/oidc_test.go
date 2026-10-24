@@ -121,7 +121,7 @@ func TestJWTAccessTokens(t *testing.T) {
 		}},
 		Features:    FeatureConfig{EnableJWTAccessTokens: true, RequirePKCE: true},
 		SocialLogin: &SocialLoginConfig{SkipConsent: true},
-	}, WithSocialConnector(f.connector()), WithPrincipalDirectory(NewMemoryPrincipalDirectory()))
+	}, WithSocialConnector(f.connector()))
 	if err != nil {
 		t.Fatal(err)
 	}

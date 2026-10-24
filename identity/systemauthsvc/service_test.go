@@ -493,6 +493,12 @@ func TestEmbedInHostBinary(t *testing.T) {
 		t.Fatal(err)
 	}
 	closeService(t, svc)
+	// Token subjects are principals: the session provider names this one.
+	if err := svc.Server().Storage().CreateHuman(t.Context(), &systemauth.HumanPrincipal{
+		ID: uuid.MustParse("00000000-0000-0000-0000-0000000000aa"), Email: "dev@example.com", EmailVerified: true, Active: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	// The host binary: one listener, routed by Host header.
 	var mu sync.Mutex

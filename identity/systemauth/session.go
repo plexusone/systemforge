@@ -18,9 +18,15 @@ import (
 
 // SessionProvider handles user authentication and consent for the authorization flow.
 // Implement this interface to integrate with your authentication system.
+//
+// The user IDs it returns are principal IDs (ADR-004): they become the
+// subject of the tokens SystemAuth issues, and a token whose subject is
+// not an active principal in the server's Storage is refused (see
+// PrincipalStatus). A provider backed by another user store must map its
+// users to principals rather than return its own IDs.
 type SessionProvider interface {
-	// GetAuthenticatedUser returns the authenticated user ID from the request.
-	// Returns empty string if the user is not authenticated.
+	// GetAuthenticatedUser returns the principal ID of the authenticated
+	// user, or an empty string if the user is not authenticated.
 	GetAuthenticatedUser(r *http.Request) string
 
 	// RedirectToLogin returns the URL to redirect unauthenticated users to.

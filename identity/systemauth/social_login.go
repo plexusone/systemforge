@@ -250,6 +250,9 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 					WithDirectoryLogger(s.logger))
 			}
 			sl.directory = NewEntPrincipalDirectory(es.db, dirOpts...)
+		} else if ms, ok := s.storage.(*MemoryStorage); ok {
+			s.logger.Warn("social login using in-memory principals; principals will not persist")
+			sl.directory = ms.PrincipalDirectory()
 		} else {
 			s.logger.Warn("social login using in-memory principal directory; principals will not persist")
 			sl.directory = NewMemoryPrincipalDirectory()

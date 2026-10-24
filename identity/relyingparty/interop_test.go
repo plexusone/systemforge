@@ -84,7 +84,12 @@ func TestInteropWithSystemAuth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	subject := uuid.NewString()
+	// Token subjects are principals: the session provider names this one.
+	human := &systemauth.HumanPrincipal{Email: "dev@example.com", EmailVerified: true, Active: true}
+	if err := sa.Storage().CreateHuman(ctx, human); err != nil {
+		t.Fatal(err)
+	}
+	subject := human.ID.String()
 	authReq.Header.Set("X-Test-User", subject)
 	noRedirect := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, err := noRedirect.Do(authReq)

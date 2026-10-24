@@ -619,9 +619,11 @@ fails with `server_error` rather than issuing a token without it.
 
 Revocation by principal status: every introspection, userinfo call and
 refresh runs `Server.requireActiveSubject`, which asks
-`PrincipalStatus.PrincipalActive(subject)` (implemented by the Ent and memory
-stores); a deactivated principal's token family is revoked and the token
-reported inactive. A role or membership change does not revoke refresh
+`PrincipalStatus.PrincipalActive(subject)` (part of every `Storage`); a
+deactivated principal's token family is revoked and the token reported
+inactive. A subject that is not a principal ID, or names no principal (one
+that was hard-deleted), is inactive in the same way; only a
+client-credentials token, with an empty subject, has no principal to check. A role or membership change does not revoke refresh
 tokens: the next refresh re-evaluates the `orgs` claim (ADR-010 decision 5).
 The relying-party `SessionStore` can delete BFF sessions by SystemAuth
 session ID or subject, which is the hook back-channel logout would use.

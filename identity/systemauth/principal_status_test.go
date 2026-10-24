@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/google/uuid"
@@ -94,10 +95,16 @@ func TestPrincipalActive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("principal: %v", err)
 	}
+	active, err := db.Principal.Create().SetType(entprincipal.TypeHuman).SetIdentifier("b@example.com").SetDisplayName("B").Save(ctx)
+	if err != nil {
+		t.Fatalf("principal: %v", err)
+	}
 	for subject, want := range map[string]bool{
-		p.ID.String():    false,
-		uuid.NewString(): true, // not a principal SystemAuth holds
-		"external|abc":   true,
+		p.ID.String():      false,
+		active.ID.String(): true,
+		uuid.NewString():   false, // no principal row: deleted, or never one
+		"external|abc":     false, // not a principal ID
+		"":                 true,  // a client's own token
 	} {
 		if got, err := s.PrincipalActive(ctx, subject); err != nil || got != want {
 			t.Errorf("PrincipalActive(%q) = %v, %v; want %v", subject, got, err, want)
@@ -109,7 +116,71 @@ func TestPrincipalActive(t *testing.T) {
 	if err := mem.CreateHuman(ctx, h); err != nil {
 		t.Fatalf("CreateHuman: %v", err)
 	}
-	if got, err := mem.PrincipalActive(ctx, h.ID.String()); err != nil || got {
-		t.Errorf("memory inactive human = %v, %v", got, err)
+	live := &HumanPrincipal{Email: "n@example.com", Active: true}
+	if err := mem.CreateHuman(ctx, live); err != nil {
+		t.Fatalf("CreateHuman: %v", err)
+	}
+	for subject, want := range map[string]bool{
+		h.ID.String():    false,
+		live.ID.String(): true,
+		uuid.NewString(): false,
+		"external|abc":   false,
+		"":               true,
+	} {
+		if got, err := mem.PrincipalActive(ctx, subject); err != nil || got != want {
+			t.Errorf("memory PrincipalActive(%q) = %v, %v; want %v", subject, got, err, want)
+		}
+	}
+}
+
+// TestDeletedPrincipalLosesTokens verifies that hard-deleting a principal
+// stops its tokens as deactivating it does: they no longer authenticate or
+// refresh, and their family is revoked.
+func TestDeletedPrincipalLosesTokens(t *testing.T) {
+	ctx := context.Background()
+	st := NewMemoryStorage()
+	s := newRefreshTestServer(t, WithStorage(st))
+	subject := newPrincipal(t, s)
+
+	tokens := exchangeCode(t, s, authorizeCode(t, s, "openid offline_access", headerUser(subject)))
+	at, _ := tokens["access_token"].(string)
+	rt, _ := tokens["refresh_token"].(string)
+	if at == "" || rt == "" {
+		t.Fatalf("tokens = %v", tokens)
+	}
+	if _, err := s.introspect(ctx, at, fosite.AccessToken, s.Session("")); err != nil {
+		t.Fatalf("introspection of a live principal's token: %v", err)
+	}
+
+	if err := st.DeleteHuman(ctx, uuid.MustParse(subject)); err != nil {
+		t.Fatalf("DeleteHuman: %v", err)
+	}
+	if _, err := s.introspect(ctx, at, fosite.AccessToken, s.Session("")); err == nil {
+		t.Error("introspection of a deleted principal's token succeeded")
+	}
+	if status, body := refresh(t, s, rt); status == http.StatusOK || body["error"] != "invalid_grant" {
+		t.Errorf("refresh for a deleted principal: %d %v", status, body)
+	}
+	// The family was revoked, not merely refused.
+	if introspectActive(t, s, at) {
+		t.Error("the deleted principal's access token is still stored as active")
+	}
+}
+
+// TestNonPrincipalSubjectRefused verifies that a session provider naming a
+// subject that is not a principal ID gets no tokens.
+func TestNonPrincipalSubjectRefused(t *testing.T) {
+	s := newRefreshTestServer(t)
+	for _, subject := range []string{"external|abc", uuid.NewString()} {
+		code := authorizeCode(t, s, "openid", headerUser(subject))
+		status, body := tokenRequest(t, s, url.Values{
+			"grant_type":    {"authorization_code"},
+			"code":          {code},
+			"redirect_uri":  {testRPCB},
+			"code_verifier": {testVerifier},
+		})
+		if status == http.StatusOK || body["error"] != "invalid_grant" {
+			t.Errorf("subject %q: %d %v", subject, status, body)
+		}
 	}
 }

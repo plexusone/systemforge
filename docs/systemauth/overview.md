@@ -111,6 +111,14 @@ scope — `email` → `email`, `email_verified`; `profile` → `name`, `picture`
 and are read live from the principal (via the `SessionProvider`), so they
 reflect the current profile rather than the one at sign-in.
 
+Token subjects are principals (ADR-004). A custom `SessionProvider` must
+return principal IDs from `GetAuthenticatedUser`: every time a token is
+used or refreshed, SystemAuth checks that its subject names an active
+principal in its storage (`PrincipalStatus`). A subject that is not a
+principal ID, or whose principal was deactivated or deleted, is refused and
+its token family revoked. Only client-credentials tokens, whose subject is
+empty, carry no principal.
+
 | Condition | Response |
 |-----------|----------|
 | No token | `401`, `WWW-Authenticate: Bearer realm="systemauth"` |

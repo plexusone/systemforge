@@ -11,28 +11,37 @@ import (
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
 )
 
-// PrincipalStatus is implemented by storage that can tell whether a token's
-// subject may still use it. SystemAuth checks it whenever a token is used
-// or refreshed, so deactivating or deleting a principal takes effect
-// immediately, however it was deactivated.
+// PrincipalStatus tells whether a token's subject may still use it. Every
+// Storage implements it. SystemAuth checks it whenever a token is used or
+// refreshed, so deactivating or deleting a principal takes effect
+// immediately, however it was deactivated or deleted.
+//
+// Principals are the sole identity root (ADR-004): the subject of every
+// token issued for an end-user is a principal ID, which is why a
+// SessionProvider must return principal IDs.
 type PrincipalStatus interface {
 	// PrincipalActive reports whether the principal named by subject is
-	// active. Subjects that are not principals this storage holds, such as
-	// users an application's session provider names, are not judged and
-	// report true.
+	// active. A subject that is not a principal ID (a UUID), or names no
+	// principal this storage holds, is inactive, so the tokens of a
+	// deleted principal stop working as those of a deactivated one do. An
+	// empty subject is a client's own token (client credentials), which no
+	// principal owns, and reports true.
 	PrincipalActive(ctx context.Context, subject string) (bool, error)
 }
 
 // PrincipalActive implements PrincipalStatus for the principals in the
 // identity database.
 func (s *EntStorage) PrincipalActive(ctx context.Context, subject string) (bool, error) {
+	if subject == "" {
+		return true, nil
+	}
 	id, err := uuid.Parse(subject)
 	if err != nil {
-		return true, nil
+		return false, nil
 	}
 	p, err := s.db.Principal.Query().Where(entprincipal.ID(id)).Select(entprincipal.FieldActive).Only(ctx)
 	if ent.IsNotFound(err) {
-		return true, nil
+		return false, nil
 	}
 	if err != nil {
 		return false, fmt.Errorf("checking principal %s: %w", id, err)
@@ -41,18 +50,21 @@ func (s *EntStorage) PrincipalActive(ctx context.Context, subject string) (bool,
 }
 
 // PrincipalActive implements PrincipalStatus for the humans the memory
-// storage holds; other subjects are not judged.
+// storage holds; any other non-empty subject is inactive.
 func (s *MemoryStorage) PrincipalActive(_ context.Context, subject string) (bool, error) {
+	if subject == "" {
+		return true, nil
+	}
 	id, err := uuid.Parse(subject)
 	if err != nil {
-		return true, nil
+		return false, nil
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if h, ok := s.humans[id]; ok {
 		return h.Active, nil
 	}
-	return true, nil
+	return false, nil
 }
 
 // subjectActive reports whether a token subject may use its token. A token
@@ -61,11 +73,7 @@ func (s *Server) subjectActive(ctx context.Context, subject string) (bool, error
 	if subject == "" {
 		return true, nil
 	}
-	ps, ok := s.storage.(PrincipalStatus)
-	if !ok {
-		return true, nil
-	}
-	return ps.PrincipalActive(ctx, subject)
+	return s.storage.PrincipalActive(ctx, subject)
 }
 
 // introspect validates a token and requires its principal to be active. A

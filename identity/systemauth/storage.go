@@ -14,6 +14,10 @@ type Storage interface {
 	// Fosite storage interfaces
 	fosite.ClientManager
 
+	// PrincipalStatus judges token subjects: a token whose subject is not
+	// an active principal is refused.
+	PrincipalStatus
+
 	// Authorization code operations
 	CreateAuthorizeCodeSession(ctx context.Context, code string, request fosite.Requester) error
 	GetAuthorizeCodeSession(ctx context.Context, code string, session fosite.Session) (fosite.Requester, error)
