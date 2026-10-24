@@ -138,6 +138,7 @@ and rejects are never passed to the next one.
 |-------|---------|
 | `Resource` | The server identifier (https, host only). It is the `aud` of the tokens this API accepts and the `iss` of the resource tokens it issues. |
 | `TrustedIssuers` | The Person Servers and Access Servers whose tokens are accepted. Tokens from other issuers are refused **before** key discovery, so an attacker can't make the API fetch keys from a URL of their choosing. |
+| `TrustedAgentIssuers` | Optional. The agent providers whose bare agent tokens are accepted (`agent-token` mode); others are refused before key discovery. Whether or not it is set, an agent token is accepted only when the agent identifier's domain is the issuer's host, so a provider cannot claim another domain's agents. |
 | `AccessMode` | `auth-token` (default) serves only auth tokens. `person-token` also accepts person tokens, and `agent-token` also accepts bare agent tokens, in both cases only on routes that require no scopes. |
 | `Scopes` | Returns the scopes a request requires. An auth token must grant all of them, and resource tokens request them. |
 | `Key`, `KeyID` | Signs resource tokens. The key is published at `JWKSPath` (default `/.well-known/aauth-resource-jwks.json`). |
