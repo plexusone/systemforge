@@ -72,6 +72,13 @@ func pkcePair() (verifier, challenge string) {
 // the code.
 func (f *flow) authorize(challenge string) string {
 	f.t.Helper()
+	return f.authorizeAs(flowSubject, challenge)
+}
+
+// authorizeAs runs the authorization endpoint for subject and returns the
+// code.
+func (f *flow) authorizeAs(subject, challenge string) string {
+	f.t.Helper()
 	ctx := context.Background()
 	q := url.Values{
 		"response_type": {"code"}, "client_id": {f.clientID}, "redirect_uri": {flowRedirect},
@@ -86,7 +93,7 @@ func (f *flow) authorize(challenge string) string {
 	for _, s := range ar.GetRequestedScopes() {
 		ar.GrantScope(s)
 	}
-	resp, err := op.NewAuthorizeResponse(ctx, ar, f.p.Session(flowSubject))
+	resp, err := op.NewAuthorizeResponse(ctx, ar, f.p.Session(subject))
 	if err != nil {
 		f.t.Fatalf("NewAuthorizeResponse: %v", err)
 	}

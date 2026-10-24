@@ -137,12 +137,19 @@ func revokeTokenFamily(ctx context.Context, familyID uuid.UUID) error {
 
 ## Token Validation Middleware
 
+`API.Middleware` accepts an access token only when it is valid and
+unrevoked, was issued to a client named with `oauth.WithAcceptedClientIDs`
+that is still active, and its principal is still active (the check the
+introspection endpoint applies). Pass `oauth.WithAnyClient()` instead when
+every client of the server may call the API and scopes alone limit them.
+`Middleware` panics when the API has neither option.
+
 ```go
 import "github.com/plexusone/systemforge/identity/oauth"
 
 func main() {
     provider, _ := oauth.NewProvider(entClient, cfg)
-    api, _ := oauth.NewAPI(provider)
+    api, _ := oauth.NewAPI(provider, oauth.WithAcceptedClientIDs("my-app"))
 
     // Protected routes
     mux := http.NewServeMux()

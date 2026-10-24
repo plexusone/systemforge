@@ -2,8 +2,11 @@ package oauth
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -27,6 +30,31 @@ type API struct {
 	authenticate func(r *http.Request) string
 	loginURL     string
 	consent      ConsentFunc
+
+	// acceptedClients are the clients whose access tokens Middleware
+	// accepts; anyClient accepts every client. Middleware panics when
+	// neither was configured.
+	acceptedClients []string
+	anyClient       bool
+}
+
+// WithAcceptedClientIDs sets the OAuth clients whose access tokens
+// Middleware accepts. A token issued to any other client is refused, so a
+// client a user authorized for one purpose cannot call APIs meant for
+// another.
+func WithAcceptedClientIDs(clientIDs ...string) Option {
+	return func(a *API) {
+		a.acceptedClients = append(a.acceptedClients, clientIDs...)
+	}
+}
+
+// WithAnyClient makes Middleware accept access tokens issued to any active
+// client of this server. Use it only when every client may call the
+// protected API and scopes alone limit what each may do.
+func WithAnyClient() Option {
+	return func(a *API) {
+		a.anyClient = true
+	}
 }
 
 // ConsentFunc reports whether userID has consented to client receiving
@@ -199,8 +227,49 @@ func (a *API) registerEndpoints() {
 	a.registerFositeEndpoints()
 }
 
-// Middleware provides OAuth token validation middleware.
+// errTokenRefused is returned by acceptToken for a valid token that
+// Middleware does not accept.
+var errTokenRefused = errors.New("oauth: access token refused")
+
+// acceptToken applies Middleware's checks beyond the token's own validity:
+// the issuing client is accepted and active, and the principal is active.
+// Storage errors refuse the token as well.
+func (a *API) acceptToken(ctx context.Context, ar fosite.AccessRequester) error {
+	clientID := ar.GetClient().GetID()
+	if !a.anyClient && !slices.Contains(a.acceptedClients, clientID) {
+		return fmt.Errorf("%w: issued to client %q", errTokenRefused, clientID)
+	}
+	// GetClient finds active clients only.
+	if _, err := a.provider.storage.GetClient(ctx, clientID); err != nil {
+		if errors.Is(err, fosite.ErrNotFound) {
+			return fmt.Errorf("%w: client %q is not active", errTokenRefused, clientID)
+		}
+		LoggerFromContext(ctx).Error("checking client", "client_id", clientID, "error", err)
+		return err
+	}
+	active, err := a.provider.storage.grants.PrincipalActive(ctx, ar.GetSession().GetSubject())
+	if err != nil {
+		LoggerFromContext(ctx).Error("checking principal", "error", err)
+		return err
+	}
+	if !active {
+		return fmt.Errorf("%w: principal is not active", errTokenRefused)
+	}
+	return nil
+}
+
+// Middleware provides OAuth token validation middleware. It accepts an
+// access token only when it is valid and unrevoked, was issued to a client
+// accepted by WithAcceptedClientIDs (or WithAnyClient) that is still
+// active, and its principal is still active, the same principal check the
+// introspection endpoint applies.
+//
+// Middleware panics when the API was created with neither
+// WithAcceptedClientIDs nor WithAnyClient.
 func (a *API) Middleware(next http.Handler) http.Handler {
+	if len(a.acceptedClients) == 0 && !a.anyClient {
+		panic("oauth: Middleware needs WithAcceptedClientIDs or WithAnyClient")
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := LoggerFromContext(ctx)
@@ -220,6 +289,12 @@ func (a *API) Middleware(next http.Handler) http.Handler {
 		_, ar, err := a.provider.OAuth2Provider().IntrospectToken(ctx, token, fosite.AccessToken, session)
 		if err != nil {
 			logger.Debug("invalid access token", "path", r.URL.Path, "error", err)
+			http.Error(w, "invalid access token", http.StatusUnauthorized)
+			return
+		}
+
+		if err := a.acceptToken(ctx, ar); err != nil {
+			logger.Debug("access token refused", "path", r.URL.Path, "client_id", ar.GetClient().GetID(), "error", err)
 			http.Error(w, "invalid access token", http.StatusUnauthorized)
 			return
 		}

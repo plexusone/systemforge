@@ -224,7 +224,7 @@ session := provider.Session("user-id")
 
 ```go
 // Create API with Huma/Chi router
-api, err := oauth.NewAPI(provider)
+api, err := oauth.NewAPI(provider, oauth.WithAcceptedClientIDs("my-app"))
 
 // Mount the router - all endpoints are automatically registered:
 // - /oauth/authorize (GET/POST)
@@ -235,7 +235,8 @@ api, err := oauth.NewAPI(provider)
 // - /.well-known/jwks.json (GET)
 http.Handle("/", api.Router())
 
-// Middleware for protected routes
+// Middleware for protected routes: accepts tokens of the accepted clients
+// only, while the client and the principal are active
 protected := api.Middleware(myHandler)
 ```
 

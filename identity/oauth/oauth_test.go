@@ -287,7 +287,8 @@ func TestMiddlewareMissingToken(t *testing.T) {
 	}
 
 	api := &API{
-		provider: provider,
+		provider:  provider,
+		anyClient: true,
 	}
 
 	// Create a handler that should not be called

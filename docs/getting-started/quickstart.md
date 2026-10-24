@@ -43,7 +43,7 @@ func main() {
     }
 
     // Create OAuth API (endpoints auto-registered)
-    oauthAPI, err := oauth.NewAPI(provider)
+    oauthAPI, err := oauth.NewAPI(provider, oauth.WithAcceptedClientIDs("my-app"))
     if err != nil {
         log.Fatalf("failed to create oauth api: %v", err)
     }
