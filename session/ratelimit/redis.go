@@ -2,7 +2,10 @@ package ratelimit
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -41,12 +44,17 @@ func NewRedisStorage(client redis.UniversalClient, opts ...RedisOption) *RedisSt
 }
 
 // Lua script for atomic sliding window rate limiting.
+// ARGV[4] is a member name unique to this request, generated in Go: Redis
+// may seed the Lua PRNG identically on every script run, so math.random
+// cannot be relied on to keep two same-millisecond requests from writing
+// the same ZSET member and being counted once.
 // Returns: [allowed (0/1), remaining, reset_at_unix]
 var slidingWindowScript = redis.NewScript(`
 local key = KEYS[1]
 local limit = tonumber(ARGV[1])
 local window_ms = tonumber(ARGV[2])
 local now_ms = tonumber(ARGV[3])
+local member = ARGV[4]
 
 -- Remove expired entries
 local window_start = now_ms - window_ms
@@ -58,7 +66,7 @@ local count = redis.call('ZCARD', key)
 -- Check if under limit
 if count < limit then
     -- Add new entry with current timestamp as score
-    redis.call('ZADD', key, now_ms, now_ms .. ':' .. math.random())
+    redis.call('ZADD', key, now_ms, member)
     -- Set expiration on the key
     redis.call('PEXPIRE', key, window_ms)
 
@@ -89,10 +97,16 @@ func (r *RedisStorage) Allow(ctx context.Context, key string, limit Limit) (Resu
 	nowMs := now.UnixMilli()
 	windowMs := limit.Period.Milliseconds()
 
+	member, err := newWindowMember(nowMs)
+	if err != nil {
+		return Result{}, fmt.Errorf("%w: %v", ErrStorageFailure, err)
+	}
+
 	result, err := slidingWindowScript.Run(ctx, r.client, []string{fullKey},
 		burst,
 		windowMs,
 		nowMs,
+		member,
 	).Slice()
 	if err != nil {
 		return Result{}, fmt.Errorf("%w: %v", ErrStorageFailure, err)
@@ -118,6 +132,17 @@ func (r *RedisStorage) Allow(ctx context.Context, key string, limit Limit) (Resu
 		ResetAt:    resetAt,
 		RetryAfter: retryAfter,
 	}, nil
+}
+
+// newWindowMember returns a sliding-window ZSET member that is unique to
+// one request: the timestamp keeps members readable, and 128 random bits
+// keep concurrent requests in the same millisecond distinct.
+func newWindowMember(nowMs int64) (string, error) {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", fmt.Errorf("generating window member: %w", err)
+	}
+	return strconv.FormatInt(nowMs, 10) + ":" + hex.EncodeToString(b[:]), nil
 }
 
 // Reset implements Storage.Reset.
