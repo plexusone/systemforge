@@ -15,6 +15,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/graphlock"
 )
 
 // DefaultService implements the Service interface.
@@ -684,7 +685,15 @@ func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input Up
 		return nil, fmt.Errorf("principal is not a human: %s", id)
 	}
 
-	update := s.client.Human.UpdateOne(p.Edges.Human)
+	// Revoking platform administration removes it from the authorization
+	// backend inside the transaction, before the commit: if the backend
+	// refuses, the flag stays set and the error is returned.
+	revokeAdmin := input.IsPlatformAdmin != nil && !*input.IsPlatformAdmin
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	update := tx.Human.UpdateOne(p.Edges.Human)
 
 	if input.GivenName != nil {
 		update.SetGivenName(*input.GivenName)
@@ -706,13 +715,24 @@ func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input Up
 	}
 
 	if _, err = update.Save(ctx); err != nil {
+		return nil, errors.Join(fmt.Errorf("failed to update human extension: %w", err), tx.Rollback())
+	}
+	if revokeAdmin {
+		if err = graphlock.Lock(ctx, tx, graphlock.Principal(id)); err != nil {
+			return nil, errors.Join(err, tx.Rollback())
+		}
+		if err = s.syncer.SetPlatformAdmin(ctx, id, false); err != nil {
+			return nil, errors.Join(fmt.Errorf("failed to remove platform admin from authz, change not saved: %w", err), tx.Rollback())
+		}
+	}
+	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to update human extension: %w", err)
 	}
 
-	// Platform administration lives in the authorization backend too;
-	// granting or revoking it must reach it.
-	if input.IsPlatformAdmin != nil {
-		if syncErr := s.syncer.SetPlatformAdmin(ctx, id, *input.IsPlatformAdmin); syncErr != nil {
+	// Granted platform administration is written to the authorization
+	// backend after the commit.
+	if input.IsPlatformAdmin != nil && *input.IsPlatformAdmin {
+		if syncErr := s.syncer.SetPlatformAdmin(ctx, id, true); syncErr != nil {
 			if s.syncMode == authz.SyncModeStrict {
 				return nil, fmt.Errorf("failed to sync platform admin to authz: %w", syncErr)
 			}
