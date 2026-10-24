@@ -64,6 +64,13 @@ Dynamically registered clients carry the same settings on `OAuthApp`
 (`managed_principals_enabled`, `login_token_ttl`). The single check every
 path uses is `(*systemauth.Server).ManagedPrincipalsAllowed(ctx, clientID)`.
 
+The browser login session is shared by every client, so the check is made
+for each client, not only the one a login token was exchanged for:
+`/oauth/authorize` answers `access_denied`, and the token endpoint
+`invalid_grant`, when a managed principal (one with an active manager,
+whether or not it has an email) is signed in and the client does not allow
+managed principals.
+
 ## Roles
 
 Two manager roles are built in:

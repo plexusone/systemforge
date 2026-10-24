@@ -183,6 +183,22 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A managed principal is authorized only for clients that allow
+	// managed principals, whichever client its login session began with.
+	allowed, err := s.clientAllowsSubject(ctx, userID, clientID)
+	if err != nil {
+		logger.Error("checking managed principal client", "user_id", userID, "client_id", clientID, "error", err)
+		s.recordAuthMetrics(ctx, "authorize", clientID, observability.StatusError, start)
+		s.oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrServerError.WithWrap(err))
+		return
+	}
+	if !allowed {
+		logger.Info("managed principal refused by client", "user_id", userID, "client_id", clientID)
+		s.recordAuthMetrics(ctx, "authorize", clientID, observability.StatusError, start)
+		s.oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrAccessDenied.WithHint("This application does not allow managed accounts."))
+		return
+	}
+
 	// Step 2: Check if user has already consented to these scopes
 	if !s.sessionProvider.HasConsent(ctx, userID, clientID, requestedScopes) {
 		// Redirect to consent
@@ -279,6 +295,22 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 		logger.Info("token request rejected", "grant_type", grantType, "client_id", clientID, "error", err)
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrInvalidGrant.WithHint("The principal is no longer active."))
+		return
+	}
+
+	// Nor for a managed principal and a client that no longer allows
+	// managed principals.
+	allowed, err := s.clientAllowsSubject(ctx, sessionSubject(ar.GetSession()), clientID)
+	if err != nil {
+		logger.Error("checking managed principal client", "grant_type", grantType, "client_id", clientID, "error", err)
+		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrServerError.WithWrap(err))
+		return
+	}
+	if !allowed {
+		logger.Info("token request rejected: managed principal refused by client", "grant_type", grantType, "client_id", clientID)
+		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrInvalidGrant.WithHint("This application does not allow managed accounts."))
 		return
 	}
 
