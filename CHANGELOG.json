@@ -22,6 +22,9 @@
       },
       {
         "description": "multiapp `AuthMiddleware` accepted a token minted for one app on every other app unless `AppAudiences` was set; a token on an app route must now be addressed to that app's ID by default"
+      },
+      {
+        "description": "authzguardsql `PolicyBuilder.Build` turned a principal authorized for no entity into a GuardSQL policy with empty allowlists, which GuardSQL reads as unrestricted, so the least-privileged principals could query every entity and field; it now returns `ErrNoAuthorizedEntities`"
       }
     ],
     "added": [
@@ -36,6 +39,9 @@
       },
       {
         "description": "session/jwt: `Claims.HasAnyAudience` and `ErrMissingAudience`"
+      },
+      {
+        "description": "authzguardsql: `ErrNoAuthorizedEntities`"
       }
     ],
     "breaking": [
@@ -58,6 +64,9 @@
       },
       {
         "description": "multiapp: mint tokens with `jwt.TokenOptions{Audience: []string{appID}}`, or set `AppAudiences` to the audiences your tokens already carry"
+      },
+      {
+        "description": "authzguardsql: handle `ErrNoAuthorizedEntities` from `PolicyBuilder.Build` by refusing the query (for example with 403)"
       }
     ]
   },
