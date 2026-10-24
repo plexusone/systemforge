@@ -73,6 +73,16 @@ type HandlerConfig struct {
 	// RateLimitConfig configures rate limiting for BFF endpoints.
 	// If nil, rate limiting is disabled.
 	RateLimitConfig *RateLimitConfig
+
+	// IdleTimeout ends a session not used for this long. Zero means
+	// DefaultIdleTimeout; a negative value disables the check.
+	IdleTimeout time.Duration
+
+	// MaxLifetime ends a session this long after it was created, however
+	// often its tokens are refreshed, so the user must sign in again. The
+	// session and cookie expiry never extend past it. Zero means
+	// DefaultMaxLifetime; a negative value disables the check.
+	MaxLifetime time.Duration
 }
 
 // TokenRefreshResult contains the result of a token refresh operation.
@@ -120,6 +130,8 @@ func NewHandler(config HandlerConfig) (*Handler, error) {
 	if config.APIPathPrefix == "" {
 		config.APIPathPrefix = "/api"
 	}
+	config.IdleTimeout = resolveLifetimeLimit(config.IdleTimeout, DefaultIdleTimeout)
+	config.MaxLifetime = resolveLifetimeLimit(config.MaxLifetime, DefaultMaxLifetime)
 
 	// Create components
 	cookieManager := NewCookieManager(cookieConfig)
@@ -185,16 +197,34 @@ func (h *Handler) Router() chi.Router {
 	// API proxy
 	if h.proxy != nil {
 		r.Route(h.config.APIPathPrefix, func(r chi.Router) {
-			if h.config.EnableProxyForPublicRoutes {
-				r.Use(OptionalSessionMiddleware(h.store, h.cookieManager))
-			} else {
-				r.Use(RequireSessionMiddleware(h.store, h.cookieManager))
-			}
+			r.Use(SessionMiddleware(MiddlewareConfig{
+				Store:          h.store,
+				CookieManager:  h.cookieManager,
+				RequireSession: !h.config.EnableProxyForPublicRoutes,
+				TouchOnAccess:  true,
+				IdleTimeout:    h.lifetimeLimit(h.config.IdleTimeout),
+				MaxLifetime:    h.lifetimeLimit(h.config.MaxLifetime),
+			}))
 			r.HandleFunc("/*", h.handleProxy)
 		})
 	}
 
 	return r
+}
+
+// lifetimeLimit converts a resolved limit (0 = unchecked) back to the
+// MiddlewareConfig convention (negative = unchecked).
+func (h *Handler) lifetimeLimit(d time.Duration) time.Duration {
+	if d == 0 {
+		return -1
+	}
+	return d
+}
+
+// sessionLifetimeExceeded reports whether a loaded session has run past
+// the handler's idle or absolute limit.
+func (h *Handler) sessionLifetimeExceeded(session *Session) bool {
+	return session.LifetimeExceeded(time.Now(), h.config.IdleTimeout, h.config.MaxLifetime)
 }
 
 // Store returns the session store.
@@ -235,10 +265,11 @@ func (h *Handler) CreateSession(ctx context.Context, w http.ResponseWriter, r *h
 		CreatedAt:             now,
 		UpdatedAt:             now,
 		LastAccessedAt:        now,
-		ExpiresAt:             now.Add(params.RefreshTokenExpiresIn),
 		IPAddress:             h.ipExtractor.GetClientIP(r),
 		UserAgent:             r.UserAgent(),
 	}
+
+	session.ExpiresAt = session.capExpiry(now.Add(params.RefreshTokenExpiresIn), h.config.MaxLifetime)
 
 	// Add Cloudflare metadata if available
 	if h.ipExtractor.IsCloudflareRequest(r) {
@@ -301,6 +332,13 @@ func (h *Handler) handleGetSession(w http.ResponseWriter, r *http.Request) {
 	session, err := h.store.Get(r.Context(), sessionID)
 	if err != nil {
 		// Clear invalid cookie
+		h.cookieManager.ClearSessionCookie(w)
+		h.writeJSON(w, http.StatusOK, SessionInfoResponse{Authenticated: false})
+		return
+	}
+
+	if h.sessionLifetimeExceeded(session) {
+		endSession(r.Context(), h.store, session.ID)
 		h.cookieManager.ClearSessionCookie(w)
 		h.writeJSON(w, http.StatusOK, SessionInfoResponse{Authenticated: false})
 		return
@@ -408,8 +446,10 @@ func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if refresh token is still valid
-	if session.IsRefreshTokenExpired() {
+	// Check if refresh token is still valid and the session within its
+	// idle and absolute limits; refreshing must not keep a session alive
+	// past them.
+	if session.IsRefreshTokenExpired() || h.sessionLifetimeExceeded(session) {
 		if err := h.store.Delete(r.Context(), session.ID); err != nil && !errors.Is(err, ErrSessionNotFound) {
 			slog.ErrorContext(r.Context(), "bff: deleting expired session failed", "error", err)
 		}
@@ -431,11 +471,12 @@ func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	session.AccessToken = result.AccessToken
 	session.AccessTokenExpiresAt = now.Add(result.AccessTokenExpiresIn)
 	session.UpdatedAt = now
+	session.LastAccessedAt = now
 
 	if result.RefreshToken != "" {
 		session.RefreshToken = result.RefreshToken
 		session.RefreshTokenExpiresAt = now.Add(result.RefreshTokenExpiresIn)
-		session.ExpiresAt = session.RefreshTokenExpiresAt
+		session.ExpiresAt = session.capExpiry(session.RefreshTokenExpiresAt, h.config.MaxLifetime)
 	}
 
 	// Update session in store

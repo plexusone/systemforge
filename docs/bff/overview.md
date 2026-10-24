@@ -98,8 +98,25 @@ type HandlerConfig struct {
 
     // Rate limiting (optional)
     RateLimitConfig *RateLimitConfig
+
+    // Session lifetime (zero = default, negative = disabled)
+    IdleTimeout time.Duration // default 24h
+    MaxLifetime time.Duration // default 7 days
 }
 ```
+
+### Session Lifetime
+
+A session ends when it has not been used for `IdleTimeout` (default
+`bff.DefaultIdleTimeout`, 24 hours) or when `MaxLifetime` (default
+`bff.DefaultMaxLifetime`, 7 days) has passed since it was created, whichever
+comes first. Refreshing tokens does not extend a session past `MaxLifetime`:
+the session and cookie expiry are capped at creation time plus `MaxLifetime`,
+and the user must sign in again. `/session` reports an ended session as
+unauthenticated, `/refresh` and the API proxy answer `401`, and the session is
+deleted. Set a negative value to disable a check. The same limits are fields
+of `MiddlewareConfig` for applications that use `bff.SessionMiddleware`
+directly.
 
 ### CookieConfig
 

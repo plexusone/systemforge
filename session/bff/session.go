@@ -94,6 +94,65 @@ func (s *Session) NeedsRefresh(threshold time.Duration) bool {
 	return time.Now().Add(threshold).After(s.AccessTokenExpiresAt)
 }
 
+// Default session lifetime limits, applied when IdleTimeout or MaxLifetime
+// is left zero in HandlerConfig or MiddlewareConfig.
+const (
+	// DefaultIdleTimeout ends a session that has not been used for a day.
+	DefaultIdleTimeout = 24 * time.Hour
+
+	// DefaultMaxLifetime ends a session a week after it was created, however
+	// often its tokens are refreshed; the user must sign in again.
+	DefaultMaxLifetime = 7 * 24 * time.Hour
+)
+
+// resolveLifetimeLimit returns def for a zero limit and 0 (unchecked) for a
+// negative one.
+func resolveLifetimeLimit(limit, def time.Duration) time.Duration {
+	switch {
+	case limit == 0:
+		return def
+	case limit < 0:
+		return 0
+	default:
+		return limit
+	}
+}
+
+// LifetimeExceeded reports whether, at now, the session has been idle for
+// longer than idleTimeout (measured from LastAccessedAt, or CreatedAt if
+// it was never accessed) or has existed for longer than maxLifetime
+// (measured from CreatedAt). A non-positive limit is not checked. A session
+// with no CreatedAt fails a maxLifetime check, since its age is unknown.
+func (s *Session) LifetimeExceeded(now time.Time, idleTimeout, maxLifetime time.Duration) bool {
+	if maxLifetime > 0 {
+		if s.CreatedAt.IsZero() || now.After(s.CreatedAt.Add(maxLifetime)) {
+			return true
+		}
+	}
+	if idleTimeout > 0 {
+		last := s.LastAccessedAt
+		if last.IsZero() {
+			last = s.CreatedAt
+		}
+		if last.IsZero() || now.After(last.Add(idleTimeout)) {
+			return true
+		}
+	}
+	return false
+}
+
+// capExpiry returns expiry, moved back to CreatedAt+maxLifetime if it is
+// later. A non-positive maxLifetime leaves expiry unchanged.
+func (s *Session) capExpiry(expiry time.Time, maxLifetime time.Duration) time.Time {
+	if maxLifetime <= 0 || s.CreatedAt.IsZero() {
+		return expiry
+	}
+	if limit := s.CreatedAt.Add(maxLifetime); expiry.After(limit) {
+		return limit
+	}
+	return expiry
+}
+
 // HasDPoP returns true if the session has a DPoP key pair.
 func (s *Session) HasDPoP() bool {
 	return len(s.DPoPKeyPairJSON) > 0 && s.DPoPThumbprint != ""
