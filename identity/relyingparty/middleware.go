@@ -117,6 +117,13 @@ type BearerConfig struct {
 	// refuse it. Without it every change to the principal applies.
 	Organization func(r *http.Request) string
 
+	// DPoP, when set, accepts DPoP-bound access tokens (a cnf.jkt claim)
+	// with the "DPoP" authorization scheme and a DPoP proof (RFC 9449). A
+	// DPoP-bound token presented with the Bearer scheme is always refused,
+	// with or without DPoP set, so a stolen bound token does not work as a
+	// bearer token.
+	DPoP *DPoPConfig
+
 	// Logger receives storage errors. Default: slog.Default().
 	Logger *slog.Logger
 }
@@ -129,12 +136,19 @@ type BearerConfig struct {
 //     principal (sf_principal_id), who must have signed in to the app once.
 //   - Authorization: Bearer <api key> or X-API-Key: <api key> — validated
 //     by APIKeys; the key's owner is the principal.
+//   - Authorization: DPoP <JWT> with a DPoP header, when DPoP is set — a
+//     DPoP-bound access token and a proof signed by the key it is bound to.
 //   - a BFF session cookie, when Sessions is set.
 //
-// Anything else gets 401 with a WWW-Authenticate: Bearer challenge.
+// Anything else gets 401 with a WWW-Authenticate: Bearer challenge (and a
+// DPoP challenge when DPoP is set).
 func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 	if cfg.Principals == nil {
 		panic("relyingparty: BearerConfig.Principals is required")
+	}
+	var dv *dpopVerifier
+	if cfg.DPoP != nil {
+		dv = newDPoPVerifier(cfg.DPoP)
 	}
 	logger := cfg.Logger
 	if logger == nil {
@@ -143,7 +157,7 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 	cfg.Memberships = defaultMembershipSource(cfg.Memberships)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			p, err := cfg.authenticate(r)
+			p, err := cfg.authenticate(r, dv)
 			if err != nil {
 				var authErr *bearerError
 				if !errors.As(err, &authErr) {
@@ -158,6 +172,9 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 					return
 				}
 				w.Header().Set("WWW-Authenticate", challenge)
+				if dv != nil {
+					w.Header().Add("WWW-Authenticate", dpopChallenge)
+				}
 				writeAuthError(w, http.StatusUnauthorized, "UNAUTHENTICATED", authErr.message)
 				return
 			}
@@ -199,11 +216,14 @@ func errUnauthenticated(code, message string) error {
 	return &bearerError{code: code, message: message}
 }
 
-func (cfg BearerConfig) authenticate(r *http.Request) (*AuthenticatedPrincipal, error) {
+func (cfg BearerConfig) authenticate(r *http.Request, dv *dpopVerifier) (*AuthenticatedPrincipal, error) {
 	ctx := r.Context()
 	token := ""
 	if auth := r.Header.Get("Authorization"); auth != "" {
 		scheme, value, ok := strings.Cut(auth, " ")
+		if ok && dv != nil && strings.EqualFold(scheme, "DPoP") {
+			return cfg.authenticateDPoP(r, dv, strings.TrimSpace(value))
+		}
 		if !ok || !strings.EqualFold(scheme, "Bearer") {
 			return nil, errUnauthenticated("invalid_request", "unsupported authorization scheme")
 		}
@@ -236,12 +256,45 @@ func (cfg BearerConfig) authenticate(r *http.Request) (*AuthenticatedPrincipal, 
 	}
 
 	if strings.Count(token, ".") == 2 {
-		return cfg.authenticateJWT(ctx, token, org)
+		claims, err := cfg.verifyJWT(ctx, token)
+		if err != nil {
+			return nil, err
+		}
+		if claims.DPoPThumbprint() != "" {
+			return nil, errUnauthenticated("invalid_token", "DPoP-bound token requires the DPoP scheme and a DPoP proof")
+		}
+		return cfg.principalForJWT(ctx, token, claims, org)
 	}
 	return cfg.authenticateAPIKey(ctx, token)
 }
 
-func (cfg BearerConfig) authenticateJWT(ctx context.Context, token, org string) (*AuthenticatedPrincipal, error) {
+// authenticateDPoP authenticates "Authorization: DPoP <token>": the token
+// must be DPoP-bound and the request must carry a valid proof signed by
+// the key it is bound to.
+func (cfg BearerConfig) authenticateDPoP(r *http.Request, dv *dpopVerifier, token string) (*AuthenticatedPrincipal, error) {
+	ctx := r.Context()
+	if strings.Count(token, ".") != 2 {
+		return nil, errUnauthenticated("invalid_token", "invalid access token")
+	}
+	claims, err := cfg.verifyJWT(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	jkt := claims.DPoPThumbprint()
+	if jkt == "" {
+		return nil, errUnauthenticated("invalid_token", "token presented with the DPoP scheme is not DPoP-bound")
+	}
+	if err := dv.verify(r, token, jkt); err != nil {
+		return nil, err
+	}
+	org := ""
+	if cfg.Organization != nil {
+		org = cfg.Organization(r)
+	}
+	return cfg.principalForJWT(ctx, token, claims, org)
+}
+
+func (cfg BearerConfig) verifyJWT(ctx context.Context, token string) (*AccessTokenClaims, error) {
 	if cfg.Tokens == nil {
 		return nil, errUnauthenticated("invalid_token", "access tokens are not accepted")
 	}
@@ -249,6 +302,10 @@ func (cfg BearerConfig) authenticateJWT(ctx context.Context, token, org string) 
 	if err != nil {
 		return nil, errUnauthenticated("invalid_token", "invalid access token")
 	}
+	return claims, nil
+}
+
+func (cfg BearerConfig) principalForJWT(ctx context.Context, token string, claims *AccessTokenClaims, org string) (*AuthenticatedPrincipal, error) {
 	if cfg.Revocation != nil {
 		var iat time.Time
 		if claims.IssuedAt != nil {

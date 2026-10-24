@@ -256,7 +256,10 @@ that matches the request method and URI, carries the token hash (`ath`), is
 fresh, and has not been seen before. Tokens without `cnf.jkt` are accepted as
 Bearer tokens. `HTTPAuth`, `HTTPAuthForAudience` and `HTTPAuthOptional` refuse
 DPoP-bound tokens, since without a verified proof they would work as plain
-bearer tokens.
+bearer tokens. Relying parties of SystemAuth get the same checks from
+`relyingparty.BearerConfig.DPoP`. SystemAuth itself issues bearer tokens; see
+[DPoP Enforcement](docs/session/dpop.md) for where DPoP is and is not
+enforced.
 
 ### BFF Pattern
 

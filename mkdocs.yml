@@ -105,6 +105,7 @@ nav:
     - Overview: session/index.md
     - BFF Sessions: session/bff-sessions.md
     - Invalidation: session/invalidation.md
+    - DPoP Enforcement: session/dpop.md
   - Architecture:
     - Application Architecture: architecture/systemforge-application-architecture.md
   - Multi-App:

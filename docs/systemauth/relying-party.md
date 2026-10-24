@@ -357,10 +357,17 @@ func (s entPrincipals) FindBySubject(ctx context.Context, sub string) (*relyingp
 - `Authorization: Bearer <api key>` or `X-API-Key` — validated by an
   `APIKeyValidator` (`*apikey.Service`); the key's owner is the principal and
   an organization-scoped key only carries that organization's membership.
+- `Authorization: DPoP <JWT>` with a `DPoP` proof header, when `DPoP` is
+  set — an access token bound to a DPoP key (`cnf.jkt`) and a proof signed by
+  that key for this request (see [DPoP Enforcement](../session/dpop.md)).
 - The BFF session cookie, when `Sessions` is set.
 
+A DPoP-bound access token presented as `Bearer` is always refused, so a
+stolen bound token cannot be replayed as a bearer token.
+
 Failures return `401` with `WWW-Authenticate: Bearer realm="api"` (plus
-`error="invalid_token"` for bad credentials).
+`error="invalid_token"` for bad credentials, and a `DPoP` challenge when
+`DPoP` is set).
 
 ### Which clients' tokens are accepted
 

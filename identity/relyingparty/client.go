@@ -294,8 +294,28 @@ type AccessTokenClaims struct {
 	ClientID string   `json:"client_id,omitempty"`
 	Scopes   []string `json:"scp,omitempty"`
 
+	// Confirmation is the cnf claim (RFC 7800); its JKT binds the token to
+	// a DPoP key (RFC 9449).
+	Confirmation *TokenConfirmation `json:"cnf,omitempty"`
+
 	// Raw holds every claim of the verified token.
 	Raw map[string]any `json:"-"`
+}
+
+// TokenConfirmation is the cnf claim of an access token.
+type TokenConfirmation struct {
+	// JKT is the JWK SHA-256 thumbprint of the DPoP key the token is bound
+	// to.
+	JKT string `json:"jkt,omitempty"`
+}
+
+// DPoPThumbprint returns the thumbprint of the DPoP key the token is bound
+// to, or "" for an unbound bearer token.
+func (c *AccessTokenClaims) DPoPThumbprint() string {
+	if c.Confirmation == nil {
+		return ""
+	}
+	return c.Confirmation.JKT
 }
 
 // HasScope reports whether the token was granted scope.
