@@ -52,6 +52,13 @@ func Open(ctx context.Context, o Options) (*Keys, error) {
 	if len(o.Purposes) == 0 {
 		return nil, errors.New("keys: Options.Purposes is required")
 	}
+	// A root key read from a file must not live in or under Dir, where a
+	// backup of the keyring would carry it too.
+	if p, ok := o.Root.(interface{ Path() string }); ok {
+		if err := checkOutside(p.Path(), o.Dir); err != nil {
+			return nil, err
+		}
+	}
 	purposes := make(map[keyforge.Purpose]embedded.PurposeOptions, len(o.Purposes))
 	for _, p := range o.Purposes {
 		purposes[p] = embedded.PurposeOptions{}

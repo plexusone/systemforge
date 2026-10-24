@@ -33,6 +33,9 @@ func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) 
 	if c.Authz.Mode != authz.ModeRBAC {
 		return fmt.Errorf("systemauthsvc: connections support authz mode %q only, not %q", authz.ModeRBAC, c.Authz.Mode)
 	}
+	if err := keys.CheckRootKeyLocation(cc.Vault, cc.RootKey, cc.KeysDir); err != nil {
+		return fmt.Errorf("systemauthsvc: connections: %w", err)
+	}
 	v, err := omnivault.VaultFromURI(cc.Vault)
 	if err != nil {
 		return fmt.Errorf("systemauthsvc: connections vault: %w", err)
