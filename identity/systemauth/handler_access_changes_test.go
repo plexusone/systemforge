@@ -65,7 +65,7 @@ func getAccessChanges(s *Server, token, query string) (int, AccessChangesRespons
 func TestAccessChangesReplayEndpoint(t *testing.T) {
 	ctx := context.Background()
 	db := openTestEnt(t)
-	s := accessChangesServer(t, WithAccessChanges(accesschange.NewSource(db)))
+	s := accessChangesServer(t, WithAccessChanges(accesschange.NewSource(db), AllOrganizations))
 	base := time.Now().UTC().Add(-time.Hour)
 	p, org := uuid.New(), uuid.New()
 	for i, c := range []accesschange.Change{
@@ -128,5 +128,62 @@ func TestAccessChangesNotConfigured(t *testing.T) {
 	rp := clientToken(t, s, "rp", "rp-secret", AccessChangesScope)
 	if code, _ := getAccessChanges(s, rp, "?since=2030-01-01T00:00:00Z"); code != http.StatusNotImplemented {
 		t.Errorf("without a lister: %d, want 501", code)
+	}
+	// A lister without a scope is not served either: the feed is never
+	// handed out unfiltered by default.
+	s = accessChangesServer(t, WithAccessChanges(accesschange.NewSource(openTestEnt(t)), nil))
+	rp = clientToken(t, s, "rp", "rp-secret", AccessChangesScope)
+	if code, _ := getAccessChanges(s, rp, "?since=2030-01-01T00:00:00Z"); code != http.StatusNotImplemented {
+		t.Errorf("without a scope: %d, want 501", code)
+	}
+}
+
+// TestAccessChangesScopedToClient verifies that a client reads only the
+// changes of the organizations its scope names, plus the changes that name
+// no organization, so one application does not learn about another's
+// members.
+func TestAccessChangesScopedToClient(t *testing.T) {
+	ctx := context.Background()
+	db := openTestEnt(t)
+	mine, theirs := uuid.New(), uuid.New()
+	scope := func(_ context.Context, clientID string) ([]uuid.UUID, bool, error) {
+		if clientID == "rp" {
+			return []uuid.UUID{mine}, false, nil
+		}
+		return nil, false, nil
+	}
+	s := accessChangesServer(t, WithAccessChanges(accesschange.NewSource(db), scope))
+	base := time.Now().UTC().Add(-time.Hour)
+	everywhere := uuid.New()
+	for i, c := range []accesschange.Change{
+		{PrincipalID: uuid.New(), OrganizationID: &mine, Reason: accesschange.MembershipRemoved},
+		{PrincipalID: uuid.New(), OrganizationID: &theirs, Reason: accesschange.MembershipRemoved},
+		{PrincipalID: everywhere, Reason: accesschange.Deactivated},
+	} {
+		create := db.AccessChange.Create().SetPrincipalID(c.PrincipalID).SetReason(string(c.Reason)).SetChangedAt(base.Add(time.Duration(i) * time.Minute))
+		if c.OrganizationID != nil {
+			create.SetOrganizationID(*c.OrganizationID)
+		}
+		create.SaveX(ctx)
+	}
+	since := url.QueryEscape(base.Add(-time.Minute).UTC().Format(time.RFC3339Nano))
+	rp := clientToken(t, s, "rp", "rp-secret", AccessChangesScope)
+	code, got := getAccessChanges(s, rp, "?since="+since)
+	if code != http.StatusOK || len(got.Changes) != 2 {
+		t.Fatalf("scoped replay = %d %+v", code, got)
+	}
+	if got.Changes[0].OrganizationID != mine.String() || got.Changes[1].PrincipalID != everywhere.String() {
+		t.Errorf("changes = %+v", got.Changes)
+	}
+	for _, c := range got.Changes {
+		if c.OrganizationID == theirs.String() {
+			t.Errorf("another application's organization in the feed: %+v", c)
+		}
+	}
+	// Paging follows the unfiltered rows: a page whose rows are all
+	// filtered out still leads on.
+	code, page := getAccessChanges(s, rp, "?limit=2&since="+url.QueryEscape(base.Add(30*time.Second).UTC().Format(time.RFC3339Nano)))
+	if code != http.StatusOK || len(page.Changes) != 1 || page.NextSince == nil {
+		t.Errorf("filtered page = %d %+v", code, page)
 	}
 }

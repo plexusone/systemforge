@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ory/fosite"
 
 	"github.com/plexusone/systemforge/identity/accesschange"
@@ -31,12 +32,34 @@ type AccessChangeLister interface {
 	List(ctx context.Context, since time.Time, limit int) ([]accesschange.Change, error)
 }
 
+// AccessChangeScope returns which organizations' access changes a client
+// may read from the replay endpoint: orgIDs, or every organization when
+// all is true (a platform operator's client, or a deployment serving a
+// single application). Changes that name no organization (a principal
+// deactivated, its sessions revoked) concern every relying party and are
+// always included.
+type AccessChangeScope func(ctx context.Context, clientID string) (orgIDs []uuid.UUID, all bool, err error)
+
+// AllOrganizations is an AccessChangeScope giving every client the whole
+// feed. Use it only when every client granted access_changes:read may see
+// changes of every organization, as in a deployment of one application.
+func AllOrganizations(context.Context, string) ([]uuid.UUID, bool, error) {
+	return nil, true, nil
+}
+
 // WithAccessChanges serves GET /access-changes?since=<RFC 3339> from lister
-// to clients holding a token with the access_changes:read scope. A
-// relying party that restarted calls it to rebuild its revocation cache
-// before serving. Without it the endpoint answers 501.
-func WithAccessChanges(lister AccessChangeLister) Option {
-	return func(s *Server) { s.accessChanges = lister }
+// to clients holding a token with the access_changes:read scope, each
+// limited to the organizations scope returns for it. A relying party that
+// restarted calls it to rebuild its revocation cache before serving.
+// Without it, or with a nil scope, the endpoint answers 501. In a
+// deployment of several applications, scope each client to the
+// organizations that use its application, so one application does not
+// learn about another's members.
+func WithAccessChanges(lister AccessChangeLister, scope AccessChangeScope) Option {
+	return func(s *Server) {
+		s.accessChanges = lister
+		s.accessScope = scope
+	}
 }
 
 // AccessChangeResponse is one change in the replay response.
@@ -74,9 +97,20 @@ func (s *Server) accessChangesEndpoint(w http.ResponseWriter, r *http.Request) {
 		writeBearerError(w, http.StatusForbidden, "insufficient_scope", "The access token was not granted the access_changes:read scope.", AccessChangesScope)
 		return
 	}
-	if s.accessChanges == nil {
+	if s.accessChanges == nil || s.accessScope == nil {
 		http.Error(w, "access changes are not configured", http.StatusNotImplemented)
 		return
+	}
+	clientID := ar.GetClient().GetID()
+	orgIDs, all, err := s.accessScope(ctx, clientID)
+	if err != nil {
+		logger.Error("access changes: resolving the client's organizations", "client_id", clientID, "error", err)
+		http.Error(w, "could not read access changes", http.StatusInternalServerError)
+		return
+	}
+	visible := make(map[uuid.UUID]bool, len(orgIDs))
+	for _, id := range orgIDs {
+		visible[id] = true
 	}
 	since, err := time.Parse(time.RFC3339Nano, r.URL.Query().Get("since"))
 	if err != nil {
@@ -98,12 +132,19 @@ func (s *Server) accessChangesEndpoint(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not read access changes", http.StatusInternalServerError)
 		return
 	}
-	resp := AccessChangesResponse{Changes: make([]AccessChangeResponse, len(changes))}
-	for i, c := range changes {
-		resp.Changes[i] = AccessChangeResponse{PrincipalID: c.PrincipalID.String(), ChangedAt: c.ChangedAt, Reason: string(c.Reason)}
-		if c.OrganizationID != nil {
-			resp.Changes[i].OrganizationID = c.OrganizationID.String()
+	// The page is filtered to the client's organizations; paging follows
+	// the unfiltered page, so a filtered page may be short or empty and
+	// still carry NextSince.
+	resp := AccessChangesResponse{Changes: make([]AccessChangeResponse, 0, len(changes))}
+	for _, c := range changes {
+		if c.OrganizationID != nil && !all && !visible[*c.OrganizationID] {
+			continue
 		}
+		item := AccessChangeResponse{PrincipalID: c.PrincipalID.String(), ChangedAt: c.ChangedAt, Reason: string(c.Reason)}
+		if c.OrganizationID != nil {
+			item.OrganizationID = c.OrganizationID.String()
+		}
+		resp.Changes = append(resp.Changes, item)
 	}
 	if len(changes) == limit {
 		next := changes[len(changes)-1].ChangedAt.Add(-time.Nanosecond)

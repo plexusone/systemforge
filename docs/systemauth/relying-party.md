@@ -259,7 +259,10 @@ limited to 1 to 2 seconds. `accesschange.NewSource(entClient)` reads the same
 table through Ent.
 
 SystemAuth serves `GET /access-changes?since=<RFC 3339>[&limit=]` when built
-with `systemauth.WithAccessChanges(accesschange.NewSource(db))`. The caller
+with `systemauth.WithAccessChanges(accesschange.NewSource(db), scope)`. The
+scope (`systemauth.AccessChangeScope`) limits each client to its
+organizations' changes; `systemauth.AllOrganizations` serves the whole feed,
+for a deployment of one application. The caller
 needs a token with the `access_changes:read` scope, for example from the
 client-credentials grant for a client registered with that scope. The
 response is `{"changes": [{"principal_id", "organization_id", "changed_at",
@@ -290,8 +293,10 @@ for deactivation and session revocation the standard
 Delivery is queued, retried with exponential backoff until one maximum
 access-token lifetime after the change, and each failure is logged against the
 client ID; a `4xx` other than 408 and 429 is not retried, and redirects are
-never followed. Every registered client receives every change; the token holds
-only opaque identifiers.
+never followed. With an access change scope, a client receives only its
+organizations' changes and the changes that name no organization; without
+one, every registered client receives every change. The token holds only
+opaque identifiers.
 
 The receiver is `relyingparty.BackchannelHandler(cache, client,
 relyingparty.WithBackchannelSessions(store))`: it verifies the token against

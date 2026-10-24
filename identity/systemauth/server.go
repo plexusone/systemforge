@@ -43,6 +43,7 @@ type Server struct {
 	orgs            OrgsSource
 	appCatalog      *appcatalog.Catalog
 	accessChanges   AccessChangeLister
+	accessScope     AccessChangeScope
 }
 
 // Option configures a Server.
