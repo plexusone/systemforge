@@ -130,10 +130,15 @@ func MustNew(cfg Config) *Observability {
 
 // newNoop creates a noop observability instance.
 func newNoop() *Observability {
-	return &Observability{
+	o := &Observability{
 		provider: &noopProvider{},
 		config:   Config{Disabled: true},
 	}
+	if err := o.initMetrics(); err != nil {
+		// The noop meter never fails.
+		panic(fmt.Sprintf("observability: noop metrics: %v", err))
+	}
+	return o
 }
 
 // buildClientOptions builds observops.ClientOption from Config.
