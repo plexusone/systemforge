@@ -66,8 +66,9 @@ func TestBearerMiddlewareDPoP(t *testing.T) {
 	bound := fake.boundAccessJWT(fake.subject, kp.Thumbprint)
 	plain := fake.accessJWT(fake.subject, testClientID, nil, time.Minute)
 
-	withoutDPoP := BearerConfig{Tokens: fake.client(t), Principals: store}
-	withDPoP := withoutDPoP
+	// withoutDPoP is a legacy configuration accepting only unbound tokens.
+	withoutDPoP := BearerConfig{Tokens: fake.client(t), Principals: store, AllowBearerTokens: true}
+	withDPoP := BearerConfig{Tokens: fake.client(t), Principals: store}
 	withDPoP.DPoP = &DPoPConfig{ReplayCache: &memoryReplayCache{seen: map[string]bool{}}, BaseURL: dpopTestBase}
 
 	const path = "/api/v1/things"
@@ -119,10 +120,42 @@ func TestBearerMiddlewareDPoP(t *testing.T) {
 		}
 	}
 
-	// Unbound tokens keep working as bearer tokens.
-	if w, _ := runBearer(t, withDPoP, req("Bearer", plain, "")); w.Code != http.StatusOK {
-		t.Errorf("unbound bearer token: %d, want 200", w.Code)
+	// An unbound token is refused by default, and accepted as a bearer
+	// token only with the explicit AllowBearerTokens opt-in.
+	if w := runBearerQuiet(t, withDPoP, req("Bearer", plain, "")); w.Code != http.StatusUnauthorized {
+		t.Errorf("unbound bearer token by default: %d, want 401", w.Code)
 	}
+	withBoth := withDPoP
+	withBoth.AllowBearerTokens = true
+	if w, _ := runBearer(t, withBoth, req("Bearer", plain, "")); w.Code != http.StatusOK {
+		t.Errorf("unbound bearer token with AllowBearerTokens: %d, want 200", w.Code)
+	}
+	if w, _ := runBearer(t, withoutDPoP, req("Bearer", plain, "")); w.Code != http.StatusOK {
+		t.Errorf("unbound bearer token, legacy configuration: %d, want 200", w.Code)
+	}
+}
+
+// TestBearerMiddlewareRequiresDPoPConfig verifies that accepting access
+// tokens needs DPoP proof checking unless bearer tokens are explicitly
+// allowed.
+func TestBearerMiddlewareRequiresDPoPConfig(t *testing.T) {
+	fake := newFakeSystemAuth(t)
+	cfg := BearerConfig{Tokens: fake.client(t), Principals: NewMemoryPrincipalStore()}
+	for name, build := range map[string]func(){
+		"BearerMiddleware":        func() { BearerMiddleware(cfg) },
+		"NewRequestAuthenticator": func() { NewRequestAuthenticator(cfg) },
+	} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("%s accepted access tokens without DPoP or AllowBearerTokens", name)
+				}
+			}()
+			build()
+		}()
+	}
+	// API keys alone need neither.
+	BearerMiddleware(BearerConfig{Principals: NewMemoryPrincipalStore()})
 }
 
 // runBearerQuiet runs the middleware for a request that is expected to be

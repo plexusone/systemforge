@@ -12,8 +12,8 @@ import (
 const bearerChallenge = `Bearer realm="api"` //nolint:gosec // G101: an authentication challenge, not a credential
 
 // dpopChallenge is the WWW-Authenticate challenge advertising the DPoP
-// scheme when BearerConfig.DPoP is set.
-const dpopChallenge = `DPoP algs="ES256"`
+// scheme.
+const dpopChallenge = `DPoP algs="ES256 ES384 ES512"`
 
 // RequestAuthenticator adapts BearerConfig to a
 // requestprincipal.Authenticator, so SystemAuth access tokens, API keys and
@@ -28,15 +28,9 @@ type RequestAuthenticator struct {
 // BearerMiddleware accepts with cfg. Requests with no Authorization or
 // X-API-Key header and no BFF session are left to the next authenticator.
 func NewRequestAuthenticator(cfg BearerConfig) *RequestAuthenticator {
-	if cfg.Principals == nil {
-		panic("relyingparty: BearerConfig.Principals is required")
-	}
+	dv := cfg.mustVerifier()
 	cfg.Memberships = defaultMembershipSource(cfg.Memberships)
-	a := &RequestAuthenticator{cfg: cfg}
-	if cfg.DPoP != nil {
-		a.dpop = newDPoPVerifier(cfg.DPoP)
-	}
-	return a
+	return &RequestAuthenticator{cfg: cfg, dpop: dv}
 }
 
 // Authenticate implements requestprincipal.Authenticator. The result's
@@ -51,10 +45,7 @@ func (a *RequestAuthenticator) Authenticate(r *http.Request) (*requestprincipal.
 		if !errors.As(err, &authErr) {
 			return nil, err
 		}
-		challenges := []string{bearerChallenge + authErr.challengeParams()}
-		if a.dpop != nil {
-			challenges = append(challenges, dpopChallenge)
-		}
+		challenges := authErr.challenges(a.dpop != nil)
 		return nil, &requestprincipal.Error{
 			Status:  http.StatusUnauthorized,
 			Header:  http.Header{"Www-Authenticate": challenges},

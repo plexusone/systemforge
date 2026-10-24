@@ -117,12 +117,21 @@ type BearerConfig struct {
 	// refuse it. Without it every change to the principal applies.
 	Organization func(r *http.Request) string
 
-	// DPoP, when set, accepts DPoP-bound access tokens (a cnf.jkt claim)
-	// with the "DPoP" authorization scheme and a DPoP proof (RFC 9449). A
-	// DPoP-bound token presented with the Bearer scheme is always refused,
-	// with or without DPoP set, so a stolen bound token does not work as a
-	// bearer token.
+	// DPoP verifies the proofs that come with DPoP-bound access tokens (a
+	// cnf.jkt claim), presented with the "DPoP" authorization scheme (RFC
+	// 9449). SystemAuth binds every token it issues unless the client is a
+	// legacy bearer exception, so DPoP is required whenever Tokens is set,
+	// unless AllowBearerTokens is. A DPoP-bound token presented with the
+	// Bearer scheme is always refused, so a stolen bound token does not
+	// work as a bearer token.
 	DPoP *DPoPConfig
+
+	// AllowBearerTokens also accepts unbound JWT access tokens with the
+	// Bearer scheme, as SystemAuth issues to clients registered with its
+	// allow_bearer_tokens exception. It is an explicit opt-in: by default
+	// an access token without cnf.jkt is refused, since whoever holds a
+	// bearer token can use it. API keys are not affected.
+	AllowBearerTokens bool
 
 	// Logger receives storage errors. Default: slog.Default().
 	Logger *slog.Logger
@@ -131,25 +140,24 @@ type BearerConfig struct {
 // BearerMiddleware authenticates programmatic clients and puts an
 // AuthenticatedPrincipal in the request context. It accepts, in order:
 //
-//   - Authorization: Bearer <JWT> — a SystemAuth JWT access token, verified
-//     against the SystemAuth JWKS; its sub must be linked to a local
-//     principal (sf_principal_id), who must have signed in to the app once.
+//   - Authorization: DPoP <JWT> with a DPoP header — a SystemAuth JWT access
+//     token bound to a DPoP key, verified against the SystemAuth JWKS, and
+//     a proof signed by that key for this request; its sub must be linked
+//     to a local principal (sf_principal_id), who must have signed in to
+//     the app once.
+//   - Authorization: Bearer <JWT>, only with AllowBearerTokens — an unbound
+//     SystemAuth JWT access token, checked the same way.
 //   - Authorization: Bearer <api key> or X-API-Key: <api key> — validated
 //     by APIKeys; the key's owner is the principal.
-//   - Authorization: DPoP <JWT> with a DPoP header, when DPoP is set — a
-//     DPoP-bound access token and a proof signed by the key it is bound to.
 //   - a BFF session cookie, when Sessions is set.
 //
-// Anything else gets 401 with a WWW-Authenticate: Bearer challenge (and a
-// DPoP challenge when DPoP is set).
+// Anything else gets 401 with WWW-Authenticate challenges for the DPoP
+// scheme and, for API keys and legacy tokens, the Bearer scheme.
+//
+// It panics without Principals, and when Tokens is set without DPoP or
+// AllowBearerTokens, since it could then accept no access token.
 func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
-	if cfg.Principals == nil {
-		panic("relyingparty: BearerConfig.Principals is required")
-	}
-	var dv *dpopVerifier
-	if cfg.DPoP != nil {
-		dv = newDPoPVerifier(cfg.DPoP)
-	}
+	dv := cfg.mustVerifier()
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.Default()
@@ -165,15 +173,12 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 					writeAuthError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal error")
 					return
 				}
-				challenge := bearerChallenge
-				challenge += authErr.challengeParams()
 				if authErr.status == http.StatusForbidden {
 					writeAuthError(w, http.StatusForbidden, "CSRF_REJECTED", authErr.message)
 					return
 				}
-				w.Header().Set("WWW-Authenticate", challenge)
-				if dv != nil {
-					w.Header().Add("WWW-Authenticate", dpopChallenge)
+				for _, c := range authErr.challenges(dv != nil) {
+					w.Header().Add("WWW-Authenticate", c)
 				}
 				writeAuthError(w, http.StatusUnauthorized, "UNAUTHENTICATED", authErr.message)
 				return
@@ -181,6 +186,21 @@ func BearerMiddleware(cfg BearerConfig) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(WithPrincipal(r.Context(), p)))
 		})
 	}
+}
+
+// mustVerifier checks cfg and returns its DPoP proof verifier, nil when
+// DPoP is not configured.
+func (cfg BearerConfig) mustVerifier() *dpopVerifier {
+	if cfg.Principals == nil {
+		panic("relyingparty: BearerConfig.Principals is required")
+	}
+	if cfg.Tokens != nil && cfg.DPoP == nil && !cfg.AllowBearerTokens {
+		panic("relyingparty: BearerConfig.DPoP is required to accept SystemAuth access tokens, which are DPoP-bound (set AllowBearerTokens to accept only unbound legacy tokens)")
+	}
+	if cfg.DPoP == nil {
+		return nil
+	}
+	return newDPoPVerifier(cfg.DPoP)
 }
 
 // bearerError is an authentication failure reported to the client.
@@ -191,9 +211,26 @@ type bearerError struct {
 	description string
 	// status overrides the 401 the client is sent.
 	status int
+	// dpop marks a failure of a DPoP request, reported in the DPoP
+	// challenge rather than the Bearer one (RFC 9449 §7.1).
+	dpop bool
 }
 
 func (e *bearerError) Error() string { return e.message }
+
+// challenges are the WWW-Authenticate challenges for the failure: the
+// error goes on the DPoP challenge for a DPoP request and on the Bearer
+// one otherwise; the DPoP challenge is offered when DPoP is configured.
+func (e *bearerError) challenges(dpopOn bool) []string {
+	if e.dpop {
+		return []string{dpopChallenge + e.challengeParams()}
+	}
+	out := []string{bearerChallenge + e.challengeParams()}
+	if dpopOn {
+		out = append(out, dpopChallenge)
+	}
+	return out
+}
 
 // challengeParams is the error and error_description parameters of the
 // WWW-Authenticate challenge (RFC 6750 section 3).
@@ -222,7 +259,12 @@ func (cfg BearerConfig) authenticate(r *http.Request, dv *dpopVerifier) (*Authen
 	if auth := r.Header.Get("Authorization"); auth != "" {
 		scheme, value, ok := strings.Cut(auth, " ")
 		if ok && dv != nil && strings.EqualFold(scheme, "DPoP") {
-			return cfg.authenticateDPoP(r, dv, strings.TrimSpace(value))
+			p, err := cfg.authenticateDPoP(r, dv, strings.TrimSpace(value))
+			var authErr *bearerError
+			if errors.As(err, &authErr) {
+				authErr.dpop = true
+			}
+			return p, err
 		}
 		if !ok || !strings.EqualFold(scheme, "Bearer") {
 			return nil, errUnauthenticated("invalid_request", "unsupported authorization scheme")
@@ -262,6 +304,9 @@ func (cfg BearerConfig) authenticate(r *http.Request, dv *dpopVerifier) (*Authen
 		}
 		if claims.DPoPThumbprint() != "" {
 			return nil, errUnauthenticated("invalid_token", "DPoP-bound token requires the DPoP scheme and a DPoP proof")
+		}
+		if !cfg.AllowBearerTokens {
+			return nil, errUnauthenticated("invalid_token", "access token is not DPoP-bound; bearer tokens are not accepted")
 		}
 		return cfg.principalForJWT(ctx, token, claims, org)
 	}

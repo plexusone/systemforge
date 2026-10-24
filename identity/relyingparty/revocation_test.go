@@ -220,7 +220,7 @@ func TestBearerMiddlewareRefusesTokensIssuedBeforeAChange(t *testing.T) {
 	}
 	cache := NewRevocationCache()
 	org := uuid.NewString()
-	cfg := BearerConfig{Tokens: fake.client(t), Principals: store, Revocation: cache,
+	cfg := BearerConfig{Tokens: fake.client(t), Principals: store, Revocation: cache, AllowBearerTokens: true,
 		Organization: func(r *http.Request) string { return r.Header.Get("X-Org") }}
 	now := time.Now()
 
