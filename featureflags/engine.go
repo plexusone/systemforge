@@ -82,17 +82,10 @@ func (e *Engine) IsEnabled(ctx context.Context, key string, evalCtx *EvaluationC
 }
 
 // IsEnabledSimple checks if a flag is enabled without context (global check).
+// A flag restricted to targets or to a partial rollout is off without a
+// subject to evaluate it for.
 func (e *Engine) IsEnabledSimple(ctx context.Context, key string) (bool, error) {
-	flag, err := e.store.Get(ctx, key)
-	if err != nil {
-		return false, err
-	}
-
-	if flag == nil {
-		return false, nil
-	}
-
-	return flag.Enabled, nil
+	return e.IsEnabled(ctx, key, nil)
 }
 
 // GetFlag retrieves a flag by key.
@@ -122,14 +115,18 @@ func (e *Engine) evaluateFlag(flag *Flag, evalCtx *EvaluationContext) bool {
 		return false
 	}
 
-	// If no evaluation context, return global state
-	if evalCtx == nil {
-		return flag.Enabled
+	// Without a subject, only an unrestricted flag is on: a flag limited
+	// to targets or to a partial rollout must not be on for everyone.
+	if evalCtx == nil || (evalCtx.UserID == "" && evalCtx.OrganizationID == "") {
+		return !isRestricted(flag)
 	}
 
 	// Check if user or org is in targets
 	if len(flag.Targets) > 0 {
 		for _, target := range flag.Targets {
+			if target == "" {
+				continue
+			}
 			if target == evalCtx.UserID || target == evalCtx.OrganizationID {
 				return true
 			}
@@ -157,6 +154,16 @@ func (e *Engine) evaluateFlag(flag *Flag, evalCtx *EvaluationContext) bool {
 	}
 
 	return flag.Enabled
+}
+
+// isRestricted reports whether an enabled flag applies only to some
+// subjects: it has targets or a rollout percentage below 100. Percentage 0
+// without targets means no rollout limit, and 100 opens the flag to all.
+func isRestricted(flag *Flag) bool {
+	if flag.Percentage >= 100 {
+		return false
+	}
+	return len(flag.Targets) > 0 || flag.Percentage > 0
 }
 
 // hashString returns a simple hash of a string.
