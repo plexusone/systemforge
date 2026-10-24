@@ -301,9 +301,11 @@ func (a *API) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Introspection MUST return 200 even for invalid tokens
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"active": false,
-		})
+		}); err != nil {
+			LoggerFromContext(ctx).Error("writing introspection response", "error", err)
+		}
 		return
 	}
 

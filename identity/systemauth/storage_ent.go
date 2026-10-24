@@ -186,9 +186,13 @@ func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
 			SetSecretPrefix(client.ID[:min(8, len(client.ID))]).
 			Save(ctx)
 		if err != nil {
-			// Clean up the app if secret creation fails
-			_ = s.db.OAuthApp.DeleteOne(app).Exec(ctx)
-			return fmt.Errorf("failed to create client secret: %w", err)
+			// Clean up the app if secret creation fails; a failed cleanup
+			// leaves a client without a secret, so report it too.
+			err = fmt.Errorf("failed to create client secret: %w", err)
+			if derr := s.db.OAuthApp.DeleteOne(app).Exec(ctx); derr != nil {
+				return errors.Join(err, fmt.Errorf("removing the client after the failure: %w", derr))
+			}
+			return err
 		}
 	}
 
