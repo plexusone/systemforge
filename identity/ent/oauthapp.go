@@ -55,6 +55,8 @@ type OAuthApp struct {
 	RefreshTokenRotation bool `json:"refresh_token_rotation,omitempty"`
 	// Whether this client may create and sign in managed principals; also requires the deployment setting (ADR-005)
 	ManagedPrincipalsEnabled bool `json:"managed_principals_enabled,omitempty"`
+	// Legacy exception: the client may get unbound bearer tokens without a DPoP proof; by default every token request needs one (RFC 9449 dpop_bound_access_tokens)
+	AllowBearerTokens bool `json:"allow_bearer_tokens,omitempty"`
 	// First-party apps skip consent screen
 	FirstParty bool `json:"first_party,omitempty"`
 	// Public clients cannot keep secrets
@@ -161,7 +163,7 @@ func (*OAuthApp) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case oauthapp.FieldRedirectUris, oauthapp.FieldAllowedScopes, oauthapp.FieldAllowedGrants, oauthapp.FieldAllowedResponseTypes, oauthapp.FieldMetadata:
 			values[i] = new([]byte)
-		case oauthapp.FieldRefreshTokenRotation, oauthapp.FieldManagedPrincipalsEnabled, oauthapp.FieldFirstParty, oauthapp.FieldPublic, oauthapp.FieldActive:
+		case oauthapp.FieldRefreshTokenRotation, oauthapp.FieldManagedPrincipalsEnabled, oauthapp.FieldAllowBearerTokens, oauthapp.FieldFirstParty, oauthapp.FieldPublic, oauthapp.FieldActive:
 			values[i] = new(sql.NullBool)
 		case oauthapp.FieldAccessTokenTTL, oauthapp.FieldRefreshTokenTTL, oauthapp.FieldLoginTokenTTL:
 			values[i] = new(sql.NullInt64)
@@ -304,6 +306,12 @@ func (_m *OAuthApp) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field managed_principals_enabled", values[i])
 			} else if value.Valid {
 				_m.ManagedPrincipalsEnabled = value.Bool
+			}
+		case oauthapp.FieldAllowBearerTokens:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field allow_bearer_tokens", values[i])
+			} else if value.Valid {
+				_m.AllowBearerTokens = value.Bool
 			}
 		case oauthapp.FieldFirstParty:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -472,6 +480,9 @@ func (_m *OAuthApp) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("managed_principals_enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ManagedPrincipalsEnabled))
+	builder.WriteString(", ")
+	builder.WriteString("allow_bearer_tokens=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AllowBearerTokens))
 	builder.WriteString(", ")
 	builder.WriteString("first_party=")
 	builder.WriteString(fmt.Sprintf("%v", _m.FirstParty))

@@ -224,6 +224,16 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 	session.Claims.AuthTime = s.authTime(r)
 	session.Claims.RequestedAt = ar.GetRequestedAt()
 
+	// dpop_jkt binds the code to a DPoP key: only a token request with a
+	// proof by that key can redeem it (RFC 9449 §10).
+	jkt, err := authorizationDPoPJKT(ar)
+	if err != nil {
+		s.recordAuthMetrics(ctx, "authorize", clientID, observability.StatusError, start)
+		s.oauth2.WriteAuthorizeError(ctx, w, ar, err)
+		return
+	}
+	session.DPoPJKT = jkt
+
 	// Grant the requested scopes (user has consented)
 	for _, scope := range requestedScopes {
 		ar.GrantScope(scope)
@@ -278,6 +288,22 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	session := s.Session("")
 	logger.Debug("token request", "grant_type", grantType)
 
+	// A DPoP proof, when sent, is checked before anything else: a request
+	// with a bad proof is refused whatever its grant (RFC 9449 §5).
+	if s.dpop.NoncesRequired() {
+		s.setDPoPNonce(ctx, w)
+	}
+	proof, err := s.tokenRequestProof(ctx, r)
+	if err == nil {
+		err = s.requireProofBeforeGrant(ctx, r, proof)
+	}
+	if err != nil {
+		logger.Info("token request rejected: DPoP proof", "grant_type", grantType, "error", err)
+		s.recordAuthMetrics(ctx, grantType, "", observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, nil, err)
+		return
+	}
+
 	// Process the token request
 	ar, err := s.oauth2.NewAccessRequest(ctx, r, session)
 	if err != nil {
@@ -288,6 +314,16 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	clientID := ar.GetClient().GetID()
+
+	// Tokens are bound to the proof's key, and a client must send one
+	// unless it is registered with the bearer-token exception; a grant
+	// already bound to a key needs a proof by it.
+	if err := s.bindDPoP(ar, proof); err != nil {
+		logger.Info("token request rejected: DPoP", "grant_type", grantType, "client_id", clientID, "error", err)
+		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, ar, err)
+		return
+	}
 
 	// Tokens are not issued or refreshed for a principal that is no longer
 	// active, and its token family is revoked.
@@ -344,6 +380,9 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, err)
 		return
+	}
+	if sess, ok := ar.GetSession().(*Session); ok {
+		response.SetTokenType(sess.TokenType())
 	}
 
 	logger.Info("token issued",
@@ -432,6 +471,7 @@ func (s *Server) prepareAccessClaims(ctx context.Context, ar fosite.AccessReques
 	claims.NotBefore = time.Time{}
 	claims.JTI = ""
 	claims.Add("client_id", clientID)
+	setConfirmationClaim(sess, claims)
 	// Always reset the header: a session stored before access tokens were
 	// typed, or before a key rotation, must not keep its old header.
 	sess.AccessHeader = s.accessTokenHeaders()
@@ -490,9 +530,11 @@ func (s *Server) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 			}
 			return true, c.IsPublic()
 		},
-		func(token string) []string {
-			ar, err := s.introspect(ctx, token, fosite.AccessToken, s.Session(""))
-			if err != nil {
+		func(string) []string {
+			// The caller's own token is checked as at any resource: a
+			// DPoP-bound one needs the DPoP scheme and a proof by its key.
+			ar, authErr := s.authenticateAccessToken(r, s.endpointURL("/oauth/introspect"))
+			if authErr != nil {
 				return nil
 			}
 			return ar.GetGrantedScopes()
@@ -506,6 +548,12 @@ func (s *Server) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	session := s.Session("")
 
+	// Fosite reads only the Bearer scheme; a DPoP caller's token and proof
+	// were checked above, so hand it the token as Bearer.
+	if scheme, token := accessTokenCredentials(r); scheme == "dpop" {
+		r = r.Clone(ctx)
+		r.Header.Set("Authorization", "Bearer "+token)
+	}
 	ir, err := s.oauth2.NewIntrospectionRequest(ctx, r, session)
 	if err == nil && ir.IsActive() {
 		// A token of a principal that is no longer active is inactive.

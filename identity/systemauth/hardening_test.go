@@ -64,6 +64,7 @@ func tokenRequest(t *testing.T, s *Server, form url.Values) (int, map[string]any
 	form.Set("client_id", "spa")
 	req := httptest.NewRequest(http.MethodPost, "/oauth/token", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	withTokenProof(t, req)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	var body map[string]any

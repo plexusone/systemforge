@@ -257,7 +257,7 @@ func TestRemoteAccessChangesSource(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
-		if r.Header.Get("Authorization") != "Bearer tok" {
+		if r.Header.Get("Authorization") != "DPoP tok" || r.Header.Get("DPoP") == "" {
 			http.Error(w, "no", http.StatusForbidden)
 			return
 		}
@@ -280,7 +280,7 @@ func TestRemoteAccessChangesSource(t *testing.T) {
 		})
 	}))
 	t.Cleanup(srv.Close)
-	c := &Client{cfg: Config{Issuer: srv.URL, HTTPClient: srv.Client()}}
+	c := newTestClient(t, srv.URL, srv.Client(), Metadata{})
 	token := func(context.Context) (string, error) { return "tok", nil }
 
 	got, err := c.AccessChangesSource(token).AccessChangesSince(context.Background(), time.Date(2029, 12, 31, 0, 0, 0, 0, time.UTC))
@@ -313,8 +313,7 @@ func TestClientCredentialsTokenAsksForTheScope(t *testing.T) {
 		writeJSON(w, http.StatusOK, map[string]any{"access_token": "cc-token", "token_type": "bearer", "expires_in": 600})
 	}))
 	t.Cleanup(srv.Close)
-	c := &Client{cfg: Config{HTTPClient: srv.Client()}}
-	c.metadata.TokenEndpoint = srv.URL
+	c := newTestClient(t, "", srv.Client(), Metadata{TokenEndpoint: srv.URL})
 	tok, err := c.ClientCredentialsToken("rp", "secret")(context.Background())
 	if err != nil || tok != "cc-token" {
 		t.Fatalf("token = %q, %v", tok, err)

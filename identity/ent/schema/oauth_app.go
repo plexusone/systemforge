@@ -111,6 +111,10 @@ func (OAuthApp) Fields() []ent.Field {
 			Default(false).
 			Comment("Whether this client may create and sign in managed principals; also requires the deployment setting (ADR-005)"),
 
+		field.Bool("allow_bearer_tokens").
+			Default(false).
+			Comment("Legacy exception: the client may get unbound bearer tokens without a DPoP proof; by default every token request needs one (RFC 9449 dpop_bound_access_tokens)"),
+
 		field.Bool("first_party").
 			Default(false).
 			Comment("First-party apps skip consent screen"),

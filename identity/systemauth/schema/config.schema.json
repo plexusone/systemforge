@@ -255,6 +255,11 @@
               "168h",
               "720h"
             ]
+          },
+          "allow_bearer_tokens": {
+            "type": "boolean",
+            "description": "Legacy exception: allow unbound bearer tokens for this client",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -620,6 +625,62 @@
       "additionalProperties": false,
       "type": "object",
       "description": "Organization console under /console (ADR-018)"
+    },
+    "dpop": {
+      "properties": {
+        "proof_max_age": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "Maximum age of a DPoP proof",
+          "default": "5m",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
+        "clock_skew": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "Allowed clock skew of DPoP proofs",
+          "default": "30s",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
+        "require_nonce": {
+          "type": "boolean",
+          "description": "Require server-provided DPoP nonces",
+          "default": false
+        },
+        "nonce_secret": {
+          "type": "string",
+          "description": "Secret keying DPoP nonces (32+ bytes; supports env var expansion)"
+        },
+        "nonce_lifetime": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "How long a DPoP nonce is accepted",
+          "default": "5m",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
+        "replay_cache_redis_url": {
+          "type": "string",
+          "description": "Redis URL of the shared DPoP replay cache (supports env var expansion)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "DPoP proof checking (RFC 9449)"
     }
   },
   "additionalProperties": false,

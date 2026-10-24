@@ -59,6 +59,45 @@ type Config struct {
 	// Console serves the organization console under /console (ADR-018);
 	// nil disables it. It signs in with social login's session.
 	Console *ConsoleConfig `json:"console,omitempty" yaml:"console,omitempty" jsonschema:"description=Organization console under /console (ADR-018)"`
+
+	// DPoP tunes DPoP proof checking (RFC 9449). DPoP itself is always on:
+	// every client must prove possession of a key at the token endpoint and
+	// gets tokens bound to it, unless its registration sets
+	// allow_bearer_tokens.
+	DPoP DPoPConfig `json:"dpop,omitempty" yaml:"dpop,omitempty" jsonschema:"description=DPoP proof checking (RFC 9449)"`
+}
+
+// DPoPConfig tunes how SystemAuth checks DPoP proofs. The replay cache is
+// set with WithDPoPReplayCache.
+type DPoPConfig struct {
+	// ProofMaxAge is how old a proof's iat may be. Default: 5 minutes.
+	ProofMaxAge Duration `json:"proof_max_age,omitempty" yaml:"proof_max_age,omitempty" jsonschema:"default=5m,description=Maximum age of a DPoP proof"`
+
+	// ClockSkew is how far a proof's iat may be in the future, and is added
+	// to ProofMaxAge. Default: 30 seconds.
+	ClockSkew Duration `json:"clock_skew,omitempty" yaml:"clock_skew,omitempty" jsonschema:"default=30s,description=Allowed clock skew of DPoP proofs"`
+
+	// RequireNonce makes every proof carry a nonce SystemAuth issued
+	// (RFC 9449 §8): a proof without one is refused with use_dpop_nonce
+	// and a DPoP-Nonce header the client retries with. It requires
+	// NonceSecret.
+	RequireNonce bool `json:"require_nonce,omitempty" yaml:"require_nonce,omitempty" jsonschema:"default=false,description=Require server-provided DPoP nonces"`
+
+	// NonceSecret keys the nonces: at least 32 bytes, the same on every
+	// instance. Supports environment variable expansion:
+	// ${SYSTEMAUTH_DPOP_NONCE_SECRET}.
+	NonceSecret string `json:"nonce_secret,omitempty" yaml:"nonce_secret,omitempty" jsonschema:"description=Secret keying DPoP nonces (32+ bytes; supports env var expansion)"`
+
+	// NonceLifetime is how long a nonce is accepted. Default: 5 minutes.
+	NonceLifetime Duration `json:"nonce_lifetime,omitempty" yaml:"nonce_lifetime,omitempty" jsonschema:"default=5m,description=How long a DPoP nonce is accepted"`
+
+	// ReplayCacheRedisURL is a Redis URL (redis://user:pass@host:6379/0)
+	// for the cache that rejects replayed proofs, shared by every
+	// instance. The packaged service (systemauthsvc) connects to it; an
+	// embedding application passes WithDPoPReplayCache instead. Empty
+	// keeps the cache in memory, which suits a single instance. Supports
+	// environment variable expansion: ${SYSTEMAUTH_DPOP_REDIS_URL}.
+	ReplayCacheRedisURL string `json:"replay_cache_redis_url,omitempty" yaml:"replay_cache_redis_url,omitempty" jsonschema:"description=Redis URL of the shared DPoP replay cache (supports env var expansion)"`
 }
 
 // ConsoleConfig configures the organization console (ADR-018).
@@ -391,6 +430,15 @@ type ClientConfig struct {
 	// login tokens issued for this client's managed principals, for example
 	// a school year. It never exceeds managed_principals.login_token_max_ttl.
 	LoginTokenTTL *Duration `json:"login_token_ttl,omitempty" yaml:"login_token_ttl,omitempty" jsonschema:"description=Client-specific default lifetime of reusable login tokens (e.g. 7200h)"`
+
+	// AllowBearerTokens is a legacy exception that lets this client get
+	// unbound bearer tokens by calling the token endpoint without a DPoP
+	// proof. By default every client must send a proof and gets tokens
+	// bound to its key (RFC 9449 client metadata dpop_bound_access_tokens
+	// true). With it set, a request that does carry a proof still gets
+	// bound tokens. Use it only for a client that cannot do DPoP yet:
+	// bearer tokens work for whoever holds them.
+	AllowBearerTokens bool `json:"allow_bearer_tokens,omitempty" yaml:"allow_bearer_tokens,omitempty" jsonschema:"default=false,description=Legacy exception: allow unbound bearer tokens for this client"`
 }
 
 // ManagedPrincipalsConfig configures managed principals: humans without an
@@ -494,6 +542,9 @@ func (c *Config) Validate() error {
 			return err
 		}
 	}
+	if err := c.DPoP.validate(); err != nil {
+		return err
+	}
 	if c.Console != nil && c.SocialLogin == nil {
 		return fmt.Errorf("%w: the console signs in with social login, which is not configured", ErrInvalidConsoleConfig)
 	}
@@ -503,6 +554,16 @@ func (c *Config) Validate() error {
 	az.ApplyDefaults()
 	if err := az.Validate(); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidConfig, err)
+	}
+	return nil
+}
+
+func (c *DPoPConfig) validate() error {
+	if c.ProofMaxAge < 0 || c.ClockSkew < 0 || c.NonceLifetime < 0 {
+		return fmt.Errorf("%w: dpop durations must not be negative", ErrInvalidConfig)
+	}
+	if c.RequireNonce && len(c.NonceSecret) < 32 {
+		return fmt.Errorf("%w: dpop.require_nonce needs a dpop.nonce_secret of at least 32 bytes", ErrInvalidConfig)
 	}
 	return nil
 }

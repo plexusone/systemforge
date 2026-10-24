@@ -104,6 +104,8 @@ func TestClientCredentialsFlow(t *testing.T) {
 				Name:       "Test Client",
 				GrantTypes: []string{"client_credentials"},
 				Scopes:     []string{"read", "write"},
+				// A legacy client that cannot do DPoP yet.
+				AllowBearerTokens: true,
 			},
 		},
 	})
@@ -136,8 +138,8 @@ func TestClientCredentialsFlow(t *testing.T) {
 		t.Error("expected access_token in response")
 	}
 
-	if tokenResp["token_type"] != "bearer" {
-		t.Errorf("expected token_type bearer, got %v", tokenResp["token_type"])
+	if tokenResp["token_type"] != "Bearer" {
+		t.Errorf("expected token_type Bearer, got %v", tokenResp["token_type"])
 	}
 }
 
@@ -346,12 +348,13 @@ func TestMiddleware(t *testing.T) {
 		Issuer: "https://test.example.com",
 		Clients: []systemauth.ClientConfig{
 			{
-				ID:         "test-client",
-				Secret:     "test-secret",
-				Type:       "confidential",
-				Name:       "Test Client",
-				GrantTypes: []string{"client_credentials"},
-				Scopes:     []string{"read"},
+				ID:                "test-client",
+				Secret:            "test-secret",
+				Type:              "confidential",
+				Name:              "Test Client",
+				GrantTypes:        []string{"client_credentials"},
+				Scopes:            []string{"read"},
+				AllowBearerTokens: true,
 			},
 		},
 	})

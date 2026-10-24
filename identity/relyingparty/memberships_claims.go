@@ -187,9 +187,8 @@ func (c *Client) membershipsPage(ctx context.Context, endpoint, accessToken, cur
 	if err != nil {
 		return nil, "", err
 	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
-	resp, err := c.cfg.HTTPClient.Do(req)
+	resp, err := c.doWithToken(req, accessToken)
 	if err != nil {
 		return nil, "", fmt.Errorf("relyingparty: memberships: %w", err)
 	}

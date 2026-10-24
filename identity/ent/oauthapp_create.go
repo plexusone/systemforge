@@ -212,6 +212,20 @@ func (_c *OAuthAppCreate) SetNillableManagedPrincipalsEnabled(v *bool) *OAuthApp
 	return _c
 }
 
+// SetAllowBearerTokens sets the "allow_bearer_tokens" field.
+func (_c *OAuthAppCreate) SetAllowBearerTokens(v bool) *OAuthAppCreate {
+	_c.mutation.SetAllowBearerTokens(v)
+	return _c
+}
+
+// SetNillableAllowBearerTokens sets the "allow_bearer_tokens" field if the given value is not nil.
+func (_c *OAuthAppCreate) SetNillableAllowBearerTokens(v *bool) *OAuthAppCreate {
+	if v != nil {
+		_c.SetAllowBearerTokens(*v)
+	}
+	return _c
+}
+
 // SetFirstParty sets the "first_party" field.
 func (_c *OAuthAppCreate) SetFirstParty(v bool) *OAuthAppCreate {
 	_c.mutation.SetFirstParty(v)
@@ -457,6 +471,10 @@ func (_c *OAuthAppCreate) defaults() {
 		v := oauthapp.DefaultManagedPrincipalsEnabled
 		_c.mutation.SetManagedPrincipalsEnabled(v)
 	}
+	if _, ok := _c.mutation.AllowBearerTokens(); !ok {
+		v := oauthapp.DefaultAllowBearerTokens
+		_c.mutation.SetAllowBearerTokens(v)
+	}
 	if _, ok := _c.mutation.FirstParty(); !ok {
 		v := oauthapp.DefaultFirstParty
 		_c.mutation.SetFirstParty(v)
@@ -545,6 +563,9 @@ func (_c *OAuthAppCreate) check() error {
 	}
 	if _, ok := _c.mutation.ManagedPrincipalsEnabled(); !ok {
 		return &ValidationError{Name: "managed_principals_enabled", err: errors.New(`ent: missing required field "OAuthApp.managed_principals_enabled"`)}
+	}
+	if _, ok := _c.mutation.AllowBearerTokens(); !ok {
+		return &ValidationError{Name: "allow_bearer_tokens", err: errors.New(`ent: missing required field "OAuthApp.allow_bearer_tokens"`)}
 	}
 	if _, ok := _c.mutation.FirstParty(); !ok {
 		return &ValidationError{Name: "first_party", err: errors.New(`ent: missing required field "OAuthApp.first_party"`)}
@@ -659,6 +680,10 @@ func (_c *OAuthAppCreate) createSpec() (*OAuthApp, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ManagedPrincipalsEnabled(); ok {
 		_spec.SetField(oauthapp.FieldManagedPrincipalsEnabled, field.TypeBool, value)
 		_node.ManagedPrincipalsEnabled = value
+	}
+	if value, ok := _c.mutation.AllowBearerTokens(); ok {
+		_spec.SetField(oauthapp.FieldAllowBearerTokens, field.TypeBool, value)
+		_node.AllowBearerTokens = value
 	}
 	if value, ok := _c.mutation.FirstParty(); ok {
 		_spec.SetField(oauthapp.FieldFirstParty, field.TypeBool, value)
@@ -1078,6 +1103,18 @@ func (u *OAuthAppUpsert) UpdateManagedPrincipalsEnabled() *OAuthAppUpsert {
 	return u
 }
 
+// SetAllowBearerTokens sets the "allow_bearer_tokens" field.
+func (u *OAuthAppUpsert) SetAllowBearerTokens(v bool) *OAuthAppUpsert {
+	u.Set(oauthapp.FieldAllowBearerTokens, v)
+	return u
+}
+
+// UpdateAllowBearerTokens sets the "allow_bearer_tokens" field to the value that was provided on create.
+func (u *OAuthAppUpsert) UpdateAllowBearerTokens() *OAuthAppUpsert {
+	u.SetExcluded(oauthapp.FieldAllowBearerTokens)
+	return u
+}
+
 // SetFirstParty sets the "first_party" field.
 func (u *OAuthAppUpsert) SetFirstParty(v bool) *OAuthAppUpsert {
 	u.Set(oauthapp.FieldFirstParty, v)
@@ -1493,6 +1530,20 @@ func (u *OAuthAppUpsertOne) SetManagedPrincipalsEnabled(v bool) *OAuthAppUpsertO
 func (u *OAuthAppUpsertOne) UpdateManagedPrincipalsEnabled() *OAuthAppUpsertOne {
 	return u.Update(func(s *OAuthAppUpsert) {
 		s.UpdateManagedPrincipalsEnabled()
+	})
+}
+
+// SetAllowBearerTokens sets the "allow_bearer_tokens" field.
+func (u *OAuthAppUpsertOne) SetAllowBearerTokens(v bool) *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.SetAllowBearerTokens(v)
+	})
+}
+
+// UpdateAllowBearerTokens sets the "allow_bearer_tokens" field to the value that was provided on create.
+func (u *OAuthAppUpsertOne) UpdateAllowBearerTokens() *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.UpdateAllowBearerTokens()
 	})
 }
 
@@ -2092,6 +2143,20 @@ func (u *OAuthAppUpsertBulk) SetManagedPrincipalsEnabled(v bool) *OAuthAppUpsert
 func (u *OAuthAppUpsertBulk) UpdateManagedPrincipalsEnabled() *OAuthAppUpsertBulk {
 	return u.Update(func(s *OAuthAppUpsert) {
 		s.UpdateManagedPrincipalsEnabled()
+	})
+}
+
+// SetAllowBearerTokens sets the "allow_bearer_tokens" field.
+func (u *OAuthAppUpsertBulk) SetAllowBearerTokens(v bool) *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.SetAllowBearerTokens(v)
+	})
+}
+
+// UpdateAllowBearerTokens sets the "allow_bearer_tokens" field to the value that was provided on create.
+func (u *OAuthAppUpsertBulk) UpdateAllowBearerTokens() *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.UpdateAllowBearerTokens()
 	})
 }
 

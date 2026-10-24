@@ -50,6 +50,8 @@ const (
 	FieldRefreshTokenRotation = "refresh_token_rotation"
 	// FieldManagedPrincipalsEnabled holds the string denoting the managed_principals_enabled field in the database.
 	FieldManagedPrincipalsEnabled = "managed_principals_enabled"
+	// FieldAllowBearerTokens holds the string denoting the allow_bearer_tokens field in the database.
+	FieldAllowBearerTokens = "allow_bearer_tokens"
 	// FieldFirstParty holds the string denoting the first_party field in the database.
 	FieldFirstParty = "first_party"
 	// FieldPublic holds the string denoting the public field in the database.
@@ -142,6 +144,7 @@ var Columns = []string{
 	FieldBackchannelLogoutURI,
 	FieldRefreshTokenRotation,
 	FieldManagedPrincipalsEnabled,
+	FieldAllowBearerTokens,
 	FieldFirstParty,
 	FieldPublic,
 	FieldActive,
@@ -186,6 +189,8 @@ var (
 	DefaultRefreshTokenRotation bool
 	// DefaultManagedPrincipalsEnabled holds the default value on creation for the "managed_principals_enabled" field.
 	DefaultManagedPrincipalsEnabled bool
+	// DefaultAllowBearerTokens holds the default value on creation for the "allow_bearer_tokens" field.
+	DefaultAllowBearerTokens bool
 	// DefaultFirstParty holds the default value on creation for the "first_party" field.
 	DefaultFirstParty bool
 	// DefaultPublic holds the default value on creation for the "public" field.
@@ -302,6 +307,11 @@ func ByRefreshTokenRotation(opts ...sql.OrderTermOption) OrderOption {
 // ByManagedPrincipalsEnabled orders the results by the managed_principals_enabled field.
 func ByManagedPrincipalsEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldManagedPrincipalsEnabled, opts...).ToFunc()
+}
+
+// ByAllowBearerTokens orders the results by the allow_bearer_tokens field.
+func ByAllowBearerTokens(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAllowBearerTokens, opts...).ToFunc()
 }
 
 // ByFirstParty orders the results by the first_party field.

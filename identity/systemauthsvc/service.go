@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/plexusone/connectforge/provider"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/mode"
@@ -20,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/approle"
+	"github.com/plexusone/systemforge/identity/dpopproof"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/managedprincipal"
 	"github.com/plexusone/systemforge/identity/relyingparty"
@@ -133,6 +135,12 @@ type Options struct {
 	// several instances serve SystemAuth.
 	ManagedPrincipalRates ratelimit.Storage
 
+	// DPoPReplayCache rejects replayed DPoP proofs. Default: a Redis cache
+	// when the configuration sets dpop.replay_cache_redis_url, otherwise
+	// an in-memory one, which suits one instance; when several instances
+	// serve SystemAuth they must share it.
+	DPoPReplayCache dpopproof.ReplayCache
+
 	// ManagedPrincipalOptions are passed to managedprincipal.NewService
 	// after the logger and audit emitter, e.g. WithRoles, WithAuthorizer or
 	// WithAuthzSyncer.
@@ -182,6 +190,9 @@ type Service struct {
 	// authorization mode openSCIM opened, if any.
 	scimTokens *scimtoken.Service
 	scimAuthz  *mode.Result
+	// dpopRedis is the Redis client of the DPoP replay cache, when New
+	// opened one.
+	dpopRedis *redis.Client
 }
 
 // New builds a SystemAuth server from cfg. Unless opts.Dev is set it
@@ -309,6 +320,12 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		}
 		serverOpts = append(serverOpts, systemauth.WithOrgsSource(src))
 	}
+	dpopOpts, err := s.dpopReplayCache(&c, opts, logger)
+	if err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
+	serverOpts = append(serverOpts, dpopOpts...)
 	serverOpts = append(serverOpts, opts.ServerOptions...)
 
 	server, err := systemauth.NewEmbedded(c, serverOpts...)
@@ -495,7 +512,7 @@ func (s *Service) Ready(ctx context.Context) error {
 // Close releases the database New opened. Injected handles (Options.DB,
 // Options.EntClient) are left to their owner.
 func (s *Service) Close() error {
-	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeManagedPrincipals(), s.closeSCIM())
+	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeManagedPrincipals(), s.closeSCIM(), s.closeDPoP())
 	if s.owned == nil {
 		return err
 	}

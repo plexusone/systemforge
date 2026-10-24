@@ -116,7 +116,7 @@ func orgsOf(t *testing.T, claims map[string]any) []map[string]any {
 func memberships(t *testing.T, s *Server, token, query string) (int, MembershipsResponse) {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, MembershipsPath+query, nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	dpopAuth(t, token)(req)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	var out MembershipsResponse
@@ -170,7 +170,7 @@ func TestOrgsClaimShapes(t *testing.T) {
 	if len(full) != 3 || full[2]["slug"] != "acme" || full[2]["name"] != "Org acme" || full[2]["type"] != "team" || full[0]["type"] != "personal" {
 		t.Errorf("id token orgs = %v", full)
 	}
-	w, info := userinfo(t, f.s, bearer(tokens["access_token"].(string)), http.MethodGet, nil)
+	w, info := userinfo(t, f.s, dpopAuth(t, tokens["access_token"].(string)), http.MethodGet, nil)
 	if w.Code != http.StatusOK || len(orgsOf(t, info)) != 3 || orgsOf(t, info)[0]["slug"] == nil || info["orgs_truncated"] != false {
 		t.Errorf("userinfo orgs: %d %v", w.Code, info)
 	}
@@ -313,7 +313,7 @@ func TestNoOrgsClaimWithoutSource(t *testing.T) {
 	if got := verifyJWTOrOpaque(t, s, tokens); got != nil {
 		t.Errorf("orgs claim without a source: %v", got)
 	}
-	if w, info := userinfo(t, s, bearer(tokens["access_token"].(string)), http.MethodGet, nil); w.Code != http.StatusOK || info["orgs"] != nil {
+	if w, info := userinfo(t, s, dpopAuth(t, tokens["access_token"].(string)), http.MethodGet, nil); w.Code != http.StatusOK || info["orgs"] != nil {
 		t.Errorf("userinfo = %d %v", w.Code, info)
 	}
 	if code, _ := memberships(t, s, tokens["access_token"].(string), ""); code != http.StatusNotImplemented {

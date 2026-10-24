@@ -149,13 +149,13 @@ func TestJWTAccessTokens(t *testing.T) {
 	}
 
 	// JWT access tokens are still stored: userinfo and revocation work.
-	if w, info := userinfo(t, s, bearer(at), http.MethodGet, nil); w.Code != http.StatusOK || info["sub"] != claims["sub"] {
+	if w, info := userinfo(t, s, dpopAuth(t, at), http.MethodGet, nil); w.Code != http.StatusOK || info["sub"] != claims["sub"] {
 		t.Errorf("userinfo with JWT: %d %v", w.Code, info)
 	}
 	if w := postForm(s, LogoutPath, testIssuer, url.Values{}, sess); w.Code != http.StatusSeeOther {
 		t.Fatal(w.Code)
 	}
-	if w, _ := userinfo(t, s, bearer(at), http.MethodGet, nil); w.Code != http.StatusUnauthorized {
+	if w, _ := userinfo(t, s, dpopAuth(t, at), http.MethodGet, nil); w.Code != http.StatusUnauthorized {
 		t.Errorf("revoked JWT accepted by userinfo: %d", w.Code)
 	}
 }

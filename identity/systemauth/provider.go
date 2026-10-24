@@ -321,6 +321,15 @@ type OAuthIntrospection struct {
 	Aud       []string `json:"aud,omitempty"`
 	Iss       string   `json:"iss,omitempty"`
 	Jti       string   `json:"jti,omitempty"`
+	// Cnf is the key a DPoP-bound token is bound to (RFC 9449 §6.2); nil
+	// for an unbound bearer token, whose TokenType is Bearer.
+	Cnf *TokenConfirmation `json:"cnf,omitempty"`
+}
+
+// TokenConfirmation is the cnf claim of a DPoP-bound token.
+type TokenConfirmation struct {
+	// JKT is the RFC 7638 thumbprint of the DPoP key.
+	JKT string `json:"jkt"`
 }
 
 // OAuthUserInfo is the OIDC userinfo response.

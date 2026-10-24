@@ -75,9 +75,13 @@ func (p *EmbeddedOAuthProvider) Introspect(ctx context.Context, token string, to
 		Active:    true,
 		Scope:     strings.Join(ar.GetGrantedScopes(), " "),
 		ClientID:  ar.GetClient().GetID(),
-		TokenType: "Bearer",
+		TokenType: TokenTypeBearer,
 		Sub:       ar.GetSession().GetSubject(),
 		Iss:       p.server.config.Issuer,
+	}
+	if sess, ok := ar.GetSession().(*Session); ok && sess.DPoPJKT != "" {
+		introspection.TokenType = TokenTypeDPoP
+		introspection.Cnf = &TokenConfirmation{JKT: sess.DPoPJKT}
 	}
 
 	// Add expiration if available
@@ -102,6 +106,11 @@ func (p *EmbeddedOAuthProvider) UserInfo(ctx context.Context, accessToken string
 	ar, err := p.server.introspect(ctx, accessToken, fosite.AccessToken, session)
 	if err != nil {
 		return nil, errors.New("invalid access token")
+	}
+	// A DPoP-bound token is usable only with a proof by its key, which
+	// this call has no request to carry: use the HTTP userinfo endpoint.
+	if sess, ok := ar.GetSession().(*Session); ok && sess.DPoPJKT != "" {
+		return nil, errors.New("access token is DPoP-bound: call the userinfo endpoint with a DPoP proof")
 	}
 
 	subject := ar.GetSession().GetSubject()

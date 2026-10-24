@@ -86,6 +86,12 @@ type Client struct {
 	// the client receives none.
 	BackchannelLogoutURI string `json:"backchannel_logout_uri,omitempty"`
 
+	// AllowBearerTokens is a legacy exception that lets the client get
+	// unbound bearer tokens by calling the token endpoint without a DPoP
+	// proof. Without it every token request must carry a valid proof and
+	// every token is bound to the proof's key (DPoPBoundAccessTokens).
+	AllowBearerTokens bool `json:"allow_bearer_tokens,omitempty"`
+
 	// CreatedAt is when the client was created.
 	CreatedAt time.Time `json:"created_at"`
 
@@ -150,6 +156,14 @@ func (c *Client) GetAudience() fosite.Arguments {
 	return c.Audience
 }
 
+// DPoPBoundAccessTokens is the client's RFC 9449 dpop_bound_access_tokens
+// metadata: true, the default, means the client always uses DPoP and a
+// token request without a proof is refused. It is false only for a client
+// registered with the AllowBearerTokens exception.
+func (c *Client) DPoPBoundAccessTokens() bool {
+	return !c.AllowBearerTokens
+}
+
 // NewClientFromConfig creates a Client from a ClientConfig.
 func NewClientFromConfig(cfg ClientConfig) (*Client, error) {
 	clientType := ClientTypeConfidential
@@ -171,6 +185,7 @@ func NewClientFromConfig(cfg ClientConfig) (*Client, error) {
 		// Managed principals are opt-in per client.
 		ManagedPrincipalsEnabled: cfg.ManagedPrincipals,
 		BackchannelLogoutURI:     cfg.BackchannelLogoutURI,
+		AllowBearerTokens:        cfg.AllowBearerTokens,
 		UpdatedAt:                time.Now(),
 	}
 	if err := ValidateBackchannelLogoutURI(client.BackchannelLogoutURI); err != nil {

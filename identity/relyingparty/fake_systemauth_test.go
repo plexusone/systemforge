@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-jose/go-jose/v3"
 	gojwt "github.com/golang-jwt/jwt/v5"
+	"github.com/grokify/goauth/dpop"
 )
 
 const (
@@ -32,10 +33,13 @@ type fakeSystemAuth struct {
 	key *rsa.PrivateKey
 	kid string
 
-	mu        sync.Mutex
-	codes     map[string]fakeCode
-	refresh   map[string]bool // refresh token -> active
-	access    map[string]string
+	mu      sync.Mutex
+	codes   map[string]fakeCode
+	refresh map[string]bool // refresh token -> active
+	access  map[string]string
+	// bound maps an access token to the thumbprint of the DPoP key of the
+	// token request that got it.
+	bound     map[string]string
 	n         int
 	revoked   []string
 	subject   string
@@ -58,7 +62,7 @@ func newFakeSystemAuth(t *testing.T) *fakeSystemAuth {
 	}
 	f := &fakeSystemAuth{
 		t: t, key: key, kid: "k1",
-		codes: map[string]fakeCode{}, refresh: map[string]bool{}, access: map[string]string{},
+		codes: map[string]fakeCode{}, refresh: map[string]bool{}, access: map[string]string{}, bound: map[string]string{},
 		subject: "11111111-1111-1111-1111-111111111111", email: "octo@example.com", verified: true, name: "Octo Cat",
 	}
 	mux := http.NewServeMux()
@@ -160,7 +164,13 @@ func (f *fakeSystemAuth) handleToken(w http.ResponseWriter, r *http.Request) {
 		f.json(w, http.StatusUnauthorized, map[string]string{"error": "invalid_client"})
 		return
 	}
-	resp := map[string]any{"token_type": "bearer", "expires_in": 900}
+	// Like SystemAuth, require a DPoP proof and bind the tokens to its key.
+	proof, err := dpop.ParseProof(r.Header.Get("DPoP"))
+	if err != nil || proof.Claims.HTTPMethod != http.MethodPost || proof.Claims.HTTPURI != f.srv.URL+"/oauth/token" {
+		f.json(w, http.StatusBadRequest, map[string]string{"error": "invalid_dpop_proof"})
+		return
+	}
+	resp := map[string]any{"token_type": "DPoP", "expires_in": 900}
 	switch r.PostForm.Get("grant_type") {
 	case "authorization_code":
 		c, ok := f.codes[r.PostForm.Get("code")]
@@ -185,6 +195,7 @@ func (f *fakeSystemAuth) handleToken(w http.ResponseWriter, r *http.Request) {
 	f.n++
 	at, rt := fmt.Sprintf("at-%d", f.n), fmt.Sprintf("rt-%d", f.n)
 	f.access[at] = f.subject
+	f.bound[at] = proof.Thumbprint
 	f.refresh[rt] = true
 	resp["access_token"], resp["refresh_token"] = at, rt
 	f.json(w, http.StatusOK, resp)
@@ -193,8 +204,10 @@ func (f *fakeSystemAuth) handleToken(w http.ResponseWriter, r *http.Request) {
 func (f *fakeSystemAuth) handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	sub, ok := f.access[strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")]
-	if !ok {
+	at := strings.TrimPrefix(r.Header.Get("Authorization"), "DPoP ")
+	sub, ok := f.access[at]
+	proof, err := dpop.ParseProof(r.Header.Get("DPoP"))
+	if !ok || err != nil || proof.Thumbprint != f.bound[at] || proof.Claims.AccessTokenHash != dpop.ComputeAccessTokenHash(at) {
 		w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
 		w.WriteHeader(http.StatusUnauthorized)
 		return

@@ -37,6 +37,7 @@ func clientToken(t *testing.T, s *Server, id, secret, scope string) string {
 	form := url.Values{"grant_type": {"client_credentials"}, "client_id": {id}, "client_secret": {secret}, "scope": {scope}}
 	req := httptest.NewRequest(http.MethodPost, "/oauth/token", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	withTokenProof(t, req)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	var body map[string]any
@@ -46,16 +47,19 @@ func clientToken(t *testing.T, s *Server, id, secret, scope string) string {
 	return body["access_token"].(string)
 }
 
-func getAccessChanges(s *Server, token, query string) (int, AccessChangesResponse) {
+func getAccessChanges(t *testing.T, s *Server, token, query string) (int, AccessChangesResponse) {
+	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, AccessChangesPath+query, nil)
 	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+		dpopAuth(t, token)(req)
 	}
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	var out AccessChangesResponse
 	if w.Code == http.StatusOK {
-		_ = json.Unmarshal(w.Body.Bytes(), &out)
+		if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+			t.Fatalf("access changes body: %v", err)
+		}
 	}
 	return w.Code, out
 }
@@ -82,19 +86,19 @@ func TestAccessChangesReplayEndpoint(t *testing.T) {
 	}
 	since := url.QueryEscape(base.Add(-time.Minute).UTC().Format(time.RFC3339Nano))
 
-	if code, _ := getAccessChanges(s, "", "?since="+since); code != http.StatusUnauthorized {
+	if code, _ := getAccessChanges(t, s, "", "?since="+since); code != http.StatusUnauthorized {
 		t.Errorf("no token: %d", code)
 	}
-	if code, _ := getAccessChanges(s, "garbage", "?since="+since); code != http.StatusUnauthorized {
+	if code, _ := getAccessChanges(t, s, "garbage", "?since="+since); code != http.StatusUnauthorized {
 		t.Errorf("bad token: %d", code)
 	}
 	plain := clientToken(t, s, "plain", "plain-secret", "read")
-	if code, _ := getAccessChanges(s, plain, "?since="+since); code != http.StatusForbidden {
+	if code, _ := getAccessChanges(t, s, plain, "?since="+since); code != http.StatusForbidden {
 		t.Errorf("token without the scope: %d", code)
 	}
 
 	rp := clientToken(t, s, "rp", "rp-secret", AccessChangesScope)
-	code, got := getAccessChanges(s, rp, "?since="+since)
+	code, got := getAccessChanges(t, s, rp, "?since="+since)
 	if code != http.StatusOK || len(got.Changes) != 3 || got.NextSince != nil {
 		t.Fatalf("replay = %d %+v", code, got)
 	}
@@ -104,20 +108,20 @@ func TestAccessChangesReplayEndpoint(t *testing.T) {
 	}
 	// Only changes after since.
 	after := url.QueryEscape(base.Add(30 * time.Second).UTC().Format(time.RFC3339Nano))
-	if _, got := getAccessChanges(s, rp, "?since="+after); len(got.Changes) != 2 {
+	if _, got := getAccessChanges(t, s, rp, "?since="+after); len(got.Changes) != 2 {
 		t.Errorf("changes after the first = %d, want 2", len(got.Changes))
 	}
 	// Paging: a full page carries next_since.
-	code, page := getAccessChanges(s, rp, "?limit=2&since="+since)
+	code, page := getAccessChanges(t, s, rp, "?limit=2&since="+since)
 	if code != http.StatusOK || len(page.Changes) != 2 || page.NextSince == nil {
 		t.Fatalf("page = %d %+v", code, page)
 	}
-	if _, rest := getAccessChanges(s, rp, "?limit=2&since="+url.QueryEscape(page.NextSince.Format(time.RFC3339Nano))); len(rest.Changes) == 0 || rest.Changes[len(rest.Changes)-1].Reason != "sessions_revoked" {
+	if _, rest := getAccessChanges(t, s, rp, "?limit=2&since="+url.QueryEscape(page.NextSince.Format(time.RFC3339Nano))); len(rest.Changes) == 0 || rest.Changes[len(rest.Changes)-1].Reason != "sessions_revoked" {
 		t.Errorf("next page = %+v", rest)
 	}
 	// Bad input.
 	for _, q := range []string{"", "?since=yesterday", "?limit=0&since=" + since, "?limit=x&since=" + since} {
-		if code, _ := getAccessChanges(s, rp, q); code != http.StatusBadRequest {
+		if code, _ := getAccessChanges(t, s, rp, q); code != http.StatusBadRequest {
 			t.Errorf("query %q: %d, want 400", q, code)
 		}
 	}
@@ -126,14 +130,14 @@ func TestAccessChangesReplayEndpoint(t *testing.T) {
 func TestAccessChangesNotConfigured(t *testing.T) {
 	s := accessChangesServer(t)
 	rp := clientToken(t, s, "rp", "rp-secret", AccessChangesScope)
-	if code, _ := getAccessChanges(s, rp, "?since=2030-01-01T00:00:00Z"); code != http.StatusNotImplemented {
+	if code, _ := getAccessChanges(t, s, rp, "?since=2030-01-01T00:00:00Z"); code != http.StatusNotImplemented {
 		t.Errorf("without a lister: %d, want 501", code)
 	}
 	// A lister without a scope is not served either: the feed is never
 	// handed out unfiltered by default.
 	s = accessChangesServer(t, WithAccessChanges(accesschange.NewSource(openTestEnt(t)), nil))
 	rp = clientToken(t, s, "rp", "rp-secret", AccessChangesScope)
-	if code, _ := getAccessChanges(s, rp, "?since=2030-01-01T00:00:00Z"); code != http.StatusNotImplemented {
+	if code, _ := getAccessChanges(t, s, rp, "?since=2030-01-01T00:00:00Z"); code != http.StatusNotImplemented {
 		t.Errorf("without a scope: %d, want 501", code)
 	}
 }
@@ -168,7 +172,7 @@ func TestAccessChangesScopedToClient(t *testing.T) {
 	}
 	since := url.QueryEscape(base.Add(-time.Minute).UTC().Format(time.RFC3339Nano))
 	rp := clientToken(t, s, "rp", "rp-secret", AccessChangesScope)
-	code, got := getAccessChanges(s, rp, "?since="+since)
+	code, got := getAccessChanges(t, s, rp, "?since="+since)
 	if code != http.StatusOK || len(got.Changes) != 2 {
 		t.Fatalf("scoped replay = %d %+v", code, got)
 	}
@@ -182,7 +186,7 @@ func TestAccessChangesScopedToClient(t *testing.T) {
 	}
 	// Paging follows the unfiltered rows: a page whose rows are all
 	// filtered out still leads on.
-	code, page := getAccessChanges(s, rp, "?limit=2&since="+url.QueryEscape(base.Add(30*time.Second).UTC().Format(time.RFC3339Nano)))
+	code, page := getAccessChanges(t, s, rp, "?limit=2&since="+url.QueryEscape(base.Add(30*time.Second).UTC().Format(time.RFC3339Nano)))
 	if code != http.StatusOK || len(page.Changes) != 1 || page.NextSince == nil {
 		t.Errorf("filtered page = %d %+v", code, page)
 	}

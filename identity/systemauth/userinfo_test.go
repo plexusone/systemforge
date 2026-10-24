@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -56,7 +57,7 @@ func TestUserInfoScopes(t *testing.T) {
 	}
 
 	// openid + email: email claims only.
-	w, claims := userinfo(t, s, bearer(tokenFor("openid email")), http.MethodGet, nil)
+	w, claims := userinfo(t, s, dpopAuth(t, tokenFor("openid email")), http.MethodGet, nil)
 	if w.Code != http.StatusOK {
 		t.Fatalf("userinfo: %d %s", w.Code, w.Body.String())
 	}
@@ -70,8 +71,16 @@ func TestUserInfoScopes(t *testing.T) {
 		t.Errorf("profile claim released without profile scope: %v", claims)
 	}
 
-	// openid + profile: profile claims, no email; token in a POST body.
-	w, claims = userinfo(t, s, nil, http.MethodPost, url.Values{"access_token": {tokenFor("openid profile")}})
+	// A DPoP-bound token cannot travel in a POST body, which carries only
+	// Bearer tokens.
+	profileToken := tokenFor("openid profile")
+	w, claims = userinfo(t, s, nil, http.MethodPost, url.Values{"access_token": {profileToken}})
+	if w.Code != http.StatusUnauthorized || claims["error"] != "invalid_token" {
+		t.Errorf("bound token in a POST body: %d %v", w.Code, claims)
+	}
+
+	// openid + profile: profile claims, no email; POST with DPoP.
+	w, claims = userinfo(t, s, dpopAuth(t, profileToken), http.MethodPost, url.Values{})
 	if w.Code != http.StatusOK || claims["name"] != "Octo Cat" || claims["sub"] != principalID {
 		t.Fatalf("profile claims: %d %v", w.Code, claims)
 	}
@@ -80,7 +89,7 @@ func TestUserInfoScopes(t *testing.T) {
 	}
 
 	// No openid scope: 403 insufficient_scope.
-	w, claims = userinfo(t, s, bearer(tokenFor("email")), http.MethodGet, nil)
+	w, claims = userinfo(t, s, dpopAuth(t, tokenFor("email")), http.MethodGet, nil)
 	if w.Code != http.StatusForbidden || claims["error"] != "insufficient_scope" ||
 		!strings.Contains(w.Header().Get("WWW-Authenticate"), `error="insufficient_scope"`) {
 		t.Errorf("no openid: %d %v %q", w.Code, claims, w.Header().Get("WWW-Authenticate"))
@@ -92,8 +101,8 @@ func TestUserInfoInvalidToken(t *testing.T) {
 
 	// Missing token: 401 with a bare challenge.
 	w, _ := userinfo(t, s, nil, http.MethodGet, nil)
-	if w.Code != http.StatusUnauthorized || w.Header().Get("WWW-Authenticate") != `Bearer realm="systemauth"` {
-		t.Errorf("missing token: %d %q", w.Code, w.Header().Get("WWW-Authenticate"))
+	if w.Code != http.StatusUnauthorized || !slices.Equal(w.Header().Values("WWW-Authenticate"), []string{`Bearer realm="systemauth"`, `DPoP algs="ES256 ES384 ES512"`}) {
+		t.Errorf("missing token: %d %q", w.Code, w.Header().Values("WWW-Authenticate"))
 	}
 
 	// Unknown token: 401 invalid_token.
@@ -117,7 +126,7 @@ func TestUserInfoInvalidToken(t *testing.T) {
 	if w := postForm(s, LogoutPath, testIssuer, url.Values{}, sess); w.Code != http.StatusSeeOther {
 		t.Fatalf("logout: %d", w.Code)
 	}
-	if w, _ := userinfo(t, s, bearer(at), http.MethodGet, nil); w.Code != http.StatusUnauthorized {
+	if w, _ := userinfo(t, s, dpopAuth(t, at), http.MethodGet, nil); w.Code != http.StatusUnauthorized {
 		t.Errorf("revoked token: %d", w.Code)
 	}
 }

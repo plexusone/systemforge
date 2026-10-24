@@ -99,6 +99,7 @@ func confidentialExchange(t *testing.T, s *Server, code, secret string, basic bo
 	}
 	req := httptest.NewRequest(http.MethodPost, "/oauth/token", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	withTokenProof(t, req)
 	if basic {
 		req.SetBasicAuth(confidentialID, secret)
 	}

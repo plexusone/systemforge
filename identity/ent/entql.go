@@ -470,6 +470,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			oauthapp.FieldBackchannelLogoutURI:     {Type: field.TypeString, Column: oauthapp.FieldBackchannelLogoutURI},
 			oauthapp.FieldRefreshTokenRotation:     {Type: field.TypeBool, Column: oauthapp.FieldRefreshTokenRotation},
 			oauthapp.FieldManagedPrincipalsEnabled: {Type: field.TypeBool, Column: oauthapp.FieldManagedPrincipalsEnabled},
+			oauthapp.FieldAllowBearerTokens:        {Type: field.TypeBool, Column: oauthapp.FieldAllowBearerTokens},
 			oauthapp.FieldFirstParty:               {Type: field.TypeBool, Column: oauthapp.FieldFirstParty},
 			oauthapp.FieldPublic:                   {Type: field.TypeBool, Column: oauthapp.FieldPublic},
 			oauthapp.FieldActive:                   {Type: field.TypeBool, Column: oauthapp.FieldActive},
@@ -3774,6 +3775,11 @@ func (f *OAuthAppFilter) WhereRefreshTokenRotation(p entql.BoolP) {
 // WhereManagedPrincipalsEnabled applies the entql bool predicate on the managed_principals_enabled field.
 func (f *OAuthAppFilter) WhereManagedPrincipalsEnabled(p entql.BoolP) {
 	f.Where(p.Field(oauthapp.FieldManagedPrincipalsEnabled))
+}
+
+// WhereAllowBearerTokens applies the entql bool predicate on the allow_bearer_tokens field.
+func (f *OAuthAppFilter) WhereAllowBearerTokens(p entql.BoolP) {
+	f.Where(p.Field(oauthapp.FieldAllowBearerTokens))
 }
 
 // WhereFirstParty applies the entql bool predicate on the first_party field.

@@ -134,7 +134,8 @@ func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
 		SetAllowedGrants(client.GrantTypes).
 		SetAllowedResponseTypes(client.ResponseTypes).
 		SetPublic(client.IsPublic()).
-		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled)
+		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled).
+		SetAllowBearerTokens(client.AllowBearerTokens)
 
 	if client.Description != "" {
 		builder.SetDescription(client.Description)
@@ -236,7 +237,8 @@ func (s *EntStorage) UpdateClient(ctx context.Context, client *Client) error {
 		SetAllowedScopes(client.Scopes).
 		SetAllowedGrants(client.GrantTypes).
 		SetAllowedResponseTypes(client.ResponseTypes).
-		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled)
+		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled).
+		SetAllowBearerTokens(client.AllowBearerTokens)
 
 	if client.Description != "" {
 		builder.SetDescription(client.Description)
@@ -865,6 +867,7 @@ func (s *EntStorage) entAppToClient(app *ent.OAuthApp) *Client {
 		CreatedAt:     app.CreatedAt,
 		// Managed principals are opt-in per client.
 		ManagedPrincipalsEnabled: app.ManagedPrincipalsEnabled,
+		AllowBearerTokens:        app.AllowBearerTokens,
 		UpdatedAt:                app.UpdatedAt,
 	}
 

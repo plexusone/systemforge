@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/ory/fosite"
 
 	"github.com/plexusone/systemforge/identity/accesschange"
 )
@@ -82,19 +81,14 @@ func (s *Server) accessChangesEndpoint(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := LoggerFromContext(ctx)
 
-	token := bearerToken(r)
-	if token == "" {
-		writeBearerError(w, http.StatusUnauthorized, "", "", "")
-		return
-	}
-	ar, err := s.introspect(ctx, token, fosite.AccessToken, s.Session(""))
-	if err != nil {
-		logger.Debug("access changes: invalid access token", "error", err)
-		writeBearerError(w, http.StatusUnauthorized, "invalid_token", "The access token is invalid, expired or revoked.", "")
+	ar, authErr := s.authenticateAccessToken(r, s.endpointURL(AccessChangesPath))
+	if authErr != nil {
+		logger.Debug("access changes: access token refused", "error", authErr)
+		s.writeTokenAuthError(w, authErr)
 		return
 	}
 	if !ar.GetGrantedScopes().Has(AccessChangesScope) {
-		writeBearerError(w, http.StatusForbidden, "insufficient_scope", "The access token was not granted the access_changes:read scope.", AccessChangesScope)
+		writeScopeError(w, ar, "The access token was not granted the access_changes:read scope.", AccessChangesScope)
 		return
 	}
 	if s.accessChanges == nil || s.accessScope == nil {

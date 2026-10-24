@@ -17101,6 +17101,7 @@ type OAuthAppMutation struct {
 	backchannel_logout_uri       *string
 	refresh_token_rotation       *bool
 	managed_principals_enabled   *bool
+	allow_bearer_tokens          *bool
 	first_party                  *bool
 	public                       *bool
 	active                       *bool
@@ -18032,6 +18033,42 @@ func (m *OAuthAppMutation) ResetManagedPrincipalsEnabled() {
 	m.managed_principals_enabled = nil
 }
 
+// SetAllowBearerTokens sets the "allow_bearer_tokens" field.
+func (m *OAuthAppMutation) SetAllowBearerTokens(b bool) {
+	m.allow_bearer_tokens = &b
+}
+
+// AllowBearerTokens returns the value of the "allow_bearer_tokens" field in the mutation.
+func (m *OAuthAppMutation) AllowBearerTokens() (r bool, exists bool) {
+	v := m.allow_bearer_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAllowBearerTokens returns the old "allow_bearer_tokens" field's value of the OAuthApp entity.
+// If the OAuthApp object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OAuthAppMutation) OldAllowBearerTokens(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAllowBearerTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAllowBearerTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAllowBearerTokens: %w", err)
+	}
+	return oldValue.AllowBearerTokens, nil
+}
+
+// ResetAllowBearerTokens resets all changes to the "allow_bearer_tokens" field.
+func (m *OAuthAppMutation) ResetAllowBearerTokens() {
+	m.allow_bearer_tokens = nil
+}
+
 // SetFirstParty sets the "first_party" field.
 func (m *OAuthAppMutation) SetFirstParty(b bool) {
 	m.first_party = &b
@@ -18614,7 +18651,7 @@ func (m *OAuthAppMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuthAppMutation) Fields() []string {
-	fields := make([]string, 0, 24)
+	fields := make([]string, 0, 25)
 	if m.client_id != nil {
 		fields = append(fields, oauthapp.FieldClientID)
 	}
@@ -18665,6 +18702,9 @@ func (m *OAuthAppMutation) Fields() []string {
 	}
 	if m.managed_principals_enabled != nil {
 		fields = append(fields, oauthapp.FieldManagedPrincipalsEnabled)
+	}
+	if m.allow_bearer_tokens != nil {
+		fields = append(fields, oauthapp.FieldAllowBearerTokens)
 	}
 	if m.first_party != nil {
 		fields = append(fields, oauthapp.FieldFirstParty)
@@ -18729,6 +18769,8 @@ func (m *OAuthAppMutation) Field(name string) (ent.Value, bool) {
 		return m.RefreshTokenRotation()
 	case oauthapp.FieldManagedPrincipalsEnabled:
 		return m.ManagedPrincipalsEnabled()
+	case oauthapp.FieldAllowBearerTokens:
+		return m.AllowBearerTokens()
 	case oauthapp.FieldFirstParty:
 		return m.FirstParty()
 	case oauthapp.FieldPublic:
@@ -18786,6 +18828,8 @@ func (m *OAuthAppMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldRefreshTokenRotation(ctx)
 	case oauthapp.FieldManagedPrincipalsEnabled:
 		return m.OldManagedPrincipalsEnabled(ctx)
+	case oauthapp.FieldAllowBearerTokens:
+		return m.OldAllowBearerTokens(ctx)
 	case oauthapp.FieldFirstParty:
 		return m.OldFirstParty(ctx)
 	case oauthapp.FieldPublic:
@@ -18927,6 +18971,13 @@ func (m *OAuthAppMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetManagedPrincipalsEnabled(v)
+		return nil
+	case oauthapp.FieldAllowBearerTokens:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAllowBearerTokens(v)
 		return nil
 	case oauthapp.FieldFirstParty:
 		v, ok := value.(bool)
@@ -19160,6 +19211,9 @@ func (m *OAuthAppMutation) ResetField(name string) error {
 		return nil
 	case oauthapp.FieldManagedPrincipalsEnabled:
 		m.ResetManagedPrincipalsEnabled()
+		return nil
+	case oauthapp.FieldAllowBearerTokens:
+		m.ResetAllowBearerTokens()
 		return nil
 	case oauthapp.FieldFirstParty:
 		m.ResetFirstParty()

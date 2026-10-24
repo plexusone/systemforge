@@ -38,6 +38,7 @@ func (f *introspectionFixture) token(client, secret, scope string) string {
 	form := url.Values{"grant_type": {"client_credentials"}, "client_id": {client}, "client_secret": {secret}, "scope": {scope}}
 	req := httptest.NewRequest(http.MethodPost, "/oauth/token", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	withTokenProof(f.t, req)
 	w := httptest.NewRecorder()
 	f.s.ServeHTTP(w, req)
 	var body map[string]any
@@ -77,9 +78,10 @@ func TestIntrospectionNeedsAnAuthorizedCaller(t *testing.T) {
 		wantActive bool
 	}{
 		"confidential client with Basic":  {func(r *http.Request) { r.SetBasicAuth("resource-server", "rs-secret") }, 200, true},
-		"token with the introspect scope": {func(r *http.Request) { r.Header.Set("Authorization", "Bearer "+rsToken) }, 200, true},
+		"token with the introspect scope": {dpopAuth(t, rsToken), 200, true},
+		"bound token sent as Bearer":      {func(r *http.Request) { r.Header.Set("Authorization", "Bearer "+rsToken) }, 401, false},
 		"no credentials":                  {func(*http.Request) {}, 401, false},
-		"any other access token":          {func(r *http.Request) { r.Header.Set("Authorization", "Bearer "+lowToken) }, 401, false},
+		"any other access token":          {dpopAuth(t, lowToken), 401, false},
 		"garbage bearer":                  {func(r *http.Request) { r.Header.Set("Authorization", "Bearer nonsense") }, 401, false},
 		"public client by id":             {func(r *http.Request) { r.SetBasicAuth("spa", "") }, 401, false},
 		"unknown client":                  {func(r *http.Request) { r.SetBasicAuth("ghost", "x") }, 401, false},

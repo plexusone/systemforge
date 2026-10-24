@@ -42,7 +42,7 @@ func TestDeactivatedPrincipalLosesTokens(t *testing.T) {
 	protected := s.Middleware()(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
 	call := func() int {
 		req := httptest.NewRequest(http.MethodGet, "/api", nil)
-		req.Header.Set("Authorization", "Bearer "+at)
+		dpopAuth(t, at)(req)
 		w := httptest.NewRecorder()
 		protected.ServeHTTP(w, req)
 		return w.Code

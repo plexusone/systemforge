@@ -55,16 +55,13 @@ func SharedSecretAuthenticator(secret string) FederationAuthenticator {
 	}
 }
 
-// TokenAuthenticator admits requests whose bearer token is a valid access
-// token of this server carrying scope.
+// TokenAuthenticator admits requests whose access token is a valid access
+// token of this server carrying scope: Bearer for an unbound token, DPoP
+// with a proof by its key for a DPoP-bound one.
 func (s *Server) TokenAuthenticator(scope string) FederationAuthenticator {
 	return func(r *http.Request) error {
-		token := fosite.AccessTokenFromRequest(r)
-		if token == "" {
-			return ErrFederationUnauthorized
-		}
-		ar, err := s.introspect(r.Context(), token, fosite.AccessToken, s.Session(""))
-		if err != nil || !ar.GetGrantedScopes().Has(scope) {
+		ar, authErr := s.authenticateAccessToken(r, s.requestURL(r))
+		if authErr != nil || !ar.GetGrantedScopes().Has(scope) {
 			return ErrFederationUnauthorized
 		}
 		return nil

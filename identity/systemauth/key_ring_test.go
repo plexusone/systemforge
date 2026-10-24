@@ -56,6 +56,7 @@ func clientCredentialsToken(t *testing.T, s *Server) string {
 	form := url.Values{"grant_type": {"client_credentials"}, "client_id": {"svc"}, "client_secret": {"svc-secret"}, "scope": {"read"}}
 	req := httptest.NewRequest(http.MethodPost, "/oauth/token", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	withTokenProof(t, req)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	var body map[string]any

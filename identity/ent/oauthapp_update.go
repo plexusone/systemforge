@@ -303,6 +303,20 @@ func (_u *OAuthAppUpdate) SetNillableManagedPrincipalsEnabled(v *bool) *OAuthApp
 	return _u
 }
 
+// SetAllowBearerTokens sets the "allow_bearer_tokens" field.
+func (_u *OAuthAppUpdate) SetAllowBearerTokens(v bool) *OAuthAppUpdate {
+	_u.mutation.SetAllowBearerTokens(v)
+	return _u
+}
+
+// SetNillableAllowBearerTokens sets the "allow_bearer_tokens" field if the given value is not nil.
+func (_u *OAuthAppUpdate) SetNillableAllowBearerTokens(v *bool) *OAuthAppUpdate {
+	if v != nil {
+		_u.SetAllowBearerTokens(*v)
+	}
+	return _u
+}
+
 // SetFirstParty sets the "first_party" field.
 func (_u *OAuthAppUpdate) SetFirstParty(v bool) *OAuthAppUpdate {
 	_u.mutation.SetFirstParty(v)
@@ -712,6 +726,9 @@ func (_u *OAuthAppUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.ManagedPrincipalsEnabled(); ok {
 		_spec.SetField(oauthapp.FieldManagedPrincipalsEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.AllowBearerTokens(); ok {
+		_spec.SetField(oauthapp.FieldAllowBearerTokens, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.FirstParty(); ok {
 		_spec.SetField(oauthapp.FieldFirstParty, field.TypeBool, value)
@@ -1262,6 +1279,20 @@ func (_u *OAuthAppUpdateOne) SetNillableManagedPrincipalsEnabled(v *bool) *OAuth
 	return _u
 }
 
+// SetAllowBearerTokens sets the "allow_bearer_tokens" field.
+func (_u *OAuthAppUpdateOne) SetAllowBearerTokens(v bool) *OAuthAppUpdateOne {
+	_u.mutation.SetAllowBearerTokens(v)
+	return _u
+}
+
+// SetNillableAllowBearerTokens sets the "allow_bearer_tokens" field if the given value is not nil.
+func (_u *OAuthAppUpdateOne) SetNillableAllowBearerTokens(v *bool) *OAuthAppUpdateOne {
+	if v != nil {
+		_u.SetAllowBearerTokens(*v)
+	}
+	return _u
+}
+
 // SetFirstParty sets the "first_party" field.
 func (_u *OAuthAppUpdateOne) SetFirstParty(v bool) *OAuthAppUpdateOne {
 	_u.mutation.SetFirstParty(v)
@@ -1701,6 +1732,9 @@ func (_u *OAuthAppUpdateOne) sqlSave(ctx context.Context) (_node *OAuthApp, err 
 	}
 	if value, ok := _u.mutation.ManagedPrincipalsEnabled(); ok {
 		_spec.SetField(oauthapp.FieldManagedPrincipalsEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.AllowBearerTokens(); ok {
+		_spec.SetField(oauthapp.FieldAllowBearerTokens, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.FirstParty(); ok {
 		_spec.SetField(oauthapp.FieldFirstParty, field.TypeBool, value)

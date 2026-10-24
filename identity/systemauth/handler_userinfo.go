@@ -3,9 +3,7 @@ package systemauth
 import (
 	"context"
 	"encoding/json"
-	"mime"
 	"net/http"
-	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/ory/fosite"
@@ -59,29 +57,8 @@ func UserInfoClaims(subject string, claims map[string]any, granted []string) map
 	return out
 }
 
-// bearerToken extracts an access token per RFC 6750 §2.1 (Authorization
-// header) or §2.2 (form-encoded POST body). Query parameters are not
-// accepted.
-func bearerToken(r *http.Request) string {
-	if auth := r.Header.Get("Authorization"); auth != "" {
-		scheme, token, ok := strings.Cut(auth, " ")
-		if ok && strings.EqualFold(scheme, "Bearer") {
-			return strings.TrimSpace(token)
-		}
-		return ""
-	}
-	if r.Method == http.MethodPost {
-		ct, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		if err == nil && ct == "application/x-www-form-urlencoded" {
-			return r.PostFormValue("access_token")
-		}
-	}
-	return ""
-}
-
-// writeBearerError writes an RFC 6750 §3 error with its WWW-Authenticate
-// challenge.
-func writeBearerError(w http.ResponseWriter, status int, code, description, scope string) {
+// bearerChallenge is an RFC 6750 §3 Bearer challenge.
+func bearerChallenge(code, description, scope string) string {
 	challenge := `Bearer realm="systemauth"`
 	if code != "" {
 		challenge += `, error="` + code + `"`
@@ -92,7 +69,35 @@ func writeBearerError(w http.ResponseWriter, status int, code, description, scop
 	if scope != "" {
 		challenge += `, scope="` + scope + `"`
 	}
-	w.Header().Set("WWW-Authenticate", challenge)
+	return challenge
+}
+
+// writeBearerError writes an RFC 6750 §3 error with its WWW-Authenticate
+// challenge.
+func writeBearerError(w http.ResponseWriter, status int, code, description, scope string) {
+	writeChallengeError(w, status, []string{bearerChallenge(code, description, scope)}, code, description)
+}
+
+// writeScopeError writes a 403 insufficient_scope error for the access
+// token of ar, challenging with the scheme the token is used with.
+func writeScopeError(w http.ResponseWriter, ar fosite.AccessRequester, description, scope string) {
+	if sess, ok := ar.GetSession().(*Session); ok && sess.DPoPJKT != "" {
+		c := dpopChallenge("insufficient_scope", description)
+		if scope != "" {
+			c += `, scope="` + scope + `"`
+		}
+		writeChallengeError(w, http.StatusForbidden, []string{c}, "insufficient_scope", description)
+		return
+	}
+	writeBearerError(w, http.StatusForbidden, "insufficient_scope", description, scope)
+}
+
+// writeChallengeError writes an error response with WWW-Authenticate
+// challenges and, when code is set, an error body.
+func writeChallengeError(w http.ResponseWriter, status int, challenges []string, code, description string) {
+	for _, c := range challenges {
+		w.Header().Add("WWW-Authenticate", c)
+	}
 	w.Header().Set("Cache-Control", "no-store")
 	if code == "" {
 		w.WriteHeader(status)
@@ -113,22 +118,16 @@ func (s *Server) userinfoEndpoint(w http.ResponseWriter, r *http.Request) {
 	logger := LoggerFromContext(ctx)
 
 	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
-	token := bearerToken(r)
-	if token == "" {
-		writeBearerError(w, http.StatusUnauthorized, "", "", "")
-		return
-	}
-
-	ar, err := s.introspect(ctx, token, fosite.AccessToken, s.Session(""))
-	if err != nil {
-		logger.Debug("userinfo: invalid access token", "error", err)
-		writeBearerError(w, http.StatusUnauthorized, "invalid_token", "The access token is invalid, expired or revoked.", "")
+	ar, authErr := s.authenticateAccessToken(r, s.endpointURL(UserInfoPath))
+	if authErr != nil {
+		logger.Debug("userinfo: access token refused", "error", authErr)
+		s.writeTokenAuthError(w, authErr)
 		return
 	}
 	granted := ar.GetGrantedScopes()
 	subject := sessionSubject(ar.GetSession())
 	if !granted.Has("openid") || subject == "" {
-		writeBearerError(w, http.StatusForbidden, "insufficient_scope", "The access token was not granted the openid scope.", "openid")
+		writeScopeError(w, ar, "The access token was not granted the openid scope.", "openid")
 		return
 	}
 
@@ -149,7 +148,7 @@ func (s *Server) userinfoEndpoint(w http.ResponseWriter, r *http.Request) {
 
 // UserInfoInput documents the UserInfo request for OpenAPI.
 type UserInfoInput struct {
-	Authorization string `header:"Authorization" doc:"Bearer access token granted the openid scope"`
+	Authorization string `header:"Authorization" doc:"DPoP <token> for a DPoP-bound access token (with a DPoP proof header), or Bearer <token> for an unbound one; granted the openid scope"`
 }
 
 // UserInfoOutput documents the UserInfo response for OpenAPI.
@@ -165,7 +164,7 @@ func (s *Server) registerUserInfoOperation() {
 		Method:      http.MethodGet,
 		Path:        UserInfoPath,
 		Summary:     "OpenID Connect UserInfo",
-		Description: "Returns claims about the authenticated end-user for a bearer access token granted the openid scope (OIDC Core 5.3). Standard claims are released per granted scope: email (email, email_verified), profile (name, picture, ...). Invalid tokens get 401 with a WWW-Authenticate challenge.",
+		Description: "Returns claims about the authenticated end-user for an access token granted the openid scope (OIDC Core 5.3); a DPoP-bound token needs the DPoP scheme and a DPoP proof (RFC 9449). Standard claims are released per granted scope: email (email, email_verified), profile (name, picture, ...). Invalid tokens get 401 with a WWW-Authenticate challenge.",
 		Tags:        []string{"OpenID Connect"},
 	}, func(_ context.Context, _ *UserInfoInput) (*UserInfoOutput, error) {
 		return &UserInfoOutput{}, nil

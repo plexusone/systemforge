@@ -22,6 +22,7 @@ import (
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
 	"github.com/plexusone/systemforge/identity/credential"
+	"github.com/plexusone/systemforge/identity/dpopproof"
 	"github.com/plexusone/systemforge/observability"
 )
 
@@ -34,6 +35,8 @@ type Server struct {
 	key             *rsa.PrivateKey
 	keyID           string
 	keys            *keyRing
+	dpop            *dpopproof.Checker
+	dpopCache       dpopproof.ReplayCache
 	huma            huma.API
 	router          chi.Router
 	logger          *slog.Logger
@@ -134,8 +137,11 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 	}
 	s.keys = newKeyRing(key, s.keyID, s.config.Keys.VerificationKeys)
 
-	// Set up Fosite
+	// Set up Fosite and DPoP proof checking
 	if err := s.setupFosite(); err != nil {
+		return nil, err
+	}
+	if err := s.setupDPoP(); err != nil {
 		return nil, err
 	}
 
@@ -457,7 +463,10 @@ func (s *Server) LoginTokenPolicy(ctx context.Context, clientID string) (credent
 }
 
 // Middleware returns HTTP middleware that validates access tokens.
-// Use this to protect your API endpoints.
+// Use this to protect your API endpoints. A DPoP-bound token is accepted
+// only with the DPoP scheme and a proof by its key whose htu is the
+// issuer's origin plus the request path; an unbound one only with the
+// Bearer scheme.
 //
 // Example:
 //
@@ -468,22 +477,12 @@ func (s *Server) Middleware() func(http.Handler) http.Handler {
 			ctx := r.Context()
 			logger := LoggerFromContext(ctx)
 
-			// Extract token from Authorization header
-			token := fosite.AccessTokenFromRequest(r)
-			if token == "" {
-				logger.Debug("missing access token", "path", r.URL.Path)
-				http.Error(w, "missing access token", http.StatusUnauthorized)
-				return
-			}
-
-			// Create session for introspection
-			session := s.Session("")
-
-			// Validate the token
-			ar, err := s.introspect(ctx, token, fosite.AccessToken, session)
-			if err != nil {
-				logger.Debug("invalid access token", "path", r.URL.Path, "error", err)
-				http.Error(w, "invalid access token", http.StatusUnauthorized)
+			// Validate the token: a DPoP-bound one needs the DPoP scheme and
+			// a proof by its key for this request.
+			ar, authErr := s.authenticateAccessToken(r, s.requestURL(r))
+			if authErr != nil {
+				logger.Debug("access token refused", "path", r.URL.Path, "error", authErr)
+				s.writeTokenAuthError(w, authErr)
 				return
 			}
 
