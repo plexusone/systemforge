@@ -295,6 +295,8 @@ authz:
     endpoint: spicedb.internal:50051
     token: ${SPICEDB_TOKEN}
     write_schema: false  # remote only: write the composed schema at startup
+  reconcile:             # rebac only; defaults shown
+    interval: 15m
 ```
 
 | Key | Meaning |
@@ -303,6 +305,7 @@ authz:
 | `engine` | The relationship engine, for `rebac` only; `spicedb` is the only one today and the default. Giving it with `rbac` is an error, so a leftover setting is not silently ignored |
 | `spicedb.mode` | `embedded` runs an instance in the process (`datastore_engine` `memory` or `postgres` with `datastore_uri`); `remote` connects to `endpoint` with `token`, over TLS unless `insecure` |
 | `spicedb.write_schema` | Embedded instances always get the composed schema (they start empty). A remote instance's schema is an operational decision, so it is written only when this is set |
+| `reconcile` | The graph reconciler of `rebac` (`disabled`, `skip_startup`, `interval`, `jitter`, `page_size`). By default it runs at startup and every 15 minutes with up to a tenth added at random. Giving it with `rbac` is an error |
 
 `authz/mode.New(ctx, cfg, Deps{DB, Registry, ...})` builds the provider
 from it: it applies the defaults, validates, and for `rebac` starts or
@@ -311,29 +314,64 @@ vocabularies. It returns a `mode.Result` carrying `Provider` (an
 `authz.Provider`: `PlatformAuthorizer` and `ResourceGranter`), the `Syncer`
 to pass to the identity services (the no-op syncer for `rbac`, which reads
 the tables at check time; the engine's for `rebac`), the grant store `Grants`
-(`invite.WithResourceGrants`) and `Close()`. The package is separate from
+(`invite.WithResourceGrants`), for `rebac` the graph `Reconciler` and its
+`Schedule` (`RunReconciler` runs it), and `Close()`. The package is separate from
 `authz` because both providers import it, and so that loading a
 configuration file does not link the SpiceDB server: `authz.SpiceDBConfig`
 is the engine's configuration type (`spicedb.Config` is an alias).
 
 The membership, role and grant tables are the record in both modes. Under
 `rebac` the identity services mirror each change into the graph as it is
-made (organization memberships, application roles, resource grants), so a
-deployment that switches from `rbac` starts with an empty graph: write the
-existing rows through the syncer before the first request is served. No
-bulk rebuild command ships yet.
+made (organization memberships, application roles, resource grants), and
+the reconciler repairs the graph from the tables. A deployment that
+switches from `rbac` starts with an empty graph, which the reconciler's
+startup run fills; run `Reconciler.Reconcile` before serving the first
+request.
 
 ## Keeping providers in step with identity
 
 Identity changes reach the authorization backend through
-`authz.RelationshipSyncer`, called explicitly by the services after their
-database transaction commits; there are no Ent hooks.
+`authz.RelationshipSyncer`, called explicitly by the services; there are no
+Ent hooks. The order is chosen so the graph never grants more than the
+tables record:
+
+- **Revocations remove first.** A change that ends access (removing or
+  deactivating a membership, a role change, removing an application role,
+  resource grant, manager or platform administration, lowering a grant,
+  deleting an organization or managed principal) removes the relationship
+  inside its database transaction, after the database change and before
+  the commit, holding the graph lock (`identity/graphlock`) of the
+  principal or organization. When the graph refuses, the transaction rolls
+  back and the error is returned whatever the `SyncMode`; nothing changed,
+  so the call is retried as is. Removing an absent relationship succeeds.
+- **Grants write after.** A change that grants access commits and then
+  writes the relationship; `authz.SyncMode` decides whether a failed write
+  is returned (`strict`) or logged (`eventual`, the default).
+- **The reconciler repairs.** `mode.Reconciler` compares the graph with the
+  tables, writes missing relationships and deletes stale ones. What it
+  repairs is always missing access (a failed grant write, a revocation
+  whose commit failed after the graph change) or a stale relationship left
+  when a grant and a revocation of the same access raced.
+
+The reconciler handles one definition at a time (`organization`,
+`platform`, `principal`, each `{app}_org` facet, each collaborator
+resource type) and manages only the relations the services write. It reads
+the graph, as one paged snapshot, before the tables, so a grant committed
+during the run is in the tables and its relationship is not deleted. It
+re-reads the rows of every relationship it deletes and writes back one a
+grant committed in between. It writes a missing relationship only inside a
+transaction holding the same graph locks as the revocations, after reading
+the rows again, so it cannot restore what a revocation in progress removed.
+The locks are PostgreSQL advisory locks; SQLite has none, so there the
+reconciler does not serialize with revocations.
 
 | Caller | Syncer calls |
 |---|---|
-| `organization.Service` | `RegisterOrganization` (create), `AddOrgMembership`, `UpdateOrgMembership` (role change, both sides of an ownership transfer), `RemoveOrgMembership`, `UnregisterOrganization` (delete) |
-| `approle.Service` (with `WithAuthzSyncer`) | `AddAppRole` (assign, and the new role of a change), `RemoveAppRole` (remove, the old role of a change, `RemoveForMember`) |
-| `managedprincipal.Service` | `RegisterPrincipal`, `AddPrincipalManager`, `RemovePrincipalManager` |
+| `organization.Service` | After commit: `RegisterOrganization` (create), `AddOrgMembership` (add, reactivation, the new role of a role change or transfer), `UpdateOrgMembership` (the new owner of a transfer). Before commit: `RemoveOrgMembership` (removal, deactivation, the old role of a role change, the previous owner of a transfer), `UnregisterOrganization` with the members' `RemoveAppRole` and `RemoveResourceGrant` (delete) |
+| `approle.Service` (with `WithAuthzSyncer`) | After commit: `AddAppRole` (assign, and the new role of a change). Before commit: `RemoveAppRole` (remove, the old role of a change, `RemoveForMember`) |
+| `resourcegrant.Service` | After commit: `AddOrgMembership` (collaborator), `SetResourceGrant` (new or raised grant). Before commit: `SetResourceGrant` (lowered grant), `RemoveResourceGrant` and the collaborator's `RemoveOrgMembership` (revoke) |
+| `principal.Service` | After commit: `RegisterPrincipal`, `SetPlatformAdmin(true)`. Before commit: `SetPlatformAdmin(false)` |
+| `managedprincipal.Service` | After commit: `RegisterPrincipal`, `AddPrincipalManager`. Before commit: `RemovePrincipalManager` (remove, release, delete), `UnregisterPrincipal` with the memberships' `RemoveAppRole` and `RemoveResourceGrant` (delete) |
 | `marketplace` (`marketplace.AuthzSyncer`, `SpiceDBSyncer`) | Listing, license, license revocation, seat assignment and unassignment, subscription relationships |
 
 `AddAppRole` and `RemoveAppRole` belong to the optional interface
@@ -345,16 +383,18 @@ is not an `AppRoleSyncer`. `spicedb.Syncer` writes
 application's schema fragment attaches to the base organization; an
 application identifier that is not a valid app name is refused. An owner's
 implicit `admin` is not a stored role and is not written; an application's
-schema fragment must derive it from the owner relation. `organization.Service.RemoveMember` removes the member's
-application roles from the graph after its transaction commits; SCIM group
-member removal deletes the rows but, like its membership changes, makes no
-syncer call.
+schema fragment must derive it from the owner relation.
+`organization.Service.RemoveMember` removes the member's application roles
+and resource grants from the graph inside its transaction, before the
+commit. SCIM changes memberships and groups through the organization
+service, so the same order applies.
 
-`invite.Service.Accept` writes the membership directly and makes no syncer
-call. `authz.SyncMode` decides what a sync failure does: `strict` returns
-it, `eventual` (the default) logs it. `noop.NewSyncer()` is the default
-syncer and what a role-based deployment uses, since `rbac` reads the
-membership and relationship tables through its getters at check time.
+`invite.Service.Accept` writes the membership directly and makes its syncer
+calls after the commit. `authz.SyncMode` decides what a failed write of
+granted access does: `strict` returns it, `eventual` (the default) logs it.
+A failed removal always fails the revocation. `noop.NewSyncer()` is the
+default syncer and what a role-based deployment uses, since `rbac` reads
+the membership and relationship tables through its getters at check time.
 
 `authz.Middleware` (`RequireAction`, `RequireAnyAction`,
 `RequireAllActions`) adapts an `Authorizer` to HTTP, building the principal

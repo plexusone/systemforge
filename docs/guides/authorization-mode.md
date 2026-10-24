@@ -22,6 +22,8 @@ authz:
     endpoint: spicedb.internal:50051
     token: ${SPICEDB_TOKEN}
     write_schema: false  # remote only
+  reconcile:             # rebac only
+    interval: 15m        # 0 reconciles only at startup
 ```
 
 | Key | Default | Meaning |
@@ -34,6 +36,11 @@ authz:
 | `spicedb.endpoint`, `spicedb.token` | | Remote only; `endpoint` required |
 | `spicedb.insecure` | `false` | Remote without TLS; development only |
 | `spicedb.write_schema` | `false` | Remote only: write the composed schema at startup. Embedded instances always get it |
+| `reconcile.disabled` | `false` | `rebac` only: turn the graph reconciler off |
+| `reconcile.skip_startup` | `false` | Do not reconcile at startup |
+| `reconcile.interval` | `15m` | Time between reconciliations (Go duration); `0` for startup only |
+| `reconcile.jitter` | a tenth of the interval | Most added at random to each interval |
+| `reconcile.page_size` | `500` | Rows or relationships read per request |
 
 ## Building the provider
 
@@ -49,29 +56,78 @@ invites := invite.NewService(db, baseURL,
 
 `mode.New` applies defaults, validates, and for `rebac` starts or connects to
 the engine and writes the schema composed from the registered vocabularies.
-`Result` carries `Provider`, `Syncer`, `Grants` and `Close()`. The
-membership, role and grant tables remain the record in both modes; under
-`rebac` the services mirror each change into the graph.
+`Result` carries `Provider`, `Syncer`, `Grants`, `Reconciler`, `Schedule`
+and `Close()`. The membership, role and grant tables remain the record in
+both modes; under `rebac` the services mirror each change into the graph.
 
-`Deps` also takes `SyncMode` (`strict` returns a graph write failure,
-`eventual`, the default, logs it), `AccessChangeSink`, `Logger`,
-`PlatformAdmin`, `ManagerRoles` and `RBACOptions`.
+`Deps` also takes `SyncMode` (what a failed write of granted access does:
+`strict` returns it, `eventual`, the default, logs it), `AccessChangeSink`,
+`Logger`, `PlatformAdmin`, `ManagerRoles` and `RBACOptions`.
 
-!!! warning "Failed revocations under `rebac`"
-    The services commit the database change before writing the graph, and
-    nothing retries a failed write. Under `rebac` the graph answers every
-    check, so a failed revocation (a removed membership, application role,
-    resource grant or platform admin) leaves the access in place while the
-    database shows it revoked. `strict` reports the failure to the caller
-    but keeps the database change. Use `strict` under `rebac`, monitor the
-    failures, and repair the graph from the identity tables, as when
-    switching modes below.
+## Keeping the graph consistent under `rebac`
+
+Under `rebac` the graph answers every check, so it must never grant more
+than the tables record.
+
+- **Revocations remove first.** Removing or deactivating a membership,
+  lowering a role, removing an application role, resource grant, manager
+  or platform administration, and deleting an organization or managed
+  principal remove the relationship inside the database transaction,
+  before the commit. If the graph refuses, the transaction rolls back and
+  the call returns the error, in both sync modes. Nothing has changed, so
+  the caller retries the same call; removing a relationship that is
+  already gone succeeds.
+- **Grants write after.** Adding a member, assigning a role or granting a
+  resource commits first and then writes the graph. A failed write is
+  returned (`strict`) or logged (`eventual`); the access is missing, not
+  extra.
+- **The reconciler repairs the rest.** `Result.Reconciler` compares the
+  graph with the tables and writes what is missing and deletes what is
+  stale: a grant whose write failed, a relationship a revocation removed
+  before its commit failed, or a grant and a revocation of the same access
+  that raced. It runs at startup and every 15 minutes by default; run it
+  with `res.RunReconciler(ctx)` beside the application (the packaged
+  SystemAuth service runs it from `RunJobs`), or on demand with
+  `res.Reconciler.Reconcile(ctx)`.
+
+```go
+go func() {
+    if err := res.RunReconciler(ctx); err != nil {
+        logger.Error("graph reconciler stopped", "error", err)
+    }
+}()
+```
+
+The reconciler manages only the relationships the identity services write:
+organization memberships, platform administration, manager relations,
+application roles on `{app}_org` facets and resource grants on collaborator
+resource types. It does not touch other relationships, such as the `org`
+relation an application writes on its resources. Inactive memberships and
+deleted organizations call for no relationships.
+
+It is safe to run beside normal traffic and on several instances at once.
+It reads the graph before the tables, so a grant committed meanwhile is not
+deleted; it re-reads the rows of every relationship it deletes and writes
+back one a grant committed in the meantime; and it writes a missing
+relationship only while holding the same lock a revocation holds, after
+reading the rows again, so it cannot restore what a revocation in progress
+removed. The lock is a PostgreSQL advisory lock; on SQLite the reconciler
+does not serialize with revocations.
+
+Each run logs a summary at info level with counts only (`checked`,
+`desired`, `added`, `removed`, `restored`, `skipped`); the relationships
+changed, with their identifiers, are logged at debug level.
+`Reconcile` returns a `ReconcileResult` with the counts per definition, and
+`Reconciler.Stats()` the running totals and last error, for metrics and
+alerts. Drift on every run points at failing grant writes.
 
 ## Switching from `rbac` to `rebac`
 
-A deployment that switches starts with an empty graph. Write the existing
-memberships, application roles and grants through the syncer before serving
-the first request; no bulk rebuild command ships yet.
+A deployment that switches starts with an empty graph. The reconciler's
+startup run writes the existing memberships, application roles, grants,
+managers and platform administrators from the tables; let it finish before
+serving the first request, by calling `res.Reconciler.Reconcile(ctx)` before
+starting the server.
 
 ## Errors
 
@@ -83,6 +139,8 @@ Configuration errors name the key and the accepted values and wrap
 | `authz: unknown mode "..." (want rbac or rebac)` | Mode misspelled |
 | `authz: engine "..." is set but mode is rbac` | Engine given with `rbac` |
 | `authz: spicedb settings are given but mode is rbac` | SpiceDB block with `rbac` |
+| `authz: reconcile settings are given but mode is rbac` | Reconcile block with `rbac` |
+| `authz: reconcile.interval "..."` | Interval or jitter not a Go duration, or negative |
 | `authz: unknown engine "..." for mode rebac` | Engine not supported |
 | `authz: spicedb.mode remote requires spicedb.endpoint` | Remote without an endpoint |
 | `authz: spicedb.endpoint and spicedb.token apply to spicedb.mode remote, not embedded` | Remote keys on an embedded instance |

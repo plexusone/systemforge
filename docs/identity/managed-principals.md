@@ -397,8 +397,10 @@ definition principal {
 }
 ```
 
-With `WithAuthzSyncer`, every committed relationship change is written to
-the authorization backend. The simple provider stores nothing; configure it
+With `WithAuthzSyncer`, every relationship change is written to the
+authorization backend: removals inside the transaction, before the commit,
+so a backend failure leaves the manager in place and is returned; additions
+after the commit. The simple provider stores nothing; configure it
 with `simple.WithManagerRoleGetter(svc.ManagerRoles)` and it applies the
 same table, so both providers agree.
 

@@ -146,9 +146,14 @@ back. There is no HTTP endpoint for the conversion yet.
 ### Service (`identity/organization`)
 
 `organization.Service` is implemented by `DefaultService` over Ent, with an
-`authz.RelationshipSyncer` (default `noop`) and an `authz.SyncMode`
-(`strict` fails the call on a sync error after the database commit;
-`eventual`, the default, logs it).
+`authz.RelationshipSyncer` (default `noop`) and an `authz.SyncMode`.
+Changes that end access (`RemoveMember`, a deactivation or role change in
+`UpdateMember`, `TransferOwnership`, `Delete`) remove the relationships
+from the graph inside their transaction, before the commit, and roll back
+with the error when the graph refuses, whatever the mode; the call can then
+be retried as is. Granted relationships are written after the commit:
+`strict` fails the call on a sync error, `eventual`, the default, logs it.
+See [Keeping providers in step with identity](authorization.md#keeping-providers-in-step-with-identity).
 
 | Method | Behavior |
 |---|---|
@@ -506,8 +511,8 @@ implements `authz.ResourceGranter` and `authz.ResourceGrantReader`:
 | Method | Behavior |
 |---|---|
 | `GrantResourceRole(principal, ref, role, by)` | Validates the role, the reference and, with `WithVocabularies`, that the type belongs to a registered application. In one transaction: gives the principal a `collaborator` membership when it has none in the organization (reactivating a deactivated collaborator; a deactivated member of another role is refused with `ErrInactiveMembership`), and creates the grant or replaces its role. Lowering a role records `grant_reduced`. A resource belongs to one organization: a grant naming another one for a resource that already has grants is refused with `ErrResourceOrganizationMismatch` |
-| `GrantInTx(tx, ...)` | The same inside the caller's transaction, returning the function to call after commit (publishes the access changes and syncs); for flows that create membership and grant together, such as accepting an invitation |
-| `RevokeResourceRole(principal, ref)` | Deletes the grant and records `grant_reduced`; when it was the principal's last grant in the organization and the membership is a `collaborator`'s, deletes the membership and records `membership_removed`. `ErrGrantNotFound` when there is none |
+| `GrantInTx(tx, ...)` | The same inside the caller's transaction, returning the function to call after commit (publishes the access changes and syncs); for flows that create membership and grant together, such as accepting an invitation. A grant lowered to a lesser role is replaced in the graph before the caller commits, and its failure is returned so the caller rolls back |
+| `RevokeResourceRole(principal, ref)` | Deletes the grant and records `grant_reduced`; when it was the principal's last grant in the organization and the membership is a `collaborator`'s, deletes the membership and records `membership_removed`. Both leave the graph before the commit; a graph failure rolls the revocation back and is returned. `ErrGrantNotFound` when there is none |
 | `ListResourceGrants(ref)` | The grants on a resource, highest role first |
 | `ListResources(principal, type, permission)` | Resource identifiers on which a grant gives the principal `view`, `edit` or `manage`, in organizations where its membership is active |
 | `ResourceRole(principal, ref)` | The principal's role through a grant, or empty when it has none or its membership is inactive |
