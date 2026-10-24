@@ -76,6 +76,11 @@ func AuthMiddleware(cfg MiddlewareConfig) func(http.Handler) http.Handler {
 			} else {
 				claims, err = cfg.JWTService.ValidateAccessToken(token)
 			}
+			// This middleware takes Bearer tokens only and verifies no DPoP
+			// proof, so a DPoP-bound token must not pass as a bearer token.
+			if err == nil && claims.IsDPoPBound() {
+				err = middleware.ErrDPoPProofRequired
+			}
 			if err != nil {
 				handleAuthError(w, r, cfg.OnError, err)
 				return

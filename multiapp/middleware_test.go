@@ -110,3 +110,19 @@ func TestAuthMiddleware_AllowCrossAppTokens(t *testing.T) {
 		}
 	}
 }
+
+// A DPoP-bound token must not pass as a bearer token: this middleware
+// verifies no DPoP proof.
+func TestAuthMiddleware_RejectsDPoPBoundToken(t *testing.T) {
+	svc := newAppTokenService(t)
+	cfg := MiddlewareConfig{JWTService: svc, RequireAuth: true}
+
+	bound, err := svc.GenerateAccessTokenWithOptions(uuid.New(), "u@example.com", "U",
+		jwt.TokenOptions{Audience: []string{"a"}, DPoPThumbprint: "test-thumbprint"})
+	if err != nil {
+		t.Fatalf("GenerateAccessTokenWithOptions: %v", err)
+	}
+	if got := serveAs(t, cfg, "a", bound); got != http.StatusUnauthorized {
+		t.Errorf("DPoP-bound token as Bearer: status %d, want 401", got)
+	}
+}
