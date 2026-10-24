@@ -93,6 +93,28 @@ passed to `WithProviderPasswordVerifier`. Every other method, `AuthMethodOIDC`
 included, returns `ErrUnsupportedAuthMethod`: OIDC sign-in goes through social
 login or federation, which verify the upstream token themselves.
 
+### Password Attempt Lockout
+
+Password authentication limits failed attempts per identifier with an
+`identity/security` lockout: after `MaxAttempts` failures (default 5 within
+15 minutes) the identifier is locked for 15 minutes and `Authenticate`
+returns `ErrAccountLocked`, even for the right password. Unknown identifiers
+lock the same way, and rejecting an unknown or inactive account costs a
+password hash verification, so neither errors nor timing reveal which
+accounts exist.
+
+The default lockout is in memory. Share it between instances, or change its
+limits, with `WithProviderLockout`; `WithProviderLockout(nil)` turns it off
+for deployments that limit attempts elsewhere:
+
+```go
+lockout := security.NewLockout(security.NewRedisLockoutStore(redisClient))
+providers := systemauth.NewProviders(server,
+    systemauth.WithProviderPasswordVerifier(creds.VerifyPassword),
+    systemauth.WithProviderLockout(lockout),
+)
+```
+
 ### Example Usage
 
 ```go

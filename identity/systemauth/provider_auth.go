@@ -5,11 +5,15 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+
+	sfidentity "github.com/plexusone/systemforge/identity"
+	"github.com/plexusone/systemforge/identity/security"
 )
 
 // Common authentication errors.
@@ -24,6 +28,15 @@ var (
 	// supported; OIDC sign-in goes through social login or federation,
 	// which verify the upstream token themselves.
 	ErrUnsupportedAuthMethod = errors.New("unsupported authentication method")
+
+	// ErrPasswordAuthNotConfigured is returned for password authentication
+	// when the provider has no password verifier.
+	ErrPasswordAuthNotConfigured = errors.New("password authentication not configured")
+
+	// ErrAccountLocked is returned when too many failed password attempts
+	// were made for an identifier. Identifiers lock whether or not an
+	// account exists, so the error does not reveal which accounts do.
+	ErrAccountLocked = security.ErrAccountLocked
 )
 
 // EmbeddedAuthProvider implements AuthenticationProvider with in-memory session storage.
@@ -38,6 +51,10 @@ type EmbeddedAuthProvider struct {
 	// passwordVerifier is called to verify passwords.
 	// If nil, password authentication is disabled.
 	passwordVerifier func(ctx context.Context, identityID uuid.UUID, password string) (bool, error)
+
+	// lockout limits failed password attempts per identifier. Nil turns
+	// the limit off.
+	lockout *security.Lockout
 }
 
 type storedSession struct {
@@ -62,6 +79,17 @@ func WithPasswordVerifier(verifier func(ctx context.Context, identityID uuid.UUI
 	}
 }
 
+// WithLockout sets the lockout that limits failed password attempts per
+// identifier. The default is an in-memory lockout with
+// security.DefaultLockoutConfig; pass one over shared storage, such as
+// security.NewRedisLockoutStore, when several instances serve logins. Nil
+// turns the limit off, for deployments that limit attempts elsewhere.
+func WithLockout(l *security.Lockout) EmbeddedAuthProviderOption {
+	return func(p *EmbeddedAuthProvider) {
+		p.lockout = l
+	}
+}
+
 // NewEmbeddedAuthProvider creates an AuthenticationProvider with in-memory sessions.
 func NewEmbeddedAuthProvider(identityProvider IdentityProvider, opts ...EmbeddedAuthProviderOption) *EmbeddedAuthProvider {
 	p := &EmbeddedAuthProvider{
@@ -69,6 +97,7 @@ func NewEmbeddedAuthProvider(identityProvider IdentityProvider, opts ...Embedded
 		sessions:         make(map[string]*storedSession),
 		sessionsByUser:   make(map[uuid.UUID][]string),
 		sessionDuration:  24 * time.Hour,
+		lockout:          security.NewLockout(security.NewMemoryLockoutStore()),
 	}
 
 	for _, opt := range opts {
@@ -81,42 +110,98 @@ func NewEmbeddedAuthProvider(identityProvider IdentityProvider, opts ...Embedded
 	return p
 }
 
-// Authenticate implements AuthenticationProvider.
+// Authenticate implements AuthenticationProvider. Only AuthMethodPassword
+// is supported.
+//
+// Failed password attempts count against the identifier's lockout whether
+// or not an account exists, and an unknown or inactive account costs a
+// password hash verification like a wrong password does, so neither the
+// errors nor the timing say which email addresses have accounts.
 func (p *EmbeddedAuthProvider) Authenticate(ctx context.Context, req *AuthenticateRequest) (*AuthSession, error) {
-	// Look up identity by identifier (email). Managed principals have no
-	// email and no password, so an empty identifier never signs in.
+	// Managed principals have no email and no password, so an empty
+	// identifier never signs in.
 	if strings.TrimSpace(req.Identifier) == "" {
 		return nil, ErrInvalidCredentials
 	}
-	identity, err := p.identityProvider.GetIdentityByEmail(ctx, req.Identifier)
-	if err != nil {
-		return nil, ErrInvalidCredentials
-	}
-
-	if identity.State != IdentityStateActive {
-		return nil, ErrInvalidCredentials
-	}
-
-	// Verify credentials based on method
-	switch req.Method {
-	case AuthMethodPassword:
-		if p.passwordVerifier == nil {
-			return nil, errors.New("password authentication not configured")
-		}
-		valid, err := p.passwordVerifier(ctx, identity.ID, req.Password)
-		if err != nil || !valid {
-			return nil, ErrInvalidCredentials
-		}
-
-	default:
+	if req.Method != AuthMethodPassword {
 		// Every other method, AuthMethodOIDC included, has no verifier
 		// here. Accepting one without checking a credential would sign in
 		// anyone who names an email address.
 		return nil, ErrUnsupportedAuthMethod
 	}
+	if p.passwordVerifier == nil {
+		return nil, ErrPasswordAuthNotConfigured
+	}
 
-	// Create session
+	var attempt *security.Attempt
+	if p.lockout != nil {
+		a, err := p.lockout.Begin(ctx, req.Identifier)
+		if errors.Is(err, security.ErrAccountLocked) {
+			return nil, ErrAccountLocked
+		}
+		if err != nil {
+			return nil, fmt.Errorf("checking login lockout: %w", err)
+		}
+		attempt = a
+	}
+
+	identity, err := p.verifyPassword(ctx, req)
+	if err != nil {
+		if attempt != nil && errors.Is(attempt.Failure(ctx), security.ErrAccountLocked) {
+			return nil, ErrAccountLocked
+		}
+		return nil, err
+	}
+	if attempt != nil {
+		if err := attempt.Success(ctx); err != nil {
+			return nil, fmt.Errorf("clearing login lockout: %w", err)
+		}
+	}
+
 	return p.createSession(identity, req.Method, req.DeviceInfo)
+}
+
+// verifyPassword returns the active identity whose email and password the
+// request names, or ErrInvalidCredentials.
+func (p *EmbeddedAuthProvider) verifyPassword(ctx context.Context, req *AuthenticateRequest) (*Identity, error) {
+	identity, err := p.identityProvider.GetIdentityByEmail(ctx, req.Identifier)
+	if err != nil || identity.State != IdentityStateActive {
+		burnVerification(req.Password)
+		return nil, ErrInvalidCredentials
+	}
+	valid, err := p.passwordVerifier(ctx, identity.ID, req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("verifying password: %w", err)
+	}
+	if !valid {
+		return nil, ErrInvalidCredentials
+	}
+	return identity, nil
+}
+
+var (
+	burnHashOnce sync.Once
+	burnHash     string
+
+	// burnVerification is a variable so tests can observe it.
+	burnVerification = burnArgon2idVerification
+)
+
+// burnArgon2idVerification spends the time of verifying a password against
+// an Argon2id hash with the default parameters, so that rejecting an
+// unknown account takes as long as rejecting a wrong password.
+func burnArgon2idVerification(password string) {
+	burnHashOnce.Do(func() {
+		h, err := sfidentity.HashPassword("burn-verification", nil)
+		if err != nil {
+			panic(fmt.Errorf("systemauth: hashing the verification placeholder: %w", err))
+		}
+		burnHash = h
+	})
+	// The result is meaningless; only the elapsed time matters.
+	if _, err := sfidentity.VerifyPassword(password, burnHash); err != nil {
+		panic(fmt.Errorf("systemauth: verifying against the placeholder: %w", err))
+	}
 }
 
 // createSession creates a new session for an identity.
