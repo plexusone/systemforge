@@ -50,7 +50,9 @@ type Deps struct {
 
 	// SyncMode decides what a failed write to the relationship engine
 	// does: authz.SyncModeStrict returns it, SyncModeEventual (the default)
-	// logs it. Mode rbac writes nothing.
+	// logs it. Mode rbac writes nothing. Nothing retries a failed write, so
+	// under rebac a failed revocation leaves the access in the graph; see
+	// authz.SyncMode.
 	SyncMode authz.SyncMode
 
 	// AccessChangeSink announces the access changes grants record

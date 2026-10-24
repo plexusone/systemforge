@@ -57,6 +57,16 @@ membership, role and grant tables remain the record in both modes; under
 `eventual`, the default, logs it), `AccessChangeSink`, `Logger`,
 `PlatformAdmin`, `ManagerRoles` and `RBACOptions`.
 
+!!! warning "Failed revocations under `rebac`"
+    The services commit the database change before writing the graph, and
+    nothing retries a failed write. Under `rebac` the graph answers every
+    check, so a failed revocation (a removed membership, application role,
+    resource grant or platform admin) leaves the access in place while the
+    database shows it revoked. `strict` reports the failure to the caller
+    but keeps the database change. Use `strict` under `rebac`, monitor the
+    failures, and repair the graph from the identity tables, as when
+    switching modes below.
+
 ## Switching from `rbac` to `rebac`
 
 A deployment that switches starts with an empty graph. Write the existing

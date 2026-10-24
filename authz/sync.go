@@ -75,14 +75,25 @@ func ValidAppName(application string) bool {
 }
 
 // SyncMode determines how sync failures are handled.
+//
+// The identity services commit their database change first and then write
+// the relationship, and SystemForge has no retry, outbox or reconciliation
+// of failed writes. Under mode rebac the relationship engine answers every
+// check, so a failed revocation (a removed membership, application role,
+// resource grant or platform admin) leaves the access in place until the
+// relationship is repaired, while the database shows it revoked. In either
+// mode the database change is kept; strict mode only reports the failure.
 type SyncMode string
 
 const (
-	// SyncModeStrict fails the operation if authorization sync fails.
-	// Use when authorization must be consistent with identity.
+	// SyncModeStrict returns a sync failure to the caller, after the
+	// database change was committed. Use it under mode rebac so that a
+	// failed revocation is reported rather than silently leaving access.
 	SyncModeStrict SyncMode = "strict"
 
-	// SyncModeEventual logs sync failures but allows the operation to succeed.
-	// Use when eventual consistency is acceptable and a retry mechanism exists.
+	// SyncModeEventual logs sync failures and lets the operation succeed.
+	// Use it only with your own reconciliation of the relationship engine
+	// from the identity tables: nothing in SystemForge retries a failed
+	// write.
 	SyncModeEventual SyncMode = "eventual"
 )

@@ -368,7 +368,11 @@ if syncErr := s.syncer.AddOrgMembership(ctx, principalID, orgID, role); syncErr 
 }
 ```
 
-For eventual consistency, implement a retry mechanism:
+SystemForge does not retry a failed write, and the database change is kept
+in both modes. When the relationship engine answers checks (mode `rebac`), a
+failed revocation therefore leaves the access in place until the
+relationship is repaired. Prefer `SyncModeStrict` so failures are reported,
+and with `SyncModeEventual` implement your own retry or reconciliation:
 
 ```go
 // Background job to retry failed syncs
