@@ -2,6 +2,8 @@ package systemauth
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -133,6 +135,14 @@ func TestJWTAccessTokens(t *testing.T) {
 	if claims["client_id"] != "spa" || claims["sub"] == "" || claims["sub"] == "spa" {
 		t.Errorf("access token claims: %v", claims)
 	}
+	// Access tokens are typed so resource servers can tell them from ID
+	// tokens signed with the same key.
+	if typ := jwtHeader(t, at)["typ"]; typ != AccessTokenType {
+		t.Errorf("access token typ = %v, want %s", typ, AccessTokenType)
+	}
+	if idt, _ := tokens["id_token"].(string); idt == "" || jwtHeader(t, idt)["typ"] == AccessTokenType {
+		t.Errorf("ID token missing or typed as an access token: %v", jwtHeader(t, idt))
+	}
 	scp, _ := claims["scp"].([]any)
 	if len(scp) != 3 {
 		t.Errorf("scp = %v", claims["scp"])
@@ -172,4 +182,22 @@ func httptestRecorder(s *Server, target string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, httptest.NewRequest(http.MethodGet, target, nil))
 	return w
+}
+
+// jwtHeader decodes the JOSE header of a compact JWT.
+func jwtHeader(t *testing.T, raw string) map[string]any {
+	t.Helper()
+	part, _, ok := strings.Cut(raw, ".")
+	if !ok {
+		t.Fatalf("not a JWT: %q", raw)
+	}
+	b, err := base64.RawURLEncoding.DecodeString(part)
+	if err != nil {
+		t.Fatalf("decode JWT header: %v", err)
+	}
+	h := map[string]any{}
+	if err := json.Unmarshal(b, &h); err != nil {
+		t.Fatalf("parse JWT header: %v", err)
+	}
+	return h
 }

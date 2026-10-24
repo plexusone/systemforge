@@ -376,8 +376,8 @@ func (s *Server) authTime(r *http.Request) time.Time {
 }
 
 // prepareAccessClaims sets the per-issuance claims of JWT access tokens:
-// a subject (the client itself for client_credentials), client_id, and a
-// fresh issued-at time. For a principal it also sets the compact orgs claim
+// a subject (the client itself for client_credentials), client_id, a
+// fresh issued-at time, and the at+jwt header. For a principal it also sets the compact orgs claim
 // and, so that a refresh carries current organizations and roles rather
 // than those of the original login, refreshes the orgs claim of the ID
 // token the session will issue.
@@ -400,9 +400,9 @@ func (s *Server) prepareAccessClaims(ctx context.Context, ar fosite.AccessReques
 	claims.NotBefore = time.Time{}
 	claims.JTI = ""
 	claims.Add("client_id", clientID)
-	if sess.AccessHeader == nil {
-		sess.AccessHeader = s.jwtHeaders()
-	}
+	// Always reset the header: a session stored before access tokens were
+	// typed, or before a key rotation, must not keep its old header.
+	sess.AccessHeader = s.accessTokenHeaders()
 	return s.setOrgsClaims(ctx, sess, claims)
 }
 

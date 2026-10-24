@@ -309,6 +309,6 @@ func (s *Server) OIDCSession(subject string, claims map[string]interface{}) *Ses
 			Headers: s.jwtHeaders(),
 			Subject: subject,
 		},
-		AccessHeader: s.jwtHeaders(),
+		AccessHeader: s.accessTokenHeaders(),
 	}
 }

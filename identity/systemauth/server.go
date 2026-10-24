@@ -353,7 +353,7 @@ func (s *Server) Session(subject string) *Session {
 			Headers: s.jwtHeaders(),
 			Subject: subject,
 		},
-		AccessHeader: s.jwtHeaders(),
+		AccessHeader: s.accessTokenHeaders(),
 	}
 }
 
@@ -367,6 +367,18 @@ func (s *Server) KeyID() string {
 // jwtHeaders returns JOSE headers carrying the signing key ID.
 func (s *Server) jwtHeaders() *jwt.Headers {
 	return &jwt.Headers{Extra: map[string]interface{}{"kid": s.keyID}}
+}
+
+// AccessTokenType is the JOSE typ header of JWT access tokens (RFC 9068),
+// which tells resource servers they are not ID tokens or other JWTs that
+// SystemAuth signs with the same key.
+const AccessTokenType = "at+jwt"
+
+// accessTokenHeaders returns the JOSE headers of JWT access tokens.
+func (s *Server) accessTokenHeaders() *jwt.Headers {
+	h := s.jwtHeaders()
+	h.Extra["typ"] = AccessTokenType
+	return h
 }
 
 // RegisterClient registers a new OAuth client.
