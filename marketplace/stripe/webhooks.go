@@ -2,14 +2,24 @@ package stripe
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/webhook"
 )
 
-// VerifyWebhook verifies the Stripe webhook signature and returns the parsed event.
+// ErrWebhookSecretRequired is returned when a webhook is verified without
+// a signing secret. An empty secret would accept a signature anyone can
+// compute, so verification fails closed.
+var ErrWebhookSecretRequired = errors.New("stripe: webhook signing secret is required")
+
+// VerifyWebhook verifies the Stripe webhook signature and returns the parsed
+// event. It returns ErrWebhookSecretRequired when secret is empty.
 func VerifyWebhook(payload []byte, signature, secret string) (*stripe.Event, error) {
+	if secret == "" {
+		return nil, ErrWebhookSecretRequired
+	}
 	event, err := webhook.ConstructEvent(payload, signature, secret)
 	if err != nil {
 		return nil, fmt.Errorf("webhook verification failed: %w", err)

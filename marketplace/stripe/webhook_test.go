@@ -124,6 +124,30 @@ func TestWebhookRejectsBadSignatures(t *testing.T) {
 	}
 }
 
+// Without a signing secret, an event signed with the empty key, which
+// anyone can compute, must be refused.
+func TestWebhookFailsClosedWithoutSecret(t *testing.T) {
+	f := newWebhookFixture(t)
+	f.svc = NewCheckoutService(Config{}, f.listings, f.licenses, nil)
+	listing := f.listing(marketplace.PricingOneTime)
+	payload, err := json.Marshal(map[string]any{"id": "evt_1", "object": "event", "type": "checkout.session.completed",
+		"api_version": stripe.APIVersion, "data": map[string]any{"object": f.session(listing, "paid", nil)}})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	forged := webhook.GenerateTestSignedPayload(&webhook.UnsignedPayload{Payload: payload, Secret: ""})
+
+	if _, err := VerifyWebhook(forged.Payload, forged.Header, ""); !errors.Is(err, ErrWebhookSecretRequired) {
+		t.Errorf("VerifyWebhook with no secret = %v, want ErrWebhookSecretRequired", err)
+	}
+	if err := f.svc.ProcessWebhook(context.Background(), forged.Payload, forged.Header); !errors.Is(err, ErrWebhookSecretRequired) {
+		t.Errorf("ProcessWebhook with no secret = %v, want ErrWebhookSecretRequired", err)
+	}
+	if f.licensed(listing) != nil {
+		t.Error("an event signed with the empty key granted a license")
+	}
+}
+
 func TestCheckoutGrantsOnlyWhenPaid(t *testing.T) {
 	f := newWebhookFixture(t)
 	listing := f.listing(marketplace.PricingOneTime)

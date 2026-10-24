@@ -20,7 +20,8 @@ type Config struct {
 	// SecretKey is the Stripe secret API key.
 	SecretKey string
 
-	// WebhookSecret is the Stripe webhook signing secret.
+	// WebhookSecret is the Stripe webhook signing secret. ProcessWebhook
+	// refuses every event with ErrWebhookSecretRequired while it is empty.
 	WebhookSecret string
 
 	// ConnectAccountID is the Stripe Connect account ID (optional, for platforms).
@@ -188,8 +189,12 @@ func (s *CheckoutService) buildLineItems(listing *marketplace.Listing, seats *in
 	}, nil
 }
 
-// ProcessWebhook handles Stripe webhook events.
+// ProcessWebhook handles Stripe webhook events. It refuses every event
+// with ErrWebhookSecretRequired when Config.WebhookSecret is empty.
 func (s *CheckoutService) ProcessWebhook(ctx context.Context, payload []byte, signature string) error {
+	if s.config.WebhookSecret == "" {
+		return ErrWebhookSecretRequired
+	}
 	event, err := VerifyWebhook(payload, signature, s.config.WebhookSecret)
 	if err != nil {
 		return fmt.Errorf("invalid webhook signature: %w", err)

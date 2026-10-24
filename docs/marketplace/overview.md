@@ -252,6 +252,11 @@ STRIPE_WEBHOOK_SECRET=whsec_...    # Webhook signing secret
 STRIPE_PUBLISHABLE_KEY=pk_live_... # For frontend (optional)
 ```
 
+The webhook signing secret is required: with an empty `WebhookSecret`,
+`ProcessWebhook` and `VerifyWebhook` refuse every event with
+`stripe.ErrWebhookSecretRequired`, because a signature made with an empty key
+can be computed by anyone.
+
 ### Webhook Events
 
 The checkout service handles these Stripe events:
