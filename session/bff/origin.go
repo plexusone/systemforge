@@ -114,6 +114,45 @@ func (v *OriginValidator) ValidateRequest(r *http.Request) bool {
 	return v.config.AllowMissingOrigin
 }
 
+// SafeMethodMiddleware returns middleware that checks the requests
+// Middleware lets through because of SkipMethods (typically GET, HEAD and
+// OPTIONS). Use it on routes where even a read carries the user's
+// credentials, such as the API proxy: an upstream GET endpoint may change
+// state, and a session cookie relaxed to SameSite=Lax is sent on cross-site
+// top-level navigations.
+//
+// A request is allowed when its Origin is allowed; without Origin, when
+// Sec-Fetch-Site is "same-origin"; without either, when the Referer (if
+// CheckReferer is set) is allowed. A request with none of the three is
+// allowed, since it does not come from a current browser.
+func (v *OriginValidator) SafeMethodMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if v.skipMethods[r.Method] && !v.validateSafeRequest(r) {
+				v.handleError(w, r)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// validateSafeRequest implements the SafeMethodMiddleware check.
+func (v *OriginValidator) validateSafeRequest(r *http.Request) bool {
+	if origin := r.Header.Get("Origin"); origin != "" {
+		return v.isAllowedOrigin(origin)
+	}
+	if site := r.Header.Get("Sec-Fetch-Site"); site != "" {
+		return site == "same-origin"
+	}
+	if v.config.CheckReferer {
+		if referer := r.Header.Get("Referer"); referer != "" {
+			return v.isAllowedReferer(referer)
+		}
+	}
+	return true
+}
+
 // isAllowedOrigin checks if the origin is in the allow list.
 func (v *OriginValidator) isAllowedOrigin(origin string) bool {
 	origin = strings.ToLower(origin)

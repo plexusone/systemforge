@@ -200,6 +200,9 @@ func (h *Handler) Router() chi.Router {
 	// API proxy
 	if h.proxy != nil {
 		r.Route(h.config.APIPathPrefix, func(r chi.Router) {
+			// Proxied requests carry the user's token whatever the method,
+			// so reads are origin-checked too.
+			r.Use(h.originValidator.SafeMethodMiddleware())
 			r.Use(SessionMiddleware(MiddlewareConfig{
 				Store:          h.store,
 				CookieManager:  h.cookieManager,

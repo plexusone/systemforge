@@ -237,9 +237,14 @@ AllowedOrigins: []string{
 }
 ```
 
-- GET/HEAD/OPTIONS requests skip origin validation (safe methods)
+- GET/HEAD/OPTIONS requests to `/session` skip origin validation (safe methods)
 - Missing Origin header on POST/PUT/DELETE returns 403 Forbidden
 - Referer header is checked as fallback
+- Proxied `/api/*` requests are checked whatever the method, because an
+  upstream GET may change state and carries the user's token: a GET, HEAD or
+  OPTIONS request with a disallowed `Origin`, a `Sec-Fetch-Site` other than
+  `same-origin` (when `Origin` is absent), or a disallowed `Referer` (when
+  both are absent) returns 403 Forbidden
 
 ### Cookie Security
 
