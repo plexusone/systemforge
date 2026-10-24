@@ -436,3 +436,59 @@ func TestConcurrentGrantsAndRevokes(t *testing.T) {
 		t.Errorf("role after revoking everything concurrently = %q, want none", got)
 	}
 }
+
+// TestRevocationAbortsWhenTheGraphFails checks that a revocation, and a
+// grant lowered to a lesser role, change the graph before they commit: the
+// graph's refusal leaves the rows as they were, whatever the sync mode,
+// and the same call succeeds when retried.
+func TestRevocationAbortsWhenTheGraphFails(t *testing.T) {
+	for _, mode := range []authz.SyncMode{authz.SyncModeStrict, authz.SyncModeEventual} {
+		t.Run(string(mode), func(t *testing.T) {
+			rec := syncrec.New()
+			f := newFixture(t, grants.WithAuthzSyncer(rec, mode))
+			boom := errors.New("graph down")
+			who := f.principal()
+			ref := f.ref(f.org)
+			if err := f.svc.GrantResourceRole(f.ctx, who, ref, authz.ResourceRoleMaintainer, uuid.Nil); err != nil {
+				t.Fatal(err)
+			}
+
+			rec.Err = boom
+			if err := f.svc.GrantResourceRole(f.ctx, who, ref, authz.ResourceRoleViewer, uuid.Nil); !errors.Is(err, boom) {
+				t.Errorf("lowering = %v, want the graph error", err)
+			}
+			if role, err := f.svc.ResourceRole(f.ctx, who, ref); err != nil || role != authz.ResourceRoleMaintainer {
+				t.Errorf("role after refused lowering = %q, %v", role, err)
+			}
+			if err := f.svc.RevokeResourceRole(f.ctx, who, ref); !errors.Is(err, boom) {
+				t.Errorf("revoke = %v, want the graph error", err)
+			}
+			if role, err := f.svc.ResourceRole(f.ctx, who, ref); err != nil || role != authz.ResourceRoleMaintainer {
+				t.Errorf("role after refused revoke = %q, %v", role, err)
+			}
+			if got := f.role(who, f.org); got != "collaborator" {
+				t.Errorf("membership after refused revoke = %q", got)
+			}
+
+			rec.Err = nil
+			rec.Reset()
+			if err := f.svc.GrantResourceRole(f.ctx, who, ref, authz.ResourceRoleViewer, uuid.Nil); err != nil {
+				t.Fatalf("retried lowering: %v", err)
+			}
+			if err := f.svc.RevokeResourceRole(f.ctx, who, ref); err != nil {
+				t.Fatalf("retried revoke: %v", err)
+			}
+			if got := f.role(who, f.org); got != "" {
+				t.Errorf("membership after revoke = %q, want none", got)
+			}
+			want := []string{
+				fmt.Sprintf("SetResourceGrant:%s:%s:%s:%s:viewer", who, f.org, ref.Type, ref.ID),
+				fmt.Sprintf("RemoveResourceGrant:%s:%s:%s:%s", who, f.org, ref.Type, ref.ID),
+				fmt.Sprintf("RemoveOrgMembership:%s:%s:collaborator", who, f.org),
+			}
+			if got := rec.Calls(); !slices.Equal(got, want) {
+				t.Errorf("calls = %v, want %v", got, want)
+			}
+		})
+	}
+}

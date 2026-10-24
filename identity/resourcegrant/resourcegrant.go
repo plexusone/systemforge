@@ -33,6 +33,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
+	"github.com/plexusone/systemforge/identity/graphlock"
 )
 
 // roleCollaborator is the membership role a grant creates. It is the same
@@ -73,9 +74,14 @@ func WithVocabularies(registry *authz.VocabularyRegistry) Option {
 // WithAuthzSyncer mirrors collaborator memberships and grants to the
 // authorization graph. The syncer writes memberships through
 // authz.RelationshipSyncer; grants are written only when it also
-// implements authz.ResourceGrantSyncer. In authz.SyncModeStrict a failed
-// write is returned after the rows were stored; in SyncModeEventual (the
-// default) it is logged.
+// implements authz.ResourceGrantSyncer.
+//
+// A revocation, or a grant lowered to a lesser role, changes the graph
+// inside its transaction, before the commit: if the graph refuses, the
+// rows are left as they were and the error is returned, whatever the mode.
+// A new or raised grant is written after the commit; in
+// authz.SyncModeStrict a failed write is returned, in SyncModeEventual
+// (the default) it is logged.
 func WithAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) Option {
 	return func(s *Service) {
 		s.syncer = syncer
@@ -199,7 +205,10 @@ func (s *Service) GrantInTx(ctx context.Context, tx *ent.Tx, principalID uuid.UU
 		return nil, err
 	}
 
-	var changes []accesschange.Change
+	var (
+		changes []accesschange.Change
+		lowered bool
+	)
 	existing, err := tx.ResourceGrant.Query().
 		Where(
 			resourcegrant.PrincipalID(principalID),
@@ -233,6 +242,9 @@ func (s *Service) GrantInTx(ctx context.Context, tx *ent.Tx, principalID uuid.UU
 		}
 		if authz.ResourceRoleRank(role) < authz.ResourceRoleRank(existing.Role) {
 			changes = append(changes, s.reduction(principalID, resource.OrganizationID))
+			// With an inactive membership just reactivated, the graph
+			// holds no grant to lower: it is written after the commit.
+			lowered = !membershipAdded
 		}
 	}
 
@@ -240,13 +252,26 @@ func (s *Service) GrantInTx(ctx context.Context, tx *ent.Tx, principalID uuid.UU
 	if err != nil {
 		return nil, err
 	}
+	// A lowered grant replaces the higher role in the graph now, before
+	// the caller commits: the lesser role is all the principal keeps if the
+	// commit fails.
+	if lowered && s.grantSyncer != nil {
+		if err := graphlock.Lock(ctx, tx, graphlock.Principal(principalID)); err != nil {
+			return nil, err
+		}
+		if err := s.grantSyncer.SetResourceGrant(ctx, principalID, resource, role); err != nil {
+			return nil, fmt.Errorf("resourcegrant: lowering grant in authz, change not saved: %w", err)
+		}
+	}
 	return func(ctx context.Context) error {
 		accesschange.Publish(s.accessSink, recorded...)
 		var errs []error
 		if membershipAdded {
 			errs = append(errs, s.syncMembershipAdd(ctx, principalID, resource.OrganizationID))
 		}
-		errs = append(errs, s.syncGrant(ctx, principalID, resource, role))
+		if !lowered {
+			errs = append(errs, s.syncGrant(ctx, principalID, resource, role))
+		}
 		return errors.Join(errs...)
 	}, nil
 }
@@ -328,7 +353,9 @@ func (s *Service) isPostgres(ctx context.Context) (bool, error) {
 
 // RevokeResourceRole removes the principal's grant on the resource, and
 // the principal's collaborator membership when it was their last grant in
-// the organization.
+// the organization. Both leave the authorization graph before the
+// revocation commits; if the graph refuses, nothing is revoked and the
+// error is returned, so the call can be retried.
 func (s *Service) RevokeResourceRole(ctx context.Context, principalID uuid.UUID, resource authz.ResourceRef) error {
 	if resource.Type == "" || resource.ID == "" {
 		return fmt.Errorf("%w: type and id are required", authz.ErrInvalidResource)
@@ -393,17 +420,39 @@ func (s *Service) RevokeResourceRole(ctx context.Context, principalID uuid.UUID,
 	if err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
+	ref := authz.ResourceRef{Type: row.ResourceType, ID: row.ResourceID, OrganizationID: orgID}
+	if err = s.revokeInGraph(ctx, tx, principalID, ref, removedMembership); err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("resourcegrant: committing revoke: %w", err)
 	}
 	accesschange.Publish(s.accessSink, recorded...)
+	return nil
+}
 
-	ref := authz.ResourceRef{Type: row.ResourceType, ID: row.ResourceID, OrganizationID: orgID}
-	errs := []error{s.syncGrantRemove(ctx, principalID, ref)}
-	if removedMembership {
-		errs = append(errs, s.syncMembershipRemove(ctx, principalID, orgID))
+// revokeInGraph removes a revoked grant, and the collaborator membership
+// when the revocation removed it, from the authorization graph inside tx,
+// holding the principal's graphlock. Its error aborts the revocation
+// whatever the sync mode.
+func (s *Service) revokeInGraph(ctx context.Context, tx *ent.Tx, principalID uuid.UUID, ref authz.ResourceRef, removedMembership bool) error {
+	if s.grantSyncer == nil && (s.syncer == nil || !removedMembership) {
+		return nil
 	}
-	return errors.Join(errs...)
+	if err := graphlock.Lock(ctx, tx, graphlock.Principal(principalID)); err != nil {
+		return err
+	}
+	if s.grantSyncer != nil {
+		if err := s.grantSyncer.RemoveResourceGrant(ctx, principalID, ref); err != nil {
+			return fmt.Errorf("resourcegrant: removing grant from authz, change not saved: %w", err)
+		}
+	}
+	if removedMembership && s.syncer != nil {
+		if err := s.syncer.RemoveOrgMembership(ctx, principalID, ref.OrganizationID, roleCollaborator); err != nil {
+			return fmt.Errorf("resourcegrant: removing collaborator membership from authz, change not saved: %w", err)
+		}
+	}
+	return nil
 }
 
 // reduction is the access change a reduced or removed grant records.
@@ -542,29 +591,12 @@ func (s *Service) syncMembershipAdd(ctx context.Context, principalID, organizati
 		s.syncer.AddOrgMembership(ctx, principalID, organizationID, roleCollaborator))
 }
 
-// syncMembershipRemove deletes the collaborator membership from the graph.
-func (s *Service) syncMembershipRemove(ctx context.Context, principalID, organizationID uuid.UUID) error {
-	if s.syncer == nil {
-		return nil
-	}
-	return s.handleSync(ctx, "remove collaborator membership", principalID, organizationID,
-		s.syncer.RemoveOrgMembership(ctx, principalID, organizationID, roleCollaborator))
-}
-
 func (s *Service) syncGrant(ctx context.Context, principalID uuid.UUID, ref authz.ResourceRef, role string) error {
 	if s.grantSyncer == nil {
 		return nil
 	}
 	return s.handleSync(ctx, "set resource grant", principalID, ref.OrganizationID,
 		s.grantSyncer.SetResourceGrant(ctx, principalID, ref, role))
-}
-
-func (s *Service) syncGrantRemove(ctx context.Context, principalID uuid.UUID, ref authz.ResourceRef) error {
-	if s.grantSyncer == nil {
-		return nil
-	}
-	return s.handleSync(ctx, "remove resource grant", principalID, ref.OrganizationID,
-		s.grantSyncer.RemoveResourceGrant(ctx, principalID, ref))
 }
 
 func (s *Service) handleSync(ctx context.Context, op string, principalID, organizationID uuid.UUID, err error) error {
