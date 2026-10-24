@@ -17,12 +17,18 @@ import (
 	"github.com/plexusone/systemforge/identity/requestprincipal"
 )
 
-// PrincipalEmailFunc returns a principal's email, or "" when it has none
-// (a managed principal).
+// PrincipalEmailFunc returns a principal's verified email, or "" when it
+// has none (a managed principal) or has not verified it. The invite API
+// treats the address it returns as proof that the caller owns it, so an
+// implementation must not return an address the principal merely claimed.
 type PrincipalEmailFunc func(ctx context.Context, principalID uuid.UUID) (string, error)
 
 // PrincipalEmail returns a principal's email from the identity database,
-// or "" when it has none. It is the API's default PrincipalEmailFunc.
+// or "" when it has none or its email is not verified (email_verified_at
+// unset). It is the API's default PrincipalEmailFunc: an address anyone can
+// claim when creating a principal (a managed principal, an unverified
+// signup or SCIM provisioning) must not list or answer the invitations sent
+// to it.
 func (s *DefaultService) PrincipalEmail(ctx context.Context, principalID uuid.UUID) (string, error) {
 	h, err := s.client.Human.Query().Where(human.PrincipalID(principalID)).Only(ctx)
 	if ent.IsNotFound(err) {
@@ -31,7 +37,7 @@ func (s *DefaultService) PrincipalEmail(ctx context.Context, principalID uuid.UU
 	if err != nil {
 		return "", fmt.Errorf("invite: principal email: %w", err)
 	}
-	if h.Email == nil {
+	if h.Email == nil || h.EmailVerifiedAt == nil {
 		return "", nil
 	}
 	return *h.Email, nil
@@ -156,7 +162,8 @@ func (a *API) inviteInOrg(ctx context.Context, rawID string, org *organization.O
 	return id, nil
 }
 
-// callerEmail returns the caller and its email; the caller must have one.
+// callerEmail returns the caller and its verified email; the caller must
+// have one.
 func (a *API) callerEmail(ctx context.Context) (uuid.UUID, string, error) {
 	caller, err := a.callerID(ctx)
 	if err != nil {
@@ -179,7 +186,7 @@ func (a *API) callerEmail(ctx context.Context) (uuid.UUID, string, error) {
 		return uuid.Nil, "", huma.Error500InternalServerError("looking up caller")
 	}
 	if email == "" {
-		return uuid.Nil, "", huma.Error403Forbidden("invites are for principals with an email")
+		return uuid.Nil, "", huma.Error403Forbidden("invites are for principals with a verified email")
 	}
 	return caller, email, nil
 }

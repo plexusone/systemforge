@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
@@ -42,12 +43,18 @@ func newInviteAPI(t *testing.T, optFns ...func(*ent.Client) invite.ServiceOption
 	})
 	orgs := organization.NewService(db)
 	a := &inviteAPI{t: t, db: db, orgs: orgs, people: map[string]uuid.UUID{}}
-	for _, name := range []string{"owner", "admin", "member", "invitee", "other"} {
+	// Every person has verified its email but the squatter, which only
+	// claimed one.
+	for _, name := range []string{"owner", "admin", "member", "invitee", "other", "squatter"} {
 		p, err := db.Principal.Create().SetType(entprincipal.TypeHuman).SetIdentifier(name + "@example.com").SetDisplayName(name).Save(ctx)
 		if err != nil {
 			t.Fatalf("principal: %v", err)
 		}
-		if _, err := db.Human.Create().SetPrincipalID(p.ID).SetEmail(name + "@example.com").Save(ctx); err != nil {
+		h := db.Human.Create().SetPrincipalID(p.ID).SetEmail(name + "@example.com")
+		if name != "squatter" {
+			h.SetEmailVerifiedAt(time.Now())
+		}
+		if _, err := h.Save(ctx); err != nil {
 			t.Fatalf("human: %v", err)
 		}
 		a.people[name] = p.ID
@@ -192,5 +199,23 @@ func TestAcceptInviteIsBoundToTheInvitee(t *testing.T) {
 	}
 	if m, err := a.orgs.GetMembership(ctx, a.org.ID, a.people["invitee"]); err != nil || m.Role != "member" {
 		t.Errorf("membership after accept = %+v, %v", m, err)
+	}
+}
+
+// TestUnverifiedEmailCannotUseInvites verifies that a principal that only
+// claimed an address, without verifying it, can neither list nor answer the
+// invitations sent to it.
+func TestUnverifiedEmailCannotUseInvites(t *testing.T) {
+	a := newInviteAPI(t)
+	_, token := a.invite("squatter@example.com")
+
+	if code, body := a.do(http.MethodGet, "/invites", "squatter", nil); code != http.StatusForbidden {
+		t.Errorf("unverified caller lists invites: %d %s", code, body)
+	}
+	if code, body := a.do(http.MethodPost, "/invites/"+token+"/accept", "squatter", map[string]any{}); code != http.StatusForbidden {
+		t.Errorf("unverified caller accepts: %d %s", code, body)
+	}
+	if code, body := a.do(http.MethodPost, "/invites/"+token+"/decline", "squatter", nil); code != http.StatusForbidden {
+		t.Errorf("unverified caller declines: %d %s", code, body)
 	}
 }

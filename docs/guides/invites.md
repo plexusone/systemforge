@@ -72,9 +72,15 @@ resource-targeted collaborator invites. See
 | Route | Rule |
 |---|---|
 | `GET /invites/{token}` | Landing-page lookup |
-| `POST /invites/{token}/accept` | The caller's email must match the invite |
+| `POST /invites/{token}/accept` | The caller's verified email must match the invite |
 | `POST /invites/{token}/decline` | Same match |
 | `GET /invites` | Lists the caller's own pending invites; another address is `403` |
+
+The email is the one `invite.DefaultService.PrincipalEmail` returns, which
+is only an address with `email_verified_at` set: an address merely claimed
+when a principal was created (a managed principal, an unverified signup, SCIM
+provisioning without trusted emails) does not count. A custom
+`APIConfig.PrincipalEmail` must apply the same rule.
 
 Signing up through an invite (`signup.SignupWithInvite`) applies the same
 email match (`signup.ErrInviteEmailMismatch`).
@@ -102,14 +108,14 @@ the member through the organization instead.
 |---|---|
 | Create, list, resend, revoke | `invite_member` on the organization (owner or admin) |
 | Invite with `role: owner` | The owner-only permission (`delete`) |
-| Accept, decline, list own | An authenticated principal whose email matches the invite |
+| Accept, decline, list own | An authenticated principal whose verified email matches the invite |
 
 ## Errors
 
 | Status | Cause |
 |---|---|
 | `400` | The service refused the request. The message names the cause: `pending invite already exists for this email`; `invite: choose an application role for at least one entitled application`; `invite: collaborators hold no application roles`; `invite: application roles are not configured`; `invite: invalid resource target` (incomplete target, role not `collaborator`, grants not configured, or a type or role the vocabulary rejects); a collaborator invite without a target to a personal organization; `invite is no longer pending`; `invite has expired`; `invite: the inviter may no longer invite to this organization`; `principal is already a member of this organization`; an application role that cannot be granted (`approle: no seats available for the application`, `approle: organization is not entitled to the application`) |
-| `403` | `inviter_principal_id` is not the caller; an admin inviting an owner; a principal without an email (a managed principal) answering an invite; listing another address's invites; the caller can view the organization but may not invite |
+| `403` | `inviter_principal_id` is not the caller; an admin inviting an owner; a principal without a verified email (a managed principal, or one that has not verified its address) answering or listing invites; listing another address's invites; the caller can view the organization but may not invite |
 | `404` | Unknown organization or invite; a caller who cannot even view the organization; an invite addressed to a different email (a mismatch looks like an unknown token) |
 | `501` | No `Authorizer`, or no principal email lookup, is configured |
 
