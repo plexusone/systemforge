@@ -84,8 +84,7 @@ session's data is encrypted with AES-256-GCM and bound to its session ID and
 are provided:
 
 ```go
-// Application-held keys, with key IDs for rotation: add the new key, make it
-// active, and drop the old one once sessions sealed with it have expired.
+// Application-held keys, with key IDs for rotation (see below).
 sealer, err := bff.NewKeyringSealer("k1", map[string][]byte{
     "k1": sessionKey, // 32 bytes, from your secret store
 })
@@ -94,6 +93,28 @@ sealer, err := bff.NewKeyringSealer("k1", map[string][]byte{
 // rotates keys itself.
 sealer := bff.NewKeysSealer(sysKeys, "bff-session")
 ```
+
+##### Rotating keyring keys
+
+Every sealed value names the key that sealed it. A rotation keeps the active
+key N and the previous key N-1 in the ring and removes only N-2, and each
+step is its own deploy, so rolling back any deploy still opens every session
+written so far:
+
+1. **Pre-stage `k2`.** Add it to the ring while `k1` stays active, and wait
+   until every instance runs it:
+   `bff.NewKeyringSealer("k1", map[string][]byte{"k1": k1, "k2": k2})`.
+2. **Promote `k2`.** Make it active and keep `k1`:
+   `bff.NewKeyringSealer("k2", map[string][]byte{"k1": k1, "k2": k2})`.
+   Rolling this deploy back returns to step 1, which still opens sessions
+   sealed with `k2`.
+3. **Next rotation.** Pre-stage `k3` with `k1` still in the ring, then
+   promote `k3` with `{"k2": k2, "k3": k3}`. Sessions still sealed with `k1`
+   (N-2) no longer open and their users sign in again; a session is sealed
+   again under the active key whenever it is updated, for example on token
+   refresh.
+
+Never add a new active key and drop the previous one in the same deploy.
 
 Once a sealer is configured, sessions stored in plaintext are rejected and
 their users sign in again. `InsecurePlaintext: true` disables the requirement

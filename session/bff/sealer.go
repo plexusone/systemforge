@@ -37,8 +37,16 @@ const keyringSealerVersion byte = 1
 
 // KeyringSealer seals with AES-256-GCM under named 32-byte keys. It seals
 // with the active key and opens with whichever key the sealed data names,
-// so keys can be rotated: add the new key, make it active, and remove the
-// old one once every session sealed with it has expired.
+// so keys can be rotated while the active key N and the previous key N-1
+// both open sessions:
+//
+//  1. Pre-stage: add N to the ring while N-1 stays active, and deploy
+//     everywhere.
+//  2. Promote: make N active, keep N-1 in the ring, and drop N-2. Rolling
+//     this deploy back returns to step 1, which still opens sessions
+//     sealed with N.
+//
+// Never add a key and drop the previous one in the same deploy.
 //
 // Sealed form: version (1 byte) | key ID length (1 byte) | key ID | nonce |
 // ciphertext and tag.
