@@ -212,10 +212,11 @@ import (
 
 // Create JWT service
 svc, err := jwt.NewService(&jwt.Config{
-    Secret:             []byte("your-secret-key"),
+    Secret:             secret, // at least 32 random bytes for HS256
+    KeyID:              "k1",   // optional "kid" header, enables key rotation
     AccessTokenExpiry:  15 * time.Minute,
     RefreshTokenExpiry: 7 * 24 * time.Hour,
-    Issuer:             "your-app",
+    Issuer:             "your-app",           // required; tokens from other issuers are refused
     Audience:           []string{"your-app"}, // required; tokens without it are refused
 })
 

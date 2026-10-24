@@ -42,9 +42,29 @@ signing key do not accept each other's tokens.
 
 ```go
 cfg := jwt.DefaultConfig()
-cfg.Secret = secret
+cfg.Secret = secret // at least 32 bytes for HS256 (48 for HS384, 64 for HS512)
+cfg.Issuer = "https://auth.my-app.example" // required
 cfg.Audience = []string{"my-app"}
 jwtService, err := jwt.NewService(cfg)
+```
+
+`NewService` also requires `Issuer` (`ErrMissingIssuer`) and an HMAC secret
+at least as long as the hash output (`ErrWeakSecret`).
+
+### Key rotation
+
+Set `KeyID` to put a `kid` header on every token. A token's `kid` selects the
+verification key: `KeyID` selects the signing key, an entry in
+`VerificationKeys` selects that key, and any other `kid` is rejected. Tokens
+without a `kid` are verified with the signing key. To rotate, first give the
+current key a `KeyID`; later make the new key the signing key under a new
+`KeyID` and move the old one into `VerificationKeys`, removing it once the
+tokens it signed have expired:
+
+```go
+cfg.Secret = newSecret
+cfg.KeyID = "k2"
+cfg.VerificationKeys = map[string]any{"k1": oldSecret}
 ```
 
 The client-kind audiences below (`bff`, `api`) are added in front of the

@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var testSecret = []byte("test-secret-key-32-bytes-long!!")
+var testSecret = []byte("test-secret-key-at-least-32-bytes-long")
 
 func newValidationService(t *testing.T, issuer string) *Service {
 	t.Helper()
@@ -78,18 +78,13 @@ func TestValidationRequiresExpiryAndTheConfiguredIssuer(t *testing.T) {
 	if _, err := svc.ValidateAccessToken(none); err == nil {
 		t.Error("an unsigned token was accepted")
 	}
-	// Issuer checking is opt-in via config, as before.
-	open := newValidationService(t, "")
-	if _, err := open.ValidateAccessToken(signed(t, gojwt.SigningMethodHS256, testSecret, accessClaims("anyone", []string{AudienceBFF}, &future))); err != nil {
-		t.Errorf("no configured issuer: %v", err)
-	}
 }
 
 func TestValidateAccessTokenForAudience(t *testing.T) {
-	svc := newValidationService(t, "")
+	svc := newValidationService(t, "https://issuer.example")
 	future := time.Now().Add(time.Hour)
-	api := signed(t, gojwt.SigningMethodHS256, testSecret, accessClaims("", []string{AudienceAPI}, &future))
-	bff := signed(t, gojwt.SigningMethodHS256, testSecret, accessClaims("", []string{AudienceBFF}, &future))
+	api := signed(t, gojwt.SigningMethodHS256, testSecret, accessClaims("https://issuer.example", []string{AudienceAPI}, &future))
+	bff := signed(t, gojwt.SigningMethodHS256, testSecret, accessClaims("https://issuer.example", []string{AudienceBFF}, &future))
 
 	if _, err := svc.ValidateAccessTokenForAudience(bff, AudienceBFF); err != nil {
 		t.Errorf("a browser token on a browser route: %v", err)

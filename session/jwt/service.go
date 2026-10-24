@@ -369,6 +369,9 @@ func (s *Service) signToken(claims *Claims) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(method, claims)
+	if s.config.KeyID != "" {
+		token.Header["kid"] = s.config.KeyID
+	}
 
 	var key any
 	if s.config.PrivateKey != nil {
@@ -384,35 +387,35 @@ func (s *Service) signToken(claims *Claims) (string, error) {
 func (s *Service) parseToken(tokenString string) (*Claims, error) {
 	keyFunc := func(token *jwt.Token) (any, error) {
 		// Verify signing method matches configuration
+		var activeKey any
 		switch s.config.Algorithm {
 		case "HS256", "HS384", "HS512":
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-			return s.config.Secret, nil
+			activeKey = s.config.Secret
 		case "RS256", "RS384", "RS512":
 			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-			return s.config.PublicKey, nil
+			activeKey = s.config.PublicKey
 		case "ES256", "ES384", "ES512":
 			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-			return s.config.PublicKey, nil
+			activeKey = s.config.PublicKey
 		default:
 			return nil, ErrInvalidAlgorithm
 		}
+		return s.verificationKey(token, activeKey)
 	}
 
-	// Pin the algorithm, and require an expiry so a token minted without
-	// one never becomes immortal. The issuer is checked when configured.
+	// Pin the algorithm and issuer, and require an expiry so a token minted
+	// without one never becomes immortal.
 	parserOpts := []jwt.ParserOption{
 		jwt.WithValidMethods([]string{s.config.Algorithm}),
 		jwt.WithExpirationRequired(),
-	}
-	if s.config.Issuer != "" {
-		parserOpts = append(parserOpts, jwt.WithIssuer(s.config.Issuer))
+		jwt.WithIssuer(s.config.Issuer),
 	}
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, keyFunc, parserOpts...)
@@ -428,6 +431,27 @@ func (s *Service) parseToken(tokenString string) (*Claims, error) {
 	}
 
 	return claims, nil
+}
+
+// verificationKey selects the key for a token by its kid header: none or
+// Config.KeyID selects the signing key, a VerificationKeys entry selects
+// that key, and any other kid is rejected.
+func (s *Service) verificationKey(token *jwt.Token, activeKey any) (any, error) {
+	raw, present := token.Header["kid"]
+	if !present {
+		return activeKey, nil
+	}
+	kid, ok := raw.(string)
+	if !ok {
+		return nil, errors.New("kid header is not a string")
+	}
+	if kid == s.config.KeyID {
+		return activeKey, nil
+	}
+	if key, ok := s.config.VerificationKeys[kid]; ok {
+		return key, nil
+	}
+	return nil, fmt.Errorf("unknown key id %q", kid)
 }
 
 // Config returns the service configuration.

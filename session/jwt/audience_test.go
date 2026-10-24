@@ -26,7 +26,7 @@ func newAppService(t *testing.T, audience ...string) *Service {
 
 func TestNewServiceRequiresAudience(t *testing.T) {
 	for name, aud := range map[string][]string{"nil": nil, "empty value": {""}} {
-		_, err := NewService(&Config{Secret: testSecret, Algorithm: "HS256", Audience: aud})
+		_, err := NewService(&Config{Secret: testSecret, Algorithm: "HS256", Issuer: "https://auth.example.com", Audience: aud})
 		if !errors.Is(err, ErrMissingAudience) {
 			t.Errorf("%s: err = %v, want ErrMissingAudience", name, err)
 		}

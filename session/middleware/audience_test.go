@@ -15,9 +15,10 @@ import (
 // refuses the narrowly scoped tokens minted for API clients.
 func TestHTTPAuthForAudience(t *testing.T) {
 	svc, err := jwt.NewService(&jwt.Config{
-		Secret:             []byte("test-secret-key-32-bytes-long!!"),
+		Secret:             []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:          "HS256",
 		Audience:           []string{"test-app"},
+		Issuer:             "test-issuer",
 		AccessTokenExpiry:  time.Minute,
 		RefreshTokenExpiry: time.Hour,
 	})
