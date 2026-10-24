@@ -83,7 +83,9 @@ provisioning without trusted emails) does not count. A custom
 `APIConfig.PrincipalEmail` must apply the same rule.
 
 Signing up through an invite (`signup.SignupWithInvite`) applies the same
-email match (`signup.ErrInviteEmailMismatch`).
+email match (`signup.ErrInviteEmailMismatch`). Because the invite token was
+delivered to that address, a successful invite signup marks the new
+account's email verified.
 
 An invite carries its inviter's current authority, not the authority it had
 when it was sent. Accepting requires the inviter to still hold

@@ -171,4 +171,9 @@ func TestSignupWithInvite(t *testing.T) {
 	if m, err := f.orgs.GetMembership(ctx, team.ID, joined.Principal.ID); err != nil || m.Role != "member" {
 		t.Errorf("team membership = %+v, %v", m, err)
 	}
+	// Signing up through the invite link proves the address, so the new
+	// member can list and answer later invitations.
+	if email, err := f.invites.(*invite.DefaultService).PrincipalEmail(ctx, joined.Principal.ID); err != nil || email != "new@example.com" {
+		t.Errorf("verified email after invite signup = %q, %v", email, err)
+	}
 }

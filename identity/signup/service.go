@@ -252,6 +252,18 @@ func (s *DefaultService) SignupWithInvite(ctx context.Context, input AcceptInvit
 		return nil, fmt.Errorf("failed to accept invite: %w", err)
 	}
 
+	// The invite token was delivered to this address, and the address
+	// matches the invite, so holding it shows the person controls the
+	// address. Without this the new member's own invitations would stay
+	// hidden from them, since listing and answering them needs a verified
+	// email.
+	if _, err := s.client.Human.Update().
+		Where(human.PrincipalIDEQ(result.Principal.ID), human.EmailVerifiedAtIsNil()).
+		SetEmailVerifiedAt(time.Now()).
+		Save(ctx); err != nil {
+		return nil, fmt.Errorf("failed to mark email verified: %w", err)
+	}
+
 	return &AcceptInviteOnSignupResult{
 		SignupResult:          *result,
 		InvitedOrganizationID: inv.OrganizationID,
