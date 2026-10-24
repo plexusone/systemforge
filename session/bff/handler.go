@@ -135,6 +135,9 @@ func NewHandler(config HandlerConfig) (*Handler, error) {
 
 	// Create components
 	cookieManager := NewCookieManager(cookieConfig)
+	if err := cookieManager.Config().Validate(); err != nil {
+		return nil, err
+	}
 
 	originValidator := NewOriginValidator(OriginConfig{
 		AllowedOrigins: config.AllowedOrigins,

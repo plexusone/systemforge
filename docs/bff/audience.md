@@ -161,7 +161,7 @@ func BFFAuthMiddleware(jwtService *jwt.Service) func(http.Handler) http.Handler 
     return func(next http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
             // Get token from cookie
-            cookie, err := r.Cookie("sf_session")
+            cookie, err := r.Cookie(bff.DefaultCookieName)
             if err != nil {
                 http.Error(w, "unauthorized", http.StatusUnauthorized)
                 return

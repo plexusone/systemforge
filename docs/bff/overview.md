@@ -123,18 +123,27 @@ directly.
 ```go
 // Secure defaults
 cookieConfig := bff.DefaultCookieConfig()
-// Name:     "sf_session"
+// Name:     "__Host-sf_session"
 // Path:     "/"
 // Secure:   true        // HTTPS only
 // HTTPOnly: true        // No JavaScript access
 // SameSite: Strict      // No cross-site requests
 
-// Development override
+// Development over plain HTTP
 if isDevelopment {
-    cookieConfig.Secure = false
-    cookieConfig.SameSite = http.SameSiteLaxMode
+    cookieConfig = bff.CookieConfig{
+        Name:          bff.InsecureCookieName, // "sf_session"
+        AllowInsecure: true,
+    }
 }
 ```
+
+The default name carries the `__Host-` prefix, so browsers accept the cookie
+only when it is `Secure`, has `Path=/` and no `Domain`; a sibling subdomain
+cannot set or overwrite it. Give each application on a host its own name.
+`NewHandler` rejects a `__Host-` name with a `Domain`, another `Path` or
+without `Secure`. Avoid `Domain` with other names too: it shares the cookie
+with every subdomain.
 
 ### ClientIPConfig (Cloudflare Support)
 
@@ -238,8 +247,9 @@ Default cookie settings:
 
 | Attribute | Value | Purpose |
 |-----------|-------|---------|
+| Name | `__Host-sf_session` | Host-only; subdomains cannot set or overwrite it |
 | HttpOnly | true | Prevents XSS from reading cookie |
-| Secure | true | HTTPS only (disable for localhost) |
+| Secure | true | HTTPS only (`AllowInsecure` for localhost) |
 | SameSite | Strict | Prevents CSRF via cookie scope |
 | Path | / | Available to all paths |
 

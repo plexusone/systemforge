@@ -83,12 +83,9 @@ store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
 
 // Create cookie manager
 cookies := bff.NewCookieManager(bff.CookieConfig{
-    Name:     "session",
-    Domain:   "example.com",
+    Name:     "__Host-myapp_session",
     Path:     "/",
-    Secure:   true,
-    HTTPOnly: true,
-    SameSite: http.SameSiteLaxMode,
+    SameSite: http.SameSiteStrictMode,
     MaxAge:   86400,
 })
 

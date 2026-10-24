@@ -115,15 +115,19 @@ store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
 
 ```go
 cookies := bff.NewCookieManager(bff.CookieConfig{
-    Name:     "session",      // Cookie name
-    Domain:   "example.com",  // Cookie domain
-    Path:     "/",            // Cookie path
-    Secure:   true,           // HTTPS only (set false for local dev)
-    HTTPOnly: true,           // Not accessible to JavaScript
-    SameSite: http.SameSiteLaxMode,
-    MaxAge:   86400,          // 24 hours in seconds
+    Name:     "__Host-myapp_session", // Default: bff.DefaultCookieName ("__Host-sf_session")
+    Path:     "/",                    // Required for a __Host- cookie
+    SameSite: http.SameSiteStrictMode,
+    MaxAge:   86400,                  // 24 hours in seconds
 })
 ```
+
+The cookie is always `HttpOnly`, and `Secure` unless `AllowInsecure` is set
+for plain-HTTP development (the default name is then `bff.InsecureCookieName`,
+`sf_session`, because browsers reject a `__Host-` cookie that is not
+`Secure`). Leave `Domain` empty: a `Domain` shares the cookie with every
+subdomain, any of which can then overwrite it, and is rejected for a
+`__Host-` name by `CookieConfig.Validate` (which `bff.NewHandler` calls).
 
 ## Middleware
 

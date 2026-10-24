@@ -110,7 +110,7 @@ func TestHandler_GetSession_WithSession(t *testing.T) {
 	req := httptest.NewRequest("GET", "/session", nil)
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "sf_session",
+		Name:  DefaultCookieName,
 		Value: session.ID,
 	})
 	rec := httptest.NewRecorder()
@@ -162,7 +162,7 @@ func TestHandler_Logout(t *testing.T) {
 	req.Header.Set("Origin", "https://example.com")
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "sf_session",
+		Name:  DefaultCookieName,
 		Value: session.ID,
 	})
 	rec := httptest.NewRecorder()
@@ -187,7 +187,7 @@ func TestHandler_Logout(t *testing.T) {
 	cookies := rec.Result().Cookies()
 	found := false
 	for _, c := range cookies {
-		if c.Name == "sf_session" && c.MaxAge == -1 {
+		if c.Name == DefaultCookieName && c.MaxAge == -1 {
 			found = true
 			break
 		}
@@ -226,7 +226,7 @@ func TestHandler_Refresh(t *testing.T) {
 	req.Header.Set("Origin", "https://example.com")
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "sf_session",
+		Name:  DefaultCookieName,
 		Value: session.ID,
 	})
 	rec := httptest.NewRecorder()
@@ -398,7 +398,7 @@ func TestHandler_CreateSession(t *testing.T) {
 	cookies := rec.Result().Cookies()
 	found := false
 	for _, c := range cookies {
-		if c.Name == "sf_session" && c.Value == session.ID {
+		if c.Name == DefaultCookieName && c.Value == session.ID {
 			found = true
 			break
 		}

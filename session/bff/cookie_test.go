@@ -10,8 +10,8 @@ import (
 func TestDefaultCookieConfig(t *testing.T) {
 	cfg := DefaultCookieConfig()
 
-	if cfg.Name != "sf_session" {
-		t.Errorf("Name = %s, want sf_session", cfg.Name)
+	if cfg.Name != DefaultCookieName {
+		t.Errorf("Name = %s, want "+DefaultCookieName, cfg.Name)
 	}
 	if cfg.Path != "/" {
 		t.Errorf("Path = %s, want /", cfg.Path)
@@ -31,8 +31,8 @@ func TestNewCookieManager(t *testing.T) {
 	mgr := NewCookieManager(CookieConfig{})
 
 	// Should apply defaults
-	if mgr.config.Name != "sf_session" {
-		t.Errorf("Name = %s, want sf_session", mgr.config.Name)
+	if mgr.config.Name != DefaultCookieName {
+		t.Errorf("Name = %s, want "+DefaultCookieName, mgr.config.Name)
 	}
 	if mgr.config.Path != "/" {
 		t.Errorf("Path = %s, want /", mgr.config.Path)
@@ -82,8 +82,8 @@ func TestCookieManager_SetSessionCookie(t *testing.T) {
 	}
 
 	cookie := cookies[0]
-	if cookie.Name != "sf_session" {
-		t.Errorf("Cookie name = %s, want sf_session", cookie.Name)
+	if cookie.Name != DefaultCookieName {
+		t.Errorf("Cookie name = %s, want "+DefaultCookieName, cookie.Name)
 	}
 	if cookie.Value != sessionID {
 		t.Errorf("Cookie value = %s, want %s", cookie.Value, sessionID)
@@ -109,7 +109,7 @@ func TestCookieManager_GetSessionID(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "sf_session",
+		Name:  DefaultCookieName,
 		Value: sessionID,
 	})
 
@@ -158,8 +158,8 @@ func TestCookieManager_ClearSessionCookie(t *testing.T) {
 	}
 
 	cookie := cookies[0]
-	if cookie.Name != "sf_session" {
-		t.Errorf("Cookie name = %s, want sf_session", cookie.Name)
+	if cookie.Name != DefaultCookieName {
+		t.Errorf("Cookie name = %s, want "+DefaultCookieName, cookie.Name)
 	}
 	if cookie.Value != "" {
 		t.Errorf("Cookie value = %s, want empty", cookie.Value)
