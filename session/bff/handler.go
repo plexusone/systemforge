@@ -3,6 +3,7 @@ package bff
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -326,17 +327,23 @@ type SessionInfoResponse struct {
 
 // handleLogout clears the session.
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
-	sessionID := h.cookieManager.GetSessionID(r)
-	if sessionID != "" {
-		// Get session for hook
-		session, err := h.store.Get(r.Context(), sessionID)
-		if err == nil && h.config.OnLogout != nil {
-			// Call logout hook (e.g., to revoke refresh token in DB)
-			_ = h.config.OnLogout(r.Context(), session)
+	// Delete only a session the store returns for the cookie: the cookie
+	// value is client-controlled and must never be passed to Delete
+	// unchecked, since a store may keep other records (such as per-user
+	// session indexes) in the same key space.
+	ctx := r.Context()
+	if sessionID := h.cookieManager.GetSessionID(r); sessionID != "" {
+		if session, err := h.store.Get(ctx, sessionID); err == nil {
+			if h.config.OnLogout != nil {
+				// Call logout hook (e.g., to revoke refresh token in DB)
+				if err := h.config.OnLogout(ctx, session); err != nil {
+					slog.ErrorContext(ctx, "bff: logout hook failed", "error", err)
+				}
+			}
+			if err := h.store.Delete(ctx, session.ID); err != nil {
+				slog.ErrorContext(ctx, "bff: deleting session at logout failed", "error", err)
+			}
 		}
-
-		// Delete session from store
-		_ = h.store.Delete(r.Context(), sessionID)
 	}
 
 	// Clear cookie

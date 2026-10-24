@@ -101,10 +101,11 @@ func (m *CookieManager) SetSessionCookie(w http.ResponseWriter, sessionID string
 }
 
 // GetSessionID extracts the session ID from the request cookie.
-// Returns empty string if the cookie is not present.
+// Returns empty string if the cookie is not present or its value is not a
+// well-formed session ID (see ValidSessionID).
 func (m *CookieManager) GetSessionID(r *http.Request) string {
 	cookie, err := r.Cookie(m.config.Name)
-	if err != nil {
+	if err != nil || !ValidSessionID(cookie.Value) {
 		return ""
 	}
 	return cookie.Value

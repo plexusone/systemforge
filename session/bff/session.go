@@ -128,6 +128,30 @@ func (s *Session) SetDPoPKeyPair(kp *dpop.KeyPair) error {
 	return nil
 }
 
+// MaxSessionIDLength is the longest session ID ValidSessionID accepts.
+const MaxSessionIDLength = 256
+
+// ValidSessionID reports whether id is a well-formed session ID: 1 to
+// MaxSessionIDLength characters from the URL-safe set A-Z, a-z, 0-9, '-',
+// '_' and '.'. GenerateSessionID produces such IDs; a custom
+// HandlerConfig.SessionIDGenerator must too. Session IDs arrive in client
+// cookies, so other values are treated as no session rather than passed to
+// the store.
+func ValidSessionID(id string) bool {
+	if id == "" || len(id) > MaxSessionIDLength {
+		return false
+	}
+	for i := 0; i < len(id); i++ {
+		c := id[i]
+		switch {
+		case c >= 'A' && c <= 'Z', c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-', c == '_', c == '.':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 // SessionIDLength is the length of generated session IDs in bytes.
 const SessionIDLength = 32
 
