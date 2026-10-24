@@ -22,13 +22,15 @@ func TestRequestTrackerMiddleware(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
 
-	handler := RequestTrackerMiddleware(client)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/users/{id}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		_, err := w.Write([]byte("OK"))
 		require.NoError(t, err)
-	}))
+	})
+	handler := RequestTrackerMiddleware(client)(mux)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/users", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/users/secret-token?code=secret", nil)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -40,9 +42,15 @@ func TestRequestTrackerMiddleware(t *testing.T) {
 	event := lastPayload.Events[0]
 	assert.Equal(t, EventTypeAPIResponse, event.EventType)
 	assert.Equal(t, "POST", event.APIMethod)
-	assert.Equal(t, "/api/users", event.APIPath)
+	assert.Equal(t, "POST /api/users/{id}", event.APIPath)
 	assert.Equal(t, 201, event.APIStatusCode)
 	assert.GreaterOrEqual(t, event.APIDurationMs, 0)
+
+	// A path no route matched is recorded as unmatched, not verbatim.
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/secret-unknown", nil))
+	lastPayload = next(t, delivered).payload
+	require.Len(t, lastPayload.Events, 1)
+	assert.Equal(t, RouteUnmatched, lastPayload.Events[0].APIPath)
 }
 
 func TestRequestTrackerMiddleware_WithCorrelation(t *testing.T) {
@@ -73,7 +81,16 @@ func TestRequestTrackerMiddleware_WithCorrelation(t *testing.T) {
 	require.Len(t, lastPayload.Events, 1)
 	event := lastPayload.Events[0]
 	assert.Equal(t, "sess-frontend-123", event.SessionID)
-	assert.Equal(t, "user-456", event.UserID)
+	assert.Empty(t, event.UserID, "a client-supplied X-User-ID must not attribute the event")
+
+	// The user ID set from the authenticated session is recorded.
+	authenticated := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler.ServeHTTP(w, r.WithContext(WithUserID(r.Context(), "verified-user")))
+	})
+	authenticated.ServeHTTP(httptest.NewRecorder(), req)
+	lastPayload = next(t, delivered).payload
+	require.Len(t, lastPayload.Events, 1)
+	assert.Equal(t, "verified-user", lastPayload.Events[0].UserID)
 }
 
 func TestRequestTrackerMiddleware_NilClient(t *testing.T) {

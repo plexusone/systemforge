@@ -62,7 +62,7 @@ func TestCorrelationMiddleware(t *testing.T) {
 		assert.Equal(t, capturedRequestID, rec.Header().Get(HeaderRequestID))
 	})
 
-	t.Run("extracts user ID", func(t *testing.T) {
+	t.Run("ignores client-supplied user ID", func(t *testing.T) {
 		var capturedUserID string
 
 		handler := CorrelationMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +76,7 @@ func TestCorrelationMiddleware(t *testing.T) {
 
 		handler.ServeHTTP(rec, req)
 
-		assert.Equal(t, "user-789", capturedUserID)
+		assert.Empty(t, capturedUserID)
 	})
 
 	t.Run("returns empty for missing values", func(t *testing.T) {

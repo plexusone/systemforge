@@ -60,8 +60,10 @@ func (o *Observability) TrackJourneyStep(ctx context.Context, journeyID, stepID,
 }
 
 // ProductGraphCorrelationMiddleware returns middleware that extracts
-// correlation headers (X-Session-ID, X-Request-ID, X-User-ID) from requests.
-// This should be used early in the middleware chain.
+// correlation headers (X-Session-ID, X-Request-ID) from requests. It does not
+// read a user ID from the request; set it from the authenticated session
+// with productgraph.WithUserID. This should be used early in the middleware
+// chain.
 func ProductGraphCorrelationMiddleware() func(http.Handler) http.Handler {
 	return productgraph.CorrelationMiddleware
 }

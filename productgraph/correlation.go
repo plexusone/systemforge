@@ -26,13 +26,21 @@ const (
 	HeaderSessionID = "X-Session-ID"
 	// HeaderRequestID is the HTTP header for request ID.
 	HeaderRequestID = "X-Request-ID"
-	// HeaderUserID is the HTTP header for user ID.
+	// HeaderUserID is the HTTP header a frontend may send with its user ID.
+	//
+	// Deprecated: CorrelationMiddleware no longer reads it, because any
+	// caller could attribute events to another user. Set the user ID from
+	// the authenticated session with WithUserID instead.
 	HeaderUserID = "X-User-ID"
 )
 
 // CorrelationMiddleware extracts correlation headers from incoming requests
 // and injects them into the request context. It also generates a request ID
 // if not provided and echoes it back in the response.
+//
+// It does not take the user ID from the request: a header is set by the
+// caller and proves nothing. After authentication, set the user ID from
+// the verified session or token with WithUserID.
 func CorrelationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -51,11 +59,6 @@ func CorrelationMiddleware(next http.Handler) http.Handler {
 
 		// Echo request ID back in response
 		w.Header().Set(HeaderRequestID, requestID)
-
-		// Extract user ID if present
-		if userID := r.Header.Get(HeaderUserID); userID != "" {
-			ctx = context.WithValue(ctx, UserIDKey, userID)
-		}
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
