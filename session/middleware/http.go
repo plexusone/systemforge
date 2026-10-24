@@ -12,7 +12,8 @@ import (
 
 // HTTPAuth returns a standard http.Handler middleware that validates JWT tokens.
 // It extracts the token from the Authorization header (Bearer scheme) and
-// attaches the claims to the request context.
+// attaches the claims to the request context. Only access tokens addressed
+// to the service's Config.Audience are accepted.
 func HTTPAuth(jwtService *jwt.Service) func(http.Handler) http.Handler {
 	return HTTPAuthWithObservability(jwtService, nil)
 }
@@ -21,7 +22,8 @@ func HTTPAuth(jwtService *jwt.Service) func(http.Handler) http.Handler {
 // it admits only access tokens addressed to one of the audiences (for
 // example jwt.AudienceBFF on browser routes), so a token minted for
 // another audience, such as a narrowly scoped API token, cannot be used
-// as a full session. HTTPAuth itself accepts any audience.
+// as a full session. HTTPAuth accepts any token addressed to this
+// application, whatever kind of client it was minted for.
 func HTTPAuthForAudience(jwtService *jwt.Service, audiences ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

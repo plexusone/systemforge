@@ -34,7 +34,9 @@ var (
 	ErrTokenExpired = errors.New("token expired")
 	// ErrWrongTokenType is returned when the token type doesn't match expectations.
 	ErrWrongTokenType = errors.New("wrong token type")
-	// ErrAudienceMismatch is returned when the token audience doesn't match expected value.
+	// ErrAudienceMismatch is returned when the token is not addressed to the
+	// expected audience: this application's Config.Audience, or the
+	// audiences a caller asked for.
 	ErrAudienceMismatch = errors.New("audience mismatch")
 	// ErrScopesRequired is returned when API tokens are created without scopes.
 	ErrScopesRequired = errors.New("at least one scope is required for API tokens")
@@ -63,7 +65,9 @@ type TokenOptions struct {
 	DPoPThumbprint string
 
 	// Audience replaces the configured audience on this token, for example to
-	// address it to one application when several share a signing key.
+	// address it to one application when several share a signing key. Such
+	// a token is accepted only by ValidateAccessTokenForAudience (or a
+	// service whose Config.Audience includes one of these values).
 	Audience []string
 }
 
@@ -203,37 +207,35 @@ func (s *Service) GenerateTokenPairWithOrg(
 	}, nil
 }
 
-// ValidateAccessToken validates and parses an access token.
+// ValidateAccessToken validates and parses an access token addressed to
+// this application: its audience must include one of Config.Audience.
 func (s *Service) ValidateAccessToken(tokenString string) (*Claims, error) {
+	return s.validateAccess(tokenString, s.config.Audience)
+}
+
+// ValidateAccessTokenForAudience is ValidateAccessToken for a verifier
+// that serves one kind of client or one application: the token must be
+// addressed to one of the audiences (AudienceBFF, AudienceAPI, or an
+// application's own), which replace Config.Audience for this check. A
+// token minted for another audience, for example a narrowly scoped API
+// token, is refused with ErrAudienceMismatch rather than accepted as a
+// full session. With no audiences every token is refused.
+func (s *Service) ValidateAccessTokenForAudience(tokenString string, audiences ...string) (*Claims, error) {
+	return s.validateAccess(tokenString, audiences)
+}
+
+func (s *Service) validateAccess(tokenString string, audiences []string) (*Claims, error) {
 	claims, err := s.parseToken(tokenString)
 	if err != nil {
 		return nil, err
 	}
-
 	if !claims.IsAccessToken() {
 		return nil, ErrWrongTokenType
 	}
-
+	if !claims.HasAnyAudience(audiences...) {
+		return nil, ErrAudienceMismatch
+	}
 	return claims, nil
-}
-
-// ValidateAccessTokenForAudience is ValidateAccessToken for a verifier
-// that serves one kind of client: the token must be addressed to one of
-// the audiences (AudienceBFF, AudienceAPI, or an application's own). A
-// token minted for another audience, for example a narrowly scoped API
-// token, is refused with ErrAudienceMismatch rather than accepted as a
-// full session.
-func (s *Service) ValidateAccessTokenForAudience(tokenString string, audiences ...string) (*Claims, error) {
-	claims, err := s.ValidateAccessToken(tokenString)
-	if err != nil {
-		return nil, err
-	}
-	for _, a := range audiences {
-		if claims.HasAudience(a) {
-			return claims, nil
-		}
-	}
-	return nil, ErrAudienceMismatch
 }
 
 // ValidateRefreshToken validates and parses a refresh token.
@@ -247,25 +249,27 @@ func (s *Service) ValidateRefreshToken(tokenString string) (*Claims, error) {
 		return nil, ErrWrongTokenType
 	}
 
+	// A refresh token from another application sharing the signing key
+	// must not mint tokens here.
+	if !claims.HasAnyAudience(s.config.Audience...) {
+		return nil, ErrAudienceMismatch
+	}
+
 	return claims, nil
 }
 
-// ValidateAccessTokenWithAudience validates an access token and checks expected audience.
-// If expectedAudience is empty, audience checking is skipped (backward compatible).
+// ValidateAccessTokenWithAudience validates an access token addressed to
+// expectedAudience. An empty expectedAudience checks Config.Audience, as
+// ValidateAccessToken does.
 func (s *Service) ValidateAccessTokenWithAudience(tokenString string, expectedAudience string) (*Claims, error) {
-	claims, err := s.ValidateAccessToken(tokenString)
-	if err != nil {
-		return nil, err
+	if expectedAudience == "" {
+		return s.ValidateAccessToken(tokenString)
 	}
-
-	if expectedAudience != "" && !claims.HasAudience(expectedAudience) {
-		return nil, fmt.Errorf("%w: expected %s, got %s", ErrAudienceMismatch, expectedAudience, claims.Audience())
-	}
-
-	return claims, nil
+	return s.validateAccess(tokenString, []string{expectedAudience})
 }
 
-// GenerateAccessTokenWithAudience creates an access token with explicit audience.
+// GenerateAccessTokenWithAudience creates an access token for a kind of
+// client: its audience is the given value followed by Config.Audience.
 func (s *Service) GenerateAccessTokenWithAudience(
 	principalID uuid.UUID,
 	email, name string,
@@ -273,7 +277,7 @@ func (s *Service) GenerateAccessTokenWithAudience(
 	scopes []string,
 ) (string, error) {
 	claims := NewAccessClaims(s.config, principalID, email, name).
-		WithAudience(audience)
+		withKind(audience)
 
 	if len(scopes) > 0 {
 		claims.Scopes = scopes
@@ -302,7 +306,7 @@ func (s *Service) GenerateAPIToken(
 	}
 
 	claims := NewAccessClaims(s.config, principalID, email, name).
-		WithAudience(AudienceAPI)
+		withKind(AudienceAPI)
 	claims.Scopes = scopes
 
 	// Override expiry if duration provided

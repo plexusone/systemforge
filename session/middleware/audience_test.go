@@ -17,6 +17,7 @@ func TestHTTPAuthForAudience(t *testing.T) {
 	svc, err := jwt.NewService(&jwt.Config{
 		Secret:             []byte("test-secret-key-32-bytes-long!!"),
 		Algorithm:          "HS256",
+		Audience:           []string{"test-app"},
 		AccessTokenExpiry:  time.Minute,
 		RefreshTokenExpiry: time.Hour,
 	})

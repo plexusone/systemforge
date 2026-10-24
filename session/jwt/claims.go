@@ -183,9 +183,34 @@ func (c *Claims) HasAudience(aud string) bool {
 	return false
 }
 
+// HasAnyAudience reports whether the claims include at least one of the
+// audiences. It is false when audiences is empty.
+func (c *Claims) HasAnyAudience(audiences ...string) bool {
+	for _, a := range audiences {
+		if c.HasAudience(a) {
+			return true
+		}
+	}
+	return false
+}
+
 // WithAudience sets the audience claim (builder pattern).
 // This overrides any audience set from Config.
 func (c *Claims) WithAudience(audiences ...string) *Claims {
 	c.RegisteredClaims.Audience = audiences
+	return c
+}
+
+// withKind puts a client-kind audience (AudienceBFF, AudienceAPI, ...)
+// first and keeps the configured application audience, so the token is
+// addressed both to a kind of client and to this application.
+func (c *Claims) withKind(kind string) *Claims {
+	aud := []string{kind}
+	for _, a := range c.RegisteredClaims.Audience {
+		if a != kind {
+			aud = append(aud, a)
+		}
+	}
+	c.RegisteredClaims.Audience = aud
 	return c
 }

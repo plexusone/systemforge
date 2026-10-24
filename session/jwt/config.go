@@ -3,6 +3,7 @@ package jwt
 
 import (
 	"errors"
+	"slices"
 	"time"
 )
 
@@ -28,7 +29,11 @@ type Config struct {
 	// Issuer is the JWT "iss" claim value.
 	Issuer string
 
-	// Audience is the JWT "aud" claim value.
+	// Audience identifies the application this service issues tokens for
+	// (required). Every token the service mints carries it, and
+	// ValidateAccessToken and ValidateRefreshToken refuse tokens without it,
+	// so a token issued by another application that shares the signing key
+	// is not accepted here.
 	Audience []string
 
 	// AccessTokenExpiry is the duration before access tokens expire.
@@ -62,6 +67,9 @@ var (
 	ErrInvalidAlgorithm = errors.New("invalid signing algorithm")
 	// ErrMissingPublicKey is returned when PrivateKey is set but PublicKey is not.
 	ErrMissingPublicKey = errors.New("public key required when using asymmetric signing")
+	// ErrMissingAudience is returned when Audience is empty or contains an
+	// empty value.
+	ErrMissingAudience = errors.New("audience required: set Config.Audience to identify this application")
 )
 
 // Validate checks that the configuration is valid.
@@ -72,6 +80,10 @@ func (c *Config) Validate() error {
 
 	if c.PrivateKey != nil && c.PublicKey == nil {
 		return ErrMissingPublicKey
+	}
+
+	if len(c.Audience) == 0 || slices.Contains(c.Audience, "") {
+		return ErrMissingAudience
 	}
 
 	validAlgorithms := map[string]bool{

@@ -15,6 +15,7 @@ func newAppTokenService(t *testing.T) *jwt.Service {
 	cfg := jwt.DefaultConfig()
 	cfg.Secret = []byte("a-test-secret-that-is-long-enough-for-hs256")
 	cfg.Issuer = "test"
+	cfg.Audience = []string{"platform"}
 	svc, err := jwt.NewService(cfg)
 	if err != nil {
 		t.Fatalf("jwt.NewService: %v", err)
