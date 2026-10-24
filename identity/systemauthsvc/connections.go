@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/plexusone/connectforge/egress"
@@ -104,13 +105,36 @@ func (s *Service) mountConnections() {
 // providers through Options.Providers.
 func (s *Service) Connections() *connections.Connections { return s.conns }
 
-// RunJobs runs background work, the key lifecycle jobs when connections are
-// enabled, until ctx is cancelled. It returns at once when there is none.
+// RunJobs runs background work until ctx is cancelled: the key lifecycle
+// jobs when connections are enabled, and the authorization graph
+// reconciler on its configured schedule when the authorization mode is
+// rebac. It returns at once when there is none, and the jobs' errors
+// joined when they end.
 func (s *Service) RunJobs(ctx context.Context) error {
-	if s.keys == nil {
+	var jobs []func(context.Context) error
+	if s.keys != nil {
+		jobs = append(jobs, s.keys.Run)
+	}
+	if s.authz != nil && s.authz.Reconciler != nil {
+		jobs = append(jobs, s.authz.RunReconciler)
+	}
+	errs := make([]error, len(jobs))
+	var wg sync.WaitGroup
+	for i, job := range jobs {
+		wg.Go(func() { errs[i] = job(ctx) })
+	}
+	wg.Wait()
+	return errors.Join(errs...)
+}
+
+// AuthzReconciler returns the authorization graph reconciler, for an
+// on-demand Reconcile, or nil when the authorization mode built by the
+// service has no graph.
+func (s *Service) AuthzReconciler() *mode.Reconciler {
+	if s.authz == nil {
 		return nil
 	}
-	return s.keys.Run(ctx)
+	return s.authz.Reconciler
 }
 
 // closeConnections releases what openConnections opened.
