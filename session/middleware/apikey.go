@@ -239,7 +239,7 @@ func APIKeyMiddleware(config APIKeyMiddlewareConfig) func(http.Handler) http.Han
 				// Fire and forget - don't block the request
 				//nolint:gosec // G118: Background context intentional for fire-and-forget usage recording
 				go func() {
-					_ = config.Service.RecordUsage(context.Background(), validatedKey.ID, ip)
+					recordAPIKeyUsage(config.Service, validatedKey.ID, ip)
 				}()
 			}
 
@@ -281,6 +281,14 @@ func checkAPIKeyOwner(ctx context.Context, check APIKeyOwnerCheck, key *apikey.A
 	}
 	slog.ErrorContext(ctx, "checking API key owner", "key_id", key.ID, "error", err)
 	return err
+}
+
+// recordAPIKeyUsage records a key's use. It runs after the response is
+// under way, so a failure cannot be returned and is logged instead.
+func recordAPIKeyUsage(service *apikey.Service, keyID uuid.UUID, ip string) {
+	if err := service.RecordUsage(context.Background(), keyID, ip); err != nil {
+		slog.Error("recording API key usage", "key_id", keyID, "error", err)
+	}
 }
 
 // extractAPIKey extracts the API key from the request.
@@ -420,7 +428,7 @@ func OptionalAPIKey(service *apikey.Service, ownerCheck APIKeyOwnerCheck) func(h
 				ip := extractIP(r, config)
 				//nolint:gosec // G118: Background context intentional for fire-and-forget usage recording
 				go func() {
-					_ = config.Service.RecordUsage(context.Background(), validatedKey.ID, ip)
+					recordAPIKeyUsage(config.Service, validatedKey.ID, ip)
 				}()
 			}
 
