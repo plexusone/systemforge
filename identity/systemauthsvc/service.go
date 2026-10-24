@@ -23,6 +23,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/managedprincipal"
 	"github.com/plexusone/systemforge/identity/relyingparty"
+	"github.com/plexusone/systemforge/identity/scim/scimtoken"
 	"github.com/plexusone/systemforge/identity/signupgate"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/keys"
@@ -137,6 +138,12 @@ type Options struct {
 	// WithAuthzSyncer.
 	ManagedPrincipalOptions []managedprincipal.Option
 
+	// SCIM serves SCIM 2.0 provisioning at SCIMPath, authenticated by
+	// default with tenant SCIM tokens from the built-in store (see
+	// SCIMOptions and Service.SCIMTokens). It needs a database. Nil, the
+	// default, serves no SCIM.
+	SCIM *SCIMOptions
+
 	// ServerOptions are passed to systemauth.NewEmbedded after the storage,
 	// logger and readiness options New sets, e.g. WithObservability or
 	// custom social login stores. They come last, so they can replace the
@@ -170,6 +177,11 @@ type Service struct {
 	// rate-limit storage New created for it, if any.
 	mp      *managedprincipal.Service
 	mpRates ratelimit.Storage
+
+	// scimTokens is set when SCIM is enabled; scimAuthz is the
+	// authorization mode openSCIM opened, if any.
+	scimTokens *scimtoken.Service
+	scimAuthz  *mode.Result
 }
 
 // New builds a SystemAuth server from cfg. Unless opts.Dev is set it
@@ -311,6 +323,10 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		return nil, err
 	}
 	s.openManagedPrincipals(&c, opts)
+	if err := s.openSCIM(ctx, &c, opts); err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
 	return s, nil
 }
 
@@ -479,7 +495,7 @@ func (s *Service) Ready(ctx context.Context) error {
 // Close releases the database New opened. Injected handles (Options.DB,
 // Options.EntClient) are left to their owner.
 func (s *Service) Close() error {
-	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeManagedPrincipals())
+	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeManagedPrincipals(), s.closeSCIM())
 	if s.owned == nil {
 		return err
 	}
