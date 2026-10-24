@@ -37,6 +37,9 @@
       },
       {
         "description": "SCIM could rewrite the login email of a user who also belonged to other organizations, enabling account takeover; a tenant now changes email, name and photo only for users it provisioned that belong to no other organization, and manages only the membership of others"
+      },
+      {
+        "description": "Deactivating an organization membership left the member's organization role, application roles and resource grants in the SpiceDB graph, so under the ReBAC authorizer a deactivated admin kept every permission; deactivation now removes them from the graph and reactivation writes them back"
       }
     ],
     "added": [
