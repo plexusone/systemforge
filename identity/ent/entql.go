@@ -31,6 +31,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
+	"github.com/plexusone/systemforge/identity/ent/scimtoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
@@ -46,7 +47,7 @@ import (
 
 // schemaGraph holds a representation of ent/schema at runtime.
 var schemaGraph = func() *sqlgraph.Schema {
-	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 33)}
+	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 34)}
 	graph.Nodes[0] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   accesschange.Table,
@@ -709,6 +710,30 @@ var schemaGraph = func() *sqlgraph.Schema {
 	}
 	graph.Nodes[27] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
+			Table:   scimtoken.Table,
+			Columns: scimtoken.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeUUID,
+				Column: scimtoken.FieldID,
+			},
+		},
+		Type: "ScimToken",
+		Fields: map[string]*sqlgraph.FieldSpec{
+			scimtoken.FieldOrganizationID: {Type: field.TypeUUID, Column: scimtoken.FieldOrganizationID},
+			scimtoken.FieldGeneration:     {Type: field.TypeInt, Column: scimtoken.FieldGeneration},
+			scimtoken.FieldTokenPrefix:    {Type: field.TypeString, Column: scimtoken.FieldTokenPrefix},
+			scimtoken.FieldTokenHash:      {Type: field.TypeString, Column: scimtoken.FieldTokenHash},
+			scimtoken.FieldDescription:    {Type: field.TypeString, Column: scimtoken.FieldDescription},
+			scimtoken.FieldCreatedBy:      {Type: field.TypeUUID, Column: scimtoken.FieldCreatedBy},
+			scimtoken.FieldCreatedAt:      {Type: field.TypeTime, Column: scimtoken.FieldCreatedAt},
+			scimtoken.FieldLastUsedAt:     {Type: field.TypeTime, Column: scimtoken.FieldLastUsedAt},
+			scimtoken.FieldExpiresAt:      {Type: field.TypeTime, Column: scimtoken.FieldExpiresAt},
+			scimtoken.FieldRevokedAt:      {Type: field.TypeTime, Column: scimtoken.FieldRevokedAt},
+			scimtoken.FieldRevokedBy:      {Type: field.TypeUUID, Column: scimtoken.FieldRevokedBy},
+		},
+	}
+	graph.Nodes[28] = &sqlgraph.Node{
+		NodeSpec: sqlgraph.NodeSpec{
 			Table:   seatassignment.Table,
 			Columns: seatassignment.Columns,
 			ID: &sqlgraph.FieldSpec{
@@ -724,7 +749,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			seatassignment.FieldAssignedAt:  {Type: field.TypeTime, Column: seatassignment.FieldAssignedAt},
 		},
 	}
-	graph.Nodes[28] = &sqlgraph.Node{
+	graph.Nodes[29] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   serviceprincipal.Table,
 			Columns: serviceprincipal.Columns,
@@ -745,7 +770,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			serviceprincipal.FieldAllowedIps:  {Type: field.TypeJSON, Column: serviceprincipal.FieldAllowedIps},
 		},
 	}
-	graph.Nodes[29] = &sqlgraph.Node{
+	graph.Nodes[30] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   signupinvite.Table,
 			Columns: signupinvite.Columns,
@@ -766,7 +791,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			signupinvite.FieldRedeemedBy: {Type: field.TypeUUID, Column: signupinvite.FieldRedeemedBy},
 		},
 	}
-	graph.Nodes[30] = &sqlgraph.Node{
+	graph.Nodes[31] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   signupwaitlistentry.Table,
 			Columns: signupwaitlistentry.Columns,
@@ -784,7 +809,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			signupwaitlistentry.FieldConsentText:    {Type: field.TypeString, Column: signupwaitlistentry.FieldConsentText},
 		},
 	}
-	graph.Nodes[31] = &sqlgraph.Node{
+	graph.Nodes[32] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   slugreservation.Table,
 			Columns: slugreservation.Columns,
@@ -804,7 +829,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			slugreservation.FieldExpiresAt:                  {Type: field.TypeTime, Column: slugreservation.FieldExpiresAt},
 		},
 	}
-	graph.Nodes[32] = &sqlgraph.Node{
+	graph.Nodes[33] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   subscription.Table,
 			Columns: subscription.Columns,
@@ -5379,6 +5404,101 @@ func (f *ResourceGrantFilter) WhereHasGranterWith(preds ...predicate.Principal) 
 }
 
 // addPredicate implements the predicateAdder interface.
+func (_q *ScimTokenQuery) addPredicate(pred func(s *sql.Selector)) {
+	_q.predicates = append(_q.predicates, pred)
+}
+
+// Filter returns a Filter implementation to apply filters on the ScimTokenQuery builder.
+func (_q *ScimTokenQuery) Filter() *ScimTokenFilter {
+	return &ScimTokenFilter{config: _q.config, predicateAdder: _q}
+}
+
+// addPredicate implements the predicateAdder interface.
+func (m *ScimTokenMutation) addPredicate(pred func(s *sql.Selector)) {
+	m.predicates = append(m.predicates, pred)
+}
+
+// Filter returns an entql.Where implementation to apply filters on the ScimTokenMutation builder.
+func (m *ScimTokenMutation) Filter() *ScimTokenFilter {
+	return &ScimTokenFilter{config: m.config, predicateAdder: m}
+}
+
+// ScimTokenFilter provides a generic filtering capability at runtime for ScimTokenQuery.
+type ScimTokenFilter struct {
+	predicateAdder
+	config
+}
+
+// Where applies the entql predicate on the query filter.
+func (f *ScimTokenFilter) Where(p entql.P) {
+	f.addPredicate(func(s *sql.Selector) {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[27].Type, p, s); err != nil {
+			s.AddError(err)
+		}
+	})
+}
+
+// WhereID applies the entql [16]byte predicate on the id field.
+func (f *ScimTokenFilter) WhereID(p entql.ValueP) {
+	f.Where(p.Field(scimtoken.FieldID))
+}
+
+// WhereOrganizationID applies the entql [16]byte predicate on the organization_id field.
+func (f *ScimTokenFilter) WhereOrganizationID(p entql.ValueP) {
+	f.Where(p.Field(scimtoken.FieldOrganizationID))
+}
+
+// WhereGeneration applies the entql int predicate on the generation field.
+func (f *ScimTokenFilter) WhereGeneration(p entql.IntP) {
+	f.Where(p.Field(scimtoken.FieldGeneration))
+}
+
+// WhereTokenPrefix applies the entql string predicate on the token_prefix field.
+func (f *ScimTokenFilter) WhereTokenPrefix(p entql.StringP) {
+	f.Where(p.Field(scimtoken.FieldTokenPrefix))
+}
+
+// WhereTokenHash applies the entql string predicate on the token_hash field.
+func (f *ScimTokenFilter) WhereTokenHash(p entql.StringP) {
+	f.Where(p.Field(scimtoken.FieldTokenHash))
+}
+
+// WhereDescription applies the entql string predicate on the description field.
+func (f *ScimTokenFilter) WhereDescription(p entql.StringP) {
+	f.Where(p.Field(scimtoken.FieldDescription))
+}
+
+// WhereCreatedBy applies the entql [16]byte predicate on the created_by field.
+func (f *ScimTokenFilter) WhereCreatedBy(p entql.ValueP) {
+	f.Where(p.Field(scimtoken.FieldCreatedBy))
+}
+
+// WhereCreatedAt applies the entql time.Time predicate on the created_at field.
+func (f *ScimTokenFilter) WhereCreatedAt(p entql.TimeP) {
+	f.Where(p.Field(scimtoken.FieldCreatedAt))
+}
+
+// WhereLastUsedAt applies the entql time.Time predicate on the last_used_at field.
+func (f *ScimTokenFilter) WhereLastUsedAt(p entql.TimeP) {
+	f.Where(p.Field(scimtoken.FieldLastUsedAt))
+}
+
+// WhereExpiresAt applies the entql time.Time predicate on the expires_at field.
+func (f *ScimTokenFilter) WhereExpiresAt(p entql.TimeP) {
+	f.Where(p.Field(scimtoken.FieldExpiresAt))
+}
+
+// WhereRevokedAt applies the entql time.Time predicate on the revoked_at field.
+func (f *ScimTokenFilter) WhereRevokedAt(p entql.TimeP) {
+	f.Where(p.Field(scimtoken.FieldRevokedAt))
+}
+
+// WhereRevokedBy applies the entql [16]byte predicate on the revoked_by field.
+func (f *ScimTokenFilter) WhereRevokedBy(p entql.ValueP) {
+	f.Where(p.Field(scimtoken.FieldRevokedBy))
+}
+
+// addPredicate implements the predicateAdder interface.
 func (_q *SeatAssignmentQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
 }
@@ -5407,7 +5527,7 @@ type SeatAssignmentFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SeatAssignmentFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[27].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[28].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5509,7 +5629,7 @@ type ServicePrincipalFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *ServicePrincipalFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[28].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[29].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5617,7 +5737,7 @@ type SignupInviteFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SignupInviteFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[29].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[30].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5697,7 +5817,7 @@ type SignupWaitlistEntryFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SignupWaitlistEntryFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[30].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[31].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5762,7 +5882,7 @@ type SlugReservationFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SlugReservationFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[31].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[32].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5865,7 +5985,7 @@ type SubscriptionFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SubscriptionFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[32].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[33].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})

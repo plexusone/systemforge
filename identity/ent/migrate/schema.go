@@ -1455,6 +1455,39 @@ var (
 			},
 		},
 	}
+	// SfScimTokensColumns holds the columns for the "sf_scim_tokens" table.
+	SfScimTokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "organization_id", Type: field.TypeUUID},
+		{Name: "generation", Type: field.TypeInt},
+		{Name: "token_prefix", Type: field.TypeString, Size: 32},
+		{Name: "token_hash", Type: field.TypeString, Unique: true},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "last_used_at", Type: field.TypeTime, Nullable: true},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "revoked_at", Type: field.TypeTime, Nullable: true},
+		{Name: "revoked_by", Type: field.TypeUUID, Nullable: true},
+	}
+	// SfScimTokensTable holds the schema information for the "sf_scim_tokens" table.
+	SfScimTokensTable = &schema.Table{
+		Name:       "sf_scim_tokens",
+		Columns:    SfScimTokensColumns,
+		PrimaryKey: []*schema.Column{SfScimTokensColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "scimtoken_organization_id_generation",
+				Unique:  true,
+				Columns: []*schema.Column{SfScimTokensColumns[1], SfScimTokensColumns[2]},
+			},
+			{
+				Name:    "scimtoken_organization_id_revoked_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfScimTokensColumns[1], SfScimTokensColumns[10]},
+			},
+		},
+	}
 	// SfSeatAssignmentsColumns holds the columns for the "sf_seat_assignments" table.
 	SfSeatAssignmentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1756,6 +1789,7 @@ var (
 		SfPrincipalMembershipsTable,
 		SfPrincipalTokensTable,
 		SfResourceGrantsTable,
+		SfScimTokensTable,
 		SfSeatAssignmentsTable,
 		SfServicePrincipalsTable,
 		SfSignupInvitesTable,
@@ -1882,6 +1916,9 @@ func init() {
 	SfResourceGrantsTable.ForeignKeys[2].RefTable = SfPrincipalsTable
 	SfResourceGrantsTable.Annotation = &entsql.Annotation{
 		Table: "sf_resource_grants",
+	}
+	SfScimTokensTable.Annotation = &entsql.Annotation{
+		Table: "sf_scim_tokens",
 	}
 	SfSeatAssignmentsTable.ForeignKeys[0].RefTable = SfLicensesTable
 	SfSeatAssignmentsTable.ForeignKeys[1].RefTable = SfPrincipalsTable

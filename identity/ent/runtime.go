@@ -34,6 +34,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/schema"
+	"github.com/plexusone/systemforge/identity/ent/scimtoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
@@ -917,6 +918,49 @@ func init() {
 	resourcegrantDescID := resourcegrantMixinFields0[0].Descriptor()
 	// resourcegrant.DefaultID holds the default value on creation for the id field.
 	resourcegrant.DefaultID = resourcegrantDescID.Default.(func() uuid.UUID)
+	scimtokenMixin := schema.ScimToken{}.Mixin()
+	scimtokenMixinFields0 := scimtokenMixin[0].Fields()
+	_ = scimtokenMixinFields0
+	scimtokenFields := schema.ScimToken{}.Fields()
+	_ = scimtokenFields
+	// scimtokenDescGeneration is the schema descriptor for generation field.
+	scimtokenDescGeneration := scimtokenFields[1].Descriptor()
+	// scimtoken.GenerationValidator is a validator for the "generation" field. It is called by the builders before save.
+	scimtoken.GenerationValidator = scimtokenDescGeneration.Validators[0].(func(int) error)
+	// scimtokenDescTokenPrefix is the schema descriptor for token_prefix field.
+	scimtokenDescTokenPrefix := scimtokenFields[2].Descriptor()
+	// scimtoken.TokenPrefixValidator is a validator for the "token_prefix" field. It is called by the builders before save.
+	scimtoken.TokenPrefixValidator = func() func(string) error {
+		validators := scimtokenDescTokenPrefix.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(token_prefix string) error {
+			for _, fn := range fns {
+				if err := fn(token_prefix); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// scimtokenDescTokenHash is the schema descriptor for token_hash field.
+	scimtokenDescTokenHash := scimtokenFields[3].Descriptor()
+	// scimtoken.TokenHashValidator is a validator for the "token_hash" field. It is called by the builders before save.
+	scimtoken.TokenHashValidator = scimtokenDescTokenHash.Validators[0].(func(string) error)
+	// scimtokenDescDescription is the schema descriptor for description field.
+	scimtokenDescDescription := scimtokenFields[4].Descriptor()
+	// scimtoken.DescriptionValidator is a validator for the "description" field. It is called by the builders before save.
+	scimtoken.DescriptionValidator = scimtokenDescDescription.Validators[0].(func(string) error)
+	// scimtokenDescCreatedAt is the schema descriptor for created_at field.
+	scimtokenDescCreatedAt := scimtokenFields[6].Descriptor()
+	// scimtoken.DefaultCreatedAt holds the default value on creation for the created_at field.
+	scimtoken.DefaultCreatedAt = scimtokenDescCreatedAt.Default.(func() time.Time)
+	// scimtokenDescID is the schema descriptor for id field.
+	scimtokenDescID := scimtokenMixinFields0[0].Descriptor()
+	// scimtoken.DefaultID holds the default value on creation for the id field.
+	scimtoken.DefaultID = scimtokenDescID.Default.(func() uuid.UUID)
 	seatassignmentMixin := schema.SeatAssignment{}.Mixin()
 	seatassignmentMixinFields0 := seatassignmentMixin[0].Fields()
 	_ = seatassignmentMixinFields0
