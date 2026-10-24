@@ -7,36 +7,114 @@ organizations.
 
 ## Credentials Are Bound to an Organization
 
-Every SCIM request runs in a provisioning scope. Authenticate requests with
-`CredentialMiddleware`, returning the organization the credential belongs to:
+Every SCIM request runs in a provisioning scope. The store refuses any
+request without one (403), so a credential must be bound to exactly one
+organization, or explicitly to the platform.
+
+## Tenant SCIM Tokens
+
+`identity/scim/scimtoken` stores the bearer tokens tenants give their
+identity providers, one set per organization, and authenticates SCIM
+requests with them:
 
 ```go
-api, err := scim.NewAPI(provider)
+tokens := scimtoken.New(client,
+    scimtoken.WithAuthorizer(authorizer),    // who may manage tokens
+    scimtoken.WithAuditEmitter(auditEmitter), // optional
+)
+
+api, err := scim.NewAPI(provider) // provider config BaseURL "/scim/v2"
 if err != nil {
     return err
 }
-router.Mount("/scim/v2", api.CredentialMiddleware(func(r *http.Request) (scim.Credential, error) {
-    tok, err := scimTokens.Verify(r.Context(), bearerToken(r))
-    if err != nil {
-        return scim.Credential{}, err
-    }
-    return scim.Credential{
-        Subject: tok.ID,
-        Scopes:  []string{scim.ScopeFull},
-        Scope:   scim.Scope{OrganizationID: tok.OrganizationID},
-    }, nil
-})(api))
+h := api.CredentialMiddleware(tokens.CredentialFunc(scimtoken.CredentialOptions{}))(api)
+router.Handle("/scim/v2", h)
+router.Handle("/scim/v2/*", h)
 ```
 
-The store refuses any request without a scope (403), so a credential must be
-bound to exactly one organization, or explicitly to the platform.
+The API serves its routes under the provider's `BaseURL`, so handle that
+path on the router rather than mounting the API under a stripped prefix.
+`CredentialFunc` binds the token's organization as the tenant
+(`scim.WithTenant`), grants `scim.ScopeFull` (set
+`CredentialOptions.Scopes` to narrow it), and answers `401` for a missing,
+malformed, unknown, revoked, expired or superseded token. With
+`identity/systemauthsvc`, setting `Options.SCIM` does all of this at
+`/scim/v2`.
 
-SystemForge does not issue or store SCIM bearer tokens; the application's
-token store does (`scimTokens` above). When it rotates a tenant's token,
-keep the previous token valid alongside the new one: issuing token N should
-leave N-1 accepted and revoke only N-2, so the identity provider can be
-switched to the new token and, if that fails, rolled back. Revoke N-1
-explicitly once the switch is confirmed, or at the next rotation.
+### Token format
+
+A token is `sfscim_` followed by 49 base62 characters: 256 random bits
+(43 characters) and a CRC-32 checksum of them (6 characters). Secret
+scanners can match `sfscim_[0-9A-Za-z]{49}` and confirm a match with the
+checksum. Only a SHA-256 hash of the token and a display prefix (`sfscim_`
+and 8 more characters) are stored; the plaintext is returned once, when
+the token is issued. Treat a token like a password: it provisions and
+deprovisions the organization's members.
+
+### Issue, rotate and revoke
+
+| Call | Effect |
+|------|--------|
+| `Issue(ctx, actor, orgID, opts)` | Issues the organization's first token. Fails with `ErrTokenExists` if it already holds a valid one |
+| `Rotate(ctx, actor, orgID, opts)` | Issues a new current token N, keeps the previous token N-1 valid, and revokes N-2 and older in the same transaction |
+| `Revoke(ctx, actor, orgID, tokenID)` | Revokes one token. Revoking N ends the overlap early, or rolls back a bad N: N-1 becomes current again |
+| `List(ctx, actor, orgID)` | Token metadata, newest first, with a status: `current`, `previous`, `revoked`, `expired` or `superseded` |
+| `Authenticate(ctx, token)` | The token's organization, if the token is one of the organization's two newest unrevoked, unexpired tokens and the organization is active |
+
+Rotation never drops N-1 in the step that issues N, so switching the
+identity provider to N can be undone. A typical rotation:
+
+1. `Rotate`, and configure the identity provider with the new token.
+2. Watch provisioning succeed. If it fails, `Revoke` the new token; the
+   provider's previous token is current again.
+3. Leave N-1 to be revoked by the next rotation, or `Revoke` it once the
+   switch is confirmed.
+
+`IssueOptions.ExpiresIn` bounds a token's lifetime; by default tokens do
+not expire. Concurrent rotations of one organization cannot leave three
+valid tokens: a unique (organization, generation) index lets only one of
+them commit, and the other returns `ErrConflict`. A token's last use is
+written at most once a minute (`WithLastUsedInterval`), not on every
+request.
+
+### Who may manage tokens
+
+`Issue`, `Rotate`, `Revoke` and `List` require the acting principal to
+hold `authz.PermOrgSettings` on the organization (its owners and
+admins) or, when the authorizer implements `authz.PlatformAuthorizer`, to
+be a platform administrator. Without `WithAuthorizer` every management
+call is refused.
+
+`scimtoken.NewAPI` serves the same operations over HTTP, beside the
+organization API:
+
+| Method | Path | Operation |
+|--------|------|-----------|
+| `GET` | `/api/v1/organizations/{slug}/scim-tokens` | List |
+| `POST` | `/api/v1/organizations/{slug}/scim-tokens` | Issue (`{"description", "expires_in_seconds"}`) |
+| `POST` | `/api/v1/organizations/{slug}/scim-tokens/rotate` | Rotate |
+| `DELETE` | `/api/v1/organizations/{slug}/scim-tokens/{token_id}` | Revoke |
+
+Responses carry `Cache-Control: no-store`. `systemauthsvc` serves this API
+for access tokens granted `systemforge:scim_tokens`
+(`systemauthsvc.SCIMTokensScope`), and `Service.SCIMTokens` returns the
+store for operator commands.
+
+### Audit
+
+With `WithAuditEmitter`, the store records `scim_token.issued`,
+`scim_token.rotated` (with the IDs of the tokens it revoked),
+`scim_token.revoked`, and `scim_token.authentication_failed` (with a
+reason, and the client address and user agent when authenticated through
+`CredentialFunc`). Events name tokens by ID and display prefix, never by
+the token or its hash.
+
+### Custom token stores
+
+An application that keeps its own SCIM credentials can still pass any
+function to `CredentialMiddleware`, returning a `scim.Credential` whose
+`Scope` names the organization. If it rotates tokens, it should keep the
+same rule: issuing N leaves N-1 valid and revokes only N-2 and older.
 
 ## What a Tenant Credential Can Do
 
@@ -142,6 +220,12 @@ A credential with `scim.Scope{Platform: true}` provisions every user and
 organization, as SCIM did before scoping. For it, `active` deactivates or
 reactivates the account itself. Issue it only to platform operators,
 never to a customer's identity provider.
+
+Tenant tokens are never platform credentials. To accept platform
+credentials next to them, set `CredentialOptions.Platform` (or
+`systemauthsvc.SCIMOptions.PlatformCredential`): it is called only for
+bearer tokens that are not tenant tokens, and a credential it returns
+without `Scope.Platform` is refused.
 
 A platform credential also manages organizations as groups, through the
 organization service (`store.Config.Organizations`, by default the
