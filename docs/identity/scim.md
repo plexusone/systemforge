@@ -31,6 +31,13 @@ router.Mount("/scim/v2", api.CredentialMiddleware(func(r *http.Request) (scim.Cr
 The store refuses any request without a scope (403), so a credential must be
 bound to exactly one organization, or explicitly to the platform.
 
+SystemForge does not issue or store SCIM bearer tokens; the application's
+token store does (`scimTokens` above). When it rotates a tenant's token,
+keep the previous token valid alongside the new one: issuing token N should
+leave N-1 accepted and revoke only N-2, so the identity provider can be
+switched to the new token and, if that fails, rolled back. Revoke N-1
+explicitly once the switch is confirmed, or at the next rotation.
+
 ## What a Tenant Credential Can Do
 
 A credential bound to an organization manages that organization's members:
