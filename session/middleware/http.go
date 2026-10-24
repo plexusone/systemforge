@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -10,24 +11,30 @@ import (
 	"github.com/plexusone/systemforge/session/jwt"
 )
 
-// HTTPAuth returns a standard http.Handler middleware that validates JWT tokens.
-// It extracts the token from the Authorization header (Bearer scheme) and
+// The HTTPAuthBearer middlewares are the legacy, explicit opt-in for
+// routes that accept unbound bearer tokens only. Whoever holds a bearer
+// token can use it, so the default middlewares, HTTPAuth, HTTPAuthForAudience
+// and HTTPAuthOptional, require DPoP-bound tokens with a proof (RFC 9449)
+// unless DPoPConfig.AllowBearer is set. The bearer middlewares still refuse
+// a DPoP-bound token (one with a cnf.jkt claim), since without a verified
+// proof it would work as a plain bearer token.
+
+// HTTPAuthBearer returns middleware that validates unbound bearer JWTs: it
+// extracts the token from the Authorization header (Bearer scheme) and
 // attaches the claims to the request context. Only access tokens addressed
-// to the service's Config.Audience are accepted. A DPoP-bound token (one
-// with a cnf.jkt claim) is refused, since without a verified proof it would
-// work as a plain bearer token; use HTTPAuthDPoP on routes that accept
-// DPoP-bound tokens.
-func HTTPAuth(jwtService *jwt.Service) func(http.Handler) http.Handler {
-	return HTTPAuthWithObservability(jwtService, nil)
+// to the service's Config.Audience are accepted, and a DPoP-bound token is
+// refused. Prefer HTTPAuth, which requires DPoP.
+func HTTPAuthBearer(jwtService *jwt.Service) func(http.Handler) http.Handler {
+	return HTTPAuthBearerWithObservability(jwtService, nil)
 }
 
-// HTTPAuthForAudience is HTTPAuth for routes that serve one kind of client:
-// it admits only access tokens addressed to one of the audiences (for
-// example jwt.AudienceBFF on browser routes), so a token minted for
-// another audience, such as a narrowly scoped API token, cannot be used
-// as a full session. HTTPAuth accepts any token addressed to this
-// application, whatever kind of client it was minted for.
-func HTTPAuthForAudience(jwtService *jwt.Service, audiences ...string) func(http.Handler) http.Handler {
+// HTTPAuthBearerForAudience is HTTPAuthBearer for routes that serve one
+// kind of client: it admits only access tokens addressed to one of the
+// audiences (for example jwt.AudienceBFF on browser routes), so a token
+// minted for another audience, such as a narrowly scoped API token, cannot
+// be used as a full session. Prefer HTTPAuthForAudience, which requires
+// DPoP.
+func HTTPAuthBearerForAudience(jwtService *jwt.Service, audiences ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := extractBearerToken(r)
@@ -49,9 +56,9 @@ func HTTPAuthForAudience(jwtService *jwt.Service, audiences ...string) func(http
 	}
 }
 
-// HTTPAuthWithObservability returns JWT validation middleware with observability.
+// HTTPAuthBearerWithObservability is HTTPAuthBearer with observability.
 // If obs is nil, metrics are not recorded.
-func HTTPAuthWithObservability(jwtService *jwt.Service, obs *observability.Observability) func(http.Handler) http.Handler {
+func HTTPAuthBearerWithObservability(jwtService *jwt.Service, obs *observability.Observability) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -90,15 +97,16 @@ func HTTPAuthWithObservability(jwtService *jwt.Service, obs *observability.Obser
 	}
 }
 
-// HTTPAuthOptional returns middleware that validates JWT tokens if present,
-// but allows requests without tokens to proceed.
-func HTTPAuthOptional(jwtService *jwt.Service) func(http.Handler) http.Handler {
-	return HTTPAuthOptionalWithObservability(jwtService, nil)
+// HTTPAuthBearerOptional is HTTPAuthBearer that lets requests without a
+// valid token through without claims. Prefer HTTPAuthOptional, which
+// requires DPoP.
+func HTTPAuthBearerOptional(jwtService *jwt.Service) func(http.Handler) http.Handler {
+	return HTTPAuthBearerOptionalWithObservability(jwtService, nil)
 }
 
-// HTTPAuthOptionalWithObservability returns optional JWT validation middleware with observability.
-// If obs is nil, metrics are not recorded.
-func HTTPAuthOptionalWithObservability(jwtService *jwt.Service, obs *observability.Observability) func(http.Handler) http.Handler {
+// HTTPAuthBearerOptionalWithObservability is HTTPAuthBearerOptional with
+// observability. If obs is nil, metrics are not recorded.
+func HTTPAuthBearerOptionalWithObservability(jwtService *jwt.Service, obs *observability.Observability) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -128,7 +136,7 @@ func HTTPAuthOptionalWithObservability(jwtService *jwt.Service, obs *observabili
 }
 
 // RequireRole returns middleware that requires the user to have a specific role.
-// Must be used after HTTPAuth middleware.
+// Must be used after HTTPAuth (or HTTPAuthBearer) middleware.
 func RequireRole(role string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +150,7 @@ func RequireRole(role string) func(http.Handler) http.Handler {
 }
 
 // RequireAnyRole returns middleware that requires the user to have any of the specified roles.
-// Must be used after HTTPAuth middleware.
+// Must be used after HTTPAuth (or HTTPAuthBearer) middleware.
 func RequireAnyRole(roles ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +164,7 @@ func RequireAnyRole(roles ...string) func(http.Handler) http.Handler {
 }
 
 // RequirePermission returns middleware that requires a specific permission.
-// Must be used after HTTPAuth middleware.
+// Must be used after HTTPAuth (or HTTPAuthBearer) middleware.
 func RequirePermission(permission string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -170,7 +178,7 @@ func RequirePermission(permission string) func(http.Handler) http.Handler {
 }
 
 // RequireAnyPermission returns middleware that requires any of the specified permissions.
-// Must be used after HTTPAuth middleware.
+// Must be used after HTTPAuth (or HTTPAuthBearer) middleware.
 func RequireAnyPermission(permissions ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -184,7 +192,7 @@ func RequireAnyPermission(permissions ...string) func(http.Handler) http.Handler
 }
 
 // RequirePlatformAdmin returns middleware that requires platform admin status.
-// Must be used after HTTPAuth middleware.
+// Must be used after HTTPAuth (or HTTPAuthBearer) middleware.
 func RequirePlatformAdmin() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -198,7 +206,7 @@ func RequirePlatformAdmin() func(http.Handler) http.Handler {
 }
 
 // RequireOrganization returns middleware that requires an organization context.
-// Must be used after HTTPAuth middleware.
+// Must be used after HTTPAuth (or HTTPAuthBearer) middleware.
 func RequireOrganization() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -235,17 +243,23 @@ type ErrorResponse struct {
 func writeUnauthorized(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
-	_ = json.NewEncoder(w).Encode(ErrorResponse{
+	if err := json.NewEncoder(w).Encode(ErrorResponse{
 		Error:   "unauthorized",
 		Message: message,
-	})
+	}); err != nil {
+		// The status is sent; only the body was lost.
+		slog.Default().Error("writing unauthorized response", "error", err)
+	}
 }
 
 func writeForbidden(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusForbidden)
-	_ = json.NewEncoder(w).Encode(ErrorResponse{
+	if err := json.NewEncoder(w).Encode(ErrorResponse{
 		Error:   "forbidden",
 		Message: message,
-	})
+	}); err != nil {
+		// The status is sent; only the body was lost.
+		slog.Default().Error("writing forbidden response", "error", err)
+	}
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/grokify/goauth/dpop"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/plexusone/systemforge/observability"
 	"github.com/plexusone/systemforge/session/jwt"
 )
 
@@ -26,6 +27,12 @@ var (
 	// ErrDPoPProofReplayed is returned for a proof whose jti was already
 	// used.
 	ErrDPoPProofReplayed = errors.New("DPoP proof replayed")
+	// ErrBearerTokenRefused is returned for an unbound token (no cnf.jkt)
+	// when DPoPConfig.AllowBearer is not set.
+	ErrBearerTokenRefused = errors.New("access token is not DPoP-bound; bearer tokens are not accepted")
+	// ErrMissingAuthorization is returned for a request without an access
+	// token in the Bearer or DPoP scheme.
+	ErrMissingAuthorization = errors.New("missing authorization header")
 	// ErrReplayCacheRequired is returned by NewDPoPAuth without a replay
 	// cache.
 	ErrReplayCacheRequired = errors.New("DPoPConfig.ReplayCache is required")
@@ -58,23 +65,35 @@ type DPoPConfig struct {
 	// not) and the host from the Host header. Forwarded headers are never
 	// trusted, so set BaseURL behind a proxy that terminates TLS.
 	BaseURL string
+
+	// AllowBearer also accepts unbound tokens (without cnf.jkt) with the
+	// Bearer scheme. It is an explicit opt-in for legacy clients: by
+	// default an unbound token is refused, since whoever holds a bearer
+	// token can use it. A DPoP-bound token is never accepted as Bearer.
+	AllowBearer bool
+
+	// Observability, when set, records token validation metrics.
+	Observability *observability.Observability
 }
 
 // DPoPAuth validates access tokens and enforces DPoP sender constraint.
 type DPoPAuth struct {
-	jwt      *jwt.Service
-	verifier *dpop.Verifier
-	maxAge   time.Duration
-	cache    ReplayCache
-	baseURL  string
+	jwt         *jwt.Service
+	verifier    *dpop.Verifier
+	maxAge      time.Duration
+	cache       ReplayCache
+	baseURL     string
+	allowBearer bool
+	obs         *observability.Observability
 }
 
 // NewDPoPAuth returns DPoP-aware token authentication. A token bound to a
 // DPoP key (cnf.jkt) is accepted only with the "DPoP" authorization scheme
 // and a proof that is signed by that key, matches the request method and
 // URI, carries the hash of the token (ath), is fresh, and has not been
-// used before. A token without cnf.jkt is accepted with the "Bearer"
-// scheme, as by HTTPAuth.
+// used before. A token without cnf.jkt is refused unless
+// DPoPConfig.AllowBearer is set, and then accepted only with the "Bearer"
+// scheme.
 func NewDPoPAuth(jwtService *jwt.Service, cfg DPoPConfig) (*DPoPAuth, error) {
 	if cfg.ReplayCache == nil {
 		return nil, ErrReplayCacheRequired
@@ -89,11 +108,13 @@ func NewDPoPAuth(jwtService *jwt.Service, cfg DPoPConfig) (*DPoPAuth, error) {
 	}
 	vc.RequireAccessTokenBinding = true
 	return &DPoPAuth{
-		jwt:      jwtService,
-		verifier: dpop.NewVerifier(vc),
-		maxAge:   vc.MaxAge + 2*vc.AllowedClockSkew,
-		cache:    cfg.ReplayCache,
-		baseURL:  strings.TrimSuffix(cfg.BaseURL, "/"),
+		jwt:         jwtService,
+		verifier:    dpop.NewVerifier(vc),
+		maxAge:      vc.MaxAge + 2*vc.AllowedClockSkew,
+		cache:       cfg.ReplayCache,
+		baseURL:     strings.TrimSuffix(cfg.BaseURL, "/"),
+		allowBearer: cfg.AllowBearer,
+		obs:         cfg.Observability,
 	}, nil
 }
 
@@ -104,9 +125,11 @@ func NewDPoPAuth(jwtService *jwt.Service, cfg DPoPConfig) (*DPoPAuth, error) {
 func (a *DPoPAuth) Middleware(audiences ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			claims, err := a.Authenticate(r, audiences...)
+			claims, err := a.authenticate(r, audiences...)
 			if err != nil {
-				w.Header().Set("WWW-Authenticate", `DPoP algs="ES256"`)
+				for _, c := range a.challenges() {
+					w.Header().Add("WWW-Authenticate", c)
+				}
 				writeUnauthorized(w, err.Error())
 				return
 			}
@@ -115,12 +138,56 @@ func (a *DPoPAuth) Middleware(audiences ...string) func(http.Handler) http.Handl
 	}
 }
 
+// OptionalMiddleware is Middleware that lets a request without valid
+// credentials through without claims, for routes that serve anonymous
+// and signed-in users alike.
+func (a *DPoPAuth) OptionalMiddleware(audiences ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, token := extractAuthorization(r); token != "" {
+				if claims, err := a.authenticate(r, audiences...); err == nil {
+					r = r.WithContext(ContextWithClaims(r.Context(), claims))
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// challenges are the WWW-Authenticate challenges of a refused request.
+func (a *DPoPAuth) challenges() []string {
+	out := []string{`DPoP algs="ES256 ES384 ES512"`}
+	if a.allowBearer {
+		out = append(out, `Bearer`)
+	}
+	return out
+}
+
+// authenticate is Authenticate recording validation metrics.
+func (a *DPoPAuth) authenticate(r *http.Request, audiences ...string) (*jwt.Claims, error) {
+	start := time.Now()
+	claims, err := a.Authenticate(r, audiences...)
+	if a.obs != nil {
+		ctx := r.Context()
+		switch {
+		case errors.Is(err, ErrMissingAuthorization):
+			a.obs.RecordJWTValidation(ctx, observability.ResultMissing)
+		case err != nil:
+			a.obs.RecordJWTValidation(ctx, observability.ResultInvalid)
+		default:
+			a.obs.RecordJWTValidation(ctx, observability.ResultValid)
+		}
+		a.obs.RecordJWTLatency(ctx, float64(time.Since(start).Milliseconds()))
+	}
+	return claims, err
+}
+
 // Authenticate validates the request's access token and, for a DPoP-bound
 // token, its DPoP proof, and returns the token's claims.
 func (a *DPoPAuth) Authenticate(r *http.Request, audiences ...string) (*jwt.Claims, error) {
 	scheme, token := extractAuthorization(r)
 	if token == "" || (scheme != "bearer" && scheme != "dpop") {
-		return nil, errors.New("missing authorization header")
+		return nil, ErrMissingAuthorization
 	}
 
 	var claims *jwt.Claims
@@ -135,8 +202,11 @@ func (a *DPoPAuth) Authenticate(r *http.Request, audiences ...string) (*jwt.Clai
 	}
 
 	if !claims.IsDPoPBound() {
-		if scheme == "dpop" {
+		switch {
+		case scheme == "dpop":
 			return nil, ErrDPoPTokenNotBound
+		case !a.allowBearer:
+			return nil, ErrBearerTokenRefused
 		}
 		return claims, nil
 	}
@@ -179,13 +249,41 @@ func (a *DPoPAuth) requestURI(r *http.Request) string {
 	return scheme + "://" + r.Host + r.URL.Path
 }
 
-// HTTPAuthDPoP is HTTPAuth with DPoP enforcement; see NewDPoPAuth.
-func HTTPAuthDPoP(jwtService *jwt.Service, cfg DPoPConfig) (func(http.Handler) http.Handler, error) {
+// HTTPAuth returns middleware that validates access tokens and attaches
+// their claims to the request context. It requires DPoP (RFC 9449): a
+// token must be bound to a key (cnf.jkt) and come with the "DPoP" scheme
+// and a valid proof by that key; see NewDPoPAuth. Unbound bearer tokens
+// are refused unless cfg.AllowBearer is set. Only access tokens addressed
+// to the service's Config.Audience are accepted.
+func HTTPAuth(jwtService *jwt.Service, cfg DPoPConfig) (func(http.Handler) http.Handler, error) {
 	a, err := NewDPoPAuth(jwtService, cfg)
 	if err != nil {
 		return nil, err
 	}
 	return a.Middleware(), nil
+}
+
+// HTTPAuthForAudience is HTTPAuth for routes that serve one kind of
+// client: it admits only access tokens addressed to one of the audiences
+// (for example jwt.AudienceBFF on browser routes), so a token minted for
+// another audience, such as a narrowly scoped API token, cannot be used
+// as a full session.
+func HTTPAuthForAudience(jwtService *jwt.Service, cfg DPoPConfig, audiences ...string) (func(http.Handler) http.Handler, error) {
+	a, err := NewDPoPAuth(jwtService, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return a.Middleware(audiences...), nil
+}
+
+// HTTPAuthOptional is HTTPAuth that lets requests without valid
+// credentials through without claims.
+func HTTPAuthOptional(jwtService *jwt.Service, cfg DPoPConfig) (func(http.Handler) http.Handler, error) {
+	a, err := NewDPoPAuth(jwtService, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return a.OptionalMiddleware(), nil
 }
 
 // extractAuthorization returns the lower-cased scheme and the credentials

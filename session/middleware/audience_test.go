@@ -36,7 +36,7 @@ func TestHTTPAuthForAudience(t *testing.T) {
 	}
 
 	reached := 0
-	handler := HTTPAuthForAudience(svc, jwt.AudienceBFF)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := HTTPAuthBearerForAudience(svc, jwt.AudienceBFF)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reached++
 		w.WriteHeader(http.StatusNoContent)
 	}))

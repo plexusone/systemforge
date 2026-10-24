@@ -71,8 +71,8 @@ var okHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { 
 func TestHTTPAuth_RejectsDPoPBoundBearer(t *testing.T) {
 	svc, _, bound, plain := dpopFixture(t)
 	for name, h := range map[string]http.Handler{
-		"HTTPAuth":            HTTPAuth(svc)(okHandler),
-		"HTTPAuthForAudience": HTTPAuthForAudience(svc, "test-app")(okHandler),
+		"HTTPAuthBearer":            HTTPAuthBearer(svc)(okHandler),
+		"HTTPAuthBearerForAudience": HTTPAuthBearerForAudience(svc, "test-app")(okHandler),
 	} {
 		if code := serve(h, "GET", "/items", "Bearer "+bound, ""); code != http.StatusUnauthorized {
 			t.Errorf("%s: bound token as Bearer: status %d, want 401", name, code)
@@ -83,12 +83,12 @@ func TestHTTPAuth_RejectsDPoPBoundBearer(t *testing.T) {
 	}
 
 	var gotClaims bool
-	optional := HTTPAuthOptional(svc)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	optional := HTTPAuthBearerOptional(svc)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotClaims = ClaimsFromContext(r.Context()) != nil
 	}))
 	serve(optional, "GET", "/items", "Bearer "+bound, "")
 	if gotClaims {
-		t.Error("HTTPAuthOptional attached claims of a bound token presented as Bearer")
+		t.Error("HTTPAuthBearerOptional attached claims of a bound token presented as Bearer")
 	}
 }
 
@@ -98,7 +98,7 @@ func TestDPoPAuth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mw, err := HTTPAuthDPoP(svc, DPoPConfig{ReplayCache: NewMemoryReplayCache(), BaseURL: dpopTestBase})
+	mw, err := HTTPAuth(svc, DPoPConfig{ReplayCache: NewMemoryReplayCache(), BaseURL: dpopTestBase})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,8 +128,46 @@ func TestDPoPAuth(t *testing.T) {
 		}
 	}
 
-	if code := serve(h, "GET", "/items", "Bearer "+plain, ""); code != http.StatusOK {
-		t.Errorf("unbound bearer token: status %d, want 200", code)
+	// An unbound token is refused by default; AllowBearer is the explicit
+	// opt-in that accepts it with the Bearer scheme.
+	if code := serve(h, "GET", "/items", "Bearer "+plain, ""); code != http.StatusUnauthorized {
+		t.Errorf("unbound bearer token by default: status %d, want 401", code)
+	}
+	legacy, err := HTTPAuth(svc, DPoPConfig{ReplayCache: NewMemoryReplayCache(), BaseURL: dpopTestBase, AllowBearer: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code := serve(legacy(okHandler), "GET", "/items", "Bearer "+plain, ""); code != http.StatusOK {
+		t.Errorf("unbound bearer token with AllowBearer: status %d, want 200", code)
+	}
+	if code := serve(legacy(okHandler), "GET", "/items", "Bearer "+bound, ""); code != http.StatusUnauthorized {
+		t.Errorf("bound token as Bearer with AllowBearer: status %d, want 401", code)
+	}
+
+	// HTTPAuthOptional attaches claims only for a valid DPoP request.
+	optional, err := HTTPAuthOptional(svc, DPoPConfig{ReplayCache: NewMemoryReplayCache(), BaseURL: dpopTestBase})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var withClaims int
+	oh := optional(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ClaimsFromContext(r.Context()) != nil {
+			withClaims++
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	for _, c := range []struct{ auth, proof string }{
+		{"", ""},
+		{"Bearer " + plain, ""},
+		{"Bearer " + bound, ""},
+		{"DPoP " + bound, proofFor(t, kp, "GET", "/items", bound)},
+	} {
+		if code := serve(oh, "GET", "/items", c.auth, c.proof); code != http.StatusOK {
+			t.Errorf("optional %q: status %d", c.auth, code)
+		}
+	}
+	if withClaims != 1 {
+		t.Errorf("optional attached claims %d times, want 1 (the DPoP request)", withClaims)
 	}
 }
 
