@@ -80,12 +80,12 @@ func (s *DefaultService) Issue(ctx context.Context, input IssueInput) (*IssuedTo
 		t := time.Now().Add(input.RefreshTTL)
 		refreshExpiresAt = &t
 	}
-	return issue(ctx, s.client, input, uuid.New(), refreshExpiresAt)
+	return issue(ctx, s.client, input, uuid.New(), refreshExpiresAt, input.DPoP.JKT())
 }
 
-// issue creates a token pair in family. A refresh token is issued when
-// refreshExpiresAt is set.
-func issue(ctx context.Context, client *ent.Client, input IssueInput, family uuid.UUID, refreshExpiresAt *time.Time) (*IssuedToken, error) {
+// issue creates a token pair in family, bound to the DPoP key jkt when it
+// is set. A refresh token is issued when refreshExpiresAt is set.
+func issue(ctx context.Context, client *ent.Client, input IssueInput, family uuid.UUID, refreshExpiresAt *time.Time, jkt string) (*IssuedToken, error) {
 	accessToken, accessSig, err := generateToken()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
@@ -123,8 +123,8 @@ func issue(ctx context.Context, client *ent.Client, input IssueInput, family uui
 		create.SetRefreshTokenSignature(refreshSig)
 		create.SetRefreshExpiresAt(*refreshExpiresAt)
 	}
-	if input.DPoPJKT != "" {
-		create.SetDpopJkt(input.DPoPJKT)
+	if jkt != "" {
+		create.SetDpopJkt(jkt)
 	}
 	if input.SessionID != "" {
 		create.SetSessionID(input.SessionID)
@@ -148,9 +148,17 @@ func issue(ctx context.Context, client *ent.Client, input IssueInput, family uui
 		Token:        entTokenToModel(token),
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		TokenType:    "Bearer",
+		TokenType:    tokenType(jkt),
 		ExpiresIn:    int(accessTTL.Seconds()),
 	}, nil
+}
+
+// tokenType is the token_type of tokens bound to jkt.
+func tokenType(jkt string) string {
+	if jkt != "" {
+		return "DPoP"
+	}
+	return "Bearer"
 }
 
 // Refresh rotates a token pair: it spends the presented refresh token and
@@ -183,8 +191,12 @@ func (s *DefaultService) Refresh(ctx context.Context, input RefreshInput) (*Issu
 		if old.RefreshExpiresAt == nil || !old.RefreshExpiresAt.After(time.Now()) {
 			return ErrInvalidRefreshToken
 		}
-		if old.DpopJkt != "" && old.DpopJkt != input.DPoPJKT {
+		jkt := old.DpopJkt
+		switch {
+		case jkt != "" && input.DPoP.JKT() != jkt:
 			return ErrDPoPMismatch
+		case jkt == "":
+			jkt = input.DPoP.JKT()
 		}
 		active, err := principalActive(ctx, tx.Client(), old.PrincipalID)
 		if err != nil {
@@ -232,13 +244,12 @@ func (s *DefaultService) Refresh(ctx context.Context, input RefreshInput) (*Issu
 			Audience:        old.Audience,
 			Capabilities:    old.Capabilities,
 			DelegationChain: old.DelegationChain,
-			DPoPJKT:         input.DPoPJKT,
 			SessionID:       old.SessionID,
 			AccessTTL:       old.AccessExpiresAt.Sub(old.CreatedAt),
 			ClientIP:        input.ClientIP,
 			UserAgent:       input.UserAgent,
 			ParentTokenID:   old.ParentTokenID,
-		}, old.FamilyID, old.RefreshExpiresAt)
+		}, old.FamilyID, old.RefreshExpiresAt, jkt)
 		return err
 	})
 	if inactiveFamily != nil {
