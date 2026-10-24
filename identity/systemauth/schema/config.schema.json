@@ -51,6 +51,28 @@
           "type": "string",
           "description": "JWKS key ID (default: RFC 7638 thumbprint of the key)"
         },
+        "verification_keys": {
+          "items": {
+            "properties": {
+              "key_id": {
+                "type": "string",
+                "description": "Key ID (default: RFC 7638 thumbprint of the key)"
+              },
+              "public_key_file": {
+                "type": "string",
+                "description": "Path of the PEM RSA key (supports env var expansion)"
+              },
+              "public_key_pem": {
+                "type": "string",
+                "description": "PEM RSA key (supports env var expansion)"
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "array",
+          "description": "Previous or pre-staged keys published in the JWKS for verification only"
+        },
         "private_key_file": {
           "type": "string",
           "description": "Path of the PEM RSA signing key (supports env var expansion)"

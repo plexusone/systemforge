@@ -33,6 +33,7 @@ type Server struct {
 	oauth2          fosite.OAuth2Provider
 	key             *rsa.PrivateKey
 	keyID           string
+	keys            *keyRing
 	huma            huma.API
 	router          chi.Router
 	logger          *slog.Logger
@@ -128,6 +129,10 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		}
 		s.keyID = kid
 	}
+	if err := s.config.Keys.LoadVerificationKeys(s.keyID); err != nil {
+		return nil, err
+	}
+	s.keys = newKeyRing(key, s.keyID, s.config.Keys.VerificationKeys)
 
 	// Set up Fosite
 	if err := s.setupFosite(); err != nil {
@@ -191,22 +196,17 @@ func (s *Server) setupFosite() error {
 		ClientSecretsHasher:            ClientSecretHasher{},
 	}
 
-	// Key getter function for JWT signing
-	keyGetter := func(_ context.Context) (interface{}, error) {
-		return s.key, nil
-	}
-
-	// Create JWT signer
-	jwtSigner := &jwt.DefaultSigner{
-		GetPrivateKey: keyGetter,
-	}
+	// JWTs are signed with the signing key and verified with the key their
+	// kid selects from the key ring (the signing key and the verification
+	// keys), so tokens signed before a rotation keep verifying.
+	jwtSigner := s.keys.signer()
 
 	// Access tokens are opaque (HMAC) by default, or RS256 JWTs verifiable
 	// against the JWKS when features.enable_jwt_access_tokens is set. Either
 	// way they are also stored, so revocation and introspection work.
 	var coreStrategy oauth2.CoreStrategy = compose.NewOAuth2HMACStrategy(fositeConfig)
 	if s.config.Features.EnableJWTAccessTokens {
-		coreStrategy = compose.NewOAuth2JWTStrategy(keyGetter, coreStrategy, fositeConfig)
+		coreStrategy = &oauth2.DefaultJWTStrategy{Signer: jwtSigner, HMACSHAStrategy: coreStrategy, Config: fositeConfig}
 	}
 
 	// Build OAuth2 provider with all needed components
@@ -215,7 +215,7 @@ func (s *Server) setupFosite() error {
 		s.storage,
 		&compose.CommonStrategy{
 			CoreStrategy:               coreStrategy,
-			OpenIDConnectTokenStrategy: compose.NewOpenIDConnectStrategy(keyGetter, fositeConfig),
+			OpenIDConnectTokenStrategy: &openid.DefaultStrategy{Signer: jwtSigner, Config: fositeConfig},
 			Signer:                     jwtSigner,
 		},
 		compose.OAuth2AuthorizeExplicitFactory,

@@ -136,19 +136,9 @@ type JWKSOutput struct {
 }
 
 func (s *Server) jwksHandler(_ context.Context, _ *JWKSInput) (*JWKSOutput, error) {
-	// Create JWK from the RSA public key
-	jwk := jose.JSONWebKey{
-		Key:       &s.key.PublicKey,
-		KeyID:     s.keyID,
-		Algorithm: string(jose.RS256),
-		Use:       "sig",
-	}
-
-	jwks := jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{jwk},
-	}
-
-	return &JWKSOutput{Body: jwks}, nil
+	// The signing key first, then the previous or pre-staged verification
+	// keys (keys.verification_keys).
+	return &JWKSOutput{Body: s.keys.jwks()}, nil
 }
 
 // PublicKey returns the public RSA key for external verification.

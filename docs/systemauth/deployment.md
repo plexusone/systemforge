@@ -173,9 +173,51 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out systemauth-sig
 
 Provide it as a file readable only by the service user, or as PEM content in
 `SYSTEMAUTH_SIGNING_KEY`. The JWKS `kid` defaults to the key's RFC 7638
-thumbprint, so rotating the key changes the `kid` and relying parties fetch the
-new JWKS on the first token signed with it. Tokens signed with the old key stop
-verifying once it is replaced (overlapping keys are not supported yet).
+thumbprint, so a new key gets a new `kid`.
+
+### Rotating the signing key
+
+SystemAuth keeps two keys: the current key N, which signs, and the previous
+key N-1, which only verifies. `keys.verification_keys` lists the keys that
+are published in the JWKS and accepted when verifying tokens without ever
+signing. A token's `kid` selects its key; a token with any other `kid` is
+refused. Rotate in two deploys, so that both a rollout and a rollback keep
+every live token verifying:
+
+1. **Pre-stage.** Generate key N and add it as a verification key while
+   N-1 still signs. Relying parties see N in the JWKS before any token
+   signed with it exists.
+
+    ```yaml
+    keys:
+      private_key_file: /etc/systemauth/signing-2.pem   # N-1, signing
+      key_id: signing-2
+      verification_keys:
+        - key_id: signing-3                               # N, pre-staged
+          public_key_file: /etc/systemauth/signing-3.pem
+    ```
+
+2. **Promote.** Make N the signing key and move N-1 into
+   `verification_keys`. Drop N-2 now, never N-1: tokens N-1 signed are in
+   use until they expire. Rolling this deploy back to step 1 still verifies
+   the tokens N signed meanwhile, because step 1 publishes N.
+
+    ```yaml
+    keys:
+      private_key_file: /etc/systemauth/signing-3.pem   # N, signing
+      key_id: signing-3
+      verification_keys:
+        - key_id: signing-2                               # N-1
+          public_key_file: /etc/systemauth/signing-2.pem
+    ```
+
+A verification key may be a public key (`PUBLIC KEY` or `RSA PUBLIC KEY`
+PEM) or the private key file, of which only the public part is used; give
+it as `public_key_file` or `public_key_pem`. Its `key_id` defaults to the
+key's thumbprint, which is also the default `kid` of a signing key. Keep N-1
+until the longest-lived token it signed has expired: ID tokens (1 hour by
+default) and JWT access tokens (at most 15 minutes); opaque tokens and
+refresh tokens are not signed with it.
 
 ## Example: systemd + Caddy
 

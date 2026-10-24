@@ -184,7 +184,28 @@ type KeyConfig struct {
 
 	// KeyID is the "kid" published in the JWKS and set on every JWT.
 	// Default: the RFC 7638 thumbprint of the key.
+	//
+	// A token's kid selects the key that verifies it: KeyID selects the
+	// signing key, a VerificationKeys entry selects that key, and any other
+	// kid is refused. Rotate in two deploys, keeping the current key N and
+	// the previous key N-1:
+	//
+	//  1. Pre-stage: add the new key N to VerificationKeys while N-1 still
+	//     signs. Relying parties pick N up from the JWKS before any token
+	//     signed by it exists.
+	//  2. Promote: make N the signing key, move N-1 into VerificationKeys,
+	//     and drop N-2. Rolling this deploy back to step 1 keeps verifying
+	//     the tokens N signed meanwhile.
+	//
+	// Never drop N-1 in the deploy that promotes N: tokens it signed are
+	// still in use until they expire.
 	KeyID string `json:"key_id,omitempty" yaml:"key_id,omitempty" jsonschema:"description=JWKS key ID (default: RFC 7638 thumbprint of the key)"`
+
+	// VerificationKeys are keys published in the JWKS and accepted when
+	// verifying tokens, but never used to sign: the previous signing key
+	// N-1 after a rotation, and a pre-staged next key N+1 before it is
+	// promoted. See KeyID for the rotation steps.
+	VerificationKeys []VerificationKeyConfig `json:"verification_keys,omitempty" yaml:"verification_keys,omitempty" jsonschema:"description=Previous or pre-staged keys published in the JWKS for verification only"`
 
 	// PrivateKeyFile is the path of a PEM-encoded RSA private key (PKCS#1
 	// or PKCS#8, at least 2048 bits). Supports environment variable
@@ -201,6 +222,29 @@ type KeyConfig struct {
 	// ephemeral key is generated (development only).
 	// This field is not serialized - for programmatic use only.
 	PrivateKey *rsa.PrivateKey `json:"-" yaml:"-" jsonschema:"-"`
+}
+
+// VerificationKeyConfig is an RSA key SystemAuth publishes and verifies
+// with but does not sign with. Give exactly one of PublicKeyPEM,
+// PublicKeyFile or PublicKey. The PEM may be a public key (PKIX "PUBLIC
+// KEY" or PKCS#1 "RSA PUBLIC KEY") or a private key, of which only the
+// public part is used, so the file of a pre-staged key can be the one it
+// signs with once promoted.
+type VerificationKeyConfig struct {
+	// KeyID is the key's "kid". Default: the RFC 7638 thumbprint of the
+	// key, which is also the default KeyID of a signing key.
+	KeyID string `json:"key_id,omitempty" yaml:"key_id,omitempty" jsonschema:"description=Key ID (default: RFC 7638 thumbprint of the key)"`
+
+	// PublicKeyFile is the path of the PEM-encoded key. Supports
+	// environment variable expansion.
+	PublicKeyFile string `json:"public_key_file,omitempty" yaml:"public_key_file,omitempty" jsonschema:"description=Path of the PEM RSA key (supports env var expansion)"`
+
+	// PublicKeyPEM is the PEM-encoded key. Supports a whole-value
+	// environment variable reference such as ${SYSTEMAUTH_PREVIOUS_KEY}.
+	PublicKeyPEM string `json:"public_key_pem,omitempty" yaml:"public_key_pem,omitempty" jsonschema:"description=PEM RSA key (supports env var expansion)"`
+
+	// PublicKey is the key, for programmatic use; it is not serialized.
+	PublicKey *rsa.PublicKey `json:"-" yaml:"-" jsonschema:"-"`
 }
 
 // TokenConfig configures token lifetimes.
