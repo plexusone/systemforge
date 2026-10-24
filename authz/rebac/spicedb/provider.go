@@ -61,7 +61,11 @@ func (p *Provider) Can(ctx context.Context, principal authz.Principal, action au
 }
 
 // CanAll checks if a principal can perform all specified actions on a resource.
+// An empty action list is denied rather than vacuously allowed.
 func (p *Provider) CanAll(ctx context.Context, principal authz.Principal, actions []authz.Action, resource authz.Resource) (bool, error) {
+	if len(actions) == 0 {
+		return false, nil
+	}
 	for _, action := range actions {
 		allowed, err := p.Can(ctx, principal, action, resource)
 		if err != nil {

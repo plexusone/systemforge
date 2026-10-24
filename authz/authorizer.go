@@ -31,6 +31,7 @@ type Authorizer interface {
 	Can(ctx context.Context, principal Principal, action Action, resource Resource) (bool, error)
 
 	// CanAll checks if a principal can perform all specified actions on a resource.
+	// Implementations must deny an empty action list.
 	CanAll(ctx context.Context, principal Principal, actions []Action, resource Resource) (bool, error)
 
 	// CanAny checks if a principal can perform any of the specified actions on a resource.

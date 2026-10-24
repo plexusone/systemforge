@@ -427,13 +427,14 @@ func testCanAllEmptyActions(t *testing.T, cfg Config) {
 	principal := authz.NewUserPrincipal(cfg.TestPrincipalID)
 	resource := authz.NewResource("test")
 
-	// Empty actions should return true (vacuous truth)
+	// Empty actions must be denied: a conjunction over nothing would
+	// otherwise allow every caller.
 	allowed, err := cfg.Provider.CanAll(ctx, principal, []authz.Action{}, resource)
 	if err != nil {
 		t.Fatalf("CanAll() with empty actions returned error: %v", err)
 	}
-	if !allowed {
-		t.Error("CanAll() with empty actions should return true (vacuous truth)")
+	if allowed {
+		t.Error("CanAll() with empty actions should return false")
 	}
 }
 

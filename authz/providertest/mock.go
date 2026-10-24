@@ -111,7 +111,11 @@ func (m *MockProvider) Can(ctx context.Context, principal authz.Principal, actio
 }
 
 // CanAll checks if a principal can perform all specified actions on a resource.
+// An empty action list is denied rather than vacuously allowed.
 func (m *MockProvider) CanAll(ctx context.Context, principal authz.Principal, actions []authz.Action, resource authz.Resource) (bool, error) {
+	if len(actions) == 0 {
+		return false, nil
+	}
 	for _, action := range actions {
 		allowed, err := m.Can(ctx, principal, action, resource)
 		if err != nil {

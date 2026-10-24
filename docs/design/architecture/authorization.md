@@ -358,7 +358,9 @@ membership and relationship tables through its getters at check time.
 
 `authz.Middleware` (`RequireAction`, `RequireAnyAction`,
 `RequireAllActions`) adapts an `Authorizer` to HTTP, building the principal
-and organization from `session/middleware` claims. The organization,
+and organization from `session/middleware` claims. `RequireAnyAction` and
+`RequireAllActions` panic when registered with no actions, and `CanAll`
+denies an empty action list rather than allowing it vacuously. The organization,
 invite, marketplace and managed-principal APIs call the authorizer directly
 with the `PermOrg*` and manager permissions.
 

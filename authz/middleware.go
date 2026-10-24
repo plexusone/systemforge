@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/session/middleware"
@@ -55,13 +57,16 @@ func (m *Middleware) RequireAction(resourceType ResourceType, action Action) fun
 }
 
 // RequireAnyAction returns middleware that checks if the user can perform
-// any of the specified actions on a resource type.
+// any of the specified actions on a resource type. It panics when no
+// action is given.
 func (m *Middleware) RequireAnyAction(resourceType ResourceType, actions ...Action) func(http.Handler) http.Handler {
 	return m.requireActions(resourceType, actions, false)
 }
 
 // RequireAllActions returns middleware that checks if the user can perform
-// all of the specified actions on a resource type.
+// all of the specified actions on a resource type. It panics when no
+// action is given, because a route that requires all of no actions would
+// otherwise be open to every authenticated caller.
 func (m *Middleware) RequireAllActions(resourceType ResourceType, actions ...Action) func(http.Handler) http.Handler {
 	return m.requireActions(resourceType, actions, true)
 }
@@ -69,6 +74,10 @@ func (m *Middleware) RequireAllActions(resourceType ResourceType, actions ...Act
 // requireActions is a helper that creates middleware for checking multiple actions.
 // If requireAll is true, all actions must be allowed; otherwise any single action suffices.
 func (m *Middleware) requireActions(resourceType ResourceType, actions []Action, requireAll bool) func(http.Handler) http.Handler {
+	if len(actions) == 0 {
+		panic(fmt.Sprintf("authz: no actions given for resource type %q", resourceType))
+	}
+	actions = slices.Clone(actions)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			claims := middleware.ClaimsFromContext(r.Context())
