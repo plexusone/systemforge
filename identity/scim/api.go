@@ -143,8 +143,46 @@ func (a *API) registerEndpoints() {
 	a.registerBulkEndpoints()
 }
 
+// Credential is an authenticated SCIM client.
+type Credential struct {
+	// Subject identifies the client (for example a token ID).
+	Subject string
+	// Scopes are the client's SCIM scopes (ScopeUsersRead, ...).
+	Scopes []string
+	// Scope is what the client may provision: its organization, or the
+	// platform for an operator credential. Requests with an invalid scope
+	// are refused.
+	Scope Scope
+}
+
+// CredentialMiddleware returns HTTP middleware for SCIM authentication.
+// authFn validates the request and returns its credential, which must be
+// bound to one organization or, for platform operators, to the platform.
+func (a *API) CredentialMiddleware(authFn func(r *http.Request) (Credential, error)) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cred, err := authFn(r)
+			if err != nil {
+				writeHumaError(w, http.StatusUnauthorized, err.Error())
+				return
+			}
+			if !cred.Scope.Valid() {
+				writeHumaError(w, http.StatusForbidden, "SCIM credential is not bound to an organization")
+				return
+			}
+			ctx := WithAuthSubject(r.Context(), cred.Subject)
+			ctx = WithAuthScopes(ctx, cred.Scopes)
+			ctx = WithScope(ctx, cred.Scope)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 // Middleware returns HTTP middleware for SCIM authentication.
 // The authFn should validate the request and return the subject and scopes.
+//
+// Deprecated: Middleware binds no provisioning scope, so stores refuse its
+// requests. Use CredentialMiddleware.
 func (a *API) Middleware(authFn func(r *http.Request) (subject string, scopes []string, err error)) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

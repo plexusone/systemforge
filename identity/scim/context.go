@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 type contextKey string
@@ -14,7 +16,48 @@ const (
 	requestIDKey   contextKey = "scim_request_id"
 	authSubjectKey contextKey = "scim_auth_subject"
 	authScopesKey  contextKey = "scim_auth_scopes"
+	scopeKey       contextKey = "scim_scope"
 )
+
+// Scope is what a SCIM credential may provision: one organization (a
+// tenant's identity provider) or, for an explicitly marked platform
+// operator credential, every organization.
+type Scope struct {
+	// OrganizationID is the organization a tenant credential provisions.
+	OrganizationID uuid.UUID
+	// Platform marks a platform operator credential that provisions every
+	// organization.
+	Platform bool
+}
+
+// Valid reports whether the scope names exactly one of an organization or
+// the platform.
+func (s Scope) Valid() bool {
+	return (s.OrganizationID != uuid.Nil) != s.Platform
+}
+
+// WithScope binds the request to a provisioning scope. Stores refuse
+// requests without a valid scope.
+func WithScope(ctx context.Context, scope Scope) context.Context {
+	return context.WithValue(ctx, scopeKey, scope)
+}
+
+// WithTenant binds the request to one organization.
+func WithTenant(ctx context.Context, orgID uuid.UUID) context.Context {
+	return WithScope(ctx, Scope{OrganizationID: orgID})
+}
+
+// WithPlatformScope binds the request to every organization. Use it only
+// for platform operator credentials.
+func WithPlatformScope(ctx context.Context) context.Context {
+	return WithScope(ctx, Scope{Platform: true})
+}
+
+// ScopeFromContext returns the request's provisioning scope.
+func ScopeFromContext(ctx context.Context) (Scope, bool) {
+	s, ok := ctx.Value(scopeKey).(Scope)
+	return s, ok && s.Valid()
+}
 
 // WithRequestID adds a request ID to the context.
 func WithRequestID(ctx context.Context, requestID string) context.Context {
