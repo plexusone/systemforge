@@ -200,6 +200,12 @@ if !hasAccess {
 
 ## Seat Management
 
+`EntLicenseService.AssignSeat` reserves a seat with a conditional increment of
+the license's used seats in the same transaction as the assignment, so
+concurrent assignments cannot exceed the purchased seats, and `UnassignSeat`
+releases it the same way. `Update` does not write `UsedSeats`; only seat
+assignment changes it.
+
 ### Assign a Seat
 
 ```go
