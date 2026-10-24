@@ -32,7 +32,7 @@ func newStoreWithDB(t *testing.T) (*store.EntStore, *ent.Client) {
 // TestUserNameIsNotCaseExact covers RFC 7643 section 4.1.1: userName is not
 // case-exact, so lookups, uniqueness, and equality filters ignore case.
 func TestUserNameIsNotCaseExact(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s := newStore(t)
 	u := createUser(t, s, "Ada@Example.com", "Ada")
 
@@ -55,7 +55,7 @@ func TestUserNameIsNotCaseExact(t *testing.T) {
 // TestUsersArePrincipals verifies that SCIM users are human principals, the
 // single identity root shared with SystemAuth.
 func TestUsersArePrincipals(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s, db := newStoreWithDB(t)
 	u := createUser(t, s, "lin@example.com", "Lin")
 
@@ -86,7 +86,7 @@ func TestUsersArePrincipals(t *testing.T) {
 }
 
 func TestDeleteUserWithMemberships(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s, db := newStoreWithDB(t)
 	u := createUser(t, s, "kim@example.com", "Kim")
 	g, err := s.CreateGroup(ctx, &scim.Group{DisplayName: "Ops"})
@@ -110,7 +110,7 @@ func TestDeleteUserWithMemberships(t *testing.T) {
 }
 
 func TestInactiveMembershipsHiddenAndReactivated(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s, db := newStoreWithDB(t)
 	u := createUser(t, s, "sam@example.com", "Sam")
 	g, err := s.CreateGroup(ctx, &scim.Group{DisplayName: "Design"})

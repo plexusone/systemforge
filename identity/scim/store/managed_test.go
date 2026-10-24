@@ -14,7 +14,7 @@ import (
 // addManaged creates a managed principal: a human without an email.
 func addManaged(t *testing.T, db *ent.Client) uuid.UUID {
 	t.Helper()
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	id := uuid.New()
 	if _, err := db.Principal.Create().SetID(id).SetType(entprincipal.TypeHuman).
 		SetIdentifier("human:" + id.String()).SetDisplayName("Learner").Save(ctx); err != nil {
@@ -29,7 +29,7 @@ func addManaged(t *testing.T, db *ent.Client) uuid.UUID {
 // TestManagedPrincipalsAreNotSCIMUsers verifies that SCIM neither lists,
 // reads, changes, deletes, nor groups managed principals.
 func TestManagedPrincipalsAreNotSCIMUsers(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s, db := newStoreWithDB(t)
 	u := createUser(t, s, "kim@example.com", "Kim")
 	managed := addManaged(t, db).String()

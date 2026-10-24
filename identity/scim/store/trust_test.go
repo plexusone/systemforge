@@ -31,7 +31,7 @@ func newTrustingStore(t *testing.T, trust bool) (*store.EntStore, *ent.Client) {
 
 func emailVerified(t *testing.T, db *ent.Client, email string) bool {
 	t.Helper()
-	h, err := db.Human.Query().Where(human.EmailEqualFold(email)).Only(context.Background())
+	h, err := db.Human.Query().Where(human.EmailEqualFold(email)).Only(scim.WithPlatformScope(context.Background()))
 	if err != nil {
 		t.Fatalf("human %s: %v", email, err)
 	}
@@ -41,7 +41,7 @@ func emailVerified(t *testing.T, db *ent.Client, email string) bool {
 // TestTrustProvisionedEmailLinksSocialLogin verifies that with the option
 // on, a social login for a provisioned email links to the same principal.
 func TestTrustProvisionedEmailLinksSocialLogin(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s, db := newTrustingStore(t, true)
 	u, err := s.CreateUser(ctx, &scim.User{UserName: "lin@example.com", DisplayName: "Lin"})
 	if err != nil {
@@ -69,7 +69,7 @@ func TestTrustProvisionedEmailLinksSocialLogin(t *testing.T) {
 // follows the address: changing a verified email clears it by default, and
 // re-verifies it when provisioned emails are trusted.
 func TestChangedEmailDoesNotInheritVerification(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	for _, trust := range []bool{false, true} {
 		s, db := newTrustingStore(t, trust)
 		u, err := s.CreateUser(ctx, &scim.User{UserName: "old@example.com"})

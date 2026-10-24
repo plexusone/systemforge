@@ -68,12 +68,72 @@ func NewEntStore(client *ent.Client, config *Config) *EntStore {
 
 // User Operations
 
-// humanQuery returns a query over the human principals SCIM manages, with
-// the Human edge loaded.
-func (s *EntStore) humanQuery() *ent.PrincipalQuery {
-	return s.client.Principal.Query().
+// Tenant scoping
+//
+// Every operation runs in the request's provisioning scope
+// (scim.ScopeFromContext). A tenant credential sees only its organization:
+// users who are members of it, and that organization as the only group.
+// Identity fields (email, name, photo) of a user change only when the
+// tenant owns the user: it provisioned the user and the user belongs to no
+// other organization. For other users the tenant manages only their
+// membership, so a tenant cannot take over an account used elsewhere.
+// A platform operator credential sees every user and organization.
+
+// errNoScope is returned for requests without a provisioning scope.
+func errNoScope() error {
+	return scim.ErrForbidden("SCIM credential is not bound to an organization")
+}
+
+// scopeOf returns the request's provisioning scope.
+func scopeOf(ctx context.Context) (scim.Scope, error) {
+	sc, ok := scim.ScopeFromContext(ctx)
+	if !ok {
+		return scim.Scope{}, errNoScope()
+	}
+	return sc, nil
+}
+
+// provisionedBy is the ExternalIdentity provider that records an
+// organization's SCIM directory provisioned a principal.
+func provisionedBy(orgID uuid.UUID) string {
+	return "scim:" + orgID.String()
+}
+
+// memberOf selects principals with a membership, active or not, in orgID.
+func memberOf(orgID uuid.UUID) predicate.Principal {
+	return principal.HasPrincipalMembershipsWith(principalmembership.OrganizationIDEQ(orgID))
+}
+
+// humanQuery returns a query over the human principals SCIM manages in
+// scope, with the Human edge loaded and, for a tenant, the membership in
+// the tenant's organization.
+func (s *EntStore) humanQuery(sc scim.Scope) *ent.PrincipalQuery {
+	q := s.client.Principal.Query().
 		Where(scimHuman()...).
 		WithHuman()
+	if !sc.Platform {
+		q = q.Where(memberOf(sc.OrganizationID)).
+			WithPrincipalMemberships(func(mq *ent.PrincipalMembershipQuery) {
+				mq.Where(principalmembership.OrganizationIDEQ(sc.OrganizationID))
+			})
+	}
+	return q
+}
+
+// ownedBy reports whether orgID's directory owns principal id: it
+// provisioned the principal and the principal belongs to no other
+// organization.
+func ownedBy(ctx context.Context, client *ent.Client, id, orgID uuid.UUID) (bool, error) {
+	provisioned, err := client.ExternalIdentity.Query().
+		Where(externalidentity.PrincipalIDEQ(id), externalidentity.ProviderEQ(provisionedBy(orgID))).
+		Exist(ctx)
+	if err != nil || !provisioned {
+		return false, err
+	}
+	elsewhere, err := client.PrincipalMembership.Query().
+		Where(principalmembership.PrincipalIDEQ(id), principalmembership.OrganizationIDNEQ(orgID)).
+		Exist(ctx)
+	return !elsewhere, err
 }
 
 // scimHuman selects the humans SCIM manages: those with an email. Managed
@@ -100,17 +160,25 @@ func (s *EntStore) onlyUser(ctx context.Context, q *ent.PrincipalQuery) (*scim.U
 
 // GetUserByID retrieves a user by SCIM ID.
 func (s *EntStore) GetUserByID(ctx context.Context, id string) (*scim.User, error) {
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, err
+	}
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, scim.ErrNotFound("invalid user ID")
 	}
-	return s.onlyUser(ctx, s.humanQuery().Where(principal.IDEQ(uid)))
+	return s.onlyUser(ctx, s.humanQuery(sc).Where(principal.IDEQ(uid)))
 }
 
 // GetUserByUserName retrieves a user by userName (email). userName is not
 // case-exact (RFC 7643 section 4.1.1), so the match ignores case.
 func (s *EntStore) GetUserByUserName(ctx context.Context, userName string) (*scim.User, error) {
-	return s.onlyUser(ctx, s.humanQuery().Where(principal.HasHumanWith(human.EmailEqualFold(userName))))
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.onlyUser(ctx, s.humanQuery(sc).Where(principal.HasHumanWith(human.EmailEqualFold(userName))))
 }
 
 // GetUserByExternalID retrieves a user by externalId.
@@ -123,7 +191,11 @@ func (s *EntStore) GetUserByExternalID(ctx context.Context, externalID string) (
 //
 //nolint:dupl // Mirrors ListGroups - same query pattern for different entity types
 func (s *EntStore) ListUsers(ctx context.Context, opts scim.ListOptions) ([]*scim.User, int, error) {
-	query := s.humanQuery()
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	query := s.humanQuery(sc)
 
 	// Apply filter if provided
 	if opts.Filter != "" {
@@ -213,21 +285,17 @@ func asSCIMError(err error) error {
 	return scim.ErrInternal(err.Error())
 }
 
-// CreateUser creates a new user as a human principal.
+// CreateUser creates a new user as a human principal. For a tenant, the
+// user also becomes a member of the tenant's organization, and the tenant
+// is recorded as having provisioned it. A user who already exists
+// elsewhere is linked by adding the membership; their identity is not
+// changed.
 func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.User, error) {
-	// Extract email from userName or emails
-	email := scimUser.UserName
-	if email == "" {
-		for _, e := range scimUser.Emails {
-			if e.Primary || e.Type == "work" {
-				email = e.Value
-				break
-			}
-		}
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if email == "" && len(scimUser.Emails) > 0 {
-		email = scimUser.Emails[0].Value
-	}
+	email := userEmail(scimUser)
 	if email == "" {
 		return nil, scim.ErrInvalidValue("userName or email is required")
 	}
@@ -248,7 +316,20 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 	}
 
 	id := uuid.New()
-	err := s.withTx(ctx, func(tx *ent.Tx) error {
+	err = s.withTx(ctx, func(tx *ent.Tx) error {
+		existing, err := tx.Principal.Query().
+			Where(append(scimHuman(), principal.HasHumanWith(human.EmailEqualFold(email)))...).
+			Only(ctx)
+		switch {
+		case err == nil:
+			if sc.Platform {
+				return scim.ErrConflict("user with this email already exists")
+			}
+			id = existing.ID
+			return s.linkMember(ctx, tx, sc.OrganizationID, existing.ID, active)
+		case !ent.IsNotFound(err):
+			return err
+		}
 		taken, err := emailTaken(ctx, tx, email, uuid.Nil)
 		if err != nil {
 			return err
@@ -256,12 +337,17 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		if taken {
 			return scim.ErrConflict("user with this email already exists")
 		}
+		principalActive := active
+		if !sc.Platform {
+			// For a tenant, active is the membership's state.
+			principalActive = true
+		}
 		if _, err := tx.Principal.Create().
 			SetID(id).
 			SetType(principal.TypeHuman).
 			SetIdentifier(email).
 			SetDisplayName(name).
-			SetActive(active).
+			SetActive(principalActive).
 			Save(ctx); err != nil {
 			return err
 		}
@@ -274,8 +360,22 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		if url, ok := primaryPhoto(scimUser.Photos); ok {
 			hc.SetAvatarURL(url)
 		}
-		_, err = hc.Save(ctx)
-		return err
+		if _, err := hc.Save(ctx); err != nil {
+			return err
+		}
+		if sc.Platform {
+			return nil
+		}
+		if _, err := tx.ExternalIdentity.Create().
+			SetPrincipalID(id).
+			SetProvider(provisionedBy(sc.OrganizationID)).
+			SetSubject(id.String()).
+			SetEmail(email).
+			SetEmailVerified(s.config.TrustProvisionedEmail).
+			Save(ctx); err != nil {
+			return err
+		}
+		return s.linkMember(ctx, tx, sc.OrganizationID, id, active)
 	})
 	if err != nil {
 		return nil, asSCIMError(err)
@@ -283,18 +383,72 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 	return s.GetUserByID(ctx, id.String())
 }
 
-// UpdateUser updates an existing user.
+// userEmail returns the email a SCIM user is created with: userName, else
+// the primary or work email, else the first email.
+func userEmail(u *scim.User) string {
+	if u.UserName != "" {
+		return u.UserName
+	}
+	for _, e := range u.Emails {
+		if e.Primary || e.Type == "work" {
+			return e.Value
+		}
+	}
+	if len(u.Emails) > 0 {
+		return u.Emails[0].Value
+	}
+	return ""
+}
+
+// linkMember adds principal id to organization orgID with the default role.
+// A user who is already a member is a conflict, as SCIM requires for a
+// duplicate create.
+func (s *EntStore) linkMember(ctx context.Context, tx *ent.Tx, orgID, id uuid.UUID, active bool) error {
+	exists, err := tx.PrincipalMembership.Query().
+		Where(principalmembership.PrincipalIDEQ(id), principalmembership.OrganizationIDEQ(orgID)).
+		Exist(ctx)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return scim.ErrConflict("user already exists in this organization")
+	}
+	if err := orgsvc.RequireMembersAllowed(ctx, tx.Client(), orgID, s.config.DefaultRole); err != nil {
+		if errors.Is(err, orgsvc.ErrPersonalOrganization) {
+			return scim.ErrInvalidValue("a personal organization cannot have members")
+		}
+		return err
+	}
+	_, err = tx.PrincipalMembership.Create().
+		SetPrincipalID(id).
+		SetOrganizationID(orgID).
+		SetRole(s.config.DefaultRole).
+		SetActive(active).
+		Save(ctx)
+	return err
+}
+
+// UpdateUser updates an existing user. For a tenant, active sets the
+// membership in the tenant's organization, and identity fields change only
+// for users the tenant owns; for other users they are left as they are.
 func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.User) (*scim.User, error) {
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, err
+	}
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, scim.ErrNotFound("invalid user ID")
 	}
 
 	err = s.withTx(ctx, func(tx *ent.Tx) error {
-		p, err := tx.Principal.Query().
+		q := tx.Principal.Query().
 			Where(append(scimHuman(), principal.IDEQ(uid))...).
-			WithHuman().
-			Only(ctx)
+			WithHuman()
+		if !sc.Platform {
+			q = q.Where(memberOf(sc.OrganizationID))
+		}
+		p, err := q.Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
 				return scim.ErrNotFound("user not found")
@@ -305,47 +459,28 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 			return scim.ErrInternal("user has no human record")
 		}
 
-		pu := tx.Principal.UpdateOne(p)
-		hu := tx.Human.UpdateOne(p.Edges.Human)
-
-		// Update fields if provided
-		if scimUser.UserName != "" {
-			taken, err := emailTaken(ctx, tx, scimUser.UserName, uid)
-			if err != nil {
-				return err
-			}
-			if taken {
-				return scim.ErrConflict("email already in use")
-			}
-			pu.SetIdentifier(scimUser.UserName)
-			hu.SetEmail(scimUser.UserName)
-			// Verification belongs to an address, so a changed email does
-			// not inherit the previous address's verification.
-			if p.Edges.Human.Email == nil || !strings.EqualFold(scimUser.UserName, *p.Edges.Human.Email) {
-				if s.config.TrustProvisionedEmail {
-					hu.SetEmailVerifiedAt(time.Now())
-				} else {
-					hu.ClearEmailVerifiedAt()
+		if sc.Platform {
+			if scimUser.Active != nil {
+				if err := tx.Principal.UpdateOne(p).SetActive(*scimUser.Active).Exec(ctx); err != nil {
+					return err
 				}
 			}
-		}
-		if scimUser.DisplayName != "" {
-			pu.SetDisplayName(scimUser.DisplayName)
-		} else if scimUser.Name != nil && scimUser.Name.Formatted != "" {
-			pu.SetDisplayName(scimUser.Name.Formatted)
-		}
-		if scimUser.Active != nil {
-			pu.SetActive(*scimUser.Active)
-		}
-		if url, ok := primaryPhoto(scimUser.Photos); ok {
-			hu.SetAvatarURL(url)
+			return s.updateIdentity(ctx, tx, p, scimUser)
 		}
 
-		if _, err := pu.Save(ctx); err != nil {
+		if scimUser.Active != nil {
+			if _, err := tx.PrincipalMembership.Update().
+				Where(principalmembership.PrincipalIDEQ(uid), principalmembership.OrganizationIDEQ(sc.OrganizationID)).
+				SetActive(*scimUser.Active).
+				Save(ctx); err != nil {
+				return err
+			}
+		}
+		owned, err := ownedBy(ctx, tx.Client(), uid, sc.OrganizationID)
+		if err != nil || !owned {
 			return err
 		}
-		_, err = hu.Save(ctx)
-		return err
+		return s.updateIdentity(ctx, tx, p, scimUser)
 	})
 	if err != nil {
 		return nil, asSCIMError(err)
@@ -353,23 +488,80 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 	return s.GetUserByID(ctx, id)
 }
 
+// updateIdentity applies the email, name and photo of scimUser to p.
+func (s *EntStore) updateIdentity(ctx context.Context, tx *ent.Tx, p *ent.Principal, scimUser *scim.User) error {
+	pu := tx.Principal.UpdateOne(p)
+	hu := tx.Human.UpdateOne(p.Edges.Human)
+
+	if scimUser.UserName != "" {
+		taken, err := emailTaken(ctx, tx, scimUser.UserName, p.ID)
+		if err != nil {
+			return err
+		}
+		if taken {
+			return scim.ErrConflict("email already in use")
+		}
+		pu.SetIdentifier(scimUser.UserName)
+		hu.SetEmail(scimUser.UserName)
+		// Verification belongs to an address, so a changed email does
+		// not inherit the previous address's verification.
+		if p.Edges.Human.Email == nil || !strings.EqualFold(scimUser.UserName, *p.Edges.Human.Email) {
+			if s.config.TrustProvisionedEmail {
+				hu.SetEmailVerifiedAt(time.Now())
+			} else {
+				hu.ClearEmailVerifiedAt()
+			}
+		}
+	}
+	if scimUser.DisplayName != "" {
+		pu.SetDisplayName(scimUser.DisplayName)
+	} else if scimUser.Name != nil && scimUser.Name.Formatted != "" {
+		pu.SetDisplayName(scimUser.Name.Formatted)
+	}
+	if url, ok := primaryPhoto(scimUser.Photos); ok {
+		hu.SetAvatarURL(url)
+	}
+
+	if _, err := pu.Save(ctx); err != nil {
+		return err
+	}
+	_, err := hu.Save(ctx)
+	return err
+}
+
 // DeleteUser deletes a user together with its group memberships and the
-// records that belong only to it.
+// records that belong only to it. For a tenant, a user the tenant does not
+// own only loses the membership in the tenant's organization.
 func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return err
+	}
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return scim.ErrNotFound("invalid user ID")
 	}
 
 	err = s.withTx(ctx, func(tx *ent.Tx) error {
-		exists, err := tx.Principal.Query().
-			Where(append(scimHuman(), principal.IDEQ(uid))...).
-			Exist(ctx)
+		where := append(scimHuman(), principal.IDEQ(uid))
+		if !sc.Platform {
+			where = append(where, memberOf(sc.OrganizationID))
+		}
+		exists, err := tx.Principal.Query().Where(where...).Exist(ctx)
 		if err != nil {
 			return err
 		}
 		if !exists {
 			return scim.ErrNotFound("user not found")
+		}
+		if !sc.Platform {
+			owned, err := ownedBy(ctx, tx.Client(), uid, sc.OrganizationID)
+			if err != nil {
+				return err
+			}
+			if !owned {
+				return removeMember(ctx, tx, sc.OrganizationID, uid)
+			}
 		}
 		if _, err := tx.PrincipalMembership.Delete().Where(principalmembership.PrincipalIDEQ(uid)).Exec(ctx); err != nil {
 			return err
@@ -395,62 +587,92 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	return nil
 }
 
+// removeMember removes principal id from organization orgID, with its
+// application roles there.
+func removeMember(ctx context.Context, tx *ent.Tx, orgID, id uuid.UUID) error {
+	if _, err := tx.AppRole.Delete().
+		Where(approle.PrincipalID(id), approle.OrganizationID(orgID)).
+		Exec(ctx); err != nil {
+		return err
+	}
+	_, err := tx.PrincipalMembership.Delete().
+		Where(
+			principalmembership.PrincipalIDEQ(id),
+			principalmembership.OrganizationIDEQ(orgID),
+		).
+		Exec(ctx)
+	return err
+}
+
 // Group Operations
+
+// tenantGroup reports whether a tenant may address group gid: only its own
+// organization. A platform scope may address any group.
+func tenantGroup(sc scim.Scope, gid uuid.UUID) bool {
+	return sc.Platform || gid == sc.OrganizationID
+}
+
+// orgQuery returns a query over the organizations visible in scope.
+func (s *EntStore) orgQuery(sc scim.Scope) *ent.OrganizationQuery {
+	q := s.client.Organization.Query()
+	if !sc.Platform {
+		q = q.Where(organization.IDEQ(sc.OrganizationID))
+	}
+	return q
+}
+
+func onlyGroup(ctx context.Context, s *EntStore, q *ent.OrganizationQuery) (*scim.Group, error) {
+	org, err := q.Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, scim.ErrNotFound("group not found")
+		}
+		return nil, scim.ErrInternal(err.Error())
+	}
+	return s.entOrgToSCIM(org), nil
+}
 
 // GetGroupByID retrieves a group by SCIM ID.
 func (s *EntStore) GetGroupByID(ctx context.Context, id string) (*scim.Group, error) {
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, err
+	}
 	gid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, scim.ErrNotFound("invalid group ID")
 	}
-
-	org, err := s.client.Organization.Get(ctx, gid)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, scim.ErrNotFound("group not found")
-		}
-		return nil, scim.ErrInternal(err.Error())
-	}
-
-	return s.entOrgToSCIM(org), nil
+	return onlyGroup(ctx, s, s.orgQuery(sc).Where(organization.IDEQ(gid)))
 }
 
 // GetGroupByDisplayName retrieves a group by displayName.
 func (s *EntStore) GetGroupByDisplayName(ctx context.Context, displayName string) (*scim.Group, error) {
-	org, err := s.client.Organization.Query().
-		Where(organization.NameEQ(displayName)).
-		Only(ctx)
+	sc, err := scopeOf(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, scim.ErrNotFound("group not found")
-		}
-		return nil, scim.ErrInternal(err.Error())
+		return nil, err
 	}
-
-	return s.entOrgToSCIM(org), nil
+	return onlyGroup(ctx, s, s.orgQuery(sc).Where(organization.NameEQ(displayName)))
 }
 
-// GetGroupByExternalID retrieves a group by externalId.
+// GetGroupByExternalID retrieves a group by externalId (the organization
+// slug).
 func (s *EntStore) GetGroupByExternalID(ctx context.Context, externalID string) (*scim.Group, error) {
-	// Use slug as externalId
-	org, err := s.client.Organization.Query().
-		Where(organization.SlugEQ(externalID)).
-		Only(ctx)
+	sc, err := scopeOf(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, scim.ErrNotFound("group not found")
-		}
-		return nil, scim.ErrInternal(err.Error())
+		return nil, err
 	}
-
-	return s.entOrgToSCIM(org), nil
+	return onlyGroup(ctx, s, s.orgQuery(sc).Where(organization.SlugEQ(externalID)))
 }
 
 // ListGroups lists groups with filtering and pagination.
 //
 //nolint:dupl // Mirrors ListUsers - same query pattern for different entity types
 func (s *EntStore) ListGroups(ctx context.Context, opts scim.ListOptions) ([]*scim.Group, int, error) {
-	query := s.client.Organization.Query()
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	query := s.orgQuery(sc)
 
 	// Apply filter if provided
 	if opts.Filter != "" {
@@ -492,8 +714,22 @@ func (s *EntStore) ListGroups(ctx context.Context, opts scim.ListOptions) ([]*sc
 	return result, total, nil
 }
 
-// CreateGroup creates a new group.
+// errTenantGroups is returned when a tenant tries to create, rename or
+// delete a group: its only group is its own organization, which the
+// platform manages.
+func errTenantGroups() error {
+	return scim.ErrForbidden("a tenant SCIM credential manages members of its organization, not groups")
+}
+
+// CreateGroup creates a new group. Only a platform scope may create groups.
 func (s *EntStore) CreateGroup(ctx context.Context, scimGroup *scim.Group) (*scim.Group, error) {
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !sc.Platform {
+		return nil, errTenantGroups()
+	}
 	if scimGroup.DisplayName == "" {
 		return nil, scim.ErrInvalidValue("displayName is required")
 	}
@@ -532,11 +768,28 @@ func (s *EntStore) CreateGroup(ctx context.Context, scimGroup *scim.Group) (*sci
 	return s.entOrgToSCIM(org), nil
 }
 
-// UpdateGroup updates an existing group.
+// UpdateGroup updates an existing group. A tenant may not rename its
+// organization; an update that keeps the name is accepted so that member
+// changes in the same request apply.
 func (s *EntStore) UpdateGroup(ctx context.Context, id string, scimGroup *scim.Group) (*scim.Group, error) {
-	gid, err := uuid.Parse(id)
+	sc, err := scopeOf(ctx)
 	if err != nil {
-		return nil, scim.ErrNotFound("invalid group ID")
+		return nil, err
+	}
+	gid, err := uuid.Parse(id)
+	if err != nil || !tenantGroup(sc, gid) {
+		return nil, scim.ErrNotFound("group not found")
+	}
+
+	if !sc.Platform {
+		current, err := s.GetGroupByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if scimGroup.DisplayName != "" && scimGroup.DisplayName != current.DisplayName {
+			return nil, errTenantGroups()
+		}
+		return current, nil
 	}
 
 	update := s.client.Organization.UpdateOneID(gid)
@@ -556,8 +809,15 @@ func (s *EntStore) UpdateGroup(ctx context.Context, id string, scimGroup *scim.G
 	return s.entOrgToSCIM(org), nil
 }
 
-// DeleteGroup deletes a group.
+// DeleteGroup deletes a group. Only a platform scope may delete groups.
 func (s *EntStore) DeleteGroup(ctx context.Context, id string) error {
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return err
+	}
+	if !sc.Platform {
+		return errTenantGroups()
+	}
 	gid, err := uuid.Parse(id)
 	if err != nil {
 		return scim.ErrNotFound("invalid group ID")
@@ -576,22 +836,29 @@ func (s *EntStore) DeleteGroup(ctx context.Context, id string) error {
 
 // Membership Operations
 
-// GetGroupsForUser returns all groups a user belongs to.
+// GetGroupsForUser returns all groups a user belongs to. A tenant sees only
+// its own organization.
 //
 //nolint:dupl // Mirrors GetMembersForGroup - intentional symmetry for membership queries
 func (s *EntStore) GetGroupsForUser(ctx context.Context, userID string) ([]scim.GroupRef, error) {
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, err
+	}
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, scim.ErrNotFound("invalid user ID")
 	}
 
-	memberships, err := s.client.PrincipalMembership.Query().
+	q := s.client.PrincipalMembership.Query().
 		Where(
 			principalmembership.PrincipalIDEQ(uid),
 			principalmembership.ActiveEQ(true),
-		).
-		WithOrganization().
-		All(ctx)
+		)
+	if !sc.Platform {
+		q = q.Where(principalmembership.OrganizationIDEQ(sc.OrganizationID))
+	}
+	memberships, err := q.WithOrganization().All(ctx)
 	if err != nil {
 		return nil, scim.ErrInternal(err.Error())
 	}
@@ -615,9 +882,13 @@ func (s *EntStore) GetGroupsForUser(ctx context.Context, userID string) ([]scim.
 //
 //nolint:dupl // Mirrors GetGroupsForUser - intentional symmetry for membership queries
 func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]scim.MemberRef, error) {
-	gid, err := uuid.Parse(groupID)
+	sc, err := scopeOf(ctx)
 	if err != nil {
-		return nil, scim.ErrNotFound("invalid group ID")
+		return nil, err
+	}
+	gid, err := uuid.Parse(groupID)
+	if err != nil || !tenantGroup(sc, gid) {
+		return nil, scim.ErrNotFound("group not found")
 	}
 
 	memberships, err := s.client.PrincipalMembership.Query().
@@ -648,17 +919,27 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 }
 
 // AddMemberToGroup adds a user to a group. Adding an existing member is a
-// no-op; re-adding a deactivated member reactivates the membership.
+// no-op; re-adding a deactivated member reactivates the membership. A
+// tenant may add only users it already sees: members of its organization,
+// active or not.
 func (s *EntStore) AddMemberToGroup(ctx context.Context, groupID, userID string) error {
-	gid, err := uuid.Parse(groupID)
+	sc, err := scopeOf(ctx)
 	if err != nil {
-		return scim.ErrNotFound("invalid group ID")
+		return err
+	}
+	gid, err := uuid.Parse(groupID)
+	if err != nil || !tenantGroup(sc, gid) {
+		return scim.ErrNotFound("group not found")
 	}
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return scim.ErrNotFound("invalid user ID")
 	}
-	known, err := s.client.Principal.Query().Where(append(scimHuman(), principal.IDEQ(uid))...).Exist(ctx)
+	where := append(scimHuman(), principal.IDEQ(uid))
+	if !sc.Platform {
+		where = append(where, memberOf(sc.OrganizationID))
+	}
+	known, err := s.client.Principal.Query().Where(where...).Exist(ctx)
 	if err != nil {
 		return scim.ErrInternal(err.Error())
 	}
@@ -706,9 +987,13 @@ func (s *EntStore) AddMemberToGroup(ctx context.Context, groupID, userID string)
 
 // RemoveMemberFromGroup removes a user from a group.
 func (s *EntStore) RemoveMemberFromGroup(ctx context.Context, groupID, userID string) error {
-	gid, err := uuid.Parse(groupID)
+	sc, err := scopeOf(ctx)
 	if err != nil {
-		return scim.ErrNotFound("invalid group ID")
+		return err
+	}
+	gid, err := uuid.Parse(groupID)
+	if err != nil || !tenantGroup(sc, gid) {
+		return scim.ErrNotFound("group not found")
 	}
 	uid, err := uuid.Parse(userID)
 	if err != nil {
@@ -716,21 +1001,9 @@ func (s *EntStore) RemoveMemberFromGroup(ctx context.Context, groupID, userID st
 	}
 
 	// The member's application roles go with the membership.
-	err = s.withTx(ctx, func(tx *ent.Tx) error {
-		if _, err := tx.AppRole.Delete().
-			Where(approle.PrincipalID(uid), approle.OrganizationID(gid)).
-			Exec(ctx); err != nil {
-			return err
-		}
-		_, err := tx.PrincipalMembership.Delete().
-			Where(
-				principalmembership.PrincipalIDEQ(uid),
-				principalmembership.OrganizationIDEQ(gid),
-			).
-			Exec(ctx)
-		return err
-	})
-	if err != nil {
+	if err := s.withTx(ctx, func(tx *ent.Tx) error {
+		return removeMember(ctx, tx, gid, uid)
+	}); err != nil {
 		return scim.ErrInternal(err.Error())
 	}
 
@@ -742,7 +1015,12 @@ func (s *EntStore) RemoveMemberFromGroup(ctx context.Context, groupID, userID st
 // principalToSCIMUser converts a human Principal, loaded with its Human edge,
 // to a SCIM User.
 func (s *EntStore) principalToSCIMUser(p *ent.Principal) *scim.User {
+	// For a tenant, the membership edge is loaded and active means the
+	// membership in the tenant's organization.
 	active := p.Active
+	for _, m := range p.Edges.PrincipalMemberships {
+		active = active && m.Active
+	}
 	var email string
 	var avatar *string
 	if h := p.Edges.Human; h != nil {

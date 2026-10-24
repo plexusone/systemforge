@@ -40,7 +40,7 @@ func boolPtr(b bool) *bool { return &b }
 
 func createUser(t *testing.T, s *store.EntStore, userName, displayName string) *scim.User {
 	t.Helper()
-	u, err := s.CreateUser(context.Background(), &scim.User{UserName: userName, DisplayName: displayName})
+	u, err := s.CreateUser(scim.WithPlatformScope(context.Background()), &scim.User{UserName: userName, DisplayName: displayName})
 	if err != nil {
 		t.Fatalf("CreateUser %s: %v", userName, err)
 	}
@@ -48,7 +48,7 @@ func createUser(t *testing.T, s *store.EntStore, userName, displayName string) *
 }
 
 func TestUserLifecycle(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s := newStore(t)
 
 	u, err := s.CreateUser(ctx, &scim.User{
@@ -104,7 +104,7 @@ func TestUserLifecycle(t *testing.T) {
 }
 
 func TestUserCreateRules(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s := newStore(t)
 
 	u, err := s.CreateUser(ctx, &scim.User{
@@ -132,7 +132,7 @@ func TestUserCreateRules(t *testing.T) {
 }
 
 func TestUserNotFound(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s := newStore(t)
 	other := createUser(t, s, "taken@example.com", "Taken")
 
@@ -157,7 +157,7 @@ func TestUserNotFound(t *testing.T) {
 }
 
 func TestListUsers(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s := newStore(t)
 	for _, n := range []string{"carol", "alice", "bob", "dave"} {
 		createUser(t, s, n+"@example.com", "User "+n)
@@ -222,7 +222,7 @@ func TestListUsers(t *testing.T) {
 
 func mustGet(t *testing.T, s *store.EntStore, userName string) *scim.User {
 	t.Helper()
-	u, err := s.GetUserByUserName(context.Background(), userName)
+	u, err := s.GetUserByUserName(scim.WithPlatformScope(context.Background()), userName)
 	if err != nil {
 		t.Fatalf("GetUserByUserName %s: %v", userName, err)
 	}
@@ -230,7 +230,7 @@ func mustGet(t *testing.T, s *store.EntStore, userName string) *scim.User {
 }
 
 func TestGroupMembership(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s := newStore(t)
 	ada := createUser(t, s, "ada@example.com", "Ada")
 	bob := createUser(t, s, "bob@example.com", "Bob")
@@ -289,7 +289,7 @@ func TestGroupMembership(t *testing.T) {
 }
 
 func TestListGroups(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s := newStore(t)
 	for _, n := range []string{"Beta", "Alpha", "Gamma"} {
 		if _, err := s.CreateGroup(ctx, &scim.Group{DisplayName: n}); err != nil {

@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/plexusone/systemforge/identity/ent/organization"
+	"github.com/plexusone/systemforge/identity/scim"
 )
 
 func TestPersonalOrganizationRefusesGroupMembers(t *testing.T) {
-	ctx := context.Background()
+	ctx := scim.WithPlatformScope(context.Background())
 	s, db := newStoreWithDB(t)
 	u := createUser(t, s, "sam@example.com", "Sam")
 	org, err := db.Organization.Create().SetName("Sam").SetSlug("sam").SetOrgType(organization.OrgTypePersonal).Save(ctx)
