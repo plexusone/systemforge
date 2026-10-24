@@ -49,8 +49,43 @@ personal account or a member of another organization, is shared: the
 organization's identity provider manages only their membership, so it cannot
 change a login email used elsewhere.
 
+## Membership Changes
+
+The store changes memberships only through the organization service, so a
+SCIM change has the same effects as any other: the authorization graph is
+synced, an access change is recorded so existing tokens stop being honored,
+and a removed member's application roles and resource grants go with the
+membership. Pass the application's configured services:
+
+```go
+st := store.NewEntStore(client, &store.Config{
+    BaseURL:     "/scim/v2",
+    DefaultRole: "member",
+    Memberships: orgService,       // organization.Service with the authz syncer
+    Principals:  principalService, // principal.Service
+})
+```
+
+Without them the store builds services on its Ent client: access changes are
+still recorded, but no authorization graph is synced, which a SpiceDB
+deployment needs.
+
+Two rules apply on top:
+
+- An organization owner is never suspended, removed or deleted through SCIM
+  (403), so an identity provider cannot lock a customer out of its own
+  organization. Transfer ownership first.
+- A restored membership (`active` back to true, or re-adding a removed member
+  to the group) gets the default role, not the role it had before, because
+  the identity provider does not manage roles.
+
+Creating a user adds the account first and the membership after. If adding
+the membership fails, the request fails; the identity provider's retry finds
+the account by email and links it.
+
 ## Platform Operator Credentials
 
 A credential with `scim.Scope{Platform: true}` provisions every user and
-organization, as SCIM did before scoping. Issue it only to platform operators,
+organization, as SCIM did before scoping. For it, `active` deactivates or
+reactivates the account itself. Issue it only to platform operators,
 never to a customer's identity provider.

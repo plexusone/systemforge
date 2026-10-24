@@ -52,6 +52,15 @@
       },
       {
         "description": "aauthrs accepted an agent token from any agent provider for any agent identifier, so a provider controlled by anyone could claim another domain's agents (for example `aauth:billing-bot@victim.example`); an agent token is now accepted only when the agent's domain is its issuer's host"
+      },
+      {
+        "description": "SCIM wrote memberships directly, so suspending, removing or deleting a user skipped the authorization-graph sync, the access-change record that revokes existing tokens, and cleanup of application roles and resource grants; SCIM now changes memberships through the organization service and deactivates accounts through the principal service"
+      },
+      {
+        "description": "SCIM could suspend, remove or delete an organization's owner, letting an identity provider lock a customer out of its own organization; it now refuses with 403"
+      },
+      {
+        "description": "Re-adding a suspended member through SCIM restored their previous role, possibly owner or admin; a restored membership now gets the default role"
       }
     ],
     "added": [
@@ -81,6 +90,9 @@
       },
       {
         "description": "aauthrs: `Config.TrustedAgentIssuers` restricts which agent providers' tokens a resource accepts"
+      },
+      {
+        "description": "scim/store: `Config.Memberships` and `Config.Principals` take the application's organization and principal services"
       }
     ],
     "breaking": [
@@ -104,6 +116,9 @@
       },
       {
         "description": "bff: a custom `HandlerConfig.SessionIDGenerator` must produce IDs that `ValidSessionID` accepts (URL-safe characters, at most 256)"
+      },
+      {
+        "description": "scim/store: SCIM refuses to deprovision an organization owner, restores memberships with the default role, and for a platform credential `active` deactivates the account through the principal service"
       }
     ],
     "upgradeGuide": [
@@ -124,6 +139,9 @@
       },
       {
         "description": "scim: authenticate with `CredentialMiddleware` and bind each SCIM credential to its organization (`Scope{OrganizationID: ...}`); give `Scope{Platform: true}` only to platform operator credentials"
+      },
+      {
+        "description": "scim/store: pass the application's organization service (with its authz syncer) as `Config.Memberships` and its principal service as `Config.Principals`, so SCIM changes sync the authorization graph"
       }
     ],
     "deprecated": [
