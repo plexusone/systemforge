@@ -20,6 +20,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
+	"github.com/plexusone/systemforge/identity/graphlock"
 )
 
 // Service defines the organization service interface.
@@ -403,27 +404,71 @@ func (s *DefaultService) Update(ctx context.Context, id uuid.UUID, input UpdateO
 	return entOrgToModel(org), nil
 }
 
-// Delete soft-deletes an organization.
+// Delete soft-deletes an organization. Its relationships, and its
+// members' application roles and resource grants in it, are removed from
+// the authorization graph before the deletion commits; if the graph
+// refuses, the organization is not deleted and the error is returned, so
+// the call can be retried.
 func (s *DefaultService) Delete(ctx context.Context, id uuid.UUID) error {
-	_, err := s.client.Organization.UpdateOneID(id).
-		SetActive(false).
-		Save(ctx)
+	tx, err := s.client.Tx(ctx)
 	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	if _, err = tx.Organization.UpdateOneID(id).SetActive(false).Save(ctx); err != nil {
 		if ent.IsNotFound(err) {
-			return fmt.Errorf("organization not found: %s", id)
+			return errors.Join(fmt.Errorf("organization not found: %s", id), tx.Rollback())
 		}
+		return errors.Join(fmt.Errorf("failed to delete organization: %w", err), tx.Rollback())
+	}
+	roles, err := tx.AppRole.Query().Where(approle.OrganizationID(id)).All(ctx)
+	if err != nil {
+		return errors.Join(fmt.Errorf("failed to read application roles: %w", err), tx.Rollback())
+	}
+	grants, err := tx.ResourceGrant.Query().Where(resourcegrant.OrganizationID(id)).All(ctx)
+	if err != nil {
+		return errors.Join(fmt.Errorf("failed to read resource grants: %w", err), tx.Rollback())
+	}
+	if err = graphlock.Lock(ctx, tx, graphlock.Organization(id)); err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
+	if err = s.revokeOrganization(ctx, id, roles, grants); err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
+	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to delete organization: %w", err)
 	}
-
-	// Sync to authorization backend
-	if syncErr := s.syncer.UnregisterOrganization(ctx, id); syncErr != nil {
-		if s.syncMode == authz.SyncModeStrict {
-			return fmt.Errorf("failed to sync organization deletion to authz: %w", syncErr)
-		}
-		s.logger.Warn("failed to sync organization deletion to authz", "org_id", id, "error", syncErr)
-	}
-
 	return nil
+}
+
+// revokeOrganization removes an organization's relationships from the
+// authorization graph: its memberships, and the application roles and
+// resource grants held in it.
+func (s *DefaultService) revokeOrganization(ctx context.Context, orgID uuid.UUID, appRoles []*ent.AppRole, grants []*ent.ResourceGrant) error {
+	if err := s.syncer.UnregisterOrganization(ctx, orgID); err != nil {
+		return revokeErr("organization", err)
+	}
+	if appSyncer, ok := s.syncer.(authz.AppRoleSyncer); ok {
+		for _, r := range appRoles {
+			if err := appSyncer.RemoveAppRole(ctx, r.PrincipalID, orgID, r.Application, r.Role); err != nil {
+				return revokeErr("application role", err)
+			}
+		}
+	}
+	if grantSyncer, ok := s.syncer.(authz.ResourceGrantSyncer); ok {
+		for _, g := range grants {
+			ref := authz.ResourceRef{Type: g.ResourceType, ID: g.ResourceID, OrganizationID: orgID}
+			if err := grantSyncer.RemoveResourceGrant(ctx, g.PrincipalID, ref); err != nil {
+				return revokeErr("resource grant", err)
+			}
+		}
+	}
+	return nil
+}
+
+// revokeErr reports a relationship the authorization graph did not remove,
+// which aborts the revocation.
+func revokeErr(what string, err error) error {
+	return fmt.Errorf("failed to remove %s from authz, change not saved: %w", what, err)
 }
 
 // List lists organizations with optional filters.
@@ -502,6 +547,12 @@ func (s *DefaultService) AddMember(ctx context.Context, input AddMemberInput) (*
 }
 
 // UpdateMember updates a membership.
+//
+// A change that reduces access (a deactivation, or a role change) removes
+// the relationships it ends from the authorization graph before it
+// commits; if the graph refuses, the membership is left unchanged and the
+// error is returned. Relationships the change grants are written after it
+// commits, as WithSyncMode decides.
 func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUID, input UpdateMemberInput) (*Membership, error) {
 	// Get current membership for role change detection and the type check
 	current, err := s.client.PrincipalMembership.Get(ctx, membershipID)
@@ -551,7 +602,8 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 	// claim; record it with the change (ADR-010).
 	var changes []accesschange.Change
 	orgID := membership.OrganizationID
-	if input.Role != nil && oldRole != *input.Role {
+	roleChanged := oldRole != membership.Role
+	if roleChanged {
 		changes = append(changes, accesschange.Change{PrincipalID: membership.PrincipalID, OrganizationID: &orgID, Reason: accesschange.OrgRoleChanged})
 	}
 	if input.Active != nil && !*input.Active && current.Active {
@@ -565,58 +617,60 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 	if err = revokeInvitesBeyond(ctx, tx, orgID, membership.PrincipalID, membership.Role, membership.Active); err != nil {
 		return nil, errors.Join(err, tx.Rollback())
 	}
+
+	// An inactive membership holds no relations in the graph (its rows are
+	// kept), so deactivation removes the member's organization role,
+	// application roles and resource grants, and reactivation writes them
+	// back. Removals happen here, before the commit.
+	switch {
+	case current.Active && !membership.Active:
+		roles, grants, err := memberAccess(ctx, tx.Client(), membership.PrincipalID, orgID)
+		if err != nil {
+			return nil, errors.Join(err, tx.Rollback())
+		}
+		if err = graphlock.Lock(ctx, tx, graphlock.Principal(membership.PrincipalID)); err != nil {
+			return nil, errors.Join(err, tx.Rollback())
+		}
+		if err = s.revokeAccess(ctx, membership.PrincipalID, orgID, oldRole, roles, grants); err != nil {
+			return nil, errors.Join(err, tx.Rollback())
+		}
+	case current.Active && membership.Active && roleChanged:
+		if err = graphlock.Lock(ctx, tx, graphlock.Principal(membership.PrincipalID)); err != nil {
+			return nil, errors.Join(err, tx.Rollback())
+		}
+		if err = s.syncer.RemoveOrgMembership(ctx, membership.PrincipalID, orgID, oldRole); err != nil {
+			return nil, errors.Join(revokeErr("previous role", err), tx.Rollback())
+		}
+	}
+
 	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to update membership: %w", err)
 	}
 	accesschange.Publish(s.accessSink, changes...)
 
-	// Sync to the authorization backend. An inactive membership holds no
-	// relations in the graph (its rows are kept), so deactivation removes
-	// the member's organization role, application roles and resource
-	// grants, and reactivation writes them back.
 	switch {
-	case current.Active && !membership.Active:
-		roles, grants, err := s.memberAccess(ctx, membership.PrincipalID, orgID)
-		if err != nil {
-			return nil, err
-		}
-		if err := s.syncAccess(ctx, false, membership.PrincipalID, orgID, oldRole, roles, grants); err != nil {
-			return nil, err
-		}
-		return entMembershipToModel(membership), nil
 	case !current.Active && membership.Active:
-		roles, grants, err := s.memberAccess(ctx, membership.PrincipalID, orgID)
+		roles, grants, err := memberAccess(ctx, s.client, membership.PrincipalID, orgID)
 		if err != nil {
 			return nil, err
 		}
-		if err := s.syncAccess(ctx, true, membership.PrincipalID, orgID, membership.Role, roles, grants); err != nil {
+		if err := s.grantAccess(ctx, membership.PrincipalID, orgID, membership.Role, roles, grants); err != nil {
 			return nil, err
 		}
-		return entMembershipToModel(membership), nil
-	case !membership.Active:
-		// Still inactive: nothing is in the graph to change.
-		return entMembershipToModel(membership), nil
-	}
-
-	// Sync role change to authorization backend
-	if input.Role != nil && oldRole != *input.Role {
-		if syncErr := s.syncer.UpdateOrgMembership(ctx, membership.PrincipalID, membership.OrganizationID, oldRole, *input.Role); syncErr != nil {
-			if s.syncMode == authz.SyncModeStrict {
-				return nil, fmt.Errorf("failed to sync role change to authz: %w", syncErr)
-			}
-			s.logger.Warn("failed to sync role change to authz",
-				"principal_id", membership.PrincipalID,
-				"org_id", membership.OrganizationID,
-				"old_role", oldRole,
-				"new_role", *input.Role,
-				"error", syncErr)
+	case current.Active && membership.Active && roleChanged:
+		if err := s.reportGrant("role change", s.syncer.AddOrgMembership(ctx, membership.PrincipalID, orgID, membership.Role),
+			"principal_id", membership.PrincipalID, "org_id", orgID, "old_role", oldRole, "new_role", membership.Role); err != nil {
+			return nil, err
 		}
 	}
-
 	return entMembershipToModel(membership), nil
 }
 
-// RemoveMember removes a principal from an organization.
+// RemoveMember removes a principal from an organization, with its
+// application roles, resource grants and the invitations it sent. The
+// member's relationships are removed from the authorization graph before
+// the removal commits; if the graph refuses, nothing is removed and the
+// error is returned, so the call can be retried.
 func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, principalID uuid.UUID) error {
 	// Get membership to know the role for authz sync
 	membership, err := s.GetMembership(ctx, organizationID, principalID)
@@ -624,23 +678,15 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 		return fmt.Errorf("membership not found: %w", err)
 	}
 
-	// The member's application roles go with the membership.
-	heldRoles, err := s.client.AppRole.Query().
-		Where(approle.OrganizationID(organizationID), approle.PrincipalID(principalID)).
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to read application roles: %w", err)
-	}
-	// So do the member's resource grants (ADR-008).
-	heldGrants, err := s.client.ResourceGrant.Query().
-		Where(resourcegrant.OrganizationID(organizationID), resourcegrant.PrincipalID(principalID)).
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to read resource grants: %w", err)
-	}
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	// The member's application roles and resource grants (ADR-008) go
+	// with the membership.
+	heldRoles, heldGrants, err := memberAccess(ctx, tx.Client(), principalID, organizationID)
+	if err != nil {
+		return errors.Join(err, tx.Rollback())
 	}
 	if _, err = tx.ResourceGrant.Delete().
 		Where(
@@ -674,14 +720,19 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 	if err = revokeInvitesBeyond(ctx, tx, organizationID, principalID, "", false); err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
+	// An inactive membership has nothing in the graph, but removing what
+	// is absent succeeds, so the removal is attempted either way.
+	if err = graphlock.Lock(ctx, tx, graphlock.Principal(principalID)); err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
+	if err = s.revokeAccess(ctx, principalID, organizationID, membership.Role, heldRoles, heldGrants); err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to remove membership: %w", err)
 	}
 	accesschange.Publish(s.accessSink, changes...)
-
-	// Sync to authorization backend: the membership, and the deleted
-	// application roles and resource grants.
-	return s.syncAccess(ctx, false, principalID, organizationID, membership.Role, heldRoles, heldGrants)
+	return nil
 }
 
 // revokeInvitesBeyond revokes, in tx, the pending invitations inviterID
@@ -709,60 +760,54 @@ func revokeInvitesBeyond(ctx context.Context, tx *ent.Tx, orgID, inviterID uuid.
 	return nil
 }
 
-// syncAccess adds (add true) or removes a member's organization role,
-// application roles and resource grants in the authorization graph. Failures
-// are returned in SyncModeStrict and logged otherwise.
-func (s *DefaultService) syncAccess(ctx context.Context, add bool, principalID, organizationID uuid.UUID, role string, appRoles []*ent.AppRole, grants []*ent.ResourceGrant) error {
-	verb := "removal"
-	if add {
-		verb = "addition"
+// revokeAccess removes a member's organization role, application roles and
+// resource grants from the authorization graph. It is called inside the
+// transaction that ends them, holding the member's graphlock, and its
+// error aborts that transaction whatever the sync mode.
+func (s *DefaultService) revokeAccess(ctx context.Context, principalID, organizationID uuid.UUID, role string, appRoles []*ent.AppRole, grants []*ent.ResourceGrant) error {
+	if err := s.syncer.RemoveOrgMembership(ctx, principalID, organizationID, role); err != nil {
+		return revokeErr("membership", err)
 	}
-	report := func(what string, syncErr error, attrs ...any) error {
-		if syncErr == nil {
-			return nil
-		}
-		if s.syncMode == authz.SyncModeStrict {
-			return fmt.Errorf("failed to sync %s %s to authz: %w", what, verb, syncErr)
-		}
-		s.logger.Warn("failed to sync "+what+" "+verb+" to authz",
-			append([]any{"principal_id", principalID, "org_id", organizationID, "error", syncErr}, attrs...)...)
-		return nil
-	}
-
-	var syncErr error
-	if add {
-		syncErr = s.syncer.AddOrgMembership(ctx, principalID, organizationID, role)
-	} else {
-		syncErr = s.syncer.RemoveOrgMembership(ctx, principalID, organizationID, role)
-	}
-	if err := report("membership", syncErr, "role", role); err != nil {
-		return err
-	}
-
-	// Application roles, when the syncer carries them.
 	if appSyncer, ok := s.syncer.(authz.AppRoleSyncer); ok {
 		for _, r := range appRoles {
-			if add {
-				syncErr = appSyncer.AddAppRole(ctx, principalID, organizationID, r.Application, r.Role)
-			} else {
-				syncErr = appSyncer.RemoveAppRole(ctx, principalID, organizationID, r.Application, r.Role)
+			if err := appSyncer.RemoveAppRole(ctx, principalID, organizationID, r.Application, r.Role); err != nil {
+				return revokeErr("application role", err)
 			}
-			if err := report("application role", syncErr, "application", r.Application); err != nil {
+		}
+	}
+	if grantSyncer, ok := s.syncer.(authz.ResourceGrantSyncer); ok {
+		for _, g := range grants {
+			ref := authz.ResourceRef{Type: g.ResourceType, ID: g.ResourceID, OrganizationID: organizationID}
+			if err := grantSyncer.RemoveResourceGrant(ctx, principalID, ref); err != nil {
+				return revokeErr("resource grant", err)
+			}
+		}
+	}
+	return nil
+}
+
+// grantAccess writes a member's organization role, application roles and
+// resource grants to the authorization graph after the change that grants
+// them committed. Failures are returned in SyncModeStrict and logged
+// otherwise.
+func (s *DefaultService) grantAccess(ctx context.Context, principalID, organizationID uuid.UUID, role string, appRoles []*ent.AppRole, grants []*ent.ResourceGrant) error {
+	attrs := []any{"principal_id", principalID, "org_id", organizationID}
+	if err := s.reportGrant("membership addition", s.syncer.AddOrgMembership(ctx, principalID, organizationID, role), append(attrs, "role", role)...); err != nil {
+		return err
+	}
+	if appSyncer, ok := s.syncer.(authz.AppRoleSyncer); ok {
+		for _, r := range appRoles {
+			if err := s.reportGrant("application role addition", appSyncer.AddAppRole(ctx, principalID, organizationID, r.Application, r.Role),
+				append(attrs, "application", r.Application)...); err != nil {
 				return err
 			}
 		}
 	}
-
-	// Resource grants, when the syncer carries them.
 	if grantSyncer, ok := s.syncer.(authz.ResourceGrantSyncer); ok {
 		for _, g := range grants {
 			ref := authz.ResourceRef{Type: g.ResourceType, ID: g.ResourceID, OrganizationID: organizationID}
-			if add {
-				syncErr = grantSyncer.SetResourceGrant(ctx, principalID, ref, g.Role)
-			} else {
-				syncErr = grantSyncer.RemoveResourceGrant(ctx, principalID, ref)
-			}
-			if err := report("resource grant", syncErr, "resource_type", g.ResourceType, "resource_id", g.ResourceID); err != nil {
+			if err := s.reportGrant("resource grant addition", grantSyncer.SetResourceGrant(ctx, principalID, ref, g.Role),
+				append(attrs, "resource_type", g.ResourceType, "resource_id", g.ResourceID)...); err != nil {
 				return err
 			}
 		}
@@ -770,16 +815,29 @@ func (s *DefaultService) syncAccess(ctx context.Context, add bool, principalID, 
 	return nil
 }
 
+// reportGrant handles a failed write of granted access after its change
+// committed: returned in SyncModeStrict, logged otherwise.
+func (s *DefaultService) reportGrant(what string, syncErr error, attrs ...any) error {
+	if syncErr == nil {
+		return nil
+	}
+	if s.syncMode == authz.SyncModeStrict {
+		return fmt.Errorf("failed to sync %s to authz: %w", what, syncErr)
+	}
+	s.logger.Warn("failed to sync "+what+" to authz", append(attrs, "error", syncErr)...)
+	return nil
+}
+
 // memberAccess returns the application roles and resource grants a
 // principal holds in an organization.
-func (s *DefaultService) memberAccess(ctx context.Context, principalID, organizationID uuid.UUID) ([]*ent.AppRole, []*ent.ResourceGrant, error) {
-	roles, err := s.client.AppRole.Query().
+func memberAccess(ctx context.Context, c *ent.Client, principalID, organizationID uuid.UUID) ([]*ent.AppRole, []*ent.ResourceGrant, error) {
+	roles, err := c.AppRole.Query().
 		Where(approle.OrganizationID(organizationID), approle.PrincipalID(principalID)).
 		All(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read application roles: %w", err)
 	}
-	grants, err := s.client.ResourceGrant.Query().
+	grants, err := c.ResourceGrant.Query().
 		Where(resourcegrant.OrganizationID(organizationID), resourcegrant.PrincipalID(principalID)).
 		All(ctx)
 	if err != nil {
@@ -955,35 +1013,29 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 		return err
 	}
 
+	// The previous owner loses the owner role in the graph before the
+	// transfer commits; if the graph refuses, the transfer is not made.
+	if err = graphlock.Lock(ctx, tx, graphlock.Principal(input.FromPrincipal), graphlock.Principal(input.ToPrincipal)); err != nil {
+		return err
+	}
+	if err = s.syncer.RemoveOrgMembership(ctx, input.FromPrincipal, input.OrganizationID, RoleOwner); err != nil {
+		return revokeErr("previous owner's role", err)
+	}
+
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	accesschange.Publish(s.accessSink, changes...)
 
-	// Sync role changes to authorization backend
-	// Update old owner's role
-	if syncErr := s.syncer.UpdateOrgMembership(ctx, input.FromPrincipal, input.OrganizationID, RoleOwner, newRoleForOld); syncErr != nil {
-		if s.syncMode == authz.SyncModeStrict {
-			return fmt.Errorf("failed to sync old owner role change to authz: %w", syncErr)
-		}
-		s.logger.Warn("failed to sync old owner role change to authz",
-			"principal_id", input.FromPrincipal,
-			"org_id", input.OrganizationID,
-			"error", syncErr)
+	// The roles the transfer grants are written after it commits.
+	if err := s.reportGrant("old owner role change", s.syncer.AddOrgMembership(ctx, input.FromPrincipal, input.OrganizationID, newRoleForOld),
+		"principal_id", input.FromPrincipal, "org_id", input.OrganizationID); err != nil {
+		return err
 	}
-
-	// Update new owner's role
-	if syncErr := s.syncer.UpdateOrgMembership(ctx, input.ToPrincipal, input.OrganizationID, newMembership.Role, RoleOwner); syncErr != nil {
-		if s.syncMode == authz.SyncModeStrict {
-			return fmt.Errorf("failed to sync new owner role change to authz: %w", syncErr)
-		}
-		s.logger.Warn("failed to sync new owner role change to authz",
-			"principal_id", input.ToPrincipal,
-			"org_id", input.OrganizationID,
-			"error", syncErr)
-	}
-
-	return nil
+	// The new owner's previous role is contained in the owner role, so it
+	// is replaced after the commit.
+	return s.reportGrant("new owner role change", s.syncer.UpdateOrgMembership(ctx, input.ToPrincipal, input.OrganizationID, newMembership.Role, RoleOwner),
+		"principal_id", input.ToPrincipal, "org_id", input.OrganizationID)
 }
 
 // GenerateSlug generates a unique slug from a name. A reserved slug and
