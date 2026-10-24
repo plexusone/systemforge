@@ -83,6 +83,15 @@ Creating a user adds the account first and the membership after. If adding
 the membership fails, the request fails; the identity provider's retry finds
 the account by email and links it.
 
+## Passwords
+
+A password sent on create, PUT or PATCH is hashed with the provider's
+`PasswordHasher` (bcrypt by default) before it reaches the store, so a custom
+`Store` only ever receives a hash. A PATCH that does not set a password hands
+the store the stored value unchanged. Passwords, and their hashes, are never
+returned in a response. The Ent store does not persist SCIM passwords; users
+it provisions sign in through the application's own login methods.
+
 ## Filters
 
 The Ent store evaluates `filter` on these attributes, and answers `400

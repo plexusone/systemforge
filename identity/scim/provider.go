@@ -219,12 +219,8 @@ func (s *providerService) CreateUser(ctx context.Context, user *User) (*User, er
 	}
 
 	// Hash password if provided
-	if user.Password != "" {
-		hashed, err := s.p.passwordHasher.Hash(user.Password)
-		if err != nil {
-			return nil, ErrInternal("failed to hash password: " + err.Error())
-		}
-		user.Password = hashed
+	if err := s.hashPassword(user); err != nil {
+		return nil, err
 	}
 
 	// Set schemas if not present
@@ -247,6 +243,20 @@ func (s *providerService) CreateUser(ctx context.Context, user *User) (*User, er
 	return created, nil
 }
 
+// hashPassword replaces a password supplied in a write with its hash, so a
+// store never receives a plaintext password.
+func (s *providerService) hashPassword(user *User) error {
+	if user.Password == "" {
+		return nil
+	}
+	hashed, err := s.p.passwordHasher.Hash(user.Password)
+	if err != nil {
+		return ErrInternal("failed to hash password: " + err.Error())
+	}
+	user.Password = hashed
+	return nil
+}
+
 // UpdateUser replaces a user (PUT semantics).
 func (s *providerService) UpdateUser(ctx context.Context, id string, user *User, etag string) (*User, error) {
 	if err := s.p.auth.CanUpdate(ctx, ResourceTypeUser, id); err != nil {
@@ -267,6 +277,11 @@ func (s *providerService) UpdateUser(ctx context.Context, id string, user *User,
 	}
 
 	user.ID = id
+	// A password in the replacement is hashed before the store sees it,
+	// as on create.
+	if err := s.hashPassword(user); err != nil {
+		return nil, err
+	}
 	updated, err := s.p.store.UpdateUser(ctx, id, user)
 	if err != nil {
 		return nil, err
@@ -308,19 +323,22 @@ func (s *providerService) PatchUser(ctx context.Context, id string, patch *Patch
 		}
 	}
 
-	// Apply patch operations
+	// Apply patch operations. The patch is applied to existing in place,
+	// so the stored password is set aside first: a password present after
+	// the patch came from the request and is hashed; otherwise the stored
+	// value is passed back unchanged.
+	stored := existing.Password
+	existing.Password = ""
 	patched, err := applyUserPatch(existing, patch.Operations)
 	if err != nil {
 		return nil, err
 	}
-
-	// Hash password if it was changed
-	if patched.Password != "" && patched.Password != existing.Password {
-		hashed, err := s.p.passwordHasher.Hash(patched.Password)
-		if err != nil {
-			return nil, ErrInternal("failed to hash password: " + err.Error())
+	if patched.Password != "" {
+		if err := s.hashPassword(patched); err != nil {
+			return nil, err
 		}
-		patched.Password = hashed
+	} else {
+		patched.Password = stored
 	}
 
 	// Update in store
@@ -922,7 +940,11 @@ func (s *providerService) PatchMe(ctx context.Context, patch *PatchRequest, etag
 }
 
 // populateUserMeta sets metadata fields on a user.
+//
+// It also clears the password: every user the service returns passes
+// through here, and a password, or its hash, is never returned.
 func (s *providerService) populateUserMeta(user *User) {
+	user.Password = ""
 	if user.Meta == nil {
 		user.Meta = &Meta{}
 	}
@@ -988,7 +1010,7 @@ func applyUserAddReplace(user *User, path string, value any) error {
 		}
 	case "password":
 		if v, ok := value.(string); ok {
-			// Store the password - the store implementation is responsible for hashing
+			// The provider hashes a password set by PATCH before the store sees it.
 			user.Password = v
 		}
 	case "active":
