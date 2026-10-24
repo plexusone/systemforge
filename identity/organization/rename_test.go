@@ -154,3 +154,23 @@ func TestOwnerOfReleasingOrganizationMayReclaim(t *testing.T) {
 		t.Errorf("co-owner of the releasing organization could not reclaim: %v", err)
 	}
 }
+
+// A generated slug steps past one in its cooling-off period instead of
+// failing.
+func TestGenerateSlugSkipsCoolingOff(t *testing.T) {
+	ctx := context.Background()
+	db := newDB(t)
+	svc := organization.NewService(db, organization.WithSlugCoolingOff(time.Hour))
+	alice := newHuman(t, db, "alice@example.com")
+	team, err := svc.Create(ctx, organization.CreateOrganizationInput{Name: "T", Slug: "acme", OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &alice})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.Rename(ctx, team.ID, "acme-inc", alice); err != nil {
+		t.Fatalf("Rename: %v", err)
+	}
+	got, err := svc.GenerateSlug(ctx, "Acme")
+	if err != nil || got != "acme-1" {
+		t.Errorf("GenerateSlug(Acme) = %q, %v; want acme-1", got, err)
+	}
+}

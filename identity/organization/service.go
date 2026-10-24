@@ -986,14 +986,15 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 	return nil
 }
 
-// GenerateSlug generates a unique slug from a name.
+// GenerateSlug generates a unique slug from a name. A reserved slug and
+// one in its cooling-off period are skipped like a taken one.
 func (s *DefaultService) GenerateSlug(ctx context.Context, name string) (string, error) {
 	base := slugify(name)
 	slug := base
 
 	// Try base slug first
 	available, err := s.SlugAvailable(ctx, slug)
-	if err != nil && !errors.Is(err, ErrSlugReserved) {
+	if err != nil && !unavailableSlug(err) {
 		return "", err
 	}
 	if available {
@@ -1004,7 +1005,7 @@ func (s *DefaultService) GenerateSlug(ctx context.Context, name string) (string,
 	for i := 1; i <= 100; i++ {
 		slug = fmt.Sprintf("%s-%d", base, i)
 		available, err := s.SlugAvailable(ctx, slug)
-		if err != nil && !errors.Is(err, ErrSlugReserved) {
+		if err != nil && !unavailableSlug(err) {
 			return "", err
 		}
 		if available {
@@ -1018,6 +1019,12 @@ func (s *DefaultService) GenerateSlug(ctx context.Context, name string) (string,
 }
 
 // Helper functions
+
+// unavailableSlug reports whether err from SlugAvailable means only that the
+// slug cannot be used, rather than that the check failed.
+func unavailableSlug(err error) bool {
+	return errors.Is(err, ErrSlugReserved) || errors.Is(err, ErrSlugCoolingOff)
+}
 
 var slugRegex = regexp.MustCompile(`^[a-z][a-z0-9-]*[a-z0-9]$`)
 var slugMinLen = 3
