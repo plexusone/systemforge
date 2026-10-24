@@ -1,12 +1,25 @@
 // Package main demonstrates running apps in single-app and multi-app modes.
 //
+// The app connects with its own database login, and its schema and
+// migrations run with a separate migration (owner) login. Provision both
+// logins once with an admin login (see "Database isolation" in the
+// multiapp README), for example:
+//
+//	go run ./cmd/multiappdb apply --admin-url-env ADMIN_DATABASE_URL \
+//	    --owner sf_owner --app example --role app_example_login \
+//	    --password-env EXAMPLE_DB_PASSWORD
+//
 // Single-app mode (dedicated deployment):
 //
-//	MODE=single DATABASE_URL=postgres://... go run main.go
+//	MODE=single MIGRATION_DATABASE_URL=postgres://sf_owner@... \
+//	    EXAMPLE_DATABASE_URL=postgres://app_example_login@... go run main.go
 //
-// Multi-app mode (shared deployment):
+// Multi-app mode (shared deployment): the same, with MODE=multi.
 //
-//	MODE=multi DATABASE_URL=postgres://... go run main.go
+// For local development only, every app can share one login, which the
+// database then does not keep apart:
+//
+//	SHARED_DATABASE_LOGIN=1 MIGRATION_DATABASE_URL=postgres://... go run main.go
 //
 // Then test with:
 //
@@ -33,10 +46,13 @@ func main() {
 		mode = "single"
 	}
 
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		databaseURL = "postgres://localhost:5432/systemforge?sslmode=disable"
+	// The migration (owner) login and the example app's own login.
+	migrationURL := os.Getenv("MIGRATION_DATABASE_URL")
+	appDatabases := map[string]multiapp.AppDatabase{}
+	if u := os.Getenv("EXAMPLE_DATABASE_URL"); u != "" {
+		appDatabases["example"] = multiapp.AppDatabase{URL: u}
 	}
+	sharedLogin := os.Getenv("SHARED_DATABASE_LOGIN") == "1"
 
 	redisURL := os.Getenv("REDIS_URL") // Optional
 
@@ -61,10 +77,12 @@ func main() {
 
 	// Create server
 	server, err := multiapp.NewServer(multiapp.Config{
-		Mode:        serverMode,
-		DatabaseURL: databaseURL,
-		RedisURL:    redisURL,
-		Logger:      logger,
+		Mode:                     serverMode,
+		AppDatabases:             appDatabases,
+		MigrationDatabaseURL:     migrationURL,
+		AllowSharedDatabaseLogin: sharedLogin,
+		RedisURL:                 redisURL,
+		Logger:                   logger,
 	})
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)

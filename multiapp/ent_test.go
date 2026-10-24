@@ -54,7 +54,7 @@ func TestSetSchemaInTxEndsWithTheTransaction(t *testing.T) {
 		t.Fatalf("create schema: %v", err)
 	}
 
-	h := NewEntConnHook(nil)
+	h := NewEntConnHook(&AppAwareDB{schemas: map[string]*SchemaDB{}})
 	actx := WithAppContext(ctx, &AppContext{AppSlug: "one", DatabaseSchema: "app_one"})
 	tx, err := db.BeginTx(actx, nil)
 	if err != nil {

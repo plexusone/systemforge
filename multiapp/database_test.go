@@ -2,6 +2,7 @@ package multiapp
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -22,12 +23,46 @@ func TestForSchemaRefusesUnsafeNames(t *testing.T) {
 	}
 }
 
+// A pool connected with one app's login serves that app's schema only.
+func TestAppLoginServesOneSchema(t *testing.T) {
+	db := &AppAwareDB{schemas: map[string]*SchemaDB{}}
+	if _, err := db.ForSchema("app_one"); err != nil {
+		t.Fatalf("first schema: %v", err)
+	}
+	if _, err := db.ForSchema("app_one"); err != nil {
+		t.Fatalf("same schema again: %v", err)
+	}
+	if _, err := db.ForSchema("app_two"); !errors.Is(err, ErrSharedDatabaseLogin) {
+		t.Errorf("second schema: %v, want ErrSharedDatabaseLogin", err)
+	}
+	ctx := WithAppContext(context.Background(), &AppContext{AppSlug: "two", DatabaseSchema: "app_two"})
+	if err := NewEntConnHook(db).SetSchemaInTx(ctx, nil); !errors.Is(err, ErrSharedDatabaseLogin) {
+		t.Errorf("hook with a second schema: %v, want ErrSharedDatabaseLogin", err)
+	}
+	if _, err := NewEntClientFactory(db).StdDBForSchema(ctx, "app_two"); !errors.Is(err, ErrSharedDatabaseLogin) {
+		t.Errorf("factory with a second schema: %v, want ErrSharedDatabaseLogin", err)
+	}
+	if _, err := NewEntConnHook(nil).schemaFromContext(WithAppContext(context.Background(), &AppContext{DatabaseSchema: "app_one"})); err == nil {
+		t.Error("hook without a database accepted a schema")
+	}
+
+	for _, opt := range []DBOption{AllowSharedLogin(), AsMigrationLogin()} {
+		multi := &AppAwareDB{schemas: map[string]*SchemaDB{}}
+		opt(&multi.opts)
+		for _, s := range []string{"app_one", "app_two"} {
+			if _, err := multi.ForSchema(s); err != nil {
+				t.Errorf("multi-schema pool refused %s: %v", s, err)
+			}
+		}
+	}
+}
+
 // TestSchemaDBIsolatesAppsOnAPooledConnection runs two applications over one
 // small pool, so their calls share connections, and verifies each sees only
 // its own schema and no connection leaves SchemaDB with a search_path set.
 func TestSchemaDBIsolatesAppsOnAPooledConnection(t *testing.T) {
 	ctx := context.Background()
-	db, err := NewAppAwareDB(pgtest.DSN(t))
+	db, err := NewAppAwareDB(pgtest.DSN(t), AllowSharedLogin())
 	if err != nil {
 		t.Fatalf("NewAppAwareDB: %v", err)
 	}

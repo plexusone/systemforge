@@ -13,38 +13,112 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// AppAwareDB manages database connections with schema-per-app isolation.
-// Each app gets its own PostgreSQL schema. All schemas share one pool and
-// database role, so the separation is by name, not a privilege boundary:
-// see "Isolation limits" in the package README.
+// AppAwareDB is a connection pool for one database login, serving app
+// schemas over it.
+//
+// A pool connected with an app's own login serves that app's schema only:
+// ForSchema, the Ent helpers and EntConnHook refuse a second schema, since
+// switching schemas inside one login (search_path, or SET LOCAL ROLE,
+// which SQL in the transaction can reset) does not keep apps apart. Open
+// the pool of the migration (owner) login with AsMigrationLogin, and a
+// pool every app shares, for local development only, with
+// AllowSharedLogin. See "Database isolation" in the package README.
 type AppAwareDB struct {
 	pool    *pgxpool.Pool
 	schemas map[string]*SchemaDB
 	mu      sync.RWMutex
+	opts    dbOptions
+	// bound is the one schema a single-app pool serves.
+	bound string
 }
 
-// NewAppAwareDB creates a new app-aware database connection pool.
-func NewAppAwareDB(databaseURL string) (*AppAwareDB, error) {
+// DBOption configures an AppAwareDB.
+type DBOption func(*dbOptions)
+
+type dbOptions struct {
+	multiSchema bool
+}
+
+// AsMigrationLogin marks the pool as the migration (owner) login, which
+// creates every app schema and runs migrations in them, so it may serve
+// any number of schemas. Never hand it to app code.
+func AsMigrationLogin() DBOption {
+	return func(o *dbOptions) { o.multiSchema = true }
+}
+
+// AllowSharedLogin lets app code use one pool, and so one database login,
+// for several app schemas. The database then does not keep the apps
+// apart: any of them can read and write the others' tables with a
+// schema-qualified name. Use it for local development only.
+func AllowSharedLogin() DBOption {
+	return func(o *dbOptions) { o.multiSchema = true }
+}
+
+// ErrSharedDatabaseLogin is returned when a pool connected with one app's
+// login is asked to serve another app's schema.
+var ErrSharedDatabaseLogin = errors.New("multiapp: one database login cannot serve several app schemas")
+
+// NewAppAwareDB opens a connection pool for databaseURL and checks that it
+// connects.
+func NewAppAwareDB(databaseURL string, opts ...DBOption) (*AppAwareDB, error) {
 	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse database URL: %w", err)
 	}
+	return NewAppAwareDBWithConfig(context.Background(), config, opts...)
+}
 
-	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+// NewAppAwareDBWithConfig opens a connection pool from config, for example
+// one whose BeforeConnect sets a short-lived IAM authentication token as
+// the password, and checks that it connects.
+func NewAppAwareDBWithConfig(ctx context.Context, config *pgxpool.Config, opts ...DBOption) (*AppAwareDB, error) {
+	if config == nil {
+		return nil, errors.New("multiapp: nil pool config")
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connection pool: %w", err)
 	}
 
 	// Test connection
-	if err := pool.Ping(context.Background()); err != nil {
+	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	return &AppAwareDB{
+	db := &AppAwareDB{
 		pool:    pool,
 		schemas: make(map[string]*SchemaDB),
-	}, nil
+	}
+	for _, o := range opts {
+		o(&db.opts)
+	}
+	return db, nil
+}
+
+// claim validates schema and records it as the schema this pool serves,
+// refusing a second one unless the pool may serve several.
+func (db *AppAwareDB) claim(schema string) error {
+	if !isValidSchemaName(schema) {
+		return fmt.Errorf("multiapp: invalid schema name %q", schema)
+	}
+	if db == nil {
+		return errors.New("multiapp: no database")
+	}
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if db.opts.multiSchema {
+		return nil
+	}
+	if db.bound == "" {
+		db.bound = schema
+		return nil
+	}
+	if db.bound != schema {
+		return fmt.Errorf("%w: this pool serves schema %q, not %q; give each app its own login (or use AllowSharedLogin for local development)",
+			ErrSharedDatabaseLogin, db.bound, schema)
+	}
+	return nil
 }
 
 // CreateSchema creates a new PostgreSQL schema for an app.
@@ -54,8 +128,17 @@ func (db *AppAwareDB) CreateSchema(ctx context.Context, schemaName string) error
 		return fmt.Errorf("invalid schema name: %s", schemaName)
 	}
 
-	// Create schema if it doesn't exist
-	query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schemaName)
+	// A provisioned schema already exists, and the migration login that
+	// owns it need not hold CREATE on the database, which CREATE SCHEMA IF
+	// NOT EXISTS checks even when the schema exists.
+	var exists bool
+	if err := db.pool.QueryRow(ctx, "SELECT EXISTS (SELECT FROM pg_catalog.pg_namespace WHERE nspname = $1)", schemaName).Scan(&exists); err != nil {
+		return fmt.Errorf("failed to look up schema: %w", err)
+	}
+	if exists {
+		return nil
+	}
+	query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", quoteIdent(schemaName))
 	_, err := db.pool.Exec(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to create schema: %w", err)
@@ -133,10 +216,12 @@ func (db *AppAwareDB) GetSchemaSize(ctx context.Context, schemaName string) (int
 
 // ForSchema returns a SchemaDB scoped to a specific schema. The name is
 // used in SQL, so it must be a plain identifier (lowercase letters, digits,
-// and underscores); anything else is refused.
+// and underscores); anything else is refused. Unless the pool was opened
+// with AsMigrationLogin or AllowSharedLogin, it serves one schema only, and
+// asking for a second returns ErrSharedDatabaseLogin.
 func (db *AppAwareDB) ForSchema(schemaName string) (*SchemaDB, error) {
-	if !isValidSchemaName(schemaName) {
-		return nil, fmt.Errorf("multiapp: invalid schema name %q", schemaName)
+	if err := db.claim(schemaName); err != nil {
+		return nil, err
 	}
 
 	db.mu.RLock()
@@ -361,12 +446,18 @@ func (db *SchemaDB) Pool() *pgxpool.Pool {
 	return db.pool
 }
 
-// StdDB returns a *sql.DB wrapper for use with Ent or other SQL libraries.
-// Note: This creates a new connection per call; consider caching if needed.
+// StdDB opens a *sql.DB for use with Ent or other database/sql libraries,
+// connected with the same login as this SchemaDB and with search_path set
+// to its schema on every connection. Each call opens a new pool; open it
+// once per app and close it when done. Usage with Ent:
+//
+//	db, err := deps.DB.StdDB(ctx)
+//	if err != nil {
+//	    return err
+//	}
+//	client := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, db)))
 func (db *SchemaDB) StdDB(ctx context.Context) (*sql.DB, error) {
-	// pgx v5 doesn't directly support *sql.DB, so we need to use database/sql
-	// with the pgx driver
-	return nil, errors.New("StdDB not implemented - use pgx directly or integrate with Ent")
+	return openStdDB(ctx, db.pool.Config().ConnConfig, db.schema)
 }
 
 // SchemaTx is a transaction scoped to a schema.

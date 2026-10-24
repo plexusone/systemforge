@@ -34,8 +34,10 @@ func NewEntClientFactory(db *AppAwareDB) *EntClientFactory {
 
 // StdDBForSchema returns a *sql.DB configured for a specific schema.
 // Every connection of the returned pool has search_path set to the app's
-// schema, so the pool must serve that app only. The schema name must be a
-// plain identifier (see AppAwareDB.ForSchema); anything else is refused.
+// schema, and it connects with the factory's login, so pass the
+// AppAwareDB of the app's own login: like AppAwareDB.ForSchema, a factory
+// over an app login serves one schema only. The schema name must be a
+// plain identifier; anything else is refused.
 //
 // Usage with Ent:
 //
@@ -50,30 +52,28 @@ func (f *EntClientFactory) StdDBForSchema(ctx context.Context, schema string) (*
 	if !isValidSchemaName(schema) {
 		return nil, fmt.Errorf("multiapp: invalid schema name %q", schema)
 	}
-	// Get connection config from pool
-	config := f.db.pool.Config().ConnConfig.Copy()
+	if err := f.db.claim(schema); err != nil {
+		return nil, err
+	}
+	return openStdDB(ctx, f.db.pool.Config().ConnConfig, schema)
+}
 
-	// Add search_path to connection parameters
-	// This ensures all connections from this pool use the correct schema
+// openStdDB opens a database/sql pool with connConfig's login and
+// search_path set to schema on every connection.
+func openStdDB(ctx context.Context, connConfig *pgx.ConnConfig, schema string) (*sql.DB, error) {
+	if !isValidSchemaName(schema) {
+		return nil, fmt.Errorf("multiapp: invalid schema name %q", schema)
+	}
+	config := connConfig.Copy()
 	if config.RuntimeParams == nil {
 		config.RuntimeParams = make(map[string]string)
 	}
 	config.RuntimeParams["search_path"] = schema + ", public"
 
-	// Create a new connection string with the modified config
-	connStr := stdlib.RegisterConnConfig(config)
-
-	// Open standard database connection
-	db, err := sql.Open("pgx", connStr)
-	if err != nil {
-		return nil, fmt.Errorf("multiapp: failed to open database for schema %s: %w", schema, err)
-	}
-
-	// Verify connection
+	db := stdlib.OpenDB(*config)
 	if err := db.PingContext(ctx); err != nil {
 		return nil, errors.Join(fmt.Errorf("multiapp: failed to ping database for schema %s: %w", schema, err), db.Close())
 	}
-
 	return db, nil
 }
 
@@ -104,13 +104,18 @@ type EntConnHook struct {
 	db *AppAwareDB
 }
 
-// NewEntConnHook creates a new Ent connection hook.
+// NewEntConnHook creates a new Ent connection hook. db is the AppAwareDB
+// of the login the transactions run with: like AppAwareDB.ForSchema, the
+// hook refuses an app context naming a second schema unless db was opened
+// with AllowSharedLogin, so one app's login never serves another app's
+// requests.
 func NewEntConnHook(db *AppAwareDB) *EntConnHook {
 	return &EntConnHook{db: db}
 }
 
-// schemaFromContext returns the validated schema of the AppContext in ctx.
-func schemaFromContext(ctx context.Context) (string, error) {
+// schemaFromContext returns the validated schema of the AppContext in ctx,
+// once the hook's database accepts it.
+func (h *EntConnHook) schemaFromContext(ctx context.Context) (string, error) {
 	appCtx := AppContextFromContext(ctx)
 	if appCtx == nil {
 		return "", ErrNoAppContext
@@ -122,6 +127,9 @@ func schemaFromContext(ctx context.Context) (string, error) {
 	if !isValidSchemaName(schema) {
 		return "", fmt.Errorf("multiapp: invalid schema name %q", schema)
 	}
+	if err := h.db.claim(schema); err != nil {
+		return "", err
+	}
 	return schema, nil
 }
 
@@ -130,7 +138,7 @@ func schemaFromContext(ctx context.Context) (string, error) {
 // goes back to the pool without it. Call it first in every transaction an
 // application runs.
 func (h *EntConnHook) SetSchemaInTx(ctx context.Context, tx *sql.Tx) error {
-	schema, err := schemaFromContext(ctx)
+	schema, err := h.schemaFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -148,7 +156,7 @@ func (h *EntConnHook) SetSchemaInTx(ctx context.Context, tx *sql.Tx) error {
 // run the hook reads and writes this application's tables. Use
 // SetSchemaInTx, whose search_path ends with the transaction.
 func (h *EntConnHook) SetSchemaFromContext(ctx context.Context, conn *sql.Conn) error {
-	schema, err := schemaFromContext(ctx)
+	schema, err := h.schemaFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -163,10 +171,14 @@ func (h *EntConnHook) SetSchemaFromContext(ctx context.Context, conn *sql.Conn) 
 
 // PgxConnWithSchema opens a dedicated, unpooled pgx connection with schema
 // set, for raw pgx operations outside of Ent; close it when done. The
-// schema name must be a plain identifier; anything else is refused.
+// schema name must be a plain identifier; anything else is refused, and
+// so is a second schema on a factory over an app's own login.
 func (f *EntClientFactory) PgxConnWithSchema(ctx context.Context, schema string) (*pgx.Conn, error) {
 	if !isValidSchemaName(schema) {
 		return nil, fmt.Errorf("multiapp: invalid schema name %q", schema)
+	}
+	if err := f.db.claim(schema); err != nil {
+		return nil, err
 	}
 	config := f.db.pool.Config().ConnConfig.Copy()
 	if config.RuntimeParams == nil {
