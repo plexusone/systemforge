@@ -71,6 +71,7 @@ router.Use(middleware.HTTPAuthWithObservability(jwtService, obs))
 ```go
 config := middleware.DefaultAPIKeyMiddlewareConfig()
 config.Service = apikeyService
+config.OwnerCheck = ownerCheck // see API Keys: Middleware Integration
 config.Observability = obs
 router.Use(middleware.APIKeyMiddleware(config))
 ```

@@ -3,6 +3,8 @@ package middleware
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/netip"
@@ -72,10 +74,30 @@ func (p *Principal) IsUser() bool {
 	return p.Type == "user"
 }
 
+// ErrAPIKeyOwnerNotAllowed is returned by an APIKeyOwnerCheck when a valid
+// key's owner may no longer use it: the owner is deactivated or deleted,
+// or is no longer a member of the key's organization.
+var ErrAPIKeyOwnerNotAllowed = errors.New("API key owner no longer has access")
+
+// APIKeyOwnerCheck confirms, on every request, that the owner of a valid
+// key may still use it. It must check that key.OwnerID is an active
+// principal and, when key.OrganizationID is set, that the owner is still an
+// active member of that organization, and return ErrAPIKeyOwnerNotAllowed
+// (possibly wrapped) when not. Any error refuses the request.
+//
+// A key's validity only proves who created it and what it was scoped to
+// then; without this check, a key keeps asserting its organization after
+// its owner was removed from it or deactivated.
+type APIKeyOwnerCheck func(ctx context.Context, key *apikey.APIKey) error
+
 // APIKeyMiddlewareConfig contains configuration for the API key middleware.
 type APIKeyMiddlewareConfig struct {
 	// Service is the API key service.
 	Service *apikey.Service
+
+	// OwnerCheck confirms that the key's owner still has access
+	// (required). APIKeyMiddleware panics without it.
+	OwnerCheck APIKeyOwnerCheck
 
 	// RequiredScopes are scopes that must be present (all required).
 	RequiredScopes []string
@@ -125,8 +147,16 @@ func DefaultAPIKeyMiddlewareConfig() APIKeyMiddlewareConfig {
 	}
 }
 
-// APIKeyMiddleware creates middleware that validates API keys.
+// APIKeyMiddleware creates middleware that validates API keys and checks,
+// with config.OwnerCheck, that each key's owner still has access. It panics
+// when config.Service or config.OwnerCheck is nil.
 func APIKeyMiddleware(config APIKeyMiddlewareConfig) func(http.Handler) http.Handler {
+	if config.Service == nil {
+		panic("middleware: APIKeyMiddlewareConfig.Service is required")
+	}
+	if config.OwnerCheck == nil {
+		panic("middleware: APIKeyMiddlewareConfig.OwnerCheck is required")
+	}
 	if config.HeaderName == "" {
 		config.HeaderName = "Authorization"
 	}
@@ -162,6 +192,15 @@ func APIKeyMiddleware(config APIKeyMiddlewareConfig) func(http.Handler) http.Han
 						result = observability.ResultInvalid
 					}
 					config.Observability.RecordAPIKeyValidation(ctx, result)
+				}
+				handleAPIKeyError(w, r, config, err)
+				return
+			}
+
+			// The key is valid; its owner must still have access.
+			if err := checkAPIKeyOwner(ctx, config.OwnerCheck, validatedKey); err != nil {
+				if config.Observability != nil {
+					config.Observability.RecordAPIKeyValidation(ctx, observability.ResultDenied)
 				}
 				handleAPIKeyError(w, r, config, err)
 				return
@@ -229,6 +268,21 @@ func APIKeyMiddleware(config APIKeyMiddlewareConfig) func(http.Handler) http.Han
 	}
 }
 
+// checkAPIKeyOwner runs check for key. It returns ErrAPIKeyOwnerNotAllowed
+// when the owner no longer has access, and logs and returns any other
+// error, which also refuses the request.
+func checkAPIKeyOwner(ctx context.Context, check APIKeyOwnerCheck, key *apikey.APIKey) error {
+	err := check(ctx, key)
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, ErrAPIKeyOwnerNotAllowed) {
+		return ErrAPIKeyOwnerNotAllowed
+	}
+	slog.ErrorContext(ctx, "checking API key owner", "key_id", key.ID, "error", err)
+	return err
+}
+
 // extractAPIKey extracts the API key from the request.
 func extractAPIKey(r *http.Request, config APIKeyMiddlewareConfig) string {
 	// Try header first
@@ -286,6 +340,8 @@ func handleAPIKeyError(w http.ResponseWriter, r *http.Request, config APIKeyMidd
 		http.Error(w, "Unauthorized: API key expired", http.StatusUnauthorized)
 	case apikey.ErrKeyRevoked:
 		http.Error(w, "Unauthorized: API key revoked", http.StatusUnauthorized)
+	case ErrAPIKeyOwnerNotAllowed:
+		http.Error(w, "Unauthorized: API key owner no longer has access", http.StatusUnauthorized)
 	case apikey.ErrScopeNotAllowed:
 		http.Error(w, "Forbidden: Insufficient permissions", http.StatusForbidden)
 	default:
@@ -305,24 +361,33 @@ func GetPrincipal(ctx context.Context) *Principal {
 	return principal
 }
 
-// RequireAPIKey creates middleware that requires a valid API key.
-// This is a convenience function with default configuration.
-func RequireAPIKey(service *apikey.Service) func(http.Handler) http.Handler {
+// RequireAPIKey creates middleware that requires a valid API key whose
+// owner passes ownerCheck. This is a convenience function with default
+// configuration.
+func RequireAPIKey(service *apikey.Service, ownerCheck APIKeyOwnerCheck) func(http.Handler) http.Handler {
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = service
+	config.OwnerCheck = ownerCheck
 	return APIKeyMiddleware(config)
 }
 
 // RequireAPIKeyWithScopes creates middleware that requires specific scopes.
-func RequireAPIKeyWithScopes(service *apikey.Service, scopes ...string) func(http.Handler) http.Handler {
+func RequireAPIKeyWithScopes(service *apikey.Service, ownerCheck APIKeyOwnerCheck, scopes ...string) func(http.Handler) http.Handler {
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = service
+	config.OwnerCheck = ownerCheck
 	config.RequiredScopes = scopes
 	return APIKeyMiddleware(config)
 }
 
-// OptionalAPIKey creates middleware that validates API keys if present but doesn't require them.
-func OptionalAPIKey(service *apikey.Service) func(http.Handler) http.Handler {
+// OptionalAPIKey creates middleware that validates API keys if present but
+// doesn't require them. A key that is invalid, or whose owner fails
+// ownerCheck, leaves the request unauthenticated. It panics when service or
+// ownerCheck is nil.
+func OptionalAPIKey(service *apikey.Service, ownerCheck APIKeyOwnerCheck) func(http.Handler) http.Handler {
+	if service == nil || ownerCheck == nil {
+		panic("middleware: OptionalAPIKey requires a service and an owner check")
+	}
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = service
 
@@ -340,6 +405,12 @@ func OptionalAPIKey(service *apikey.Service) func(http.Handler) http.Handler {
 			validatedKey, err := config.Service.Validate(r.Context(), key)
 			if err != nil {
 				// Invalid key - continue without authentication
+				next.ServeHTTP(w, r)
+				return
+			}
+			if err := checkAPIKeyOwner(r.Context(), ownerCheck, validatedKey); err != nil {
+				// The owner no longer has access - continue without
+				// authentication
 				next.ServeHTTP(w, r)
 				return
 			}

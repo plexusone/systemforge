@@ -140,6 +140,7 @@ func TestAPIKeyMiddleware_ValidKey(t *testing.T) {
 
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	config.RecordUsage = false // Disable for test
 	middleware := APIKeyMiddleware(config)
 
@@ -166,6 +167,7 @@ func TestAPIKeyMiddleware_NoKey(t *testing.T) {
 
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	middleware := APIKeyMiddleware(config)
 
 	req := httptest.NewRequest("GET", "/api/users", nil)
@@ -187,6 +189,7 @@ func TestAPIKeyMiddleware_InvalidKey(t *testing.T) {
 
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	middleware := APIKeyMiddleware(config)
 
 	req := httptest.NewRequest("GET", "/api/users", nil)
@@ -218,6 +221,7 @@ func TestAPIKeyMiddleware_RevokedKey(t *testing.T) {
 
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	middleware := APIKeyMiddleware(config)
 
 	req := httptest.NewRequest("GET", "/api/users", nil)
@@ -248,6 +252,7 @@ func TestAPIKeyMiddleware_RequiredScopes(t *testing.T) {
 	// Require a scope the key doesn't have
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	config.RequiredScopes = []string{"write:users"}
 	config.RecordUsage = false
 	middleware := APIKeyMiddleware(config)
@@ -281,6 +286,7 @@ func TestAPIKeyMiddleware_AnyScopes(t *testing.T) {
 
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	config.AnyScopes = []string{"read:users", "write:users"}
 	config.RecordUsage = false
 	middleware := APIKeyMiddleware(config)
@@ -315,6 +321,7 @@ func TestAPIKeyMiddleware_ApiKeyScheme(t *testing.T) {
 
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	config.RecordUsage = false
 	middleware := APIKeyMiddleware(config)
 
@@ -345,6 +352,7 @@ func TestAPIKeyMiddleware_QueryParam(t *testing.T) {
 
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	config.AllowQueryParam = true
 	config.RecordUsage = false
 	middleware := APIKeyMiddleware(config)
@@ -373,6 +381,7 @@ func TestAPIKeyMiddleware_QueryParamDisabled(t *testing.T) {
 
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	config.AllowQueryParam = false // Default
 	middleware := APIKeyMiddleware(config)
 
@@ -392,6 +401,7 @@ func TestAPIKeyMiddleware_CustomErrorHandler(t *testing.T) {
 	customErrorCalled := false
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	config.OnError = func(w http.ResponseWriter, r *http.Request, err error) {
 		customErrorCalled = true
 		http.Error(w, "Custom error", http.StatusTeapot)
@@ -426,6 +436,7 @@ func TestAPIKeyMiddleware_OnSuccess(t *testing.T) {
 	successCalled := false
 	config := DefaultAPIKeyMiddlewareConfig()
 	config.Service = svc
+	config.OwnerCheck = allowOwner
 	config.RecordUsage = false
 	config.OnSuccess = func(r *http.Request, key *apikey.APIKey) {
 		successCalled = true
@@ -464,7 +475,7 @@ func TestRequireAPIKey(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	middleware := RequireAPIKey(svc)
+	middleware := RequireAPIKey(svc, allowOwner)
 
 	req := httptest.NewRequest("GET", "/api/users", nil)
 	req.Header.Set("Authorization", "Bearer "+result.Key)
@@ -491,7 +502,7 @@ func TestRequireAPIKeyWithScopes(t *testing.T) {
 		t.Error("Handler should not be called without required scope")
 	})
 
-	middleware := RequireAPIKeyWithScopes(svc, "write:users")
+	middleware := RequireAPIKeyWithScopes(svc, allowOwner, "write:users")
 
 	req := httptest.NewRequest("GET", "/api/users", nil)
 	req.Header.Set("Authorization", "Bearer "+result.Key)
@@ -524,7 +535,7 @@ func TestOptionalAPIKey_WithKey(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	middleware := OptionalAPIKey(svc)
+	middleware := OptionalAPIKey(svc, allowOwner)
 
 	req := httptest.NewRequest("GET", "/api/users", nil)
 	req.Header.Set("Authorization", "Bearer "+result.Key)
@@ -552,7 +563,7 @@ func TestOptionalAPIKey_WithoutKey(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	middleware := OptionalAPIKey(svc)
+	middleware := OptionalAPIKey(svc, allowOwner)
 
 	req := httptest.NewRequest("GET", "/api/users", nil)
 
@@ -582,7 +593,7 @@ func TestOptionalAPIKey_InvalidKey(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	middleware := OptionalAPIKey(svc)
+	middleware := OptionalAPIKey(svc, allowOwner)
 
 	req := httptest.NewRequest("GET", "/api/users", nil)
 	req.Header.Set("Authorization", "Bearer invalid_key")
@@ -611,7 +622,7 @@ func TestRequireScope(t *testing.T) {
 	})
 
 	// Chain middleware
-	apiKeyMiddleware := RequireAPIKey(svc)
+	apiKeyMiddleware := RequireAPIKey(svc, allowOwner)
 	scopeMiddleware := RequireScope("read:users")
 
 	req := httptest.NewRequest("GET", "/api/users", nil)
@@ -657,7 +668,7 @@ func TestRequireAnyScope(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	apiKeyMiddleware := RequireAPIKey(svc)
+	apiKeyMiddleware := RequireAPIKey(svc, allowOwner)
 	scopeMiddleware := RequireAnyScope("read:users", "write:users")
 
 	req := httptest.NewRequest("GET", "/api/users", nil)
