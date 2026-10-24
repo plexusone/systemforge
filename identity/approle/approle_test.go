@@ -391,17 +391,19 @@ func TestAppRolesSyncToTheGraph(t *testing.T) {
 	if _, err := f.svc.Change(ctx, f.in(f.member, "alpha", "admin")); err != nil {
 		t.Fatal(err)
 	}
-	check("change", call("AddAppRole", "viewer"), call("AddAppRole", "admin"), call("RemoveAppRole", "viewer"))
+	// The previous role leaves the graph before the change commits, the
+	// new one is written after.
+	check("change", call("AddAppRole", "viewer"), call("RemoveAppRole", "viewer"), call("AddAppRole", "admin"))
 
 	if _, err := f.svc.Change(ctx, f.in(f.member, "alpha", "admin")); err != nil {
 		t.Fatal(err)
 	}
-	check("unchanged role writes nothing", call("AddAppRole", "viewer"), call("AddAppRole", "admin"), call("RemoveAppRole", "viewer"))
+	check("unchanged role writes nothing", call("AddAppRole", "viewer"), call("RemoveAppRole", "viewer"), call("AddAppRole", "admin"))
 
 	if err := f.svc.Remove(ctx, f.org.ID, f.member, "alpha", f.owner); err != nil {
 		t.Fatal(err)
 	}
-	check("remove", call("AddAppRole", "viewer"), call("AddAppRole", "admin"), call("RemoveAppRole", "viewer"), call("RemoveAppRole", "admin"))
+	check("remove", call("AddAppRole", "viewer"), call("RemoveAppRole", "viewer"), call("AddAppRole", "admin"), call("RemoveAppRole", "admin"))
 
 	// RemoveForMember removes every role from the graph.
 	rec2 := syncrec.New()
@@ -489,5 +491,63 @@ func TestRemoveMemberSyncsAppRoleRemoval(t *testing.T) {
 	want := "RemoveAppRole:" + f.member.String() + ":" + f.org.ID.String() + ":alpha:viewer"
 	if got := appCalls(rec); len(got) != 1 || got[0] != want {
 		t.Errorf("calls = %v, want %v", got, want)
+	}
+}
+
+// A role removal or change the graph refuses is not saved, whatever the
+// sync mode, and succeeds when retried.
+func TestAppRoleRevocationAbortsWhenTheGraphFails(t *testing.T) {
+	ctx := context.Background()
+	boom := errors.New("graph down")
+	for _, mode := range []authz.SyncMode{authz.SyncModeStrict, authz.SyncModeEventual} {
+		t.Run(string(mode), func(t *testing.T) {
+			f, rec := syncedFixture(t, mode)
+			if _, err := f.svc.Assign(ctx, f.in(f.member, "alpha", "admin")); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.svc.Assign(ctx, f.in(f.member, "beta", "viewer")); err != nil {
+				t.Fatal(err)
+			}
+			roles := func() map[string]string {
+				t.Helper()
+				held, err := f.svc.ListForPrincipal(ctx, f.org.ID, f.member)
+				if err != nil {
+					t.Fatal(err)
+				}
+				out := map[string]string{}
+				for _, r := range held {
+					out[r.Application] = r.Role
+				}
+				return out
+			}
+
+			rec.RemoveErr = boom
+			if _, err := f.svc.Change(ctx, f.in(f.member, "alpha", "viewer")); !errors.Is(err, boom) {
+				t.Errorf("Change = %v, want the graph error", err)
+			}
+			if err := f.svc.Remove(ctx, f.org.ID, f.member, "alpha", f.owner); !errors.Is(err, boom) {
+				t.Errorf("Remove = %v, want the graph error", err)
+			}
+			if _, err := f.svc.RemoveForMember(ctx, f.org.ID, f.member); !errors.Is(err, boom) {
+				t.Errorf("RemoveForMember = %v, want the graph error", err)
+			}
+			if got := roles(); got["alpha"] != "admin" || got["beta"] != "viewer" {
+				t.Fatalf("roles after refused revocations = %v, want them unchanged", got)
+			}
+
+			rec.RemoveErr = nil
+			if _, err := f.svc.Change(ctx, f.in(f.member, "alpha", "viewer")); err != nil {
+				t.Fatalf("retried Change: %v", err)
+			}
+			if err := f.svc.Remove(ctx, f.org.ID, f.member, "alpha", f.owner); err != nil {
+				t.Fatalf("retried Remove: %v", err)
+			}
+			if n, err := f.svc.RemoveForMember(ctx, f.org.ID, f.member); err != nil || n != 1 {
+				t.Fatalf("retried RemoveForMember = %d, %v", n, err)
+			}
+			if got := roles(); len(got) != 0 {
+				t.Errorf("roles after retries = %v, want none", got)
+			}
+		})
 	}
 }

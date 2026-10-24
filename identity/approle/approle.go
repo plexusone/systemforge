@@ -38,6 +38,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
+	"github.com/plexusone/systemforge/identity/graphlock"
 )
 
 // Errors returned by the service.
@@ -146,9 +147,14 @@ func EntitleAll(registry *authz.VocabularyRegistry) Option {
 
 // WithAuthzSyncer writes application roles to the authorization graph when
 // syncer also implements authz.AppRoleSyncer; a syncer that does not is
-// ignored, so any existing authz.RelationshipSyncer can be passed. In
-// authz.SyncModeStrict a failed write is returned to the caller after the
-// role was stored; in SyncModeEventual (the default) it is logged.
+// ignored, so any existing authz.RelationshipSyncer can be passed.
+//
+// A removed or changed role is deleted from the graph inside the
+// transaction that removes or changes it, before the commit: if the graph
+// refuses, the role is left as it was and the error is returned, whatever
+// the mode. An assigned role is written after the commit; in
+// authz.SyncModeStrict a failed write is returned to the caller, in
+// SyncModeEventual (the default) it is logged.
 func WithAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) Option {
 	return func(s *Service) {
 		s.syncer, _ = syncer.(authz.AppRoleSyncer)
@@ -493,7 +499,10 @@ func (s *Service) isPostgres(ctx context.Context) (bool, error) {
 }
 
 // Change sets a different role for a principal who already has one. It
-// fails with ErrNotAssigned if there is none.
+// fails with ErrNotAssigned if there is none. The previous role leaves the
+// authorization graph before the change commits and the new one is
+// written after, so a failure never leaves the principal with more access
+// than the database records.
 func (s *Service) Change(ctx context.Context, in AssignInput) (*AppRole, error) {
 	if _, err := s.validate(ctx, s.client.PrincipalMembership, in); err != nil {
 		return nil, err
@@ -511,22 +520,20 @@ func (s *Service) Change(ctx context.Context, in AssignInput) (*AppRole, error) 
 		if err != nil {
 			return nil, nil, fmt.Errorf("approle: changing: %w", err)
 		}
-		if previous != in.Role {
-			return updated, s.roleChange(in.PrincipalID, in.OrganizationID), nil
+		if previous == in.Role {
+			return updated, nil, nil
 		}
-		return updated, nil, nil
+		if err := s.revoke(ctx, tx, in.PrincipalID, in.OrganizationID, in.Application, previous); err != nil {
+			return nil, nil, err
+		}
+		return updated, s.roleChange(in.PrincipalID, in.OrganizationID), nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	s.audit(ctx, "changed", in, previous)
 	if previous != in.Role {
-		// Add the new relation before removing the old one so the
-		// principal never has no role in the graph mid-change.
 		if err := s.syncAdd(ctx, in.PrincipalID, in.OrganizationID, in.Application, in.Role); err != nil {
-			return nil, err
-		}
-		if err := s.syncRemove(ctx, in.PrincipalID, in.OrganizationID, in.Application, previous); err != nil {
 			return nil, err
 		}
 	}
@@ -534,7 +541,9 @@ func (s *Service) Change(ctx context.Context, in AssignInput) (*AppRole, error) 
 }
 
 // Remove deletes the principal's role in an application. It fails with
-// ErrNotAssigned if there is none.
+// ErrNotAssigned if there is none. The role leaves the authorization graph
+// before the removal commits; if the graph refuses, the role is kept and
+// the error is returned.
 func (s *Service) Remove(ctx context.Context, organizationID, principalID uuid.UUID, application string, removedBy uuid.UUID) error {
 	row, err := s.find(ctx, organizationID, principalID, application)
 	if err != nil {
@@ -544,6 +553,9 @@ func (s *Service) Remove(ctx context.Context, organizationID, principalID uuid.U
 		if err := tx.AppRole.DeleteOne(row).Exec(ctx); err != nil {
 			return nil, nil, fmt.Errorf("approle: removing: %w", err)
 		}
+		if err := s.revoke(ctx, tx, principalID, organizationID, application, row.Role); err != nil {
+			return nil, nil, err
+		}
 		return row, s.roleChange(principalID, organizationID), nil
 	}); err != nil {
 		return err
@@ -552,20 +564,23 @@ func (s *Service) Remove(ctx context.Context, organizationID, principalID uuid.U
 		OrganizationID: organizationID, PrincipalID: principalID,
 		Application: application, Role: row.Role, AssignedBy: removedBy,
 	}, row.Role)
-	return s.syncRemove(ctx, principalID, organizationID, application, row.Role)
+	return nil
 }
 
 // RemoveForMember deletes every role the principal holds in the
 // organization and reports how many it deleted. organization.Service
 // does the same inside its RemoveMember transaction; this is for callers
-// that remove access another way.
+// that remove access another way. The roles leave the authorization graph
+// before the removal commits; if the graph refuses, none is removed.
 func (s *Service) RemoveForMember(ctx context.Context, organizationID, principalID uuid.UUID) (int, error) {
-	held, err := s.ListForPrincipal(ctx, organizationID, principalID)
-	if err != nil {
-		return 0, err
-	}
 	var n int
-	if _, err = s.writeRecorded(ctx, func(tx *ent.Tx) (*ent.AppRole, []accesschange.Change, error) {
+	if _, err := s.writeRecorded(ctx, func(tx *ent.Tx) (*ent.AppRole, []accesschange.Change, error) {
+		held, err := tx.AppRole.Query().
+			Where(approle.OrganizationID(organizationID), approle.PrincipalID(principalID)).
+			All(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("approle: reading member roles: %w", err)
+		}
 		deleted, err := tx.AppRole.Delete().
 			Where(approle.OrganizationID(organizationID), approle.PrincipalID(principalID)).
 			Exec(ctx)
@@ -573,6 +588,11 @@ func (s *Service) RemoveForMember(ctx context.Context, organizationID, principal
 			return nil, nil, fmt.Errorf("approle: removing member roles: %w", err)
 		}
 		n = deleted
+		for _, r := range held {
+			if err := s.revoke(ctx, tx, principalID, organizationID, r.Application, r.Role); err != nil {
+				return nil, nil, err
+			}
+		}
 		if deleted == 0 {
 			return nil, nil, nil
 		}
@@ -580,13 +600,7 @@ func (s *Service) RemoveForMember(ctx context.Context, organizationID, principal
 	}); err != nil {
 		return 0, err
 	}
-	var errs []error
-	for _, r := range held {
-		if err := s.syncRemove(ctx, principalID, organizationID, r.Application, r.Role); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	return n, errors.Join(errs...)
+	return n, nil
 }
 
 // roleChange is the access change an application role change or removal
@@ -628,14 +642,21 @@ func (s *Service) syncAdd(ctx context.Context, principalID, organizationID uuid.
 		s.syncer.AddAppRole(ctx, principalID, organizationID, application, role))
 }
 
-// syncRemove deletes a role from the authorization graph, honoring the
-// sync mode.
-func (s *Service) syncRemove(ctx context.Context, principalID, organizationID uuid.UUID, application, role string) error {
+// revoke deletes a role from the authorization graph inside tx, the
+// transaction that removes or changes it, holding the principal's
+// graphlock. Its error aborts the transaction whatever the sync mode, so
+// the graph never keeps a role the database no longer records.
+func (s *Service) revoke(ctx context.Context, tx *ent.Tx, principalID, organizationID uuid.UUID, application, role string) error {
 	if s.syncer == nil {
 		return nil
 	}
-	return s.handleSync(ctx, "remove", principalID, organizationID, application, role,
-		s.syncer.RemoveAppRole(ctx, principalID, organizationID, application, role))
+	if err := graphlock.Lock(ctx, tx, graphlock.Principal(principalID)); err != nil {
+		return err
+	}
+	if err := s.syncer.RemoveAppRole(ctx, principalID, organizationID, application, role); err != nil {
+		return fmt.Errorf("approle: removing application role from authz, change not saved: %w", err)
+	}
+	return nil
 }
 
 func (s *Service) handleSync(ctx context.Context, op string, principalID, organizationID uuid.UUID, application, role string, err error) error {
