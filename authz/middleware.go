@@ -1,7 +1,9 @@
 package authz
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -222,11 +224,24 @@ func (m *PlatformMiddleware) RequirePlatformAdmin() func(http.Handler) http.Hand
 }
 
 // ResourceExtractor is a function that extracts a resource from an HTTP request.
-// Use this for routes that include resource IDs in the path.
+// Use this for routes that include resource IDs in the path. The extractor
+// must set the resource's owning organization (Resource.OrgID) when
+// authorization depends on it; see WithResourceLookup.
 type ResourceExtractor func(r *http.Request) (Resource, error)
 
 // RequireResourceAction returns middleware that extracts a resource from
 // the request and checks if the user can perform an action on it.
+//
+// The resource's organization comes only from the extractor, never from
+// the caller's token: a resource of another organization must not be
+// checked against the caller's role in their own. Use WithResourceLookup
+// so the check runs against the organization that owns the resource. A
+// resource without an organization is checked by owner and resource
+// grants only (rbac), or by its ID (SpiceDB).
+//
+// Extractor errors answer 400 for a missing or malformed ID, 403 for
+// ErrResourceNotFound (so a caller cannot tell another organization's
+// resource from a missing one), and 500 otherwise.
 func (m *Middleware) RequireResourceAction(extractor ResourceExtractor, action Action) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -237,14 +252,17 @@ func (m *Middleware) RequireResourceAction(extractor ResourceExtractor, action A
 			}
 
 			resource, err := extractor(r)
-			if err != nil {
+			switch {
+			case err == nil:
+			case errors.Is(err, ErrMissingResourceID), errors.Is(err, ErrInvalidResourceID):
 				writeError(w, http.StatusBadRequest, "invalid resource")
 				return
-			}
-
-			// Add org context if available and not already set
-			if resource.OrgID == nil && claims.OrganizationID != nil {
-				resource = resource.WithOrg(*claims.OrganizationID)
+			case errors.Is(err, ErrResourceNotFound):
+				writeForbidden(w, "insufficient permissions")
+				return
+			default:
+				writeError(w, http.StatusInternalServerError, "resource lookup failed")
+				return
 			}
 
 			principal := NewUserPrincipal(claims.PrincipalID)
@@ -265,7 +283,8 @@ func (m *Middleware) RequireResourceAction(extractor ResourceExtractor, action A
 }
 
 // WithResourceID creates a ResourceExtractor that parses a resource ID from
-// a URL path parameter.
+// a URL path parameter. The resource has no organization; use
+// WithResourceLookup when authorization depends on the owning organization.
 func WithResourceID(resourceType ResourceType, pathParamName string, getParam func(r *http.Request, key string) string) ResourceExtractor {
 	return func(r *http.Request) (Resource, error) {
 		idStr := getParam(r, pathParamName)
@@ -280,10 +299,35 @@ func WithResourceID(resourceType ResourceType, pathParamName string, getParam fu
 	}
 }
 
+// ResourceOrgLookup returns the organization that owns a resource. It
+// returns ErrResourceNotFound when the resource does not exist.
+type ResourceOrgLookup func(ctx context.Context, id uuid.UUID) (orgID uuid.UUID, err error)
+
+// WithResourceLookup is WithResourceID that also loads the resource's
+// owning organization from storage, so RequireResourceAction checks the
+// caller's role in that organization.
+func WithResourceLookup(resourceType ResourceType, pathParamName string, getParam func(r *http.Request, key string) string, lookup ResourceOrgLookup) ResourceExtractor {
+	byID := WithResourceID(resourceType, pathParamName, getParam)
+	return func(r *http.Request) (Resource, error) {
+		resource, err := byID(r)
+		if err != nil {
+			return Resource{}, err
+		}
+		orgID, err := lookup(r.Context(), *resource.ID)
+		if err != nil {
+			return Resource{}, err
+		}
+		return resource.WithOrg(orgID), nil
+	}
+}
+
 // Error types for resource extraction.
 var (
 	ErrMissingResourceID = &middlewareError{msg: "missing resource ID"}
 	ErrInvalidResourceID = &middlewareError{msg: "invalid resource ID"}
+	// ErrResourceNotFound is returned by a ResourceOrgLookup for a resource
+	// that does not exist.
+	ErrResourceNotFound = &middlewareError{msg: "resource not found"}
 )
 
 type middlewareError struct {
