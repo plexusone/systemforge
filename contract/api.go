@@ -17,6 +17,8 @@ type API struct {
 	router   chi.Router
 	provider *Provider
 	logger   *slog.Logger
+	// audit is this API's audit stream state.
+	audit *auditStreamState
 }
 
 // Option configures an API.
@@ -35,6 +37,7 @@ func NewAPI(provider *Provider, opts ...Option) (*API, error) {
 	api := &API{
 		provider: provider,
 		logger:   slog.Default(),
+		audit:    newAuditStreamState(),
 	}
 
 	// Apply options
