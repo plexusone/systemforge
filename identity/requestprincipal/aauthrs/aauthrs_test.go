@@ -130,6 +130,12 @@ func (f fakeAPIKeys) Validate(_ context.Context, key string) (*apikey.APIKey, er
 // /admin also things:admin.
 func newResourceServer(t *testing.T, mode string, trusted ...string) *resourceServer {
 	t.Helper()
+	return newResourceServerWith(t, mode, nil, trusted...)
+}
+
+// newResourceServerWith is newResourceServer with a config adjustment.
+func newResourceServerWith(t *testing.T, mode string, adjust func(*aauthrs.Config), trusted ...string) *resourceServer {
+	t.Helper()
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -138,7 +144,7 @@ func newResourceServer(t *testing.T, mode string, trusted ...string) *resourceSe
 	if err != nil {
 		t.Fatal(err)
 	}
-	auth, err := aauthrs.New(aauthrs.Config{
+	cfg := aauthrs.Config{
 		HTTPClient:     http.DefaultClient,
 		Resource:       srv.URL,
 		TrustedIssuers: trusted,
@@ -155,7 +161,11 @@ func newResourceServer(t *testing.T, mode string, trusted ...string) *resourceSe
 		},
 		ScopeDescriptions:           map[string]string{"things:read": "Read things"},
 		InsecureSkipIdentifierCheck: true,
-	})
+	}
+	if adjust != nil {
+		adjust(&cfg)
+	}
+	auth, err := aauthrs.New(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -578,6 +588,24 @@ func TestAgentTokenMode(t *testing.T) {
 	res, _ = do(t, http.DefaultClient, signedGet(t, rs.url+"/things", d.agentToken, d.key))
 	if res.StatusCode != http.StatusUnauthorized || requirement(t, res).Requirement != aauth.RequirementPersonToken {
 		t.Errorf("scoped route: %d", res.StatusCode)
+	}
+}
+
+// TrustedAgentIssuers restricts which agent providers' tokens are accepted.
+func TestTrustedAgentIssuers(t *testing.T) {
+	d := newDeployment(t)
+	only := func(issuers ...string) func(*aauthrs.Config) {
+		return func(c *aauthrs.Config) { c.TrustedAgentIssuers = issuers }
+	}
+
+	rs := newResourceServerWith(t, aauth.AccessModeAgentToken, only("http://agents.other.example"), d.issuer)
+	if res, _ := do(t, http.DefaultClient, signedGet(t, rs.url+"/open", d.agentToken, d.key)); res.StatusCode != http.StatusUnauthorized {
+		t.Errorf("agent token from an untrusted provider: status %d, want 401", res.StatusCode)
+	}
+
+	rs = newResourceServerWith(t, aauth.AccessModeAgentToken, only(d.issuer), d.issuer)
+	if res, body := do(t, http.DefaultClient, signedGet(t, rs.url+"/open", d.agentToken, d.key)); res.StatusCode != http.StatusOK {
+		t.Errorf("agent token from a trusted provider: %d %s", res.StatusCode, body)
 	}
 }
 

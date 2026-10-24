@@ -32,6 +32,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -88,6 +89,13 @@ type Config struct {
 	// AgentResolver locates agent token keys (AccessModeAgentToken).
 	// Default: a JWKS resolver over HTTPClient and JWKSCache.
 	AgentResolver aauth.KeyResolver
+	// TrustedAgentIssuers, when set, are the only agent providers whose
+	// agent tokens this resource accepts; tokens from other issuers are
+	// refused before any key discovery. Empty accepts any agent provider.
+	// Either way an agent token is accepted only when its agent
+	// identifier's domain is its issuer's host, so a provider cannot claim
+	// another domain's agents.
+	TrustedAgentIssuers []string
 	// HTTPClient performs key discovery. Default: aauth.DiscoveryClient,
 	// which reaches only public https destinations; a client supplied here
 	// should apply the same egress admission. Local development needs a
@@ -205,6 +213,18 @@ func New(cfg Config) (*Authenticator, error) {
 		Resolver:                    trustedResolver{next: resolver, trusted: trusted},
 		Signature:                   cfg.Signature,
 		InsecureSkipIdentifierCheck: cfg.InsecureSkipIdentifierCheck,
+	}
+	if len(cfg.TrustedAgentIssuers) > 0 {
+		agentTrusted := make(map[string]bool, len(cfg.TrustedAgentIssuers))
+		for _, iss := range cfg.TrustedAgentIssuers {
+			if !cfg.InsecureSkipIdentifierCheck {
+				if err := aauth.ValidateServerIdentifier(iss); err != nil {
+					return nil, fmt.Errorf("aauthrs: trusted agent issuer %q: %w", iss, err)
+				}
+			}
+			agentTrusted[iss] = true
+		}
+		agentResolver = trustedResolver{next: agentResolver, trusted: agentTrusted}
 	}
 	a.agent = aauth.VerifyAgentTokenOptions{
 		Resolver:              agentResolver,
@@ -337,6 +357,11 @@ func (a *Authenticator) agentToken(r *http.Request, required []string) (*request
 	if err != nil {
 		return nil, signatureFailure(err)
 	}
+	if !a.cfg.InsecureSkipIdentifierCheck {
+		if err := agentBelongsToIssuer(claims.Subject, claims.Issuer); err != nil {
+			return nil, signatureFailure(err)
+		}
+	}
 	p := &requestprincipal.RequestPrincipal{
 		PrincipalID: claims.Subject,
 		Type:        requestprincipal.TypeAgent,
@@ -450,6 +475,25 @@ func signatureFailure(err error) error {
 		Message: "invalid AAuth credentials",
 		Err:     err,
 	}
+}
+
+// agentBelongsToIssuer checks that an agent identifier's domain is the
+// host of the agent provider that issued its token. Agent token keys are
+// discovered from the issuer the token names, so without this check any
+// provider could issue tokens for another domain's agents.
+func agentBelongsToIssuer(sub, iss string) error {
+	id, err := aauth.ParseAgentIdentifier(sub)
+	if err != nil {
+		return fmt.Errorf("%w: %w", aauth.ErrInvalidToken, err)
+	}
+	u, err := url.Parse(iss)
+	if err != nil || u.Hostname() == "" {
+		return fmt.Errorf("%w: agent token issuer %q is not a URL", aauth.ErrInvalidToken, iss)
+	}
+	if !strings.EqualFold(id.Domain, u.Hostname()) {
+		return fmt.Errorf("%w: agent %q is not an agent of issuer %q", aauth.ErrInvalidToken, sub, iss)
+	}
+	return nil
 }
 
 // errUntrustedIssuer marks a token from an issuer outside TrustedIssuers.
