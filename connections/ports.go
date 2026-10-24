@@ -115,13 +115,21 @@ func (a authorizer) Allowed(ctx context.Context, p cf.Principal, act cf.Action, 
 		return fmt.Errorf("%w: owner is not an organization", cf.ErrDenied)
 	}
 	res := authz.Resource{Type: ResourceType, ID: &cid, OrgID: &org}
-	// The principal who created a stored connection manages it (ADR-017).
-	// A connection not yet stored has no owner, so creating one is decided
-	// by the organization role alone.
+	principal := authz.Principal{ID: pid, Type: principalType(p.Kind)}
+	// The principal who created a stored connection manages it (ADR-017),
+	// while still a member of the owning organization: a creator who left or
+	// was removed keeps nothing. A connection not yet stored has no owner,
+	// so creating one is decided by the organization role alone.
 	if creator, err := uuid.Parse(c.CreatedBy.ID); err == nil && c.Revision > 0 && c.CreatedBy.Kind == cf.PrincipalUser {
-		res.OwnerID = &creator
+		member, err := a.isMember(ctx, principal, creator, org)
+		if err != nil {
+			return fmt.Errorf("connections: authorization: %w", err)
+		}
+		if member {
+			res.OwnerID = &creator
+		}
 	}
-	allowed, err := a.az.Can(ctx, authz.Principal{ID: pid, Type: principalType(p.Kind)}, perm, res)
+	allowed, err := a.az.Can(ctx, principal, perm, res)
 	if err != nil {
 		return fmt.Errorf("connections: authorization: %w", err)
 	}
@@ -129,6 +137,22 @@ func (a authorizer) Allowed(ctx context.Context, p cf.Principal, act cf.Action, 
 		return fmt.Errorf("%w: %s on connection %s", cf.ErrDenied, act, c.ID)
 	}
 	return nil
+}
+
+// isMember reports whether the creator is the requesting principal and a
+// member (collaborators included) of org. An Authorizer that cannot answer
+// membership (not an authz.OrgAuthorizer) grants no creator rights.
+func (a authorizer) isMember(ctx context.Context, principal authz.Principal, creator, org uuid.UUID) (bool, error) {
+	if creator != principal.ID {
+		// Ownership only matters to the creator; anyone else is decided by
+		// role and grants.
+		return false, nil
+	}
+	oa, ok := a.az.(authz.OrgAuthorizer)
+	if !ok {
+		return false, nil
+	}
+	return oa.IsMember(ctx, principal, org)
 }
 
 // auditor records connection events in the platform audit trail.
