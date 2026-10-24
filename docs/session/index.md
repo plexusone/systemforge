@@ -76,6 +76,7 @@ import (
 // Create session store (using omnistorage for Redis support)
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:        "redis",
+    SiteID:         "myapp", // required for redis
     RedisURL:       "redis://localhost:6379",
     MaxSessionSize: 1024 * 1024, // 1MB
     DefaultTTL:     24 * time.Hour,
@@ -131,6 +132,7 @@ The OmniStorage backend provides:
 ```go
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:        "redis",
+    SiteID:         "myapp", // required for redis
     RedisURL:       os.Getenv("REDIS_URL"),
     MaxSessionSize: 1024 * 1024,
     ControlOptions: []omnisession.ControlOption{

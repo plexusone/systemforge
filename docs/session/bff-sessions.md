@@ -67,6 +67,7 @@ For production with Redis and security controls:
 ```go
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:         "redis",
+    SiteID:          "myapp", // required for redis
     RedisURL:        "redis://localhost:6379",
     MaxSessionSize:  1024 * 1024, // 1MB
     DefaultTTL:      24 * time.Hour,
@@ -81,6 +82,7 @@ store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
 |-------|-------------|---------|
 | `Backend` | `"memory"` or `"redis"` | `"memory"` |
 | `RedisURL` | Redis connection URL | Required for redis |
+| `SiteID` | Tags every session with this application; a session tagged for another site is not found | Required for redis |
 | `MaxSessionSize` | Max session size in bytes | 1MB |
 | `DefaultTTL` | Session lifetime | 24 hours |
 | `CleanupInterval` | Cleanup frequency | 5 minutes |
@@ -94,6 +96,7 @@ import omnisession "github.com/plexusone/omnistorage-core/session"
 
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:        "redis",
+    SiteID:         "myapp", // required for redis
     RedisURL:       os.Getenv("REDIS_URL"),
     MaxSessionSize: 1024 * 1024,
     ControlOptions: []omnisession.ControlOption{

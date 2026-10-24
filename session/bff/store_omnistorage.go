@@ -3,6 +3,7 @@ package bff
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/plexusone/omnistorage-core/kvs"
@@ -21,8 +22,11 @@ type OmniStorageConfig struct {
 	RedisURL string
 
 	// SiteID identifies which site/service this store handles.
-	// Used for multi-site isolation (e.g., "academyos", "agentos", "dashforge").
-	// When set, sessions are tagged and validated against this site.
+	// Used for multi-site isolation (e.g., "billing", "admin", "dashboard").
+	// When set, every session written is tagged with it and a session
+	// tagged for another site is not found. Required for the redis
+	// backend, since several applications may share one Redis: without it
+	// they would accept each other's session IDs.
 	SiteID string
 
 	// MaxSessionSize is the maximum serialized session size in bytes.
@@ -58,9 +62,14 @@ func DefaultOmniStorageConfig() OmniStorageConfig {
 	}
 }
 
+// ErrSiteIDRequired is returned by NewOmniStorageStore for a shared
+// backend (redis) configured without OmniStorageConfig.SiteID.
+var ErrSiteIDRequired = errors.New("bff: OmniStorageConfig.SiteID is required for a shared session backend")
+
 // OmniStorageStore adapts omnistorage session storage to the systemforge Store interface.
 type OmniStorageStore struct {
-	store omnisession.Store
+	store  omnisession.Store
+	siteID string
 }
 
 // NewOmniStorageStore creates a new omnistorage-backed session store.
@@ -80,6 +89,9 @@ func NewOmniStorageStore(cfg OmniStorageConfig) (*OmniStorageStore, error) {
 	case "redis":
 		if cfg.RedisURL == "" {
 			return nil, ErrStoreRequired
+		}
+		if cfg.SiteID == "" {
+			return nil, ErrSiteIDRequired
 		}
 
 		// Create Redis KVS backend
@@ -101,7 +113,7 @@ func NewOmniStorageStore(cfg OmniStorageConfig) (*OmniStorageStore, error) {
 		return nil, ErrInvalidSession
 	}
 
-	return &OmniStorageStore{store: store}, nil
+	return &OmniStorageStore{store: store, siteID: cfg.SiteID}, nil
 }
 
 // NewOmniStorageStoreWithKVS creates a store using a pre-configured KVS backend.
@@ -115,12 +127,12 @@ func NewOmniStorageStoreWithKVS(backend kvs.ListableStore, cfg OmniStorageConfig
 		KeyPrefix:          cfg.KeyPrefix,
 	}
 	store := sessionkvs.NewWithControls(backend, omniCfg, cfg.ControlOptions...)
-	return &OmniStorageStore{store: store}
+	return &OmniStorageStore{store: store, siteID: cfg.SiteID}
 }
 
 // Create stores a new session.
 func (s *OmniStorageStore) Create(ctx context.Context, session *Session) error {
-	omniSession, err := toOmniSession(session)
+	omniSession, err := s.toOmniSession(session)
 	if err != nil {
 		return err
 	}
@@ -138,7 +150,7 @@ func (s *OmniStorageStore) Get(ctx context.Context, id string) (*Session, error)
 
 // Update updates an existing session.
 func (s *OmniStorageStore) Update(ctx context.Context, session *Session) error {
-	omniSession, err := toOmniSession(session)
+	omniSession, err := s.toOmniSession(session)
 	if err != nil {
 		return err
 	}
@@ -186,8 +198,10 @@ type sessionData struct {
 	UserAgent             string            `json:"user_agent,omitempty"`
 }
 
-// toOmniSession converts a systemforge Session to omnistorage Session.
-func toOmniSession(s *Session) (*omnisession.Session, error) {
+// toOmniSession converts a systemforge Session to omnistorage Session,
+// tagged with the store's SiteID: every write must carry it, or the next
+// Get under site isolation would treat the session as another site's.
+func (st *OmniStorageStore) toOmniSession(s *Session) (*omnisession.Session, error) {
 	// Store systemforge-specific fields in Data
 	data := sessionData{
 		AccessToken:           s.AccessToken,
@@ -210,6 +224,7 @@ func toOmniSession(s *Session) (*omnisession.Session, error) {
 		ID:             s.ID,
 		UserID:         s.UserID,
 		OrganizationID: s.OrganizationID,
+		SiteID:         st.siteID,
 		Data: map[string]any{
 			"_bff": string(dataBytes),
 		},
