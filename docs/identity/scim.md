@@ -111,3 +111,18 @@ A credential with `scim.Scope{Platform: true}` provisions every user and
 organization, as SCIM did before scoping. For it, `active` deactivates or
 reactivates the account itself. Issue it only to platform operators,
 never to a customer's identity provider.
+
+A platform credential also manages organizations as groups, through the
+organization service (`store.Config.Organizations`, by default the
+`Memberships` service when it is a full `organization.Service`):
+
+- Creating a group creates a team organization. Its slug is the group's
+  `externalId`, which must be a valid organization slug (3 to 63 lowercase
+  letters, digits and hyphens, starting with a letter), not reserved, not
+  taken and not in another organization's cooling-off period; without an
+  `externalId` the slug is generated from `displayName`.
+- Deleting a group soft-deletes the organization, as an administrator's
+  delete does: it is removed from the authorization graph and no longer
+  listed, and its memberships and history are kept.
+- A personal organization belongs to its owner: it cannot be renamed or
+  deleted through SCIM (403).

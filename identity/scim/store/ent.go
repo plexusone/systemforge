@@ -57,6 +57,22 @@ type Config struct {
 	// change that stops existing tokens being honored. Default:
 	// principal.NewService on the store's client.
 	Principals Principals
+
+	// Organizations creates, renames and deletes the organizations a
+	// platform-scoped credential manages as groups, with the organization
+	// service's slug rules and authorization-graph sync. Default: Memberships
+	// when it also implements Organizations (as organization.Service does),
+	// otherwise organization.NewService on the store's client.
+	Organizations Organizations
+}
+
+// Organizations is the part of organization.Service the SCIM store uses to
+// manage groups.
+type Organizations interface {
+	Create(ctx context.Context, input orgsvc.CreateOrganizationInput) (*orgsvc.Organization, error)
+	Update(ctx context.Context, id uuid.UUID, input orgsvc.UpdateOrganizationInput) (*orgsvc.Organization, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+	GenerateSlug(ctx context.Context, name string) (string, error)
 }
 
 // Memberships is the part of organization.Service the SCIM store uses.
@@ -92,6 +108,13 @@ func NewEntStore(client *ent.Client, config *Config) *EntStore {
 	}
 	if cfg.Principals == nil {
 		cfg.Principals = principalsvc.NewService(client)
+	}
+	if cfg.Organizations == nil {
+		if o, ok := cfg.Memberships.(Organizations); ok {
+			cfg.Organizations = o
+		} else {
+			cfg.Organizations = orgsvc.NewService(client)
+		}
 	}
 	return &EntStore{
 		client: client,
@@ -304,6 +327,13 @@ func (s *EntStore) withTx(ctx context.Context, fn func(tx *ent.Tx) error) error 
 		return scim.ErrInternal(err.Error())
 	}
 	return nil
+}
+
+// internalError logs err with the request's logger and returns a 500 SCIM
+// error that does not carry err's text to the client.
+func internalError(ctx context.Context, err error) error {
+	scim.LoggerFromContext(ctx).Error("scim store: internal error", "error", err)
+	return scim.ErrInternal("internal error")
 }
 
 // asSCIMError passes SCIM errors through and wraps anything else as internal.
@@ -744,9 +774,10 @@ func tenantGroup(sc scim.Scope, gid uuid.UUID) bool {
 	return sc.Platform || gid == sc.OrganizationID
 }
 
-// orgQuery returns a query over the organizations visible in scope.
+// orgQuery returns a query over the organizations visible in scope. A
+// deleted (inactive) organization is not a group.
 func (s *EntStore) orgQuery(sc scim.Scope) *ent.OrganizationQuery {
-	q := s.client.Organization.Query()
+	q := s.client.Organization.Query().Where(organization.Active(true))
 	if !sc.Platform {
 		q = q.Where(organization.IDEQ(sc.OrganizationID))
 	}
@@ -854,6 +885,9 @@ func errTenantGroups() error {
 }
 
 // CreateGroup creates a new group. Only a platform scope may create groups.
+// The organization is created through the organization service, so its
+// slug obeys the same rules as any other: a valid format, not reserved, not
+// taken and not in another organization's cooling-off period.
 func (s *EntStore) CreateGroup(ctx context.Context, scimGroup *scim.Group) (*scim.Group, error) {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -866,38 +900,68 @@ func (s *EntStore) CreateGroup(ctx context.Context, scimGroup *scim.Group) (*sci
 		return nil, scim.ErrInvalidValue("displayName is required")
 	}
 
-	// Generate slug from displayName
-	slug := generateSlug(scimGroup.DisplayName)
-	if scimGroup.ExternalID != "" {
-		slug = scimGroup.ExternalID
-	}
-
-	if orgsvc.IsReservedSlug(slug) {
-		return nil, scim.ErrInvalidValue("group slug is reserved")
-	}
-
-	// Check for existing organization with same slug
-	exists, err := s.client.Organization.Query().Where(organization.SlugEQ(slug)).Exist(ctx)
-	if err != nil {
-		return nil, scim.ErrInternal(err.Error())
-	}
-	if exists {
-		return nil, scim.ErrConflict("group with this slug already exists")
-	}
-
-	org, err := s.client.Organization.Create().
-		SetName(scimGroup.DisplayName).
-		SetSlug(slug).
-		SetActive(true).
-		Save(ctx)
-	if err != nil {
-		if ent.IsConstraintError(err) {
-			return nil, scim.ErrConflict("group already exists")
+	// The slug is the group's externalId when one is given, held to the
+	// organization slug rules; otherwise it is generated from displayName.
+	slug := scimGroup.ExternalID
+	if slug == "" {
+		generated, err := s.config.Organizations.GenerateSlug(ctx, scimGroup.DisplayName)
+		if err != nil {
+			return nil, internalError(ctx, err)
 		}
-		return nil, scim.ErrInternal(err.Error())
+		slug = generated
+	}
+	if !orgsvc.IsValidSlug(slug) {
+		if scimGroup.ExternalID == "" {
+			return nil, scim.ErrInvalidValue("displayName does not yield a valid organization slug; supply externalId")
+		}
+		return nil, scim.ErrInvalidValue("externalId is not a valid organization slug: 3 to 63 lowercase letters, digits and hyphens, starting with a letter")
 	}
 
-	return s.entOrgToSCIM(org), nil
+	org, err := s.config.Organizations.Create(ctx, orgsvc.CreateOrganizationInput{
+		Name:    scimGroup.DisplayName,
+		Slug:    slug,
+		OrgType: orgsvc.OrgTypeTeam,
+	})
+	if err != nil {
+		return nil, groupError(ctx, err)
+	}
+	return s.GetGroupByID(ctx, org.ID.String())
+}
+
+// groupError maps an organization service error on a group write to a SCIM
+// error.
+func groupError(ctx context.Context, err error) error {
+	switch {
+	case errors.Is(err, orgsvc.ErrSlugReserved):
+		return scim.ErrInvalidValue("group slug is reserved")
+	case errors.Is(err, orgsvc.ErrSlugTaken), errors.Is(err, orgsvc.ErrSlugCoolingOff):
+		return scim.ErrConflict("group slug is not available")
+	case errors.Is(err, orgsvc.ErrPersonalOrganization):
+		return errPersonalGroup()
+	}
+	return internalError(ctx, err)
+}
+
+// errPersonalGroup is returned when a platform credential tries to rename or
+// delete a personal organization, which belongs to its owner.
+func errPersonalGroup() error {
+	return scim.ErrForbidden("a personal organization belongs to its owner and cannot be renamed or deleted through SCIM")
+}
+
+// platformGroup returns the active, non-personal organization gid for a
+// platform-scoped rename or delete.
+func (s *EntStore) platformGroup(ctx context.Context, sc scim.Scope, gid uuid.UUID) (*ent.Organization, error) {
+	org, err := s.orgQuery(sc).Where(organization.IDEQ(gid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, scim.ErrNotFound("group not found")
+		}
+		return nil, internalError(ctx, err)
+	}
+	if org.OrgType == organization.OrgTypePersonal {
+		return nil, errPersonalGroup()
+	}
+	return org, nil
 }
 
 // UpdateGroup updates an existing group. A tenant may not rename its
@@ -924,24 +988,23 @@ func (s *EntStore) UpdateGroup(ctx context.Context, id string, scimGroup *scim.G
 		return current, nil
 	}
 
-	update := s.client.Organization.UpdateOneID(gid)
-
-	if scimGroup.DisplayName != "" {
-		update = update.SetName(scimGroup.DisplayName)
-	}
-
-	org, err := update.Save(ctx)
+	org, err := s.platformGroup(ctx, sc, gid)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, scim.ErrNotFound("group not found")
-		}
-		return nil, scim.ErrInternal(err.Error())
+		return nil, err
 	}
-
-	return s.entOrgToSCIM(org), nil
+	if scimGroup.DisplayName == "" || scimGroup.DisplayName == org.Name {
+		return s.entOrgToSCIM(org), nil
+	}
+	name := scimGroup.DisplayName
+	if _, err := s.config.Organizations.Update(ctx, gid, orgsvc.UpdateOrganizationInput{Name: &name}); err != nil {
+		return nil, groupError(ctx, err)
+	}
+	return s.GetGroupByID(ctx, id)
 }
 
-// DeleteGroup deletes a group. Only a platform scope may delete groups.
+// DeleteGroup deletes a group. Only a platform scope may delete groups, and
+// never a personal organization. The organization is soft-deleted through
+// the organization service, as an administrator's delete is.
 func (s *EntStore) DeleteGroup(ctx context.Context, id string) error {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -955,14 +1018,14 @@ func (s *EntStore) DeleteGroup(ctx context.Context, id string) error {
 		return scim.ErrNotFound("invalid group ID")
 	}
 
-	err = s.client.Organization.DeleteOneID(gid).Exec(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return scim.ErrNotFound("group not found")
-		}
-		return scim.ErrInternal(err.Error())
+	if _, err := s.platformGroup(ctx, sc, gid); err != nil {
+		return err
 	}
-
+	// The organization service soft-deletes the organization and removes it
+	// from the authorization graph; its memberships, roles and history stay.
+	if err := s.config.Organizations.Delete(ctx, gid); err != nil {
+		return groupError(ctx, err)
+	}
 	return nil
 }
 
@@ -1229,23 +1292,6 @@ func (s *EntStore) applySortGroup(q *ent.OrganizationQuery, sortBy, sortOrder st
 	default:
 		return q.Order(organization.ByCreatedAt(orderOpts...))
 	}
-}
-
-// generateSlug generates a URL-safe slug from a name.
-func generateSlug(name string) string {
-	var sb strings.Builder
-	for _, r := range name {
-		if r >= 'a' && r <= 'z' {
-			sb.WriteRune(r)
-		} else if r >= 'A' && r <= 'Z' {
-			sb.WriteRune(r + 32) // lowercase
-		} else if r >= '0' && r <= '9' {
-			sb.WriteRune(r)
-		} else if r == ' ' || r == '-' || r == '_' {
-			sb.WriteByte('-')
-		}
-	}
-	return sb.String()
 }
 
 // Ensure EntStore implements scim.Store
