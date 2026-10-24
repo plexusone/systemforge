@@ -71,6 +71,7 @@ import (
 
 // Create provider
 cfg := oauth.DefaultConfig("https://api.example.com", []byte("secret"))
+cfg.PrivateKey = signingKey // required: one RSA key, the same on every instance
 provider, _ := oauth.NewProvider(entClient, cfg)
 
 // Create API (all endpoints auto-registered)

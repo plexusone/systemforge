@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/ory/fosite"
@@ -29,13 +31,24 @@ type Config struct {
 	// AuthCodeLifespan is the duration authorization codes are valid
 	AuthCodeLifespan time.Duration
 
-	// PrivateKey is the RSA private key for signing tokens
-	// If nil, a key will be generated
+	// PrivateKey is the RSA private key for signing tokens (required). It
+	// must be the same on every instance and across restarts: tokens and
+	// the JWKS are tied to it.
 	PrivateKey *rsa.PrivateKey
+
+	// AllowEphemeralKey lets NewProvider generate a fresh signing key when
+	// PrivateKey is nil. Development and tests only: the key changes on
+	// every start and differs between instances, so tokens stop verifying
+	// after a restart.
+	AllowEphemeralKey bool
 
 	// HashSecret is the secret used for HMAC operations
 	HashSecret []byte
 }
+
+// ErrSigningKeyRequired is returned by NewProvider when Config.PrivateKey
+// is nil and Config.AllowEphemeralKey is not set.
+var ErrSigningKeyRequired = errors.New("oauth: a signing key (Config.PrivateKey) is required")
 
 // DefaultConfig returns a default OAuth configuration.
 func DefaultConfig(issuer string, hashSecret []byte) *Config {
@@ -60,14 +73,18 @@ type Provider struct {
 func NewProvider(db *ent.Client, cfg *Config) (*Provider, error) {
 	storage := NewStorage(db)
 
-	// Generate RSA key if not provided
+	// A signing key is required; an ephemeral one only when asked for.
 	key := cfg.PrivateKey
 	if key == nil {
+		if !cfg.AllowEphemeralKey {
+			return nil, ErrSigningKeyRequired
+		}
 		var err error
 		key, err = rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
 			return nil, err
 		}
+		slog.Default().Warn("oauth: generated an ephemeral signing key; tokens will not verify after a restart or on another instance")
 	}
 
 	// Build Fosite configuration

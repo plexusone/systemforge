@@ -117,7 +117,7 @@ func TestJWKS(t *testing.T) {
 		t.Error("expected Keys to be non-nil (empty slice)")
 	}
 
-	p, err := NewProvider(nil, DefaultConfig("https://auth.example.com", []byte("test-secret-32-bytes-long-xxxxx")))
+	p, err := NewProvider(nil, ephemeralConfig(DefaultConfig("https://auth.example.com", []byte("test-secret-32-bytes-long-xxxxx"))))
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)
 	}

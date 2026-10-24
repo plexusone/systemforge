@@ -32,6 +32,7 @@ func main() {
 
     // Create OAuth provider
     cfg := oauth.DefaultConfig("https://api.example.com", []byte("secret"))
+    cfg.PrivateKey = signingKey // required: one RSA key, the same on every instance
     provider, _ := oauth.NewProvider(client, cfg)
 
     // Create OAuth API (Huma/Chi)

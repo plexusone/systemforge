@@ -55,7 +55,7 @@ func newFlow(t *testing.T) *flow {
 		Save(ctx); err != nil {
 		t.Fatalf("app: %v", err)
 	}
-	p, err := NewProvider(db, DefaultConfig("https://issuer.example", []byte("0123456789abcdef0123456789abcdef")))
+	p, err := NewProvider(db, ephemeralConfig(DefaultConfig("https://issuer.example", []byte("0123456789abcdef0123456789abcdef"))))
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)
 	}
