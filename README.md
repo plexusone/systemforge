@@ -116,6 +116,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 
 - 🏗️ **Multi-App Server** - Run multiple SaaS apps on shared infrastructure
 - 📦 **Schema per App** - Each app gets its own PostgreSQL schema
+- 🔐 **Database Login per App** - Each app connects with its own role, confined to its schema and checked at startup; migrations use a separate owner login, and `cmd/multiappdb` provisions and verifies the roles (see [Database isolation](docs/multiapp/overview.md#database-isolation))
 - 🔀 **X-App-ID Routing** - Header-based request routing to app backends
 - 🔌 **AppBackend Interface** - Composable app registration with lifecycle hooks
 - 💾 **Shared Caching** - Redis or in-memory with app-scoped prefixes
@@ -355,7 +356,9 @@ github.com/plexusone/systemforge/
 ├── multiapp/              # Multi-app platform
 │   ├── server.go          # Multi-app server with routing
 │   ├── app.go             # AppBackend interface
-│   ├── database.go        # Schema-per-app isolation
+│   ├── database.go        # Schema-per-app pools, one login per app
+│   ├── provision.go       # Per-app role provisioning SQL
+│   ├── isolation.go       # Startup database isolation check
 │   ├── cache.go           # Redis and memory cache
 │   └── context.go         # App context helpers
 │
