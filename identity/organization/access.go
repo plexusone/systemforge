@@ -102,7 +102,10 @@ func (a *API) isPlatformAdmin(ctx context.Context, caller uuid.UUID) (bool, erro
 
 // MembershipRoleGetter returns a role getter for rbac.WithRoleGetter
 // that reads a principal's role from its active membership in the
-// organization. A missing or deactivated membership has no role.
+// organization. A missing or deactivated membership has no role, and
+// neither has any membership of a deleted (inactive) organization, so a
+// deleted organization grants its former members nothing, as unregistering
+// it does in the relationship graph.
 func MembershipRoleGetter(svc Service) func(ctx context.Context, principalID, orgID uuid.UUID) (string, error) {
 	return func(ctx context.Context, principalID, orgID uuid.UUID) (string, error) {
 		m, err := svc.GetMembership(ctx, orgID, principalID)
@@ -113,6 +116,16 @@ func MembershipRoleGetter(svc Service) func(ctx context.Context, principalID, or
 			return "", err
 		}
 		if !m.Active {
+			return "", nil
+		}
+		org, err := svc.GetByID(ctx, orgID)
+		if errors.Is(err, ErrOrganizationNotFound) {
+			return "", nil
+		}
+		if err != nil {
+			return "", err
+		}
+		if !org.Active {
 			return "", nil
 		}
 		return m.Role, nil

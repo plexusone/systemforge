@@ -156,7 +156,7 @@ back. There is no HTTP endpoint for the conversion yet.
 | `CreatePersonalOrg(input)` | `Create` with `org_type = personal`, and the owner |
 | `GetByID`, `GetBySlug`, `GetPersonalOrg` | Lookups |
 | `Update(id, input)` | Name, logo, description, website, settings; never the slug or type |
-| `Delete(id)` | Sets `active = false`; `syncer.UnregisterOrganization` |
+| `Delete(id)` | Sets `active = false`; `syncer.UnregisterOrganization`. A deleted organization no longer resolves by slug (`ResolveSlug`), takes no membership changes (`RequireMembersAllowed` returns `ErrOrganizationDeleted`, so `AddMember`, `UpdateMember`, invites and SCIM refuse it), and `MembershipRoleGetter` gives its members no role, so the RBAC authorizer denies them as SpiceDB does after `UnregisterOrganization` |
 | `List(input)` | Filters: `OrgType`, `Active`, `MemberPrincipalID` (active memberships only), limit and offset |
 | `TransferOwnership(input)` | See [Ownership transfer](#ownership-transfer) |
 | `Rename(orgID, slug, actor)`, `ResolveSlug(slug)` | See [Renaming and the cooling-off period](#renaming-and-the-cooling-off-period) |

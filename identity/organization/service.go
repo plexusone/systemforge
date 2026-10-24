@@ -334,7 +334,7 @@ func (s *DefaultService) GetByID(ctx context.Context, id uuid.UUID) (*Organizati
 	org, err := s.client.Organization.Get(ctx, id)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("organization not found: %s", id)
+			return nil, fmt.Errorf("%w: %s", ErrOrganizationNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get organization: %w", err)
 	}

@@ -125,11 +125,13 @@ func holdsReservation(ctx context.Context, c *ent.Client, res *ent.SlugReservati
 	return owns, nil
 }
 
-// ResolveSlug returns the organization with slug. When no organization
-// uses it but one released it within the cooling-off period, it returns
-// that organization and alias true, so old links keep working.
+// ResolveSlug returns the active organization with slug. When no
+// organization uses it but one released it within the cooling-off period,
+// it returns that organization and alias true, so old links keep working.
+// A deleted (inactive) organization does not resolve: its API routes answer
+// as for an unknown organization.
 func (s *DefaultService) ResolveSlug(ctx context.Context, slug string) (*Organization, bool, error) {
-	org, err := s.client.Organization.Query().Where(organization.Slug(slug)).Only(ctx)
+	org, err := s.client.Organization.Query().Where(organization.Slug(slug), organization.Active(true)).Only(ctx)
 	if err == nil {
 		return entOrgToModel(org), false, nil
 	}
@@ -142,8 +144,11 @@ func (s *DefaultService) ResolveSlug(ctx context.Context, slug string) (*Organiz
 	}
 	if res != nil && res.ReleasedFromOrganizationID != nil {
 		org, err := s.client.Organization.Get(ctx, *res.ReleasedFromOrganizationID)
-		if err == nil {
+		if err == nil && org.Active {
 			return entOrgToModel(org), true, nil
+		}
+		if err == nil {
+			return nil, false, fmt.Errorf("%w: %s", ErrOrganizationNotFound, slug)
 		}
 		if !ent.IsNotFound(err) {
 			return nil, false, fmt.Errorf("failed to get organization: %w", err)
