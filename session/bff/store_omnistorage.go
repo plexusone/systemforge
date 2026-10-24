@@ -80,9 +80,11 @@ func DefaultOmniStorageConfig() OmniStorageConfig {
 // backend (redis) configured without OmniStorageConfig.SiteID.
 var ErrSiteIDRequired = errors.New("bff: OmniStorageConfig.SiteID is required for a shared session backend")
 
-// ErrSealerRequired is returned for a persistent session backend configured
-// without OmniStorageConfig.Sealer or InsecurePlaintext.
-var ErrSealerRequired = errors.New("bff: OmniStorageConfig.Sealer is required for a persistent session backend")
+// ErrSealerRequired is returned for a persistent session store configured
+// without a way to encrypt session secrets: an OmniStorageStore without
+// OmniStorageConfig.Sealer or InsecurePlaintext, or an EntStore without
+// EntStoreConfig.Sealer or EncryptionKey.
+var ErrSealerRequired = errors.New("bff: a session sealer is required for a persistent session store")
 
 const (
 	// omniDataPlain holds the BFF fields as JSON when no sealer is set.

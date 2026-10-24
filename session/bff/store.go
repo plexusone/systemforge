@@ -64,7 +64,7 @@ type StoreConfig struct {
 
 	// EncryptionKey is not read by any store.
 	//
-	// Deprecated: set EntStoreConfig.EncryptionKey for EntStore or
+	// Deprecated: set EntStoreConfig.Sealer for EntStore or
 	// OmniStorageConfig.Sealer for OmniStorageStore. MemoryStore keeps
 	// sessions in process memory and does not encrypt them.
 	EncryptionKey []byte
