@@ -105,6 +105,19 @@ such as `emails[type eq "work"]`, trailing input, or nesting deeper than
 | Users | `id`, `userName` and `emails.value` (case-insensitive), `displayName` and `name.formatted`, `active` (`eq`, `ne`), `meta.created` and `meta.lastModified` (`gt`, `ge`, `lt`, `le`), `externalId` (`eq`, `pr`; users carry none, so it matches nobody) |
 | Groups | `id`, `displayName`, `externalId` (the organization slug), `meta.created`, `meta.lastModified` |
 
+## Request Limits
+
+- `/Bulk` accepts at most `Config.BulkMaxOperations` operations and a body
+  of at most `Config.BulkMaxPayloadSize` bytes (413 beyond it); both are
+  advertised in `ServiceProviderConfig`.
+- At most `Config.BulkMaxPasswordOperations` operations in one bulk request
+  may set a password (default 50; a negative value refuses passwords in
+  bulk), because each one costs a password hash.
+- A filter may nest at most `filter.MaxDepth` levels.
+- List pages load group memberships in one query when the store implements
+  `scim.BatchMembershipStore`, as the Ent store does, instead of one query
+  per returned user or group.
+
 ## Errors
 
 A database or other unexpected error is logged with the API's logger and

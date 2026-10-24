@@ -20,6 +20,8 @@ func (a *API) registerBulkEndpoints() {
 		Description:   "Processes multiple SCIM operations in a single request (RFC 7644 Section 3.7)",
 		Tags:          []string{"Bulk"},
 		DefaultStatus: http.StatusOK,
+		// The advertised maxPayloadSize is the body limit (413 beyond it).
+		MaxBodyBytes: int64(a.provider.Config().BulkMaxPayloadSize),
 	}, a.processBulk)
 }
 

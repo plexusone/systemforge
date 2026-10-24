@@ -126,6 +126,20 @@ type Store interface {
 	RemoveMemberFromGroup(ctx context.Context, groupID, userID string) error
 }
 
+// BatchMembershipStore is optionally implemented by a Store that can load
+// the memberships of a whole list page in one query. ListUsers and
+// ListGroups use it when the store implements it, instead of calling
+// GetGroupsForUser or GetMembersForGroup once per returned resource.
+// Resources missing from the returned map have no groups or members.
+type BatchMembershipStore interface {
+	// GetGroupsForUsers returns the groups of each user, keyed by user ID.
+	GetGroupsForUsers(ctx context.Context, userIDs []string) (map[string][]GroupRef, error)
+
+	// GetMembersForGroups returns the members of each group, keyed by
+	// group ID.
+	GetMembersForGroups(ctx context.Context, groupIDs []string) (map[string][]MemberRef, error)
+}
+
 // AuthorizationHook provides authorization checks for SCIM operations.
 type AuthorizationHook interface {
 	// CanRead checks if the authenticated user can read the resource.

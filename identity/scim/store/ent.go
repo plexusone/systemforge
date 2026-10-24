@@ -1034,19 +1034,38 @@ func (s *EntStore) DeleteGroup(ctx context.Context, id string) error {
 //
 //nolint:dupl // Mirrors GetMembersForGroup - intentional symmetry for membership queries
 func (s *EntStore) GetGroupsForUser(ctx context.Context, userID string) ([]scim.GroupRef, error) {
+	if _, err := uuid.Parse(userID); err != nil {
+		return nil, scim.ErrNotFound("invalid user ID")
+	}
+	groups, err := s.GetGroupsForUsers(ctx, []string{userID})
+	if err != nil {
+		return nil, err
+	}
+	if groups[userID] == nil {
+		return []scim.GroupRef{}, nil
+	}
+	return groups[userID], nil
+}
+
+// GetGroupsForUsers returns the groups of each user in one query,
+// implementing scim.BatchMembershipStore. A tenant sees only its own
+// organization; IDs that are not UUIDs are skipped.
+func (s *EntStore) GetGroupsForUsers(ctx context.Context, userIDs []string) (map[string][]scim.GroupRef, error) {
 	sc, err := scopeOf(ctx)
 	if err != nil {
 		return nil, err
 	}
-	uid, err := uuid.Parse(userID)
-	if err != nil {
-		return nil, scim.ErrNotFound("invalid user ID")
+	uids := parseIDs(userIDs)
+	out := make(map[string][]scim.GroupRef, len(uids))
+	if len(uids) == 0 {
+		return out, nil
 	}
 
 	q := s.client.PrincipalMembership.Query().
 		Where(
-			principalmembership.PrincipalIDEQ(uid),
+			principalmembership.PrincipalIDIn(uids...),
 			principalmembership.ActiveEQ(true),
+			principalmembership.HasOrganizationWith(organization.Active(true)),
 		)
 	if !sc.Platform {
 		q = q.Where(principalmembership.OrganizationIDEQ(sc.OrganizationID))
@@ -1056,10 +1075,10 @@ func (s *EntStore) GetGroupsForUser(ctx context.Context, userID string) ([]scim.
 		return nil, internalError(ctx, err)
 	}
 
-	groups := make([]scim.GroupRef, 0, len(memberships))
 	for _, m := range memberships {
 		if m.Edges.Organization != nil {
-			groups = append(groups, scim.GroupRef{
+			id := m.PrincipalID.String()
+			out[id] = append(out[id], scim.GroupRef{
 				Value:   m.OrganizationID.String(),
 				Ref:     s.config.BaseURL + "/Groups/" + m.OrganizationID.String(),
 				Display: m.Edges.Organization.Name,
@@ -1067,8 +1086,18 @@ func (s *EntStore) GetGroupsForUser(ctx context.Context, userID string) ([]scim.
 			})
 		}
 	}
+	return out, nil
+}
 
-	return groups, nil
+// parseIDs returns the UUIDs among ids, skipping any that do not parse.
+func parseIDs(ids []string) []uuid.UUID {
+	out := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		if u, err := uuid.Parse(id); err == nil {
+			out = append(out, u)
+		}
+	}
+	return out
 }
 
 // GetMembersForGroup returns all human members of a group.
@@ -1083,10 +1112,38 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 	if err != nil || !tenantGroup(sc, gid) {
 		return nil, scim.ErrNotFound("group not found")
 	}
+	members, err := s.GetMembersForGroups(ctx, []string{groupID})
+	if err != nil {
+		return nil, err
+	}
+	if members[groupID] == nil {
+		return []scim.MemberRef{}, nil
+	}
+	return members[groupID], nil
+}
+
+// GetMembersForGroups returns the members of each group in one query,
+// implementing scim.BatchMembershipStore. A tenant sees only its own
+// organization; other IDs, and IDs that are not UUIDs, are skipped.
+func (s *EntStore) GetMembersForGroups(ctx context.Context, groupIDs []string) (map[string][]scim.MemberRef, error) {
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var gids []uuid.UUID
+	for _, gid := range parseIDs(groupIDs) {
+		if tenantGroup(sc, gid) {
+			gids = append(gids, gid)
+		}
+	}
+	out := make(map[string][]scim.MemberRef, len(gids))
+	if len(gids) == 0 {
+		return out, nil
+	}
 
 	memberships, err := s.client.PrincipalMembership.Query().
 		Where(
-			principalmembership.OrganizationIDEQ(gid),
+			principalmembership.OrganizationIDIn(gids...),
 			principalmembership.ActiveEQ(true),
 			principalmembership.HasPrincipalWith(scimHuman()...),
 		).
@@ -1096,10 +1153,10 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 		return nil, internalError(ctx, err)
 	}
 
-	members := make([]scim.MemberRef, 0, len(memberships))
 	for _, m := range memberships {
 		if m.Edges.Principal != nil {
-			members = append(members, scim.MemberRef{
+			id := m.OrganizationID.String()
+			out[id] = append(out[id], scim.MemberRef{
 				Value:   m.PrincipalID.String(),
 				Ref:     s.config.BaseURL + "/Users/" + m.PrincipalID.String(),
 				Display: m.Edges.Principal.DisplayName,
@@ -1107,8 +1164,7 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 			})
 		}
 	}
-
-	return members, nil
+	return out, nil
 }
 
 // AddMemberToGroup adds a user to a group. Adding an existing member is a
@@ -1292,5 +1348,8 @@ func (s *EntStore) applySortGroup(q *ent.OrganizationQuery, sortBy, sortOrder st
 	}
 }
 
-// Ensure EntStore implements scim.Store
-var _ scim.Store = (*EntStore)(nil)
+// Ensure EntStore implements scim.Store and scim.BatchMembershipStore.
+var (
+	_ scim.Store                = (*EntStore)(nil)
+	_ scim.BatchMembershipStore = (*EntStore)(nil)
+)

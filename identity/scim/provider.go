@@ -192,19 +192,66 @@ func (s *providerService) ListUsers(ctx context.Context, opts ListOptions) (*Lis
 	}
 
 	// Convert to interface slice and populate metadata
+	groupsOf, err := s.groupsForUsers(ctx, users)
+	if err != nil {
+		return nil, err
+	}
 	resources := make([]any, len(users))
 	for i, user := range users {
-		// Populate groups for each user
-		groups, err := s.p.store.GetGroupsForUser(ctx, user.ID)
-		if err != nil {
-			return nil, err
-		}
-		user.Groups = groups
+		user.Groups = groupsOf[user.ID]
 		s.populateUserMeta(user)
 		resources[i] = user
 	}
 
 	return NewListResponse(resources, total, opts.StartIndex, len(users)), nil
+}
+
+// groupsForUsers loads the groups of a page of users: in one call when the
+// store implements BatchMembershipStore, otherwise one call per user.
+func (s *providerService) groupsForUsers(ctx context.Context, users []*User) (map[string][]GroupRef, error) {
+	if len(users) == 0 {
+		return nil, nil
+	}
+	if b, ok := s.p.store.(BatchMembershipStore); ok {
+		ids := make([]string, len(users))
+		for i, u := range users {
+			ids[i] = u.ID
+		}
+		return b.GetGroupsForUsers(ctx, ids)
+	}
+	out := make(map[string][]GroupRef, len(users))
+	for _, u := range users {
+		groups, err := s.p.store.GetGroupsForUser(ctx, u.ID)
+		if err != nil {
+			return nil, err
+		}
+		out[u.ID] = groups
+	}
+	return out, nil
+}
+
+// membersForGroups loads the members of a page of groups: in one call when
+// the store implements BatchMembershipStore, otherwise one call per group.
+func (s *providerService) membersForGroups(ctx context.Context, groups []*Group) (map[string][]MemberRef, error) {
+	if len(groups) == 0 {
+		return nil, nil
+	}
+	if b, ok := s.p.store.(BatchMembershipStore); ok {
+		ids := make([]string, len(groups))
+		for i, g := range groups {
+			ids[i] = g.ID
+		}
+		return b.GetMembersForGroups(ctx, ids)
+	}
+	out := make(map[string][]MemberRef, len(groups))
+	for _, g := range groups {
+		members, err := s.p.store.GetMembersForGroup(ctx, g.ID)
+		if err != nil {
+			return nil, err
+		}
+		out[g.ID] = members
+	}
+	return out, nil
 }
 
 // CreateUser creates a new user.
@@ -412,14 +459,13 @@ func (s *providerService) ListGroups(ctx context.Context, opts ListOptions) (*Li
 	}
 
 	// Convert to interface slice and populate metadata
+	membersOf, err := s.membersForGroups(ctx, groups)
+	if err != nil {
+		return nil, err
+	}
 	resources := make([]any, len(groups))
 	for i, group := range groups {
-		// Populate members for each group
-		members, err := s.p.store.GetMembersForGroup(ctx, group.ID)
-		if err != nil {
-			return nil, err
-		}
-		group.Members = members
+		group.Members = membersOf[group.ID]
 		s.populateGroupMeta(group)
 		resources[i] = group
 	}
@@ -626,6 +672,10 @@ func (s *providerService) ProcessBulk(ctx context.Context, req *BulkRequest) (*B
 	if len(req.Operations) > s.p.config.BulkMaxOperations {
 		return nil, ErrTooMany(fmt.Sprintf("bulk request exceeds maximum of %d operations", s.p.config.BulkMaxOperations))
 	}
+	// Each password costs a hash; bound the hashing one request can cause.
+	if n, limit := countBulkPasswords(req.Operations), s.p.config.bulkMaxPasswordOperations(); n > limit {
+		return nil, ErrTooMany(fmt.Sprintf("bulk request sets %d passwords; at most %d are allowed per request", n, limit))
+	}
 
 	response := &BulkResponse{
 		Schemas:    []string{SchemaBulkResponse},
@@ -660,6 +710,54 @@ func (s *providerService) ProcessBulk(ctx context.Context, req *BulkRequest) (*B
 	}
 
 	return response, nil
+}
+
+// countBulkPasswords counts the operations that set a password: a user
+// create or replace whose data has a password attribute, or a PATCH with a
+// password path or a value carrying one.
+func countBulkPasswords(ops []BulkOperation) int {
+	n := 0
+	for _, op := range ops {
+		if bulkSetsPassword(op.Data) {
+			n++
+		}
+	}
+	return n
+}
+
+func bulkSetsPassword(data any) bool {
+	m, ok := data.(map[string]any)
+	if !ok {
+		return false
+	}
+	for k, v := range m {
+		switch {
+		case strings.EqualFold(k, "password"):
+			return true
+		case strings.EqualFold(k, "Operations"):
+			patchOps, ok := v.([]any)
+			if !ok {
+				continue
+			}
+			for _, po := range patchOps {
+				pm, ok := po.(map[string]any)
+				if !ok {
+					continue
+				}
+				for pk, pv := range pm {
+					if strings.EqualFold(pk, "path") {
+						if path, ok := pv.(string); ok && strings.EqualFold(path, "password") {
+							return true
+						}
+					}
+					if strings.EqualFold(pk, "value") && bulkSetsPassword(pv) {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 // resolveBulkIdReferences replaces bulkId:xxx references with actual resource IDs.
