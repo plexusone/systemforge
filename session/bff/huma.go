@@ -1,8 +1,8 @@
 package bff
 
 import (
-	"context"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -27,8 +27,12 @@ type HumaConfig struct {
 	IncludeRateLimitDocs bool
 }
 
-// RegisterHumaRoutes registers BFF endpoints with a Huma API for OpenAPI generation.
-// The actual request handling is done by chi-based handlers in Handler.Router().
+// RegisterHumaRoutes documents the BFF endpoints in a Huma API's OpenAPI
+// spec. It registers no handlers: requests are served by the chi-based
+// handlers in Handler.Router(). Registering stub handlers instead would put
+// static routes on a router shared with Huma that take precedence over the
+// mounted BFF handler, so logout, session and refresh would answer without
+// doing anything.
 //
 // Usage:
 //
@@ -38,7 +42,7 @@ type HumaConfig struct {
 //	// Mount chi routes for actual handling
 //	router.Mount("/bff", bffHandler.Router())
 //
-//	// Register with Huma for OpenAPI spec
+//	// Document the routes in the Huma OpenAPI spec
 //	bff.RegisterHumaRoutes(humaAPI, bff.HumaConfig{
 //	    Handler:    bffHandler,
 //	    PathPrefix: "/bff",
@@ -50,9 +54,28 @@ func RegisterHumaRoutes(api huma.API, config HumaConfig) {
 	if len(config.Tags) == 0 {
 		config.Tags = []string{"BFF"}
 	}
+	oapi := api.OpenAPI()
+	registry := oapi.Components.Schemas
+	jsonBody := func(description string, body any) map[string]*huma.Response {
+		return map[string]*huma.Response{
+			"200": {
+				Description: description,
+				Content: map[string]*huma.MediaType{
+					"application/json": {Schema: registry.Schema(reflect.TypeOf(body), true, "")},
+				},
+			},
+		}
+	}
+	originHeader := &huma.Param{
+		Name:        "Origin",
+		In:          "header",
+		Required:    true,
+		Description: "Origin header for CSRF protection",
+		Schema:      &huma.Schema{Type: huma.TypeString},
+	}
 
 	// GET /bff/session - Check session status
-	huma.Register(api, huma.Operation{
+	oapi.AddOperation(&huma.Operation{
 		OperationID: "bff-get-session",
 		Method:      http.MethodGet,
 		Path:        config.PathPrefix + "/session",
@@ -63,11 +86,7 @@ func RegisterHumaRoutes(api huma.API, config HumaConfig) {
 			"x-internal":    true,
 			"x-cookie-auth": true,
 		},
-	}, func(ctx context.Context, input *GetSessionInput) (*GetSessionOutput, error) {
-		// This is a stub - actual handling is done by chi handler
-		return &GetSessionOutput{
-			Body: SessionStatusResponse{Authenticated: false},
-		}, nil
+		Responses: jsonBody("Session status", SessionStatusResponse{}),
 	})
 
 	// POST /bff/logout - Logout and clear session
@@ -78,7 +97,7 @@ func RegisterHumaRoutes(api huma.API, config HumaConfig) {
 	}
 	mergeRateLimitExtensions(logoutExt, config, "/logout")
 
-	huma.Register(api, huma.Operation{
+	oapi.AddOperation(&huma.Operation{
 		OperationID: "bff-logout",
 		Method:      http.MethodPost,
 		Path:        config.PathPrefix + "/logout",
@@ -86,10 +105,8 @@ func RegisterHumaRoutes(api huma.API, config HumaConfig) {
 		Description: "Clears the session and revokes tokens. Requires valid Origin header for CSRF protection.",
 		Tags:        config.Tags,
 		Extensions:  logoutExt,
-	}, func(ctx context.Context, input *LogoutInput) (*LogoutOutput, error) {
-		return &LogoutOutput{
-			Body: LogoutResponse{Message: "Logged out successfully"},
-		}, nil
+		Parameters:  []*huma.Param{originHeader},
+		Responses:   jsonBody("Logged out", LogoutResponse{}),
 	})
 
 	// POST /bff/refresh - Refresh session tokens
@@ -100,7 +117,7 @@ func RegisterHumaRoutes(api huma.API, config HumaConfig) {
 	}
 	mergeRateLimitExtensions(refreshExt, config, "/refresh")
 
-	huma.Register(api, huma.Operation{
+	oapi.AddOperation(&huma.Operation{
 		OperationID: "bff-refresh-session",
 		Method:      http.MethodPost,
 		Path:        config.PathPrefix + "/refresh",
@@ -108,13 +125,8 @@ func RegisterHumaRoutes(api huma.API, config HumaConfig) {
 		Description: "Refreshes the access token using the refresh token. Requires valid Origin header for CSRF protection.",
 		Tags:        config.Tags,
 		Extensions:  refreshExt,
-	}, func(ctx context.Context, input *RefreshInput) (*RefreshOutput, error) {
-		return &RefreshOutput{
-			Body: RefreshResponse{
-				Message:   "Session refreshed",
-				ExpiresAt: time.Now().Add(time.Hour).Unix(),
-			},
-		}, nil
+		Parameters:  []*huma.Param{originHeader},
+		Responses:   jsonBody("Session refreshed", RefreshResponse{}),
 	})
 }
 
