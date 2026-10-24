@@ -216,6 +216,7 @@ svc, err := jwt.NewService(&jwt.Config{
     AccessTokenExpiry:  15 * time.Minute,
     RefreshTokenExpiry: 7 * 24 * time.Hour,
     Issuer:             "your-app",
+    Audience:           []string{"your-app"}, // required; tokens without it are refused
 })
 
 // Generate tokens

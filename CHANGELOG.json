@@ -7,7 +7,60 @@
   "maintainers": [
     "grokify"
   ],
-  "unreleased": {},
+  "unreleased": {
+    "highlights": [
+      {
+        "description": "Access tokens are bound to the application they were issued for: relying parties, the session JWT service, and multi-app routing each refuse tokens minted for another application that shares the signing key"
+      }
+    ],
+    "security": [
+      {
+        "description": "Relying-party bearer authentication accepted a SystemAuth access token issued to any other OAuth client, and an ID token, as an access token for the application, taking the organization memberships in its claims; `VerifyAccessToken` now requires a `client_id` claim from an accepted client and refuses typed non-access JWTs"
+      },
+      {
+        "description": "The session JWT service's default validation (`ValidateAccessToken`, `HTTPAuth`, `HTTPAuthOptional`) accepted tokens for any audience, so applications sharing a signing key accepted each other's access and refresh tokens; tokens must now carry the service's `Config.Audience`"
+      },
+      {
+        "description": "multiapp `AuthMiddleware` accepted a token minted for one app on every other app unless `AppAudiences` was set; a token on an app route must now be addressed to that app's ID by default"
+      }
+    ],
+    "added": [
+      {
+        "description": "relyingparty: `Config.AcceptedClientIDs` lists the OAuth clients whose access tokens an application accepts"
+      },
+      {
+        "description": "systemauth: JWT access tokens carry the JOSE `typ` header `at+jwt` (RFC 9068)"
+      },
+      {
+        "description": "multiapp: `MiddlewareConfig.AllowCrossAppTokens` accepts tokens for every app when that is intended"
+      },
+      {
+        "description": "session/jwt: `Claims.HasAnyAudience` and `ErrMissingAudience`"
+      }
+    ],
+    "breaking": [
+      {
+        "description": "session/jwt: `Config.Audience` is required; `NewService` returns `ErrMissingAudience` without it. Client-kind audiences (`bff`, `api`, custom) are added in front of the application audience instead of replacing it, and `ValidateAccessTokenWithAudience` with an empty audience checks `Config.Audience` instead of skipping the check"
+      },
+      {
+        "description": "relyingparty: `VerifyAccessToken` accepts only tokens issued to `Config.ClientID` unless `AcceptedClientIDs` or `AccessTokenAudience` is set; client-credentials tokens from other clients must be listed"
+      },
+      {
+        "description": "multiapp: without `AppAudiences`, tokens on app routes must carry the app's `AppID` as an audience"
+      }
+    ],
+    "upgradeGuide": [
+      {
+        "description": "session/jwt: set `Config.Audience` to a value naming the application. Access tokens issued before the upgrade are refused and clients refresh; refresh tokens issued without the audience require signing in again"
+      },
+      {
+        "description": "relyingparty: list in `AcceptedClientIDs` every client, including the application's own `ClientID`, whose tokens the API must accept, such as service clients using client credentials; or set `AccessTokenAudience` for an API that many clients call with an audience"
+      },
+      {
+        "description": "multiapp: mint tokens with `jwt.TokenOptions{Audience: []string{appID}}`, or set `AppAudiences` to the audiences your tokens already carry"
+      }
+    ]
+  },
   "releases": [
     {
       "version": "v0.19.0",

@@ -348,10 +348,12 @@ func (s entPrincipals) FindBySubject(ctx context.Context, sub string) (*relyingp
 `BearerMiddleware` accepts, in order:
 
 - `Authorization: Bearer <JWT>` — a SystemAuth JWT access token, verified
-  against the JWKS (`iss`, `exp`, and `Config.AccessTokenAudience` when set).
-  Its `sub` must already be linked to a local principal (the user signed in to
-  the app once). Client-credentials tokens (`sub` = `client_id`) are accepted
-  as a `client` principal only with `AllowClientTokens`.
+  against the JWKS (`iss`, `exp`, a `typ` of `at+jwt` or `JWT`, and
+  `Config.AccessTokenAudience` when set). The token must have been issued to
+  an accepted client (see below); ID tokens are refused. Its `sub` must
+  already be linked to a local principal (the user signed in to the app
+  once). Client-credentials tokens (`sub` = `client_id`) are accepted as a
+  `client` principal only with `AllowClientTokens`.
 - `Authorization: Bearer <api key>` or `X-API-Key` — validated by an
   `APIKeyValidator` (`*apikey.Service`); the key's owner is the principal and
   an organization-scoped key only carries that organization's membership.
@@ -359,6 +361,30 @@ func (s entPrincipals) FindBySubject(ctx context.Context, sub string) (*relyingp
 
 Failures return `401` with `WWW-Authenticate: Bearer realm="api"` (plus
 `error="invalid_token"` for bad credentials).
+
+### Which clients' tokens are accepted
+
+Every app that uses SystemAuth receives tokens signed with the same key, so
+the verifier checks which client a token was issued to (its `client_id`
+claim):
+
+| Configuration | Accepted access tokens |
+|---------------|------------------------|
+| Default | Issued to this app's `ClientID` only |
+| `AcceptedClientIDs` | Issued to one of the listed clients (list `ClientID` too to keep the app's own) |
+| `AccessTokenAudience` | Carrying that `aud`, from any client; combine with `AcceptedClientIDs` to restrict clients too |
+
+A service client that calls the API with client-credentials tokens must be
+listed in `AcceptedClientIDs`:
+
+```go
+client, err := relyingparty.NewClient(ctx, relyingparty.Config{
+    Issuer:            "https://auth.example.com",
+    ClientID:          "my-app",
+    RedirectURL:       "https://app.example.com/bff/auth/callback",
+    AcceptedClientIDs: []string{"my-app", "reporting-service"},
+})
+```
 
 ## Managed principals
 

@@ -297,6 +297,22 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
+## Tokens Are Bound to an App
+
+The `X-App-ID` header chooses the app, and a client controls that header. So
+that a token issued for one app cannot be used against another, `AuthMiddleware`
+requires a token on an app route to be addressed to that app. By default the
+required audience is the app's `AppID`; mint tokens for it with:
+
+```go
+pair, err := jwtService.GenerateTokenPairWithOptions(userID, email, name,
+    jwt.TokenOptions{Audience: []string{appCtx.AppID}})
+```
+
+Set `MiddlewareConfig.AppAudiences` to derive a different audience per app.
+Set `AllowCrossAppTokens` only when one token is meant to work in every app;
+tokens are then checked against the JWT service's own `Config.Audience`.
+
 ## Optional: SystemAuth Integration
 
 Apps can optionally integrate with SystemAuth for:

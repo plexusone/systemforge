@@ -32,6 +32,25 @@ Web App                    API Client
 └──────────────┘         └──────────────┘
 ```
 
+## Application Audience
+
+`Config.Audience` names the application a `jwt.Service` issues tokens for and
+is required: `NewService` returns `ErrMissingAudience` without it. Every token
+the service mints carries it, and `ValidateAccessToken` and
+`ValidateRefreshToken` refuse tokens that do not, so applications that share a
+signing key do not accept each other's tokens.
+
+```go
+cfg := jwt.DefaultConfig()
+cfg.Secret = secret
+cfg.Audience = []string{"my-app"}
+jwtService, err := jwt.NewService(cfg)
+```
+
+The client-kind audiences below (`bff`, `api`) are added in front of the
+application audience rather than replacing it, so a BFF token for `my-app`
+carries `aud: ["bff", "my-app"]`.
+
 ## Constants
 
 ```go
@@ -61,7 +80,7 @@ tokenPair, err := jwtService.GenerateBFFTokenPair(
     email,
     name,
 )
-// tokenPair.AccessToken has aud: "bff"
+// tokenPair.AccessToken has aud: ["bff", "my-app"]
 ```
 
 ### API Tokens (Programmatic Clients)
@@ -75,7 +94,7 @@ apiToken, err := jwtService.GenerateAPIToken(
     []string{"read:users", "write:projects"},
     90 * 24 * time.Hour, // 90 days
 )
-// apiToken has aud: "api" and scopes
+// apiToken has aud: ["api", "my-app"] and scopes
 ```
 
 ### Custom Audience
@@ -93,10 +112,10 @@ accessToken, err := jwtService.GenerateAccessTokenWithAudience(
 
 ## Validating Tokens with Audience
 
-### Standard Validation (No Audience Check)
+### Standard Validation (Application Audience)
 
 ```go
-// Backward compatible - accepts any audience
+// Accepts any kind of token addressed to this application (Config.Audience)
 claims, err := jwtService.ValidateAccessToken(tokenString)
 ```
 
