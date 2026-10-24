@@ -399,6 +399,81 @@ func (c *Client) DeleteRelationships(ctx context.Context, filter *RelationshipFi
 	return nil
 }
 
+// ReadRelationships calls fn for every stored relationship matching
+// filter, reading pageSize relationships per request (0 means 1000). The
+// first page is read fully consistent, and each later page continues from
+// the previous one's cursor, which carries the revision it was read at, so
+// the pages together are one consistent view of the graph even while it
+// changes. A relationship to a subject relation (such as
+// "group:g#member") is passed with only its subject object. An error from
+// fn stops the read and is returned.
+func (c *Client) ReadRelationships(ctx context.Context, filter *RelationshipFilter, pageSize int, fn func(*Relationship) error) error {
+	if filter.ResourceType == "" {
+		return fmt.Errorf("read relationships: filter requires a resource type")
+	}
+	if filter.SubjectID != "" && filter.SubjectType == "" {
+		return fmt.Errorf("read relationships: a subject ID requires a subject type")
+	}
+	if pageSize <= 0 {
+		pageSize = 1000
+	}
+	f := &pb.RelationshipFilter{
+		ResourceType:       filter.ResourceType,
+		OptionalResourceId: filter.ResourceID,
+		OptionalRelation:   filter.Relation,
+	}
+	if filter.SubjectType != "" {
+		f.OptionalSubjectFilter = &pb.SubjectFilter{
+			SubjectType:       filter.SubjectType,
+			OptionalSubjectId: filter.SubjectID,
+		}
+	}
+	consistency := &pb.Consistency{Requirement: &pb.Consistency_FullyConsistent{FullyConsistent: true}}
+	var cursor *pb.Cursor
+	for {
+		stream, err := c.permClient.ReadRelationships(ctx, &pb.ReadRelationshipsRequest{
+			Consistency:        consistency,
+			RelationshipFilter: f,
+			OptionalLimit:      uint32(pageSize), //nolint:gosec // G115: pageSize is positive and caller-bounded
+			OptionalCursor:     cursor,
+		})
+		if err != nil {
+			return fmt.Errorf("read relationships: %w", err)
+		}
+		n := 0
+		for {
+			resp, err := stream.Recv()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil {
+				return fmt.Errorf("read relationships: %w", err)
+			}
+			n++
+			cursor = resp.AfterResultCursor
+			r := resp.Relationship
+			if err := fn(&Relationship{
+				ResourceType: r.GetResource().GetObjectType(),
+				ResourceID:   r.GetResource().GetObjectId(),
+				Relation:     r.GetRelation(),
+				SubjectType:  r.GetSubject().GetObject().GetObjectType(),
+				SubjectID:    r.GetSubject().GetObject().GetObjectId(),
+			}); err != nil {
+				return err
+			}
+		}
+		if n < pageSize || cursor == nil {
+			return nil
+		}
+	}
+}
+
+// DeleteRelationshipsExact deletes the given relationship tuples in one
+// atomic request. Deleting a tuple that does not exist is not an error.
+func (c *Client) DeleteRelationshipsExact(ctx context.Context, rels []*Relationship) error {
+	return c.ReplaceRelationships(ctx, rels, nil)
+}
+
 // LookupSubjects finds all subjects with a given permission on a resource.
 func (c *Client) LookupSubjects(ctx context.Context, req *LookupSubjectsRequest) ([]string, error) {
 	stream, err := c.permClient.LookupSubjects(ctx, &pb.LookupSubjectsRequest{
