@@ -225,6 +225,99 @@ func TestSubscriptionCancellationRevokesTheLicense(t *testing.T) {
 	}
 }
 
+// recordingSyncer records the license syncs the checkout service makes.
+type recordingSyncer struct {
+	marketplace.AuthzSyncer
+	granted, revoked int
+}
+
+func (r *recordingSyncer) SyncLicense(context.Context, *marketplace.License) error {
+	r.granted++
+	return nil
+}
+
+func (r *recordingSyncer) SyncLicenseRevocation(context.Context, *marketplace.License) error {
+	r.revoked++
+	return nil
+}
+
+// An unpaid subscription suspends its license, and a later payment
+// restores it.
+func TestSubscriptionStatusSuspendsAndRestoresTheLicense(t *testing.T) {
+	f := newWebhookFixture(t)
+	syncer := &recordingSyncer{}
+	f.svc = NewCheckoutService(Config{WebhookSecret: testSecret}, f.listings, f.licenses, syncer)
+	listing := f.listing(marketplace.PricingSubscription)
+	sess := f.session(listing, "paid", nil)
+	sess["subscription"] = "sub_status"
+	if err := f.send("checkout.session.completed", sess); err != nil {
+		t.Fatalf("completed: %v", err)
+	}
+	ctx := context.Background()
+	valid := func() bool {
+		t.Helper()
+		ok, err := f.licenses.Check(ctx, listing, f.org)
+		if err != nil {
+			t.Fatalf("Check: %v", err)
+		}
+		return ok
+	}
+	if !valid() {
+		t.Fatal("license not valid after checkout")
+	}
+
+	sub := map[string]any{"id": "sub_status", "object": "subscription", "status": "past_due"}
+	if err := f.send("customer.subscription.updated", sub); err != nil {
+		t.Fatalf("past_due: %v", err)
+	}
+	if !valid() {
+		t.Error("license suspended while Stripe is still retrying the payment")
+	}
+
+	for _, status := range []string{"unpaid", "unpaid"} { // the second is a redelivery
+		sub["status"] = status
+		if err := f.send("customer.subscription.updated", sub); err != nil {
+			t.Fatalf("%s: %v", status, err)
+		}
+		if valid() {
+			t.Fatalf("license still valid with status %s", status)
+		}
+	}
+	if syncer.revoked != 1 {
+		t.Errorf("revocation synced %d times, want 1", syncer.revoked)
+	}
+
+	sub["status"] = "active"
+	if err := f.send("customer.subscription.updated", sub); err != nil {
+		t.Fatalf("active: %v", err)
+	}
+	if !valid() {
+		t.Error("license not restored after payment")
+	}
+	if syncer.granted != 1 {
+		t.Errorf("restored license synced %d times, want 1", syncer.granted)
+	}
+}
+
+// A seat-based license follows the subscription's quantity.
+func TestSubscriptionQuantityUpdatesSeats(t *testing.T) {
+	f := newWebhookFixture(t)
+	listing := f.listing(marketplace.PricingPerSeat)
+	sess := f.session(listing, "paid", map[string]string{"seats": "12"})
+	sess["subscription"] = "sub_seats"
+	if err := f.send("checkout.session.completed", sess); err != nil {
+		t.Fatalf("completed: %v", err)
+	}
+	sub := map[string]any{"id": "sub_seats", "object": "subscription", "status": "active",
+		"items": map[string]any{"object": "list", "data": []any{map[string]any{"id": "si_1", "object": "subscription_item", "quantity": 5}}}}
+	if err := f.send("customer.subscription.updated", sub); err != nil {
+		t.Fatalf("updated: %v", err)
+	}
+	if lic := f.licensed(listing); lic == nil || lic.Seats == nil || *lic.Seats != 5 {
+		t.Errorf("license = %+v, want 5 seats", lic)
+	}
+}
+
 func TestUnhandledAndMalformedEvents(t *testing.T) {
 	f := newWebhookFixture(t)
 	if err := f.send("customer.created", map[string]any{"id": "cus_1", "object": "customer"}); err != nil {

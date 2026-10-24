@@ -37,8 +37,6 @@ func parseCheckoutSession(event *stripe.Event) (*stripe.CheckoutSession, error) 
 }
 
 // parseSubscription extracts a subscription from an event.
-//
-//nolint:unparam // Subscription return value will be used when handlers are implemented
 func parseSubscription(event *stripe.Event) (*stripe.Subscription, error) {
 	var sub stripe.Subscription
 	if err := json.Unmarshal(event.Data.Raw, &sub); err != nil {

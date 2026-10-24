@@ -263,11 +263,23 @@ The checkout service handles these Stripe events:
 
 | Event | Action |
 |-------|--------|
-| `checkout.session.completed` | Create license and subscription |
-| `customer.subscription.updated` | Update license status |
-| `customer.subscription.deleted` | Revoke license |
-| `invoice.paid` | Extend license validity |
-| `invoice.payment_failed` | Mark license as past_due |
+| `checkout.session.completed` | Grant the license once paid |
+| `checkout.session.async_payment_succeeded` | Grant the license for a delayed payment |
+| `customer.subscription.updated` | Reconcile the license with the subscription (see below) |
+| `customer.subscription.deleted` | Revoke the license |
+| `invoice.paid`, `invoice.payment_failed` | Nothing; the resulting subscription status arrives as `customer.subscription.updated` |
+
+`customer.subscription.updated` reconciles the license with the subscription:
+
+- `active` or `trialing`: the license is valid. A suspended license is
+  restored and synced to the authorization system again, and a seat-based
+  license takes the subscription's quantity as its seat count. Seats already
+  assigned beyond a reduced count stay assigned, but no new seat can be
+  assigned until the count is under the limit.
+- `past_due`: unchanged while Stripe retries the payment.
+- `unpaid`, `paused`, `incomplete_expired` or `canceled`: the license is
+  suspended (`ValidUntil` is set to now, so `Check` and `CheckPrincipal`
+  deny it) and its access is removed from the authorization system.
 
 ### Webhook Endpoint
 
