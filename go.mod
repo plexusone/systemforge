@@ -27,10 +27,10 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/ory/fosite v0.49.0
-	github.com/plexusone/connectforge v0.4.0
+	github.com/plexusone/connectforge v0.6.0
 	github.com/plexusone/keyforge v0.2.0
 	github.com/plexusone/omniobserve v0.12.0
-	github.com/plexusone/omnistorage-core v0.5.2
+	github.com/plexusone/omnistorage-core v0.6.0
 	github.com/plexusone/omnivault v0.6.0
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/spf13/cobra v1.10.2
