@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -19,6 +20,50 @@ import (
 	"github.com/plexusone/systemforge/keys"
 )
 
+// openConnectionKeys opens the connections key system described by cc.
+// o supplies Audit, Logger and AcceptRollback; the directory, root key
+// and purposes come from cc. It also returns the vault holding the root
+// key, which the connections store reads credentials from.
+func openConnectionKeys(ctx context.Context, cc *systemauth.ConnectionsConfig, o keys.Options) (*keys.Keys, omnivault.Vault, error) {
+	if err := keys.CheckRootKeyLocation(cc.Vault, cc.RootKey, cc.KeysDir); err != nil {
+		return nil, nil, fmt.Errorf("systemauthsvc: connections: %w", err)
+	}
+	v, err := omnivault.VaultFromURI(cc.Vault)
+	if err != nil {
+		return nil, nil, fmt.Errorf("systemauthsvc: connections vault: %w", err)
+	}
+	o.Dir = cc.KeysDir
+	o.Root = keys.VaultSource(v, cc.RootKey)
+	o.Purposes = []keyforge.Purpose{connections.Purpose}
+	k, err := keys.Open(ctx, o)
+	if err != nil {
+		return nil, nil, err
+	}
+	return k, v, nil
+}
+
+// AcceptKeyRollback opens the connections keyring once with
+// keys.Options.AcceptRollback and closes it again. Run it after restoring
+// the keys directory from a backup, after moving it to a new host without
+// its rollback state, or once after upgrading from a release whose
+// rollback state was not authenticated. Opening it records the accepted
+// generation, so later starts succeed without the option. Confirm the
+// keyring is the one you mean to keep before running it: accepting an
+// older keyring brings back the key versions it holds.
+func AcceptKeyRollback(ctx context.Context, cfg *Config, logger *slog.Logger) error {
+	if cfg == nil || cfg.Connections == nil {
+		return errors.New("systemauthsvc: no connections keyring is configured")
+	}
+	k, _, err := openConnectionKeys(ctx, cfg.Connections, keys.Options{
+		Logger:         logger,
+		AcceptRollback: true,
+	})
+	if err != nil {
+		return err
+	}
+	return k.Close()
+}
+
 // openConnections opens the key system and the connections store when the
 // configuration enables connections (ADR-017), checking with the
 // service's authorization mode (openAuthz), which must be rbac.
@@ -30,19 +75,13 @@ func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) 
 	if s.client == nil || s.db == nil || s.authz == nil {
 		return errors.New("systemauthsvc: connections need a database with a connection pool")
 	}
-	if err := keys.CheckRootKeyLocation(cc.Vault, cc.RootKey, cc.KeysDir); err != nil {
-		return fmt.Errorf("systemauthsvc: connections: %w", err)
-	}
-	v, err := omnivault.VaultFromURI(cc.Vault)
-	if err != nil {
-		return fmt.Errorf("systemauthsvc: connections vault: %w", err)
-	}
-	s.keys, err = keys.Open(ctx, keys.Options{
-		Dir:      cc.KeysDir,
-		Root:     keys.VaultSource(v, cc.RootKey),
-		Purposes: []keyforge.Purpose{connections.Purpose},
-		Audit:    opts.AuditStore,
-		Logger:   s.logger,
+	var (
+		v   omnivault.Vault
+		err error
+	)
+	s.keys, v, err = openConnectionKeys(ctx, cc, keys.Options{
+		Audit:  opts.AuditStore,
+		Logger: s.logger,
 	})
 	if err != nil {
 		return err
