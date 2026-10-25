@@ -162,6 +162,7 @@ type world struct {
 	collab  uuid.UUID
 	admin   uuid.UUID // platform administrator
 	managed uuid.UUID
+	off     uuid.UUID // deactivated principal holding every kind of access
 	desired []spicedb.Relationship
 }
 
@@ -195,6 +196,11 @@ func newWorld(t *testing.T, db *ent.Client) *world {
 	}
 	w := &world{db: db, org: org(true), gone: org(false)}
 	w.owner, w.member, w.paused, w.collab, w.admin, w.managed = person(false), person(false), person(false), person(false), person(true), person(false)
+	w.off = person(true)
+	if _, err := db.Principal.UpdateOneID(w.off).SetActive(false).Save(ctx); err != nil {
+		t.Fatalf("deactivate: %v", err)
+	}
+	member(w.org, w.off, "member", true)
 	member(w.org, w.owner, "owner", true)
 	member(w.org, w.member, "member", true)
 	member(w.org, w.paused, "admin", false)
@@ -204,7 +210,7 @@ func newWorld(t *testing.T, db *ent.Client) *world {
 	for _, ar := range []struct {
 		o, p uuid.UUID
 		role string
-	}{{w.org, w.member, "editor"}, {w.org, w.paused, "admin"}, {w.gone, w.member, "admin"}} {
+	}{{w.org, w.member, "editor"}, {w.org, w.paused, "admin"}, {w.gone, w.member, "admin"}, {w.org, w.collab, "editor"}, {w.org, w.off, "editor"}} {
 		if _, err := db.AppRole.Create().SetOrganizationID(ar.o).SetPrincipalID(ar.p).SetApplication("recdemo").SetRole(ar.role).Save(ctx); err != nil {
 			t.Fatalf("app role: %v", err)
 		}
@@ -212,7 +218,7 @@ func newWorld(t *testing.T, db *ent.Client) *world {
 	for _, g := range []struct {
 		o, p     uuid.UUID
 		id, role string
-	}{{w.org, w.collab, "d1", "viewer"}, {w.org, w.paused, "d2", "maintainer"}, {w.gone, w.member, "d3", "contributor"}} {
+	}{{w.org, w.collab, "d1", "viewer"}, {w.org, w.paused, "d2", "maintainer"}, {w.gone, w.member, "d3", "contributor"}, {w.org, w.off, "d4", "viewer"}} {
 		if _, err := db.ResourceGrant.Create().SetOrganizationID(g.o).SetPrincipalID(g.p).SetResourceType("recdemo_doc").SetResourceID(g.id).SetRole(g.role).Save(ctx); err != nil {
 			t.Fatalf("grant: %v", err)
 		}
@@ -221,6 +227,9 @@ func newWorld(t *testing.T, db *ent.Client) *world {
 		t.Fatalf("manager: %v", err)
 	}
 	if _, err := db.ManagerRelationship.Create().SetManagedPrincipalID(w.managed).SetManagerPrincipalID(w.member).SetRole("educator").SetActive(false).Save(ctx); err != nil {
+		t.Fatalf("manager: %v", err)
+	}
+	if _, err := db.ManagerRelationship.Create().SetManagedPrincipalID(w.managed).SetManagerPrincipalID(w.off).SetRole("educator").Save(ctx); err != nil {
 		t.Fatalf("manager: %v", err)
 	}
 	o := w.org.String()
@@ -238,7 +247,9 @@ func newWorld(t *testing.T, db *ent.Client) *world {
 
 // stale returns relationships the tables do not call for: the deactivated
 // member's, the deleted organization's, an ended manager relation, a
-// removed platform administrator and a higher role than the one held.
+// removed platform administrator, a higher role than the one held, a
+// collaborator's application role, and every relationship of a
+// deactivated principal.
 func (w *world) stale() []spicedb.Relationship {
 	o, gone := w.org.String(), w.gone.String()
 	return []spicedb.Relationship{
@@ -252,6 +263,12 @@ func (w *world) stale() []spicedb.Relationship {
 		pr("recdemo_doc", "d1", "maintainer", w.collab),
 		pr("platform", "global", "admin", w.owner),
 		pr("principal", w.managed.String(), "educator", w.member),
+		pr("recdemo_org", o, "editor", w.collab),
+		pr("organization", o, "member", w.off),
+		pr("recdemo_org", o, "editor", w.off),
+		pr("recdemo_doc", "d4", "viewer", w.off),
+		pr("platform", "global", "admin", w.off),
+		pr("principal", w.managed.String(), "educator", w.off),
 	}
 }
 

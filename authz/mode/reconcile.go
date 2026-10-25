@@ -19,10 +19,10 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
-	entorg "github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/graphlock"
+	"github.com/plexusone/systemforge/identity/graphstate"
 )
 
 // Graph is the relationship store a Reconciler repairs. *spicedb.Client
@@ -123,6 +123,11 @@ type ReconcileStats struct {
 // restores one a grant committed in the meantime. The locks need
 // PostgreSQL; on SQLite the reconciler does not serialize with
 // revocations.
+//
+// What the tables call for follows package identity/graphstate, which the
+// services also consult before writing a grant: in particular, a
+// deactivated principal and a collaborator's application roles call for
+// nothing.
 //
 // It holds one definition's relationships in memory at a time.
 type Reconciler struct {
@@ -498,11 +503,10 @@ func orgPrincipalLocks(_ context.Context, x rel) ([]string, error) {
 	return []string{graphlock.Organization(org), graphlock.Principal(p)}, nil
 }
 
-var orgRelations = []string{spicedb.RelOwner, spicedb.RelAdmin, spicedb.RelMember, spicedb.RelCollaborator}
-
 // organizations: organization:{org}#{role}@principal:{p} for every active
-// membership of an active organization.
+// membership of an active organization held by an active principal.
 func (r *Reconciler) organizations() namespace {
+	orgRelations := graphstate.OrgRoles()
 	return namespace{
 		name:   spicedb.TypeOrganization,
 		filter: spicedb.RelationshipFilter{ResourceType: spicedb.TypeOrganization, SubjectType: spicedb.TypePrincipal},
@@ -513,12 +517,8 @@ func (r *Reconciler) organizations() namespace {
 			last := uuid.Nil
 			for {
 				rows, err := r.db.PrincipalMembership.Query().
-					Where(
-						principalmembership.IDGT(last),
-						principalmembership.Active(true),
-						principalmembership.RoleIn(orgRelations...),
-						principalmembership.HasOrganizationWith(entorg.Active(true)),
-					).
+					Where(principalmembership.IDGT(last)).
+					Where(graphstate.HoldingMemberships()...).
 					Order(ent.Asc(principalmembership.FieldID)).
 					Limit(r.pageSize).
 					All(ctx)
@@ -537,31 +537,12 @@ func (r *Reconciler) organizations() namespace {
 		locks: orgPrincipalLocks,
 		confirm: func(ctx context.Context, tx *ent.Tx, x rel, keys []string) (bool, error) {
 			org, p, ok := ids(x)
-			if !ok {
+			if !ok || !slices.Contains(orgRelations, x.Relation) {
 				return false, nil
 			}
-			return activeMembership(ctx, tx, org, p, x.Relation)
+			return graphstate.Membership(ctx, tx.Client(), org, p, x.Relation)
 		},
 	}
-}
-
-// activeMembership reports whether principal p has an active membership
-// in the active organization org, with role when it is not empty.
-func activeMembership(ctx context.Context, tx *ent.Tx, org, p uuid.UUID, role string) (bool, error) {
-	q := tx.PrincipalMembership.Query().Where(
-		principalmembership.OrganizationID(org),
-		principalmembership.PrincipalID(p),
-		principalmembership.Active(true),
-		principalmembership.HasOrganizationWith(entorg.Active(true)),
-	)
-	if role != "" {
-		q = q.Where(principalmembership.Role(role))
-	}
-	ok, err := q.Exist(ctx)
-	if err != nil {
-		return false, fmt.Errorf("reading membership: %w", err)
-	}
-	return ok, nil
 }
 
 const (
@@ -569,7 +550,7 @@ const (
 	platformID   = "global"
 )
 
-// platform: platform:global#admin@principal:{p} for every platform
+// platform: platform:global#admin@principal:{p} for every active platform
 // administrator.
 func (r *Reconciler) platform() namespace {
 	return namespace{
@@ -582,7 +563,8 @@ func (r *Reconciler) platform() namespace {
 			last := uuid.Nil
 			for {
 				rows, err := r.db.Human.Query().
-					Where(human.IDGT(last), human.IsPlatformAdmin(true)).
+					Where(human.IDGT(last)).
+					Where(graphstate.HoldingAdmins()...).
 					Order(ent.Asc(human.FieldID)).
 					Limit(r.pageSize).
 					All(ctx)
@@ -610,17 +592,13 @@ func (r *Reconciler) platform() namespace {
 			if !ok {
 				return false, nil
 			}
-			admin, err := tx.Human.Query().Where(human.PrincipalID(p), human.IsPlatformAdmin(true)).Exist(ctx)
-			if err != nil {
-				return false, fmt.Errorf("reading platform administrator: %w", err)
-			}
-			return admin, nil
+			return graphstate.PlatformAdmin(ctx, tx.Client(), p)
 		},
 	}
 }
 
 // managers: principal:{managed}#{role}@principal:{manager} for every
-// active manager relationship.
+// active manager relationship of an active manager.
 func (r *Reconciler) managers() namespace {
 	return namespace{
 		name:    spicedb.TypePrincipal,
@@ -630,7 +608,8 @@ func (r *Reconciler) managers() namespace {
 			last := uuid.Nil
 			for {
 				rows, err := r.db.ManagerRelationship.Query().
-					Where(managerrelationship.IDGT(last), managerrelationship.Active(true)).
+					Where(managerrelationship.IDGT(last)).
+					Where(graphstate.HoldingManagerRelationships()...).
 					Order(ent.Asc(managerrelationship.FieldID)).
 					Limit(r.pageSize).
 					All(ctx)
@@ -647,36 +626,26 @@ func (r *Reconciler) managers() namespace {
 			}
 		},
 		locks: func(_ context.Context, x rel) ([]string, error) {
-			managed, _, ok := ids(x)
+			managed, manager, ok := ids(x)
 			if !ok {
 				return nil, nil
 			}
-			return []string{graphlock.Principal(managed)}, nil
+			return []string{graphlock.Principal(managed), graphlock.Principal(manager)}, nil
 		},
 		confirm: func(ctx context.Context, tx *ent.Tx, x rel, keys []string) (bool, error) {
 			managed, manager, ok := ids(x)
 			if !ok {
 				return false, nil
 			}
-			active, err := tx.ManagerRelationship.Query().
-				Where(
-					managerrelationship.ManagedPrincipalID(managed),
-					managerrelationship.ManagerPrincipalID(manager),
-					managerrelationship.Role(x.Relation),
-					managerrelationship.Active(true),
-				).
-				Exist(ctx)
-			if err != nil {
-				return false, fmt.Errorf("reading manager relationship: %w", err)
-			}
-			return active, nil
+			return graphstate.Manager(ctx, tx.Client(), managed, manager, x.Relation)
 		},
 	}
 }
 
-// activePairs returns which of the (principal, organization) pairs have an
-// active membership in an active organization.
-func activePairs(ctx context.Context, c *ent.Client, principals, orgs []uuid.UUID) (map[[2]uuid.UUID]bool, error) {
+// activePairs returns which of the (principal, organization) pairs hold a
+// membership that calls for access with one of roles (any organization
+// role when none is given).
+func activePairs(ctx context.Context, c *ent.Client, principals, orgs []uuid.UUID, roles ...string) (map[[2]uuid.UUID]bool, error) {
 	out := map[[2]uuid.UUID]bool{}
 	if len(principals) == 0 {
 		return out, nil
@@ -687,9 +656,8 @@ func activePairs(ctx context.Context, c *ent.Client, principals, orgs []uuid.UUI
 		Where(
 			principalmembership.PrincipalIDIn(slices.Compact(principals)...),
 			principalmembership.OrganizationIDIn(slices.Compact(orgs)...),
-			principalmembership.Active(true),
-			principalmembership.HasOrganizationWith(entorg.Active(true)),
 		).
+		Where(graphstate.HoldingMemberships(roles...)...).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("reading memberships: %w", err)
@@ -701,8 +669,9 @@ func activePairs(ctx context.Context, c *ent.Client, principals, orgs []uuid.UUI
 }
 
 // appRoles: {app}_org:{org}#{role}@principal:{p} for every stored role in
-// the application held through an active membership of an active
-// organization.
+// the application held through an active owner, admin or member
+// membership of an active organization by an active principal.
+// Collaborators hold no application roles.
 func (r *Reconciler) appRoles(app string) namespace {
 	facet := app + "_org"
 	v, _ := r.registry.Get(app)
@@ -729,7 +698,7 @@ func (r *Reconciler) appRoles(app string) namespace {
 				for _, ar := range rows {
 					principals, orgs = append(principals, ar.PrincipalID), append(orgs, ar.OrganizationID)
 				}
-				active, err := activePairs(ctx, r.db, principals, orgs)
+				active, err := activePairs(ctx, r.db, principals, orgs, graphstate.AppRoleHolders()...)
 				if err != nil {
 					return err
 				}
@@ -750,23 +719,14 @@ func (r *Reconciler) appRoles(app string) namespace {
 			if !ok {
 				return false, nil
 			}
-			held, err := tx.AppRole.Query().
-				Where(approle.OrganizationID(org), approle.PrincipalID(p), approle.Application(app), approle.Role(x.Relation)).
-				Exist(ctx)
-			if err != nil {
-				return false, fmt.Errorf("reading application role: %w", err)
-			}
-			if !held {
-				return false, nil
-			}
-			return activeMembership(ctx, tx, org, p, "")
+			return graphstate.AppRole(ctx, tx.Client(), org, p, app, x.Relation)
 		},
 	}
 }
 
 // grants: {type}:{id}#{role}@principal:{p} for every grant on the
 // resource type held through an active membership of an active
-// organization.
+// organization by an active principal.
 func (r *Reconciler) grants(resourceType string) namespace {
 	return namespace{
 		name:   resourceType,
@@ -843,7 +803,7 @@ func (r *Reconciler) grants(resourceType string) namespace {
 			if g.Role != x.Relation || !slices.Contains(keys, graphlock.Organization(g.OrganizationID)) {
 				return false, nil
 			}
-			return activeMembership(ctx, tx, g.OrganizationID, p, "")
+			return graphstate.Membership(ctx, tx.Client(), g.OrganizationID, p)
 		},
 	}
 }
