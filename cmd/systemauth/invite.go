@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/principal/admincmd"
 	"github.com/plexusone/systemforge/identity/signupgate/signupcmd"
+	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/identity/systemauthsvc"
 )
 
@@ -19,6 +22,26 @@ func newInviteCmd(opts *options) *cobra.Command { return signupcmd.InviteCommand
 // configured database.
 func newWaitlistCmd(opts *options) *cobra.Command {
 	return signupcmd.WaitlistCommand(openDatabase(opts))
+}
+
+// newCodeCmd builds "systemauth code" (signupcmd) over the configured
+// database, printing invite links on the issuer's /signup page.
+func newCodeCmd(opts *options) *cobra.Command {
+	return signupcmd.CodeCommand(openDatabase(opts), func() string {
+		cfg, err := loadConfig(opts)
+		if err != nil {
+			// The command opened the database with this configuration
+			// already, so it loads; without it, the link is left out.
+			return ""
+		}
+		return strings.TrimRight(cfg.Issuer, "/") + systemauth.SignupPath
+	})
+}
+
+// newAdminCmd builds "systemauth admin" (admincmd) over the configured
+// database.
+func newAdminCmd(opts *options) *cobra.Command {
+	return admincmd.Command(admincmd.Open(openDatabase(opts)))
 }
 
 // openDatabase opens the database the flags and configuration file name.

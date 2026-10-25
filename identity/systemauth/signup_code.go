@@ -2,6 +2,10 @@ package systemauth
 
 import "context"
 
+// SignupPath is the sign-up page an invite link opens: GET /signup?code=…
+// sets the invite code for the next sign-in and offers each provider.
+const SignupPath = "/signup"
+
 // SignupGateAborter is implemented by a SignupGate that reserves something
 // in AllowSignup, such as one use of an invite code. SignupAborted is called
 // when account creation fails after AllowSignup allowed it, so the gate can

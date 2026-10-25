@@ -159,7 +159,9 @@ Run without a subcommand it serves (same as "systemauth serve").
 		},
 		newKeysCmd(opts),
 		newInviteCmd(opts),
+		newCodeCmd(opts),
 		newWaitlistCmd(opts),
+		newAdminCmd(opts),
 		&cobra.Command{
 			Use:   "version",
 			Short: "Print version information",
