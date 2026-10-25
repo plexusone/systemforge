@@ -282,7 +282,13 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 			logger.Info("created the system principal that owns statically configured clients")
 		}
 		serverOpts = append(serverOpts,
-			systemauth.WithStorage(systemauth.NewEntStorage(s.client, systemauth.WithDefaultOwner(ownerID))),
+			// Federation sync and the identity provider deactivate humans
+			// through the storage; give it the syncer so a deactivated
+			// principal's access leaves the graph at once.
+			systemauth.WithStorage(systemauth.NewEntStorage(s.client,
+				systemauth.WithDefaultOwner(ownerID),
+				systemauth.WithEntAuthzSyncer(syncer, syncMode),
+				systemauth.WithEntLogger(logger))),
 			systemauth.WithReadinessCheck("database", s.ping),
 		)
 		if c.SocialLogin != nil {

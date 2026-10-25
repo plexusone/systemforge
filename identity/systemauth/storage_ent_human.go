@@ -15,6 +15,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/principal"
+	principalsvc "github.com/plexusone/systemforge/identity/principal"
 )
 
 // toHumanPrincipal converts a Principal loaded with its Human edge.
@@ -235,7 +236,17 @@ func emailChanged(stored *string, next string) bool {
 // UpdateHuman implements Storage. It replaces the profile fields of an
 // existing human principal with those in h. Changing the email clears its
 // verification.
+//
+// A change of h.Active deactivates or reactivates the principal as the
+// principal service does (identity/principal Deactivate and Reactivate),
+// after the profile fields are saved: a deactivation records an access
+// change and removes the principal's relationships from the authorization
+// graph (WithEntAuthzSyncer) before it commits, and if the graph refuses,
+// the principal stays active and the error is returned, so the update can
+// be retried; a reactivation writes back the relationships its rows still
+// call for.
 func (s *EntStorage) UpdateHuman(ctx context.Context, h *HumanPrincipal) error {
+	var wasActive bool
 	err := s.withTx(ctx, func(tx *ent.Tx) error {
 		p, err := tx.Principal.Query().
 			Where(principal.IDEQ(h.ID), principal.TypeEQ(principal.TypeHuman)).
@@ -257,10 +268,11 @@ func (s *EntStorage) UpdateHuman(ctx context.Context, h *HumanPrincipal) error {
 		if taken {
 			return ErrPrincipalExists
 		}
+		wasActive = p.Active
+		// Active is changed below, by the principal service.
 		pu := tx.Principal.UpdateOne(p).
 			SetIdentifier(h.Email).
-			SetDisplayName(humanDisplayName(h)).
-			SetActive(h.Active)
+			SetDisplayName(humanDisplayName(h))
 		if h.Metadata != nil {
 			pu.SetMetadata(h.Metadata)
 		} else {
@@ -307,7 +319,33 @@ func (s *EntStorage) UpdateHuman(ctx context.Context, h *HumanPrincipal) error {
 		}
 		return fmt.Errorf("failed to update human: %w", err)
 	}
+	if h.Active == wasActive {
+		return nil
+	}
+	svc := s.principalService()
+	if h.Active {
+		err = svc.Reactivate(ctx, h.ID)
+	} else {
+		err = svc.Deactivate(ctx, h.ID)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to update human: %w", err)
+	}
 	return nil
+}
+
+// principalService returns the principal service that deactivates and
+// reactivates principals, with the storage's authorization syncer, access
+// change sink and logger.
+func (s *EntStorage) principalService() principalsvc.Service {
+	opts := []principalsvc.ServiceOption{principalsvc.WithAccessChangeSink(s.accessSink)}
+	if s.syncer != nil {
+		opts = append(opts, principalsvc.WithAuthzSyncer(s.syncer), principalsvc.WithSyncMode(s.syncMode))
+	}
+	if s.logger != nil {
+		opts = append(opts, principalsvc.WithLogger(s.logger))
+	}
+	return principalsvc.NewService(s.db, opts...)
 }
 
 // DeleteHuman implements Storage. It removes the principal together with its

@@ -7,12 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
 
+	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/clientassertion"
 	"github.com/plexusone/systemforge/identity/ent"
@@ -34,6 +36,12 @@ type EntStorage struct {
 	db             *ent.Client
 	defaultOwnerID uuid.UUID
 	accessSink     accesschange.Sink
+
+	// syncer and syncMode are passed to the principal service that
+	// deactivates and reactivates humans (UpdateHuman).
+	syncer   authz.RelationshipSyncer
+	syncMode authz.SyncMode
+	logger   *slog.Logger
 }
 
 // EntStorageOption configures EntStorage.
@@ -52,6 +60,28 @@ func WithDefaultOwner(ownerID uuid.UUID) EntStorageOption {
 // sink is set.
 func WithEntAccessChangeSink(sink accesschange.Sink) EntStorageOption {
 	return func(s *EntStorage) { s.accessSink = sink }
+}
+
+// WithEntAuthzSyncer sets the authorization syncer UpdateHuman deactivates
+// and reactivates principals with (package identity/principal): a
+// deactivation removes the principal's relationships from the
+// authorization graph before it commits, and a reactivation writes back
+// those its rows still call for, honoring mode. Set it whenever
+// authorization is relationship-based (mode rebac), with the syncer given
+// to WithSocialAuthzSyncer; without it nothing is written to a graph.
+func WithEntAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) EntStorageOption {
+	return func(s *EntStorage) {
+		s.syncer = syncer
+		s.syncMode = mode
+	}
+}
+
+// WithEntLogger sets the logger for failures EntStorage logs instead of
+// returning, such as a reactivated principal's access that could not be
+// written to the graph in authz.SyncModeEventual. Defaults to
+// slog.Default.
+func WithEntLogger(logger *slog.Logger) EntStorageOption {
+	return func(s *EntStorage) { s.logger = logger }
 }
 
 // NewEntStorage creates a new Ent-backed storage.

@@ -94,6 +94,28 @@ func TestPackagedServiceInModeReBAC(t *testing.T) {
 		t.Fatalf("deleted user's graph role = %q, want none", got)
 	}
 
+	// Deactivating a human through the server's storage, as federation
+	// sync does, removes its access from the graph at once.
+	st := svc.Server().Storage()
+	h, err := st.GetHuman(ctx, alice)
+	if err != nil {
+		t.Fatalf("GetHuman: %v", err)
+	}
+	h.Active = false
+	if err := st.UpdateHuman(ctx, h); err != nil {
+		t.Fatalf("UpdateHuman(inactive): %v", err)
+	}
+	if got := role(alice, acme); got != "" {
+		t.Fatalf("deactivated human's graph role = %q, want none", got)
+	}
+	h.Active = true
+	if err := st.UpdateHuman(ctx, h); err != nil {
+		t.Fatalf("UpdateHuman(active): %v", err)
+	}
+	if got := role(alice, acme); got != "owner" {
+		t.Fatalf("reactivated human's graph role = %q, want owner", got)
+	}
+
 	// RunJobs runs the reconciler at startup and until cancelled.
 	runs := res.Reconciler.Stats().Runs
 	jobsCtx, stop := context.WithCancel(ctx)
