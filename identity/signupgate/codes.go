@@ -18,7 +18,10 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/signupcode"
 	"github.com/plexusone/systemforge/identity/ent/signupcoderedemption"
+	"github.com/plexusone/systemforge/identity/systemauth"
 )
+
+var _ systemauth.SignupCodeLookup = (*CodeStore)(nil)
 
 var (
 	// ErrCodeInvalid means a code cannot be used: it is malformed, unknown,
@@ -454,4 +457,21 @@ func CodeLink(signupURL, code string) string {
 	q.Set("code", code)
 	u.RawQuery = q.Encode()
 	return u.String()
+}
+
+// SignupCodeUsable implements systemauth.SignupCodeLookup: it returns the
+// code in its stored form and whether it can be used now.
+func (s *CodeStore) SignupCodeUsable(ctx context.Context, code string) (string, bool, error) {
+	normalized, err := NormalizeCode(code)
+	if err != nil {
+		return "", false, nil //nolint:nilerr // a malformed code is not usable; it is refused, not a fault
+	}
+	c, err := s.Lookup(ctx, normalized)
+	if errors.Is(err, ErrCodeInvalid) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return normalized, c.Status(s.now()) == CodeActive, nil
 }
