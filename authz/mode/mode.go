@@ -103,6 +103,10 @@ type Result struct {
 	// authz.AppRoleSyncer and authz.ResourceGrantSyncer.
 	Syncer authz.RelationshipSyncer
 
+	// SyncMode is Deps.SyncMode with its default applied
+	// (authz.SyncModeEventual), to pass to the services with Syncer.
+	SyncMode authz.SyncMode
+
 	// Grants is the resource-grant store both modes keep, for services that
 	// grant inside their own transactions (invite.WithResourceGrants).
 	Grants *resourcegrant.Service
@@ -157,6 +161,9 @@ func New(ctx context.Context, cfg authz.ModeConfig, deps Deps) (*Result, error) 
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.SyncMode == "" {
+		deps.SyncMode = authz.SyncModeEventual
+	}
 	switch cfg.Mode {
 	case authz.ModeRBAC:
 		return newRBAC(deps), nil
@@ -206,6 +213,7 @@ func newRBAC(deps Deps) *Result {
 		Mode:     authz.ModeRBAC,
 		Provider: rbac.New(opts...),
 		Syncer:   noop.NewSyncer(),
+		SyncMode: deps.SyncMode,
 		Grants:   store,
 	}
 }
@@ -237,6 +245,7 @@ func newSpiceDB(ctx context.Context, cfg authz.ModeConfig, deps Deps) (*Result, 
 		Mode:     authz.ModeReBAC,
 		Provider: spicedb.NewProvider(client, spicedb.WithResourceGrants(store)),
 		Syncer:   syncer,
+		SyncMode: deps.SyncMode,
 		Grants:   store,
 		closeFn:  client.Close,
 	}
