@@ -229,7 +229,7 @@ func (s *Service) AcceptManagerInvite(ctx context.Context, token string, princip
 	accesschange.Publish(s.accessSink, change)
 	s.emit(ctx, EventManagerInviteAccepted, "accept_manager_invite", principalID, principalID,
 		map[string]any{"manager_principal_id": managerID.String(), "role": role})
-	return managerID, s.sync(ctx, "add manager", principalID, s.syncer.AddPrincipalManager(ctx, principalID, managerID, role))
+	return managerID, s.grantManager(ctx, principalID, managerID, role)
 }
 
 // pendingInvite finds the invitation a token names and requires it to be

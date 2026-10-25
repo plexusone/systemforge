@@ -247,12 +247,7 @@ func (s *DefaultService) syncHuman(ctx context.Context, id uuid.UUID, platformAd
 
 	// Set platform admin if applicable
 	if platformAdmin {
-		if syncErr := s.syncer.SetPlatformAdmin(ctx, id, true); syncErr != nil {
-			if s.syncMode == authz.SyncModeStrict {
-				return fmt.Errorf("failed to sync platform admin to authz: %w", syncErr)
-			}
-			s.logger.Warn("failed to sync platform admin to authz", "principal_id", id, "error", syncErr)
-		}
+		return s.grantPlatformAdmin(ctx, id)
 	}
 	return nil
 }
@@ -732,11 +727,8 @@ func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input Up
 	// Granted platform administration is written to the authorization
 	// backend after the commit.
 	if input.IsPlatformAdmin != nil && *input.IsPlatformAdmin {
-		if syncErr := s.syncer.SetPlatformAdmin(ctx, id, true); syncErr != nil {
-			if s.syncMode == authz.SyncModeStrict {
-				return nil, fmt.Errorf("failed to sync platform admin to authz: %w", syncErr)
-			}
-			s.logger.Warn("failed to sync platform admin to authz", "principal_id", id, "error", syncErr)
+		if err := s.grantPlatformAdmin(ctx, id); err != nil {
+			return nil, err
 		}
 	}
 

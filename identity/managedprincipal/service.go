@@ -23,6 +23,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/graphlock"
+	"github.com/plexusone/systemforge/identity/graphstate"
 	"github.com/plexusone/systemforge/identity/principal"
 )
 
@@ -242,7 +243,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 
 	syncErr := s.sync(ctx, "register principal", id, s.syncer.RegisterPrincipal(ctx, id))
 	for _, m := range in.Managers {
-		syncErr = errors.Join(syncErr, s.sync(ctx, "add manager", id, s.syncer.AddPrincipalManager(ctx, id, m.PrincipalID, m.Role)))
+		syncErr = errors.Join(syncErr, s.grantManager(ctx, id, m.PrincipalID, m.Role))
 	}
 	if syncErr != nil {
 		return id, syncErr
@@ -285,7 +286,7 @@ func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m Manager
 	}
 	s.emit(ctx, EventManagerAdded, "add_manager", actorID, managedID,
 		map[string]any{"manager_principal_id": m.PrincipalID.String(), "role": m.Role})
-	return s.sync(ctx, "add manager", managedID, s.syncer.AddPrincipalManager(ctx, managedID, m.PrincipalID, m.Role))
+	return s.grantManager(ctx, managedID, m.PrincipalID, m.Role)
 }
 
 // RemoveManager deactivates a manager relationship. It refuses with
@@ -716,6 +717,27 @@ func (s *Service) revoke(ctx context.Context, tx *ent.Tx, managedID uuid.UUID, o
 		return fmt.Errorf("managedprincipal: %s in authz, change not saved: %w", op, err)
 	}
 	return nil
+}
+
+// grantManager writes a manager relation to the authorization graph after
+// the change establishing it committed, holding the graph locks of both
+// principals, and only if the relationship is still active and the
+// manager still active: a removal or deactivation that committed in
+// between is not undone. Without a graph (the no-op syncer) it does
+// nothing.
+func (s *Service) grantManager(ctx context.Context, managedID, managerID uuid.UUID, role string) error {
+	if _, isNoop := s.syncer.(*noop.Syncer); isNoop {
+		return nil
+	}
+	keys := []string{graphlock.Principal(managedID), graphlock.Principal(managerID)}
+	err := graphlock.Grant(ctx, s.client, keys, func(ctx context.Context, c *ent.Client) error {
+		held, err := graphstate.Manager(ctx, c, managedID, managerID, role)
+		if err != nil || !held {
+			return err
+		}
+		return s.syncer.AddPrincipalManager(ctx, managedID, managerID, role)
+	})
+	return s.sync(ctx, "add manager", managedID, err)
 }
 
 // sync applies the sync mode to the result of an authorization backend

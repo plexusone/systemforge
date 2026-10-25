@@ -33,12 +33,14 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/authz/noop"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/graphlock"
+	"github.com/plexusone/systemforge/identity/graphstate"
 )
 
 // Errors returned by the service.
@@ -630,13 +632,27 @@ func (s *Service) writeRecorded(ctx context.Context, fn func(tx *ent.Tx) (*ent.A
 	return row, nil
 }
 
-// syncAdd writes a role to the authorization graph, honoring the sync mode.
+// syncAdd writes a role to the authorization graph after the change
+// assigning it committed, honoring the sync mode. It holds the graph locks
+// of the organization and the principal and writes the role only if the
+// rows still call for it, so a removal, demotion or deactivation that
+// committed in between is not undone.
 func (s *Service) syncAdd(ctx context.Context, principalID, organizationID uuid.UUID, application, role string) error {
 	if s.syncer == nil {
 		return nil
 	}
-	return s.handleSync(ctx, "add", principalID, organizationID, application, role,
-		s.syncer.AddAppRole(ctx, principalID, organizationID, application, role))
+	if _, isNoop := s.syncer.(*noop.Syncer); isNoop {
+		return nil
+	}
+	keys := []string{graphlock.Organization(organizationID), graphlock.Principal(principalID)}
+	err := graphlock.Grant(ctx, s.client, keys, func(ctx context.Context, c *ent.Client) error {
+		held, err := graphstate.AppRole(ctx, c, organizationID, principalID, application, role)
+		if err != nil || !held {
+			return err
+		}
+		return s.syncer.AddAppRole(ctx, principalID, organizationID, application, role)
+	})
+	return s.handleSync(ctx, "add", principalID, organizationID, application, role, err)
 }
 
 // revoke deletes a role from the authorization graph inside tx, the

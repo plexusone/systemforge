@@ -258,19 +258,16 @@ func (s *DefaultService) insertOrganization(ctx context.Context, tx *ent.Tx, inp
 	return org, membership, nil
 }
 
-// syncCreated registers a committed organization with the authorization
-// syncer, honoring the sync mode.
+// syncCreated registers a committed organization and its owner with the
+// authorization syncer, unless the owner's membership has been revoked
+// since, honoring the sync mode.
 func (s *DefaultService) syncCreated(ctx context.Context, orgID uuid.UUID, owner *uuid.UUID) error {
 	if owner == nil {
 		return nil
 	}
-	if syncErr := s.syncer.RegisterOrganization(ctx, orgID, *owner); syncErr != nil {
-		if s.syncMode == authz.SyncModeStrict {
-			return fmt.Errorf("failed to sync organization to authz: %w", syncErr)
-		}
-		s.logger.Warn("failed to sync organization to authz", "org_id", orgID, "error", syncErr)
-	}
-	return nil
+	return s.grantMembership(ctx, "organization", orgID, *owner, RoleOwner, func(ctx context.Context) error {
+		return s.syncer.RegisterOrganization(ctx, orgID, *owner)
+	})
 }
 
 // AfterCommit registers a created entity with the authorization backend. It
@@ -526,15 +523,10 @@ func (s *DefaultService) AddMember(ctx context.Context, input AddMemberInput) (*
 	}
 
 	// Sync to authorization backend
-	if syncErr := s.syncer.AddOrgMembership(ctx, input.PrincipalID, input.OrganizationID, input.Role); syncErr != nil {
-		if s.syncMode == authz.SyncModeStrict {
-			return nil, fmt.Errorf("failed to sync membership to authz: %w", syncErr)
-		}
-		s.logger.Warn("failed to sync membership to authz",
-			"principal_id", input.PrincipalID,
-			"org_id", input.OrganizationID,
-			"role", input.Role,
-			"error", syncErr)
+	if err := s.grantMembership(ctx, "membership", input.OrganizationID, input.PrincipalID, input.Role, func(ctx context.Context) error {
+		return s.syncer.AddOrgMembership(ctx, input.PrincipalID, input.OrganizationID, input.Role)
+	}); err != nil {
+		return nil, err
 	}
 
 	return entMembershipToModel(membership), nil
@@ -652,8 +644,9 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 			return nil, err
 		}
 	case current.Active && membership.Active && roleChanged:
-		if err := s.reportGrant("role change", s.syncer.AddOrgMembership(ctx, membership.PrincipalID, orgID, membership.Role),
-			"principal_id", membership.PrincipalID, "org_id", orgID, "old_role", oldRole, "new_role", membership.Role); err != nil {
+		if err := s.grantMembership(ctx, "role change", orgID, membership.PrincipalID, membership.Role, func(ctx context.Context) error {
+			return s.syncer.AddOrgMembership(ctx, membership.PrincipalID, orgID, membership.Role)
+		}); err != nil {
 			return nil, err
 		}
 	}
@@ -774,35 +767,6 @@ func (s *DefaultService) revokeAccess(ctx context.Context, principalID, organiza
 			ref := authz.ResourceRef{Type: g.ResourceType, ID: g.ResourceID, OrganizationID: organizationID}
 			if err := grantSyncer.RemoveResourceGrant(ctx, principalID, ref); err != nil {
 				return revokeErr("resource grant", err)
-			}
-		}
-	}
-	return nil
-}
-
-// grantAccess writes a member's organization role, application roles and
-// resource grants to the authorization graph after the change that grants
-// them committed. Failures are returned in SyncModeStrict and logged
-// otherwise.
-func (s *DefaultService) grantAccess(ctx context.Context, principalID, organizationID uuid.UUID, role string, appRoles []*ent.AppRole, grants []*ent.ResourceGrant) error {
-	attrs := []any{"principal_id", principalID, "org_id", organizationID}
-	if err := s.reportGrant("membership addition", s.syncer.AddOrgMembership(ctx, principalID, organizationID, role), append(attrs, "role", role)...); err != nil {
-		return err
-	}
-	if appSyncer, ok := s.syncer.(authz.AppRoleSyncer); ok {
-		for _, r := range appRoles {
-			if err := s.reportGrant("application role addition", appSyncer.AddAppRole(ctx, principalID, organizationID, r.Application, r.Role),
-				append(attrs, "application", r.Application)...); err != nil {
-				return err
-			}
-		}
-	}
-	if grantSyncer, ok := s.syncer.(authz.ResourceGrantSyncer); ok {
-		for _, g := range grants {
-			ref := authz.ResourceRef{Type: g.ResourceType, ID: g.ResourceID, OrganizationID: organizationID}
-			if err := s.reportGrant("resource grant addition", grantSyncer.SetResourceGrant(ctx, principalID, ref, g.Role),
-				append(attrs, "resource_type", g.ResourceType, "resource_id", g.ResourceID)...); err != nil {
-				return err
 			}
 		}
 	}
@@ -1016,14 +980,16 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 	accesschange.Publish(s.accessSink, changes...)
 
 	// The roles the transfer grants are written after it commits.
-	if err := s.reportGrant("old owner role change", s.syncer.AddOrgMembership(ctx, input.FromPrincipal, input.OrganizationID, newRoleForOld),
-		"principal_id", input.FromPrincipal, "org_id", input.OrganizationID); err != nil {
+	if err := s.grantMembership(ctx, "old owner role change", input.OrganizationID, input.FromPrincipal, newRoleForOld, func(ctx context.Context) error {
+		return s.syncer.AddOrgMembership(ctx, input.FromPrincipal, input.OrganizationID, newRoleForOld)
+	}); err != nil {
 		return err
 	}
 	// The new owner's previous role is contained in the owner role, so it
 	// is replaced after the commit.
-	return s.reportGrant("new owner role change", s.syncer.UpdateOrgMembership(ctx, input.ToPrincipal, input.OrganizationID, newMembership.Role, RoleOwner),
-		"principal_id", input.ToPrincipal, "org_id", input.OrganizationID)
+	return s.grantMembership(ctx, "new owner role change", input.OrganizationID, input.ToPrincipal, RoleOwner, func(ctx context.Context) error {
+		return s.syncer.UpdateOrgMembership(ctx, input.ToPrincipal, input.OrganizationID, newMembership.Role, RoleOwner)
+	})
 }
 
 // GenerateSlug generates a unique slug from a name. A reserved slug and

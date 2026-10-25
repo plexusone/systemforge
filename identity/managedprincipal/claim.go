@@ -174,7 +174,7 @@ func (s *Service) RedeemClaim(ctx context.Context, code string, claimantID uuid.
 	}
 	s.emit(ctx, EventClaimRedeemed, "redeem_claim", claimantID, managedID,
 		map[string]any{"manager_principal_id": claimantID.String(), "role": RoleGuardian})
-	return managedID, s.sync(ctx, "add manager", managedID, s.syncer.AddPrincipalManager(ctx, managedID, claimantID, RoleGuardian))
+	return managedID, s.grantManager(ctx, managedID, claimantID, RoleGuardian)
 }
 
 // AttachVerifiedEmail gives a managed principal that has no email an

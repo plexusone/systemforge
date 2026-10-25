@@ -29,11 +29,13 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/authz/noop"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/graphlock"
+	"github.com/plexusone/systemforge/identity/graphstate"
 )
 
 // roleCollaborator is the membership role a grant creates. It is the same
@@ -582,21 +584,48 @@ func (s *Service) OrganizationRoles(ctx context.Context, principalID uuid.UUID) 
 	return out, nil
 }
 
-// syncMembershipAdd writes the collaborator membership to the graph.
+// syncMembershipAdd writes the collaborator membership to the graph after
+// the grant that created it committed, if the membership still holds.
 func (s *Service) syncMembershipAdd(ctx context.Context, principalID, organizationID uuid.UUID) error {
 	if s.syncer == nil {
 		return nil
 	}
-	return s.handleSync(ctx, "add collaborator membership", principalID, organizationID,
-		s.syncer.AddOrgMembership(ctx, principalID, organizationID, roleCollaborator))
+	err := s.writeGranted(ctx, principalID, organizationID, func(ctx context.Context, c *ent.Client) error {
+		held, err := graphstate.Membership(ctx, c, organizationID, principalID, roleCollaborator)
+		if err != nil || !held {
+			return err
+		}
+		return s.syncer.AddOrgMembership(ctx, principalID, organizationID, roleCollaborator)
+	})
+	return s.handleSync(ctx, "add collaborator membership", principalID, organizationID, err)
 }
 
+// syncGrant writes a grant to the graph after the change granting it
+// committed, if the rows still call for it.
 func (s *Service) syncGrant(ctx context.Context, principalID uuid.UUID, ref authz.ResourceRef, role string) error {
 	if s.grantSyncer == nil {
 		return nil
 	}
-	return s.handleSync(ctx, "set resource grant", principalID, ref.OrganizationID,
-		s.grantSyncer.SetResourceGrant(ctx, principalID, ref, role))
+	err := s.writeGranted(ctx, principalID, ref.OrganizationID, func(ctx context.Context, c *ent.Client) error {
+		held, err := graphstate.ResourceGrant(ctx, c, ref.OrganizationID, principalID, ref.Type, ref.ID, role)
+		if err != nil || !held {
+			return err
+		}
+		return s.grantSyncer.SetResourceGrant(ctx, principalID, ref, role)
+	})
+	return s.handleSync(ctx, "set resource grant", principalID, ref.OrganizationID, err)
+}
+
+// writeGranted runs write holding the graph locks of the organization and
+// the principal (graphlock.Grant), so a revocation that committed after
+// the grant is not undone. Without a graph (the no-op syncer) it does
+// nothing.
+func (s *Service) writeGranted(ctx context.Context, principalID, organizationID uuid.UUID, write func(ctx context.Context, c *ent.Client) error) error {
+	if _, isNoop := s.syncer.(*noop.Syncer); isNoop {
+		return nil
+	}
+	keys := []string{graphlock.Organization(organizationID), graphlock.Principal(principalID)}
+	return graphlock.Grant(ctx, s.client, keys, write)
 }
 
 func (s *Service) handleSync(ctx context.Context, op string, principalID, organizationID uuid.UUID, err error) error {

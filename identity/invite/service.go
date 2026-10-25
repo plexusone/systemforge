@@ -19,6 +19,8 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
+	"github.com/plexusone/systemforge/identity/graphlock"
+	"github.com/plexusone/systemforge/identity/graphstate"
 	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/identity/resourcegrant"
 )
@@ -478,7 +480,7 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 	// Sync the new membership to the authorization backend after commit.
 	// A resource invite to an existing member created none.
 	if membershipCreated {
-		if syncErr := s.syncer.AddOrgMembership(ctx, input.PrincipalID, inv.OrganizationID, inv.Role); syncErr != nil {
+		if syncErr := s.grantMembership(ctx, input.PrincipalID, inv.OrganizationID, inv.Role); syncErr != nil {
 			if s.syncMode == authz.SyncModeStrict {
 				return nil, fmt.Errorf("failed to sync membership to authz: %w", syncErr)
 			}
@@ -731,4 +733,23 @@ func entInviteToModel(inv *ent.Invite) *Invite {
 	}
 
 	return model
+}
+
+// grantMembership writes an accepted invitation's membership to the
+// authorization graph after the acceptance committed, holding the graph
+// locks of the organization and the principal, and only if the membership
+// still holds the role: a removal or demotion that committed in between is
+// not undone. Without a graph (the no-op syncer) it does nothing.
+func (s *DefaultService) grantMembership(ctx context.Context, principalID, orgID uuid.UUID, role string) error {
+	if _, isNoop := s.syncer.(*noop.Syncer); isNoop {
+		return nil
+	}
+	keys := []string{graphlock.Organization(orgID), graphlock.Principal(principalID)}
+	return graphlock.Grant(ctx, s.client, keys, func(ctx context.Context, c *ent.Client) error {
+		held, err := graphstate.Membership(ctx, c, orgID, principalID, role)
+		if err != nil || !held {
+			return err
+		}
+		return s.syncer.AddOrgMembership(ctx, principalID, orgID, role)
+	})
 }
