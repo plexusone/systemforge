@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
 	"github.com/plexusone/systemforge/identity/systemauth"
@@ -43,13 +44,16 @@ var (
 
 // Invite is a sign-up invite as listed to operators.
 type Invite struct {
-	Email      string
-	Note       string
-	InvitedBy  string
-	CreatedAt  time.Time
-	ExpiresAt  *time.Time
-	RedeemedAt *time.Time
-	RedeemedBy *uuid.UUID
+	Email     string
+	Note      string
+	InvitedBy string
+	// InvitedByPrincipal is the person who created the invite through the
+	// API; nil for invites created from the command line.
+	InvitedByPrincipal *uuid.UUID
+	CreatedAt          time.Time
+	ExpiresAt          *time.Time
+	RedeemedAt         *time.Time
+	RedeemedBy         *uuid.UUID
 }
 
 // Status is "redeemed", "expired" or "pending" at the given time.
@@ -70,6 +74,8 @@ type AddOptions struct {
 	Note string
 	// InvitedBy labels the operator creating the invite.
 	InvitedBy string
+	// InvitedByPrincipal is the person creating the invite through the API.
+	InvitedByPrincipal *uuid.UUID
 	// ExpiresAt ends the invite; nil means it does not expire.
 	ExpiresAt *time.Time
 }
@@ -115,6 +121,11 @@ func (s *Store) Add(ctx context.Context, email string, opts AddOptions) (*Invite
 			return nil, fmt.Errorf("%w: %s", ErrAlreadyRedeemed, email)
 		}
 		u := existing.Update().SetNote(opts.Note).SetInvitedBy(opts.InvitedBy)
+		if opts.InvitedByPrincipal != nil {
+			u.SetInvitedByPrincipalID(*opts.InvitedByPrincipal)
+		} else {
+			u.ClearInvitedByPrincipalID()
+		}
 		if opts.ExpiresAt != nil {
 			u.SetExpiresAt(*opts.ExpiresAt)
 		} else {
@@ -128,7 +139,8 @@ func (s *Store) Add(ctx context.Context, email string, opts AddOptions) (*Invite
 	case !ent.IsNotFound(err):
 		return nil, fmt.Errorf("signupgate: reading invite: %w", err)
 	}
-	c := s.client.SignupInvite.Create().SetEmail(email).SetNote(opts.Note).SetInvitedBy(opts.InvitedBy)
+	c := s.client.SignupInvite.Create().SetEmail(email).SetNote(opts.Note).SetInvitedBy(opts.InvitedBy).
+		SetNillableInvitedByPrincipalID(opts.InvitedByPrincipal)
 	if opts.ExpiresAt != nil {
 		c.SetExpiresAt(*opts.ExpiresAt)
 	}
@@ -214,7 +226,7 @@ func (s *Store) Redeem(ctx context.Context, email string, principalID uuid.UUID)
 
 func toInvite(r *ent.SignupInvite) *Invite {
 	return &Invite{
-		Email: r.Email, Note: r.Note, InvitedBy: r.InvitedBy, CreatedAt: r.CreatedAt,
+		Email: r.Email, Note: r.Note, InvitedBy: r.InvitedBy, InvitedByPrincipal: r.InvitedByPrincipalID, CreatedAt: r.CreatedAt,
 		ExpiresAt: r.ExpiresAt, RedeemedAt: r.RedeemedAt, RedeemedBy: r.RedeemedBy,
 	}
 }
@@ -227,6 +239,7 @@ func toInvite(r *ent.SignupInvite) *Invite {
 type Gate struct {
 	store *Store
 	codes *CodeStore
+	audit audit.Emitter
 
 	// reserved holds the code use reserved for each login between
 	// AllowSignup and SignedUp or SignupAborted, keyed by loginKey. Both
@@ -245,6 +258,12 @@ type GateOption func(*Gate)
 // WithCodes lets the gate admit people who bring an invite code from codes.
 func WithCodes(codes *CodeStore) GateOption {
 	return func(g *Gate) { g.codes = codes }
+}
+
+// WithGateAudit emits signup_code.redeemed through emitter when a code
+// admits an account.
+func WithGateAudit(emitter audit.Emitter) GateOption {
+	return func(g *Gate) { g.audit = emitter }
 }
 
 // NewGate returns a gate that allows a sign-up when the login's verified
@@ -304,8 +323,35 @@ func (g *Gate) SignedUp(ctx context.Context, login systemauth.ExternalLogin, pri
 	if !ok || id == inviteAdmitted {
 		return g.store.Redeem(ctx, login.Email, principalID)
 	}
-	return g.codes.Redeem(ctx, id, principalID, login.Email)
+	if err := g.codes.Redeem(ctx, id, principalID, login.Email); err != nil {
+		return err
+	}
+	if g.audit != nil {
+		ev := &audit.Event{
+			EventType: EventCodeRedeemed,
+			Action:    "redeem",
+			Actor:     audit.Actor{ID: principalID, Type: "human", Identifier: login.Email},
+			Resource:  audit.Resource{Type: "signup_code", ID: id},
+			Outcome:   "success",
+			Details:   map[string]any{"provider": login.Provider},
+		}
+		if err := g.audit.Emit(ctx, ev); err != nil {
+			systemauth.LoggerFromContext(ctx).Error("signupgate: emit audit event", "event_type", EventCodeRedeemed, "code_id", id, "error", err)
+		}
+	}
+	return nil
 }
+
+// Audit event types for sign-up invites.
+const (
+	EventInviteCreated   = "signup_invite.created"
+	EventInviteRevoked   = "signup_invite.revoked"
+	EventCodeCreated     = "signup_code.created"
+	EventCodeRevoked     = "signup_code.revoked"
+	EventCodeRedeemed    = "signup_code.redeemed"
+	EventAllowanceSet    = "signup_allowance.set"
+	EventWaitlistInvited = "signup_waitlist.invited"
+)
 
 // SignupAborted implements systemauth.SignupGateAborter by giving back a
 // reserved code use when the account was not created, for example because
