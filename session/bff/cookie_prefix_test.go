@@ -1,7 +1,9 @@
 package bff
 
 import (
+	"bytes"
 	"errors"
+	"log/slog"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -74,5 +76,36 @@ func TestCustomNameCookieIsHostOnly(t *testing.T) {
 		if strings.Contains(strings.ToLower(h), "domain=") {
 			t.Errorf("Set-Cookie = %q, want no Domain attribute", h)
 		}
+	}
+}
+
+// TestNewHandler_WarnsForInsecureCookie expects NewHandler to warn once
+// when the session cookie is not Secure, and not otherwise.
+func TestNewHandler_WarnsForInsecureCookie(t *testing.T) {
+	for name, tc := range map[string]struct {
+		cfg   CookieConfig
+		warns int
+	}{
+		"default":        {cfg: CookieConfig{}, warns: 0},
+		"allow insecure": {cfg: CookieConfig{AllowInsecure: true}, warns: 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var logs bytes.Buffer
+			h, err := NewHandler(HandlerConfig{
+				Store:          NewMemoryStore(DefaultStoreConfig()),
+				AllowedOrigins: []string{"https://example.com"},
+				CookieConfig:   tc.cfg,
+				Logger:         slog.New(slog.NewTextHandler(&logs, nil)),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := strings.Count(logs.String(), "not Secure"); got != tc.warns {
+				t.Errorf("warnings = %d, want %d:\n%s", got, tc.warns, logs.String())
+			}
+			if tc.warns > 0 && h.cookieManager.Config().Name != InsecureCookieName {
+				t.Errorf("insecure cookie name = %q, want %q", h.cookieManager.Config().Name, InsecureCookieName)
+			}
+		})
 	}
 }

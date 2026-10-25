@@ -17,9 +17,13 @@ type HandlerConfig struct {
 	// Store is the session store. Required.
 	Store Store
 
-	// CookieConfig configures session cookies.
-	// If zero value, uses DefaultCookieConfig().
+	// CookieConfig configures session cookies. Fields left out take the
+	// defaults of DefaultCookieConfig().
 	CookieConfig CookieConfig
+
+	// Logger receives operational errors and the startup warning for an
+	// insecure (development) cookie. Default: slog.Default().
+	Logger *slog.Logger
 
 	// ProxyConfig configures the API proxy.
 	// TargetURL is required if using the proxy.
@@ -117,9 +121,8 @@ func NewHandler(config HandlerConfig) (*Handler, error) {
 	}
 
 	// Apply defaults
-	cookieConfig := config.CookieConfig
-	if cookieConfig.Name == "" {
-		cookieConfig = DefaultCookieConfig()
+	if config.Logger == nil {
+		config.Logger = slog.Default()
 	}
 
 	clientIPConfig := config.ClientIPConfig
@@ -134,9 +137,15 @@ func NewHandler(config HandlerConfig) (*Handler, error) {
 	config.MaxLifetime = resolveLifetimeLimit(config.MaxLifetime, DefaultMaxLifetime)
 
 	// Create components
-	cookieManager := NewCookieManager(cookieConfig)
+	// NewCookieManager applies the cookie defaults, so a config that sets
+	// only some fields (AllowInsecure for development, say) keeps them.
+	cookieManager := NewCookieManager(config.CookieConfig)
 	if err := cookieManager.Config().Validate(); err != nil {
 		return nil, err
+	}
+	if !cookieManager.Config().Secure {
+		config.Logger.Warn("bff: the session cookie is not Secure (AllowInsecure); use this for local development over plain HTTP only",
+			"cookie", cookieManager.Config().Name)
 	}
 
 	originValidator := NewOriginValidator(OriginConfig{
@@ -407,7 +416,7 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 			h.writeJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 			return
 		}
-		slog.ErrorContext(ctx, "bff: loading session at logout failed", "error", err)
+		h.config.Logger.ErrorContext(ctx, "bff: loading session at logout failed", "error", err)
 		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "logout_failed", "message": "Logout failed; retry"})
 		return
 	}
@@ -416,13 +425,13 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if h.config.OnLogout != nil {
 		// Call logout hook (e.g., to revoke refresh token in DB)
 		if err := h.config.OnLogout(ctx, session); err != nil {
-			slog.ErrorContext(ctx, "bff: logout hook failed", "error", err)
+			h.config.Logger.ErrorContext(ctx, "bff: logout hook failed", "error", err)
 			revokeFailed = true
 		}
 	}
 
 	if err := h.store.Delete(ctx, session.ID); err != nil && !errors.Is(err, ErrSessionNotFound) {
-		slog.ErrorContext(ctx, "bff: deleting session at logout failed", "error", err)
+		h.config.Logger.ErrorContext(ctx, "bff: deleting session at logout failed", "error", err)
 		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "logout_failed", "message": "Logout failed; retry"})
 		return
 	}
@@ -465,7 +474,7 @@ func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	// past them.
 	if session.IsRefreshTokenExpired() || h.sessionLifetimeExceeded(session) {
 		if err := h.store.Delete(r.Context(), session.ID); err != nil && !errors.Is(err, ErrSessionNotFound) {
-			slog.ErrorContext(r.Context(), "bff: deleting expired session failed", "error", err)
+			h.config.Logger.ErrorContext(r.Context(), "bff: deleting expired session failed", "error", err)
 		}
 		h.cookieManager.ClearSessionCookie(w)
 		http.Error(w, "Unauthorized: Session expired", http.StatusUnauthorized)
