@@ -71,6 +71,21 @@ func (c *Client) IsPublic() bool {
 	return c.app.Public
 }
 
+// DPoPBoundAccessTokens reports whether the client must use DPoP (RFC
+// 9449's dpop_bound_access_tokens): every client except one registered
+// with the allow_bearer_tokens legacy exception, which may get unbound
+// bearer tokens.
+func (c *Client) DPoPBoundAccessTokens() bool {
+	return !c.app.AllowBearerTokens
+}
+
+// requiresDPoP reports whether a client must send DPoP proofs. Only a
+// Client registered with the bearer-token exception is exempt.
+func requiresDPoP(c fosite.Client) bool {
+	oc, ok := c.(*Client)
+	return !ok || oc.DPoPBoundAccessTokens()
+}
+
 // GetAudience returns the audience for this client.
 func (c *Client) GetAudience() fosite.Arguments {
 	// Default to the client ID as audience

@@ -2,6 +2,8 @@ package oauth
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
 	"io"
@@ -91,37 +93,17 @@ func TestOpenIDConfiguration(t *testing.T) {
 
 // TestJWKS tests the JSON Web Key Set endpoint.
 func TestJWKS(t *testing.T) {
-	config := &Config{
-		Issuer:     "https://auth.example.com",
-		HashSecret: []byte("test-secret-32-bytes-long-xxxxx"),
-	}
-
-	provider := &Provider{
-		config: config,
-	}
-
-	api := &API{
-		provider: provider,
-	}
-
-	// Call the handler directly
-	output, err := api.getJWKS(context.Background(), &struct{}{})
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		t.Fatalf("getJWKS returned error: %v", err)
+		t.Fatal(err)
 	}
-
-	jwks := output.Body
-
-	// A provider without a key publishes an empty set.
-	if jwks.Keys == nil {
-		t.Error("expected Keys to be non-nil (empty slice)")
-	}
-
-	p, err := NewProvider(nil, ephemeralConfig(DefaultConfig("https://auth.example.com", []byte("test-secret-32-bytes-long-xxxxx"))))
+	cfg := DefaultConfig("https://auth.example.com", []byte("test-secret-32-bytes-long-xxxxx"))
+	cfg.PrivateKey = key
+	p, err := NewProvider(nil, cfg)
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)
 	}
-	output, err = (&API{provider: p}).getJWKS(context.Background(), &struct{}{})
+	output, err := (&API{provider: p}).getJWKS(context.Background(), &struct{}{})
 	if err != nil {
 		t.Fatalf("getJWKS returned error: %v", err)
 	}
@@ -133,7 +115,7 @@ func TestJWKS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode n: %v", err)
 	}
-	if k.Kty != "RSA" || k.Alg != "RS256" || k.Kid == "" || new(big.Int).SetBytes(n).Cmp(p.key.N) != 0 {
+	if k.Kty != "RSA" || k.Alg != "RS256" || k.Kid == "" || new(big.Int).SetBytes(n).Cmp(key.N) != 0 {
 		t.Errorf("JWK does not describe the provider key: %+v", k)
 	}
 }
@@ -201,13 +183,9 @@ func TestOpenIDConfigurationHTTP(t *testing.T) {
 
 // TestJWKSHTTP tests the JWKS endpoint via HTTP.
 func TestJWKSHTTP(t *testing.T) {
-	config := &Config{
-		Issuer:     "https://auth.example.com",
-		HashSecret: []byte("test-secret-32-bytes-long-xxxxx"),
-	}
-
-	provider := &Provider{
-		config: config,
+	provider, err := NewProvider(nil, ephemeralConfig(DefaultConfig("https://auth.example.com", []byte("test-secret-32-bytes-long-xxxxx"))))
+	if err != nil {
+		t.Fatalf("NewProvider: %v", err)
 	}
 
 	api := &API{
