@@ -130,7 +130,7 @@ p, err := principals.UpdateHuman(ctx, principalID, principal.UpdateHumanInput{
 })
 ```
 
-`Deactivate` and `Reactivate` toggle `active`; a deactivated principal cannot authenticate.
+`Deactivate` and `Reactivate` toggle `active`; a deactivated principal cannot authenticate and holds no access. `Deactivate` records the `deactivated` access change and, with an authorization syncer, removes every relationship the principal holds from the graph (memberships, application roles, resource grants, platform administration and the manager relations in which it is the manager) before it commits; if the graph refuses, the principal stays active and the error is returned. The rows stay, so `Reactivate` writes the relationships they still call for back after it commits, and the graph reconciler of mode `rebac` repairs any write that fails. `Update` with `Active` does the same.
 
 ## SystemAuth Storage
 

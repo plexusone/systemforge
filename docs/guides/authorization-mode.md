@@ -56,9 +56,26 @@ invites := invite.NewService(db, baseURL,
 
 `mode.New` applies defaults, validates, and for `rebac` starts or connects to
 the engine and writes the schema composed from the registered vocabularies.
-`Result` carries `Provider`, `Syncer`, `Grants`, `Reconciler`, `Schedule`
-and `Close()`. The membership, role and grant tables remain the record in
-both modes; under `rebac` the services mirror each change into the graph.
+`Result` carries `Provider`, `Syncer`, `SyncMode`, `Grants`, `Reconciler`,
+`Schedule` and `Close()`. The membership, role and grant tables remain the
+record in both modes; under `rebac` the services mirror each change into
+the graph. Build one `Result` per process and give its `Syncer` and
+`SyncMode` to every identity service that changes access; a service left
+with the default no-op syncer writes nothing to the graph.
+
+### The packaged SystemAuth service
+
+`systemauthsvc.New` reads the same `authz` key and builds the mode once when
+it has a database. The services it constructs (the organization, principal
+and store behind SCIM, managed principals, the social login directory and
+application roles) write through its syncer, with
+`Options.AuthzSyncMode` (default `eventual`); the SCIM token API and
+connections check with its provider; and `RunJobs` runs the reconciler at
+startup and on schedule, so run `RunJobs` beside the server (the
+`systemauth serve` command does). `Service.Authz()` returns the `Result`
+for identity services an application constructs beside the service.
+`rbac` stays the default. Connections are served in `rbac` only; a
+configuration enabling them under `rebac` is refused at startup.
 
 `Deps` also takes `SyncMode` (what a failed write of granted access does:
 `strict` returns it, `eventual`, the default, logs it), `AccessChangeSink`,
@@ -77,10 +94,20 @@ than the tables record.
   the call returns the error, in both sync modes. Nothing has changed, so
   the caller retries the same call; removing a relationship that is
   already gone succeeds.
-- **Grants write after.** Adding a member, assigning a role or granting a
-  resource commits first and then writes the graph. A failed write is
-  returned (`strict`) or logged (`eventual`); the access is missing, not
-  extra.
+  Deactivating a principal removes every relationship it holds (its
+  memberships, application roles, resource grants, platform
+  administration and the manager relations in which it is the manager)
+  the same way, and demoting a member to collaborator deletes their
+  application roles, removing them from the graph first. SCIM deletes a
+  user only after removing its relationships.
+- **Grants write after, under the lock.** Adding a member, assigning a
+  role or granting a resource commits first and then writes the graph,
+  in a transaction holding the graph locks of the organization and the
+  principal, after reading the rows again: a revocation that committed in
+  between is never undone, and one that starts later waits and removes
+  what was written. A failed write is returned (`strict`) or logged
+  (`eventual`); the access is missing, not extra. Reactivating a
+  principal writes back the relationships its rows still call for.
 - **The reconciler repairs the rest.** `Result.Reconciler` compares the
   graph with the tables and writes what is missing and deletes what is
   stale: a grant whose write failed, a relationship a revocation removed
@@ -102,8 +129,12 @@ The reconciler manages only the relationships the identity services write:
 organization memberships, platform administration, manager relations,
 application roles on `{app}_org` facets and resource grants on collaborator
 resource types. It does not touch other relationships, such as the `org`
-relation an application writes on its resources. Inactive memberships and
-deleted organizations call for no relationships.
+relation an application writes on its resources. What the tables call for
+is defined once, in `identity/graphstate`, which the services also read
+before a grant write: inactive memberships, deleted organizations and
+deactivated principals call for no relationships, application roles count
+only through an owner, admin or member membership (never a collaborator's),
+and a manager relation only while the manager is active.
 
 It is safe to run beside normal traffic and on several instances at once.
 It reads the graph before the tables, so a grant committed meanwhile is not

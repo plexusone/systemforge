@@ -344,14 +344,29 @@ tables record:
   principal or organization. When the graph refuses, the transaction rolls
   back and the error is returned whatever the `SyncMode`; nothing changed,
   so the call is retried as is. Removing an absent relationship succeeds.
-- **Grants write after.** A change that grants access commits and then
-  writes the relationship; `authz.SyncMode` decides whether a failed write
-  is returned (`strict`) or logged (`eventual`, the default).
+  Deactivating a principal removes all of its relationships this way, and
+  demoting a member to collaborator deletes their application roles with
+  the demotion.
+- **Grants write after, under the lock.** A change that grants access
+  commits and then writes the relationship through `graphlock.Grant`: in
+  a transaction holding the graph locks of the organization and the
+  principal (both principals for a manager relation), it reads the rows
+  again and writes only what `identity/graphstate` says they still call
+  for, so a revocation that committed in between is not undone.
+  `authz.SyncMode` decides whether a failed write is returned (`strict`)
+  or logged (`eventual`, the default).
 - **The reconciler repairs.** `mode.Reconciler` compares the graph with the
   tables, writes missing relationships and deletes stale ones. What it
   repairs is always missing access (a failed grant write, a revocation
   whose commit failed after the graph change) or a stale relationship left
   when a grant and a revocation of the same access raced.
+
+What the tables call for is defined once, in `identity/graphstate`: active
+memberships of active organizations, application roles held through an
+owner, admin or member membership, resource grants held through any
+membership, platform administration, and active manager relations of an
+active manager, all only for active principals. The grant writes and the
+reconciler both use it.
 
 The reconciler handles one definition at a time (`organization`,
 `platform`, `principal`, each `{app}_org` facet, each collaborator
@@ -367,10 +382,11 @@ reconciler does not serialize with revocations.
 
 | Caller | Syncer calls |
 |---|---|
-| `organization.Service` | After commit: `RegisterOrganization` (create), `AddOrgMembership` (add, reactivation, the new role of a role change or transfer), `UpdateOrgMembership` (the new owner of a transfer). Before commit: `RemoveOrgMembership` (removal, deactivation, the old role of a role change, the previous owner of a transfer), `UnregisterOrganization` with the members' `RemoveAppRole` and `RemoveResourceGrant` (delete) |
+| `organization.Service` | After commit: `RegisterOrganization` (create), `AddOrgMembership` (add, reactivation, the new role of a role change or transfer), `UpdateOrgMembership` (the new owner of a transfer). Before commit: `RemoveOrgMembership` (removal, deactivation, the old role of a role change, the previous owner of a transfer), `RemoveAppRole` (removal, deactivation, demotion to collaborator), `UnregisterOrganization` with the members' `RemoveAppRole` and `RemoveResourceGrant` (delete) |
+| `scim/store.EntStore` (with `Config.Syncer`) | Before the deletion commits: `UnregisterPrincipal`, `RemovePrincipalManager`, `RemoveAppRole`, `RemoveResourceGrant` (`DeleteUser`) |
 | `approle.Service` (with `WithAuthzSyncer`) | After commit: `AddAppRole` (assign, and the new role of a change). Before commit: `RemoveAppRole` (remove, the old role of a change, `RemoveForMember`) |
 | `resourcegrant.Service` | After commit: `AddOrgMembership` (collaborator), `SetResourceGrant` (new or raised grant). Before commit: `SetResourceGrant` (lowered grant), `RemoveResourceGrant` and the collaborator's `RemoveOrgMembership` (revoke) |
-| `principal.Service` | After commit: `RegisterPrincipal`, `SetPlatformAdmin(true)`. Before commit: `SetPlatformAdmin(false)` |
+| `principal.Service` | After commit: `RegisterPrincipal`, `SetPlatformAdmin(true)`, and on `Reactivate` every relationship the principal's rows call for. Before commit: `SetPlatformAdmin(false)`, and on `Deactivate` the principal's `RemoveOrgMembership`, `RemoveAppRole`, `RemoveResourceGrant`, `SetPlatformAdmin(false)` and the `RemovePrincipalManager` of the relations it manages |
 | `managedprincipal.Service` | After commit: `RegisterPrincipal`, `AddPrincipalManager`. Before commit: `RemovePrincipalManager` (remove, release, delete), `UnregisterPrincipal` with the memberships' `RemoveAppRole` and `RemoveResourceGrant` (delete) |
 | `marketplace` (`marketplace.AuthzSyncer`, `SpiceDBSyncer`) | Listing, license, license revocation, seat assignment and unassignment, subscription relationships |
 
@@ -449,8 +465,8 @@ to be recorded as a reduced grant.
 |---|---|---|
 | `membership_removed` | The principal was removed from, or deactivated in, an organization | `organization.RemoveMember`; `UpdateMember` setting a membership inactive (scoped to the organization) |
 | `org_role_changed` | The principal's organization role changed | `UpdateMember` changing the role; `TransferOwnership`, for both principals (scoped) |
-| `app_role_changed` | An application role was changed or removed | `approle.Change` to a different role, `Remove`, `RemoveForMember` (scoped); assignment only adds access and records nothing |
-| `deactivated` | The principal was deactivated | `principal.Deactivate`; `managedprincipal.Delete` (every organization) |
+| `app_role_changed` | An application role was changed or removed | `approle.Change` to a different role, `Remove`, `RemoveForMember`, `organization.UpdateMember` demoting a member who held application roles to `collaborator` (scoped); assignment only adds access and records nothing |
+| `deactivated` | The principal was deactivated | `principal.Deactivate` and `principal.Update` setting `Active` false; `managedprincipal.Delete` (every organization) |
 | `sessions_revoked` | The principal's sessions or tokens were revoked | `token.RevokeAllForPrincipal`, `EntStorage.RevokeSubjectTokens` for a principal subject, `managedprincipal.RevokeSession` and `RevokeAll` (every organization) |
 | `management_granted` | The principal came under management and gave up the capabilities managed principals do not hold | `managedprincipal.AcceptManagerInvite` (every organization) |
 | `management_ended` | The principal's management ended and its own capabilities were restored | `managedprincipal.Release`; `RemoveManager` removing the last manager of a principal with a verified email (every organization) |

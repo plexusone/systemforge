@@ -163,19 +163,33 @@ st := store.NewEntStore(client, &store.Config{
     BaseURL:     "/scim/v2",
     DefaultRole: "member",
     Memberships: orgService,       // organization.Service with the authz syncer
-    Principals:  principalService, // principal.Service
+    Principals:  principalService, // principal.Service with the authz syncer
+    Syncer:      res.Syncer,       // the same syncer, for deleted users
 })
 ```
 
 Without them the store builds services on its Ent client: access changes are
 still recorded, but no authorization graph is synced, which a SpiceDB
-deployment needs.
+deployment needs. The packaged SystemAuth service passes all three from its
+authorization mode.
+
+Deleting a user the organization owns (or any user, with a platform
+credential) removes its memberships through the membership service and
+deactivates the account, which removes the account's remaining access from
+the graph. The deletion itself then removes, before it commits, every
+relationship left on the account (platform administration, manager
+relations on both sides, application roles and resource grants) through
+`Config.Syncer`; if the graph refuses, the account is kept and the request
+fails, so the identity provider's retry completes it.
 
 Two rules apply on top:
 
 - An organization owner is never suspended, removed or deleted through SCIM
   (403), so an identity provider cannot lock a customer out of its own
   organization. Transfer ownership first.
+- A user who actively manages other accounts (a guardian or educator) is not
+  deleted (409), so the accounts it manages are not left without it.
+  Transfer their management first.
 - A restored membership (`active` back to true, or re-adding a removed member
   to the group) gets the default role, not the role it had before, because
   the identity provider does not manage roles.

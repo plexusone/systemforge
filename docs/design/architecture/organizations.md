@@ -151,8 +151,11 @@ Changes that end access (`RemoveMember`, a deactivation or role change in
 `UpdateMember`, `TransferOwnership`, `Delete`) remove the relationships
 from the graph inside their transaction, before the commit, and roll back
 with the error when the graph refuses, whatever the mode; the call can then
-be retried as is. Granted relationships are written after the commit:
-`strict` fails the call on a sync error, `eventual`, the default, logs it.
+be retried as is. Granted relationships are written after the commit,
+holding the graph locks of the organization and the principal and only if
+the rows still call for them, so a revocation that committed in between is
+not undone: `strict` fails the call on a sync error, `eventual`, the
+default, logs it.
 See [Keeping providers in step with identity](authorization.md#keeping-providers-in-step-with-identity).
 
 | Method | Behavior |
@@ -206,7 +209,7 @@ only `role = owner` plus `sf_organizations.owner_principal_id`.
 | Method | Behavior |
 |---|---|
 | `AddMember(input)` | Refuses when a membership (active or not) exists; creates it active; `syncer.AddOrgMembership(principal, org, role)` |
-| `UpdateMember(membershipID, input)` | Role, permissions, active; a role change calls `syncer.UpdateOrgMembership(old, new)` |
+| `UpdateMember(membershipID, input)` | Role, permissions, active. A role change removes the old role from the graph before the commit and writes the new one after; a change to `collaborator` also deletes the member's application roles in the organization, removing them from the graph first, and records `app_role_changed` |
 | `RemoveMember(orgID, principalID)` | Deletes the row; `syncer.RemoveOrgMembership` |
 | `GetMembership(orgID, principalID)` | Returns the row whatever its `active` value, or `ErrMembershipNotFound` |
 | `ListMembers(orgID)`, `ListMemberships(principalID)` | Active rows by default |
@@ -467,7 +470,9 @@ in its hierarchy; when an owner also has a stored role the higher wins.
 Admins and members hold only stored roles, and nobody holds any by default.
 Deactivating a membership leaves the rows but they are not effective;
 removing the member deletes them, in the same transaction
-(`organization.Service.RemoveMember`, and SCIM's group member removal).
+(`organization.Service.RemoveMember`, and SCIM's group member removal), and
+so does demoting the member to `collaborator` (`UpdateMember`); promoting
+them again does not restore the roles.
 
 HTTP endpoints, on the organization API when `APIConfig.AppRoles` is set
 (501 otherwise):
