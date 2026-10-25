@@ -118,6 +118,9 @@ Security properties:
   every login and any presented session is deleted (no fixation).
 - Login state is single-use, server-side, and bound to the browser with a
   `__Host-sf_rp_state` cookie; PKCE and the OIDC `nonce` are always used.
+- `InsecureCookies` drops `Secure` and the `__Host-` prefix for local
+  development over plain HTTP; `NewBFF` logs a warning when it is set. See
+  [Browser Cookies](../guides/cookies.md).
 - The ID token is verified per OIDC Core §3.1.3.7 (RS256 signature against
   the JWKS, `iss`, `aud`/`azp`, `exp`, `nonce`), and the UserInfo `sub` must
   match it.

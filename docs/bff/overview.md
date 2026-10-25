@@ -261,6 +261,11 @@ Default cookie settings:
 | Secure | true | HTTPS only (`AllowInsecure` for localhost) |
 | SameSite | Strict | Prevents CSRF via cookie scope |
 | Path | / | Available to all paths |
+| Domain | none | Host-only; never shared with sibling subdomains |
+
+`NewHandler` logs a warning when `AllowInsecure` leaves the cookie without
+`Secure`. See [Browser Cookies](../guides/cookies.md) for every cookie
+SystemForge sets.
 
 ### Rate Limiting
 
