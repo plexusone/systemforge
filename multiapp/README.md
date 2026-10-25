@@ -466,6 +466,31 @@ Set `MiddlewareConfig.AppAudiences` to derive a different audience per app.
 Set `AllowCrossAppTokens` only when one token is meant to work in every app;
 tokens are then checked against the JWT service's own `Config.Audience`.
 
+## Tokens Are DPoP-Bound
+
+`AuthMiddleware` requires DPoP (RFC 9449): a token must be bound to a key
+(`cnf.jkt`, minted with `jwt.TokenOptions{DPoPThumbprint: ...}`) and come with
+`Authorization: DPoP <token>` and a fresh proof by that key for the request,
+carrying the token's hash. Configure it with a replay cache shared by every
+instance and the external base URL clients use:
+
+```go
+auth, err := multiapp.AuthMiddleware(multiapp.MiddlewareConfig{
+    JWTService:  jwtService,
+    RequireAuth: true,
+    DPoP: middleware.DPoPConfig{
+        ReplayCache: middleware.NewRedisReplayCache(redisClient, "dpop-jti:"),
+        BaseURL:     "https://apps.example.com",
+    },
+})
+```
+
+The proof's `htu` must equal `DPoP.BaseURL` plus the request path as this
+server sees it. Behind a proxy that strips a path prefix, include the prefix
+in `BaseURL` (for example `https://example.com/api`). Unbound bearer tokens
+are refused unless `DPoP.AllowBearer` is set, an explicit opt-in for legacy
+clients; a DPoP-bound token is never accepted as Bearer.
+
 ## Optional: SystemAuth Integration
 
 Apps can optionally integrate with SystemAuth for:
