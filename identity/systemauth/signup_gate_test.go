@@ -148,3 +148,56 @@ func TestSignupDeniedURLValidation(t *testing.T) {
 		}
 	}
 }
+
+// abortingGate is a stubGate that records aborted sign-ups.
+type abortingGate struct {
+	stubGate
+	aborted []string
+}
+
+func (g *abortingGate) SignupAborted(_ context.Context, login ExternalLogin) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.aborted = append(g.aborted, login.Email)
+}
+
+// failingDirectory fails every account creation.
+type failingDirectory struct {
+	PrincipalDirectory
+	err error
+}
+
+func (d failingDirectory) CreateFromExternal(context.Context, ExternalLogin) (*HumanPrincipal, error) {
+	return nil, d.err
+}
+
+func TestGatedDirectoryAbortsWhenCreationFails(t *testing.T) {
+	gate := &abortingGate{stubGate: stubGate{allowed: map[string]bool{"ada@example.com": true}}}
+	d := &gatedDirectory{PrincipalDirectory: failingDirectory{err: errSignupAgeRequired}, gate: gate}
+	ctx := t.Context()
+	if _, err := d.CreateFromExternal(ctx, ExternalLogin{Email: "ada@example.com"}); err != errSignupAgeRequired { //nolint:errorlint // the sentinel is returned as is
+		t.Fatalf("err = %v", err)
+	}
+	if _, err := d.CreateFromExternal(ctx, ExternalLogin{Email: "grace@example.com"}); err != ErrSignupNotInvited { //nolint:errorlint // the sentinel is returned as is
+		t.Fatalf("uninvited err = %v", err)
+	}
+	if len(gate.aborted) != 1 || gate.aborted[0] != "ada@example.com" {
+		t.Errorf("aborted = %v; want only the allowed sign-up whose creation failed", gate.aborted)
+	}
+	if len(gate.signedUp) != 0 {
+		t.Errorf("signed up = %v", gate.signedUp)
+	}
+}
+
+func TestSignupCodeContext(t *testing.T) {
+	ctx := t.Context()
+	if got := SignupCodeFromContext(ctx); got != "" {
+		t.Errorf("empty context carries %q", got)
+	}
+	if got := SignupCodeFromContext(WithSignupCode(ctx, "")); got != "" {
+		t.Errorf("empty code carried as %q", got)
+	}
+	if got := SignupCodeFromContext(WithSignupCode(ctx, "ABCD")); got != "ABCD" {
+		t.Errorf("code = %q", got)
+	}
+}
