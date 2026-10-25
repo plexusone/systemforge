@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 
@@ -167,7 +168,7 @@ func newAPIWith(t *testing.T, withGrants bool) *apiEnv {
 	}
 	opts := connections.Options{
 		Authorizer: az, Providers: reg,
-		Egress: egress.Policy{AllowPrivate: true, AllowHTTP: true},
+		Egress: egress.Policy{AllowPrefixes: []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}, AllowHTTP: true},
 	}
 	if withGrants {
 		e.granter = newFakeGranter()

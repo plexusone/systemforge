@@ -86,6 +86,14 @@ func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) 
 	if err != nil {
 		return err
 	}
+	prefixes, err := cc.EgressPrefixes()
+	if err != nil {
+		return err
+	}
+	if len(prefixes) > 0 || cc.AllowHTTPEgress {
+		s.logger.Warn("connections: provider requests may reach non-public addresses or use plain HTTP; use this for development only",
+			"egress_allow_prefixes", cc.EgressAllowPrefixes, "allow_http_egress", cc.AllowHTTPEgress)
+	}
 	s.conns, err = connections.Open(connections.Options{
 		DB:         s.db,
 		Dialect:    sqlstore.Dialect(s.dialect),
@@ -96,7 +104,7 @@ func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) 
 		Audit:      opts.AuditStore,
 		Logger:     s.logger,
 		Providers:  opts.Providers,
-		Egress:     egress.Policy{AllowPrivate: cc.AllowPrivateEgress, AllowHTTP: cc.AllowPrivateEgress},
+		Egress:     egress.Policy{AllowPrefixes: prefixes, AllowHTTP: cc.AllowHTTPEgress},
 	})
 	if err != nil {
 		return err

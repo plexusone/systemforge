@@ -24,7 +24,10 @@ connections:
 | `keys_dir` | Directory holding the key ring and its registry. Back it up with the database: without it, stored credentials cannot be read |
 | `vault` | omnivault URI of the deployment's secret store: `env://`, `file:///etc/systemauth/secrets`, or a registered provider |
 | `root_key` | Path in the vault of the key ring's root key: 32 random bytes as base64 or hex |
-| `allow_private_egress` | Development only: lets provider requests reach loopback and private addresses over plain HTTP |
+| `egress_allow_prefixes` | Development only: address ranges in CIDR notation, such as `127.0.0.0/8`, that provider requests may reach although they are not public. List only the ranges your local fakes use. Link-local and cloud metadata addresses are refused even when listed |
+| `allow_http_egress` | Development only: lets provider requests use plain HTTP |
+
+When either development setting is on, SystemAuth logs a warning at startup.
 
 Create the root key once and keep it in the secret store, not beside
 `keys_dir`:

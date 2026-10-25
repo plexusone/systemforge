@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -381,7 +382,7 @@ func openConnections(t *testing.T, e *env) *connections.Connections {
 			roles: map[uuid.UUID]string{e.admin: "admin", e.member: "member"},
 			perms: connections.RolePermissions(authz.DefaultRolePermissions),
 		},
-		Egress: egress.Policy{AllowPrivate: true, AllowHTTP: true},
+		Egress: egress.Policy{AllowPrefixes: []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}, AllowHTTP: true},
 	})
 	if err != nil {
 		t.Fatal(err)

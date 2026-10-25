@@ -601,9 +601,16 @@
           "type": "string",
           "description": "Path in the vault of the key ring's 32-byte root key"
         },
-        "allow_private_egress": {
+        "egress_allow_prefixes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Development only: CIDR ranges provider requests may reach although not public (link-local and metadata addresses are always refused)"
+        },
+        "allow_http_egress": {
           "type": "boolean",
-          "description": "Development only: allow provider requests to private addresses and plain HTTP"
+          "description": "Development only: allow provider requests over plain HTTP"
         }
       },
       "additionalProperties": false,

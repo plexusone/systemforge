@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"net/netip"
 	"net/url"
 	"time"
 
@@ -138,9 +139,29 @@ type ConnectionsConfig struct {
 	// as base64 or hex, for example the output of openssl rand -base64 32.
 	RootKey string `json:"root_key" yaml:"root_key" jsonschema:"required,description=Path in the vault of the key ring's 32-byte root key"`
 
-	// AllowPrivateEgress lets provider requests reach private and loopback
-	// addresses and plain HTTP. For development against local fakes only.
-	AllowPrivateEgress bool `json:"allow_private_egress,omitempty" yaml:"allow_private_egress,omitempty" jsonschema:"description=Development only: allow provider requests to private addresses and plain HTTP"`
+	// EgressAllowPrefixes lists address ranges in CIDR notation, such as
+	// 127.0.0.0/8, that provider requests may reach although they are not
+	// public. For development against local fakes only: list just the
+	// ranges the fakes use. Link-local and cloud metadata addresses are
+	// refused even when listed.
+	EgressAllowPrefixes []string `json:"egress_allow_prefixes,omitempty" yaml:"egress_allow_prefixes,omitempty" jsonschema:"description=Development only: CIDR ranges provider requests may reach although not public (link-local and metadata addresses are always refused)"`
+
+	// AllowHTTPEgress lets provider requests use plain HTTP. For
+	// development against local fakes only.
+	AllowHTTPEgress bool `json:"allow_http_egress,omitempty" yaml:"allow_http_egress,omitempty" jsonschema:"description=Development only: allow provider requests over plain HTTP"`
+}
+
+// EgressPrefixes parses EgressAllowPrefixes.
+func (c *ConnectionsConfig) EgressPrefixes() ([]netip.Prefix, error) {
+	out := make([]netip.Prefix, 0, len(c.EgressAllowPrefixes))
+	for _, s := range c.EgressAllowPrefixes {
+		p, err := netip.ParsePrefix(s)
+		if err != nil {
+			return nil, fmt.Errorf("%w: egress_allow_prefixes: %w", ErrInvalidConnectionsConfig, err)
+		}
+		out = append(out, p.Masked())
+	}
+	return out, nil
 }
 
 // ErrInvalidConnectionsConfig is returned for an incomplete connections
@@ -152,6 +173,9 @@ func (c *ConnectionsConfig) validate() error {
 		if v == "" {
 			return fmt.Errorf("%w: %s is required", ErrInvalidConnectionsConfig, name)
 		}
+	}
+	if _, err := c.EgressPrefixes(); err != nil {
+		return err
 	}
 	return nil
 }
