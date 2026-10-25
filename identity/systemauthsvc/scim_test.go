@@ -1,9 +1,11 @@
 package systemauthsvc_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -59,10 +61,22 @@ func addOrg(t *testing.T, svc *systemauthsvc.Service, slug string, owner uuid.UU
 	return org.ID
 }
 
-// scimUsers calls the SCIM Users endpoint.
+// scimUsers calls the SCIM Users endpoint the way an identity provider
+// does: SCIM tenant tokens are static secrets sent with the Bearer scheme.
 func scimUsers(t *testing.T, svc *systemauthsvc.Service, token, method string, body any) (int, string) {
 	t.Helper()
-	w := callAPI(t, svc, token, method, systemauthsvc.SCIMPath+"/Users", body)
+	var buf bytes.Buffer
+	if body != nil {
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r := httptest.NewRequest(method, mpIssuer+systemauthsvc.SCIMPath+"/Users", &buf)
+	if token != "" {
+		r.Header.Set("Authorization", "Bearer "+token)
+	}
+	w := httptest.NewRecorder()
+	svc.Handler().ServeHTTP(w, r)
 	return w.Code, w.Body.String()
 }
 
