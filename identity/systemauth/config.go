@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/invopop/jsonschema"
@@ -98,6 +99,16 @@ type DPoPConfig struct {
 	// keeps the cache in memory, which suits a single instance. Supports
 	// environment variable expansion: ${SYSTEMAUTH_DPOP_REDIS_URL}.
 	ReplayCacheRedisURL string `json:"replay_cache_redis_url,omitempty" yaml:"replay_cache_redis_url,omitempty" jsonschema:"description=Redis URL of the shared DPoP replay cache (supports env var expansion)"`
+
+	// ResourceBaseURL is the external base URL of the routes this server
+	// protects outside SystemAuth's own endpoints (BearerAccess,
+	// BearerPrincipal, Middleware): a DPoP proof's htu must equal it plus
+	// the request path as this server sees it. Default: the issuer's
+	// origin (scheme and host). Set it when a proxy maps the external path
+	// to another one, for example "https://example.com/api" when the proxy
+	// strips /api. SystemAuth's own endpoints are always checked against
+	// the issuer URL.
+	ResourceBaseURL string `json:"resource_base_url,omitempty" yaml:"resource_base_url,omitempty" jsonschema:"description=External base URL of protected routes for DPoP htu (default: the issuer origin)"`
 }
 
 // ConsoleConfig configures the organization console (ADR-018).
@@ -564,6 +575,12 @@ func (c *DPoPConfig) validate() error {
 	}
 	if c.RequireNonce && len(c.NonceSecret) < 32 {
 		return fmt.Errorf("%w: dpop.require_nonce needs a dpop.nonce_secret of at least 32 bytes", ErrInvalidConfig)
+	}
+	if c.ResourceBaseURL != "" {
+		u, err := url.Parse(c.ResourceBaseURL)
+		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {
+			return fmt.Errorf("%w: dpop.resource_base_url must be an http(s) URL without query or fragment", ErrInvalidConfig)
+		}
 	}
 	return nil
 }

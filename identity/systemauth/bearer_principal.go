@@ -54,8 +54,9 @@ func (s *Server) BearerPrincipal(r *http.Request, scope string) (uuid.UUID, erro
 // whose checks depend on the calling application.
 //
 // A DPoP-bound token is accepted only with the DPoP scheme and a proof by
-// its key whose htu is the issuer's origin plus the request path; an
-// unbound token only with the Bearer scheme.
+// its key whose htu is dpop.resource_base_url (default: the issuer's
+// origin) plus the request path; an unbound token only with the Bearer
+// scheme.
 func (s *Server) BearerAccess(r *http.Request, scope string) (*BearerGrant, error) {
 	ar, authErr := s.authenticateAccessToken(r, s.requestURL(r))
 	if authErr != nil {

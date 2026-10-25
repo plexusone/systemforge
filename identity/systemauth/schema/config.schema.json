@@ -676,6 +676,10 @@
         "replay_cache_redis_url": {
           "type": "string",
           "description": "Redis URL of the shared DPoP replay cache (supports env var expansion)"
+        },
+        "resource_base_url": {
+          "type": "string",
+          "description": "External base URL of protected routes for DPoP htu (default: the issuer origin)"
         }
       },
       "additionalProperties": false,

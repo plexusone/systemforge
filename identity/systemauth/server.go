@@ -467,9 +467,9 @@ func (s *Server) LoginTokenPolicy(ctx context.Context, clientID string) (credent
 
 // Middleware returns HTTP middleware that validates access tokens.
 // Use this to protect your API endpoints. A DPoP-bound token is accepted
-// only with the DPoP scheme and a proof by its key whose htu is the
-// issuer's origin plus the request path; an unbound one only with the
-// Bearer scheme.
+// only with the DPoP scheme and a proof by its key whose htu is
+// dpop.resource_base_url (default: the issuer's origin) plus the request
+// path; an unbound one only with the Bearer scheme.
 //
 // Example:
 //

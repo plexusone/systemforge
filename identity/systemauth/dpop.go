@@ -87,9 +87,12 @@ func (s *Server) endpointURL(path string) string {
 }
 
 // requestURL is the external URL of a request to another route served by
-// this server, such as an API behind BearerAccess: the issuer's origin
-// and the request path.
+// this server, such as an API behind BearerAccess: dpop.resource_base_url,
+// or by default the issuer's origin, and the request path.
 func (s *Server) requestURL(r *http.Request) string {
+	if base := strings.TrimSuffix(s.config.DPoP.ResourceBaseURL, "/"); base != "" {
+		return base + r.URL.Path
+	}
 	u, err := url.Parse(s.config.Issuer)
 	if err != nil || u.Host == "" {
 		return s.config.Issuer + r.URL.Path
