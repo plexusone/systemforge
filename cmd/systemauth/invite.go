@@ -38,6 +38,12 @@ func newCodeCmd(opts *options) *cobra.Command {
 	})
 }
 
+// newAllowanceCmd builds "systemauth allowance" (signupcmd) over the
+// configured database.
+func newAllowanceCmd(opts *options) *cobra.Command {
+	return signupcmd.AllowanceCommand(openDatabase(opts))
+}
+
 // newAdminCmd builds "systemauth admin" (admincmd) over the configured
 // database.
 func newAdminCmd(opts *options) *cobra.Command {

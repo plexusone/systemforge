@@ -160,6 +160,7 @@ Run without a subcommand it serves (same as "systemauth serve").
 		newKeysCmd(opts),
 		newInviteCmd(opts),
 		newCodeCmd(opts),
+		newAllowanceCmd(opts),
 		newWaitlistCmd(opts),
 		newAdminCmd(opts),
 		&cobra.Command{

@@ -13,6 +13,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
+	"github.com/plexusone/systemforge/identity/principal"
 	"github.com/plexusone/systemforge/identity/signupgate"
 )
 
@@ -103,5 +104,31 @@ func TestWaitlistInviteCommand(t *testing.T) {
 	invites, err := signupgate.NewStore(client).List(t.Context(), false)
 	if err != nil || len(invites) != 2 {
 		t.Errorf("invites = %+v, %v", invites, err)
+	}
+}
+
+func TestAllowanceCommands(t *testing.T) {
+	open, client := testOpen(t)
+	if _, err := principal.NewService(client).CreateHuman(t.Context(), principal.CreateHumanInput{Email: "ada@example.com", DisplayName: "Ada"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := execute(t, AllowanceCommand(open), "set", "ada@example.com", "-1"); err == nil {
+		t.Error("negative count accepted")
+	}
+	if _, err := execute(t, AllowanceCommand(open), "set", "nobody@example.com", "3"); err == nil {
+		t.Error("an address with no account accepted")
+	}
+	if out, err := execute(t, AllowanceCommand(open), "set", "ada@example.com", "3", "--note", "early"); err != nil || !strings.Contains(out, "set ada@example.com to 3") {
+		t.Fatalf("set = %q, %v", out, err)
+	}
+	out, err := execute(t, AllowanceCommand(open), "list")
+	if err != nil || !strings.Contains(out, "ada@example.com") || !strings.Contains(out, "early") {
+		t.Fatalf("list = %q, %v", out, err)
+	}
+	if _, err := execute(t, AllowanceCommand(open), "set", "ada@example.com", "default"); err != nil {
+		t.Fatal(err)
+	}
+	if out, _ := execute(t, AllowanceCommand(open), "list"); !strings.Contains(out, "default") {
+		t.Errorf("after reset, list = %q", out)
 	}
 }

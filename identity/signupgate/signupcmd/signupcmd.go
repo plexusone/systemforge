@@ -1,6 +1,7 @@
 // Package signupcmd provides the operator commands for invite-only sign-up
 // as cobra commands a host CLI mounts: "invite" (add, list, revoke), "code"
-// (create, list, revoke, joined) and "waitlist" (list, invite, remove). They open the identity database directly, so
+// (create, list, revoke, joined), "allowance" (set, list) and "waitlist"
+// (list, invite, remove). They open the identity database directly, so
 // they work whether or not the server is running, and never change the
 // schema; the tables come from the schema migration.
 package signupcmd
