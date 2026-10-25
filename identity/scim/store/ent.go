@@ -4,20 +4,27 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/authz/noop"
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
+	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
+	"github.com/plexusone/systemforge/identity/graphlock"
 	orgsvc "github.com/plexusone/systemforge/identity/organization"
 	principalsvc "github.com/plexusone/systemforge/identity/principal"
 	"github.com/plexusone/systemforge/identity/scim"
@@ -64,6 +71,15 @@ type Config struct {
 	// when it also implements Organizations (as organization.Service does),
 	// otherwise organization.NewService on the store's client.
 	Organizations Organizations
+
+	// Syncer removes a deleted user's relationships from the authorization
+	// graph: its memberships, platform administration, manager relations
+	// (both those on the user and those it holds), application roles and
+	// resource grants. DeleteUser removes them before the deletion commits,
+	// holding the graph locks; if the graph refuses, the user is not
+	// deleted. Pass the same syncer as Memberships and Principals use.
+	// Default: none, for deployments without a graph.
+	Syncer authz.RelationshipSyncer
 }
 
 // Organizations is the part of organization.Service the SCIM store uses to
@@ -590,8 +606,10 @@ func (s *EntStore) updateIdentity(ctx context.Context, tx *ent.Tx, p *ent.Princi
 // only loses the membership in the tenant's organization. Otherwise every
 // membership is removed through the membership service, the account is
 // deactivated so existing tokens stop being honored, and the account and
-// the records that belong only to it are deleted. An organization owner
-// is never deleted through SCIM.
+// the records that belong only to it, its manager relations included, are
+// deleted, after its relationships are removed from the authorization
+// graph (Config.Syncer). An organization owner, and a user who actively
+// manages other accounts, are never deleted through SCIM.
 func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -634,6 +652,17 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 			return errOwnerDeprovision()
 		}
 	}
+	// A user who manages other accounts keeps them reachable; deleting it
+	// would leave them without that manager.
+	manages, err := s.client.ManagerRelationship.Query().
+		Where(managerrelationship.ManagerPrincipalID(uid), managerrelationship.Active(true)).
+		Exist(ctx)
+	if err != nil {
+		return asSCIMError(ctx, err)
+	}
+	if manages {
+		return scim.ErrConflict("the user manages other accounts; transfer their management first")
+	}
 	for _, m := range memberships {
 		if err := s.removeMember(ctx, m.OrganizationID, uid); err != nil {
 			return err
@@ -644,7 +673,15 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	}
 
 	err = s.withTx(ctx, func(tx *ent.Tx) error {
+		if err := s.unregister(ctx, tx, uid); err != nil {
+			return err
+		}
 		if _, err := tx.PrincipalMembership.Delete().Where(principalmembership.PrincipalIDEQ(uid)).Exec(ctx); err != nil {
+			return err
+		}
+		if _, err := tx.ManagerRelationship.Delete().
+			Where(managerrelationship.Or(managerrelationship.ManagedPrincipalID(uid), managerrelationship.ManagerPrincipalID(uid))).
+			Exec(ctx); err != nil {
 			return err
 		}
 		if _, err := tx.Human.Delete().Where(human.PrincipalIDEQ(uid)).Exec(ctx); err != nil {
@@ -660,6 +697,68 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	})
 	if err != nil {
 		return asSCIMError(ctx, err)
+	}
+	return nil
+}
+
+// unregister removes, inside tx, the transaction that deletes the user,
+// every relationship the user holds or is the resource of from the
+// authorization graph, holding the graph locks of the user and of the
+// principals on the other side of its manager relations. It runs before
+// the deletion commits, so if the graph refuses, nothing is deleted.
+func (s *EntStore) unregister(ctx context.Context, tx *ent.Tx, uid uuid.UUID) error {
+	syncer := s.config.Syncer
+	if syncer == nil {
+		return nil
+	}
+	if _, isNoop := syncer.(*noop.Syncer); isNoop {
+		return nil
+	}
+	rels, err := tx.ManagerRelationship.Query().
+		Where(managerrelationship.Or(managerrelationship.ManagedPrincipalID(uid), managerrelationship.ManagerPrincipalID(uid))).
+		All(ctx)
+	if err != nil {
+		return err
+	}
+	roles, err := tx.AppRole.Query().Where(approle.PrincipalID(uid)).All(ctx)
+	if err != nil {
+		return err
+	}
+	grants, err := tx.ResourceGrant.Query().Where(resourcegrant.PrincipalID(uid)).All(ctx)
+	if err != nil {
+		return err
+	}
+	keys := []string{graphlock.Principal(uid)}
+	for _, r := range rels {
+		keys = append(keys, graphlock.Principal(r.ManagedPrincipalID), graphlock.Principal(r.ManagerPrincipalID))
+	}
+	if err := graphlock.Lock(ctx, tx, keys...); err != nil {
+		return err
+	}
+	// UnregisterPrincipal removes the memberships, the platform
+	// administration and the manager relations on both sides.
+	if err := syncer.UnregisterPrincipal(ctx, uid); err != nil {
+		return fmt.Errorf("removing the user from authz, user not deleted: %w", err)
+	}
+	for _, r := range rels {
+		if err := syncer.RemovePrincipalManager(ctx, r.ManagedPrincipalID, r.ManagerPrincipalID, r.Role); err != nil {
+			return fmt.Errorf("removing a manager relation from authz, user not deleted: %w", err)
+		}
+	}
+	if appSyncer, ok := syncer.(authz.AppRoleSyncer); ok {
+		for _, r := range roles {
+			if err := appSyncer.RemoveAppRole(ctx, uid, r.OrganizationID, r.Application, r.Role); err != nil {
+				return fmt.Errorf("removing an application role from authz, user not deleted: %w", err)
+			}
+		}
+	}
+	if grantSyncer, ok := syncer.(authz.ResourceGrantSyncer); ok {
+		for _, g := range grants {
+			ref := authz.ResourceRef{Type: g.ResourceType, ID: g.ResourceID, OrganizationID: g.OrganizationID}
+			if err := grantSyncer.RemoveResourceGrant(ctx, uid, ref); err != nil {
+				return fmt.Errorf("removing a resource grant from authz, user not deleted: %w", err)
+			}
+		}
 	}
 	return nil
 }
