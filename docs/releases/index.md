@@ -4,16 +4,23 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.20.0](v0.20.0.md), is a security release: tokens are
-bound to the application they were issued for, SCIM credentials to one
-organization, revocation removes access everywhere, and authorization checks
-fail closed. It is breaking; read its upgrade notes first.
+The latest release, [v0.21.0](v0.21.0.md), is a security release: tokens are
+DPoP-bound by default, keys and secrets rotate keeping the current and
+previous value, SCIM has built-in per-tenant tokens, revocations remove graph
+access before they commit, and each multi-app application gets its own
+database login. It is breaking; read its upgrade guide first.
 
-The previous release, [v0.19.0](v0.19.0.md), added a minimum sign-up age:
+The previous release, [v0.20.0](v0.20.0.md), was also a security release:
+it bound tokens to the application they were issued for and SCIM
+credentials to one organization, made revocation remove access everywhere,
+and made authorization checks fail closed. It is breaking; read its upgrade
+notes first.
+
+Before it, [v0.19.0](v0.19.0.md) added a minimum sign-up age:
 SystemAuth asks a person's birth month and year before it creates their
 account and refuses anyone younger, keeping nothing about them.
 
-Before it, [v0.18.0](v0.18.0.md) added the organization console,
+Further back, [v0.18.0](v0.18.0.md) added the organization console,
 served by SystemAuth under `/console`, where organizations manage their
 connections, and recorded each connection's rotation mode.
 
@@ -40,6 +47,7 @@ completed the organization model. It is a breaking release with migrations
 
 | Version | Release date |
 |---|---|
+| [v0.21.0](v0.21.0.md) | 2026-10-25 |
 | [v0.20.0](v0.20.0.md) | 2026-10-23 |
 | [v0.19.0](v0.19.0.md) | 2026-10-22 |
 | [v0.18.0](v0.18.0.md) | 2026-10-20 |
