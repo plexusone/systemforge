@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -440,4 +441,17 @@ func toCode(r *ent.SignupCode) Code {
 		MaxUses: r.MaxUses, UseCount: r.UseCount, CreatedAt: r.CreatedAt,
 		ExpiresAt: r.ExpiresAt, RevokedAt: r.RevokedAt,
 	}
+}
+
+// CodeLink returns the invite link for a code: the sign-up page URL with the
+// code as its code query parameter.
+func CodeLink(signupURL, code string) string {
+	u, err := url.Parse(signupURL)
+	if err != nil {
+		return signupURL + "?code=" + url.QueryEscape(code)
+	}
+	q := u.Query()
+	q.Set("code", code)
+	u.RawQuery = q.Encode()
+	return u.String()
 }
