@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	kvsmemory "github.com/plexusone/omnistorage-core/kvs/backend/memory"
+	kvsredis "github.com/plexusone/omnistorage-core/kvs/backend/redis"
 )
 
 func newTestOmniStore(t *testing.T, backend *kvsmemory.Store, siteID string) *OmniStorageStore {
@@ -117,5 +118,25 @@ func TestOmniStorageStore_DefaultKeyPrefixIsPerSite(t *testing.T) {
 	}
 	if sessionKeyPrefix(OmniStorageConfig{SiteID: "s", KeyPrefix: "custom:"}) != "custom:" {
 		t.Error("an explicit KeyPrefix was not kept")
+	}
+}
+
+func TestNewOmniStorageStore_RedisRequiresSecureConnection(t *testing.T) {
+	cfg := DefaultOmniStorageConfig()
+	cfg.Backend = "redis"
+	cfg.SiteID = "site-a"
+	cfg.InsecurePlaintext = true
+	cfg.RedisURL = "redis://redis.invalid:6379"
+	if _, err := NewOmniStorageStore(cfg); !errors.Is(err, kvsredis.ErrInsecureConnection) {
+		t.Fatalf("remote Redis without TLS: error = %v, want ErrInsecureConnection", err)
+	}
+
+	cfg.AllowInsecureRedis = true
+	_, err := NewOmniStorageStore(cfg)
+	if err == nil {
+		t.Fatal("connected to an unresolvable host")
+	}
+	if errors.Is(err, kvsredis.ErrInsecureConnection) {
+		t.Fatalf("AllowInsecureRedis did not permit the connection: %v", err)
 	}
 }

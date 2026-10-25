@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/plexusone/omnistorage-core/kvs"
@@ -21,7 +22,17 @@ type OmniStorageConfig struct {
 	Backend string
 
 	// RedisURL is the Redis connection URL (required for redis backend).
+	// A server that is not on loopback must be reached over TLS
+	// (rediss://) with certificate verification and a password, unless
+	// AllowInsecureRedis is set.
 	RedisURL string
+
+	// AllowInsecureRedis permits a Redis server that is not on loopback
+	// without TLS, without a password or without certificate verification,
+	// such as a Redis container on a local development network. Session
+	// IDs and sealed sessions then cross the network readable by anyone
+	// on it. For development only; a warning is logged when it is set.
+	AllowInsecureRedis bool
 
 	// SiteID identifies which site/service this store handles.
 	// Used for multi-site isolation (e.g., "billing", "admin", "dashboard").
@@ -144,9 +155,13 @@ func NewOmniStorageStore(cfg OmniStorageConfig) (*OmniStorageStore, error) {
 		}
 
 		// Create Redis KVS backend
+		if cfg.AllowInsecureRedis {
+			slog.Warn("bff: AllowInsecureRedis is set; the session store's Redis connection may be unencrypted or unauthenticated. Use it for development only")
+		}
 		redisStore, err := kvsredis.New(kvsredis.Config{
-			URL:       cfg.RedisURL,
-			KeyPrefix: cfg.KeyPrefix,
+			URL:           cfg.RedisURL,
+			KeyPrefix:     cfg.KeyPrefix,
+			AllowInsecure: cfg.AllowInsecureRedis,
 		})
 		if err != nil {
 			return nil, err

@@ -69,7 +69,7 @@ store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:         "redis",
     SiteID:          "myapp", // required for redis
     Sealer:          sealer,  // required for redis; see below
-    RedisURL:        "redis://localhost:6379",
+    RedisURL:        "rediss://:password@redis.internal:6379", // TLS and a password
     MaxSessionSize:  1024 * 1024, // 1MB
     DefaultTTL:      24 * time.Hour,
     CleanupInterval: 5 * time.Minute,
@@ -125,7 +125,8 @@ for local development only.
 | Field | Description | Default |
 |-------|-------------|---------|
 | `Backend` | `"memory"` or `"redis"` | `"memory"` |
-| `RedisURL` | Redis connection URL | Required for redis |
+| `RedisURL` | Redis connection URL. A server that is not on loopback must use TLS (`rediss://`) with certificate verification and a password | Required for redis |
+| `AllowInsecureRedis` | Permit a non-loopback Redis without TLS, a password or certificate verification, such as a local container network (development only; logs a warning) | `false` |
 | `SiteID` | Tags every session with this application; a session tagged for another site is not found | Required for redis |
 | `Sealer` | Encrypts tokens and DPoP keys at rest (`NewKeyringSealer`, `NewKeysSealer`) | Required for redis |
 | `InsecurePlaintext` | Store secrets unencrypted without a `Sealer` (development only) | `false` |
