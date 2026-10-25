@@ -50,6 +50,10 @@ func (SignupInvite) Fields() []ent.Field {
 			Optional().
 			MaxLen(255).
 			Comment("Operator label that created the invite"),
+		field.UUID("invited_by_principal_id", uuid.UUID{}).
+			Optional().
+			Nillable().
+			Comment("The principal that created the invite, when created through the API; not a foreign key"),
 		field.Time("expires_at").
 			Optional().
 			Nillable().

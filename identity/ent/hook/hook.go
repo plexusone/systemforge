@@ -369,6 +369,42 @@ func (f ServicePrincipalFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.V
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ServicePrincipalMutation", m)
 }
 
+// The SignupAllowanceFunc type is an adapter to allow the use of ordinary
+// function as SignupAllowance mutator.
+type SignupAllowanceFunc func(context.Context, *ent.SignupAllowanceMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SignupAllowanceFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SignupAllowanceMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SignupAllowanceMutation", m)
+}
+
+// The SignupCodeFunc type is an adapter to allow the use of ordinary
+// function as SignupCode mutator.
+type SignupCodeFunc func(context.Context, *ent.SignupCodeMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SignupCodeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SignupCodeMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SignupCodeMutation", m)
+}
+
+// The SignupCodeRedemptionFunc type is an adapter to allow the use of ordinary
+// function as SignupCodeRedemption mutator.
+type SignupCodeRedemptionFunc func(context.Context, *ent.SignupCodeRedemptionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SignupCodeRedemptionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SignupCodeRedemptionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SignupCodeRedemptionMutation", m)
+}
+
 // The SignupInviteFunc type is an adapter to allow the use of ordinary
 // function as SignupInvite mutator.
 type SignupInviteFunc func(context.Context, *ent.SignupInviteMutation) (ent.Value, error)

@@ -96,6 +96,15 @@ type SeatAssignment func(*sql.Selector)
 // ServicePrincipal is the predicate function for serviceprincipal builders.
 type ServicePrincipal func(*sql.Selector)
 
+// SignupAllowance is the predicate function for signupallowance builders.
+type SignupAllowance func(*sql.Selector)
+
+// SignupCode is the predicate function for signupcode builders.
+type SignupCode func(*sql.Selector)
+
+// SignupCodeRedemption is the predicate function for signupcoderedemption builders.
+type SignupCodeRedemption func(*sql.Selector)
+
 // SignupInvite is the predicate function for signupinvite builders.
 type SignupInvite func(*sql.Selector)
 

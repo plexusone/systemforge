@@ -28,6 +28,8 @@ type SignupInvite struct {
 	Note string `json:"note,omitempty"`
 	// Operator label that created the invite
 	InvitedBy string `json:"invited_by,omitempty"`
+	// The principal that created the invite, when created through the API; not a foreign key
+	InvitedByPrincipalID *uuid.UUID `json:"invited_by_principal_id,omitempty"`
 	// When the invite stops working; nil means it does not expire
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 	// When an account was created with the invite
@@ -42,7 +44,7 @@ func (*SignupInvite) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case signupinvite.FieldRedeemedBy:
+		case signupinvite.FieldInvitedByPrincipalID, signupinvite.FieldRedeemedBy:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case signupinvite.FieldEmail, signupinvite.FieldNote, signupinvite.FieldInvitedBy:
 			values[i] = new(sql.NullString)
@@ -100,6 +102,13 @@ func (_m *SignupInvite) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field invited_by", values[i])
 			} else if value.Valid {
 				_m.InvitedBy = value.String
+			}
+		case signupinvite.FieldInvitedByPrincipalID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field invited_by_principal_id", values[i])
+			} else if value.Valid {
+				_m.InvitedByPrincipalID = new(uuid.UUID)
+				*_m.InvitedByPrincipalID = *value.S.(*uuid.UUID)
 			}
 		case signupinvite.FieldExpiresAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -172,6 +181,11 @@ func (_m *SignupInvite) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("invited_by=")
 	builder.WriteString(_m.InvitedBy)
+	builder.WriteString(", ")
+	if v := _m.InvitedByPrincipalID; v != nil {
+		builder.WriteString("invited_by_principal_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	if v := _m.ExpiresAt; v != nil {
 		builder.WriteString("expires_at=")

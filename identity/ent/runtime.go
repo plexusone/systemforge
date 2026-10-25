@@ -37,6 +37,9 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/scimtoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
+	"github.com/plexusone/systemforge/identity/ent/signupallowance"
+	"github.com/plexusone/systemforge/identity/ent/signupcode"
+	"github.com/plexusone/systemforge/identity/ent/signupcoderedemption"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
 	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
@@ -1009,6 +1012,99 @@ func init() {
 	serviceprincipalDescID := serviceprincipalMixinFields0[0].Descriptor()
 	// serviceprincipal.DefaultID holds the default value on creation for the id field.
 	serviceprincipal.DefaultID = serviceprincipalDescID.Default.(func() uuid.UUID)
+	signupallowanceMixin := schema.SignupAllowance{}.Mixin()
+	signupallowanceMixinFields0 := signupallowanceMixin[0].Fields()
+	_ = signupallowanceMixinFields0
+	signupallowanceFields := schema.SignupAllowance{}.Fields()
+	_ = signupallowanceFields
+	// signupallowanceDescCreatedAt is the schema descriptor for created_at field.
+	signupallowanceDescCreatedAt := signupallowanceMixinFields0[1].Descriptor()
+	// signupallowance.DefaultCreatedAt holds the default value on creation for the created_at field.
+	signupallowance.DefaultCreatedAt = signupallowanceDescCreatedAt.Default.(func() time.Time)
+	// signupallowanceDescUpdatedAt is the schema descriptor for updated_at field.
+	signupallowanceDescUpdatedAt := signupallowanceMixinFields0[2].Descriptor()
+	// signupallowance.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	signupallowance.DefaultUpdatedAt = signupallowanceDescUpdatedAt.Default.(func() time.Time)
+	// signupallowance.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	signupallowance.UpdateDefaultUpdatedAt = signupallowanceDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// signupallowanceDescGranted is the schema descriptor for granted field.
+	signupallowanceDescGranted := signupallowanceFields[1].Descriptor()
+	// signupallowance.GrantedValidator is a validator for the "granted" field. It is called by the builders before save.
+	signupallowance.GrantedValidator = signupallowanceDescGranted.Validators[0].(func(int) error)
+	// signupallowanceDescNote is the schema descriptor for note field.
+	signupallowanceDescNote := signupallowanceFields[2].Descriptor()
+	// signupallowance.NoteValidator is a validator for the "note" field. It is called by the builders before save.
+	signupallowance.NoteValidator = signupallowanceDescNote.Validators[0].(func(string) error)
+	// signupallowanceDescID is the schema descriptor for id field.
+	signupallowanceDescID := signupallowanceMixinFields0[0].Descriptor()
+	// signupallowance.DefaultID holds the default value on creation for the id field.
+	signupallowance.DefaultID = signupallowanceDescID.Default.(func() uuid.UUID)
+	signupcodeMixin := schema.SignupCode{}.Mixin()
+	signupcodeMixinFields0 := signupcodeMixin[0].Fields()
+	_ = signupcodeMixinFields0
+	signupcodeFields := schema.SignupCode{}.Fields()
+	_ = signupcodeFields
+	// signupcodeDescCreatedAt is the schema descriptor for created_at field.
+	signupcodeDescCreatedAt := signupcodeMixinFields0[1].Descriptor()
+	// signupcode.DefaultCreatedAt holds the default value on creation for the created_at field.
+	signupcode.DefaultCreatedAt = signupcodeDescCreatedAt.Default.(func() time.Time)
+	// signupcodeDescUpdatedAt is the schema descriptor for updated_at field.
+	signupcodeDescUpdatedAt := signupcodeMixinFields0[2].Descriptor()
+	// signupcode.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	signupcode.DefaultUpdatedAt = signupcodeDescUpdatedAt.Default.(func() time.Time)
+	// signupcode.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	signupcode.UpdateDefaultUpdatedAt = signupcodeDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// signupcodeDescCodeHash is the schema descriptor for code_hash field.
+	signupcodeDescCodeHash := signupcodeFields[0].Descriptor()
+	// signupcode.CodeHashValidator is a validator for the "code_hash" field. It is called by the builders before save.
+	signupcode.CodeHashValidator = signupcodeDescCodeHash.Validators[0].(func(string) error)
+	// signupcodeDescCodeHint is the schema descriptor for code_hint field.
+	signupcodeDescCodeHint := signupcodeFields[1].Descriptor()
+	// signupcode.CodeHintValidator is a validator for the "code_hint" field. It is called by the builders before save.
+	signupcode.CodeHintValidator = signupcodeDescCodeHint.Validators[0].(func(string) error)
+	// signupcodeDescLabel is the schema descriptor for label field.
+	signupcodeDescLabel := signupcodeFields[3].Descriptor()
+	// signupcode.LabelValidator is a validator for the "label" field. It is called by the builders before save.
+	signupcode.LabelValidator = signupcodeDescLabel.Validators[0].(func(string) error)
+	// signupcodeDescNote is the schema descriptor for note field.
+	signupcodeDescNote := signupcodeFields[4].Descriptor()
+	// signupcode.NoteValidator is a validator for the "note" field. It is called by the builders before save.
+	signupcode.NoteValidator = signupcodeDescNote.Validators[0].(func(string) error)
+	// signupcodeDescCreatedByLabel is the schema descriptor for created_by_label field.
+	signupcodeDescCreatedByLabel := signupcodeFields[6].Descriptor()
+	// signupcode.CreatedByLabelValidator is a validator for the "created_by_label" field. It is called by the builders before save.
+	signupcode.CreatedByLabelValidator = signupcodeDescCreatedByLabel.Validators[0].(func(string) error)
+	// signupcodeDescMaxUses is the schema descriptor for max_uses field.
+	signupcodeDescMaxUses := signupcodeFields[7].Descriptor()
+	// signupcode.MaxUsesValidator is a validator for the "max_uses" field. It is called by the builders before save.
+	signupcode.MaxUsesValidator = signupcodeDescMaxUses.Validators[0].(func(int) error)
+	// signupcodeDescUseCount is the schema descriptor for use_count field.
+	signupcodeDescUseCount := signupcodeFields[8].Descriptor()
+	// signupcode.DefaultUseCount holds the default value on creation for the use_count field.
+	signupcode.DefaultUseCount = signupcodeDescUseCount.Default.(int)
+	// signupcode.UseCountValidator is a validator for the "use_count" field. It is called by the builders before save.
+	signupcode.UseCountValidator = signupcodeDescUseCount.Validators[0].(func(int) error)
+	// signupcodeDescID is the schema descriptor for id field.
+	signupcodeDescID := signupcodeMixinFields0[0].Descriptor()
+	// signupcode.DefaultID holds the default value on creation for the id field.
+	signupcode.DefaultID = signupcodeDescID.Default.(func() uuid.UUID)
+	signupcoderedemptionMixin := schema.SignupCodeRedemption{}.Mixin()
+	signupcoderedemptionMixinFields0 := signupcoderedemptionMixin[0].Fields()
+	_ = signupcoderedemptionMixinFields0
+	signupcoderedemptionFields := schema.SignupCodeRedemption{}.Fields()
+	_ = signupcoderedemptionFields
+	// signupcoderedemptionDescEmail is the schema descriptor for email field.
+	signupcoderedemptionDescEmail := signupcoderedemptionFields[2].Descriptor()
+	// signupcoderedemption.EmailValidator is a validator for the "email" field. It is called by the builders before save.
+	signupcoderedemption.EmailValidator = signupcoderedemptionDescEmail.Validators[0].(func(string) error)
+	// signupcoderedemptionDescCreatedAt is the schema descriptor for created_at field.
+	signupcoderedemptionDescCreatedAt := signupcoderedemptionFields[3].Descriptor()
+	// signupcoderedemption.DefaultCreatedAt holds the default value on creation for the created_at field.
+	signupcoderedemption.DefaultCreatedAt = signupcoderedemptionDescCreatedAt.Default.(func() time.Time)
+	// signupcoderedemptionDescID is the schema descriptor for id field.
+	signupcoderedemptionDescID := signupcoderedemptionMixinFields0[0].Descriptor()
+	// signupcoderedemption.DefaultID holds the default value on creation for the id field.
+	signupcoderedemption.DefaultID = signupcoderedemptionDescID.Default.(func() uuid.UUID)
 	signupinviteMixin := schema.SignupInvite{}.Mixin()
 	signupinviteMixinFields0 := signupinviteMixin[0].Fields()
 	_ = signupinviteMixinFields0

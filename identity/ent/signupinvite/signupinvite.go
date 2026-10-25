@@ -24,6 +24,8 @@ const (
 	FieldNote = "note"
 	// FieldInvitedBy holds the string denoting the invited_by field in the database.
 	FieldInvitedBy = "invited_by"
+	// FieldInvitedByPrincipalID holds the string denoting the invited_by_principal_id field in the database.
+	FieldInvitedByPrincipalID = "invited_by_principal_id"
 	// FieldExpiresAt holds the string denoting the expires_at field in the database.
 	FieldExpiresAt = "expires_at"
 	// FieldRedeemedAt holds the string denoting the redeemed_at field in the database.
@@ -42,6 +44,7 @@ var Columns = []string{
 	FieldEmail,
 	FieldNote,
 	FieldInvitedBy,
+	FieldInvitedByPrincipalID,
 	FieldExpiresAt,
 	FieldRedeemedAt,
 	FieldRedeemedBy,
@@ -105,6 +108,11 @@ func ByNote(opts ...sql.OrderTermOption) OrderOption {
 // ByInvitedBy orders the results by the invited_by field.
 func ByInvitedBy(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldInvitedBy, opts...).ToFunc()
+}
+
+// ByInvitedByPrincipalID orders the results by the invited_by_principal_id field.
+func ByInvitedByPrincipalID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInvitedByPrincipalID, opts...).ToFunc()
 }
 
 // ByExpiresAt orders the results by the expires_at field.

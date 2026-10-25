@@ -24,6 +24,8 @@ const (
 	FieldConsentVersion = "consent_version"
 	// FieldConsentText holds the string denoting the consent_text field in the database.
 	FieldConsentText = "consent_text"
+	// FieldInvitedAt holds the string denoting the invited_at field in the database.
+	FieldInvitedAt = "invited_at"
 	// Table holds the table name of the signupwaitlistentry in the database.
 	Table = "sf_signup_waitlist"
 )
@@ -36,6 +38,7 @@ var Columns = []string{
 	FieldEmail,
 	FieldConsentVersion,
 	FieldConsentText,
+	FieldInvitedAt,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -96,4 +99,9 @@ func ByConsentVersion(opts ...sql.OrderTermOption) OrderOption {
 // ByConsentText orders the results by the consent_text field.
 func ByConsentText(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldConsentText, opts...).ToFunc()
+}
+
+// ByInvitedAt orders the results by the invited_at field.
+func ByInvitedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInvitedAt, opts...).ToFunc()
 }

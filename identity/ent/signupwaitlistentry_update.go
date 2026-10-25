@@ -76,6 +76,26 @@ func (_u *SignupWaitlistEntryUpdate) SetNillableConsentText(v *string) *SignupWa
 	return _u
 }
 
+// SetInvitedAt sets the "invited_at" field.
+func (_u *SignupWaitlistEntryUpdate) SetInvitedAt(v time.Time) *SignupWaitlistEntryUpdate {
+	_u.mutation.SetInvitedAt(v)
+	return _u
+}
+
+// SetNillableInvitedAt sets the "invited_at" field if the given value is not nil.
+func (_u *SignupWaitlistEntryUpdate) SetNillableInvitedAt(v *time.Time) *SignupWaitlistEntryUpdate {
+	if v != nil {
+		_u.SetInvitedAt(*v)
+	}
+	return _u
+}
+
+// ClearInvitedAt clears the value of the "invited_at" field.
+func (_u *SignupWaitlistEntryUpdate) ClearInvitedAt() *SignupWaitlistEntryUpdate {
+	_u.mutation.ClearInvitedAt()
+	return _u
+}
+
 // Mutation returns the SignupWaitlistEntryMutation object of the builder.
 func (_u *SignupWaitlistEntryUpdate) Mutation() *SignupWaitlistEntryMutation {
 	return _u.mutation
@@ -161,6 +181,12 @@ func (_u *SignupWaitlistEntryUpdate) sqlSave(ctx context.Context) (_node int, er
 	if value, ok := _u.mutation.ConsentText(); ok {
 		_spec.SetField(signupwaitlistentry.FieldConsentText, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.InvitedAt(); ok {
+		_spec.SetField(signupwaitlistentry.FieldInvitedAt, field.TypeTime, value)
+	}
+	if _u.mutation.InvitedAtCleared() {
+		_spec.ClearField(signupwaitlistentry.FieldInvitedAt, field.TypeTime)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{signupwaitlistentry.Label}
@@ -226,6 +252,26 @@ func (_u *SignupWaitlistEntryUpdateOne) SetNillableConsentText(v *string) *Signu
 	if v != nil {
 		_u.SetConsentText(*v)
 	}
+	return _u
+}
+
+// SetInvitedAt sets the "invited_at" field.
+func (_u *SignupWaitlistEntryUpdateOne) SetInvitedAt(v time.Time) *SignupWaitlistEntryUpdateOne {
+	_u.mutation.SetInvitedAt(v)
+	return _u
+}
+
+// SetNillableInvitedAt sets the "invited_at" field if the given value is not nil.
+func (_u *SignupWaitlistEntryUpdateOne) SetNillableInvitedAt(v *time.Time) *SignupWaitlistEntryUpdateOne {
+	if v != nil {
+		_u.SetInvitedAt(*v)
+	}
+	return _u
+}
+
+// ClearInvitedAt clears the value of the "invited_at" field.
+func (_u *SignupWaitlistEntryUpdateOne) ClearInvitedAt() *SignupWaitlistEntryUpdateOne {
+	_u.mutation.ClearInvitedAt()
 	return _u
 }
 
@@ -343,6 +389,12 @@ func (_u *SignupWaitlistEntryUpdateOne) sqlSave(ctx context.Context) (_node *Sig
 	}
 	if value, ok := _u.mutation.ConsentText(); ok {
 		_spec.SetField(signupwaitlistentry.FieldConsentText, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.InvitedAt(); ok {
+		_spec.SetField(signupwaitlistentry.FieldInvitedAt, field.TypeTime, value)
+	}
+	if _u.mutation.InvitedAtCleared() {
+		_spec.ClearField(signupwaitlistentry.FieldInvitedAt, field.TypeTime)
 	}
 	_node = &SignupWaitlistEntry{config: _u.config}
 	_spec.Assign = _node.assignValues

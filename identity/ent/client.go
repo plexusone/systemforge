@@ -46,6 +46,9 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/scimtoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
+	"github.com/plexusone/systemforge/identity/ent/signupallowance"
+	"github.com/plexusone/systemforge/identity/ent/signupcode"
+	"github.com/plexusone/systemforge/identity/ent/signupcoderedemption"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
 	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
@@ -119,6 +122,12 @@ type Client struct {
 	SeatAssignment *SeatAssignmentClient
 	// ServicePrincipal is the client for interacting with the ServicePrincipal builders.
 	ServicePrincipal *ServicePrincipalClient
+	// SignupAllowance is the client for interacting with the SignupAllowance builders.
+	SignupAllowance *SignupAllowanceClient
+	// SignupCode is the client for interacting with the SignupCode builders.
+	SignupCode *SignupCodeClient
+	// SignupCodeRedemption is the client for interacting with the SignupCodeRedemption builders.
+	SignupCodeRedemption *SignupCodeRedemptionClient
 	// SignupInvite is the client for interacting with the SignupInvite builders.
 	SignupInvite *SignupInviteClient
 	// SignupWaitlistEntry is the client for interacting with the SignupWaitlistEntry builders.
@@ -168,6 +177,9 @@ func (c *Client) init() {
 	c.ScimToken = NewScimTokenClient(c.config)
 	c.SeatAssignment = NewSeatAssignmentClient(c.config)
 	c.ServicePrincipal = NewServicePrincipalClient(c.config)
+	c.SignupAllowance = NewSignupAllowanceClient(c.config)
+	c.SignupCode = NewSignupCodeClient(c.config)
+	c.SignupCodeRedemption = NewSignupCodeRedemptionClient(c.config)
 	c.SignupInvite = NewSignupInviteClient(c.config)
 	c.SignupWaitlistEntry = NewSignupWaitlistEntryClient(c.config)
 	c.SlugReservation = NewSlugReservationClient(c.config)
@@ -262,42 +274,45 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                 ctx,
-		config:              cfg,
-		AccessChange:        NewAccessChangeClient(cfg),
-		Agent:               NewAgentClient(cfg),
-		AppRole:             NewAppRoleClient(cfg),
-		Application:         NewApplicationClient(cfg),
-		ClientAssertionJTI:  NewClientAssertionJTIClient(cfg),
-		ConsentGrant:        NewConsentGrantClient(cfg),
-		Credential:          NewCredentialClient(cfg),
-		ExternalIdentity:    NewExternalIdentityClient(cfg),
-		Human:               NewHumanClient(cfg),
-		Invite:              NewInviteClient(cfg),
-		License:             NewLicenseClient(cfg),
-		Listing:             NewListingClient(cfg),
-		LoginSession:        NewLoginSessionClient(cfg),
-		LoginState:          NewLoginStateClient(cfg),
-		ManagerClaim:        NewManagerClaimClient(cfg),
-		ManagerInvite:       NewManagerInviteClient(cfg),
-		ManagerRelationship: NewManagerRelationshipClient(cfg),
-		OAuthApp:            NewOAuthAppClient(cfg),
-		OAuthAppSecret:      NewOAuthAppSecretClient(cfg),
-		OAuthAuthCode:       NewOAuthAuthCodeClient(cfg),
-		OAuthConsent:        NewOAuthConsentClient(cfg),
-		OAuthToken:          NewOAuthTokenClient(cfg),
-		Organization:        NewOrganizationClient(cfg),
-		Principal:           NewPrincipalClient(cfg),
-		PrincipalMembership: NewPrincipalMembershipClient(cfg),
-		PrincipalToken:      NewPrincipalTokenClient(cfg),
-		ResourceGrant:       NewResourceGrantClient(cfg),
-		ScimToken:           NewScimTokenClient(cfg),
-		SeatAssignment:      NewSeatAssignmentClient(cfg),
-		ServicePrincipal:    NewServicePrincipalClient(cfg),
-		SignupInvite:        NewSignupInviteClient(cfg),
-		SignupWaitlistEntry: NewSignupWaitlistEntryClient(cfg),
-		SlugReservation:     NewSlugReservationClient(cfg),
-		Subscription:        NewSubscriptionClient(cfg),
+		ctx:                  ctx,
+		config:               cfg,
+		AccessChange:         NewAccessChangeClient(cfg),
+		Agent:                NewAgentClient(cfg),
+		AppRole:              NewAppRoleClient(cfg),
+		Application:          NewApplicationClient(cfg),
+		ClientAssertionJTI:   NewClientAssertionJTIClient(cfg),
+		ConsentGrant:         NewConsentGrantClient(cfg),
+		Credential:           NewCredentialClient(cfg),
+		ExternalIdentity:     NewExternalIdentityClient(cfg),
+		Human:                NewHumanClient(cfg),
+		Invite:               NewInviteClient(cfg),
+		License:              NewLicenseClient(cfg),
+		Listing:              NewListingClient(cfg),
+		LoginSession:         NewLoginSessionClient(cfg),
+		LoginState:           NewLoginStateClient(cfg),
+		ManagerClaim:         NewManagerClaimClient(cfg),
+		ManagerInvite:        NewManagerInviteClient(cfg),
+		ManagerRelationship:  NewManagerRelationshipClient(cfg),
+		OAuthApp:             NewOAuthAppClient(cfg),
+		OAuthAppSecret:       NewOAuthAppSecretClient(cfg),
+		OAuthAuthCode:        NewOAuthAuthCodeClient(cfg),
+		OAuthConsent:         NewOAuthConsentClient(cfg),
+		OAuthToken:           NewOAuthTokenClient(cfg),
+		Organization:         NewOrganizationClient(cfg),
+		Principal:            NewPrincipalClient(cfg),
+		PrincipalMembership:  NewPrincipalMembershipClient(cfg),
+		PrincipalToken:       NewPrincipalTokenClient(cfg),
+		ResourceGrant:        NewResourceGrantClient(cfg),
+		ScimToken:            NewScimTokenClient(cfg),
+		SeatAssignment:       NewSeatAssignmentClient(cfg),
+		ServicePrincipal:     NewServicePrincipalClient(cfg),
+		SignupAllowance:      NewSignupAllowanceClient(cfg),
+		SignupCode:           NewSignupCodeClient(cfg),
+		SignupCodeRedemption: NewSignupCodeRedemptionClient(cfg),
+		SignupInvite:         NewSignupInviteClient(cfg),
+		SignupWaitlistEntry:  NewSignupWaitlistEntryClient(cfg),
+		SlugReservation:      NewSlugReservationClient(cfg),
+		Subscription:         NewSubscriptionClient(cfg),
 	}, nil
 }
 
@@ -315,42 +330,45 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                 ctx,
-		config:              cfg,
-		AccessChange:        NewAccessChangeClient(cfg),
-		Agent:               NewAgentClient(cfg),
-		AppRole:             NewAppRoleClient(cfg),
-		Application:         NewApplicationClient(cfg),
-		ClientAssertionJTI:  NewClientAssertionJTIClient(cfg),
-		ConsentGrant:        NewConsentGrantClient(cfg),
-		Credential:          NewCredentialClient(cfg),
-		ExternalIdentity:    NewExternalIdentityClient(cfg),
-		Human:               NewHumanClient(cfg),
-		Invite:              NewInviteClient(cfg),
-		License:             NewLicenseClient(cfg),
-		Listing:             NewListingClient(cfg),
-		LoginSession:        NewLoginSessionClient(cfg),
-		LoginState:          NewLoginStateClient(cfg),
-		ManagerClaim:        NewManagerClaimClient(cfg),
-		ManagerInvite:       NewManagerInviteClient(cfg),
-		ManagerRelationship: NewManagerRelationshipClient(cfg),
-		OAuthApp:            NewOAuthAppClient(cfg),
-		OAuthAppSecret:      NewOAuthAppSecretClient(cfg),
-		OAuthAuthCode:       NewOAuthAuthCodeClient(cfg),
-		OAuthConsent:        NewOAuthConsentClient(cfg),
-		OAuthToken:          NewOAuthTokenClient(cfg),
-		Organization:        NewOrganizationClient(cfg),
-		Principal:           NewPrincipalClient(cfg),
-		PrincipalMembership: NewPrincipalMembershipClient(cfg),
-		PrincipalToken:      NewPrincipalTokenClient(cfg),
-		ResourceGrant:       NewResourceGrantClient(cfg),
-		ScimToken:           NewScimTokenClient(cfg),
-		SeatAssignment:      NewSeatAssignmentClient(cfg),
-		ServicePrincipal:    NewServicePrincipalClient(cfg),
-		SignupInvite:        NewSignupInviteClient(cfg),
-		SignupWaitlistEntry: NewSignupWaitlistEntryClient(cfg),
-		SlugReservation:     NewSlugReservationClient(cfg),
-		Subscription:        NewSubscriptionClient(cfg),
+		ctx:                  ctx,
+		config:               cfg,
+		AccessChange:         NewAccessChangeClient(cfg),
+		Agent:                NewAgentClient(cfg),
+		AppRole:              NewAppRoleClient(cfg),
+		Application:          NewApplicationClient(cfg),
+		ClientAssertionJTI:   NewClientAssertionJTIClient(cfg),
+		ConsentGrant:         NewConsentGrantClient(cfg),
+		Credential:           NewCredentialClient(cfg),
+		ExternalIdentity:     NewExternalIdentityClient(cfg),
+		Human:                NewHumanClient(cfg),
+		Invite:               NewInviteClient(cfg),
+		License:              NewLicenseClient(cfg),
+		Listing:              NewListingClient(cfg),
+		LoginSession:         NewLoginSessionClient(cfg),
+		LoginState:           NewLoginStateClient(cfg),
+		ManagerClaim:         NewManagerClaimClient(cfg),
+		ManagerInvite:        NewManagerInviteClient(cfg),
+		ManagerRelationship:  NewManagerRelationshipClient(cfg),
+		OAuthApp:             NewOAuthAppClient(cfg),
+		OAuthAppSecret:       NewOAuthAppSecretClient(cfg),
+		OAuthAuthCode:        NewOAuthAuthCodeClient(cfg),
+		OAuthConsent:         NewOAuthConsentClient(cfg),
+		OAuthToken:           NewOAuthTokenClient(cfg),
+		Organization:         NewOrganizationClient(cfg),
+		Principal:            NewPrincipalClient(cfg),
+		PrincipalMembership:  NewPrincipalMembershipClient(cfg),
+		PrincipalToken:       NewPrincipalTokenClient(cfg),
+		ResourceGrant:        NewResourceGrantClient(cfg),
+		ScimToken:            NewScimTokenClient(cfg),
+		SeatAssignment:       NewSeatAssignmentClient(cfg),
+		ServicePrincipal:     NewServicePrincipalClient(cfg),
+		SignupAllowance:      NewSignupAllowanceClient(cfg),
+		SignupCode:           NewSignupCodeClient(cfg),
+		SignupCodeRedemption: NewSignupCodeRedemptionClient(cfg),
+		SignupInvite:         NewSignupInviteClient(cfg),
+		SignupWaitlistEntry:  NewSignupWaitlistEntryClient(cfg),
+		SlugReservation:      NewSlugReservationClient(cfg),
+		Subscription:         NewSubscriptionClient(cfg),
 	}, nil
 }
 
@@ -386,7 +404,8 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
 		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
 		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.ScimToken,
-		c.SeatAssignment, c.ServicePrincipal, c.SignupInvite, c.SignupWaitlistEntry,
+		c.SeatAssignment, c.ServicePrincipal, c.SignupAllowance, c.SignupCode,
+		c.SignupCodeRedemption, c.SignupInvite, c.SignupWaitlistEntry,
 		c.SlugReservation, c.Subscription,
 	} {
 		n.Use(hooks...)
@@ -403,7 +422,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
 		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
 		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.ScimToken,
-		c.SeatAssignment, c.ServicePrincipal, c.SignupInvite, c.SignupWaitlistEntry,
+		c.SeatAssignment, c.ServicePrincipal, c.SignupAllowance, c.SignupCode,
+		c.SignupCodeRedemption, c.SignupInvite, c.SignupWaitlistEntry,
 		c.SlugReservation, c.Subscription,
 	} {
 		n.Intercept(interceptors...)
@@ -473,6 +493,12 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.SeatAssignment.mutate(ctx, m)
 	case *ServicePrincipalMutation:
 		return c.ServicePrincipal.mutate(ctx, m)
+	case *SignupAllowanceMutation:
+		return c.SignupAllowance.mutate(ctx, m)
+	case *SignupCodeMutation:
+		return c.SignupCode.mutate(ctx, m)
+	case *SignupCodeRedemptionMutation:
+		return c.SignupCodeRedemption.mutate(ctx, m)
 	case *SignupInviteMutation:
 		return c.SignupInvite.mutate(ctx, m)
 	case *SignupWaitlistEntryMutation:
@@ -5676,6 +5702,437 @@ func (c *ServicePrincipalClient) mutate(ctx context.Context, m *ServicePrincipal
 	}
 }
 
+// SignupAllowanceClient is a client for the SignupAllowance schema.
+type SignupAllowanceClient struct {
+	config
+}
+
+// NewSignupAllowanceClient returns a client for the SignupAllowance from the given config.
+func NewSignupAllowanceClient(c config) *SignupAllowanceClient {
+	return &SignupAllowanceClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `signupallowance.Hooks(f(g(h())))`.
+func (c *SignupAllowanceClient) Use(hooks ...Hook) {
+	c.hooks.SignupAllowance = append(c.hooks.SignupAllowance, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `signupallowance.Intercept(f(g(h())))`.
+func (c *SignupAllowanceClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SignupAllowance = append(c.inters.SignupAllowance, interceptors...)
+}
+
+// Create returns a builder for creating a SignupAllowance entity.
+func (c *SignupAllowanceClient) Create() *SignupAllowanceCreate {
+	mutation := newSignupAllowanceMutation(c.config, OpCreate)
+	return &SignupAllowanceCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SignupAllowance entities.
+func (c *SignupAllowanceClient) CreateBulk(builders ...*SignupAllowanceCreate) *SignupAllowanceCreateBulk {
+	return &SignupAllowanceCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SignupAllowanceClient) MapCreateBulk(slice any, setFunc func(*SignupAllowanceCreate, int)) *SignupAllowanceCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SignupAllowanceCreateBulk{err: fmt.Errorf("calling to SignupAllowanceClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SignupAllowanceCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SignupAllowanceCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SignupAllowance.
+func (c *SignupAllowanceClient) Update() *SignupAllowanceUpdate {
+	mutation := newSignupAllowanceMutation(c.config, OpUpdate)
+	return &SignupAllowanceUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SignupAllowanceClient) UpdateOne(_m *SignupAllowance) *SignupAllowanceUpdateOne {
+	mutation := newSignupAllowanceMutation(c.config, OpUpdateOne, withSignupAllowance(_m))
+	return &SignupAllowanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SignupAllowanceClient) UpdateOneID(id uuid.UUID) *SignupAllowanceUpdateOne {
+	mutation := newSignupAllowanceMutation(c.config, OpUpdateOne, withSignupAllowanceID(id))
+	return &SignupAllowanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SignupAllowance.
+func (c *SignupAllowanceClient) Delete() *SignupAllowanceDelete {
+	mutation := newSignupAllowanceMutation(c.config, OpDelete)
+	return &SignupAllowanceDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SignupAllowanceClient) DeleteOne(_m *SignupAllowance) *SignupAllowanceDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SignupAllowanceClient) DeleteOneID(id uuid.UUID) *SignupAllowanceDeleteOne {
+	builder := c.Delete().Where(signupallowance.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SignupAllowanceDeleteOne{builder}
+}
+
+// Query returns a query builder for SignupAllowance.
+func (c *SignupAllowanceClient) Query() *SignupAllowanceQuery {
+	return &SignupAllowanceQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSignupAllowance},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a SignupAllowance entity by its id.
+func (c *SignupAllowanceClient) Get(ctx context.Context, id uuid.UUID) (*SignupAllowance, error) {
+	return c.Query().Where(signupallowance.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SignupAllowanceClient) GetX(ctx context.Context, id uuid.UUID) *SignupAllowance {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *SignupAllowanceClient) Hooks() []Hook {
+	return c.hooks.SignupAllowance
+}
+
+// Interceptors returns the client interceptors.
+func (c *SignupAllowanceClient) Interceptors() []Interceptor {
+	return c.inters.SignupAllowance
+}
+
+func (c *SignupAllowanceClient) mutate(ctx context.Context, m *SignupAllowanceMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SignupAllowanceCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SignupAllowanceUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SignupAllowanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SignupAllowanceDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SignupAllowance mutation op: %q", m.Op())
+	}
+}
+
+// SignupCodeClient is a client for the SignupCode schema.
+type SignupCodeClient struct {
+	config
+}
+
+// NewSignupCodeClient returns a client for the SignupCode from the given config.
+func NewSignupCodeClient(c config) *SignupCodeClient {
+	return &SignupCodeClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `signupcode.Hooks(f(g(h())))`.
+func (c *SignupCodeClient) Use(hooks ...Hook) {
+	c.hooks.SignupCode = append(c.hooks.SignupCode, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `signupcode.Intercept(f(g(h())))`.
+func (c *SignupCodeClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SignupCode = append(c.inters.SignupCode, interceptors...)
+}
+
+// Create returns a builder for creating a SignupCode entity.
+func (c *SignupCodeClient) Create() *SignupCodeCreate {
+	mutation := newSignupCodeMutation(c.config, OpCreate)
+	return &SignupCodeCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SignupCode entities.
+func (c *SignupCodeClient) CreateBulk(builders ...*SignupCodeCreate) *SignupCodeCreateBulk {
+	return &SignupCodeCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SignupCodeClient) MapCreateBulk(slice any, setFunc func(*SignupCodeCreate, int)) *SignupCodeCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SignupCodeCreateBulk{err: fmt.Errorf("calling to SignupCodeClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SignupCodeCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SignupCodeCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SignupCode.
+func (c *SignupCodeClient) Update() *SignupCodeUpdate {
+	mutation := newSignupCodeMutation(c.config, OpUpdate)
+	return &SignupCodeUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SignupCodeClient) UpdateOne(_m *SignupCode) *SignupCodeUpdateOne {
+	mutation := newSignupCodeMutation(c.config, OpUpdateOne, withSignupCode(_m))
+	return &SignupCodeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SignupCodeClient) UpdateOneID(id uuid.UUID) *SignupCodeUpdateOne {
+	mutation := newSignupCodeMutation(c.config, OpUpdateOne, withSignupCodeID(id))
+	return &SignupCodeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SignupCode.
+func (c *SignupCodeClient) Delete() *SignupCodeDelete {
+	mutation := newSignupCodeMutation(c.config, OpDelete)
+	return &SignupCodeDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SignupCodeClient) DeleteOne(_m *SignupCode) *SignupCodeDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SignupCodeClient) DeleteOneID(id uuid.UUID) *SignupCodeDeleteOne {
+	builder := c.Delete().Where(signupcode.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SignupCodeDeleteOne{builder}
+}
+
+// Query returns a query builder for SignupCode.
+func (c *SignupCodeClient) Query() *SignupCodeQuery {
+	return &SignupCodeQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSignupCode},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a SignupCode entity by its id.
+func (c *SignupCodeClient) Get(ctx context.Context, id uuid.UUID) (*SignupCode, error) {
+	return c.Query().Where(signupcode.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SignupCodeClient) GetX(ctx context.Context, id uuid.UUID) *SignupCode {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryRedemptions queries the redemptions edge of a SignupCode.
+func (c *SignupCodeClient) QueryRedemptions(_m *SignupCode) *SignupCodeRedemptionQuery {
+	query := (&SignupCodeRedemptionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(signupcode.Table, signupcode.FieldID, id),
+			sqlgraph.To(signupcoderedemption.Table, signupcoderedemption.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, signupcode.RedemptionsTable, signupcode.RedemptionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *SignupCodeClient) Hooks() []Hook {
+	return c.hooks.SignupCode
+}
+
+// Interceptors returns the client interceptors.
+func (c *SignupCodeClient) Interceptors() []Interceptor {
+	return c.inters.SignupCode
+}
+
+func (c *SignupCodeClient) mutate(ctx context.Context, m *SignupCodeMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SignupCodeCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SignupCodeUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SignupCodeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SignupCodeDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SignupCode mutation op: %q", m.Op())
+	}
+}
+
+// SignupCodeRedemptionClient is a client for the SignupCodeRedemption schema.
+type SignupCodeRedemptionClient struct {
+	config
+}
+
+// NewSignupCodeRedemptionClient returns a client for the SignupCodeRedemption from the given config.
+func NewSignupCodeRedemptionClient(c config) *SignupCodeRedemptionClient {
+	return &SignupCodeRedemptionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `signupcoderedemption.Hooks(f(g(h())))`.
+func (c *SignupCodeRedemptionClient) Use(hooks ...Hook) {
+	c.hooks.SignupCodeRedemption = append(c.hooks.SignupCodeRedemption, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `signupcoderedemption.Intercept(f(g(h())))`.
+func (c *SignupCodeRedemptionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SignupCodeRedemption = append(c.inters.SignupCodeRedemption, interceptors...)
+}
+
+// Create returns a builder for creating a SignupCodeRedemption entity.
+func (c *SignupCodeRedemptionClient) Create() *SignupCodeRedemptionCreate {
+	mutation := newSignupCodeRedemptionMutation(c.config, OpCreate)
+	return &SignupCodeRedemptionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SignupCodeRedemption entities.
+func (c *SignupCodeRedemptionClient) CreateBulk(builders ...*SignupCodeRedemptionCreate) *SignupCodeRedemptionCreateBulk {
+	return &SignupCodeRedemptionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SignupCodeRedemptionClient) MapCreateBulk(slice any, setFunc func(*SignupCodeRedemptionCreate, int)) *SignupCodeRedemptionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SignupCodeRedemptionCreateBulk{err: fmt.Errorf("calling to SignupCodeRedemptionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SignupCodeRedemptionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SignupCodeRedemptionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SignupCodeRedemption.
+func (c *SignupCodeRedemptionClient) Update() *SignupCodeRedemptionUpdate {
+	mutation := newSignupCodeRedemptionMutation(c.config, OpUpdate)
+	return &SignupCodeRedemptionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SignupCodeRedemptionClient) UpdateOne(_m *SignupCodeRedemption) *SignupCodeRedemptionUpdateOne {
+	mutation := newSignupCodeRedemptionMutation(c.config, OpUpdateOne, withSignupCodeRedemption(_m))
+	return &SignupCodeRedemptionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SignupCodeRedemptionClient) UpdateOneID(id uuid.UUID) *SignupCodeRedemptionUpdateOne {
+	mutation := newSignupCodeRedemptionMutation(c.config, OpUpdateOne, withSignupCodeRedemptionID(id))
+	return &SignupCodeRedemptionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SignupCodeRedemption.
+func (c *SignupCodeRedemptionClient) Delete() *SignupCodeRedemptionDelete {
+	mutation := newSignupCodeRedemptionMutation(c.config, OpDelete)
+	return &SignupCodeRedemptionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SignupCodeRedemptionClient) DeleteOne(_m *SignupCodeRedemption) *SignupCodeRedemptionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SignupCodeRedemptionClient) DeleteOneID(id uuid.UUID) *SignupCodeRedemptionDeleteOne {
+	builder := c.Delete().Where(signupcoderedemption.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SignupCodeRedemptionDeleteOne{builder}
+}
+
+// Query returns a query builder for SignupCodeRedemption.
+func (c *SignupCodeRedemptionClient) Query() *SignupCodeRedemptionQuery {
+	return &SignupCodeRedemptionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSignupCodeRedemption},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a SignupCodeRedemption entity by its id.
+func (c *SignupCodeRedemptionClient) Get(ctx context.Context, id uuid.UUID) (*SignupCodeRedemption, error) {
+	return c.Query().Where(signupcoderedemption.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SignupCodeRedemptionClient) GetX(ctx context.Context, id uuid.UUID) *SignupCodeRedemption {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryCode queries the code edge of a SignupCodeRedemption.
+func (c *SignupCodeRedemptionClient) QueryCode(_m *SignupCodeRedemption) *SignupCodeQuery {
+	query := (&SignupCodeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(signupcoderedemption.Table, signupcoderedemption.FieldID, id),
+			sqlgraph.To(signupcode.Table, signupcode.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, signupcoderedemption.CodeTable, signupcoderedemption.CodeColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *SignupCodeRedemptionClient) Hooks() []Hook {
+	return c.hooks.SignupCodeRedemption
+}
+
+// Interceptors returns the client interceptors.
+func (c *SignupCodeRedemptionClient) Interceptors() []Interceptor {
+	return c.inters.SignupCodeRedemption
+}
+
+func (c *SignupCodeRedemptionClient) mutate(ctx context.Context, m *SignupCodeRedemptionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SignupCodeRedemptionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SignupCodeRedemptionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SignupCodeRedemptionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SignupCodeRedemptionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SignupCodeRedemption mutation op: %q", m.Op())
+	}
+}
+
 // SignupInviteClient is a client for the SignupInvite schema.
 type SignupInviteClient struct {
 	config
@@ -6264,8 +6721,9 @@ type (
 		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
 		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
 		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, ScimToken,
-		SeatAssignment, ServicePrincipal, SignupInvite, SignupWaitlistEntry,
-		SlugReservation, Subscription []ent.Hook
+		SeatAssignment, ServicePrincipal, SignupAllowance, SignupCode,
+		SignupCodeRedemption, SignupInvite, SignupWaitlistEntry, SlugReservation,
+		Subscription []ent.Hook
 	}
 	inters struct {
 		AccessChange, Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant,
@@ -6273,8 +6731,9 @@ type (
 		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
 		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
 		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, ScimToken,
-		SeatAssignment, ServicePrincipal, SignupInvite, SignupWaitlistEntry,
-		SlugReservation, Subscription []ent.Interceptor
+		SeatAssignment, ServicePrincipal, SignupAllowance, SignupCode,
+		SignupCodeRedemption, SignupInvite, SignupWaitlistEntry, SlugReservation,
+		Subscription []ent.Interceptor
 	}
 )
 
