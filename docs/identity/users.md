@@ -143,10 +143,12 @@ The SystemAuth server works with humans through its `Storage` interface using on
 | `GetHumanByEmail(ctx, email)` | Look up by email, ignoring case |
 | `GetHumanByExternalIdentity(ctx, provider, subject)` | Look up through a linked upstream identity |
 | `LinkExternalIdentity(ctx, principalID, provider, subject)` | Link an upstream identity; relinking the same pair is a no-op |
-| `UpdateHuman(ctx, h)` | Replace the profile fields |
+| `UpdateHuman(ctx, h)` | Replace the profile fields; a change of `h.Active` deactivates or reactivates the principal |
 | `DeleteHuman(ctx, id)` | Delete the human with its extension, external identities, and credentials |
 
 Not-found lookups return `systemauth.ErrPrincipalNotFound`; a taken email returns `systemauth.ErrPrincipalExists`; an upstream identity already linked to another human returns `systemauth.ErrExternalIdentityExists`. Both `systemauth.NewEntStorage` and `systemauth.NewMemoryStorage` implement these methods.
+
+Federation sync (an `update` to a non-active status, or a `delete`) and `EmbeddedIdentityProvider.UpdateIdentity` deactivate humans through `UpdateHuman`. `EntStorage.UpdateHuman` saves the profile fields, then deactivates or reactivates through the principal service's `Deactivate` and `Reactivate` described above: a deactivation records the `deactivated` access change and removes the principal's relationships from the graph before it commits, and if the graph refuses, the principal stays active and the error is returned. Give the storage the authorization syncer with `systemauth.WithEntAuthzSyncer(syncer, mode)`, the same one passed to `systemauth.WithSocialAuthzSyncer`; the packaged service (`identity/systemauthsvc`) does this for you. Without it nothing is written to a graph.
 
 ### Password Login
 
