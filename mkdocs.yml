@@ -62,6 +62,7 @@ nav:
     - The Organization Console: guides/console.md
     - Key Management: guides/key-management.md
     - Minimum Sign-Up Age: guides/signup-age.md
+    - Invite-Gated Sign-Up: guides/invite-gated-signup.md
     - Browser Cookies: guides/cookies.md
     - Calling APIs with DPoP: guides/dpop-clients.md
     - Rotating Keys and Secrets: guides/rotation.md
