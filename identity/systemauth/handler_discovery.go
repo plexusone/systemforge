@@ -142,7 +142,7 @@ type JWKSOutput struct {
 func (s *Server) jwksHandler(_ context.Context, _ *JWKSInput) (*JWKSOutput, error) {
 	// The signing key first, then the previous or pre-staged verification
 	// keys (keys.verification_keys).
-	return &JWKSOutput{Body: s.keys.jwks()}, nil
+	return &JWKSOutput{Body: s.keys.JWKS()}, nil
 }
 
 // PublicKey returns the public RSA key for external verification.

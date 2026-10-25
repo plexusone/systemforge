@@ -34,7 +34,7 @@ type Server struct {
 	oauth2          fosite.OAuth2Provider
 	key             *rsa.PrivateKey
 	keyID           string
-	keys            *keyRing
+	keys            *KeyRing
 	codeStrategy    oauth2.AuthorizeCodeStrategy
 	dpop            *dpopproof.Checker
 	dpopCache       dpopproof.ReplayCache
@@ -206,7 +206,7 @@ func (s *Server) setupFosite() error {
 	// JWTs are signed with the signing key and verified with the key their
 	// kid selects from the key ring (the signing key and the verification
 	// keys), so tokens signed before a rotation keep verifying.
-	jwtSigner := s.keys.signer()
+	jwtSigner := s.keys.Signer()
 
 	// Access tokens are opaque (HMAC) by default, or RS256 JWTs verifiable
 	// against the JWKS when features.enable_jwt_access_tokens is set. Either

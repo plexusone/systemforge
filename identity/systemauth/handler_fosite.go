@@ -226,7 +226,7 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// dpop_jkt binds the code to a DPoP key: only a token request with a
 	// proof by that key can redeem it (RFC 9449 §10).
-	jkt, err := authorizationDPoPJKT(ar)
+	jkt, err := AuthorizationDPoPJKT(ar)
 	if err != nil {
 		s.recordAuthMetrics(ctx, "authorize", clientID, observability.StatusError, start)
 		s.oauth2.WriteAuthorizeError(ctx, w, ar, err)
@@ -480,7 +480,7 @@ func (s *Server) prepareAccessClaims(ctx context.Context, ar fosite.AccessReques
 	claims.NotBefore = time.Time{}
 	claims.JTI = ""
 	claims.Add("client_id", clientID)
-	setConfirmationClaim(sess, claims)
+	SetConfirmationClaim(sess, claims)
 	// Always reset the header: a session stored before access tokens were
 	// typed, or before a key rotation, must not keep its old header.
 	sess.AccessHeader = s.accessTokenHeaders()
@@ -559,7 +559,7 @@ func (s *Server) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// Fosite reads only the Bearer scheme; a DPoP caller's token and proof
 	// were checked above, so hand it the token as Bearer.
-	if scheme, token := accessTokenCredentials(r); scheme == "dpop" {
+	if scheme, token := AccessTokenCredentials(r); scheme == "dpop" {
 		r = r.Clone(ctx)
 		r.Header.Set("Authorization", "Bearer "+token)
 	}

@@ -103,14 +103,22 @@ func dpopError(code, description string) *fosite.RFC6749Error {
 }
 
 // tokenRequestProof verifies the DPoP proof of a token request, if it
-// carries one. A request without one returns nil: whether a proof is
-// required depends on the client, which is known only after the request
-// is parsed.
+// carries one; see VerifyTokenRequestProof.
 func (s *Server) tokenRequestProof(ctx context.Context, r *http.Request) (*dpopproof.Proof, error) {
+	return VerifyTokenRequestProof(ctx, s.dpop, r, s.TokenEndpointURL())
+}
+
+// VerifyTokenRequestProof verifies the DPoP proof of a token request to
+// the token endpoint at tokenURL (its external URL, as discovery
+// advertises it), if the request carries one. A request without one
+// returns nil: whether a proof is required depends on the client. The
+// error is an RFC 6749 error to write with WriteAccessError:
+// invalid_dpop_proof, use_dpop_nonce or server_error.
+func VerifyTokenRequestProof(ctx context.Context, checker *dpopproof.Checker, r *http.Request, tokenURL string) (*dpopproof.Proof, error) {
 	if !dpopproof.Present(r) {
 		return nil, nil
 	}
-	proof, err := s.dpop.Check(ctx, r, dpopproof.Target{Method: http.MethodPost, URI: s.TokenEndpointURL()})
+	proof, err := checker.Check(ctx, r, dpopproof.Target{Method: http.MethodPost, URI: tokenURL})
 	switch {
 	case err == nil:
 		return proof, nil
@@ -121,6 +129,12 @@ func (s *Server) tokenRequestProof(ctx context.Context, r *http.Request) (*dpopp
 	default:
 		return nil, fosite.ErrServerError.WithWrap(err)
 	}
+}
+
+// DPoPProofRequiredError is the token endpoint error for a client that must
+// use DPoP and sent no proof.
+func DPoPProofRequiredError() *fosite.RFC6749Error {
+	return dpopError(errInvalidDPoPProof, "This client must use DPoP: a DPoP proof is required.")
 }
 
 // requireProofBeforeGrant refuses a token request without a proof from a
@@ -150,7 +164,7 @@ func (s *Server) requireProofBeforeGrant(ctx context.Context, r *http.Request, p
 		return fosite.ErrServerError.WithWrap(err)
 	}
 	if c.DPoPBoundAccessTokens() {
-		return dpopError(errInvalidDPoPProof, "This client must use DPoP: a DPoP proof is required.")
+		return DPoPProofRequiredError()
 	}
 	return nil
 }
@@ -194,14 +208,23 @@ func CheckCodeDPoPBinding(ctx context.Context, codes CodeDPoPBindingStorage, str
 	return nil
 }
 
-// bindDPoP applies the DPoP policy to a parsed token request and binds the
-// tokens it issues to the proof's key:
+// bindDPoP applies the DPoP policy to a parsed token request; see
+// BindDPoPGrant. A client must send a proof unless it is registered with
+// the AllowBearerTokens exception.
+func (s *Server) bindDPoP(ar fosite.AccessRequester, proof *dpopproof.Proof) error {
+	return BindDPoPGrant(ar, proof, requiresDPoP(ar.GetClient()))
+}
+
+// BindDPoPGrant applies the DPoP policy to a token request Fosite has
+// parsed, whose session is a *Session, and binds the tokens it issues to
+// the proof's key:
 //
-//   - a client without the AllowBearerTokens exception must send a proof;
+//   - without a proof, the request is refused when requireProof is set
+//     (the client has no bearer-token exception);
 //   - a code issued for a dpop_jkt, and a refresh token bound to a key,
 //     need a proof by that key (RFC 9449 §10, §5);
 //   - with a proof, the access and refresh tokens are bound to its key.
-func (s *Server) bindDPoP(ar fosite.AccessRequester, proof *dpopproof.Proof) error {
+func BindDPoPGrant(ar fosite.AccessRequester, proof *dpopproof.Proof, requireProof bool) error {
 	sess, ok := ar.GetSession().(*Session)
 	if !ok || sess.DefaultSession == nil {
 		return fosite.ErrServerError.WithHint("unexpected session type")
@@ -211,8 +234,8 @@ func (s *Server) bindDPoP(ar fosite.AccessRequester, proof *dpopproof.Proof) err
 		if bound != "" {
 			return dpopError(errInvalidDPoPProof, "The grant is bound to a DPoP key; a DPoP proof by that key is required.")
 		}
-		if requiresDPoP(ar.GetClient()) {
-			return dpopError(errInvalidDPoPProof, "This client must use DPoP: a DPoP proof is required.")
+		if requireProof {
+			return DPoPProofRequiredError()
 		}
 		return nil
 	}
@@ -233,10 +256,10 @@ func requiresDPoP(c fosite.Client) bool {
 // dpopJKTPattern matches a base64url SHA-256 thumbprint.
 var dpopJKTPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)
 
-// authorizationDPoPJKT returns the dpop_jkt of an authorization request
+// AuthorizationDPoPJKT returns the dpop_jkt of an authorization request
 // (RFC 9449 §10), which binds the code to that key, or an error for a
 // malformed one.
-func authorizationDPoPJKT(ar fosite.AuthorizeRequester) (string, error) {
+func AuthorizationDPoPJKT(ar fosite.AuthorizeRequester) (string, error) {
 	values := ar.GetRequestForm()["dpop_jkt"]
 	switch {
 	case len(values) == 0 || (len(values) == 1 && values[0] == ""):
@@ -247,9 +270,9 @@ func authorizationDPoPJKT(ar fosite.AuthorizeRequester) (string, error) {
 	return values[0], nil
 }
 
-// setConfirmationClaim sets or clears the cnf claim of JWT access tokens
+// SetConfirmationClaim sets or clears the cnf claim of JWT access tokens
 // to match the session's binding.
-func setConfirmationClaim(sess *Session, claims *jwt.JWTClaims) {
+func SetConfirmationClaim(sess *Session, claims *jwt.JWTClaims) {
 	if sess.DPoPJKT == "" {
 		delete(claims.Extra, "cnf")
 		return
@@ -269,8 +292,8 @@ func (s *Server) setDPoPNonce(ctx context.Context, w http.ResponseWriter) {
 	}
 }
 
-// tokenAuthError is why a request's access token was not accepted.
-type tokenAuthError struct {
+// TokenAuthError is why a request's access token was not accepted.
+type TokenAuthError struct {
 	status      int
 	code        string
 	description string
@@ -282,19 +305,26 @@ type tokenAuthError struct {
 	err   error
 }
 
-func (e *tokenAuthError) Error() string {
+func (e *TokenAuthError) Error() string {
 	if e.err != nil {
 		return e.description + ": " + e.err.Error()
 	}
 	return e.description
 }
 
-func (e *tokenAuthError) Unwrap() error { return e.err }
+func (e *TokenAuthError) Unwrap() error { return e.err }
 
-// accessTokenCredentials returns the scheme ("bearer" or "dpop") and the
+// NoToken reports whether the request carried no access token.
+func (e *TokenAuthError) NoToken() bool { return errors.Is(e.err, errNoAccessToken) }
+
+// StatusCode is the HTTP status of the refusal: 401, or 500 when the
+// token could not be checked.
+func (e *TokenAuthError) StatusCode() int { return e.status }
+
+// AccessTokenCredentials returns the scheme ("bearer" or "dpop") and the
 // access token of a request: the Authorization header, or for Bearer the
 // form body of a POST (RFC 6750 §2.2). Query parameters are not accepted.
-func accessTokenCredentials(r *http.Request) (scheme, token string) {
+func AccessTokenCredentials(r *http.Request) (scheme, token string) {
 	if auth := r.Header.Get("Authorization"); auth != "" {
 		sch, tok, ok := strings.Cut(auth, " ")
 		if !ok {
@@ -321,25 +351,36 @@ func accessTokenCredentials(r *http.Request) (scheme, token string) {
 var errNoAccessToken = errors.New("systemauth: no access token")
 
 // authenticateAccessToken validates the access token of a request to one
-// of this server's resources at htu. The token must be active and its
-// principal active; a DPoP-bound token must come with the DPoP scheme and
-// a fresh, unreplayed proof by its key for the request's method and htu,
+// of this server's resources at htu; see AuthenticateAccessToken. The
+// token must be active and its principal active.
+func (s *Server) authenticateAccessToken(r *http.Request, htu string) (fosite.AccessRequester, *TokenAuthError) {
+	return AuthenticateAccessToken(r, s.dpop, htu, func(ctx context.Context, token string) (fosite.AccessRequester, error) {
+		return s.introspect(ctx, token, fosite.AccessToken, s.Session(""))
+	})
+}
+
+// AuthenticateAccessToken validates the access token of a request to a
+// resource at htu, the request's external URL without query. introspect
+// returns the request of an active, acceptable access token, whose session
+// is a *Session, or an error to refuse it with invalid_token. A
+// DPoP-bound token must come with the DPoP scheme and a fresh, unreplayed
+// proof by its key (checked by checker) for the request's method and htu,
 // carrying the token's hash; an unbound token must come with the Bearer
-// scheme. A request without a token returns a *tokenAuthError wrapping
-// errNoAccessToken.
-func (s *Server) authenticateAccessToken(r *http.Request, htu string) (fosite.AccessRequester, *tokenAuthError) {
+// scheme. A request without a token returns a *TokenAuthError for which
+// NoToken reports true. Write a refusal with WriteTokenAuthError.
+func AuthenticateAccessToken(r *http.Request, checker *dpopproof.Checker, htu string, introspect func(ctx context.Context, token string) (fosite.AccessRequester, error)) (fosite.AccessRequester, *TokenAuthError) {
 	ctx := r.Context()
-	scheme, token := accessTokenCredentials(r)
+	scheme, token := AccessTokenCredentials(r)
 	if token == "" {
-		return nil, &tokenAuthError{status: http.StatusUnauthorized, err: errNoAccessToken}
+		return nil, &TokenAuthError{status: http.StatusUnauthorized, err: errNoAccessToken}
 	}
 	challenge := ""
 	if scheme == "dpop" {
 		challenge = TokenTypeDPoP
 	}
-	ar, err := s.introspect(ctx, token, fosite.AccessToken, s.Session(""))
+	ar, err := introspect(ctx, token)
 	if err != nil {
-		return nil, &tokenAuthError{status: http.StatusUnauthorized, code: "invalid_token", description: "The access token is invalid, expired or revoked.", scheme: challenge, err: err}
+		return nil, &TokenAuthError{status: http.StatusUnauthorized, code: "invalid_token", description: "The access token is invalid, expired or revoked.", scheme: challenge, err: err}
 	}
 	sess, _ := ar.GetSession().(*Session)
 	jkt := ""
@@ -348,28 +389,28 @@ func (s *Server) authenticateAccessToken(r *http.Request, htu string) (fosite.Ac
 	}
 	if jkt == "" {
 		if scheme == "dpop" {
-			return nil, &tokenAuthError{status: http.StatusUnauthorized, code: "invalid_token", description: "The access token is not DPoP-bound; use the Bearer scheme.", scheme: TokenTypeDPoP}
+			return nil, &TokenAuthError{status: http.StatusUnauthorized, code: "invalid_token", description: "The access token is not DPoP-bound; use the Bearer scheme.", scheme: TokenTypeDPoP}
 		}
 		return ar, nil
 	}
 	if scheme != "dpop" {
-		return nil, &tokenAuthError{status: http.StatusUnauthorized, code: "invalid_token", description: "The access token is DPoP-bound; use the DPoP scheme with a DPoP proof.", scheme: TokenTypeDPoP}
+		return nil, &TokenAuthError{status: http.StatusUnauthorized, code: "invalid_token", description: "The access token is DPoP-bound; use the DPoP scheme with a DPoP proof.", scheme: TokenTypeDPoP}
 	}
-	proof, err := s.dpop.Check(ctx, r, dpopproof.Target{Method: r.Method, URI: htu, AccessToken: token})
+	proof, err := checker.Check(ctx, r, dpopproof.Target{Method: r.Method, URI: htu, AccessToken: token})
 	switch {
 	case errors.Is(err, dpopproof.ErrUseNonce):
-		nonce, nerr := s.dpop.Nonce()
+		nonce, nerr := checker.Nonce()
 		if nerr != nil {
-			return nil, &tokenAuthError{status: http.StatusInternalServerError, err: nerr}
+			return nil, &TokenAuthError{status: http.StatusInternalServerError, err: nerr}
 		}
-		return nil, &tokenAuthError{status: http.StatusUnauthorized, code: errUseDPoPNonce, description: "Resource server requires a nonce in the DPoP proof.", scheme: TokenTypeDPoP, nonce: nonce, err: err}
+		return nil, &TokenAuthError{status: http.StatusUnauthorized, code: errUseDPoPNonce, description: "Resource server requires a nonce in the DPoP proof.", scheme: TokenTypeDPoP, nonce: nonce, err: err}
 	case errors.Is(err, dpopproof.ErrInvalid), errors.Is(err, dpopproof.ErrMissing):
-		return nil, &tokenAuthError{status: http.StatusUnauthorized, code: errInvalidDPoPProof, description: "A valid DPoP proof for this request is required.", scheme: TokenTypeDPoP, err: err}
+		return nil, &TokenAuthError{status: http.StatusUnauthorized, code: errInvalidDPoPProof, description: "A valid DPoP proof for this request is required.", scheme: TokenTypeDPoP, err: err}
 	case err != nil:
-		return nil, &tokenAuthError{status: http.StatusInternalServerError, err: err}
+		return nil, &TokenAuthError{status: http.StatusInternalServerError, err: err}
 	}
 	if proof.JKT() != jkt {
-		return nil, &tokenAuthError{status: http.StatusUnauthorized, code: errInvalidDPoPProof, description: "The DPoP proof was not signed by the key the access token is bound to.", scheme: TokenTypeDPoP}
+		return nil, &TokenAuthError{status: http.StatusUnauthorized, code: errInvalidDPoPProof, description: "The DPoP proof was not signed by the key the access token is bound to.", scheme: TokenTypeDPoP}
 	}
 	return ar, nil
 }
@@ -389,11 +430,19 @@ func dpopChallenge(code, description string) string {
 // writeTokenAuthError writes the response for a request whose access token
 // was not accepted, with WWW-Authenticate challenges (RFC 6750 §3, RFC 9449
 // §7.1).
-func (s *Server) writeTokenAuthError(w http.ResponseWriter, e *tokenAuthError) {
+func (s *Server) writeTokenAuthError(w http.ResponseWriter, e *TokenAuthError) {
 	writeTokenAuthError(w, e)
 }
 
-func writeTokenAuthError(w http.ResponseWriter, e *tokenAuthError) {
+// WriteTokenAuthError writes the response for a request whose access
+// token AuthenticateAccessToken did not accept: 401 with WWW-Authenticate
+// challenges (RFC 6750 §3, RFC 9449 §7.1) and a DPoP-Nonce to retry with
+// when one is needed, or 500 when the token could not be checked.
+func WriteTokenAuthError(w http.ResponseWriter, e *TokenAuthError) {
+	writeTokenAuthError(w, e)
+}
+
+func writeTokenAuthError(w http.ResponseWriter, e *TokenAuthError) {
 	if e.status == http.StatusInternalServerError {
 		http.Error(w, "could not check the access token", http.StatusInternalServerError)
 		return

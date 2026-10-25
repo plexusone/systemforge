@@ -150,7 +150,7 @@ func TestSigningKeyRotation(t *testing.T) {
 func TestKeyRingRefusesUnknownKID(t *testing.T) {
 	k1, other := rsaKey(t), rsaKey(t)
 	ring := newKeyRing(k1, "k1", nil)
-	signer := ring.signer()
+	signer := ring.Signer()
 	sign := func(key *rsa.PrivateKey, kid string) string {
 		tok := gojwt.NewWithClaims(gojwt.SigningMethodRS256, gojwt.MapClaims{"sub": "x"})
 		tok.Header["kid"] = kid

@@ -144,7 +144,7 @@ func (a bearerAuthenticator) Challenge(h http.Header) {
 // authentication failure, or the access request of a token lacking scope.
 type bearerError struct {
 	base error
-	auth *tokenAuthError
+	auth *TokenAuthError
 	ar   fosite.AccessRequester
 }
 
@@ -174,8 +174,8 @@ func WriteBearerError(w http.ResponseWriter, err error, scope string) {
 	case hasDetail && be.auth != nil:
 		writeTokenAuthError(w, be.auth)
 	case errors.Is(err, ErrBearerInvalid):
-		writeTokenAuthError(w, &tokenAuthError{status: http.StatusUnauthorized, code: "invalid_token", description: "The access token is invalid, expired or revoked."})
+		writeTokenAuthError(w, &TokenAuthError{status: http.StatusUnauthorized, code: "invalid_token", description: "The access token is invalid, expired or revoked."})
 	default:
-		writeTokenAuthError(w, &tokenAuthError{status: http.StatusUnauthorized})
+		writeTokenAuthError(w, &TokenAuthError{status: http.StatusUnauthorized})
 	}
 }

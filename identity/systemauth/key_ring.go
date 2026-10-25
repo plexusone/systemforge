@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/go-jose/go-jose/v3"
@@ -130,9 +131,12 @@ func publicKeyThumbprint(key *rsa.PublicKey) (string, error) {
 // errUnknownKeyID is returned for a token whose kid names no key.
 var errUnknownKeyID = errors.New("systemauth: unknown key id")
 
-// keyRing holds SystemAuth's signing key and the keys it verifies with:
-// the signing key and every verification key, by kid.
-type keyRing struct {
+// KeyRing holds a signing key and the keys tokens are verified with: the
+// signing key and every verification key, by kid. It is how SystemAuth,
+// and the identity/oauth provider, rotate signing keys N / N-1 (see
+// KeyConfig.KeyID): a token's kid selects the key that verifies it, and a
+// token with any other kid is refused.
+type KeyRing struct {
 	signing    *rsa.PrivateKey
 	signingKID string
 	verify     map[string]*rsa.PublicKey
@@ -140,8 +144,33 @@ type keyRing struct {
 	order []string
 }
 
-func newKeyRing(signing *rsa.PrivateKey, signingKID string, verification []VerificationKeyConfig) *keyRing {
-	r := &keyRing{
+// NewKeyRing returns a key ring that signs with signing, published under
+// signingKID (its RFC 7638 thumbprint when empty), and verifies also with
+// the verification keys: the previous signing key N-1 after a rotation,
+// or a pre-staged next key. Each verification entry is as configured, with
+// exactly one of PublicKey, PublicKeyPEM or PublicKeyFile; its KeyID
+// defaults to the key's thumbprint. No two keys may share a kid.
+func NewKeyRing(signing *rsa.PrivateKey, signingKID string, verification []VerificationKeyConfig) (*KeyRing, error) {
+	if signing == nil {
+		return nil, fmt.Errorf("%w: no signing key", ErrInvalidSigningKey)
+	}
+	if signingKID == "" {
+		kid, err := KeyThumbprint(signing)
+		if err != nil {
+			return nil, err
+		}
+		signingKID = kid
+	}
+	keys := KeyConfig{VerificationKeys: slices.Clone(verification)}
+	if err := keys.LoadVerificationKeys(signingKID); err != nil {
+		return nil, err
+	}
+	return newKeyRing(signing, signingKID, keys.VerificationKeys), nil
+}
+
+// newKeyRing builds a ring from loaded verification keys.
+func newKeyRing(signing *rsa.PrivateKey, signingKID string, verification []VerificationKeyConfig) *KeyRing {
+	r := &KeyRing{
 		signing:    signing,
 		signingKID: signingKID,
 		verify:     map[string]*rsa.PublicKey{signingKID: &signing.PublicKey},
@@ -154,9 +183,13 @@ func newKeyRing(signing *rsa.PrivateKey, signingKID string, verification []Verif
 	return r
 }
 
-// jwks returns the published key set: the signing key first, then the
+// SigningKeyID returns the kid of the signing key, to set in the header
+// of every JWT signed with the ring.
+func (r *KeyRing) SigningKeyID() string { return r.signingKID }
+
+// JWKS returns the published key set: the signing key first, then the
 // verification keys.
-func (r *keyRing) jwks() jose.JSONWebKeySet {
+func (r *KeyRing) JWKS() jose.JSONWebKeySet {
 	set := jose.JSONWebKeySet{Keys: make([]jose.JSONWebKey, 0, len(r.order))}
 	for _, kid := range r.order {
 		set.Keys = append(set.Keys, jose.JSONWebKey{
@@ -172,7 +205,7 @@ func (r *keyRing) jwks() jose.JSONWebKeySet {
 // keyFunc selects the key that verifies a token by its kid header: the
 // signing key's kid or none selects the signing key, a verification key's
 // kid selects that key, and any other kid is refused.
-func (r *keyRing) keyFunc(t *jwt.Token) (interface{}, error) {
+func (r *KeyRing) keyFunc(t *jwt.Token) (interface{}, error) {
 	raw, present := t.Header["kid"]
 	if !present {
 		return &r.signing.PublicKey, nil
@@ -188,18 +221,18 @@ func (r *keyRing) keyFunc(t *jwt.Token) (interface{}, error) {
 	return key, nil
 }
 
-// signer returns the fosite JWT signer of the ring: it signs with the
+// Signer returns the fosite JWT signer of the ring: it signs with the
 // signing key and verifies with the key the token's kid selects.
-func (r *keyRing) signer() jwt.Signer {
+func (r *KeyRing) Signer() jwt.Signer {
 	return &keyRingSigner{
 		ring: r,
 		sign: &jwt.DefaultSigner{GetPrivateKey: func(context.Context) (interface{}, error) { return r.signing, nil }},
 	}
 }
 
-// keyRingSigner is a fosite jwt.Signer over a keyRing.
+// keyRingSigner is a fosite jwt.Signer over a KeyRing.
 type keyRingSigner struct {
-	ring *keyRing
+	ring *KeyRing
 	sign *jwt.DefaultSigner
 }
 
