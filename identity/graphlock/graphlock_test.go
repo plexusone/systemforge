@@ -2,6 +2,8 @@ package graphlock_test
 
 import (
 	"context"
+	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -109,5 +111,76 @@ func TestLockSerializesOnPostgres(t *testing.T) {
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("second Lock still waiting after the first transaction committed")
+	}
+}
+
+// Grant waits for a transaction holding one of its locks, so the rows it
+// reads again include that transaction's revocation.
+func TestGrantWaitsForARevocationHoldingTheLock(t *testing.T) {
+	ctx := context.Background()
+	sqlDB := pgtest.Open(t)
+	db := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, sqlDB)))
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	org, p := uuid.New(), uuid.New()
+
+	revocation, err := db.Tx(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := graphlock.Lock(ctx, revocation, graphlock.Principal(p)); err != nil {
+		t.Fatalf("revocation Lock: %v", err)
+	}
+	var revoked atomic.Bool
+	done := make(chan error, 1)
+	go func() {
+		done <- graphlock.Grant(ctx, db, []string{graphlock.Organization(org), graphlock.Principal(p)}, func(context.Context, *ent.Client) error {
+			if !revoked.Load() {
+				return errors.New("grant wrote before the revocation committed")
+			}
+			return nil
+		})
+	}()
+	select {
+	case err := <-done:
+		t.Fatalf("Grant returned while a revocation held the lock: %v", err)
+	case <-time.After(200 * time.Millisecond):
+	}
+	revoked.Store(true)
+	if err := revocation.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("Grant: %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Grant still waiting after the revocation committed")
+	}
+}
+
+// Grant returns write's error and reads through the transaction's client;
+// on SQLite it takes no locks.
+func TestGrantReturnsWriteError(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	want := errors.New("graph refused")
+	err := graphlock.Grant(ctx, db, []string{graphlock.Principal(uuid.New())}, func(ctx context.Context, c *ent.Client) error {
+		if _, err := c.Organization.Query().Count(ctx); err != nil {
+			return err
+		}
+		return want
+	})
+	if !errors.Is(err, want) {
+		t.Fatalf("Grant = %v, want %v", err, want)
 	}
 }

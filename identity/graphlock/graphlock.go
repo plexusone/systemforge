@@ -18,6 +18,7 @@ package graphlock
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -62,4 +63,34 @@ func Lock(ctx context.Context, tx *ent.Tx, keys ...string) error {
 		return fmt.Errorf("graphlock: locking %s: %w", k, err)
 	}
 	return nil
+}
+
+// Grant writes to the graph the access a committed change granted, without
+// undoing a revocation that committed since. It runs write in a
+// transaction holding the locks named by keys; write reads the rows again
+// through c, the transaction's client, and writes only the relationships
+// they still call for (package identity/graphstate). A revocation holding
+// one of the locks finishes first, so write sees its result; one that
+// starts later waits for write, and removes what it wrote.
+//
+// The transaction only reads and is rolled back when write returns. Grant
+// returns write's error, joined with a failure to end the transaction.
+// Lock it with the same keys as the reconciler's repair of the
+// relationship: the organization and the principal for a relationship on
+// an organization, its facet or a resource in it, the principal alone for
+// platform administration, and both principals for a manager relation.
+func Grant(ctx context.Context, client *ent.Client, keys []string, write func(ctx context.Context, c *ent.Client) error) (err error) {
+	tx, err := client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("graphlock: starting transaction: %w", err)
+	}
+	defer func() {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = errors.Join(err, fmt.Errorf("graphlock: ending transaction: %w", rerr))
+		}
+	}()
+	if err = Lock(ctx, tx, keys...); err != nil {
+		return err
+	}
+	return write(ctx, tx.Client())
 }
