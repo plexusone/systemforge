@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/plexusone/systemforge/identity/appcatalog"
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
@@ -34,7 +35,7 @@ type Server struct {
 	oauth2          fosite.OAuth2Provider
 	key             *rsa.PrivateKey
 	keyID           string
-	keys            *KeyRing
+	keys            *oauthcore.KeyRing
 	codeStrategy    oauth2.AuthorizeCodeStrategy
 	dpop            *dpopproof.Checker
 	dpopCache       dpopproof.ReplayCache
@@ -136,7 +137,7 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 	if err := s.config.Keys.LoadVerificationKeys(s.keyID); err != nil {
 		return nil, err
 	}
-	s.keys = newKeyRing(key, s.keyID, s.config.Keys.VerificationKeys)
+	s.keys = oauthcore.NewKeyRing(key, s.keyID, verificationKeys(s.config.Keys.VerificationKeys))
 
 	// Set up Fosite and DPoP proof checking
 	if err := s.setupFosite(); err != nil {

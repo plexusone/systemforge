@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
 
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
 )
 
@@ -60,7 +61,7 @@ func (s *Server) BearerPrincipal(r *http.Request, scope string) (uuid.UUID, erro
 func (s *Server) BearerAccess(r *http.Request, scope string) (*BearerGrant, error) {
 	ar, authErr := s.authenticateAccessToken(r, s.requestURL(r))
 	if authErr != nil {
-		if errors.Is(authErr, errNoAccessToken) {
+		if authErr.NoToken() {
 			return nil, ErrBearerMissing
 		}
 		return nil, &bearerError{base: ErrBearerInvalid, auth: authErr}
@@ -137,7 +138,7 @@ func (a bearerAuthenticator) Authenticate(r *http.Request) (*requestprincipal.Re
 // Challenge implements requestprincipal.Challenger.
 func (a bearerAuthenticator) Challenge(h http.Header) {
 	h.Add("WWW-Authenticate", `Bearer realm="systemauth"`)
-	h.Add("WWW-Authenticate", dpopChallenge("", ""))
+	h.Add("WWW-Authenticate", oauthcore.DPoPChallenge("", ""))
 }
 
 // bearerError is an error from BearerAccess that carries what
@@ -145,7 +146,7 @@ func (a bearerAuthenticator) Challenge(h http.Header) {
 // authentication failure, or the access request of a token lacking scope.
 type bearerError struct {
 	base error
-	auth *TokenAuthError
+	auth *oauthcore.TokenAuthError
 	ar   fosite.AccessRequester
 }
 
@@ -173,10 +174,10 @@ func WriteBearerError(w http.ResponseWriter, err error, scope string) {
 		}
 		writeBearerError(w, http.StatusForbidden, "insufficient_scope", description, scope)
 	case hasDetail && be.auth != nil:
-		writeTokenAuthError(w, be.auth)
+		oauthcore.WriteTokenAuthError(w, be.auth)
 	case errors.Is(err, ErrBearerInvalid):
-		writeTokenAuthError(w, &TokenAuthError{status: http.StatusUnauthorized, code: "invalid_token", description: "The access token is invalid, expired or revoked."})
+		oauthcore.WriteTokenAuthError(w, oauthcore.UnauthorizedError("invalid_token", "The access token is invalid, expired or revoked."))
 	default:
-		writeTokenAuthError(w, &TokenAuthError{status: http.StatusUnauthorized})
+		oauthcore.WriteTokenAuthError(w, oauthcore.UnauthorizedError("", ""))
 	}
 }

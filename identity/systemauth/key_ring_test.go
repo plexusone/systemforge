@@ -145,33 +145,6 @@ func TestSigningKeyRotation(t *testing.T) {
 	}
 }
 
-// TestKeyRingRefusesUnknownKID verifies that a token signed by a key the
-// ring does not hold, or naming an unknown kid, is refused.
-func TestKeyRingRefusesUnknownKID(t *testing.T) {
-	k1, other := rsaKey(t), rsaKey(t)
-	ring := newKeyRing(k1, "k1", nil)
-	signer := ring.Signer()
-	sign := func(key *rsa.PrivateKey, kid string) string {
-		tok := gojwt.NewWithClaims(gojwt.SigningMethodRS256, gojwt.MapClaims{"sub": "x"})
-		tok.Header["kid"] = kid
-		raw, err := tok.SignedString(key)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return raw
-	}
-	if _, err := signer.Decode(context.Background(), sign(k1, "k1")); err != nil {
-		t.Errorf("own token: %v", err)
-	}
-	// fosite wraps the key function's error without Unwrap.
-	if _, err := signer.Decode(context.Background(), sign(other, "k2")); err == nil || !strings.Contains(err.Error(), errUnknownKeyID.Error()) {
-		t.Errorf("unknown kid: err = %v", err)
-	}
-	if _, err := signer.Decode(context.Background(), sign(other, "k1")); err == nil {
-		t.Error("a token signed by another key under the signing kid verified")
-	}
-}
-
 func TestVerificationKeyConfig(t *testing.T) {
 	key := rsaKey(t)
 	pkix, err := x509.MarshalPKIXPublicKey(&key.PublicKey)

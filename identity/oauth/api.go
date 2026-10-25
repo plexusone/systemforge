@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ory/fosite"
 
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 	"github.com/plexusone/systemforge/identity/systemauth"
 )
 
@@ -297,7 +298,7 @@ func (a *API) Middleware(next http.Handler) http.Handler {
 		ctx := r.Context()
 		logger := LoggerFromContext(ctx)
 
-		ar, authErr := systemauth.AuthenticateAccessToken(r, a.provider.dpop, a.resourceURL(r), func(ctx context.Context, token string) (fosite.AccessRequester, error) {
+		ar, authErr := oauthcore.AuthenticateAccessToken(r, a.provider.dpop, a.resourceURL(r), func(ctx context.Context, token string) (fosite.AccessRequester, error) {
 			ar, err := a.provider.introspect(ctx, token)
 			if err != nil {
 				return nil, err
@@ -306,10 +307,10 @@ func (a *API) Middleware(next http.Handler) http.Handler {
 				return nil, err
 			}
 			return ar, nil
-		})
+		}, sessionDPoPJKT)
 		if authErr != nil {
 			logger.Debug("access token refused", "path", r.URL.Path, "error", authErr)
-			systemauth.WriteTokenAuthError(w, authErr)
+			oauthcore.WriteTokenAuthError(w, authErr)
 			return
 		}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/ory/fosite"
 
 	"github.com/plexusone/systemforge/identity/dpopproof"
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 	"github.com/plexusone/systemforge/identity/systemauth"
 )
 
@@ -197,7 +198,7 @@ func (a *API) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// dpop_jkt binds the code to a DPoP key: only a token request with a
 	// proof by that key can redeem it (RFC 9449 §10).
-	jkt, err := systemauth.AuthorizationDPoPJKT(ar)
+	jkt, err := oauthcore.AuthorizationDPoPJKT(ar)
 	if err != nil {
 		oauth2.WriteAuthorizeError(ctx, w, ar, err)
 		return
@@ -234,7 +235,7 @@ func (a *API) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	oauth2 := a.provider.OAuth2Provider()
 
 	// The body is limited before anything reads it.
-	if err := systemauth.ParseTokenRequest(w, r); err != nil {
+	if err := oauthcore.ParseTokenRequest(w, r); err != nil {
 		logger.Info("token request rejected: unreadable body", "error", err)
 		oauth2.WriteAccessError(ctx, w, nil, err)
 		return
@@ -253,12 +254,12 @@ func (a *API) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 		oauth2.WriteAccessError(ctx, w, nil, fosite.ErrServerError.WithWrap(err))
 		return
 	}
-	proof, err := systemauth.VerifyTokenRequestProof(ctx, a.provider.dpop, r, a.provider.TokenEndpointURL())
+	proof, err := oauthcore.VerifyTokenRequestProof(ctx, a.provider.dpop, r, a.provider.TokenEndpointURL())
 	if err == nil {
 		err = a.requireProofBeforeGrant(ctx, r, proof)
 	}
 	if err == nil {
-		err = systemauth.CheckCodeDPoPBinding(ctx, a.provider.storage, a.provider.codeStrategy, r, proof)
+		err = oauthcore.CheckCodeDPoPBinding(ctx, a.provider.storage, a.provider.codeStrategy, r, proof, &systemauth.Session{}, sessionDPoPJKT)
 	}
 	if err != nil {
 		logger.Info("token request rejected: DPoP", "grant_type", grantType, "error", err)
@@ -279,7 +280,7 @@ func (a *API) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Tokens are bound to the proof's key, and a client must send one
 	// unless it is registered with the bearer-token exception; a grant
 	// already bound to a key needs a proof by it.
-	if err := systemauth.BindDPoPGrant(ar, proof, requiresDPoP(ar.GetClient())); err != nil {
+	if err := bindDPoP(ar, proof); err != nil {
 		logger.Info("token request rejected: DPoP", "grant_type", grantType, "client_id", clientID, "error", err)
 		oauth2.WriteAccessError(ctx, w, ar, err)
 		return
@@ -313,7 +314,7 @@ func (a *API) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 
 // requireProofBeforeGrant refuses a token request without a proof from a
 // client that must use DPoP before Fosite handles the grant. The client is
-// the one the request names; BindDPoPGrant checks the authenticated client
+// the one the request names; bindDPoP checks the authenticated client
 // again afterwards.
 func (a *API) requireProofBeforeGrant(ctx context.Context, r *http.Request, proof *dpopproof.Proof) error {
 	if proof != nil {
@@ -337,7 +338,7 @@ func (a *API) requireProofBeforeGrant(ctx context.Context, r *http.Request, proo
 		return fosite.ErrServerError.WithWrap(err)
 	}
 	if requiresDPoP(c) {
-		return systemauth.DPoPProofRequiredError()
+		return oauthcore.DPoPProofRequiredError()
 	}
 	return nil
 }
@@ -360,7 +361,7 @@ func (a *API) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 		func(string) []string {
 			// The caller's own token is checked as at any resource: a
 			// DPoP-bound one needs the DPoP scheme and a proof by its key.
-			ar, authErr := systemauth.AuthenticateAccessToken(r, a.provider.dpop, a.provider.config.Issuer+"/oauth/introspect", a.provider.introspect)
+			ar, authErr := oauthcore.AuthenticateAccessToken(r, a.provider.dpop, a.provider.config.Issuer+"/oauth/introspect", a.provider.introspect, sessionDPoPJKT)
 			if authErr != nil {
 				return nil
 			}
@@ -379,7 +380,7 @@ func (a *API) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// Fosite reads only the Bearer scheme; a DPoP caller's token and proof
 	// were checked above, so hand it the token as Bearer.
-	if scheme, token := systemauth.AccessTokenCredentials(r); scheme == "dpop" {
+	if scheme, token := oauthcore.AccessTokenCredentials(r); scheme == "dpop" {
 		r = r.Clone(ctx)
 		r.Header.Set("Authorization", "Bearer "+token)
 	}

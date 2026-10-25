@@ -19,6 +19,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/dpopproof"
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/session/middleware"
 )
@@ -132,7 +133,7 @@ type Provider struct {
 	oauth2       fosite.OAuth2Provider
 	storage      *Storage
 	config       *Config
-	keys         *systemauth.KeyRing
+	keys         *oauthcore.KeyRing
 	codeStrategy oauth2.AuthorizeCodeStrategy
 	dpop         *dpopproof.Checker
 }
@@ -154,7 +155,7 @@ func NewProvider(db *ent.Client, cfg *Config) (*Provider, error) {
 		}
 		slog.Default().Warn("oauth: generated an ephemeral signing key; tokens will not verify after a restart or on another instance")
 	}
-	keys, err := systemauth.NewKeyRing(key, cfg.KeyID, cfg.VerificationKeys)
+	keys, err := newKeyRing(key, cfg.KeyID, cfg.VerificationKeys)
 	if err != nil {
 		return nil, fmt.Errorf("oauth: %w", err)
 	}
@@ -313,7 +314,7 @@ func (p *Provider) prepareAccessClaims(ar fosite.AccessRequester) error {
 	claims.NotBefore = time.Time{}
 	claims.JTI = ""
 	claims.Add("client_id", clientID)
-	systemauth.SetConfirmationClaim(sess, claims)
+	oauthcore.SetConfirmationClaim(sess.DPoPJKT, claims)
 	// A session stored before a key rotation must not keep its old kid.
 	sess.AccessHeader = p.accessTokenHeaders()
 	return nil

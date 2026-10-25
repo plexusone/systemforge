@@ -7,6 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/ory/fosite"
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 )
 
 // UserInfoPath is the OpenID Connect UserInfo endpoint (OIDC Core §5.3).
@@ -57,59 +58,24 @@ func UserInfoClaims(subject string, claims map[string]any, granted []string) map
 	return out
 }
 
-// bearerChallenge is an RFC 6750 §3 Bearer challenge.
-func bearerChallenge(code, description, scope string) string {
-	challenge := `Bearer realm="systemauth"`
-	if code != "" {
-		challenge += `, error="` + code + `"`
-	}
-	if description != "" {
-		challenge += `, error_description="` + description + `"`
-	}
-	if scope != "" {
-		challenge += `, scope="` + scope + `"`
-	}
-	return challenge
-}
-
 // writeBearerError writes an RFC 6750 §3 error with its WWW-Authenticate
 // challenge.
 func writeBearerError(w http.ResponseWriter, status int, code, description, scope string) {
-	writeChallengeError(w, status, []string{bearerChallenge(code, description, scope)}, code, description)
+	oauthcore.WriteChallengeError(w, status, []string{oauthcore.BearerChallenge(code, description, scope)}, code, description)
 }
 
 // writeScopeError writes a 403 insufficient_scope error for the access
 // token of ar, challenging with the scheme the token is used with.
 func writeScopeError(w http.ResponseWriter, ar fosite.AccessRequester, description, scope string) {
 	if sess, ok := ar.GetSession().(*Session); ok && sess.DPoPJKT != "" {
-		c := dpopChallenge("insufficient_scope", description)
+		c := oauthcore.DPoPChallenge("insufficient_scope", description)
 		if scope != "" {
 			c += `, scope="` + scope + `"`
 		}
-		writeChallengeError(w, http.StatusForbidden, []string{c}, "insufficient_scope", description)
+		oauthcore.WriteChallengeError(w, http.StatusForbidden, []string{c}, "insufficient_scope", description)
 		return
 	}
 	writeBearerError(w, http.StatusForbidden, "insufficient_scope", description, scope)
-}
-
-// writeChallengeError writes an error response with WWW-Authenticate
-// challenges and, when code is set, an error body.
-func writeChallengeError(w http.ResponseWriter, status int, challenges []string, code, description string) {
-	for _, c := range challenges {
-		w.Header().Add("WWW-Authenticate", c)
-	}
-	w.Header().Set("Cache-Control", "no-store")
-	if code == "" {
-		w.WriteHeader(status)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	// The status line and challenge are already written; an encoding
-	// failure here can only be a broken connection.
-	if err := json.NewEncoder(w).Encode(map[string]string{"error": code, "error_description": description}); err != nil {
-		return
-	}
 }
 
 // userinfoEndpoint serves GET/POST /oauth/userinfo.

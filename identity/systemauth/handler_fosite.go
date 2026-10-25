@@ -10,6 +10,7 @@ import (
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/token/jwt"
 	"github.com/plexusone/omniobserve/observops"
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 	"github.com/plexusone/systemforge/observability"
 )
 
@@ -226,7 +227,7 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// dpop_jkt binds the code to a DPoP key: only a token request with a
 	// proof by that key can redeem it (RFC 9449 §10).
-	jkt, err := AuthorizationDPoPJKT(ar)
+	jkt, err := oauthcore.AuthorizationDPoPJKT(ar)
 	if err != nil {
 		s.recordAuthMetrics(ctx, "authorize", clientID, observability.StatusError, start)
 		s.oauth2.WriteAuthorizeError(ctx, w, ar, err)
@@ -268,7 +269,7 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
 	// The body is limited before anything reads it.
-	if err := ParseTokenRequest(w, r); err != nil {
+	if err := oauthcore.ParseTokenRequest(w, r); err != nil {
 		logger.Info("token request rejected: unreadable body", "error", err)
 		s.recordAuthMetrics(ctx, "", "", observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, nil, err)
@@ -304,7 +305,7 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		// A code bound to a key is checked before Fosite handles it, so a
 		// refused exchange leaves the code usable with every storage.
-		err = CheckCodeDPoPBinding(ctx, s.storage, s.codeStrategy, r, proof)
+		err = s.checkCodeDPoPBinding(ctx, r, proof)
 	}
 	if err != nil {
 		logger.Info("token request rejected: DPoP proof", "grant_type", grantType, "error", err)
@@ -480,7 +481,7 @@ func (s *Server) prepareAccessClaims(ctx context.Context, ar fosite.AccessReques
 	claims.NotBefore = time.Time{}
 	claims.JTI = ""
 	claims.Add("client_id", clientID)
-	SetConfirmationClaim(sess, claims)
+	oauthcore.SetConfirmationClaim(sess.DPoPJKT, claims)
 	// Always reset the header: a session stored before access tokens were
 	// typed, or before a key rotation, must not keep its old header.
 	sess.AccessHeader = s.accessTokenHeaders()
@@ -559,7 +560,7 @@ func (s *Server) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// Fosite reads only the Bearer scheme; a DPoP caller's token and proof
 	// were checked above, so hand it the token as Bearer.
-	if scheme, token := AccessTokenCredentials(r); scheme == "dpop" {
+	if scheme, token := oauthcore.AccessTokenCredentials(r); scheme == "dpop" {
 		r = r.Clone(ctx)
 		r.Header.Set("Authorization", "Bearer "+token)
 	}

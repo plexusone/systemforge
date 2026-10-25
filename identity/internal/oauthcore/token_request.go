@@ -1,4 +1,4 @@
-package systemauth
+package oauthcore
 
 import (
 	"errors"
