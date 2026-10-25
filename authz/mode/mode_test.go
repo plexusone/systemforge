@@ -157,8 +157,10 @@ func TestNewRejects(t *testing.T) {
 		"bad interval":        {Mode: authz.ModeReBAC, Reconcile: &authz.ReconcileConfig{Interval: "soon"}},
 	} {
 		if res, err := mode.New(ctx, cfg, mode.Deps{DB: db}); err == nil {
-			_ = res.Close()
 			t.Errorf("%s: New succeeded", name)
+			if cerr := res.Close(); cerr != nil {
+				t.Errorf("%s: Close: %v", name, cerr)
+			}
 		}
 	}
 }

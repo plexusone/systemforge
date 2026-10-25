@@ -422,18 +422,15 @@ func (s *Service) assignSeated(ctx context.Context, in AssignInput, g Grant) (*e
 		// Released when the transaction ends.
 		key := in.OrganizationID.String() + ":" + in.Application
 		if _, err = tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", key); err != nil {
-			_ = tx.Rollback()
-			return nil, fmt.Errorf("approle: locking seats: %w", err)
+			return nil, errors.Join(fmt.Errorf("approle: locking seats: %w", err), tx.Rollback())
 		}
 	}
 	if err = s.checkSeat(ctx, tx.AppRole, in, g); err != nil {
-		_ = tx.Rollback()
-		return nil, err
+		return nil, errors.Join(err, tx.Rollback())
 	}
 	row, err := s.insert(ctx, tx.AppRole, in)
 	if err != nil {
-		_ = tx.Rollback()
-		return nil, err
+		return nil, errors.Join(err, tx.Rollback())
 	}
 	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("approle: committing assignment: %w", err)

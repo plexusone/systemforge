@@ -165,15 +165,9 @@ func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInp
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
-
 	org, _, err := s.insertOrganization(ctx, tx, input)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(err, rollbackErr(tx))
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -975,18 +969,12 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
-
 	// Update old owner's role
 	_, err = tx.PrincipalMembership.UpdateOneID(currentMembership.ID).
 		SetRole(newRoleForOld).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to update old owner's role: %w", err)
+		return errors.Join(fmt.Errorf("failed to update old owner's role: %w", err), rollbackErr(tx))
 	}
 
 	// Update new owner's role
@@ -994,7 +982,7 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 		SetRole(RoleOwner).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to update new owner's role: %w", err)
+		return errors.Join(fmt.Errorf("failed to update new owner's role: %w", err), rollbackErr(tx))
 	}
 
 	// Update organization's owner principal ID
@@ -1002,7 +990,7 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 		SetOwnerPrincipalID(input.ToPrincipal).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to update organization owner: %w", err)
+		return errors.Join(fmt.Errorf("failed to update organization owner: %w", err), rollbackErr(tx))
 	}
 
 	changes, err := recordChanges(ctx, tx, []accesschange.Change{
@@ -1010,16 +998,16 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 		{PrincipalID: input.ToPrincipal, OrganizationID: &input.OrganizationID, Reason: accesschange.OrgRoleChanged},
 	})
 	if err != nil {
-		return err
+		return errors.Join(err, rollbackErr(tx))
 	}
 
 	// The previous owner loses the owner role in the graph before the
 	// transfer commits; if the graph refuses, the transfer is not made.
 	if err = graphlock.Lock(ctx, tx, graphlock.Principal(input.FromPrincipal), graphlock.Principal(input.ToPrincipal)); err != nil {
-		return err
+		return errors.Join(err, rollbackErr(tx))
 	}
 	if err = s.syncer.RemoveOrgMembership(ctx, input.FromPrincipal, input.OrganizationID, RoleOwner); err != nil {
-		return revokeErr("previous owner's role", err)
+		return errors.Join(revokeErr("previous owner's role", err), rollbackErr(tx))
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -1176,6 +1164,15 @@ func entMembershipToModel(m *ent.PrincipalMembership) *Membership {
 		CreatedAt:      m.CreatedAt,
 		UpdatedAt:      m.UpdatedAt,
 	}
+}
+
+// rollbackErr rolls tx back and reports a failure to do so, for joining
+// with the error that abandoned the transaction.
+func rollbackErr(tx *ent.Tx) error {
+	if err := tx.Rollback(); err != nil {
+		return fmt.Errorf("failed to roll back transaction: %w", err)
+	}
+	return nil
 }
 
 // recordChanges writes changes in tx and returns them with their times.
