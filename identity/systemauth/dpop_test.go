@@ -12,6 +12,8 @@ import (
 	gojwt "github.com/golang-jwt/jwt/v5"
 	"github.com/grokify/goauth/dpop"
 	"github.com/ory/fosite"
+
+	"github.com/plexusone/systemforge/identity/ent/enttest"
 )
 
 const testTokenURL = testIssuer + "/oauth/token"
@@ -91,7 +93,24 @@ func str(v any) string {
 // dpop_jkt is redeemed only with a proof by that key, and the tokens are
 // bound to it.
 func TestDPoPCodeFlowWithDPoPJKT(t *testing.T) {
-	s := newRefreshTestServer(t)
+	checkDPoPCodeFlowWithDPoPJKT(t, newRefreshTestServer(t))
+}
+
+// TestDPoPCodeFlowWithDPoPJKTEnt is TestDPoPCodeFlowWithDPoPJKT with Ent
+// storage: a refused exchange leaves the code usable with either storage.
+func TestDPoPCodeFlowWithDPoPJKTEnt(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:dpop_code_flow?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	})
+	owner := createTestOwner(t, client)
+	checkDPoPCodeFlowWithDPoPJKT(t, newRefreshTestServer(t, WithStorage(NewEntStorage(client, WithDefaultOwner(owner)))))
+}
+
+func checkDPoPCodeFlowWithDPoPJKT(t *testing.T, s *Server) {
+	t.Helper()
 	subject := newPrincipal(t, s)
 	kp, other := newDPoPKey(t), newDPoPKey(t)
 	jkt := url.Values{"dpop_jkt": {kp.Thumbprint}}
@@ -101,12 +120,11 @@ func TestDPoPCodeFlowWithDPoPJKT(t *testing.T) {
 	if w, body := rawTokenRequest(t, s, codeForm(code)); w.Code != http.StatusBadRequest || body["error"] != "invalid_dpop_proof" {
 		t.Errorf("no proof: %d %v", w.Code, body)
 	}
-	// A proof by another key: refused. (Fosite may consume the code's PKCE
-	// request on a refused exchange, so the next case takes a new code.)
+	// A proof by another key: refused before Fosite handles the grant, so
+	// the code still works afterwards with every storage.
 	if w, body := rawTokenRequest(t, s, codeForm(code), tokenProof(t, other)); w.Code != http.StatusBadRequest || body["error"] != "invalid_grant" {
 		t.Errorf("other key: %d %v", w.Code, body)
 	}
-	code = authorizeCodeFor(t, s, subject, jkt).Query().Get("code")
 	// The bound key: tokens bound to it.
 	w, body := rawTokenRequest(t, s, codeForm(code), tokenProof(t, kp))
 	if w.Code != http.StatusOK || body["token_type"] != TokenTypeDPoP {

@@ -35,6 +35,7 @@ type Server struct {
 	key             *rsa.PrivateKey
 	keyID           string
 	keys            *keyRing
+	codeStrategy    oauth2.AuthorizeCodeStrategy
 	dpop            *dpopproof.Checker
 	dpopCache       dpopproof.ReplayCache
 	huma            huma.API
@@ -214,6 +215,8 @@ func (s *Server) setupFosite() error {
 	if s.config.Features.EnableJWTAccessTokens {
 		coreStrategy = &oauth2.DefaultJWTStrategy{Signer: jwtSigner, HMACSHAStrategy: coreStrategy, Config: fositeConfig}
 	}
+
+	s.codeStrategy = coreStrategy
 
 	// Build OAuth2 provider with all needed components
 	s.oauth2 = compose.Compose(

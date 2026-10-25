@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/ory/fosite"
+	"github.com/ory/fosite/handler/oauth2"
 	"github.com/ory/fosite/token/jwt"
 
 	"github.com/plexusone/systemforge/identity/dpopproof"
@@ -150,6 +151,45 @@ func (s *Server) requireProofBeforeGrant(ctx context.Context, r *http.Request, p
 	}
 	if c.DPoPBoundAccessTokens() {
 		return dpopError(errInvalidDPoPProof, "This client must use DPoP: a DPoP proof is required.")
+	}
+	return nil
+}
+
+// CodeDPoPBindingStorage reads authorization codes for CheckCodeDPoPBinding.
+type CodeDPoPBindingStorage interface {
+	GetAuthorizeCodeSession(ctx context.Context, signature string, session fosite.Session) (fosite.Requester, error)
+}
+
+// CheckCodeDPoPBinding refuses an authorization_code token request whose
+// code is bound to a DPoP key (dpop_jkt, RFC 9449 §10) when the request
+// carries no proof by that key. Call it before Fosite handles the request:
+// Fosite's grant handling has side effects even when the exchange is then
+// refused (it deletes the code's PKCE request, which with some storage
+// makes the code unusable), so a refused exchange must not reach it. The
+// code is looked up by its signature under codes. A request for another
+// grant, or a code that cannot be read, is left to Fosite.
+func CheckCodeDPoPBinding(ctx context.Context, codes CodeDPoPBindingStorage, strategy oauth2.AuthorizeCodeStrategy, r *http.Request, proof *dpopproof.Proof) error {
+	if r.PostForm.Get("grant_type") != "authorization_code" {
+		return nil
+	}
+	code := r.PostForm.Get("code")
+	if code == "" {
+		return nil
+	}
+	ar, err := codes.GetAuthorizeCodeSession(ctx, strategy.AuthorizeCodeSignature(ctx, code), &Session{})
+	if err != nil || ar == nil {
+		// Unknown, used or expired: Fosite refuses it.
+		return nil //nolint:nilerr // Fosite reports the code's own error
+	}
+	sess, ok := ar.GetSession().(*Session)
+	if !ok || sess.DPoPJKT == "" {
+		return nil
+	}
+	if proof == nil {
+		return dpopError(errInvalidDPoPProof, "The grant is bound to a DPoP key; a DPoP proof by that key is required.")
+	}
+	if proof.JKT() != sess.DPoPJKT {
+		return fosite.ErrInvalidGrant.WithHint("The DPoP proof was not signed by the key the grant is bound to.")
 	}
 	return nil
 }

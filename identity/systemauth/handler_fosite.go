@@ -301,6 +301,11 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		err = s.requireProofBeforeGrant(ctx, r, proof)
 	}
+	if err == nil {
+		// A code bound to a key is checked before Fosite handles it, so a
+		// refused exchange leaves the code usable with every storage.
+		err = CheckCodeDPoPBinding(ctx, s.storage, s.codeStrategy, r, proof)
+	}
 	if err != nil {
 		logger.Info("token request rejected: DPoP proof", "grant_type", grantType, "error", err)
 		s.recordAuthMetrics(ctx, grantType, "", observability.StatusError, start)
