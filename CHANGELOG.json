@@ -187,6 +187,14 @@
         },
         {
           "description": "The token endpoints parsed the request form before installing their 1 MB body limit; the limit now applies before parsing"
+        },
+        {
+          "description": "The BFF omnistorage session store's Redis connection is refused for a server that is not on loopback unless it uses TLS with certificate verification and a password, so session IDs and sealed sessions no longer cross the network in clear text by default",
+          "commit": "ca5266c"
+        },
+        {
+          "description": "Connections' development egress setting lets provider requests reach only the address ranges listed, instead of every non-public address; link-local and cloud metadata addresses are refused even when listed",
+          "commit": "506c9ed"
         }
       ],
       "added": [
@@ -267,6 +275,18 @@
         },
         {
           "description": "marketplace/stripe: `ErrWebhookSecretRequired`"
+        },
+        {
+          "description": "`systemauth keys accept-rollback --confirm` and `systemauthsvc.AcceptKeyRollback`, which open the connections keyring once accepting a restored or moved copy, or one from before its rollback state was authenticated",
+          "commit": "2927336"
+        },
+        {
+          "description": "Connections settings `egress_allow_prefixes` (CIDR ranges provider requests may reach in development) and `allow_http_egress`, with a startup warning when either is set",
+          "commit": "506c9ed"
+        },
+        {
+          "description": "`bff.OmniStorageConfig.AllowInsecureRedis` for a development Redis without TLS or a password, with a warning when set",
+          "commit": "ca5266c"
         }
       ],
       "fixed": [
@@ -398,6 +418,18 @@
         },
         {
           "description": "contract: `RecordAuditEvent`, `GetAuditStreamConfig` and `IsAuditStreamEnabled` are methods of `*contract.API` (`AuditStreamConfig` for the second)"
+        },
+        {
+          "description": "systemauth: the connections setting `allow_private_egress` is removed; use `egress_allow_prefixes` and `allow_http_egress`",
+          "commit": "506c9ed"
+        },
+        {
+          "description": "bff: a redis backend whose `RedisURL` names a non-loopback server without `rediss://`, a password or certificate verification fails with an error wrapping omnistorage-core's `ErrInsecureConnection` unless `AllowInsecureRedis` is set",
+          "commit": "ca5266c"
+        },
+        {
+          "description": "keys: an existing connections keyring refuses to open after the upgrade until it is accepted once with `systemauth keys accept-rollback --confirm`, since keyforge v0.2.0 authenticates the keyring's rollback state; a keyring moved to a new host without that state needs the same",
+          "commit": "89719ae"
         }
       ],
       "documentation": [
@@ -418,6 +450,14 @@
         },
         {
           "description": "Built-in SCIM tenant token store, sign-up age scope, and the rls isolation model"
+        },
+        {
+          "description": "Key management guide describes accepting a restored or moved keyring in SystemAuth",
+          "commit": "b55d034"
+        },
+        {
+          "description": "ADRs for customer-authorized, time-limited support access and for organization admins seeing their support request index",
+          "commit": "40d5008"
         }
       ],
       "tests": [
@@ -478,6 +518,41 @@
         },
         {
           "description": "contract: call the audit stream functions as methods of `*contract.API`"
+        },
+        {
+          "description": "With connections enabled, stop SystemAuth, run `systemauth keys accept-rollback --confirm` once with the server's configuration, then start it"
+        },
+        {
+          "description": "Replace `allow_private_egress: true` with `egress_allow_prefixes` listing the ranges local fakes use, for example `[127.0.0.0/8]`, and `allow_http_egress: true`"
+        },
+        {
+          "description": "Point the BFF omnistorage store at `rediss://` with a password, or set `AllowInsecureRedis` for a development Redis on a local network"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump `github.com/plexusone/connectforge` from 0.4.0 to 0.6.0",
+          "commit": "8ce2f15"
+        },
+        {
+          "description": "Bump `github.com/plexusone/keyforge` from 0.1.0 to 0.2.0",
+          "commit": "89719ae"
+        },
+        {
+          "description": "Bump `github.com/plexusone/omnistorage-core` from 0.5.2 to 0.6.0",
+          "commit": "8ce2f15"
+        },
+        {
+          "description": "Bump `github.com/plexusone/omnivault` from 0.5.0 to 0.6.0",
+          "commit": "89719ae"
+        },
+        {
+          "description": "Bump `github.com/grokify/oscompat` from 0.7.0 to 0.9.0",
+          "commit": "89719ae"
+        },
+        {
+          "description": "Bump `modernc.org/sqlite` from 1.60.1 to 1.61.0",
+          "commit": "89719ae"
         }
       ]
     },
