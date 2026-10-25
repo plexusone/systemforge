@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/plexusone/systemforge/multiapp"
 )
 
 func TestSQLCommandPrintsQuotedSQL(t *testing.T) {
 	cmd := newRootCmd()
 	var out bytes.Buffer
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"sql", "--with-owner", "--owner", "sf_owner", "--app", "example", "--role", "app_example_login", "--default-shared-tables"})
+	cmd.SetArgs([]string{"sql", "--with-owner", "--owner", "sf_owner", "--app", "example", "--role", "app_example_login"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -24,6 +26,44 @@ func TestSQLCommandPrintsQuotedSQL(t *testing.T) {
 		if !strings.Contains(sql, want) {
 			t.Errorf("output lacks %q", want)
 		}
+	}
+}
+
+func TestSQLCommandSharedTables(t *testing.T) {
+	run := func(args ...string) (string, error) {
+		cmd := newRootCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetArgs(append([]string{"sql", "--owner", "sf_owner", "--app", "example", "--role", "app_example_login"}, args...))
+		err := cmd.Execute()
+		return out.String(), err
+	}
+	sql, err := run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, table := range multiapp.DefaultSharedReadTables {
+		if !strings.Contains(sql, `"public"."`+table+`"`) {
+			t.Errorf("default output lacks %s", table)
+		}
+	}
+	if sql, err = run("--no-shared-tables"); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(sql, "GRANT SELECT ON TABLE") {
+		t.Error("--no-shared-tables still grants shared tables")
+	}
+	if sql, err = run("--shared-table", "sf_organizations"); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(sql, "sf_principals") || !strings.Contains(sql, "sf_organizations") {
+		t.Error("--shared-table does not replace the default list")
+	}
+	if _, err = run("--shared-table", "sf_credentials"); err == nil {
+		t.Error("a restricted shared table was accepted")
+	}
+	if _, err = run("--no-shared-tables", "--shared-table", "sf_organizations"); err == nil {
+		t.Error("--no-shared-tables with --shared-table was accepted")
 	}
 }
 

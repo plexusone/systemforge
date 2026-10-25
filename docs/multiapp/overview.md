@@ -203,13 +203,12 @@ login. The `multiappdb` command wraps both:
 ```bash
 # Print the SQL for review (it never contains a password).
 go run ./cmd/multiappdb sql --with-owner --owner sf_owner \
-    --app app1 --role app_app1_login --default-shared-tables
+    --app app1 --role app_app1_login
 
 # Apply it; the admin DSN and the password come from environment variables.
 go run ./cmd/multiappdb apply --admin-url-env ADMIN_DATABASE_URL \
     --create-owner --owner sf_owner --owner-password-env OWNER_DB_PASSWORD \
-    --app app1 --role app_app1_login --password-env APP1_DB_PASSWORD \
-    --default-shared-tables
+    --app app1 --role app_app1_login --password-env APP1_DB_PASSWORD
 
 # Check the deployed logins.
 go run ./cmd/multiappdb verify --owner sf_owner \
@@ -230,8 +229,9 @@ For each app, the SQL:
   owner creates later;
 - revokes `CREATE` on schema `public` from `PUBLIC`, and `EXECUTE` on the
   owner's future functions from `PUBLIC`;
-- grants `SELECT` on the shared tables listed in `SharedReadTables`, and
-  sets the login's `search_path` to its schema and the shared schema.
+- grants `SELECT` on the shared tables (by default
+  `DefaultSharedReadTables`; see below), and sets the login's
+  `search_path` to its schema and the shared schema.
 
 Names are validated (lowercase letters, digits and underscores) and
 quoted. Passwords are never generated or logged: they come from a
@@ -241,10 +241,10 @@ client-side, so the plaintext never reaches the server or its statement
 log. The admin login that applies the SQL must be able to act as the owner
 role (a superuser, or a member of it).
 
-**Shared SystemForge tables.** Apps get read-only access only to the
-shared tables they name. `multiapp.DefaultSharedReadTables` lists the
-identity tables an app reads to authorize requests in process (what authz
-mode `rbac` reads):
+**Shared SystemForge tables.** By default an app's login gets read-only
+access (`SELECT`) to the identity tables in
+`multiapp.DefaultSharedReadTables`, which an app reads to authorize
+requests in process (what authz mode `rbac` reads):
 
 | Table | Why an app reads it |
 |-------|---------------------|
@@ -254,11 +254,22 @@ mode `rbac` reads):
 | `sf_app_roles` | app role definitions |
 | `sf_resource_grants` | per-resource grants |
 
+`RoleProvisioning.SharedReadTables` changes the list: nil (the default)
+means `DefaultSharedReadTables`; `multiapp.NoSharedReadTables` (a non-nil
+empty list) grants none, for an app that does not read the identity
+tables; any other list replaces the default, so append to
+`DefaultSharedReadTables` to add a table. The `multiappdb` flags match:
+no flag grants the default list, `--no-shared-tables` grants none, and
+`--shared-table` (repeatable) replaces the list, with
+`--default-shared-tables` adding the defaults back.
+
 Tables holding secrets or driving sign-in are never granted to apps and
 stay with the identity service's own login: credentials, OAuth app secrets,
 authorization codes and tokens, principal (API key) token hashes, SCIM
-tokens, login states and sessions, invites, signup and external
-identities. Grants are skipped for tables that do not exist yet, so apply
+tokens, login states and sessions, invites and manager claims, signup and
+external identities. `multiapp.RestrictedSharedTables` lists them, and
+provisioning refuses a `SharedReadTables` entry that names one. Grants are
+skipped for tables that do not exist yet, so apply
 the provisioning again after the identity migrations create them.
 
 **Amazon RDS.** The same SQL works on RDS for PostgreSQL; apply it with the

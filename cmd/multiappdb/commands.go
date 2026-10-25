@@ -25,6 +25,7 @@ type roleFlags struct {
 	sharedSchema  string
 	sharedTables  []string
 	defaultShared bool
+	noShared      bool
 	memberOf      []string
 }
 
@@ -37,8 +38,9 @@ func (f *roleFlags) register(cmd *cobra.Command) {
 	fl.StringVar(&f.database, "database", "", "database to grant CONNECT on (optional)")
 	fl.BoolVar(&f.readOnly, "read-only", false, "grant SELECT only on the app's tables")
 	fl.StringVar(&f.sharedSchema, "shared-schema", "public", "schema holding the shared SystemForge tables")
-	fl.StringSliceVar(&f.sharedTables, "shared-table", nil, "shared table the app may read (repeatable)")
-	fl.BoolVar(&f.defaultShared, "default-shared-tables", false, "grant SELECT on multiapp.DefaultSharedReadTables")
+	fl.StringSliceVar(&f.sharedTables, "shared-table", nil, "shared table the app may read, replacing the default list (repeatable; default multiapp.DefaultSharedReadTables)")
+	fl.BoolVar(&f.defaultShared, "default-shared-tables", false, "with --shared-table, also grant multiapp.DefaultSharedReadTables")
+	fl.BoolVar(&f.noShared, "no-shared-tables", false, "grant no shared table, for an app that does not read the identity tables")
 	fl.StringSliceVar(&f.memberOf, "member-of", nil, "role to grant the app role, e.g. rds_iam (repeatable)")
 }
 
@@ -50,9 +52,19 @@ func (f *roleFlags) provisioning() (multiapp.RoleProvisioning, error) {
 		}
 		schema = multiapp.SchemaFromAppSlug(f.app)
 	}
-	tables := append([]string{}, f.sharedTables...)
-	if f.defaultShared {
-		tables = append(tables, multiapp.DefaultSharedReadTables...)
+	// Nil keeps RoleProvisioning's default, DefaultSharedReadTables.
+	var tables []string
+	switch {
+	case f.noShared:
+		if len(f.sharedTables) > 0 || f.defaultShared {
+			return multiapp.RoleProvisioning{}, errors.New("--no-shared-tables excludes --shared-table and --default-shared-tables")
+		}
+		tables = multiapp.NoSharedReadTables
+	case len(f.sharedTables) > 0:
+		tables = append([]string{}, f.sharedTables...)
+		if f.defaultShared {
+			tables = append(tables, multiapp.DefaultSharedReadTables...)
+		}
 	}
 	return multiapp.RoleProvisioning{
 		Schema:           schema,

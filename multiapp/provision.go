@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -15,8 +16,8 @@ import (
 // reads when it authorizes requests in process against the identity
 // database: who a principal is, which organizations it belongs to, and the
 // app roles and resource grants it holds (the tables authz mode rbac
-// reads). RoleProvisioning grants SELECT on them only when listed in
-// SharedReadTables; pass this list to opt in.
+// reads). RoleProvisioning grants SELECT on them by default, when
+// SharedReadTables is nil.
 //
 // Tables that hold secrets or drive sign-in are deliberately absent and
 // must stay with the identity service's own login: credentials, OAuth app
@@ -60,15 +61,54 @@ type RoleProvisioning struct {
 	SharedSchema string
 
 	// SharedReadTables are tables in SharedSchema Role may read (SELECT
-	// only). Tables that do not exist yet are skipped, so apply the SQL
-	// again after the identity migrations create them. See
-	// DefaultSharedReadTables.
+	// only). Nil, the default, means DefaultSharedReadTables; a non-nil
+	// empty slice (NoSharedReadTables) grants none, for an app that does
+	// not read the identity tables. A non-empty list replaces the
+	// default, so append to DefaultSharedReadTables to add tables. Tables
+	// that do not exist yet are skipped, so apply the SQL again after the
+	// identity migrations create them.
 	SharedReadTables []string
 
 	// MemberOf lists roles Role is made a member of, for example rds_iam
 	// for IAM database authentication on Amazon RDS. Never list another
 	// app's role or OwnerRole: the isolation check rejects it.
 	MemberOf []string
+}
+
+// RestrictedSharedTables are the shared SystemForge tables an app login is
+// never granted, even when SharedReadTables names them: they hold
+// credentials, secrets, tokens, sign-in sessions and state, invitations
+// and claim codes, and external identities. RoleProvisioning refuses a
+// SharedReadTables entry listed here.
+var RestrictedSharedTables = []string{
+	"sf_client_assertion_jtis",
+	"sf_credentials",
+	"sf_external_identities",
+	"sf_invites",
+	"sf_login_sessions",
+	"sf_login_states",
+	"sf_manager_claims",
+	"sf_manager_invites",
+	"sf_oauth_app_secrets",
+	"sf_oauth_auth_codes",
+	"sf_oauth_tokens",
+	"sf_principal_tokens",
+	"sf_scim_tokens",
+	"sf_signup_invites",
+	"sf_signup_waitlist",
+}
+
+// NoSharedReadTables is a SharedReadTables value that grants no shared
+// table.
+var NoSharedReadTables = []string{}
+
+// sharedTables returns the shared tables Role may read: SharedReadTables,
+// or DefaultSharedReadTables when it is nil.
+func (p RoleProvisioning) sharedTables() []string {
+	if p.SharedReadTables == nil {
+		return DefaultSharedReadTables
+	}
+	return p.SharedReadTables
 }
 
 func (p RoleProvisioning) sharedSchema() string {
@@ -103,9 +143,12 @@ func (p RoleProvisioning) validate() error {
 	if shared == p.Schema {
 		return errors.New("multiapp: the shared schema must differ from the app schema")
 	}
-	for _, t := range p.SharedReadTables {
+	for _, t := range p.sharedTables() {
 		if err := checkName("shared table", t); err != nil {
 			return err
+		}
+		if slices.Contains(RestrictedSharedTables, t) {
+			return fmt.Errorf("multiapp: shared table %q holds secrets or sign-in state and is never granted to an app login", t)
 		}
 	}
 	for _, r := range p.MemberOf {
@@ -137,7 +180,8 @@ func (p RoleProvisioning) validate() error {
 //     creates later;
 //   - revoke CREATE on schema public from PUBLIC and EXECUTE on OwnerRole's
 //     future functions from PUBLIC;
-//   - grant SELECT on SharedReadTables, and set Role's search_path to
+//   - grant SELECT on the shared tables (SharedReadTables, by default
+//     DefaultSharedReadTables), and set Role's search_path to
 //     Schema and SharedSchema.
 func (p RoleProvisioning) SQL() ([]string, error) {
 	if err := p.validate(); err != nil {
@@ -185,7 +229,7 @@ func (p RoleProvisioning) SQL() ([]string, error) {
 		"REVOKE CREATE ON SCHEMA public FROM PUBLIC",
 		fmt.Sprintf("GRANT USAGE ON SCHEMA %s TO %s", shared, role),
 	)
-	for _, t := range p.SharedReadTables {
+	for _, t := range p.sharedTables() {
 		qualified := quoteQualified(p.sharedSchema(), t)
 		stmts = append(stmts, fmt.Sprintf(
 			`DO $sf$ BEGIN IF to_regclass(%s) IS NOT NULL THEN GRANT SELECT ON TABLE %s TO %s; END IF; END $sf$`,

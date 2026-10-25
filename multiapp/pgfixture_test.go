@@ -122,10 +122,9 @@ func (f *pgFixture) provisionedApps(slugs ...string) (string, []*pgxpool.Pool) {
 	var pools []*pgxpool.Pool
 	for i, s := range slugs {
 		p := RoleProvisioning{
-			Schema:           SchemaFromAppSlug(s),
-			Role:             roles[i+1],
-			OwnerRole:        owner,
-			SharedReadTables: DefaultSharedReadTables,
+			Schema:    SchemaFromAppSlug(s),
+			Role:      roles[i+1],
+			OwnerRole: owner,
 		}
 		if err := ApplyRoleProvisioning(ctx, f.admin, p, nil); err != nil {
 			f.t.Fatalf("ApplyRoleProvisioning(%s): %v", s, err)

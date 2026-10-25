@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -55,6 +56,49 @@ func TestRoleProvisioningSQLQuotesAndValidates(t *testing.T) {
 	sql = strings.Join(stmts, ";\n")
 	if strings.Contains(sql, "INSERT") || !strings.Contains(sql, `GRANT SELECT ON ALL TABLES IN SCHEMA "app_one"`) {
 		t.Error("ReadOnly still grants writes")
+	}
+}
+
+func TestRoleProvisioningSharedTablesDefault(t *testing.T) {
+	grants := func(p RoleProvisioning) []string {
+		t.Helper()
+		stmts, err := p.SQL()
+		if err != nil {
+			t.Fatalf("SQL: %v", err)
+		}
+		var tables []string
+		for _, s := range stmts {
+			if _, rest, ok := strings.Cut(s, `GRANT SELECT ON TABLE "public".`); ok {
+				name, _, _ := strings.Cut(rest, " ")
+				tables = append(tables, strings.Trim(name, `"`))
+			}
+		}
+		return tables
+	}
+	base := RoleProvisioning{Schema: "app_one", Role: "app_one_login", OwnerRole: "sf_owner"}
+
+	if got := grants(base); strings.Join(got, ",") != strings.Join(DefaultSharedReadTables, ",") {
+		t.Errorf("default grants %v, want %v", got, DefaultSharedReadTables)
+	}
+	none := base
+	none.SharedReadTables = NoSharedReadTables
+	if got := grants(none); len(got) != 0 {
+		t.Errorf("opt-out grants %v, want none", got)
+	}
+	one := base
+	one.SharedReadTables = []string{"sf_organizations"}
+	if got := grants(one); strings.Join(got, ",") != "sf_organizations" {
+		t.Errorf("explicit list grants %v", got)
+	}
+	for _, restricted := range RestrictedSharedTables {
+		if slices.Contains(DefaultSharedReadTables, restricted) {
+			t.Errorf("default shared tables include restricted %q", restricted)
+		}
+		p := base
+		p.SharedReadTables = append(slices.Clone(DefaultSharedReadTables), restricted)
+		if _, err := p.SQL(); err == nil {
+			t.Errorf("shared table %q accepted", restricted)
+		}
 	}
 }
 
@@ -209,7 +253,7 @@ func TestProvisionedRolesAreConfined(t *testing.T) {
 	}
 
 	// Applying again is harmless.
-	p := RoleProvisioning{Schema: "app_one", Role: f.name("sfapp_one"), OwnerRole: f.name("sfowner"), SharedReadTables: DefaultSharedReadTables}
+	p := RoleProvisioning{Schema: "app_one", Role: f.name("sfapp_one"), OwnerRole: f.name("sfowner")}
 	if err := ApplyRoleProvisioning(ctx, f.admin, p, nil); err != nil {
 		t.Fatalf("second apply: %v", err)
 	}
