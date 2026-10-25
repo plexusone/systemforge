@@ -227,7 +227,7 @@ state-changing requests pass `http.CrossOriginProtection`.
 | `DELETE /admin/waitlist/{email}` | admin | Remove |
 | `GET /admin/allowances` | admin | Allowances with each member's email and held count |
 | `PUT /admin/allowances` | admin | `{email, granted, note}` |
-| `GET /admin/redemptions` | admin | Accounts by code, inviter, or label, joined with email invites |
+| `GET /admin/joined` | admin | Accounts admitted by codes and email invites (`?code_id=&label=&inviter=`) |
 | `GET /me/invites` | member | Allowance, held, and the caller's codes |
 | `POST /me/codes` | member | Create a member code; returns the code and link once |
 | `POST /me/codes/{id}/revoke` | member | Revoke one of the caller's codes |
