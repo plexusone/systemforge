@@ -4,13 +4,19 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.21.0](v0.21.0.md), is a security release: tokens are
+The latest release, [v0.22.0](v0.22.0.md), adds invite-gated sign-up:
+invite codes with use limits and cohort labels, member invites from an
+allowance, attribution of every account to its invite, an invite API, and
+operator commands. It is not breaking; existing databases run migration
+0011.
+
+The previous release, [v0.21.0](v0.21.0.md), was a security release: tokens are
 DPoP-bound by default, keys and secrets rotate keeping the current and
 previous value, SCIM has built-in per-tenant tokens, revocations remove graph
 access before they commit, and each multi-app application gets its own
 database login. It is breaking; read its upgrade guide first.
 
-The previous release, [v0.20.0](v0.20.0.md), was also a security release:
+Before it, [v0.20.0](v0.20.0.md), was also a security release:
 it bound tokens to the application they were issued for and SCIM
 credentials to one organization, made revocation remove access everywhere,
 and made authorization checks fail closed. It is breaking; read its upgrade
