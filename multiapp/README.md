@@ -90,7 +90,7 @@ serves that app's schema only: `ForSchema`, `EntClientFactory` and
 ```go
 server, err := multiapp.NewServer(multiapp.Config{
     Mode:                 multiapp.MultiAppMode,
-    MigrationDatabaseURL: os.Getenv("MIGRATION_DATABASE_URL"), // owner login
+    MigrationRole:        "sf_owner", // the owner role, for the isolation check
     AppDatabases: map[string]multiapp.AppDatabase{
         "app1": {URL: os.Getenv("APP1_DATABASE_URL")},
         "app2": {URL: os.Getenv("APP2_DATABASE_URL")},
@@ -99,16 +99,44 @@ server, err := multiapp.NewServer(multiapp.Config{
 ```
 
 The same rule applies in single-app mode: the one app connects with its
-own login, and migrations with the owner login.
+own login, and migrations run with the owner login in a separate step.
 
-**Migrations run with a separate migration (owner) login.**
-`Config.MigrationDatabaseURL` owns the app schemas: `RegisterApp` uses it
-to create each app's schema and run the app's `Migrations`, and never hands
-it to app code. Tables the owner creates reach the app's login through
-default privileges set at provisioning. To keep the owner's credentials out
-of the server process entirely, leave `MigrationDatabaseURL` empty and run
-`multiapp.Migrate(ctx, ownerURL, backends...)` from a separate deploy step;
-`RegisterApp` then expects the schemas to exist.
+**Migrations run as a separate step, with a separate migration (owner)
+login.** The owner login owns the app schemas and creates their tables;
+tables it creates reach the app's login through default privileges set at
+provisioning. App servers do not hold it: run
+`multiapp.Migrate(ctx, ownerURL, backends...)` before the servers start,
+from a process that is given the owner's secret and nothing else to do,
+such as the app binary's own `migrate` command (the example's
+`main.go migrate`) run as a one-off task. `Migrate` runs every migration
+on every call, so write migrations to be idempotent (`CREATE TABLE IF NOT
+EXISTS`, and so on). The `multiappdb` command cannot run them, since they
+are Go code compiled into the app.
+
+The servers then leave `Config.MigrationDatabaseURL` empty. `RegisterApp`
+creates no schema and runs no migration: it requires the app's schema to
+exist and its login to have `USAGE` on it, refusing the app with
+`ErrAppSchemaMissing` otherwise, and the isolation check runs as usual.
+Set `Config.MigrationRole` to the owner role's name (no credentials), so
+the check also verifies that no app login is a member of it or can act as
+it.
+
+**In-process migrations, for local development only.** Setting
+`MigrationDatabaseURL` makes `RegisterApp` create each app's schema and run
+its `Migrations` with the owner login when the app registers. `NewServer`
+refuses it (`ErrInProcessMigrationsNotAllowed`) unless
+`AllowInProcessMigrations` is also set, and logs a warning when it is: the
+server process then holds the owner's credentials, and any code that takes
+it over can use the owner's privileges on every app schema.
+
+**Running migrations on AWS.** Package the migration step as a one-off
+Amazon ECS task: a task definition that runs the app image's `migrate`
+command, with its own task role and only the owner's secret (Secrets
+Manager or an RDS IAM token for the owner role) injected. Run it with
+`aws ecs run-task` (or a deployment pipeline step) and wait for it to
+stop with exit code 0 before updating the app service. The app service's
+task definition gets only the app's own database secret, and
+`MigrationRole` as plain configuration.
 
 **The server checks isolation at startup.** `RegisterApp` and `Run` call
 `CheckDatabaseIsolation` (also available as
@@ -135,7 +163,9 @@ If you serve `Server.Router()` yourself instead of calling `Run`, call
 `AllowSharedDatabaseLogin` lets apps without an `AppDatabases` entry share
 the `MigrationDatabaseURL` login. The database then does not keep those
 apps apart, and the server logs a warning at startup and for each such
-app. `SkipIsolationCheck` turns the check off and is accepted only together
+app. Because the apps on it already hold the owner login, it implies
+`AllowInProcessMigrations`: it needs `MigrationDatabaseURL`, and every app
+registered, with or without its own login, is migrated in process. `SkipIsolationCheck` turns the check off and is accepted only together
 with `AllowSharedDatabaseLogin`.
 
 #### Provisioning the logins
@@ -234,8 +264,8 @@ multi-app mode: all apps run in one process, so code that takes over that
 process can read every app's credentials, and the migration login's, from
 memory and connect as any of them. For apps that hold sensitive data, use
 single-app mode: run each app as its own binary or container, given only
-its own database secret (and migrate out of band, so the owner login is
-not in the process at all).
+its own database secret (migrations run as a separate step, so the owner
+login is not in the process at all).
 
 ### Self-Contained Apps
 
@@ -407,8 +437,8 @@ import (
 
 func main() {
     server, _ := cfmultiapp.NewServer(cfmultiapp.Config{
-        Mode:                 cfmultiapp.MultiAppMode,
-        MigrationDatabaseURL: os.Getenv("MIGRATION_DATABASE_URL"),
+        Mode:          cfmultiapp.MultiAppMode,
+        MigrationRole: "sf_owner", // migrations ran beforehand with Migrate
         AppDatabases: map[string]cfmultiapp.AppDatabase{
             "app1": {URL: os.Getenv("APP1_DATABASE_URL")},
         },

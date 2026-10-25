@@ -71,6 +71,7 @@ func TestNewServerValidatesDatabaseConfig(t *testing.T) {
 		"skip check without opt-out": {SkipIsolationCheck: true, AppDatabases: map[string]AppDatabase{"x": {URL: "postgres://x@localhost/x"}}},
 		"opt-out without login":      {AllowSharedDatabaseLogin: true},
 		"empty app database":         {AppDatabases: map[string]AppDatabase{"x": {}}},
+		"unsafe migration role":      {AppDatabases: map[string]AppDatabase{"x": {URL: "postgres://x@localhost/x"}}, MigrationRole: `bad"role`},
 	} {
 		if _, err := NewServer(cfg); err == nil {
 			t.Errorf("%s: accepted", name)
@@ -80,7 +81,7 @@ func TestNewServerValidatesDatabaseConfig(t *testing.T) {
 
 func TestRegisterAppRequiresItsOwnLogin(t *testing.T) {
 	f := newPGFixture(t)
-	s, err := NewServer(Config{Mode: MultiAppMode, MigrationDatabaseURL: f.dsn})
+	s, err := NewServer(Config{Mode: MultiAppMode, MigrationDatabaseURL: f.dsn, AllowInProcessMigrations: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,16 +130,91 @@ func TestSharedLoginOptOutWarns(t *testing.T) {
 	}
 }
 
+func TestNewServerRefusesInProcessMigrationsByDefault(t *testing.T) {
+	_, err := NewServer(Config{
+		Mode:                 SingleAppMode,
+		MigrationDatabaseURL: "postgres://owner@localhost/x",
+		AppDatabases:         map[string]AppDatabase{"x": {URL: "postgres://x@localhost/x"}},
+	})
+	if !errors.Is(err, ErrInProcessMigrationsNotAllowed) {
+		t.Fatalf("NewServer: %v, want ErrInProcessMigrationsNotAllowed", err)
+	}
+	if !strings.Contains(err.Error(), "multiapp.Migrate") || !strings.Contains(err.Error(), "AllowInProcessMigrations") {
+		t.Errorf("error does not say how to fix it: %v", err)
+	}
+}
+
+func TestInProcessMigrationsWarn(t *testing.T) {
+	f := newPGFixture(t)
+	owner, _ := f.provisionedApps("one")
+	var logs syncBuffer
+	s, err := NewServer(Config{
+		Mode:                     SingleAppMode,
+		MigrationDatabaseURL:     f.loginURL(owner),
+		AllowInProcessMigrations: true,
+		AppDatabases:             map[string]AppDatabase{"one": {URL: f.loginURL(f.name("sfapp_one"))}},
+		Logger:                   slog.New(slog.NewTextHandler(&logs, nil)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	shutdownLater(t, s)
+	one := &testBackend{slug: "one"}
+	if err := s.RegisterApp(one); err != nil {
+		t.Fatalf("RegisterApp: %v", err)
+	}
+	if !strings.Contains(logs.String(), "in-process migrations are enabled") {
+		t.Errorf("no warning about in-process migrations:\n%s", logs.String())
+	}
+	if _, err := one.deps.DB.Exec(context.Background(), "INSERT INTO items VALUES ('x')"); err != nil {
+		t.Fatalf("migrated table: %v", err)
+	}
+}
+
+// TestRegisterAppRequiresTheSchemaWithoutMigrations starts a server
+// without the migration login and expects an app whose schema was never
+// created to be refused.
+func TestRegisterAppRequiresTheSchemaWithoutMigrations(t *testing.T) {
+	f := newPGFixture(t)
+	owner, _ := f.provisionedApps("one")
+	f.exec("DROP SCHEMA app_one CASCADE")
+	s, err := NewServer(Config{
+		Mode:          SingleAppMode,
+		MigrationRole: owner,
+		AppDatabases:  map[string]AppDatabase{"one": {URL: f.loginURL(f.name("sfapp_one"))}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	shutdownLater(t, s)
+	err = s.RegisterApp(&testBackend{slug: "one"})
+	if !errors.Is(err, ErrAppSchemaMissing) {
+		t.Fatalf("RegisterApp: %v, want ErrAppSchemaMissing", err)
+	}
+	if !strings.Contains(err.Error(), `"app_one"`) || !strings.Contains(err.Error(), "multiapp.Migrate") {
+		t.Errorf("error does not name the schema and the fix: %v", err)
+	}
+	if _, ok := s.GetApp("one"); ok {
+		t.Error("the app was registered")
+	}
+}
+
 // TestRegisterAppWithProvisionedLogins runs two apps on their own
-// provisioned logins, with migrations on the owner login.
+// provisioned logins, migrated beforehand with Migrate and the owner
+// login, as a production deployment does: the server holds no owner
+// login.
 func TestRegisterAppWithProvisionedLogins(t *testing.T) {
 	f := newPGFixture(t)
 	ctx := context.Background()
 	owner, _ := f.provisionedApps("one", "two")
+	one, two := &testBackend{slug: "one"}, &testBackend{slug: "two"}
+	if err := Migrate(ctx, f.loginURL(owner), one, two); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
 	var logs syncBuffer
 	s, err := NewServer(Config{
-		Mode:                 MultiAppMode,
-		MigrationDatabaseURL: f.loginURL(owner),
+		Mode:          MultiAppMode,
+		MigrationRole: owner,
 		AppDatabases: map[string]AppDatabase{
 			"one": {URL: f.loginURL(f.name("sfapp_one"))},
 			"two": {URL: f.loginURL(f.name("sfapp_two"))},
@@ -149,7 +225,6 @@ func TestRegisterAppWithProvisionedLogins(t *testing.T) {
 		t.Fatal(err)
 	}
 	shutdownLater(t, s)
-	one, two := &testBackend{slug: "one"}, &testBackend{slug: "two"}
 	for _, b := range []*testBackend{one, two} {
 		if err := s.RegisterApp(b); err != nil {
 			t.Fatalf("RegisterApp(%s): %v", b.slug, err)
@@ -226,8 +301,9 @@ func TestRegisterAppRefusesALeakyLogin(t *testing.T) {
 	twoRole := f.name("sfapp_two")
 	f.exec("GRANT USAGE ON SCHEMA app_one TO " + quoteIdent(twoRole))
 	s, err := NewServer(Config{
-		Mode:                 SingleAppMode,
-		MigrationDatabaseURL: f.loginURL(owner),
+		Mode:                     SingleAppMode,
+		MigrationDatabaseURL:     f.loginURL(owner),
+		AllowInProcessMigrations: true,
 		AppDatabases: map[string]AppDatabase{
 			"one": {URL: f.loginURL(f.name("sfapp_one"))},
 			"two": {URL: f.loginURL(twoRole)},

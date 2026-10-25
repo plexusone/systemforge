@@ -32,9 +32,10 @@ const (
 // Config contains configuration for creating a new server.
 //
 // Every app connects to the database with a login of its own, given in
-// AppDatabases, in single-app and multi-app mode alike; schema and table
-// changes run with a separate migration (owner) login,
-// MigrationDatabaseURL. See "Database isolation" in the package README.
+// AppDatabases, in single-app and multi-app mode alike. Schema and table
+// changes run with a separate migration (owner) login, as a deploy step of
+// their own (Migrate) in production, so the server process never holds the
+// owner's credentials. See "Database isolation" in the package README.
 type Config struct {
 	// Mode determines how apps are routed (multi or single).
 	Mode ServerMode
@@ -45,19 +46,39 @@ type Config struct {
 	// serves its app's schema only, and must pass the isolation check.
 	AppDatabases map[string]AppDatabase
 
-	// MigrationDatabaseURL is the migration (owner) login: RegisterApp
-	// uses it to create each app's schema and run the app's Migrations.
-	// It is never handed to app code. Leave it empty to provision and
-	// migrate out of band (see Migrate), which keeps the owner's
-	// credentials out of the server process; RegisterApp then expects the
-	// schemas to exist and skips Migrations.
+	// MigrationDatabaseURL is the migration (owner) login, for running
+	// migrations in the server process: RegisterApp then uses it to create
+	// each app's schema and run the app's Migrations. It is never handed
+	// to app code. It is accepted only with AllowInProcessMigrations (or
+	// AllowSharedDatabaseLogin). Leave it empty in production and run
+	// Migrate as a separate step, such as a one-off task given the owner's
+	// secret; RegisterApp then expects each app's schema to exist, refuses
+	// an app whose schema is missing (ErrAppSchemaMissing), and does not
+	// run Migrations.
 	MigrationDatabaseURL string
+
+	// AllowInProcessMigrations lets the server hold the migration login,
+	// MigrationDatabaseURL, and create schemas and run migrations when an
+	// app registers. Any code that takes over the process can then use
+	// the owner's privileges on every app schema. For local development
+	// only; the server logs a warning when it is set.
+	AllowInProcessMigrations bool
+
+	// MigrationRole names the migration (owner) role when
+	// MigrationDatabaseURL is empty, so the isolation check can verify
+	// that no app login is a member of it or can act as it. It holds no
+	// credentials. With MigrationDatabaseURL, the role is read from that
+	// login and this field is ignored. Optional, but set it in
+	// production.
+	MigrationRole string
 
 	// AllowSharedDatabaseLogin lets apps without an AppDatabases entry
 	// use the MigrationDatabaseURL login, shared by every such app. The
 	// database then does not keep those apps apart: each can read and
-	// write the others' tables. For local development only; the server
-	// logs a warning when it is set.
+	// write the others' tables. It needs MigrationDatabaseURL and implies
+	// AllowInProcessMigrations, since the apps on it already hold the
+	// owner login. For local development only; the server logs a warning
+	// when it is set.
 	AllowSharedDatabaseLogin bool
 
 	// SkipIsolationCheck turns the database isolation check off. It is
@@ -88,6 +109,15 @@ type AppDatabase struct {
 // ErrAppDatabaseLoginRequired is returned when an app is registered
 // without a database login of its own and the shared login is not allowed.
 var ErrAppDatabaseLoginRequired = errors.New("multiapp: app has no database login of its own")
+
+// ErrInProcessMigrationsNotAllowed is returned by NewServer when
+// MigrationDatabaseURL is set without AllowInProcessMigrations.
+var ErrInProcessMigrationsNotAllowed = errors.New("multiapp: MigrationDatabaseURL puts the migration (owner) login in the server process")
+
+// ErrAppSchemaMissing is returned by RegisterApp when the server runs no
+// migrations (no MigrationDatabaseURL) and the app's schema does not
+// exist or its login cannot see it.
+var ErrAppSchemaMissing = errors.New("multiapp: app schema does not exist")
 
 // Server manages multiple app backends on shared or dedicated infrastructure.
 type Server struct {
@@ -124,7 +154,15 @@ func NewServer(cfg Config) (*Server, error) {
 		return nil, errors.New("multiapp: AllowSharedDatabaseLogin requires MigrationDatabaseURL, the login the apps share")
 	}
 	if cfg.MigrationDatabaseURL == "" && len(cfg.AppDatabases) == 0 {
-		return nil, errors.New("multiapp: no database configured: set AppDatabases (one login per app) and MigrationDatabaseURL")
+		return nil, errors.New("multiapp: no database configured: set AppDatabases (one login per app), and run migrations with Migrate")
+	}
+	if cfg.MigrationDatabaseURL != "" && !cfg.AllowInProcessMigrations && !cfg.AllowSharedDatabaseLogin {
+		return nil, fmt.Errorf("%w: run migrations as a separate step with multiapp.Migrate and leave MigrationDatabaseURL empty, or set AllowInProcessMigrations for local development", ErrInProcessMigrationsNotAllowed)
+	}
+	if cfg.MigrationRole != "" {
+		if err := checkName("migration role", cfg.MigrationRole); err != nil {
+			return nil, err
+		}
 	}
 	for slug, d := range cfg.AppDatabases {
 		if d.URL == "" && d.PoolConfig == nil {
@@ -139,11 +177,13 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	s := &Server{
-		config: cfg,
-		apps:   make(map[string]*registeredApp),
-		logger: logger,
+		config:    cfg,
+		apps:      make(map[string]*registeredApp),
+		logger:    logger,
+		ownerRole: cfg.MigrationRole,
 	}
 	if cfg.MigrationDatabaseURL != "" {
+		logger.Warn("multiapp: in-process migrations are enabled; the server holds the migration (owner) login. Use it for local development only, and run multiapp.Migrate as a separate step in production")
 		db, err := NewAppAwareDB(cfg.MigrationDatabaseURL, AsMigrationLogin())
 		if err != nil {
 			return nil, fmt.Errorf("multiapp: failed to connect with the migration login: %w", err)
@@ -219,8 +259,9 @@ func (s *Server) openAppDatabase(ctx context.Context, slug string) (db *AppAware
 
 // RegisterApp registers an app backend with the server. It connects with
 // the app's own database login, creates the app's schema and runs its
-// migrations with the migration login (when configured), and checks that
-// the app's login is confined to its schema; any failure refuses the app.
+// migrations with the migration login when in-process migrations are
+// enabled (otherwise it requires the schema to exist), and checks that the
+// app's login is confined to its schema; any failure refuses the app.
 func (s *Server) RegisterApp(backend AppBackend) error {
 	ctx := context.Background()
 	slug := backend.Slug()
@@ -255,8 +296,14 @@ func (s *Server) RegisterApp(backend AppBackend) error {
 		if err := migrateApp(ctx, s.migrationDB, slug, schema, backend.Migrations()); err != nil {
 			return fail(err)
 		}
-	} else if len(backend.Migrations()) > 0 {
-		s.logger.Warn("multiapp: no MigrationDatabaseURL; skipping the app's migrations, run them out of band with Migrate", "app", slug)
+	} else {
+		// Migrations ran as a separate step; the schema must exist.
+		if err := requireSchema(ctx, appDB, slug, schema); err != nil {
+			return fail(err)
+		}
+		if len(backend.Migrations()) > 0 {
+			s.logger.Debug("multiapp: migrations run as a separate step (multiapp.Migrate)", "app", slug)
+		}
 	}
 
 	if !shared && !s.config.SkipIsolationCheck {
@@ -322,6 +369,24 @@ func (s *Server) RegisterApp(backend AppBackend) error {
 	return nil
 }
 
+// requireSchema reports ErrAppSchemaMissing unless schema exists and the
+// app's login has USAGE on it.
+func requireSchema(ctx context.Context, db *AppAwareDB, slug, schema string) error {
+	var ok bool
+	if err := db.pool.QueryRow(ctx,
+		// has_schema_privilege fails on a missing schema, so it is asked
+		// only once the schema is known to exist.
+		"SELECT CASE WHEN EXISTS (SELECT FROM pg_catalog.pg_namespace WHERE nspname = $1::text) THEN has_schema_privilege($1::text, 'USAGE') ELSE false END",
+		schema).Scan(&ok); err != nil {
+		return fmt.Errorf("multiapp: app %q: checking schema %q: %w", slug, schema, err)
+	}
+	if !ok {
+		return fmt.Errorf("%w: app %q: schema %q is missing or its login has no USAGE on it; provision the login (multiappdb apply) and run multiapp.Migrate before starting the server",
+			ErrAppSchemaMissing, slug, schema)
+	}
+	return nil
+}
+
 // isolationLogins lists the registered apps for the isolation check; apps
 // on the shared login have no pool, so only their schemas are checked.
 func (s *Server) isolationLogins() []AppDatabaseLogin {
@@ -355,8 +420,12 @@ func (s *Server) VerifyDatabaseIsolation(ctx context.Context) error {
 }
 
 // Migrate creates the schemas of backends and runs their Migrations with
-// the migration (owner) login at migrationDatabaseURL, for deployments
-// that migrate out of band and leave Config.MigrationDatabaseURL empty.
+// the migration (owner) login at migrationDatabaseURL. It is the
+// production way to migrate: run it as a separate step before the servers
+// start, from a process given the owner's secret (for example the app
+// binary's own migrate command, run as a one-off task), and leave
+// Config.MigrationDatabaseURL empty in the servers. Every migration runs
+// on every call, so migrations must be idempotent.
 func Migrate(ctx context.Context, migrationDatabaseURL string, backends ...AppBackend) error {
 	db, err := NewAppAwareDB(migrationDatabaseURL, AsMigrationLogin())
 	if err != nil {
