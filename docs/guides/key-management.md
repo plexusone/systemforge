@@ -103,7 +103,7 @@ plain, err := k.Open(ctx, "myapp.sessions", sealed, []byte("user:42"))
 | Task | How |
 |---|---|
 | Back up | Stop the process, copy the whole keys directory, and keep the root key separately. The key ring and the registry must come from the same moment |
-| Restore | Stop the process, restore the directory, and open with `keys.Options.AcceptRollback` once to acknowledge a ring older than one this host has seen. SystemAuth's configuration does not expose it yet, so a restore there needs a one-off start of an embedding host |
+| Restore or move | Stop the process, restore or copy the directory, and open with `keys.Options.AcceptRollback` once. This is needed for a ring older than one this host has seen, a ring moved to a new host without its rollback state, and once after upgrading from a release whose rollback state was not authenticated. For SystemAuth, run `systemauth keys accept-rollback --confirm` with the server's configuration, then start the server as usual |
 | Check status or rotate by hand | Not served yet. SystemAuth runs the lifecycle jobs but does not mount keyforge's control plane or command line |
 | Move the registry to PostgreSQL | Not yet: this release uses keyforge's single-host setup. ADR-013 records the follow-up |
 
