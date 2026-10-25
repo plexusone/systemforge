@@ -61,13 +61,18 @@ token=eyJhbGciOiJIUzI1NiIs...
 }
 ```
 
+A DPoP-bound token's introspection also carries `"token_type": "DPoP"` and
+`"cnf": {"jkt": "..."}`, the thumbprint of the key it is bound to.
+
 ## Token Refresh
 
-Exchange a refresh token for new tokens:
+Exchange a refresh token for new tokens, with a DPoP proof by the key the
+refresh token is bound to:
 
 ```bash
 POST /oauth/token
 Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIs...
 
 grant_type=refresh_token&
 refresh_token=8xLOxBtZp8&
@@ -79,7 +84,7 @@ client_id=my-app
 ```json
 {
   "access_token": "new_access_token...",
-  "token_type": "Bearer",
+  "token_type": "DPoP",
   "expires_in": 900,
   "refresh_token": "new_refresh_token...",
   "scope": "openid profile email"
@@ -143,6 +148,12 @@ that is still active, and its principal is still active (the check the
 introspection endpoint applies). Pass `oauth.WithAnyClient()` instead when
 every client of the server may call the API and scopes alone limit them.
 `Middleware` panics when the API has neither option.
+
+A DPoP-bound token is accepted only with `Authorization: DPoP <token>` and a
+proof by its key for the request, whose `htu` is `oauth.WithResourceBaseURL`
+(default: the issuer's origin) plus the request path; an unbound token only
+with the Bearer scheme. Behind a proxy that strips a path prefix, pass the
+external base URL including the prefix.
 
 ```go
 import "github.com/plexusone/systemforge/identity/oauth"

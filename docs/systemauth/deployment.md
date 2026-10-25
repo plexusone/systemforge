@@ -304,6 +304,9 @@ dpop:
   # Optional server nonces (RFC 9449 §8):
   # require_nonce: true
   # nonce_secret: ${SYSTEMAUTH_DPOP_NONCE_SECRET}         # 32+ bytes, same on every instance
+  # External base URL of the APIs SystemAuth protects (Middleware,
+  # BearerAccess), when a proxy strips a path prefix:
+  # resource_base_url: https://example.com/api
 ```
 
 Without `replay_cache_redis_url` the cache is in memory, which suits a single

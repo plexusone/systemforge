@@ -51,6 +51,22 @@ and 8 more characters) are stored; the plaintext is returned once, when
 the token is issued. Treat a token like a password: it provisions and
 deprovisions the organization's members.
 
+### Why SCIM tokens are bearer tokens
+
+SystemForge binds its access tokens to a key with DPoP (see
+[DPoP Enforcement](../session/dpop.md)). SCIM tenant tokens are the
+deliberate exception: they use the `Bearer` scheme, because the identity
+providers that call SCIM endpoints do not support DPoP. What limits a token
+that leaks instead:
+
+- it is 256 random bits, stored only as a SHA-256 hash;
+- it is rotated N / N-1: at most the current and the previous token are
+  valid, and a rotation revokes N-2;
+- it is scoped to one tenant: it provisions only its organization.
+
+Serve SCIM only over TLS and behind a rate limiter, so a token cannot be
+read in transit and guessing or abusing one is throttled.
+
 ### Issue, rotate and revoke
 
 | Call | Effect |
