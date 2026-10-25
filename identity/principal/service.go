@@ -627,15 +627,14 @@ func (s *DefaultService) CreateService(ctx context.Context, input CreateServiceI
 	return result, nil
 }
 
-// Update updates an existing principal.
+// Update updates an existing principal. A change of Active deactivates or
+// reactivates it as Deactivate and Reactivate do, after the other fields
+// are saved.
 func (s *DefaultService) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (*Principal, error) {
 	update := s.client.Principal.UpdateOneID(id)
 
 	if input.DisplayName != nil {
 		update.SetDisplayName(*input.DisplayName)
-	}
-	if input.Active != nil {
-		update.SetActive(*input.Active)
 	}
 	if input.AllowedScopes != nil {
 		update.SetAllowedScopes(input.AllowedScopes)
@@ -650,6 +649,16 @@ func (s *DefaultService) Update(ctx context.Context, id uuid.UUID, input UpdateI
 	p, err := update.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update principal: %w", err)
+	}
+	if input.Active != nil && *input.Active != p.Active {
+		if *input.Active {
+			err = s.Reactivate(ctx, id)
+		} else {
+			err = s.Deactivate(ctx, id)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return s.GetByID(ctx, p.ID)
@@ -888,7 +897,12 @@ func (s *DefaultService) UpdateService(ctx context.Context, id uuid.UUID, input 
 	return s.GetByID(ctx, id)
 }
 
-// Deactivate deactivates a principal.
+// Deactivate deactivates a principal. A deactivated principal holds no
+// access: its memberships, application roles, resource grants, platform
+// administration and manager relations stay in the tables, but their
+// relationships are removed from the authorization graph before the
+// deactivation commits. If the graph refuses, the principal stays active
+// and the error is returned, so the call can be retried.
 func (s *DefaultService) Deactivate(ctx context.Context, id uuid.UUID) error {
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
@@ -902,6 +916,9 @@ func (s *DefaultService) Deactivate(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
+	if err = s.revokeGraphAccess(ctx, tx, id); err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to deactivate principal: %w", err)
 	}
@@ -909,7 +926,10 @@ func (s *DefaultService) Deactivate(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// Reactivate reactivates a principal.
+// Reactivate reactivates a principal and, after the change commits, writes
+// back to the authorization graph the relationships its rows call for
+// (failures returned in SyncModeStrict and logged otherwise; the graph
+// reconciler repairs what is left).
 func (s *DefaultService) Reactivate(ctx context.Context, id uuid.UUID) error {
 	_, err := s.client.Principal.UpdateOneID(id).
 		SetActive(true).
@@ -917,7 +937,7 @@ func (s *DefaultService) Reactivate(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("failed to reactivate principal: %w", err)
 	}
-	return nil
+	return s.restoreGraphAccess(ctx, id)
 }
 
 // Helper functions
