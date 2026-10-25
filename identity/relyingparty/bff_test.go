@@ -1,8 +1,10 @@
 package relyingparty
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -395,5 +397,31 @@ func TestNewBFFValidation(t *testing.T) {
 	b.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/auth-bff/auth/login", nil))
 	if c := cookieNamed(w.Result(), insecureStateCookieName); w.Code != http.StatusFound || c == nil || c.Secure {
 		t.Errorf("insecure mode: %d %+v", w.Code, c)
+	}
+}
+
+// TestNewBFFWarnsForInsecureCookies expects one warning at construction
+// when InsecureCookies is set, none per request, and none otherwise.
+func TestNewBFFWarnsForInsecureCookies(t *testing.T) {
+	fake := newFakeSystemAuth(t)
+	for _, insecure := range []bool{false, true} {
+		var logs bytes.Buffer
+		b, err := NewBFF(BFFConfig{
+			Client:          fake.client(t),
+			Principals:      NewMemoryPrincipalStore(),
+			InsecureCookies: insecure,
+			Logger:          slog.New(slog.NewTextHandler(&logs, nil)),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/bff/auth/login", nil))
+		want := 0
+		if insecure {
+			want = 1
+		}
+		if got := strings.Count(logs.String(), "InsecureCookies is set"); got != want {
+			t.Errorf("InsecureCookies=%v: %d warnings, want %d:\n%s", insecure, got, want, logs.String())
+		}
 	}
 }

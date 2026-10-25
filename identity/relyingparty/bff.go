@@ -85,7 +85,8 @@ type BFFConfig struct {
 	AllowedOrigins []string
 
 	// InsecureCookies drops the __Host- prefix and the Secure flag for
-	// local development over plain HTTP. Never enable in production.
+	// local development over plain HTTP. Never enable in production;
+	// NewBFF logs a warning when it is set.
 	InsecureCookies bool
 
 	// Logger receives operational errors. Default: slog.Default().
@@ -140,6 +141,9 @@ func NewBFF(cfg BFFConfig) (*BFF, error) {
 	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
+	}
+	if cfg.InsecureCookies {
+		cfg.Logger.Warn("relyingparty: InsecureCookies is set; the session and login state cookies are not Secure. Use it for local development over plain HTTP only")
 	}
 
 	appOrigin, err := parseOrigin(cfg.Client.Config().RedirectURL)

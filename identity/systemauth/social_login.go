@@ -211,6 +211,9 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 		clients:    s.storage,
 		oauth2:     s.oauth2,
 	}
+	if cfg.InsecureCookies {
+		s.logger.Warn("systemauth: InsecureCookies is set; login, state and sign-up cookies are not Secure. Use it for local development over plain HTTP only")
+	}
 	if revoker, ok := s.storage.(SubjectTokenRevoker); ok {
 		sl.revoker = revoker
 	}
