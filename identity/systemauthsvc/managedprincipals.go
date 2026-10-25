@@ -22,7 +22,8 @@ func (s *Service) openManagedPrincipals(c *Config, opts Options) {
 	if c.ManagedPrincipals == nil || !c.ManagedPrincipals.Enabled || s.client == nil {
 		return
 	}
-	mpOpts := []managedprincipal.Option{managedprincipal.WithLogger(s.logger)}
+	syncer, syncMode := s.authzSyncer()
+	mpOpts := []managedprincipal.Option{managedprincipal.WithLogger(s.logger), managedprincipal.WithAuthzSyncer(syncer, syncMode)}
 	if opts.AuditEmitter != nil {
 		mpOpts = append(mpOpts, managedprincipal.WithAuditEmitter(opts.AuditEmitter))
 	}

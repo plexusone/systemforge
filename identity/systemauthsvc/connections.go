@@ -13,26 +13,22 @@ import (
 	"github.com/plexusone/keyforge"
 	"github.com/plexusone/omnivault"
 
-	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/mode"
-	"github.com/plexusone/systemforge/authz/rbac"
 	"github.com/plexusone/systemforge/connections"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/keys"
 )
 
-// openConnections opens the key system, the authorization provider and the
-// connections store when the configuration enables connections (ADR-017).
+// openConnections opens the key system and the connections store when the
+// configuration enables connections (ADR-017), checking with the
+// service's authorization mode (openAuthz), which must be rbac.
 func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) error {
 	cc := c.Connections
 	if cc == nil {
 		return nil
 	}
-	if s.client == nil || s.db == nil {
+	if s.client == nil || s.db == nil || s.authz == nil {
 		return errors.New("systemauthsvc: connections need a database with a connection pool")
-	}
-	if c.Authz.Mode != authz.ModeRBAC {
-		return fmt.Errorf("systemauthsvc: connections support authz mode %q only, not %q", authz.ModeRBAC, c.Authz.Mode)
 	}
 	if err := keys.CheckRootKeyLocation(cc.Vault, cc.RootKey, cc.KeysDir); err != nil {
 		return fmt.Errorf("systemauthsvc: connections: %w", err)
@@ -50,22 +46,6 @@ func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) 
 	})
 	if err != nil {
 		return err
-	}
-	// Grants on a connection are accepted when the deployment restricts them
-	// to registered applications' resource types, so register ours.
-	if err := connections.RegisterVocabulary(opts.Vocabularies); err != nil {
-		return fmt.Errorf("systemauthsvc: connections vocabulary: %w", err)
-	}
-	s.authz, err = mode.New(ctx, c.Authz, mode.Deps{
-		DB:       s.client,
-		Registry: opts.Vocabularies,
-		Logger:   s.logger,
-		RBACOptions: []rbac.Option{
-			rbac.WithPermissions(connections.RolePermissions(authz.DefaultRolePermissions)),
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("systemauthsvc: connections authorization: %w", err)
 	}
 	s.conns, err = connections.Open(connections.Options{
 		DB:         s.db,
@@ -106,10 +86,11 @@ func (s *Service) mountConnections() {
 func (s *Service) Connections() *connections.Connections { return s.conns }
 
 // RunJobs runs background work until ctx is cancelled: the key lifecycle
-// jobs when connections are enabled, and the authorization graph
-// reconciler on its configured schedule when the authorization mode is
-// rebac. It returns at once when there is none, and the jobs' errors
-// joined when they end.
+// jobs when connections are enabled, and, when the authorization mode is
+// rebac, the authorization graph reconciler at startup and on its
+// configured schedule (authz.reconcile). Run it beside the server for as
+// long as the service serves. It returns at once when there is none, and
+// the jobs' errors joined when they end.
 func (s *Service) RunJobs(ctx context.Context) error {
 	var jobs []func(context.Context) error
 	if s.keys != nil {
@@ -139,15 +120,11 @@ func (s *Service) AuthzReconciler() *mode.Reconciler {
 
 // closeConnections releases what openConnections opened.
 func (s *Service) closeConnections() error {
-	var errs []error
-	if s.authz != nil {
-		errs = append(errs, s.authz.Close())
-		s.authz = nil
-	}
+	var err error
 	if s.keys != nil {
-		errs = append(errs, s.keys.Close())
+		err = s.keys.Close()
 		s.keys = nil
 	}
 	s.conns = nil
-	return errors.Join(errs...)
+	return err
 }

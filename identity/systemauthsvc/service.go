@@ -142,9 +142,16 @@ type Options struct {
 	DPoPReplayCache dpopproof.ReplayCache
 
 	// ManagedPrincipalOptions are passed to managedprincipal.NewService
-	// after the logger and audit emitter, e.g. WithRoles, WithAuthorizer or
-	// WithAuthzSyncer.
+	// after the logger, audit emitter and authorization syncer, e.g.
+	// WithRoles or WithAuthorizer.
 	ManagedPrincipalOptions []managedprincipal.Option
+
+	// AuthzSyncMode decides, in mode rebac, what a failed write of granted
+	// access to the relationship graph does in the identity services the
+	// service constructs: authz.SyncModeEventual (the default) logs it and
+	// leaves it to the graph reconciler, authz.SyncModeStrict returns it.
+	// Revocations remove access from the graph before they commit in both.
+	AuthzSyncMode authz.SyncMode
 
 	// SCIM serves SCIM 2.0 provisioning at SCIMPath, authenticated by
 	// default with tenant SCIM tokens from the built-in store (see
@@ -173,9 +180,12 @@ type Service struct {
 	dialect string
 	logger  *slog.Logger
 
-	// keys, authz and conns are set when connections are enabled.
-	keys  *keys.Keys
+	// authz is the authorization mode, built once when there is a
+	// database (openAuthz) and shared by every part of the service.
 	authz *mode.Result
+
+	// keys and conns are set when connections are enabled.
+	keys  *keys.Keys
 	conns *connections.Connections
 
 	// console is set when the organization console is enabled.
@@ -186,10 +196,8 @@ type Service struct {
 	mp      *managedprincipal.Service
 	mpRates ratelimit.Storage
 
-	// scimTokens is set when SCIM is enabled; scimAuthz is the
-	// authorization mode openSCIM opened, if any.
+	// scimTokens is set when SCIM is enabled.
 	scimTokens *scimtoken.Service
-	scimAuthz  *mode.Result
 	// dpopRedis is the Redis client of the DPoP replay cache, when New
 	// opened one.
 	dpopRedis *redis.Client
@@ -246,12 +254,17 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		s.closeQuietly()
 		return nil, err
 	}
+	if err := s.openAuthz(ctx, &c, opts); err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
 	if err := s.openConnections(ctx, &c, opts); err != nil {
 		s.closeQuietly()
 		return nil, err
 	}
 
-	serverOpts := []systemauth.Option{systemauth.WithLogger(logger)}
+	syncer, syncMode := s.authzSyncer()
+	serverOpts := []systemauth.Option{systemauth.WithLogger(logger), systemauth.WithSocialAuthzSyncer(syncer, syncMode)}
 	if s.client != nil {
 		if opts.Migrate {
 			logger.Info("running database migrations")
@@ -313,7 +326,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		serverOpts = append(serverOpts, systemauth.WithSignupDeniedURL(opts.SignupDeniedURL))
 	}
 	if s.client != nil {
-		src, err := orgsSource(ctx, s.client, opts, logger)
+		src, err := orgsSource(ctx, s.client, opts, logger, syncer, syncMode)
 		if err != nil {
 			s.closeQuietly()
 			return nil, err
@@ -340,7 +353,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		return nil, err
 	}
 	s.openManagedPrincipals(&c, opts)
-	if err := s.openSCIM(ctx, &c, opts); err != nil {
+	if err := s.openSCIM(opts); err != nil {
 		s.closeQuietly()
 		return nil, err
 	}
@@ -351,7 +364,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 // from approle over opts.Vocabularies, with entitlements from the
 // marketplace's default entitlements; with no vocabularies the claim
 // carries organizations only.
-func orgsSource(ctx context.Context, client *ent.Client, opts Options, logger *slog.Logger) (systemauth.OrgsSource, error) {
+func orgsSource(ctx context.Context, client *ent.Client, opts Options, logger *slog.Logger, syncer authz.RelationshipSyncer, syncMode authz.SyncMode) (systemauth.OrgsSource, error) {
 	if opts.Vocabularies == nil {
 		if len(opts.DefaultEntitlements) > 0 {
 			return nil, errors.New("systemauthsvc: Options.DefaultEntitlements requires Options.Vocabularies")
@@ -369,7 +382,7 @@ func orgsSource(ctx context.Context, client *ent.Client, opts Options, logger *s
 		return nil, err
 	}
 	entitlements := marketplace.EntitlementSource(nil, nil, nil, defaults)
-	roleOpts := append([]approle.Option{approle.WithLogger(logger)}, marketplace.ApproleOptions(entitlements)...)
+	roleOpts := append([]approle.Option{approle.WithLogger(logger), approle.WithAuthzSyncer(syncer, syncMode)}, marketplace.ApproleOptions(entitlements)...)
 	return systemauth.NewEntOrgsSource(client, approle.NewService(client, opts.Vocabularies, roleOpts...)), nil
 }
 
@@ -512,7 +525,7 @@ func (s *Service) Ready(ctx context.Context) error {
 // Close releases the database New opened. Injected handles (Options.DB,
 // Options.EntClient) are left to their owner.
 func (s *Service) Close() error {
-	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeManagedPrincipals(), s.closeSCIM(), s.closeDPoP())
+	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeManagedPrincipals(), s.closeDPoP(), s.closeAuthz())
 	if s.owned == nil {
 		return err
 	}

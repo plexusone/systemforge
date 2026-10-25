@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
-	"github.com/plexusone/systemforge/authz/mode"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/identity/principal"
@@ -38,9 +37,9 @@ type SCIMOptions struct {
 	// scim.DefaultConfig(). Its BaseURL is always SCIMPath.
 	Config *scim.Config
 
-	// Store configures the Ent store. Default: memberships and principals
-	// changed through the organization and principal services with the
-	// configured authorization mode's syncer. Its BaseURL is always
+	// Store configures the Ent store. Default: memberships, principals and
+	// deleted users changed through the organization and principal services
+	// and the store with the authorization mode's syncer. Its BaseURL is always
 	// SCIMPath.
 	Store *store.Config
 
@@ -69,28 +68,15 @@ type SCIMOptions struct {
 
 // openSCIM serves SCIM and the token management API when Options.SCIM is
 // set.
-func (s *Service) openSCIM(ctx context.Context, c *Config, opts Options) error {
+func (s *Service) openSCIM(opts Options) error {
 	so := opts.SCIM
 	if so == nil {
 		return nil
 	}
-	if s.client == nil {
+	if s.client == nil || s.authz == nil {
 		return errors.New("systemauthsvc: SCIM needs a database")
 	}
 	res := s.authz
-	if res == nil {
-		r, err := mode.New(ctx, c.Authz, mode.Deps{
-			DB:            s.client,
-			Registry:      opts.Vocabularies,
-			Logger:        s.logger,
-			PlatformAdmin: s.isPlatformAdmin,
-		})
-		if err != nil {
-			return fmt.Errorf("systemauthsvc: SCIM authorization: %w", err)
-		}
-		s.scimAuthz = r
-		res = r
-	}
 	authorizer := so.Authorizer
 	if authorizer == nil {
 		authorizer = res.Provider
@@ -114,12 +100,17 @@ func (s *Service) openSCIM(ctx context.Context, c *Config, opts Options) error {
 		storeCfg = &cp
 	}
 	storeCfg.BaseURL = SCIMPath
-	orgs := organization.NewService(s.client, organization.WithAuthzSyncer(res.Syncer), organization.WithLogger(s.logger))
+	orgs := organization.NewService(s.client,
+		organization.WithAuthzSyncer(res.Syncer), organization.WithSyncMode(res.SyncMode), organization.WithLogger(s.logger))
 	if storeCfg.Memberships == nil {
 		storeCfg.Memberships = orgs
 	}
 	if storeCfg.Principals == nil {
-		storeCfg.Principals = principal.NewService(s.client, principal.WithAuthzSyncer(res.Syncer), principal.WithLogger(s.logger))
+		storeCfg.Principals = principal.NewService(s.client,
+			principal.WithAuthzSyncer(res.Syncer), principal.WithSyncMode(res.SyncMode), principal.WithLogger(s.logger))
+	}
+	if storeCfg.Syncer == nil {
+		storeCfg.Syncer = res.Syncer
 	}
 	provOpts := append([]scim.ProviderOption{scim.WithAuthorizationHook(scim.NewScopedAuthorizationHook(true))}, so.ProviderOptions...)
 	provider, err := scim.NewProvider(scimCfg, store.NewEntStore(s.client, storeCfg), provOpts...)
@@ -160,13 +151,3 @@ func (s *Service) isPlatformAdmin(ctx context.Context, principalID uuid.UUID) (b
 // is not set. Operator commands and host applications use it to issue,
 // rotate and revoke an organization's tokens.
 func (s *Service) SCIMTokens() *scimtoken.Service { return s.scimTokens }
-
-// closeSCIM releases the authorization mode openSCIM opened.
-func (s *Service) closeSCIM() error {
-	if s.scimAuthz == nil {
-		return nil
-	}
-	r := s.scimAuthz
-	s.scimAuthz = nil
-	return r.Close()
-}
