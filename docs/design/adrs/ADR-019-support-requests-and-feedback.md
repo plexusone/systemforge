@@ -5,7 +5,8 @@
 **Relates to:** ADR-003 (omnimail, which the default desk uses), ADR-011 and
 ADR-012 (classification, privacy rights and holds, which cover support
 requests), ADR-013 (keys, which can seal message text), ADR-017 (the same
-adoption pattern as connectforge), ADR-007 (platform roles).
+adoption pattern as connectforge), ADR-007 (organization and platform roles),
+ADR-020 (customer-authorized support access, and staff masking).
 **Builds on:** [supportforge](https://github.com/plexusone/supportforge),
 the generic support-request library, and
 [supportforge-core](https://github.com/plexusone/supportforge-core), its
@@ -76,13 +77,31 @@ adopts it, as ADR-017 does for connectforge.
 
 5. **Requests belong to the deployment, not to the requester's
    organization.** The operator of the application answers them. The
-   requester's organization is recorded as context and for export, and
-   customer organizations do not see requests in this version.
+   requester's organization is recorded as context, for export, and for what
+   that organization's administrators may see:
+   - **The index, always.** Organization owners and admins see their
+     organization's requests without the text: who filed, kind, product,
+     status and dates.
+   - **The text, when the requester shares it.** The form offers "share with my
+     organization's admins", off by default. An organization may set a policy
+     that shares every request from its members, and the form then says so
+     before anyone types.
+   - **Billing requests are shared.** Billing belongs to the organization
+     (ADR-007), so requests of kind `billing` are visible in full to its
+     owners and admins, and the form says so.
+   - **Never to members or collaborators.** Only owners and admins see other
+     people's requests.
+
+   A request is written to the operator, not to the employer, so sharing its
+   text with the organization is a separate purpose the requester agrees to,
+   not a default.
 6. **Support has its own permissions.** `support.request.read` lets a
    holder list and read requests through the API, which matters when mail is
    the only desk. `support.desk.configure` lets a holder change the desk
    order. They are held by a platform role, `support_agent`, separate from
-   platform administration, in the vocabulary of ADR-007 and ADR-012.
+   platform administration, in the vocabulary of ADR-007 and ADR-012. Reading a
+   request's own text needs no customer grant. Looking at the customer's
+   application data does, under ADR-020.
 7. **The API:**
 
    ```text
@@ -90,6 +109,8 @@ adopts it, as ADR-017 does for connectforge.
    POST /api/v1/public/support/requests   visitor; bot challenge required
    GET  /api/v1/support/requests          support_agent; list, without cleared text
    GET  /api/v1/support/requests/{ref}    support_agent
+   GET  /api/v1/organizations/{org}/support/requests        owners and admins; index, plus shared text
+   GET  /api/v1/organizations/{org}/support/requests/{ref}  owners and admins
    ```
 
    The response to a request is its reference and the promise of an email
