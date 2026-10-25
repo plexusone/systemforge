@@ -3,6 +3,7 @@ package signupgate
 import (
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -22,6 +23,9 @@ type WaitlistEntry struct {
 	// last submitted.
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	// InvitedAt is when an operator invited the address from the waitlist;
+	// nil until then.
+	InvitedAt *time.Time
 }
 
 // Waitlist stores the addresses that asked to be notified while a
@@ -70,7 +74,7 @@ func (w *Waitlist) List(ctx context.Context) ([]WaitlistEntry, error) {
 	for _, r := range rows {
 		out = append(out, WaitlistEntry{
 			Email: r.Email, ConsentVersion: r.ConsentVersion, ConsentText: r.ConsentText,
-			CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+			CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, InvitedAt: r.InvitedAt,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -99,16 +103,62 @@ func (w *Waitlist) Remove(ctx context.Context, email string) error {
 	return nil
 }
 
+// Invite creates an email invite in invites for each address on the
+// waitlist and marks the entry invited; the entry stays listed. It returns
+// the invites created and an error joining the failures, such as an address
+// that is not listed or one whose invite was already redeemed.
+func (w *Waitlist) Invite(ctx context.Context, invites *Store, emails []string, opts AddOptions) ([]Invite, error) {
+	var (
+		out  []Invite
+		errs []error
+	)
+	for _, raw := range emails {
+		email, err := NormalizeEmail(raw)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		listed, err := w.client.SignupWaitlistEntry.Query().Where(signupwaitlistentry.EmailEQ(email)).Exist(ctx)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("signupgate: reading the waitlist: %w", err))
+			continue
+		}
+		if !listed {
+			errs = append(errs, fmt.Errorf("%w: %s is not on the waitlist", ErrNotFound, email))
+			continue
+		}
+		inv, err := invites.Add(ctx, email, opts)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", email, err))
+			continue
+		}
+		if _, err := w.client.SignupWaitlistEntry.Update().
+			Where(signupwaitlistentry.EmailEQ(email)).
+			SetInvitedAt(inv.CreatedAt).
+			Save(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("signupgate: marking %s invited: %w", email, err))
+			continue
+		}
+		out = append(out, *inv)
+	}
+	return out, errors.Join(errs...)
+}
+
 // WriteWaitlistCSV writes entries as CSV with a header row: email, joined
-// and last submitted times (RFC 3339, UTC) and the consent version.
+// and last submitted times (RFC 3339, UTC), the consent version, and when
+// the address was invited (empty until then).
 func WriteWaitlistCSV(out io.Writer, entries []WaitlistEntry) error {
 	cw := csv.NewWriter(out)
-	if err := cw.Write([]string{"email", "joined_at", "last_submitted_at", "consent_version"}); err != nil {
+	if err := cw.Write([]string{"email", "joined_at", "last_submitted_at", "consent_version", "invited_at"}); err != nil {
 		return err
 	}
 	for _, e := range entries {
+		invited := ""
+		if e.InvitedAt != nil {
+			invited = e.InvitedAt.UTC().Format(time.RFC3339)
+		}
 		if err := cw.Write([]string{
-			e.Email, e.CreatedAt.UTC().Format(time.RFC3339), e.UpdatedAt.UTC().Format(time.RFC3339), e.ConsentVersion,
+			e.Email, e.CreatedAt.UTC().Format(time.RFC3339), e.UpdatedAt.UTC().Format(time.RFC3339), e.ConsentVersion, invited,
 		}); err != nil {
 			return err
 		}
