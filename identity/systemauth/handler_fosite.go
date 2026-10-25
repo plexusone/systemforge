@@ -267,7 +267,14 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	logger := LoggerFromContext(ctx)
 	start := time.Now()
 
-	grantType := r.FormValue("grant_type")
+	// The body is limited before anything reads it.
+	if err := ParseTokenRequest(w, r); err != nil {
+		logger.Info("token request rejected: unreadable body", "error", err)
+		s.recordAuthMetrics(ctx, "", "", observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, nil, err)
+		return
+	}
+	grantType := r.PostForm.Get("grant_type")
 
 	// Start span if observability is configured
 	if s.observability != nil {
@@ -280,9 +287,6 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 		)
 		defer span.End()
 	}
-
-	// Limit request body size to prevent memory exhaustion (1MB max for token requests)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	// Create session (will be populated by the grant handler)
 	session := s.Session("")

@@ -217,12 +217,16 @@ func (a *API) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	logger := LoggerFromContext(ctx)
 	oauth2 := a.provider.OAuth2Provider()
 
-	// Limit request body size to prevent memory exhaustion (1MB max for token requests)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	// The body is limited before anything reads it.
+	if err := systemauth.ParseTokenRequest(w, r); err != nil {
+		logger.Info("token request rejected: unreadable body", "error", err)
+		oauth2.WriteAccessError(ctx, w, nil, err)
+		return
+	}
 
 	// Create session (will be populated by the grant handler)
 	session := a.provider.Session("")
-	grantType := r.FormValue("grant_type")
+	grantType := r.PostForm.Get("grant_type")
 	logger.Debug("token request", "grant_type", grantType)
 
 	// Process the token request
