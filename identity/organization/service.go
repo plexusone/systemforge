@@ -539,6 +539,10 @@ func (s *DefaultService) AddMember(ctx context.Context, input AddMemberInput) (*
 // commits; if the graph refuses, the membership is left unchanged and the
 // error is returned. Relationships the change grants are written after it
 // commits, as WithSyncMode decides.
+//
+// A collaborator holds no application roles, so a change of role to
+// collaborator deletes the member's application roles in the organization
+// with the change, removing them from the graph first.
 func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUID, input UpdateMemberInput) (*Membership, error) {
 	// Get current membership for role change detection and the type check
 	current, err := s.client.PrincipalMembership.Get(ctx, membershipID)
@@ -595,6 +599,16 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 	if input.Active != nil && !*input.Active && current.Active {
 		changes = append(changes, accesschange.Change{PrincipalID: membership.PrincipalID, OrganizationID: &orgID, Reason: accesschange.MembershipRemoved})
 	}
+	// Demotion to collaborator ends the member's application roles.
+	var dropped []*ent.AppRole
+	if roleChanged && membership.Role == RoleCollaborator {
+		if dropped, err = dropAppRoles(ctx, tx, membership.PrincipalID, orgID); err != nil {
+			return nil, errors.Join(err, tx.Rollback())
+		}
+		if len(dropped) > 0 {
+			changes = append(changes, accesschange.Change{PrincipalID: membership.PrincipalID, OrganizationID: &orgID, Reason: accesschange.AppRoleChanged})
+		}
+	}
 	changes, err = recordChanges(ctx, tx, changes)
 	if err != nil {
 		return nil, errors.Join(err, tx.Rollback())
@@ -617,7 +631,7 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 		if err = graphlock.Lock(ctx, tx, graphlock.Principal(membership.PrincipalID)); err != nil {
 			return nil, errors.Join(err, tx.Rollback())
 		}
-		if err = s.revokeAccess(ctx, membership.PrincipalID, orgID, oldRole, roles, grants); err != nil {
+		if err = s.revokeAccess(ctx, membership.PrincipalID, orgID, oldRole, append(roles, dropped...), grants); err != nil {
 			return nil, errors.Join(err, tx.Rollback())
 		}
 	case current.Active && membership.Active && roleChanged:
@@ -626,6 +640,9 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 		}
 		if err = s.syncer.RemoveOrgMembership(ctx, membership.PrincipalID, orgID, oldRole); err != nil {
 			return nil, errors.Join(revokeErr("previous role", err), tx.Rollback())
+		}
+		if err = s.revokeAppRoles(ctx, membership.PrincipalID, orgID, dropped); err != nil {
+			return nil, errors.Join(err, tx.Rollback())
 		}
 	}
 
@@ -755,12 +772,8 @@ func (s *DefaultService) revokeAccess(ctx context.Context, principalID, organiza
 	if err := s.syncer.RemoveOrgMembership(ctx, principalID, organizationID, role); err != nil {
 		return revokeErr("membership", err)
 	}
-	if appSyncer, ok := s.syncer.(authz.AppRoleSyncer); ok {
-		for _, r := range appRoles {
-			if err := appSyncer.RemoveAppRole(ctx, principalID, organizationID, r.Application, r.Role); err != nil {
-				return revokeErr("application role", err)
-			}
-		}
+	if err := s.revokeAppRoles(ctx, principalID, organizationID, appRoles); err != nil {
+		return err
 	}
 	if grantSyncer, ok := s.syncer.(authz.ResourceGrantSyncer); ok {
 		for _, g := range grants {
@@ -784,6 +797,42 @@ func (s *DefaultService) reportGrant(what string, syncErr error, attrs ...any) e
 	}
 	s.logger.Warn("failed to sync "+what+" to authz", append(attrs, "error", syncErr)...)
 	return nil
+}
+
+// revokeAppRoles removes application roles from the authorization graph,
+// inside the transaction that ends them and holding the member's
+// graphlock.
+func (s *DefaultService) revokeAppRoles(ctx context.Context, principalID, organizationID uuid.UUID, appRoles []*ent.AppRole) error {
+	appSyncer, ok := s.syncer.(authz.AppRoleSyncer)
+	if !ok {
+		return nil
+	}
+	for _, r := range appRoles {
+		if err := appSyncer.RemoveAppRole(ctx, principalID, organizationID, r.Application, r.Role); err != nil {
+			return revokeErr("application role", err)
+		}
+	}
+	return nil
+}
+
+// dropAppRoles deletes, in tx, the application roles a principal holds in
+// an organization and returns them.
+func dropAppRoles(ctx context.Context, tx *ent.Tx, principalID, organizationID uuid.UUID) ([]*ent.AppRole, error) {
+	roles, err := tx.AppRole.Query().
+		Where(approle.OrganizationID(organizationID), approle.PrincipalID(principalID)).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read application roles: %w", err)
+	}
+	if len(roles) == 0 {
+		return nil, nil
+	}
+	if _, err := tx.AppRole.Delete().
+		Where(approle.OrganizationID(organizationID), approle.PrincipalID(principalID)).
+		Exec(ctx); err != nil {
+		return nil, fmt.Errorf("failed to remove application roles: %w", err)
+	}
+	return roles, nil
 }
 
 // memberAccess returns the application roles and resource grants a

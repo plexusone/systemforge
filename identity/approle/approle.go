@@ -16,7 +16,8 @@
 //   - Only active owners, admins and members can hold a role;
 //     collaborators and non-members cannot.
 //   - Removing a member deletes their roles (organization.Service
-//     RemoveMember does this in its transaction). Deactivating a
+//     RemoveMember does this in its transaction), and so does demoting
+//     them to collaborator (UpdateMember). Deactivating a
 //     membership leaves the rows in place but EffectiveRoles ignores them
 //     until the membership is active again.
 package approle
