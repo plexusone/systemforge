@@ -146,8 +146,8 @@ revoke only their own codes (`RevokeMemberCode(ctx, principalID, id)`).
 2. otherwise a code on the context (section 5) is reserved;
 3. otherwise `ErrSignupNotInvited`.
 
-`SignedUp` redeems whichever admitted the sign-up: the email invite as today
-(also re-checking expiry), or the reserved code's redemption row.
+`SignedUp` redeems whichever admitted the sign-up: the email invite as today,
+or the reserved code's redemption row.
 
 **Undoing a reservation.** A new optional interface in `identity/systemauth`:
 
@@ -162,8 +162,9 @@ type SignupGateAborter interface {
 
 `gatedDirectory.CreateFromExternal` calls it when the wrapped directory
 fails, which includes the age question (`errSignupAgeRequired`). The gate
-releases the reserved use. The reservation is found again from the code on
-the context, so no state is kept between calls.
+releases the reserved use. Between `AllowSignup` and `SignedUp` or
+`SignupAborted` the gate remembers what admitted each login, keyed by
+provider and subject; the three calls happen within one account creation.
 
 ### 5. Carrying a code through sign-in (`identity/systemauth`)
 

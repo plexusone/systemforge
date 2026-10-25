@@ -1,12 +1,15 @@
 // Package signupgate keeps platform sign-up invites and implements the
 // systemauth.SignupGate that enforces them. With the gate installed a
-// deployment creates accounts only for verified emails that hold an invite;
-// people who already have an account sign in as before.
+// deployment creates accounts only for people who are invited; people who
+// already have an account sign in as before.
 //
-// An invite is an email address, not a code: the person proves control of
-// the address by signing in through the upstream provider, and the gate
-// compares that verified address with the invites. Nothing is sent and
-// nothing needs to be typed.
+// There are two kinds of invite. An email invite (Store) names an address:
+// the person proves control of it by signing in through the upstream
+// provider, and the gate compares that verified address with the invites.
+// An invite code (CodeStore) is shared as a link and admits up to its use
+// limit, whoever holds it; operators create codes for cohorts, and members
+// create single-use codes from their allowance. Either way a verified email
+// is required.
 package signupgate
 
 import (
@@ -16,6 +19,7 @@ import (
 	"net/mail"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -215,20 +219,56 @@ func toInvite(r *ent.SignupInvite) *Invite {
 	}
 }
 
-// Gate is the systemauth.SignupGate over a Store.
+// Gate is the systemauth.SignupGate over a Store and, optionally, a
+// CodeStore. A sign-up is allowed when the login's verified email holds a
+// pending invite, or else when the person brought an invite code with a use
+// left. An email invite wins: a person invited by address does not use up a
+// code they also hold.
 type Gate struct {
 	store *Store
+	codes *CodeStore
+
+	// reserved holds the code use reserved for each login between
+	// AllowSignup and SignedUp or SignupAborted, keyed by loginKey. Both
+	// calls happen within one account creation, so entries are short-lived.
+	reserved sync.Map
 }
 
-var _ systemauth.SignupGate = (*Gate)(nil)
+var (
+	_ systemauth.SignupGate        = (*Gate)(nil)
+	_ systemauth.SignupGateAborter = (*Gate)(nil)
+)
+
+// GateOption configures a Gate.
+type GateOption func(*Gate)
+
+// WithCodes lets the gate admit people who bring an invite code from codes.
+func WithCodes(codes *CodeStore) GateOption {
+	return func(g *Gate) { g.codes = codes }
+}
 
 // NewGate returns a gate that allows a sign-up when the login's verified
-// email holds a pending invite.
-func NewGate(store *Store) *Gate { return &Gate{store: store} }
+// email holds a pending invite, or with WithCodes, when it brings a usable
+// invite code.
+func NewGate(store *Store, opts ...GateOption) *Gate {
+	g := &Gate{store: store}
+	for _, o := range opts {
+		o(g)
+	}
+	return g
+}
+
+// inviteAdmitted marks a login admitted by its email invite in reserved.
+var inviteAdmitted = uuid.Nil
+
+func loginKey(login systemauth.ExternalLogin) string {
+	return login.Provider + "\x00" + login.Subject
+}
 
 // AllowSignup implements systemauth.SignupGate. Only a verified email can
-// match: an unverified address is never trusted, and the directory refuses
-// to create an account for one anyway.
+// sign up: an unverified address is never trusted, and the directory refuses
+// to create an account for one anyway. A code is reserved here, one use, so
+// a code's limit holds however many sign-ups race for it.
 func (g *Gate) AllowSignup(ctx context.Context, login systemauth.ExternalLogin) error {
 	if !login.EmailVerified {
 		return systemauth.ErrSignupNotInvited
@@ -237,13 +277,46 @@ func (g *Gate) AllowSignup(ctx context.Context, login systemauth.ExternalLogin) 
 	if err != nil {
 		return err
 	}
-	if !ok {
+	if ok {
+		g.reserved.Store(loginKey(login), inviteAdmitted)
+		return nil
+	}
+	code := systemauth.SignupCodeFromContext(ctx)
+	if g.codes == nil || code == "" {
 		return systemauth.ErrSignupNotInvited
 	}
+	id, err := g.codes.Reserve(ctx, code)
+	if errors.Is(err, ErrCodeInvalid) {
+		return systemauth.ErrSignupNotInvited
+	}
+	if err != nil {
+		return err
+	}
+	g.reserved.Store(loginKey(login), id)
 	return nil
 }
 
-// SignedUp implements systemauth.SignupGate by consuming the invite.
+// SignedUp implements systemauth.SignupGate by consuming what admitted the
+// sign-up: the email invite, or the reserved code use.
 func (g *Gate) SignedUp(ctx context.Context, login systemauth.ExternalLogin, principalID uuid.UUID) error {
-	return g.store.Redeem(ctx, login.Email, principalID)
+	v, ok := g.reserved.LoadAndDelete(loginKey(login))
+	id, _ := v.(uuid.UUID) //nolint:errcheck // a type assertion, not an error: only uuid.UUID values are stored
+	if !ok || id == inviteAdmitted {
+		return g.store.Redeem(ctx, login.Email, principalID)
+	}
+	return g.codes.Redeem(ctx, id, principalID, login.Email)
+}
+
+// SignupAborted implements systemauth.SignupGateAborter by giving back a
+// reserved code use when the account was not created, for example because
+// the person has yet to answer the sign-up age question.
+func (g *Gate) SignupAborted(ctx context.Context, login systemauth.ExternalLogin) {
+	v, ok := g.reserved.LoadAndDelete(loginKey(login))
+	id, _ := v.(uuid.UUID) //nolint:errcheck // a type assertion, not an error: only uuid.UUID values are stored
+	if !ok || id == inviteAdmitted {
+		return
+	}
+	if err := g.codes.Release(ctx, id); err != nil {
+		systemauth.LoggerFromContext(ctx).Error("releasing a reserved invite code use", "code_id", id, "error", err)
+	}
 }
