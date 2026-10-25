@@ -38,7 +38,6 @@ func TestInsecureDevCookieDropsHostPrefix(t *testing.T) {
 
 func TestCookieConfigValidate(t *testing.T) {
 	bad := []CookieConfig{
-		{Name: "__Host-x", Path: "/", Secure: true, Domain: "example.com"},
 		{Name: "__Host-x", Path: "/app", Secure: true},
 		{Name: "__Host-x", Path: "/", Secure: false},
 		{Name: "__Secure-x", Path: "/", Secure: false},
@@ -50,13 +49,30 @@ func TestCookieConfigValidate(t *testing.T) {
 	}
 }
 
-func TestNewHandler_RejectsHostCookieWithDomain(t *testing.T) {
+func TestNewHandler_RejectsHostCookieWithPath(t *testing.T) {
 	_, err := NewHandler(HandlerConfig{
 		Store:          NewMemoryStore(DefaultStoreConfig()),
 		AllowedOrigins: []string{"https://example.com"},
-		CookieConfig:   CookieConfig{Name: DefaultCookieName, Domain: "example.com"},
+		CookieConfig:   CookieConfig{Name: DefaultCookieName, Path: "/app"},
 	})
 	if !errors.Is(err, ErrInvalidCookieConfig) {
 		t.Fatalf("NewHandler() error = %v, want ErrInvalidCookieConfig", err)
+	}
+}
+
+// TestCustomNameCookieIsHostOnly expects a session cookie with a name
+// other than the __Host- default to stay host-only, set and cleared
+// without a Domain attribute.
+func TestCustomNameCookieIsHostOnly(t *testing.T) {
+	m := NewCookieManager(CookieConfig{Name: "app_session"})
+	set := httptest.NewRecorder()
+	m.SetSessionCookie(set, "id", time.Now().Add(time.Hour))
+	cleared := httptest.NewRecorder()
+	m.ClearSessionCookie(cleared)
+	for _, rr := range []*httptest.ResponseRecorder{set, cleared} {
+		h := rr.Header().Get("Set-Cookie")
+		if strings.Contains(strings.ToLower(h), "domain=") {
+			t.Errorf("Set-Cookie = %q, want no Domain attribute", h)
+		}
 	}
 }

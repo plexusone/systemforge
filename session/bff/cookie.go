@@ -29,18 +29,17 @@ const (
 var ErrInvalidCookieConfig = errors.New("invalid session cookie configuration")
 
 // CookieConfig contains configuration for session cookies.
+//
+// The session cookie is always host-only: it has no Domain attribute, so
+// it is never shared with sibling subdomains, any of which could otherwise
+// read, set or overwrite it. Applications on different hosts each keep
+// their own session cookie.
 type CookieConfig struct {
 	// Name is the cookie name. Default: DefaultCookieName
 	// ("__Host-sf_session"), or InsecureCookieName ("sf_session") when the
 	// cookie is not Secure. Give each application its own name when
 	// several share a host.
 	Name string
-
-	// Domain is the cookie domain. If empty (recommended), the cookie is
-	// host-only. Setting it shares the cookie with every subdomain of
-	// Domain, any of which can then read, set or overwrite it; it is not
-	// allowed with a __Host- name.
-	Domain string
 
 	// Path is the cookie path. Default: "/".
 	Path string
@@ -56,7 +55,7 @@ type CookieConfig struct {
 
 	// AllowInsecure permits a cookie without the Secure flag when Secure
 	// is false, for local development over plain HTTP. Never set it in
-	// production.
+	// production; NewHandler logs a warning when the cookie is not Secure.
 	AllowInsecure bool
 
 	// HTTPOnly prevents JavaScript access to the cookie. The session
@@ -113,15 +112,12 @@ func NewCookieManager(config CookieConfig) *CookieManager {
 	return &CookieManager{config: config}
 }
 
-// Validate reports a cookie configuration browsers would reject or that
-// weakens the cookie's scope: a __Host- name with a Domain, a Path other
-// than "/" or without Secure, or a __Secure- name without Secure. Call it on CookieManager.Config(), after defaults are
-// applied; NewHandler does.
+// Validate reports a cookie configuration browsers would reject: a
+// __Host- name with a Path other than "/" or without Secure, or a
+// __Secure- name without Secure. Call it on CookieManager.Config(), after
+// defaults are applied; NewHandler does.
 func (c CookieConfig) Validate() error {
 	if strings.HasPrefix(c.Name, hostCookiePrefix) {
-		if c.Domain != "" {
-			return fmt.Errorf("%w: a %s cookie cannot set Domain", ErrInvalidCookieConfig, hostCookiePrefix)
-		}
 		if c.Path != "/" {
 			return fmt.Errorf("%w: a %s cookie must have Path=/", ErrInvalidCookieConfig, hostCookiePrefix)
 		}
@@ -142,7 +138,6 @@ func (m *CookieManager) SetSessionCookie(w http.ResponseWriter, sessionID string
 		Name:     m.config.Name,
 		Value:    sessionID,
 		Path:     m.config.Path,
-		Domain:   m.config.Domain,
 		Expires:  expiry,
 		MaxAge:   m.config.MaxAge,
 		Secure:   m.config.Secure,
@@ -171,7 +166,6 @@ func (m *CookieManager) ClearSessionCookie(w http.ResponseWriter) {
 		Name:     m.config.Name,
 		Value:    "",
 		Path:     m.config.Path,
-		Domain:   m.config.Domain,
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
 		Secure:   m.config.Secure,

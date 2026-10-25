@@ -175,9 +175,11 @@ cookies := bff.NewCookieManager(bff.CookieConfig{
 The cookie is always `HttpOnly`, and `Secure` unless `AllowInsecure` is set
 for plain-HTTP development (the default name is then `bff.InsecureCookieName`,
 `sf_session`, because browsers reject a `__Host-` cookie that is not
-`Secure`). Leave `Domain` empty: a `Domain` shares the cookie with every
-subdomain, any of which can then overwrite it, and is rejected for a
-`__Host-` name by `CookieConfig.Validate` (which `bff.NewHandler` calls).
+`Secure`). The cookie is always host-only: `CookieConfig` has no `Domain`
+field, because a `Domain` would share the session with every subdomain, any
+of which could then read or overwrite it. `CookieConfig.Validate` (which
+`bff.NewHandler` calls) rejects a `__Host-` name with another `Path` or
+without `Secure`.
 
 ## Middleware
 

@@ -141,9 +141,10 @@ if isDevelopment {
 The default name carries the `__Host-` prefix, so browsers accept the cookie
 only when it is `Secure`, has `Path=/` and no `Domain`; a sibling subdomain
 cannot set or overwrite it. Give each application on a host its own name.
-`NewHandler` rejects a `__Host-` name with a `Domain`, another `Path` or
-without `Secure`. Avoid `Domain` with other names too: it shares the cookie
-with every subdomain.
+`NewHandler` rejects a `__Host-` name with another `Path` or without
+`Secure`. The session cookie never has a `Domain` attribute, whatever its
+name: it stays host-only, so each application keeps its own session cookie
+and no sibling subdomain can read or overwrite it.
 
 ### ClientIPConfig (Cloudflare Support)
 
