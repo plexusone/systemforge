@@ -64,6 +64,7 @@ nav:
     - Minimum Sign-Up Age: guides/signup-age.md
     - Browser Cookies: guides/cookies.md
     - Calling APIs with DPoP: guides/dpop-clients.md
+    - Rotating Keys and Secrets: guides/rotation.md
   - Identity:
     - Overview: identity/overview.md
     - Users: identity/users.md

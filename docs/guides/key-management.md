@@ -91,9 +91,11 @@ plain, err := k.Open(ctx, "myapp.sessions", sealed, []byte("user:42"))
   readable until nothing references them.
 - **Audit.** When you pass `Audit`, key creation, rotation, retirement and
   destruction are recorded in the platform audit trail with no key material.
-  Ordinary seal and open are not logged one by one. SystemAuth does not pass
-  an audit store to `keys` yet, so a SystemAuth deployment records no key
-  events.
+  Ordinary seal and open are not logged one by one. Without an audit
+  store, `keys.Options.Logger` logs the same events instead. A host that
+  embeds SystemAuth passes `systemauthsvc.Options.AuditStore` to record key
+  and connection events in its audit trail; the `systemauth` command passes
+  none, so it logs them.
 - **Backup checks.** A key ring restored from a backup older than one this
   host has seen is refused unless `keys.Options.AcceptRollback` is set, so a
   stale copy is never used by mistake.
@@ -103,9 +105,14 @@ plain, err := k.Open(ctx, "myapp.sessions", sealed, []byte("user:42"))
 | Task | How |
 |---|---|
 | Back up | Stop the process, copy the whole keys directory, and keep the root key separately. The key ring and the registry must come from the same moment |
-| Restore or move | Stop the process, restore or copy the directory, and open with `keys.Options.AcceptRollback` once. This is needed for a ring older than one this host has seen, a ring moved to a new host without its rollback state, and once after upgrading from a release whose rollback state was not authenticated. For SystemAuth, run `systemauth keys accept-rollback --confirm` with the server's configuration, then start the server as usual |
+| Restore or move | Stop the process, restore or copy the directory, and open with `keys.Options.AcceptRollback` once. This is needed for a ring older than one this host has seen, a ring moved to a new host without its rollback state, and once after upgrading from a release whose rollback state was not authenticated. For SystemAuth, run `systemauth keys accept-rollback --confirm` with the server's configuration, then start the server as usual; a host that embeds SystemAuth calls `systemauthsvc.AcceptKeyRollback` |
+| Upgrade to SystemForge v0.21.0 | keyforge v0.2.0 authenticates the rollback state, so an existing keyring refuses to open after the upgrade. Stop the server, run `systemauth keys accept-rollback --confirm --config <path>` once, then start it |
 | Check status or rotate by hand | Not served yet. SystemAuth runs the lifecycle jobs but does not mount keyforge's control plane or command line |
 | Move the registry to PostgreSQL | Not yet: this release uses keyforge's single-host setup. ADR-013 records the follow-up |
+
+Signing keys, client secrets, session sealing keys and SCIM tokens are not
+keyforge keys; they rotate by keeping the current and previous value valid.
+See [Rotating keys and secrets](rotation.md).
 
 ## Limits to know
 

@@ -193,6 +193,8 @@ stored credentials cannot be read. See [Key management](key-management.md).
 - The role-based authorization mode only.
 - The API acts for the token's principal as a user; service principals and
   agents use the broker in process.
-- Connection events go to the server log until an audit store is configured.
+- Connection events go to the server log unless the embedding host passes
+  an audit store in `systemauthsvc.Options.AuditStore`; the `systemauth`
+  command does not.
 - A disconnect does not yet require acknowledging the bindings it would stop;
   list them first with `GET .../bindings`.
