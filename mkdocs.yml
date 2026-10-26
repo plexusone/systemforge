@@ -63,6 +63,7 @@ nav:
     - Key Management: guides/key-management.md
     - Minimum Sign-Up Age: guides/signup-age.md
     - Browser Cookies: guides/cookies.md
+    - Calling APIs with DPoP: guides/dpop-clients.md
   - Identity:
     - Overview: identity/overview.md
     - Users: identity/users.md
