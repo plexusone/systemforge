@@ -50,11 +50,18 @@ _, err = client.OAuthAppSecret.Create().
 
 ## Token Request
 
+Tokens are DPoP-bound by default: every token request carries a `DPoP`
+header with a proof for `POST` at the token endpoint, signed by a key the
+client keeps, and the access token is bound to that key. See
+[Calling APIs with DPoP](../guides/dpop-clients.md) for how to make the key
+and the proofs.
+
 ### Using Basic Authentication
 
 ```bash
 curl -X POST https://api.example.com/oauth/token \
   -u "my-backend-service:client_secret_here" \
+  -H "DPoP: <proof>" \
   -d "grant_type=client_credentials" \
   -d "scope=api:read api:write"
 ```
@@ -64,6 +71,7 @@ curl -X POST https://api.example.com/oauth/token \
 ```bash
 curl -X POST https://api.example.com/oauth/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
+  -H "DPoP: <proof>" \
   -d "grant_type=client_credentials" \
   -d "client_id=my-backend-service" \
   -d "client_secret=client_secret_here" \
@@ -74,103 +82,85 @@ curl -X POST https://api.example.com/oauth/token \
 
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIs...",
-  "token_type": "Bearer",
-  "expires_in": 3600,
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "DPoP",
+  "expires_in": 600,
   "scope": "api:read api:write"
 }
 ```
 
 **Note**: No refresh token is issued. Request a new access token when needed.
 
+Present the token with `Authorization: DPoP <token>` and a new proof for
+each request. A client registered with the legacy `allow_bearer_tokens`
+exception may omit the proof and gets `"token_type": "Bearer"` instead.
+
 ## Go Client Example
 
+`golang.org/x/oauth2/clientcredentials` does not send DPoP proofs. Make the
+requests with `github.com/grokify/goauth/dpop`:
+
 ```go
-package main
-
-import (
-    "context"
-    "net/http"
-    "net/url"
-    "encoding/json"
-
-    "golang.org/x/oauth2/clientcredentials"
-)
-
-func main() {
-    // Configure client credentials
-    config := &clientcredentials.Config{
-        ClientID:     "my-backend-service",
-        ClientSecret: "client_secret_here",
-        TokenURL:     "https://api.example.com/oauth/token",
-        Scopes:       []string{"api:read", "api:write"},
+func callAPI(ctx context.Context, secret string) error {
+    key, err := dpop.GenerateKeyPair() // keep it while its tokens are in use
+    if err != nil {
+        return err
     }
 
-    // Get HTTP client with automatic token management
-    client := config.Client(context.Background())
+    // Token request with a proof for POST at the token endpoint.
+    tokenURL := "https://api.example.com/oauth/token"
+    proof, err := dpop.CreateProof(key, http.MethodPost, tokenURL)
+    if err != nil {
+        return err
+    }
+    form := url.Values{"grant_type": {"client_credentials"}, "scope": {"api:read api:write"}}
+    req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
+    if err != nil {
+        return err
+    }
+    req.SetBasicAuth("my-backend-service", secret)
+    req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+    req.Header.Set("DPoP", proof)
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+    var tok struct {
+        AccessToken string `json:"access_token"`
+        ExpiresIn   int    `json:"expires_in"`
+    }
+    if err := json.NewDecoder(resp.Body).Decode(&tok); err != nil {
+        return err
+    }
 
-    // Make authenticated requests
-    resp, err := client.Get("https://api.example.com/v1/data")
+    // API call: a new proof bound to the token (ath).
+    apiURL := "https://api.example.com/v1/data"
+    proof, err = dpop.CreateProofWithOptions(key, http.MethodGet, apiURL,
+        dpop.ProofOptions{AccessToken: tok.AccessToken})
+    if err != nil {
+        return err
+    }
+    req, err = http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+    if err != nil {
+        return err
+    }
+    req.Header.Set("Authorization", "DPoP "+tok.AccessToken)
+    req.Header.Set("DPoP", proof)
     // ...
+    return nil
 }
 ```
 
-## Python Client Example
-
-```python
-import requests
-from requests.auth import HTTPBasicAuth
-
-# Get token
-response = requests.post(
-    'https://api.example.com/oauth/token',
-    auth=HTTPBasicAuth('my-backend-service', 'client_secret_here'),
-    data={
-        'grant_type': 'client_credentials',
-        'scope': 'api:read api:write'
-    }
-)
-
-token = response.json()['access_token']
-
-# Use token
-headers = {'Authorization': f'Bearer {token}'}
-api_response = requests.get('https://api.example.com/v1/data', headers=headers)
-```
+Check the response status before decoding, and retry once with the
+`DPoP-Nonce` value when the server answers `use_dpop_nonce`.
 
 ## Token Caching
 
-Cache tokens to avoid unnecessary token requests:
-
-```go
-type TokenCache struct {
-    token     string
-    expiresAt time.Time
-    mu        sync.RWMutex
-}
-
-func (c *TokenCache) GetToken(ctx context.Context, config *clientcredentials.Config) (string, error) {
-    c.mu.RLock()
-    if c.token != "" && time.Now().Before(c.expiresAt.Add(-30*time.Second)) {
-        defer c.mu.RUnlock()
-        return c.token, nil
-    }
-    c.mu.RUnlock()
-
-    // Fetch new token
-    c.mu.Lock()
-    defer c.mu.Unlock()
-
-    token, err := config.Token(ctx)
-    if err != nil {
-        return "", err
-    }
-
-    c.token = token.AccessToken
-    c.expiresAt = token.Expiry
-    return c.token, nil
-}
-```
+Cache the token with its expiry and the key it is bound to, and request a
+new one shortly before it expires. A cached token is useless without its
+key, so keep both together and request a new token whenever the key
+changes.
 
 ## Security Considerations
 
@@ -191,12 +181,16 @@ secret, err := vaultClient.Read("secret/data/my-service")
 
 ### Secret Rotation
 
-Rotate secrets periodically:
+A client authenticates with its current secret and the one before it.
+Rotate with `EntStorage.RotateClientSecret`, which issues a new secret,
+keeps the previous one valid and revokes older ones:
 
-1. Generate new secret
-2. Add to app (both secrets valid)
-3. Update all clients to use new secret
-4. Revoke old secret after confirmation
+1. Rotate, and deploy the new secret to the client
+2. Confirm the client authenticates with it
+3. Revoke the previous secret with `RevokeClientSecret`, or leave it for
+   the next rotation
+
+See [Rotating keys and secrets](../guides/rotation.md#oauth-client-secrets).
 
 ### Scope Limitation
 
@@ -230,7 +224,7 @@ func validateClientIP(r *http.Request, allowedIPs []string) bool {
 
 | Feature | Client Credentials | API Keys |
 |---------|-------------------|----------|
-| Token lifetime | Short (hours) | Long (months) |
+| Token lifetime | Short (minutes) | Long (months) |
 | Revocation | Per-token | Per-key |
 | Rotation | Automatic via expiry | Manual |
 | Standards | OAuth 2.0 | Custom |

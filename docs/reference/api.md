@@ -36,11 +36,16 @@ POST /oauth/authorize
 
 ### Token Endpoint
 
-Exchange authorization code or credentials for tokens.
+Exchange authorization code or credentials for tokens. Every request
+carries a DPoP proof (RFC 9449) for `POST` at this URL, and the tokens are
+bound to the proof's key; only a client registered with the legacy
+`allow_bearer_tokens` exception may omit it. See
+[Calling APIs with DPoP](../guides/dpop-clients.md).
 
 ```
 POST /oauth/token
 Content-Type: application/x-www-form-urlencoded
+DPoP: <proof>
 ```
 
 #### Authorization Code Grant
@@ -75,7 +80,7 @@ client_id=<client_id>
 ```json
 {
   "access_token": "eyJ...",
-  "token_type": "Bearer",
+  "token_type": "DPoP",
   "expires_in": 900,
   "refresh_token": "dGhp...",
   "scope": "openid profile"
@@ -114,7 +119,8 @@ token_type_hint=access_token
   "scope": "openid profile",
   "client_id": "my-app",
   "username": "user@example.com",
-  "token_type": "Bearer",
+  "token_type": "DPoP",
+  "cnf": {"jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I"},
   "exp": 1704067200,
   "iat": 1704066300,
   "sub": "550e8400-e29b-41d4-a716-446655440000",
@@ -170,7 +176,8 @@ GET /.well-known/openid-configuration
   "response_types_supported": ["code"],
   "grant_types_supported": ["authorization_code", "refresh_token", "client_credentials"],
   "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post", "none"],
-  "code_challenge_methods_supported": ["S256"]
+  "code_challenge_methods_supported": ["S256"],
+  "dpop_signing_alg_values_supported": ["ES256", "ES384", "ES512"]
 }
 ```
 
