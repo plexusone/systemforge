@@ -156,6 +156,9 @@ func TestCallSitesUseRegisteredReasons(t *testing.T) {
 			case ".git", "node_modules", "vendor", "testdata":
 				return fs.SkipDir
 			}
+			if isNestedCheckout(root, path) {
+				return fs.SkipDir
+			}
 			return nil
 		}
 		if !strings.HasSuffix(path, ".go") || filepath.Dir(path) == filepath.Join(root, "identity", "accesschange") {
@@ -233,4 +236,15 @@ func TestCallSitesUseRegisteredReasons(t *testing.T) {
 	if sites == 0 {
 		t.Fatal("found no accesschange.Change call sites; the scan is broken")
 	}
+}
+
+// isNestedCheckout reports whether dir, below the module root, is another
+// git checkout: a worktree or a nested repository, which carries its own
+// .git file or directory and its own copy of the code.
+func isNestedCheckout(root, dir string) bool {
+	if dir == root {
+		return false
+	}
+	_, err := os.Lstat(filepath.Join(dir, ".git"))
+	return err == nil
 }
