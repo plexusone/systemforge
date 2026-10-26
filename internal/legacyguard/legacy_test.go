@@ -86,6 +86,9 @@ func TestNoLegacyIdentityReferences(t *testing.T) {
 			case ".git", "node_modules", "site", "vendor":
 				return filepath.SkipDir
 			}
+			if isNestedCheckout(root, path) {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		if isHistorical(rel) {
@@ -129,4 +132,15 @@ func scan(t *testing.T, repo *os.Root, rel string, patterns []*regexp.Regexp) (e
 		}
 	}
 	return sc.Err()
+}
+
+// isNestedCheckout reports whether dir, below the module root, is another
+// git checkout: a worktree or a nested repository, which carries its own
+// .git file or directory and its own copy of the code.
+func isNestedCheckout(root, dir string) bool {
+	if dir == root {
+		return false
+	}
+	_, err := os.Lstat(filepath.Join(dir, ".git"))
+	return err == nil
 }

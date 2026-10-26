@@ -573,6 +573,18 @@
         {
           "description": "Bump `modernc.org/sqlite` from 1.60.1 to 1.61.0",
           "commit": "89719ae"
+        },
+        {
+          "description": "Bump `github.com/authzed/spicedb` from 1.56.2 to 1.57.0",
+          "commit": "b6db81c"
+        },
+        {
+          "description": "Bump `github.com/grokify/guardsql` from 0.3.0 to 0.4.0",
+          "commit": "b6db81c"
+        },
+        {
+          "description": "Bump `github.com/plexusone/omniobserve` from 0.12.0 to 0.12.1",
+          "commit": "b6db81c"
         }
       ],
       "changed": [
