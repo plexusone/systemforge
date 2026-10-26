@@ -474,6 +474,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -944,6 +950,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2349,6 +2439,8 @@
       
         
       
+        
+      
     
     
     
@@ -2448,6 +2540,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3238,6 +3358,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3795,6 +3919,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4046,6 +4226,8 @@
       
         
       
+        
+      
     
     
     
@@ -4117,6 +4299,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5075,7 +5285,7 @@ resource-targeted collaborator invites. See
 </tr>
 <tr>
 <td><code>POST /invites/{token}/accept</code></td>
-<td>The caller's email must match the invite</td>
+<td>The caller's verified email must match the invite</td>
 </tr>
 <tr>
 <td><code>POST /invites/{token}/decline</code></td>
@@ -5087,8 +5297,30 @@ resource-targeted collaborator invites. See
 </tr>
 </tbody>
 </table>
+<p>The email is the one <code>invite.DefaultService.PrincipalEmail</code> returns, which
+is only an address with <code>email_verified_at</code> set: an address merely claimed
+when a principal was created (a managed principal, an unverified signup, SCIM
+provisioning without trusted emails) does not count. A custom
+<code>APIConfig.PrincipalEmail</code> must apply the same rule.</p>
 <p>Signing up through an invite (<code>signup.SignupWithInvite</code>) applies the same
-email match (<code>signup.ErrInviteEmailMismatch</code>).</p>
+email match (<code>signup.ErrInviteEmailMismatch</code>). Because the invite token was
+delivered to that address, a successful invite signup marks the new
+account's email verified.</p>
+<p>An invite carries its inviter's current authority, not the authority it had
+when it was sent. Accepting requires the inviter to still hold
+<code>invite_member</code> on the organization, and the owner-only <code>delete</code> for an
+owner invite; otherwise acceptance fails with
+<code>invite.ErrInviterNotAuthorized</code>. By default the inviter's active membership
+role is checked; <code>invite.WithAuthorizer(authorizer)</code> asks an authorizer
+instead, for deployments where principals who are not members (platform
+administrators) send invites. Removing or deactivating a member revokes the
+pending invites it sent, and demoting it revokes those it may no longer send
+(owner invites when it stops being an owner).</p>
+<p>Every change of an invite's status (accept, decline, revoke, resend, expiry)
+applies only to a pending invite, as one conditional update. An invite
+revoked while it is being accepted is not accepted, and revoking an accepted
+invite fails rather than marking it revoked (<code>invite.ErrNotPending</code>); remove
+the member through the organization instead.</p>
 <h2 id="permissions">Permissions<a class="headerlink" href="#permissions" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -5108,7 +5340,7 @@ email match (<code>signup.ErrInviteEmailMismatch</code>).</p>
 </tr>
 <tr>
 <td>Accept, decline, list own</td>
-<td>An authenticated principal whose email matches the invite</td>
+<td>An authenticated principal whose verified email matches the invite</td>
 </tr>
 </tbody>
 </table>
@@ -5123,11 +5355,11 @@ email match (<code>signup.ErrInviteEmailMismatch</code>).</p>
 <tbody>
 <tr>
 <td><code>400</code></td>
-<td>The service refused the request. The message names the cause: <code>pending invite already exists for this email</code>; <code>invite: choose an application role for at least one entitled application</code>; <code>invite: collaborators hold no application roles</code>; <code>invite: application roles are not configured</code>; <code>invite: invalid resource target</code> (incomplete target, role not <code>collaborator</code>, grants not configured, or a type or role the vocabulary rejects); a collaborator invite without a target to a personal organization; <code>invite is no longer pending</code>; <code>invite has expired</code>; <code>principal is already a member of this organization</code>; an application role that cannot be granted (<code>approle: no seats available for the application</code>, <code>approle: organization is not entitled to the application</code>)</td>
+<td>The service refused the request. The message names the cause: <code>pending invite already exists for this email</code>; <code>invite: choose an application role for at least one entitled application</code>; <code>invite: collaborators hold no application roles</code>; <code>invite: application roles are not configured</code>; <code>invite: invalid resource target</code> (incomplete target, role not <code>collaborator</code>, grants not configured, or a type or role the vocabulary rejects); a collaborator invite without a target to a personal organization; <code>invite is no longer pending</code>; <code>invite has expired</code>; <code>invite: the inviter may no longer invite to this organization</code>; <code>principal is already a member of this organization</code>; an application role that cannot be granted (<code>approle: no seats available for the application</code>, <code>approle: organization is not entitled to the application</code>)</td>
 </tr>
 <tr>
 <td><code>403</code></td>
-<td><code>inviter_principal_id</code> is not the caller; an admin inviting an owner; a principal without an email (a managed principal) answering an invite; listing another address's invites; the caller can view the organization but may not invite</td>
+<td><code>inviter_principal_id</code> is not the caller; an admin inviting an owner; a principal without a verified email (a managed principal, or one that has not verified its address) answering or listing invites; listing another address's invites; the caller can view the organization but may not invite</td>
 </tr>
 <tr>
 <td><code>404</code></td>

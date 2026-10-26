@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2499,6 +2589,8 @@
       
         
       
+        
+      
     
     
     
@@ -2598,6 +2690,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3388,6 +3508,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3945,6 +4069,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4196,6 +4376,8 @@
       
         
       
+        
+      
     
     
     
@@ -4267,6 +4449,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5496,40 +5706,41 @@
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="hash-secret">Hash Secret<a class="headerlink" href="#hash-secret" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;golang.org/x/crypto/argon2&quot;</span>
+<p>The token endpoint verifies a client secret against its stored hash with
+<code>systemauth.ClientSecretHasher</code>, which accepts bcrypt hashes and Argon2id
+hashes in PHC string format (<code>$argon2id$...</code>). Use either:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity&quot;</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kd">func</span><span class="w"> </span><span class="nx">hashSecret</span><span class="p">(</span><span class="nx">secret</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">salt</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="p">)</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nx">rand</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="nx">salt</span><span class="p">)</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nx">hash</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">argon2</span><span class="p">.</span><span class="nx">IDKey</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">secret</span><span class="p">),</span><span class="w"> </span><span class="nx">salt</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">64</span><span class="o">*</span><span class="mi">1024</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">32</span><span class="p">)</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="c1">// Return encoded hash with parameters</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;$argon2id$v=19$m=65536,t=3,p=4$%s$%s&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="nx">base64</span><span class="p">.</span><span class="nx">RawStdEncoding</span><span class="p">.</span><span class="nx">EncodeToString</span><span class="p">(</span><span class="nx">salt</span><span class="p">),</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="nx">base64</span><span class="p">.</span><span class="nx">RawStdEncoding</span><span class="p">.</span><span class="nx">EncodeToString</span><span class="p">(</span><span class="nx">hash</span><span class="p">),</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="p">)</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="p">}</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kd">func</span><span class="w"> </span><span class="nx">hashSecret</span><span class="p">(</span><span class="nx">secret</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">identity</span><span class="p">.</span><span class="nx">HashPassword</span><span class="p">(</span><span class="nx">secret</span><span class="p">,</span><span class="w"> </span><span class="nx">identity</span><span class="p">.</span><span class="nx">DefaultArgon2idParams</span><span class="p">())</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
 </code></pre></div>
+<p>A confidential client authenticates with <code>client_secret_basic</code> or
+<code>client_secret_post</code>. Only secrets that are neither revoked nor expired
+are accepted.</p>
 <h3 id="rotate-secret">Rotate Secret<a class="headerlink" href="#rotate-secret" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// Generate new secret</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nx">newSecret</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">generateSecret</span><span class="p">()</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nx">newHash</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">hashSecret</span><span class="p">(</span><span class="nx">newSecret</span><span class="p">)</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1">// Add new secret (old one still works)</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">OAuthAppSecret</span><span class="p">.</span><span class="nx">Create</span><span class="p">().</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nx">SetAppID</span><span class="p">(</span><span class="nx">appID</span><span class="p">).</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nx">SetSecretHash</span><span class="p">(</span><span class="nx">newHash</span><span class="p">).</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="nx">SetSecretPrefix</span><span class="p">(</span><span class="nx">newSecret</span><span class="p">[:</span><span class="mi">8</span><span class="p">]).</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">    </span><span class="nx">Save</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1">// Later: revoke old secret</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">OAuthAppSecret</span><span class="p">.</span><span class="nx">Update</span><span class="p">().</span>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">    </span><span class="nx">Where</span><span class="p">(</span><span class="nx">oauthappsecret</span><span class="p">.</span><span class="nx">IDEQ</span><span class="p">(</span><span class="nx">oldSecretID</span><span class="p">)).</span>
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">    </span><span class="nx">SetRevoked</span><span class="p">(</span><span class="kc">true</span><span class="p">).</span>
-<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">    </span><span class="nx">SetRevokedAt</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">()).</span>
-<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">    </span><span class="nx">Save</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<p>A client authenticates with at most two secrets: the current one (N) and
+the one it replaced (N-1). A rotation therefore always leaves a known
+working secret to roll back to, and secrets older than N-1 are not
+accepted even if they were never revoked.</p>
+<p><code>EntStorage.RotateClientSecret</code> issues a new secret, keeps the previous
+one valid, and revokes anything older:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">st</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewEntStorage</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1">// N becomes current; N-1 keeps working; N-2 and older are revoked.</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nx">rotated</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">st</span><span class="p">.</span><span class="nx">RotateClientSecret</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;my-backend-service&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">}</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1">// rotated.Secret is shown once; store only rotated.ID for later revocation.</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="c1">// Once every caller uses the new secret, end the overlap early:</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">st</span><span class="p">.</span><span class="nx">RevokeClientSecret</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;my-backend-service&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">previousSecretID</span><span class="p">)</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="c1">// Or, if the new secret is bad, revoke it and N-1 is current again:</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">st</span><span class="p">.</span><span class="nx">RevokeClientSecret</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;my-backend-service&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">rotated</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
 </code></pre></div>
+<p>Without an explicit revocation, N-1 stays valid until the next rotation.</p>
 <h2 id="querying-apps">Querying Apps<a class="headerlink" href="#querying-apps" title="Permanent link">&para;</a></h2>
 <h3 id="by-client-id">By Client ID<a class="headerlink" href="#by-client-id" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">app</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">OAuthApp</span><span class="p">.</span><span class="nx">Query</span><span class="p">().</span>

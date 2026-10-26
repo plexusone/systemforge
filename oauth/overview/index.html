@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -1397,6 +1487,28 @@
   
     <nav class="md-nav" aria-label="Security Features">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dpop-bound-tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DPoP-Bound Tokens
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signing-key-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signing Key Rotation
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#pkce-enforcement" class="md-nav__link">
@@ -2404,6 +2516,8 @@
       
         
       
+        
+      
     
     
     
@@ -2503,6 +2617,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3293,6 +3435,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3850,6 +3996,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4101,6 +4303,8 @@
       
         
       
+        
+      
     
     
     
@@ -4172,6 +4376,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -4999,6 +5231,28 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#dpop-bound-tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DPoP-Bound Tokens
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signing-key-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signing Key Rotation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#pkce-enforcement" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5225,15 +5479,33 @@ non-human identities.</p>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1">// Create provider</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nx">cfg</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">DefaultConfig</span><span class="p">(</span><span class="s">&quot;https://api.example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;secret&quot;</span><span class="p">))</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewProvider</span><span class="p">(</span><span class="nx">entClient</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">)</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1">// Create API (all endpoints auto-registered)</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nx">api</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewAPI</span><span class="p">(</span><span class="nx">provider</span><span class="p">)</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1">// Mount router (includes all OAuth and discovery endpoints)</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="nx">http</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">api</span><span class="p">.</span><span class="nx">Router</span><span class="p">())</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nx">cfg</span><span class="p">.</span><span class="nx">PrivateKey</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">signingKey</span><span class="w"> </span><span class="c1">// required: the same on every instance</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nx">cfg</span><span class="p">.</span><span class="nx">DPoP</span><span class="p">.</span><span class="nx">ReplayCache</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">middleware</span><span class="p">.</span><span class="nx">NewRedisReplayCache</span><span class="p">(</span><span class="nx">redisClient</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;dpop-jti:&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewProvider</span><span class="p">(</span><span class="nx">entClient</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">)</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1">// Create API (all endpoints auto-registered)</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nx">api</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewAPI</span><span class="p">(</span><span class="nx">provider</span><span class="p">)</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1">// Mount router (includes all OAuth and discovery endpoints)</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nx">http</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">api</span><span class="p">.</span><span class="nx">Router</span><span class="p">())</span>
 </code></pre></div>
 <h2 id="security-features">Security Features<a class="headerlink" href="#security-features" title="Permanent link">&para;</a></h2>
+<h3 id="dpop-bound-tokens">DPoP-Bound Tokens<a class="headerlink" href="#dpop-bound-tokens" title="Permanent link">&para;</a></h3>
+<p>The provider issues DPoP-bound tokens (RFC 9449) by default: every token
+request carries a DPoP proof, and the access and refresh tokens are bound to
+its key (<code>token_type: DPoP</code>). Only a client registered with the legacy
+<code>allow_bearer_tokens</code> exception may get unbound bearer tokens. See
+<a href="../../session/dpop/#the-identityoauth-provider">DPoP Enforcement</a>.</p>
+<h3 id="signing-key-rotation">Signing Key Rotation<a class="headerlink" href="#signing-key-rotation" title="Permanent link">&para;</a></h3>
+<p><code>Config.KeyID</code> names the signing key and <code>Config.VerificationKeys</code> holds
+keys that verify but never sign. Rotate N / N-1 in two deploys:</p>
+<ol>
+<li>Pre-stage: add the new key N to <code>VerificationKeys</code> while N-1 still signs.</li>
+<li>Promote: make N <code>PrivateKey</code>, move N-1 into <code>VerificationKeys</code>, and drop
+   N-2. Never drop N-1 in the deploy that promotes N.</li>
+</ol>
+<p>The JWKS publishes the signing key and every verification key; a token
+whose <code>kid</code> names no key is refused.</p>
 <h3 id="pkce-enforcement">PKCE Enforcement<a class="headerlink" href="#pkce-enforcement" title="Permanent link">&para;</a></h3>
 <p>PKCE is required for public clients (SPAs, mobile apps):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">fositeConfig</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">fosite</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>

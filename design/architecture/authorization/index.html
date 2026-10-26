@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2219,6 +2309,8 @@
       
         
       
+        
+      
     
     
     
@@ -2318,6 +2410,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3388,6 +3508,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3945,6 +4069,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4196,6 +4376,8 @@
       
         
       
+        
+      
     
     
     
@@ -4267,6 +4449,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5690,6 +5900,8 @@ of the file:</p>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">spicedb.internal:50051</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SPICEDB_TOKEN}</span>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">write_schema</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">  </span><span class="c1"># remote only: write the composed schema at startup</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nt">reconcile</span><span class="p">:</span><span class="w">             </span><span class="c1"># rebac only; defaults shown</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15m</span>
 </code></pre></div>
 <table>
 <thead>
@@ -5715,6 +5927,10 @@ of the file:</p>
 <td><code>spicedb.write_schema</code></td>
 <td>Embedded instances always get the composed schema (they start empty). A remote instance's schema is an operational decision, so it is written only when this is set</td>
 </tr>
+<tr>
+<td><code>reconcile</code></td>
+<td>The graph reconciler of <code>rebac</code> (<code>disabled</code>, <code>skip_startup</code>, <code>interval</code>, <code>jitter</code>, <code>page_size</code>). By default it runs at startup and every 15 minutes with up to a tenth added at random. Giving it with <code>rbac</code> is an error</td>
+</tr>
 </tbody>
 </table>
 <p><code>authz/mode.New(ctx, cfg, Deps{DB, Registry, ...})</code> builds the provider
@@ -5724,20 +5940,67 @@ vocabularies. It returns a <code>mode.Result</code> carrying <code>Provider</cod
 <code>authz.Provider</code>: <code>PlatformAuthorizer</code> and <code>ResourceGranter</code>), the <code>Syncer</code>
 to pass to the identity services (the no-op syncer for <code>rbac</code>, which reads
 the tables at check time; the engine's for <code>rebac</code>), the grant store <code>Grants</code>
-(<code>invite.WithResourceGrants</code>) and <code>Close()</code>. The package is separate from
+(<code>invite.WithResourceGrants</code>), for <code>rebac</code> the graph <code>Reconciler</code> and its
+<code>Schedule</code> (<code>RunReconciler</code> runs it), and <code>Close()</code>. The package is separate from
 <code>authz</code> because both providers import it, and so that loading a
 configuration file does not link the SpiceDB server: <code>authz.SpiceDBConfig</code>
 is the engine's configuration type (<code>spicedb.Config</code> is an alias).</p>
 <p>The membership, role and grant tables are the record in both modes. Under
 <code>rebac</code> the identity services mirror each change into the graph as it is
-made (organization memberships, application roles, resource grants), so a
-deployment that switches from <code>rbac</code> starts with an empty graph: write the
-existing rows through the syncer before the first request is served. No
-bulk rebuild command ships yet.</p>
+made (organization memberships, application roles, resource grants), and
+the reconciler repairs the graph from the tables. A deployment that
+switches from <code>rbac</code> starts with an empty graph, which the reconciler's
+startup run fills; run <code>Reconciler.Reconcile</code> before serving the first
+request.</p>
 <h2 id="keeping-providers-in-step-with-identity">Keeping providers in step with identity<a class="headerlink" href="#keeping-providers-in-step-with-identity" title="Permanent link">&para;</a></h2>
 <p>Identity changes reach the authorization backend through
-<code>authz.RelationshipSyncer</code>, called explicitly by the services after their
-database transaction commits; there are no Ent hooks.</p>
+<code>authz.RelationshipSyncer</code>, called explicitly by the services; there are no
+Ent hooks. The order is chosen so the graph never grants more than the
+tables record:</p>
+<ul>
+<li><strong>Revocations remove first.</strong> A change that ends access (removing or
+  deactivating a membership, a role change, removing an application role,
+  resource grant, manager or platform administration, lowering a grant,
+  deleting an organization or managed principal) removes the relationship
+  inside its database transaction, after the database change and before
+  the commit, holding the graph lock (<code>identity/graphlock</code>) of the
+  principal or organization. When the graph refuses, the transaction rolls
+  back and the error is returned whatever the <code>SyncMode</code>; nothing changed,
+  so the call is retried as is. Removing an absent relationship succeeds.
+  Deactivating a principal removes all of its relationships this way, and
+  demoting a member to collaborator deletes their application roles with
+  the demotion.</li>
+<li><strong>Grants write after, under the lock.</strong> A change that grants access
+  commits and then writes the relationship through <code>graphlock.Grant</code>: in
+  a transaction holding the graph locks of the organization and the
+  principal (both principals for a manager relation), it reads the rows
+  again and writes only what <code>identity/graphstate</code> says they still call
+  for, so a revocation that committed in between is not undone.
+  <code>authz.SyncMode</code> decides whether a failed write is returned (<code>strict</code>)
+  or logged (<code>eventual</code>, the default).</li>
+<li><strong>The reconciler repairs.</strong> <code>mode.Reconciler</code> compares the graph with the
+  tables, writes missing relationships and deletes stale ones. What it
+  repairs is always missing access (a failed grant write, a revocation
+  whose commit failed after the graph change) or a stale relationship left
+  when a grant and a revocation of the same access raced.</li>
+</ul>
+<p>What the tables call for is defined once, in <code>identity/graphstate</code>: active
+memberships of active organizations, application roles held through an
+owner, admin or member membership, resource grants held through any
+membership, platform administration, and active manager relations of an
+active manager, all only for active principals. The grant writes and the
+reconciler both use it.</p>
+<p>The reconciler handles one definition at a time (<code>organization</code>,
+<code>platform</code>, <code>principal</code>, each <code>{app}_org</code> facet, each collaborator
+resource type) and manages only the relations the services write. It reads
+the graph, as one paged snapshot, before the tables, so a grant committed
+during the run is in the tables and its relationship is not deleted. It
+re-reads the rows of every relationship it deletes and writes back one a
+grant committed in between. It writes a missing relationship only inside a
+transaction holding the same graph locks as the revocations, after reading
+the rows again, so it cannot restore what a revocation in progress removed.
+The locks are PostgreSQL advisory locks; SQLite has none, so there the
+reconciler does not serialize with revocations.</p>
 <table>
 <thead>
 <tr>
@@ -5748,15 +6011,27 @@ database transaction commits; there are no Ent hooks.</p>
 <tbody>
 <tr>
 <td><code>organization.Service</code></td>
-<td><code>RegisterOrganization</code> (create), <code>AddOrgMembership</code>, <code>UpdateOrgMembership</code> (role change, both sides of an ownership transfer), <code>RemoveOrgMembership</code>, <code>UnregisterOrganization</code> (delete)</td>
+<td>After commit: <code>RegisterOrganization</code> (create), <code>AddOrgMembership</code> (add, reactivation, the new role of a role change or transfer), <code>UpdateOrgMembership</code> (the new owner of a transfer). Before commit: <code>RemoveOrgMembership</code> (removal, deactivation, the old role of a role change, the previous owner of a transfer), <code>RemoveAppRole</code> (removal, deactivation, demotion to collaborator), <code>UnregisterOrganization</code> with the members' <code>RemoveAppRole</code> and <code>RemoveResourceGrant</code> (delete)</td>
+</tr>
+<tr>
+<td><code>scim/store.EntStore</code> (with <code>Config.Syncer</code>)</td>
+<td>Before the deletion commits: <code>UnregisterPrincipal</code>, <code>RemovePrincipalManager</code>, <code>RemoveAppRole</code>, <code>RemoveResourceGrant</code> (<code>DeleteUser</code>)</td>
 </tr>
 <tr>
 <td><code>approle.Service</code> (with <code>WithAuthzSyncer</code>)</td>
-<td><code>AddAppRole</code> (assign, and the new role of a change), <code>RemoveAppRole</code> (remove, the old role of a change, <code>RemoveForMember</code>)</td>
+<td>After commit: <code>AddAppRole</code> (assign, and the new role of a change). Before commit: <code>RemoveAppRole</code> (remove, the old role of a change, <code>RemoveForMember</code>)</td>
+</tr>
+<tr>
+<td><code>resourcegrant.Service</code></td>
+<td>After commit: <code>AddOrgMembership</code> (collaborator), <code>SetResourceGrant</code> (new or raised grant). Before commit: <code>SetResourceGrant</code> (lowered grant), <code>RemoveResourceGrant</code> and the collaborator's <code>RemoveOrgMembership</code> (revoke)</td>
+</tr>
+<tr>
+<td><code>principal.Service</code></td>
+<td>After commit: <code>RegisterPrincipal</code>, <code>SetPlatformAdmin(true)</code>, and on <code>Reactivate</code> every relationship the principal's rows call for. Before commit: <code>SetPlatformAdmin(false)</code>, and on <code>Deactivate</code> the principal's <code>RemoveOrgMembership</code>, <code>RemoveAppRole</code>, <code>RemoveResourceGrant</code>, <code>SetPlatformAdmin(false)</code> and the <code>RemovePrincipalManager</code> of the relations it manages</td>
 </tr>
 <tr>
 <td><code>managedprincipal.Service</code></td>
-<td><code>RegisterPrincipal</code>, <code>AddPrincipalManager</code>, <code>RemovePrincipalManager</code></td>
+<td>After commit: <code>RegisterPrincipal</code>, <code>AddPrincipalManager</code>. Before commit: <code>RemovePrincipalManager</code> (remove, release, delete), <code>UnregisterPrincipal</code> with the memberships' <code>RemoveAppRole</code> and <code>RemoveResourceGrant</code> (delete)</td>
 </tr>
 <tr>
 <td><code>marketplace</code> (<code>marketplace.AuthzSyncer</code>, <code>SpiceDBSyncer</code>)</td>
@@ -5773,18 +6048,22 @@ is not an <code>AppRoleSyncer</code>. <code>spicedb.Syncer</code> writes
 application's schema fragment attaches to the base organization; an
 application identifier that is not a valid app name is refused. An owner's
 implicit <code>admin</code> is not a stored role and is not written; an application's
-schema fragment must derive it from the owner relation. <code>organization.Service.RemoveMember</code> removes the member's
-application roles from the graph after its transaction commits; SCIM group
-member removal deletes the rows but, like its membership changes, makes no
-syncer call.</p>
-<p><code>invite.Service.Accept</code> writes the membership directly and makes no syncer
-call. <code>authz.SyncMode</code> decides what a sync failure does: <code>strict</code> returns
-it, <code>eventual</code> (the default) logs it. <code>noop.NewSyncer()</code> is the default
-syncer and what a role-based deployment uses, since <code>rbac</code> reads the
-membership and relationship tables through its getters at check time.</p>
+schema fragment must derive it from the owner relation.
+<code>organization.Service.RemoveMember</code> removes the member's application roles
+and resource grants from the graph inside its transaction, before the
+commit. SCIM changes memberships and groups through the organization
+service, so the same order applies.</p>
+<p><code>invite.Service.Accept</code> writes the membership directly and makes its syncer
+calls after the commit. <code>authz.SyncMode</code> decides what a failed write of
+granted access does: <code>strict</code> returns it, <code>eventual</code> (the default) logs it.
+A failed removal always fails the revocation. <code>noop.NewSyncer()</code> is the
+default syncer and what a role-based deployment uses, since <code>rbac</code> reads
+the membership and relationship tables through its getters at check time.</p>
 <p><code>authz.Middleware</code> (<code>RequireAction</code>, <code>RequireAnyAction</code>,
 <code>RequireAllActions</code>) adapts an <code>Authorizer</code> to HTTP, building the principal
-and organization from <code>session/middleware</code> claims. The organization,
+and organization from <code>session/middleware</code> claims. <code>RequireAnyAction</code> and
+<code>RequireAllActions</code> panic when registered with no actions, and <code>CanAll</code>
+denies an empty action list rather than allowing it vacuously. The organization,
 invite, marketplace and managed-principal APIs call the authorizer directly
 with the <code>PermOrg*</code> and manager permissions.</p>
 <h2 id="request-authorization">Request authorization<a class="headerlink" href="#request-authorization" title="Permanent link">&para;</a></h2>
@@ -5846,12 +6125,12 @@ to be recorded as a reduced grant.</p>
 <tr>
 <td><code>app_role_changed</code></td>
 <td>An application role was changed or removed</td>
-<td><code>approle.Change</code> to a different role, <code>Remove</code>, <code>RemoveForMember</code> (scoped); assignment only adds access and records nothing</td>
+<td><code>approle.Change</code> to a different role, <code>Remove</code>, <code>RemoveForMember</code>, <code>organization.UpdateMember</code> demoting a member who held application roles to <code>collaborator</code> (scoped); assignment only adds access and records nothing</td>
 </tr>
 <tr>
 <td><code>deactivated</code></td>
 <td>The principal was deactivated</td>
-<td><code>principal.Deactivate</code>; <code>managedprincipal.Delete</code> (every organization)</td>
+<td><code>principal.Deactivate</code> and <code>principal.Update</code> setting <code>Active</code> false; <code>managedprincipal.Delete</code> (every organization)</td>
 </tr>
 <tr>
 <td><code>sessions_revoked</code></td>

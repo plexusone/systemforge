@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2221,6 +2311,8 @@
       
         
       
+        
+      
     
     
     
@@ -2408,6 +2500,17 @@
   
     <nav class="md-nav" aria-label="OmniStorage Store (Recommended)">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rotating-keyring-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotating keyring keys
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#omnistorage-configuration" class="md-nav__link">
@@ -2609,6 +2712,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3399,6 +3530,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3956,6 +4091,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4207,6 +4398,8 @@
       
         
       
+        
+      
     
     
     
@@ -4278,6 +4471,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5106,6 +5327,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#rotating-keyring-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotating keyring keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#omnistorage-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5369,19 +5601,70 @@
 </code></pre></div>
 <h3 id="ent-store">Ent Store<a class="headerlink" href="#ent-store" title="Permanent link">&para;</a></h3>
 <p>For SQL databases via Ent ORM:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">store</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewEntStore</span><span class="p">(</span><span class="nx">entClient</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">sealer</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewKeyringSealer</span><span class="p">(</span><span class="s">&quot;k1&quot;</span><span class="p">,</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">byte</span><span class="p">{</span><span class="s">&quot;k1&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">sessionKey</span><span class="p">})</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">}</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewEntStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">EntStoreConfig</span><span class="p">{</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nx">Client</span><span class="p">:</span><span class="w"> </span><span class="nx">entClient</span><span class="p">,</span><span class="w"> </span><span class="c1">// implements bff.EntClientInterface</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nx">Sealer</span><span class="p">:</span><span class="w"> </span><span class="nx">sealer</span><span class="p">,</span><span class="w">    </span><span class="c1">// encrypts tokens and DPoP keys at rest</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">})</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">}</span>
 </code></pre></div>
+<p>See <a href="../../bff/ent-store/">Ent Store</a> for the client adapter and key
+rotation.</p>
 <h3 id="omnistorage-store-recommended">OmniStorage Store (Recommended)<a class="headerlink" href="#omnistorage-store-recommended" title="Permanent link">&para;</a></h3>
 <p>For production with Redis and security controls:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewOmniStorageStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">OmniStorageConfig</span><span class="p">{</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">Backend</span><span class="p">:</span><span class="w">         </span><span class="s">&quot;redis&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">RedisURL</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;redis://localhost:6379&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">MaxSessionSize</span><span class="p">:</span><span class="w">  </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w"> </span><span class="c1">// 1MB</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nx">DefaultTTL</span><span class="p">:</span><span class="w">      </span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">,</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nx">CleanupInterval</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nx">KeyPrefix</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;myapp:session:&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">})</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">SiteID</span><span class="p">:</span><span class="w">          </span><span class="s">&quot;myapp&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// required for redis</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">Sealer</span><span class="p">:</span><span class="w">          </span><span class="nx">sealer</span><span class="p">,</span><span class="w">  </span><span class="c1">// required for redis; see below</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nx">RedisURL</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;rediss://:password@redis.internal:6379&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// TLS and a password</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nx">MaxSessionSize</span><span class="p">:</span><span class="w">  </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w"> </span><span class="c1">// 1MB</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nx">DefaultTTL</span><span class="p">:</span><span class="w">      </span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nx">CleanupInterval</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nx">KeyPrefix</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;myapp:session:&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="p">})</span>
 </code></pre></div>
+<p>Tokens and DPoP private keys are sealed before they reach Redis. <code>Sealer</code> is
+required for the redis backend (<code>bff.ErrSealerRequired</code> otherwise). Each
+session's data is encrypted with AES-256-GCM and bound to its session ID and
+<code>SiteID</code>, so a ciphertext copied to another record does not open. Two sealers
+are provided:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Application-held keys, with key IDs for rotation (see below).</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">sealer</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewKeyringSealer</span><span class="p">(</span><span class="s">&quot;k1&quot;</span><span class="p">,</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">byte</span><span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="s">&quot;k1&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">sessionKey</span><span class="p">,</span><span class="w"> </span><span class="c1">// 32 bytes, from your secret store</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">})</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1">// Or a keyforge purpose key from the keys package, which versions and</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1">// rotates keys itself.</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="nx">sealer</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewKeysSealer</span><span class="p">(</span><span class="nx">sysKeys</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;bff-session&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h5 id="rotating-keyring-keys">Rotating keyring keys<a class="headerlink" href="#rotating-keyring-keys" title="Permanent link">&para;</a></h5>
+<p>Every sealed value names the key that sealed it. A rotation keeps the active
+key N and the previous key N-1 in the ring and removes only N-2, and each
+step is its own deploy, so rolling back any deploy still opens every session
+written so far:</p>
+<ol>
+<li><strong>Pre-stage <code>k2</code>.</strong> Add it to the ring while <code>k1</code> stays active, and wait
+   until every instance runs it:
+   <code>bff.NewKeyringSealer("k1", map[string][]byte{"k1": k1, "k2": k2})</code>.</li>
+<li><strong>Promote <code>k2</code>.</strong> Make it active and keep <code>k1</code>:
+   <code>bff.NewKeyringSealer("k2", map[string][]byte{"k1": k1, "k2": k2})</code>.
+   Rolling this deploy back returns to step 1, which still opens sessions
+   sealed with <code>k2</code>.</li>
+<li><strong>Next rotation.</strong> Pre-stage <code>k3</code> with <code>k1</code> still in the ring, then
+   promote <code>k3</code> with <code>{"k2": k2, "k3": k3}</code>. Sessions still sealed with <code>k1</code>
+   (N-2) no longer open and their users sign in again; a session is sealed
+   again under the active key whenever it is updated, for example on token
+   refresh.</li>
+</ol>
+<p>Never add a new active key and drop the previous one in the same deploy.</p>
+<p>Once a sealer is configured, sessions stored in plaintext are rejected and
+their users sign in again. <code>InsecurePlaintext: true</code> disables the requirement
+for local development only.</p>
 <h4 id="omnistorage-configuration">OmniStorage Configuration<a class="headerlink" href="#omnistorage-configuration" title="Permanent link">&para;</a></h4>
 <table>
 <thead>
@@ -5399,8 +5682,28 @@
 </tr>
 <tr>
 <td><code>RedisURL</code></td>
-<td>Redis connection URL</td>
+<td>Redis connection URL. A server that is not on loopback must use TLS (<code>rediss://</code>) with certificate verification and a password</td>
 <td>Required for redis</td>
+</tr>
+<tr>
+<td><code>AllowInsecureRedis</code></td>
+<td>Permit a non-loopback Redis without TLS, a password or certificate verification, such as a local container network (development only; logs a warning)</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>SiteID</code></td>
+<td>Tags every session with this application; a session tagged for another site is not found</td>
+<td>Required for redis</td>
+</tr>
+<tr>
+<td><code>Sealer</code></td>
+<td>Encrypts tokens and DPoP keys at rest (<code>NewKeyringSealer</code>, <code>NewKeysSealer</code>)</td>
+<td>Required for redis</td>
+</tr>
+<tr>
+<td><code>InsecurePlaintext</code></td>
+<td>Store secrets unencrypted without a <code>Sealer</code> (development only)</td>
+<td><code>false</code></td>
 </tr>
 <tr>
 <td><code>MaxSessionSize</code></td>
@@ -5419,8 +5722,8 @@
 </tr>
 <tr>
 <td><code>KeyPrefix</code></td>
-<td>Redis key prefix</td>
-<td><code>"session:"</code></td>
+<td>Prefix of session keys and the per-user session index</td>
+<td><code>"session:&lt;SiteID&gt;:"</code></td>
 </tr>
 <tr>
 <td><code>ControlOptions</code></td>
@@ -5430,170 +5733,177 @@
 </tbody>
 </table>
 <h4 id="with-observability">With Observability<a class="headerlink" href="#with-observability" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nx">omnisession</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/omnistorage-core/session&quot;</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewOmniStorageStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">OmniStorageConfig</span><span class="p">{</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">Backend</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;redis&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nx">RedisURL</span><span class="p">:</span><span class="w">       </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;REDIS_URL&quot;</span><span class="p">),</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">MaxSessionSize</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nx">ControlOptions</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="nx">omnisession</span><span class="p">.</span><span class="nx">ControlOption</span><span class="p">{</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="nx">omnisession</span><span class="p">.</span><span class="nx">WithLogger</span><span class="p">(</span><span class="nx">slog</span><span class="p">.</span><span class="nx">Default</span><span class="p">()),</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="nx">omnisession</span><span class="p">.</span><span class="nx">WithViolationHandler</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">event</span><span class="w"> </span><span class="nx">omnisession</span><span class="p">.</span><span class="nx">ViolationEvent</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">            </span><span class="c1">// Record metric</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">            </span><span class="nx">metrics</span><span class="p">.</span><span class="nx">SessionViolations</span><span class="p">.</span><span class="nx">Inc</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">Type</span><span class="p">)</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">            </span><span class="c1">// Alert on abuse</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">Type</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">omnisession</span><span class="p">.</span><span class="nx">ViolationSizeExceeded</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">                </span><span class="nx">alerting</span><span class="p">.</span><span class="nx">Warn</span><span class="p">(</span><span class="s">&quot;Session size exceeded&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">event</span><span class="p">)</span>
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">        </span><span class="p">}),</span>
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nx">omnisession</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/omnistorage-core/session&quot;</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewOmniStorageStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">OmniStorageConfig</span><span class="p">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">Backend</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;redis&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nx">SiteID</span><span class="p">:</span><span class="w">         </span><span class="s">&quot;myapp&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// required for redis</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="nx">Sealer</span><span class="p">:</span><span class="w">         </span><span class="nx">sealer</span><span class="p">,</span><span class="w">  </span><span class="c1">// required for redis</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nx">RedisURL</span><span class="p">:</span><span class="w">       </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;REDIS_URL&quot;</span><span class="p">),</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nx">MaxSessionSize</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="nx">ControlOptions</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="nx">omnisession</span><span class="p">.</span><span class="nx">ControlOption</span><span class="p">{</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">        </span><span class="nx">omnisession</span><span class="p">.</span><span class="nx">WithLogger</span><span class="p">(</span><span class="nx">slog</span><span class="p">.</span><span class="nx">Default</span><span class="p">()),</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="nx">omnisession</span><span class="p">.</span><span class="nx">WithViolationHandler</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">event</span><span class="w"> </span><span class="nx">omnisession</span><span class="p">.</span><span class="nx">ViolationEvent</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">            </span><span class="c1">// Record metric</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">            </span><span class="nx">metrics</span><span class="p">.</span><span class="nx">SessionViolations</span><span class="p">.</span><span class="nx">Inc</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">Type</span><span class="p">)</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">            </span><span class="c1">// Alert on abuse</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">Type</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">omnisession</span><span class="p">.</span><span class="nx">ViolationSizeExceeded</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">                </span><span class="nx">alerting</span><span class="p">.</span><span class="nx">Warn</span><span class="p">(</span><span class="s">&quot;Session size exceeded&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">event</span><span class="p">)</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">        </span><span class="p">}),</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="p">})</span>
 </code></pre></div>
 <h2 id="cookie-manager">Cookie Manager<a class="headerlink" href="#cookie-manager" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">cookies</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewCookieManager</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">CookieConfig</span><span class="p">{</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">Name</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;session&quot;</span><span class="p">,</span><span class="w">      </span><span class="c1">// Cookie name</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">Domain</span><span class="p">:</span><span class="w">   </span><span class="s">&quot;example.com&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Cookie domain</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">Path</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w">            </span><span class="c1">// Cookie path</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nx">Secure</span><span class="p">:</span><span class="w">   </span><span class="kc">true</span><span class="p">,</span><span class="w">           </span><span class="c1">// HTTPS only (set false for local dev)</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="nx">HTTPOnly</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">           </span><span class="c1">// Not accessible to JavaScript</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nx">SameSite</span><span class="p">:</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">SameSiteLaxMode</span><span class="p">,</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nx">MaxAge</span><span class="p">:</span><span class="w">   </span><span class="mi">86400</span><span class="p">,</span><span class="w">          </span><span class="c1">// 24 hours in seconds</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">cookies</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewCookieManager</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">CookieConfig</span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">Name</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;__Host-myapp_session&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// Default: bff.DefaultCookieName (&quot;__Host-sf_session&quot;)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nx">Path</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w">                    </span><span class="c1">// Required for a __Host- cookie</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nx">SameSite</span><span class="p">:</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">SameSiteStrictMode</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nx">MaxAge</span><span class="p">:</span><span class="w">   </span><span class="mi">86400</span><span class="p">,</span><span class="w">                  </span><span class="c1">// 24 hours in seconds</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">})</span>
 </code></pre></div>
+<p>The cookie is always <code>HttpOnly</code>, and <code>Secure</code> unless <code>AllowInsecure</code> is set
+for plain-HTTP development (the default name is then <code>bff.InsecureCookieName</code>,
+<code>sf_session</code>, because browsers reject a <code>__Host-</code> cookie that is not
+<code>Secure</code>). The cookie is always host-only: <code>CookieConfig</code> has no <code>Domain</code>
+field, because a <code>Domain</code> would share the session with every subdomain, any
+of which could then read or overwrite it. <code>CookieConfig.Validate</code> (which
+<code>bff.NewHandler</code> calls) rejects a <code>__Host-</code> name with another <code>Path</code> or
+without <code>Secure</code>.</p>
 <h2 id="middleware">Middleware<a class="headerlink" href="#middleware" title="Permanent link">&para;</a></h2>
 <h3 id="required-session">Required Session<a class="headerlink" href="#required-session" title="Permanent link">&para;</a></h3>
 <p>Requires authentication, returns 401 if no session:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">SessionMiddleware</span><span class="p">(</span><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">cookies</span><span class="p">))</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1">// In handler</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nx">session</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">SessionFromContext</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">())</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1">// session is guaranteed non-nil</span>
-</code></pre></div>
-<h3 id="optional-session">Optional Session<a class="headerlink" href="#optional-session" title="Permanent link">&para;</a></h3>
-<p>Loads session if present, but doesn't require it:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">OptionalSessionMiddleware</span><span class="p">(</span><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">cookies</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">SessionMiddleware</span><span class="p">(</span><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">cookies</span><span class="p">))</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1">// In handler</span>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nx">session</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">SessionFromContext</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">())</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">if</span><span class="w"> </span><span class="nx">session</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="c1">// Not logged in</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">}</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1">// session is guaranteed non-nil</span>
+</code></pre></div>
+<h3 id="optional-session">Optional Session<a class="headerlink" href="#optional-session" title="Permanent link">&para;</a></h3>
+<p>Loads session if present, but doesn't require it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">OptionalSessionMiddleware</span><span class="p">(</span><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">cookies</span><span class="p">))</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1">// In handler</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nx">session</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">SessionFromContext</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">())</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="k">if</span><span class="w"> </span><span class="nx">session</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="c1">// Not logged in</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="session-operations">Session Operations<a class="headerlink" href="#session-operations" title="Permanent link">&para;</a></h2>
 <h3 id="create-session-login">Create Session (Login)<a class="headerlink" href="#create-session-login" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleOAuthCallback</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="c1">// Exchange code for tokens</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nx">tokens</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">Exchange</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">code</span><span class="p">)</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="c1">// Create session</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nx">session</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">bff</span><span class="p">.</span><span class="nx">Session</span><span class="p">{</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">        </span><span class="nx">ID</span><span class="p">:</span><span class="w">                    </span><span class="nx">bff</span><span class="p">.</span><span class="nx">GenerateSessionID</span><span class="p">(),</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">        </span><span class="nx">UserID</span><span class="p">:</span><span class="w">                </span><span class="nx">user</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">        </span><span class="nx">OrganizationID</span><span class="p">:</span><span class="w">        </span><span class="o">&amp;</span><span class="nx">user</span><span class="p">.</span><span class="nx">DefaultOrgID</span><span class="p">,</span>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">        </span><span class="nx">AccessToken</span><span class="p">:</span><span class="w">           </span><span class="nx">tokens</span><span class="p">.</span><span class="nx">AccessToken</span><span class="p">,</span>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">        </span><span class="nx">RefreshToken</span><span class="p">:</span><span class="w">          </span><span class="nx">tokens</span><span class="p">.</span><span class="nx">RefreshToken</span><span class="p">,</span>
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">        </span><span class="nx">AccessTokenExpiresAt</span><span class="p">:</span><span class="w">  </span><span class="nx">tokens</span><span class="p">.</span><span class="nx">Expiry</span><span class="p">,</span>
-<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">        </span><span class="nx">IPAddress</span><span class="p">:</span><span class="w">             </span><span class="nx">r</span><span class="p">.</span><span class="nx">RemoteAddr</span><span class="p">,</span>
-<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">        </span><span class="nx">UserAgent</span><span class="p">:</span><span class="w">             </span><span class="nx">r</span><span class="p">.</span><span class="nx">UserAgent</span><span class="p">(),</span>
-<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">        </span><span class="nx">CreatedAt</span><span class="p">:</span><span class="w">             </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">(),</span>
-<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">        </span><span class="nx">ExpiresAt</span><span class="p">:</span><span class="w">             </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">Add</span><span class="p">(</span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">),</span>
-<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>
-<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="w">        </span><span class="c1">// Handle error</span>
-<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>
-<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="w">    </span><span class="c1">// Set session cookie</span>
-<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a><span class="w">    </span><span class="nx">cookies</span><span class="p">.</span><span class="nx">Set</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
-<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>
-<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Redirect</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/dashboard&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusFound</span><span class="p">)</span>
-<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleOAuthCallback</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="c1">// Exchange code for tokens</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nx">tokens</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">Exchange</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">code</span><span class="p">)</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="c1">// Create session</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nx">session</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">bff</span><span class="p">.</span><span class="nx">Session</span><span class="p">{</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">        </span><span class="nx">ID</span><span class="p">:</span><span class="w">                    </span><span class="nx">bff</span><span class="p">.</span><span class="nx">GenerateSessionID</span><span class="p">(),</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">        </span><span class="nx">UserID</span><span class="p">:</span><span class="w">                </span><span class="nx">user</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">        </span><span class="nx">OrganizationID</span><span class="p">:</span><span class="w">        </span><span class="o">&amp;</span><span class="nx">user</span><span class="p">.</span><span class="nx">DefaultOrgID</span><span class="p">,</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">        </span><span class="nx">AccessToken</span><span class="p">:</span><span class="w">           </span><span class="nx">tokens</span><span class="p">.</span><span class="nx">AccessToken</span><span class="p">,</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">        </span><span class="nx">RefreshToken</span><span class="p">:</span><span class="w">          </span><span class="nx">tokens</span><span class="p">.</span><span class="nx">RefreshToken</span><span class="p">,</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">        </span><span class="nx">AccessTokenExpiresAt</span><span class="p">:</span><span class="w">  </span><span class="nx">tokens</span><span class="p">.</span><span class="nx">Expiry</span><span class="p">,</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">        </span><span class="nx">IPAddress</span><span class="p">:</span><span class="w">             </span><span class="nx">r</span><span class="p">.</span><span class="nx">RemoteAddr</span><span class="p">,</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">        </span><span class="nx">UserAgent</span><span class="p">:</span><span class="w">             </span><span class="nx">r</span><span class="p">.</span><span class="nx">UserAgent</span><span class="p">(),</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">        </span><span class="nx">CreatedAt</span><span class="p">:</span><span class="w">             </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">(),</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">        </span><span class="nx">ExpiresAt</span><span class="p">:</span><span class="w">             </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">Add</span><span class="p">(</span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">),</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="w">        </span><span class="c1">// Handle error</span>
+<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>
+<a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a><span class="w">    </span><span class="c1">// Set session cookie</span>
+<a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a><span class="w">    </span><span class="nx">cookies</span><span class="p">.</span><span class="nx">Set</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+<a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a>
+<a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Redirect</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/dashboard&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusFound</span><span class="p">)</span>
+<a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="get-current-session">Get Current Session<a class="headerlink" href="#get-current-session" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleGetSession</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="nx">session</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">SessionFromContext</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">())</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nx">json</span><span class="p">.</span><span class="nx">NewEncoder</span><span class="p">(</span><span class="nx">w</span><span class="p">).</span><span class="nx">Encode</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">{</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">        </span><span class="s">&quot;user_id&quot;</span><span class="p">:</span><span class="w">         </span><span class="nx">session</span><span class="p">.</span><span class="nx">UserID</span><span class="p">,</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">        </span><span class="s">&quot;organization_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">OrganizationID</span><span class="p">,</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">        </span><span class="s">&quot;expires_at&quot;</span><span class="p">:</span><span class="w">      </span><span class="nx">session</span><span class="p">.</span><span class="nx">ExpiresAt</span><span class="p">,</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="p">})</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleGetSession</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="nx">session</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">SessionFromContext</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">())</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nx">json</span><span class="p">.</span><span class="nx">NewEncoder</span><span class="p">(</span><span class="nx">w</span><span class="p">).</span><span class="nx">Encode</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">{</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">        </span><span class="s">&quot;user_id&quot;</span><span class="p">:</span><span class="w">         </span><span class="nx">session</span><span class="p">.</span><span class="nx">UserID</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">        </span><span class="s">&quot;organization_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">OrganizationID</span><span class="p">,</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">        </span><span class="s">&quot;expires_at&quot;</span><span class="p">:</span><span class="w">      </span><span class="nx">session</span><span class="p">.</span><span class="nx">ExpiresAt</span><span class="p">,</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="p">})</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="update-session-token-refresh">Update Session (Token Refresh)<a class="headerlink" href="#update-session-token-refresh" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">refreshTokens</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="w"> </span><span class="o">*</span><span class="nx">bff</span><span class="p">.</span><span class="nx">Session</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="c1">// Refresh OAuth tokens</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nx">newTokens</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">Refresh</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">RefreshToken</span><span class="p">)</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="c1">// Update session</span>
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="nx">session</span><span class="p">.</span><span class="nx">AccessToken</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">newTokens</span><span class="p">.</span><span class="nx">AccessToken</span>
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">    </span><span class="nx">session</span><span class="p">.</span><span class="nx">RefreshToken</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">newTokens</span><span class="p">.</span><span class="nx">RefreshToken</span>
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">    </span><span class="nx">session</span><span class="p">.</span><span class="nx">AccessTokenExpiresAt</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">newTokens</span><span class="p">.</span><span class="nx">Expiry</span>
-<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="nx">session</span><span class="p">.</span><span class="nx">UpdatedAt</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">()</span>
-<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>
-<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Update</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">)</span>
-<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">refreshTokens</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="w"> </span><span class="o">*</span><span class="nx">bff</span><span class="p">.</span><span class="nx">Session</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="c1">// Refresh OAuth tokens</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nx">newTokens</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">Refresh</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">RefreshToken</span><span class="p">)</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span><span class="c1">// Update session</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">    </span><span class="nx">session</span><span class="p">.</span><span class="nx">AccessToken</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">newTokens</span><span class="p">.</span><span class="nx">AccessToken</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">    </span><span class="nx">session</span><span class="p">.</span><span class="nx">RefreshToken</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">newTokens</span><span class="p">.</span><span class="nx">RefreshToken</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">    </span><span class="nx">session</span><span class="p">.</span><span class="nx">AccessTokenExpiresAt</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">newTokens</span><span class="p">.</span><span class="nx">Expiry</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="nx">session</span><span class="p">.</span><span class="nx">UpdatedAt</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">()</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Update</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">)</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="delete-session-logout">Delete Session (Logout)<a class="headerlink" href="#delete-session-logout" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleLogout</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="nx">session</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">SessionFromContext</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">())</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="c1">// Delete from store</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="nx">store</span><span class="p">.</span><span class="nx">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="c1">// Clear cookie</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span><span class="nx">cookies</span><span class="p">.</span><span class="nx">Clear</span><span class="p">(</span><span class="nx">w</span><span class="p">)</span>
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Redirect</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusFound</span><span class="p">)</span>
-<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="p">}</span>
-</code></pre></div>
-<h3 id="logout-all-devices">Logout All Devices<a class="headerlink" href="#logout-all-devices" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleLogoutAllDevices</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleLogout</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="nx">session</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">SessionFromContext</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">())</span>
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="c1">// Delete all sessions for user</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nx">count</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">DeleteByUserID</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">UserID</span><span class="p">.</span><span class="nx">String</span><span class="p">())</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="c1">// Delete from store</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nx">store</span><span class="p">.</span><span class="nx">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
 <a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="c1">// Clear current cookie</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="c1">// Clear cookie</span>
 <a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="nx">cookies</span><span class="p">.</span><span class="nx">Clear</span><span class="p">(</span><span class="nx">w</span><span class="p">)</span>
 <a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="nx">json</span><span class="p">.</span><span class="nx">NewEncoder</span><span class="p">(</span><span class="nx">w</span><span class="p">).</span><span class="nx">Encode</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">{</span>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">        </span><span class="s">&quot;logged_out_sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">count</span><span class="p">,</span>
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="p">})</span>
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="p">}</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Redirect</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusFound</span><span class="p">)</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="logout-all-devices">Logout All Devices<a class="headerlink" href="#logout-all-devices" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleLogoutAllDevices</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="nx">session</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">SessionFromContext</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">())</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="c1">// Delete all sessions for user</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="nx">count</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">DeleteByUserID</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">UserID</span><span class="p">.</span><span class="nx">String</span><span class="p">())</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">    </span><span class="c1">// Clear current cookie</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">    </span><span class="nx">cookies</span><span class="p">.</span><span class="nx">Clear</span><span class="p">(</span><span class="nx">w</span><span class="p">)</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">    </span><span class="nx">json</span><span class="p">.</span><span class="nx">NewEncoder</span><span class="p">(</span><span class="nx">w</span><span class="p">).</span><span class="nx">Encode</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">any</span><span class="p">{</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">        </span><span class="s">&quot;logged_out_sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">count</span><span class="p">,</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">    </span><span class="p">})</span>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nx">session</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">sessionID</span><span class="p">)</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">errors</span><span class="p">.</span><span class="nx">Is</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">ErrSessionNotFound</span><span class="p">):</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">        </span><span class="c1">// Session doesn&#39;t exist</span>
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">        </span><span class="nx">http</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Session not found&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusUnauthorized</span><span class="p">)</span>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">errors</span><span class="p">.</span><span class="nx">Is</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">ErrSessionExpired</span><span class="p">):</span>
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">        </span><span class="c1">// Session expired</span>
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">        </span><span class="nx">cookies</span><span class="p">.</span><span class="nx">Clear</span><span class="p">(</span><span class="nx">w</span><span class="p">)</span>
-<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">        </span><span class="nx">http</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Session expired&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusUnauthorized</span><span class="p">)</span>
-<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">    </span><span class="k">default</span><span class="p">:</span>
-<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">        </span><span class="c1">// Internal error</span>
-<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="w">        </span><span class="nx">http</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Internal error&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusInternalServerError</span><span class="p">)</span>
-<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nx">session</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">sessionID</span><span class="p">)</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">errors</span><span class="p">.</span><span class="nx">Is</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">ErrSessionNotFound</span><span class="p">):</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">        </span><span class="c1">// Session doesn&#39;t exist</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">        </span><span class="nx">http</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Session not found&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusUnauthorized</span><span class="p">)</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">errors</span><span class="p">.</span><span class="nx">Is</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">ErrSessionExpired</span><span class="p">):</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">        </span><span class="c1">// Session expired</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">        </span><span class="nx">cookies</span><span class="p">.</span><span class="nx">Clear</span><span class="p">(</span><span class="nx">w</span><span class="p">)</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">        </span><span class="nx">http</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Session expired&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusUnauthorized</span><span class="p">)</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">    </span><span class="k">default</span><span class="p">:</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">        </span><span class="c1">// Internal error</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="w">        </span><span class="nx">http</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Internal error&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusInternalServerError</span><span class="p">)</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="integration-with-oauth">Integration with OAuth<a class="headerlink" href="#integration-with-oauth" title="Permanent link">&para;</a></h2>
 <p>See <a href="../oauth/">OAuth documentation</a> for integrating BFF sessions with OAuth providers.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1">// OAuth callback handler</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleOAuthCallback</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="c1">// 1. Validate state parameter</span>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="c1">// 2. Exchange code for tokens</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="c1">// 3. Get or create user</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="c1">// 4. Create BFF session with tokens</span>
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span><span class="c1">// 5. Set session cookie</span>
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span><span class="c1">// 6. Redirect to app</span>
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1">// OAuth callback handler</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleOAuthCallback</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="c1">// 1. Validate state parameter</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="c1">// 2. Exchange code for tokens</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span><span class="c1">// 3. Get or create user</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">    </span><span class="c1">// 4. Create BFF session with tokens</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="c1">// 5. Set session cookie</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">    </span><span class="c1">// 6. Redirect to app</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="p">}</span>
 </code></pre></div>
 
 

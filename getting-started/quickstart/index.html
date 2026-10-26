@@ -613,6 +613,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -955,6 +961,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2360,6 +2450,8 @@
       
         
       
+        
+      
     
     
     
@@ -2459,6 +2551,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3249,6 +3369,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3806,6 +3930,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4057,6 +4237,8 @@
       
         
       
+        
+      
     
     
     
@@ -4128,6 +4310,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5036,32 +5246,35 @@
 <a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">        </span><span class="s">&quot;http://localhost:8080&quot;</span><span class="p">,</span><span class="w">           </span><span class="c1">// Issuer URL</span>
 <a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="w">        </span><span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;your-32-byte-secret-key&quot;</span><span class="p">),</span><span class="w"> </span><span class="c1">// HMAC secret</span>
 <a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="w">    </span><span class="p">)</span>
-<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="w">    </span><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewProvider</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">)</span>
-<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatalf</span><span class="p">(</span><span class="s">&quot;failed to create provider: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span>
-<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>
-<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="w">    </span><span class="c1">// Create OAuth API (endpoints auto-registered)</span>
-<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="w">    </span><span class="nx">oauthAPI</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewAPI</span><span class="p">(</span><span class="nx">provider</span><span class="p">)</span>
-<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatalf</span><span class="p">(</span><span class="s">&quot;failed to create oauth api: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span>
-<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>
-<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a><span class="w">    </span><span class="c1">// Mount OAuth router (includes all OAuth and discovery endpoints)</span>
-<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">oauthAPI</span><span class="p">.</span><span class="nx">Router</span><span class="p">())</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="w">    </span><span class="c1">// Development only: a signing key generated at every start. In</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="w">    </span><span class="c1">// production set cfg.PrivateKey to a key kept in your secret store.</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="w">    </span><span class="nx">cfg</span><span class="p">.</span><span class="nx">AllowEphemeralKey</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="w">    </span><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewProvider</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">)</span>
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatalf</span><span class="p">(</span><span class="s">&quot;failed to create provider: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="w">    </span><span class="c1">// Create OAuth API (endpoints auto-registered)</span>
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="w">    </span><span class="nx">oauthAPI</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewAPI</span><span class="p">(</span><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">WithAcceptedClientIDs</span><span class="p">(</span><span class="s">&quot;my-frontend-app&quot;</span><span class="p">))</span>
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a><span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatalf</span><span class="p">(</span><span class="s">&quot;failed to create oauth api: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a><span class="w">    </span><span class="p">}</span>
 <a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>
-<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a><span class="w">    </span><span class="c1">// Protected API endpoint</span>
-<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;GET /api/me&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">oauthAPI</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">HandlerFunc</span><span class="p">(</span><span class="nx">meHandler</span><span class="p">)))</span>
+<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a><span class="w">    </span><span class="c1">// Mount OAuth router (includes all OAuth and discovery endpoints)</span>
+<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">oauthAPI</span><span class="p">.</span><span class="nx">Router</span><span class="p">())</span>
 <a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>
-<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a><span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Server starting on :8080&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a><span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">ListenAndServe</span><span class="p">(</span><span class="s">&quot;:8080&quot;</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">))</span>
-<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a><span class="p">}</span>
-<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>
-<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a><span class="kd">func</span><span class="w"> </span><span class="nx">meHandler</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a><span class="w">    </span><span class="nx">userID</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">UserIDFromContext</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">())</span>
-<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a><span class="w">    </span><span class="nx">w</span><span class="p">.</span><span class="nx">Header</span><span class="p">().</span><span class="nx">Set</span><span class="p">(</span><span class="s">&quot;Content-Type&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a><span class="w">    </span><span class="nx">w</span><span class="p">.</span><span class="nx">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">`{&quot;user_id&quot;:&quot;`</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">userID</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">`&quot;}`</span><span class="p">))</span>
-<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a><span class="p">}</span>
+<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a><span class="w">    </span><span class="c1">// Protected API endpoint</span>
+<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;GET /api/me&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">oauthAPI</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">HandlerFunc</span><span class="p">(</span><span class="nx">meHandler</span><span class="p">)))</span>
+<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>
+<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a><span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Server starting on :8080&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a><span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">ListenAndServe</span><span class="p">(</span><span class="s">&quot;:8080&quot;</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">))</span>
+<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a><span class="p">}</span>
+<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>
+<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a><span class="kd">func</span><span class="w"> </span><span class="nx">meHandler</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a><span class="w">    </span><span class="nx">userID</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">UserIDFromContext</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Context</span><span class="p">())</span>
+<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a><span class="w">    </span><span class="nx">w</span><span class="p">.</span><span class="nx">Header</span><span class="p">().</span><span class="nx">Set</span><span class="p">(</span><span class="s">&quot;Content-Type&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a><span class="w">    </span><span class="nx">w</span><span class="p">.</span><span class="nx">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">`{&quot;user_id&quot;:&quot;`</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">userID</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">`&quot;}`</span><span class="p">))</span>
+<a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="step-2-create-an-oauth-app">Step 2: Create an OAuth App<a class="headerlink" href="#step-2-create-an-oauth-app" title="Permanent link">&para;</a></h2>
 <p>Before clients can authenticate, you need to create an OAuth app:</p>
@@ -5090,16 +5303,24 @@
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  code_challenge_method=S256
 </code></pre></div>
 <h3 id="exchange-code-for-token">Exchange Code for Token<a class="headerlink" href="#exchange-code-for-token" title="Permanent link">&para;</a></h3>
+<p>Tokens are DPoP-bound by default: every token request carries a DPoP
+proof, and the token is bound to the proof's key. See
+<a href="../../guides/dpop-clients/">Calling APIs with DPoP</a> for how a client makes
+the key and the proofs.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8080/oauth/token<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;grant_type=authorization_code&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;client_id=my-frontend-app&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;code=YOUR_AUTH_CODE&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;redirect_uri=http://localhost:3000/callback&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;DPoP: YOUR_DPOP_PROOF&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;grant_type=authorization_code&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;client_id=my-frontend-app&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;code=YOUR_AUTH_CODE&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;redirect_uri=http://localhost:3000/callback&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk&quot;</span>
 </code></pre></div>
 <h3 id="access-protected-endpoint">Access Protected Endpoint<a class="headerlink" href="#access-protected-endpoint" title="Permanent link">&para;</a></h3>
+<p>Present the token with the <code>DPoP</code> scheme and a new proof for this request,
+carrying the token's hash:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>curl<span class="w"> </span>http://localhost:8080/api/me<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer YOUR_ACCESS_TOKEN&quot;</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: DPoP YOUR_ACCESS_TOKEN&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;DPoP: YOUR_DPOP_PROOF_FOR_GET_API_ME&quot;</span>
 </code></pre></div>
 <h2 id="step-4-add-user-registration">Step 4: Add User Registration<a class="headerlink" href="#step-4-add-user-registration" title="Permanent link">&para;</a></h2>
 <p>A person is a human principal; the password is a credential that belongs to it.</p>

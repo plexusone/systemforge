@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2219,6 +2309,8 @@
       
         
       
+        
+      
     
     
     
@@ -2318,6 +2410,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3108,6 +3228,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3665,6 +3789,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3918,6 +4098,8 @@
       
         
       
+        
+      
     
     
     
@@ -3987,6 +4169,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -4762,14 +4972,20 @@
 <p>Release notes, one file per version, newest first. The
 <a href="changelog/">changelog</a> is generated from <code>CHANGELOG.json</code> and lists every
 change with its commit.</p>
-<p>The latest release, <a href="v0.20.0/">v0.20.0</a>, is a security release: tokens are
-bound to the application they were issued for, SCIM credentials to one
-organization, revocation removes access everywhere, and authorization checks
-fail closed. It is breaking; read its upgrade notes first.</p>
-<p>The previous release, <a href="v0.19.0/">v0.19.0</a>, added a minimum sign-up age:
+<p>The latest release, <a href="v0.21.0/">v0.21.0</a>, is a security release: tokens are
+DPoP-bound by default, keys and secrets rotate keeping the current and
+previous value, SCIM has built-in per-tenant tokens, revocations remove graph
+access before they commit, and each multi-app application gets its own
+database login. It is breaking; read its upgrade guide first.</p>
+<p>The previous release, <a href="v0.20.0/">v0.20.0</a>, was also a security release:
+it bound tokens to the application they were issued for and SCIM
+credentials to one organization, made revocation remove access everywhere,
+and made authorization checks fail closed. It is breaking; read its upgrade
+notes first.</p>
+<p>Before it, <a href="v0.19.0/">v0.19.0</a> added a minimum sign-up age:
 SystemAuth asks a person's birth month and year before it creates their
 account and refuses anyone younger, keeping nothing about them.</p>
-<p>Before it, <a href="v0.18.0/">v0.18.0</a> added the organization console,
+<p>Further back, <a href="v0.18.0/">v0.18.0</a> added the organization console,
 served by SystemAuth under <code>/console</code>, where organizations manage their
 connections, and recorded each connection's rotation mode.</p>
 <p>Before that, <a href="v0.17.0/">v0.17.0</a> let relying-party applications
@@ -4797,6 +5013,10 @@ completed the organization model. It is a breaking release with migrations
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><a href="v0.21.0/">v0.21.0</a></td>
+<td>2026-10-25</td>
+</tr>
 <tr>
 <td><a href="v0.20.0/">v0.20.0</a></td>
 <td>2026-10-23</td>

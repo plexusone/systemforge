@@ -474,6 +474,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -966,6 +972,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2371,6 +2461,8 @@
       
         
       
+        
+      
     
     
     
@@ -2470,6 +2562,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3260,6 +3380,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3817,6 +3941,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4068,6 +4248,8 @@
       
         
       
+        
+      
     
     
     
@@ -4139,6 +4321,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5059,11 +5269,16 @@ database and the role-based authorization mode (the default).</p>
 <td>Path in the vault of the key ring's root key: 32 random bytes as base64 or hex</td>
 </tr>
 <tr>
-<td><code>allow_private_egress</code></td>
-<td>Development only: lets provider requests reach loopback and private addresses over plain HTTP</td>
+<td><code>egress_allow_prefixes</code></td>
+<td>Development only: address ranges in CIDR notation, such as <code>127.0.0.0/8</code>, that provider requests may reach although they are not public. List only the ranges your local fakes use. Link-local and cloud metadata addresses are refused even when listed</td>
+</tr>
+<tr>
+<td><code>allow_http_egress</code></td>
+<td>Development only: lets provider requests use plain HTTP</td>
 </tr>
 </tbody>
 </table>
+<p>When either development setting is on, SystemAuth logs a warning at startup.</p>
 <p>Create the root key once and keep it in the secret store, not beside
 <code>keys_dir</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">SYSTEMAUTH_KEYS_ROOT</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
@@ -5292,7 +5507,9 @@ stored credentials cannot be read. See <a href="../key-management/">Key manageme
 <li>The role-based authorization mode only.</li>
 <li>The API acts for the token's principal as a user; service principals and
   agents use the broker in process.</li>
-<li>Connection events go to the server log until an audit store is configured.</li>
+<li>Connection events go to the server log unless the embedding host passes
+  an audit store in <code>systemauthsvc.Options.AuditStore</code>; the <code>systemauth</code>
+  command does not.</li>
 <li>A disconnect does not yet require acknowledging the bindings it would stop;
   list them first with <code>GET .../bindings</code>.</li>
 </ul>

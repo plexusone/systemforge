@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2234,6 +2324,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#session-lifetime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Lifetime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cookieconfig" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2356,10 +2457,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#redisstore-production" class="md-nav__link">
+  <a href="#omnistoragestore-with-redis-production" class="md-nav__link">
     <span class="md-ellipsis">
       
-        RedisStore (Production)
+        OmniStorageStore with Redis (Production)
       
     </span>
   </a>
@@ -2593,6 +2694,8 @@
       
         
       
+        
+      
     
     
     
@@ -2692,6 +2795,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3482,6 +3613,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4039,6 +4174,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4290,6 +4481,8 @@
       
         
       
+        
+      
     
     
     
@@ -4361,6 +4554,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5177,6 +5398,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#session-lifetime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Lifetime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cookieconfig" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5299,10 +5531,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#redisstore-production" class="md-nav__link">
+  <a href="#omnistoragestore-with-redis-production" class="md-nav__link">
     <span class="md-ellipsis">
       
-        RedisStore (Production)
+        OmniStorageStore with Redis (Production)
       
     </span>
   </a>
@@ -5474,7 +5706,7 @@
 <ol>
 <li><strong>Server-side token storage</strong> - Access and refresh tokens never reach the browser</li>
 <li><strong>HTTP-only cookies</strong> - Session IDs are stored in cookies that JavaScript cannot access</li>
-<li><strong>Automatic token injection</strong> - BFF proxies API requests, injecting the Bearer token</li>
+<li><strong>Automatic token injection</strong> - BFF proxies API requests, presenting the access token with a DPoP proof by the session's key (or as Bearer, for a token issued as Bearer)</li>
 <li><strong>Built-in CSRF protection</strong> - Origin validation prevents cross-site request forgery</li>
 </ol>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────┐     Cookie (session_id)      ┌─────────────────┐
@@ -5482,7 +5714,7 @@
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│   (React)   │                              │   /bff/*        │
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>└─────────────┘                              └────────┬────────┘
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                                                      │
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                                                      │ Inject Bearer token
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                                                      │ Inject token + DPoP proof
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                                                      ▼
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                                             ┌─────────────────┐
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                                             │   API Backend   │
@@ -5541,7 +5773,7 @@
 <td><code>/logout</code></td>
 <td>POST</td>
 <td>Cookie</td>
-<td>Clear session and revoke tokens</td>
+<td>Delete the session, clear the cookie, and run <code>OnLogout</code></td>
 </tr>
 <tr>
 <td><code>/refresh</code></td>
@@ -5583,23 +5815,47 @@
 <a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>
 <a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">    </span><span class="c1">// Rate limiting (optional)</span>
 <a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="nx">RateLimitConfig</span><span class="w"> </span><span class="o">*</span><span class="nx">RateLimitConfig</span>
-<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="p">}</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">    </span><span class="c1">// Session lifetime (zero = default, negative = disabled)</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">    </span><span class="nx">IdleTimeout</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="w"> </span><span class="c1">// default 24h</span>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">    </span><span class="nx">MaxLifetime</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="w"> </span><span class="c1">// default 7 days</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="p">}</span>
 </code></pre></div>
+<h3 id="session-lifetime">Session Lifetime<a class="headerlink" href="#session-lifetime" title="Permanent link">&para;</a></h3>
+<p>A session ends when it has not been used for <code>IdleTimeout</code> (default
+<code>bff.DefaultIdleTimeout</code>, 24 hours) or when <code>MaxLifetime</code> (default
+<code>bff.DefaultMaxLifetime</code>, 7 days) has passed since it was created, whichever
+comes first. Refreshing tokens does not extend a session past <code>MaxLifetime</code>:
+the session and cookie expiry are capped at creation time plus <code>MaxLifetime</code>,
+and the user must sign in again. <code>/session</code> reports an ended session as
+unauthenticated, <code>/refresh</code> and the API proxy answer <code>401</code>, and the session is
+deleted. Set a negative value to disable a check. The same limits are fields
+of <code>MiddlewareConfig</code> for applications that use <code>bff.SessionMiddleware</code>
+directly.</p>
 <h3 id="cookieconfig">CookieConfig<a class="headerlink" href="#cookieconfig" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// Secure defaults</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nx">cookieConfig</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">DefaultCookieConfig</span><span class="p">()</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1">// Name:     &quot;sf_session&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1">// Name:     &quot;__Host-sf_session&quot;</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1">// Path:     &quot;/&quot;</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1">// Secure:   true        // HTTPS only</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1">// HTTPOnly: true        // No JavaScript access</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1">// SameSite: Strict      // No cross-site requests</span>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1">// Development override</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1">// Development over plain HTTP</span>
 <a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="k">if</span><span class="w"> </span><span class="nx">isDevelopment</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="nx">cookieConfig</span><span class="p">.</span><span class="nx">Secure</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">false</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nx">cookieConfig</span><span class="p">.</span><span class="nx">SameSite</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">SameSiteLaxMode</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="p">}</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="nx">cookieConfig</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">CookieConfig</span><span class="p">{</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">        </span><span class="nx">Name</span><span class="p">:</span><span class="w">          </span><span class="nx">bff</span><span class="p">.</span><span class="nx">InsecureCookieName</span><span class="p">,</span><span class="w"> </span><span class="c1">// &quot;sf_session&quot;</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">        </span><span class="nx">AllowInsecure</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="p">}</span>
 </code></pre></div>
+<p>The default name carries the <code>__Host-</code> prefix, so browsers accept the cookie
+only when it is <code>Secure</code>, has <code>Path=/</code> and no <code>Domain</code>; a sibling subdomain
+cannot set or overwrite it. Give each application on a host its own name.
+<code>NewHandler</code> rejects a <code>__Host-</code> name with another <code>Path</code> or without
+<code>Secure</code>. The session cookie never has a <code>Domain</code> attribute, whatever its
+name: it stays host-only, so each application keeps its own session cookie
+and no sibling subdomain can read or overwrite it.</p>
 <h3 id="clientipconfig-cloudflare-support">ClientIPConfig (Cloudflare Support)<a class="headerlink" href="#clientipconfig-cloudflare-support" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// For Cloudflare deployments</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">clientIPConfig</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">CloudflareClientIPConfig</span><span class="p">()</span>
@@ -5630,16 +5886,19 @@
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="nx">UserID</span><span class="p">:</span><span class="w">                </span><span class="nx">userID</span><span class="p">,</span>
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="nx">AccessToken</span><span class="p">:</span><span class="w">           </span><span class="nx">tokens</span><span class="p">.</span><span class="nx">AccessToken</span><span class="p">,</span>
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="nx">RefreshToken</span><span class="p">:</span><span class="w">          </span><span class="nx">tokens</span><span class="p">.</span><span class="nx">RefreshToken</span><span class="p">,</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="nx">AccessTokenExpiresIn</span><span class="p">:</span><span class="w">  </span><span class="mi">15</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="nx">RefreshTokenExpiresIn</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">,</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">        </span><span class="nx">Metadata</span><span class="p">:</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">            </span><span class="s">&quot;provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;google&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="p">},</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="p">})</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span><span class="c1">// Cookie is set automatically</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Redirect</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/dashboard&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusFound</span><span class="p">)</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="p">}</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="nx">TokenType</span><span class="p">:</span><span class="w">             </span><span class="nx">tokens</span><span class="p">.</span><span class="nx">TokenType</span><span class="p">,</span><span class="w"> </span><span class="c1">// &quot;DPoP&quot; for a DPoP-bound token</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="nx">DPoPKeyPairJSON</span><span class="p">:</span><span class="w">       </span><span class="nx">keyPairJSON</span><span class="p">,</span><span class="w">      </span><span class="c1">// the key the token request proved</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">        </span><span class="nx">DPoPThumbprint</span><span class="p">:</span><span class="w">        </span><span class="nx">keyPair</span><span class="p">.</span><span class="nx">Thumbprint</span><span class="p">,</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="nx">AccessTokenExpiresIn</span><span class="p">:</span><span class="w">  </span><span class="mi">15</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="nx">RefreshTokenExpiresIn</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">,</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">        </span><span class="nx">Metadata</span><span class="p">:</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">            </span><span class="s">&quot;provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;google&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">        </span><span class="p">},</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="p">})</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">    </span><span class="c1">// Cookie is set automatically</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Redirect</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/dashboard&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusFound</span><span class="p">)</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="token-refresh-hook">Token Refresh Hook<a class="headerlink" href="#token-refresh-hook" title="Permanent link">&para;</a></h2>
 <p>The <code>OnRefresh</code> hook exchanges the session's refresh token for new tokens. With SystemAuth as the authorization server, the refresh token never needs to be stored by your application: SystemAuth keeps token state in its own database, rotates refresh tokens on every use, and revokes the whole token family if a used refresh token is replayed. The hook only calls the token endpoint:</p>
@@ -5676,9 +5935,14 @@
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">}</span>
 </code></pre></div>
 <ul>
-<li>GET/HEAD/OPTIONS requests skip origin validation (safe methods)</li>
+<li>GET/HEAD/OPTIONS requests to <code>/session</code> skip origin validation (safe methods)</li>
 <li>Missing Origin header on POST/PUT/DELETE returns 403 Forbidden</li>
 <li>Referer header is checked as fallback</li>
+<li>Proxied <code>/api/*</code> requests are checked whatever the method, because an
+  upstream GET may change state and carries the user's token: a GET, HEAD or
+  OPTIONS request with a disallowed <code>Origin</code>, a <code>Sec-Fetch-Site</code> other than
+  <code>same-origin</code> (when <code>Origin</code> is absent), or a disallowed <code>Referer</code> (when
+  both are absent) returns 403 Forbidden</li>
 </ul>
 <h3 id="cookie-security">Cookie Security<a class="headerlink" href="#cookie-security" title="Permanent link">&para;</a></h3>
 <p>Default cookie settings:</p>
@@ -5692,6 +5956,11 @@
 </thead>
 <tbody>
 <tr>
+<td>Name</td>
+<td><code>__Host-sf_session</code></td>
+<td>Host-only; subdomains cannot set or overwrite it</td>
+</tr>
+<tr>
 <td>HttpOnly</td>
 <td>true</td>
 <td>Prevents XSS from reading cookie</td>
@@ -5699,7 +5968,7 @@
 <tr>
 <td>Secure</td>
 <td>true</td>
-<td>HTTPS only (disable for localhost)</td>
+<td>HTTPS only (<code>AllowInsecure</code> for localhost)</td>
 </tr>
 <tr>
 <td>SameSite</td>
@@ -5711,8 +5980,16 @@
 <td>/</td>
 <td>Available to all paths</td>
 </tr>
+<tr>
+<td>Domain</td>
+<td>none</td>
+<td>Host-only; never shared with sibling subdomains</td>
+</tr>
 </tbody>
 </table>
+<p><code>NewHandler</code> logs a warning when <code>AllowInsecure</code> leaves the cookie without
+<code>Secure</code>. See <a href="../../guides/cookies/">Browser Cookies</a> for every cookie
+SystemForge sets.</p>
 <h3 id="rate-limiting">Rate Limiting<a class="headerlink" href="#rate-limiting" title="Permanent link">&para;</a></h3>
 <p>Built-in rate limiting protects against brute force and DoS:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">RateLimitConfig</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">bff</span><span class="p">.</span><span class="nx">RateLimitConfig</span><span class="p">{</span>
@@ -5734,17 +6011,21 @@
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1">// - Automatic cleanup of expired sessions</span>
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1">// - Not suitable for multi-instance deployments</span>
 </code></pre></div>
-<h3 id="redisstore-production">RedisStore (Production)<a class="headerlink" href="#redisstore-production" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewRedisStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">RedisStoreConfig</span><span class="p">{</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="nx">Addr</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;localhost:6379&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nx">Password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nx">DB</span><span class="p">:</span><span class="w">       </span><span class="mi">0</span><span class="p">,</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nx">Prefix</span><span class="p">:</span><span class="w">   </span><span class="s">&quot;bff:session:&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">})</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1">// - Persistent across restarts</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="c1">// - Shared across multiple instances</span>
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="c1">// - Recommended for production</span>
+<h3 id="omnistoragestore-with-redis-production">OmniStorageStore with Redis (Production)<a class="headerlink" href="#omnistoragestore-with-redis-production" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nx">sealer</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewKeyringSealer</span><span class="p">(</span><span class="s">&quot;k1&quot;</span><span class="p">,</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">byte</span><span class="p">{</span><span class="s">&quot;k1&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">sessionKey</span><span class="p">})</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1">// handle err</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewOmniStorageStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">OmniStorageConfig</span><span class="p">{</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nx">Backend</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;redis&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="nx">RedisURL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;redis://localhost:6379&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="nx">SiteID</span><span class="p">:</span><span class="w">   </span><span class="s">&quot;myapp&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// required: isolates this app&#39;s sessions</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="nx">Sealer</span><span class="p">:</span><span class="w">   </span><span class="nx">sealer</span><span class="p">,</span><span class="w">  </span><span class="c1">// required: encrypts tokens and DPoP keys at rest</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="p">})</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="c1">// - Persistent across restarts</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="c1">// - Shared across multiple instances</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="c1">// - Recommended for production</span>
 </code></pre></div>
+<p>See <a href="../../session/bff-sessions/">BFF Sessions</a> for the full configuration.</p>
 <h2 id="frontend-integration">Frontend Integration<a class="headerlink" href="#frontend-integration" title="Permanent link">&para;</a></h2>
 <h3 id="check-session-status">Check Session Status<a class="headerlink" href="#check-session-status" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="s1">&#39;/bff/session&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
@@ -5757,7 +6038,7 @@
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="s1">&#39;/bff/api/v1/users/me&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nx">credentials</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;include&#39;</span><span class="p">,</span>
 <a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="p">});</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1">// BFF injects Bearer token automatically</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1">// BFF injects the access token and a DPoP proof automatically</span>
 </code></pre></div>
 <h3 id="logout">Logout<a class="headerlink" href="#logout" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="s1">&#39;/bff/logout&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
@@ -5766,6 +6047,12 @@
 <a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="p">});</span>
 <a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1">// Session cleared, cookie removed</span>
 </code></pre></div>
+<p>Logout fails closed. If the session store cannot load or delete the session,
+<code>/logout</code> responds <code>500</code> with <code>{"error": "logout_failed"}</code> and leaves the
+cookie in place so the frontend can retry. The BFF does not revoke tokens on
+its own; revoke them at the authorization server in <code>OnLogout</code>. If <code>OnLogout</code>
+returns an error, the session is still deleted and the cookie cleared, but the
+response is <code>500</code> with <code>{"error": "revocation_failed"}</code>.</p>
 <h3 id="refresh-session">Refresh Session<a class="headerlink" href="#refresh-session" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1">// Usually automatic, but can be explicit</span>
 <a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="s1">&#39;/bff/refresh&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>

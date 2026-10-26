@@ -594,6 +594,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -936,6 +942,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2341,6 +2431,8 @@
       
         
       
+        
+      
     
     
     
@@ -2440,6 +2532,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3230,6 +3350,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3787,6 +3911,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4038,6 +4218,8 @@
       
         
       
+        
+      
     
     
     
@@ -4109,6 +4291,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -4994,15 +5204,16 @@
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="c1">// Create OAuth provider</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nx">cfg</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">DefaultConfig</span><span class="p">(</span><span class="s">&quot;https://api.example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;secret&quot;</span><span class="p">))</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewProvider</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">)</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="c1">// Create OAuth API (Huma/Chi)</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="nx">api</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewAPI</span><span class="p">(</span><span class="nx">provider</span><span class="p">)</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="c1">// Mount the API router</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">api</span><span class="p">.</span><span class="nx">Router</span><span class="p">())</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">ListenAndServe</span><span class="p">(</span><span class="s">&quot;:8080&quot;</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">)</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="p">}</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="nx">cfg</span><span class="p">.</span><span class="nx">PrivateKey</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">signingKey</span><span class="w"> </span><span class="c1">// required: one RSA key, the same on every instance</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewProvider</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">)</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="c1">// Create OAuth API (Huma/Chi)</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">    </span><span class="nx">api</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewAPI</span><span class="p">(</span><span class="nx">provider</span><span class="p">)</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="c1">// Mount the API router</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">api</span><span class="p">.</span><span class="nx">Router</span><span class="p">())</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">ListenAndServe</span><span class="p">(</span><span class="s">&quot;:8080&quot;</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">)</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>┌──────────────────────────────────────────────────────────┐

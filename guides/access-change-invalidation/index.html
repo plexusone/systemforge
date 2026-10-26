@@ -474,6 +474,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -927,6 +933,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2332,6 +2422,8 @@
       
         
       
+        
+      
     
     
     
@@ -2431,6 +2523,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3221,6 +3341,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3778,6 +3902,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4029,6 +4209,8 @@
       
         
       
+        
+      
     
     
     
@@ -4100,6 +4282,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -4996,7 +5206,8 @@ a clock-skew margin (30 seconds by default, never below 15).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nx">cache</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewRevocationCache</span><span class="p">()</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nx">mw</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BearerMiddleware</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BearerConfig</span><span class="p">{</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">Tokens</span><span class="p">:</span><span class="w"> </span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">Principals</span><span class="p">:</span><span class="w"> </span><span class="nx">principals</span><span class="p">,</span><span class="w"> </span><span class="nx">Revocation</span><span class="p">:</span><span class="w"> </span><span class="nx">cache</span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">})</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">DPoP</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">DPoPConfig</span><span class="p">{</span><span class="nx">ReplayCache</span><span class="p">:</span><span class="w"> </span><span class="nx">replayCache</span><span class="p">},</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">})</span>
 </code></pre></div>
 <table>
 <thead>
@@ -5029,9 +5240,20 @@ issued before it started until the first replay or poll succeeds, so a
 restart never widens the window.</p>
 <h2 id="replay-endpoint">Replay endpoint<a class="headerlink" href="#replay-endpoint" title="Permanent link">&para;</a></h2>
 <p>Enable <code>GET /access-changes?since=&lt;RFC 3339&gt;[&amp;limit=]</code> with
-<code>systemauth.WithAccessChanges(accesschange.NewSource(db))</code>. The caller needs
-a client-credentials token with the <code>access_changes:read</code> scope. The
-response is <code>{"changes": [...], "next_since": ...}</code>.</p>
+<code>systemauth.WithAccessChanges(accesschange.NewSource(db), scope)</code>. The caller
+needs a client-credentials token with the <code>access_changes:read</code> scope. The
+response is <code>{"changes": [...], "next_since": ...}</code>; a page filtered by the
+scope may be short or empty and still carry <code>next_since</code>.</p>
+<p>The second argument, a <code>systemauth.AccessChangeScope</code>, limits each client to
+the organizations whose changes it may read; changes that name no
+organization (a deactivation, revoked sessions) reach every client. It is
+called with the token's client ID and returns organization IDs, or <code>all</code> for
+a client that may read everything. In a deployment of several applications,
+return the organizations that use the client's application, so one
+application does not learn about another's members.
+<code>systemauth.AllOrganizations</code> gives every client the whole feed, for a
+deployment of one application. Without a scope the endpoint answers <code>501</code>.
+The same scope filters back-channel deliveries.</p>
 <table>
 <thead>
 <tr>
@@ -5054,7 +5276,7 @@ response is <code>{"changes": [...], "next_since": ...}</code>.</p>
 </tr>
 <tr>
 <td><code>501</code></td>
-<td>Access changes are not configured</td>
+<td>Access changes, or their scope, are not configured</td>
 </tr>
 </tbody>
 </table>
@@ -5068,7 +5290,8 @@ column <code>sf_oauth_apps.backchannel_logout_uri</code>, migration
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">go</span><span class="w"> </span><span class="nx">bc</span><span class="p">.</span><span class="nx">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 <p>SystemAuth POSTs an OpenID Connect Back-Channel Logout token carrying the
-<code>urn:systemforge:event:access_change</code> event to every registered client,
+<code>urn:systemforge:event:access_change</code> event to every registered client
+(within the access change scope, when one is configured),
 retrying with backoff for up to one maximum token lifetime and never
 following redirects; a <code>4xx</code> other than 408 and 429 is not retried. The
 receiver is <code>relyingparty.BackchannelHandler(cache, client, ...)</code>; the BFF
@@ -5084,7 +5307,7 @@ serves it at <code>&lt;BasePath&gt;/auth/backchannel-logout</code>.</p>
 <tbody>
 <tr>
 <td>Token issued before a recorded change</td>
-<td><code>401</code> with <code>WWW-Authenticate: Bearer error="invalid_token", error_description="token expired"</code>; refresh and retry</td>
+<td><code>401</code> with <code>error="invalid_token", error_description="token expired"</code> on the <code>WWW-Authenticate</code> challenge of the scheme used: <code>DPoP algs="ES256 ES384 ES512", error=...</code> for a DPoP-bound token, <code>Bearer realm="api", error=...</code> for a bearer token; refresh and retry</td>
 </tr>
 <tr>
 <td>BFF session after a change</td>

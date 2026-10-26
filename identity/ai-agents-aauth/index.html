@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2338,6 +2428,8 @@
       
         
       
+        
+      
     
     
     
@@ -2437,6 +2529,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3227,6 +3347,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3784,6 +3908,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4035,6 +4215,8 @@
       
         
       
+        
+      
     
     
     
@@ -4106,6 +4288,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5151,16 +5361,17 @@ person token, exchanges the resource token at its Person Server, and retries.</p
 <a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>
 <a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="nx">humans</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewRequestAuthenticator</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BearerConfig</span><span class="p">{</span>
 <a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">    </span><span class="nx">Tokens</span><span class="p">:</span><span class="w">     </span><span class="nx">client</span><span class="p">,</span><span class="w">   </span><span class="c1">// *relyingparty.Client</span>
-<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">    </span><span class="nx">APIKeys</span><span class="p">:</span><span class="w">    </span><span class="nx">apiKeys</span><span class="p">,</span><span class="w">  </span><span class="c1">// *apikey.Service</span>
-<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">    </span><span class="nx">Principals</span><span class="p">:</span><span class="w"> </span><span class="nx">principals</span><span class="p">,</span>
-<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">    </span><span class="nx">Sessions</span><span class="p">:</span><span class="w">   </span><span class="nx">bff</span><span class="p">,</span><span class="w">      </span><span class="c1">// optional: browser sessions too</span>
-<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="p">})</span>
-<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a>
-<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="nx">mux</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">NewServeMux</span><span class="p">()</span>
-<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="nx">agents</span><span class="p">.</span><span class="nx">Register</span><span class="p">(</span><span class="nx">mux</span><span class="p">)</span><span class="w"> </span><span class="c1">// /.well-known/aauth-resource.json and the resource JWKS (public)</span>
-<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a>
-<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="nx">protect</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">(</span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Options</span><span class="p">{},</span><span class="w"> </span><span class="nx">agents</span><span class="p">,</span><span class="w"> </span><span class="nx">humans</span><span class="p">)</span>
-<a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="nx">mux</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/api/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">protect</span><span class="p">(</span><span class="nx">apiHandler</span><span class="p">))</span>
+<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">    </span><span class="nx">DPoP</span><span class="p">:</span><span class="w">       </span><span class="o">&amp;</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">DPoPConfig</span><span class="p">{</span><span class="nx">ReplayCache</span><span class="p">:</span><span class="w"> </span><span class="nx">replayCache</span><span class="p">},</span><span class="w"> </span><span class="c1">// SystemAuth tokens are DPoP-bound</span>
+<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">    </span><span class="nx">APIKeys</span><span class="p">:</span><span class="w">    </span><span class="nx">apiKeys</span><span class="p">,</span><span class="w">  </span><span class="c1">// *apikey.Service</span>
+<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">    </span><span class="nx">Principals</span><span class="p">:</span><span class="w"> </span><span class="nx">principals</span><span class="p">,</span>
+<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">    </span><span class="nx">Sessions</span><span class="p">:</span><span class="w">   </span><span class="nx">bff</span><span class="p">,</span><span class="w">      </span><span class="c1">// optional: browser sessions too</span>
+<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="p">})</span>
+<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a>
+<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="nx">mux</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">NewServeMux</span><span class="p">()</span>
+<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="nx">agents</span><span class="p">.</span><span class="nx">Register</span><span class="p">(</span><span class="nx">mux</span><span class="p">)</span><span class="w"> </span><span class="c1">// /.well-known/aauth-resource.json and the resource JWKS (public)</span>
+<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a>
+<a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="nx">protect</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">(</span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Options</span><span class="p">{},</span><span class="w"> </span><span class="nx">agents</span><span class="p">,</span><span class="w"> </span><span class="nx">humans</span><span class="p">)</span>
+<a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="nx">mux</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/api/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">protect</span><span class="p">(</span><span class="nx">apiHandler</span><span class="p">))</span>
 </code></pre></div>
 <p>Put the AAuth authenticator first. It only acts on requests that carry a
 <code>Signature-Key</code> header, so cookies and bearer tokens still reach the

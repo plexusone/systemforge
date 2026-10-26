@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2444,6 +2534,8 @@
       
         
       
+        
+      
     
     
     
@@ -2543,6 +2635,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3333,6 +3453,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3890,6 +4014,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4141,6 +4321,8 @@
       
         
       
+        
+      
     
     
     
@@ -4212,6 +4394,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5293,35 +5503,44 @@
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  state=xyz123
 </code></pre></div>
 <h2 id="step-4-token-exchange">Step 4: Token Exchange<a class="headerlink" href="#step-4-token-exchange" title="Permanent link">&para;</a></h2>
-<p>Exchange the code for tokens:</p>
+<p>Exchange the code for tokens. The request carries a DPoP proof for <code>POST</code>
+at the token endpoint, and the tokens are bound to the proof's key; see
+<a href="../../guides/dpop-clients/">Calling APIs with DPoP</a>. If the authorization
+request named the key in <code>dpop_jkt</code>, only a proof by that key redeems the
+code.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>POST<span class="w"> </span>/oauth/token
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>Content-Type:<span class="w"> </span>application/x-www-form-urlencoded
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nv">grant_type</span><span class="o">=</span>authorization_code<span class="p">&amp;</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nv">code</span><span class="o">=</span>SplxlOBeZQQYbYS6WxSbIA<span class="p">&amp;</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="nv">client_id</span><span class="o">=</span>my-app<span class="p">&amp;</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="nv">redirect_uri</span><span class="o">=</span>https://app.example.com/callback<span class="p">&amp;</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="nv">code_verifier</span><span class="o">=</span>dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>DPoP:<span class="w"> </span>&lt;proof&gt;
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nv">grant_type</span><span class="o">=</span>authorization_code<span class="p">&amp;</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="nv">code</span><span class="o">=</span>SplxlOBeZQQYbYS6WxSbIA<span class="p">&amp;</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="nv">client_id</span><span class="o">=</span>my-app<span class="p">&amp;</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="nv">redirect_uri</span><span class="o">=</span>https://app.example.com/callback<span class="p">&amp;</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="nv">code_verifier</span><span class="o">=</span>dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
 </code></pre></div>
 <h3 id="confidential-clients">Confidential Clients<a class="headerlink" href="#confidential-clients" title="Permanent link">&para;</a></h3>
 <p>Add client authentication:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>POST<span class="w"> </span>/oauth/token
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>Content-Type:<span class="w"> </span>application/x-www-form-urlencoded
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>Authorization:<span class="w"> </span>Basic<span class="w"> </span>base64<span class="o">(</span>client_id:client_secret<span class="o">)</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nv">grant_type</span><span class="o">=</span>authorization_code<span class="p">&amp;</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nv">code</span><span class="o">=</span>SplxlOBeZQQYbYS6WxSbIA<span class="p">&amp;</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nv">redirect_uri</span><span class="o">=</span>https://app.example.com/callback
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>DPoP:<span class="w"> </span>&lt;proof&gt;
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nv">grant_type</span><span class="o">=</span>authorization_code<span class="p">&amp;</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nv">code</span><span class="o">=</span>SplxlOBeZQQYbYS6WxSbIA<span class="p">&amp;</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="nv">redirect_uri</span><span class="o">=</span>https://app.example.com/callback
 </code></pre></div>
 <h3 id="token-response">Token Response<a class="headerlink" href="#token-response" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;access_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eyJhbGciOiJIUzI1NiIs...&quot;</span><span class="p">,</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">&quot;token_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Bearer&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;access_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eyJhbGciOiJSUzI1NiIs...&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">&quot;token_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DPoP&quot;</span><span class="p">,</span>
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">&quot;expires_in&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">900</span><span class="p">,</span>
 <a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="nt">&quot;refresh_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;8xLOxBtZp8&quot;</span><span class="p">,</span>
 <a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;openid profile email&quot;</span>
 <a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="p">}</span>
 </code></pre></div>
+<p>The refresh token is bound to the same key: a refresh needs a proof by it.
+A client registered with the legacy <code>allow_bearer_tokens</code> exception may
+omit the proof and gets <code>"token_type": "Bearer"</code>.</p>
 <h2 id="complete-example-javascript">Complete Example (JavaScript)<a class="headerlink" href="#complete-example-javascript" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">class</span><span class="w"> </span><span class="nx">OAuthClient</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="kr">constructor</span><span class="p">(</span><span class="nx">config</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
@@ -5369,21 +5588,30 @@
 <a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a><span class="w">        </span><span class="kd">const</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">tokenEndpoint</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a><span class="w">            </span><span class="nx">method</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;POST&#39;</span><span class="p">,</span>
 <a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a><span class="w">            </span><span class="nx">headers</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a><span class="w">                </span><span class="s1">&#39;Content-Type&#39;</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;application/x-www-form-urlencoded&#39;</span>
-<a id="__codelineno-10-48" name="__codelineno-10-48" href="#__codelineno-10-48"></a><span class="w">            </span><span class="p">},</span>
-<a id="__codelineno-10-49" name="__codelineno-10-49" href="#__codelineno-10-49"></a><span class="w">            </span><span class="nx">body</span><span class="o">:</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">URLSearchParams</span><span class="p">({</span>
-<a id="__codelineno-10-50" name="__codelineno-10-50" href="#__codelineno-10-50"></a><span class="w">                </span><span class="nx">grant_type</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;authorization_code&#39;</span><span class="p">,</span>
-<a id="__codelineno-10-51" name="__codelineno-10-51" href="#__codelineno-10-51"></a><span class="w">                </span><span class="nx">code</span><span class="o">:</span><span class="w"> </span><span class="nx">code</span><span class="p">,</span>
-<a id="__codelineno-10-52" name="__codelineno-10-52" href="#__codelineno-10-52"></a><span class="w">                </span><span class="nx">client_id</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">clientId</span><span class="p">,</span>
-<a id="__codelineno-10-53" name="__codelineno-10-53" href="#__codelineno-10-53"></a><span class="w">                </span><span class="nx">redirect_uri</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">redirectUri</span><span class="p">,</span>
-<a id="__codelineno-10-54" name="__codelineno-10-54" href="#__codelineno-10-54"></a><span class="w">                </span><span class="nx">code_verifier</span><span class="o">:</span><span class="w"> </span><span class="nx">verifier</span>
-<a id="__codelineno-10-55" name="__codelineno-10-55" href="#__codelineno-10-55"></a><span class="w">            </span><span class="p">})</span>
-<a id="__codelineno-10-56" name="__codelineno-10-56" href="#__codelineno-10-56"></a><span class="w">        </span><span class="p">});</span>
-<a id="__codelineno-10-57" name="__codelineno-10-57" href="#__codelineno-10-57"></a>
-<a id="__codelineno-10-58" name="__codelineno-10-58" href="#__codelineno-10-58"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
-<a id="__codelineno-10-59" name="__codelineno-10-59" href="#__codelineno-10-59"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-10-60" name="__codelineno-10-60" href="#__codelineno-10-60"></a><span class="p">}</span>
+<a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a><span class="w">                </span><span class="s1">&#39;Content-Type&#39;</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;application/x-www-form-urlencoded&#39;</span><span class="p">,</span>
+<a id="__codelineno-10-48" name="__codelineno-10-48" href="#__codelineno-10-48"></a><span class="w">                </span><span class="c1">// A DPoP proof for POST at the token endpoint, signed with</span>
+<a id="__codelineno-10-49" name="__codelineno-10-49" href="#__codelineno-10-49"></a><span class="w">                </span><span class="c1">// a non-extractable WebCrypto key kept for this session.</span>
+<a id="__codelineno-10-50" name="__codelineno-10-50" href="#__codelineno-10-50"></a><span class="w">                </span><span class="s1">&#39;DPoP&#39;</span><span class="o">:</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">dpopProof</span><span class="p">(</span><span class="s1">&#39;POST&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">tokenEndpoint</span><span class="p">)</span>
+<a id="__codelineno-10-51" name="__codelineno-10-51" href="#__codelineno-10-51"></a><span class="w">            </span><span class="p">},</span>
+<a id="__codelineno-10-52" name="__codelineno-10-52" href="#__codelineno-10-52"></a><span class="w">            </span><span class="nx">body</span><span class="o">:</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">URLSearchParams</span><span class="p">({</span>
+<a id="__codelineno-10-53" name="__codelineno-10-53" href="#__codelineno-10-53"></a><span class="w">                </span><span class="nx">grant_type</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;authorization_code&#39;</span><span class="p">,</span>
+<a id="__codelineno-10-54" name="__codelineno-10-54" href="#__codelineno-10-54"></a><span class="w">                </span><span class="nx">code</span><span class="o">:</span><span class="w"> </span><span class="nx">code</span><span class="p">,</span>
+<a id="__codelineno-10-55" name="__codelineno-10-55" href="#__codelineno-10-55"></a><span class="w">                </span><span class="nx">client_id</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">clientId</span><span class="p">,</span>
+<a id="__codelineno-10-56" name="__codelineno-10-56" href="#__codelineno-10-56"></a><span class="w">                </span><span class="nx">redirect_uri</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">redirectUri</span><span class="p">,</span>
+<a id="__codelineno-10-57" name="__codelineno-10-57" href="#__codelineno-10-57"></a><span class="w">                </span><span class="nx">code_verifier</span><span class="o">:</span><span class="w"> </span><span class="nx">verifier</span>
+<a id="__codelineno-10-58" name="__codelineno-10-58" href="#__codelineno-10-58"></a><span class="w">            </span><span class="p">})</span>
+<a id="__codelineno-10-59" name="__codelineno-10-59" href="#__codelineno-10-59"></a><span class="w">        </span><span class="p">});</span>
+<a id="__codelineno-10-60" name="__codelineno-10-60" href="#__codelineno-10-60"></a>
+<a id="__codelineno-10-61" name="__codelineno-10-61" href="#__codelineno-10-61"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
+<a id="__codelineno-10-62" name="__codelineno-10-62" href="#__codelineno-10-62"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-63" name="__codelineno-10-63" href="#__codelineno-10-63"></a><span class="p">}</span>
 </code></pre></div>
+<p><code>dpopProof</code> stands for the application's own proof builder: a JWT with the
+public key in its header and <code>htm</code>, <code>htu</code>, <code>iat</code> and a fresh <code>jti</code>, signed
+with the session's key (see
+<a href="../../guides/dpop-clients/#build-a-proof">Calling APIs with DPoP</a>). A
+browser application behind the <a href="../../bff/overview/">BFF</a> needs none of
+this: the BFF holds the key and sends the proofs.</p>
 <h2 id="server-side-implementation">Server-Side Implementation<a class="headerlink" href="#server-side-implementation" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1">// Login handler - after successful authentication</span>
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handleLogin</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>

@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2433,6 +2523,8 @@
       
         
       
+        
+      
     
     
     
@@ -2532,6 +2624,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3322,6 +3442,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3879,6 +4003,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4130,6 +4310,8 @@
       
         
       
+        
+      
     
     
     
@@ -4201,6 +4383,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5159,7 +5369,10 @@
 </ul>
 <h2 id="deployment-modes">Deployment Modes<a class="headerlink" href="#deployment-modes" title="Permanent link">&para;</a></h2>
 <h3 id="embedded-mode-development">Embedded Mode (Development)<a class="headerlink" href="#embedded-mode-development" title="Permanent link">&para;</a></h3>
-<p>For development and testing, SystemForge can run an embedded SpiceDB instance:</p>
+<p>For development and testing, SystemForge can run an embedded SpiceDB instance.
+The embedded server listens in memory inside the application process, so it
+opens no network port, and it is guarded by a random preshared key generated at
+startup:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="s">&quot;context&quot;</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/authz/rebac/spicedb&quot;</span>
@@ -5342,10 +5555,17 @@
 <a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="sync-modes">Sync Modes<a class="headerlink" href="#sync-modes" title="Permanent link">&para;</a></h3>
+<p>The sync mode applies to writes that grant access, which happen after the
+database commit:</p>
 <ul>
-<li><strong><code>SyncModeStrict</code></strong>: Operations fail if SpiceDB sync fails. Use when authorization must be consistent.</li>
-<li><strong><code>SyncModeEventual</code></strong>: Operations succeed, sync failures are logged. Use with a retry mechanism.</li>
+<li><strong><code>SyncModeStrict</code></strong>: the operation returns the SpiceDB error; the database change is kept.</li>
+<li><strong><code>SyncModeEventual</code></strong>: the operation succeeds and the error is logged.</li>
 </ul>
+<p>Writes that revoke access happen before the commit in both modes: if
+SpiceDB refuses, the revocation is rolled back and the error returned, so it
+can be retried. In either mode the graph reconciler of <code>authz/mode</code> writes
+missing relationships and removes stale ones on its schedule; see
+<a href="../../guides/authorization-mode/#keeping-the-graph-consistent-under-rebac">Configuring the authorization mode</a>.</p>
 <h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
 <p>Test your setup:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">testSetup</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">provider</span><span class="w"> </span><span class="o">*</span><span class="nx">spicedb</span><span class="p">.</span><span class="nx">Provider</span><span class="p">,</span><span class="w"> </span><span class="nx">syncer</span><span class="w"> </span><span class="o">*</span><span class="nx">spicedb</span><span class="p">.</span><span class="nx">Syncer</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>

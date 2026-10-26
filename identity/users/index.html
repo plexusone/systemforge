@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -827,6 +833,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1143,6 +1233,17 @@
     <span class="md-ellipsis">
       
         Federation Sync
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changing-an-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing an Email
       
     </span>
   </a>
@@ -2438,6 +2539,8 @@
       
         
       
+        
+      
     
     
     
@@ -2537,6 +2640,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3327,6 +3458,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3884,6 +4019,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4135,6 +4326,8 @@
       
         
       
+        
+      
     
     
     
@@ -4206,6 +4399,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5110,6 +5331,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#changing-an-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing an Email
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -5349,7 +5581,7 @@ created only through <code>identity/managedprincipal</code>. See
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">FamilyName</span><span class="p">:</span><span class="w">  </span><span class="o">&amp;</span><span class="nx">family</span><span class="p">,</span>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">})</span>
 </code></pre></div>
-<p><code>Deactivate</code> and <code>Reactivate</code> toggle <code>active</code>; a deactivated principal cannot authenticate.</p>
+<p><code>Deactivate</code> and <code>Reactivate</code> toggle <code>active</code>; a deactivated principal cannot authenticate and holds no access. <code>Deactivate</code> records the <code>deactivated</code> access change and, with an authorization syncer, removes every relationship the principal holds from the graph (memberships, application roles, resource grants, platform administration and the manager relations in which it is the manager) before it commits; if the graph refuses, the principal stays active and the error is returned. The rows stay, so <code>Reactivate</code> writes the relationships they still call for back after it commits, and the graph reconciler of mode <code>rebac</code> repairs any write that fails. <code>Update</code> with <code>Active</code> does the same.</p>
 <h2 id="systemauth-storage">SystemAuth Storage<a class="headerlink" href="#systemauth-storage" title="Permanent link">&para;</a></h2>
 <p>The SystemAuth server works with humans through its <code>Storage</code> interface using one value type, <code>systemauth.HumanPrincipal</code>, which joins a human principal with its extension:</p>
 <table>
@@ -5382,7 +5614,7 @@ created only through <code>identity/managedprincipal</code>. See
 </tr>
 <tr>
 <td><code>UpdateHuman(ctx, h)</code></td>
-<td>Replace the profile fields</td>
+<td>Replace the profile fields; a change of <code>h.Active</code> deactivates or reactivates the principal</td>
 </tr>
 <tr>
 <td><code>DeleteHuman(ctx, id)</code></td>
@@ -5391,6 +5623,7 @@ created only through <code>identity/managedprincipal</code>. See
 </tbody>
 </table>
 <p>Not-found lookups return <code>systemauth.ErrPrincipalNotFound</code>; a taken email returns <code>systemauth.ErrPrincipalExists</code>; an upstream identity already linked to another human returns <code>systemauth.ErrExternalIdentityExists</code>. Both <code>systemauth.NewEntStorage</code> and <code>systemauth.NewMemoryStorage</code> implement these methods.</p>
+<p>Federation sync (an <code>update</code> to a non-active status, or a <code>delete</code>) and <code>EmbeddedIdentityProvider.UpdateIdentity</code> deactivate humans through <code>UpdateHuman</code>. <code>EntStorage.UpdateHuman</code> saves the profile fields, then deactivates or reactivates through the principal service's <code>Deactivate</code> and <code>Reactivate</code> described above: a deactivation records the <code>deactivated</code> access change and removes the principal's relationships from the graph before it commits, and if the graph refuses, the principal stays active and the error is returned. Give the storage the authorization syncer with <code>systemauth.WithEntAuthzSyncer(syncer, mode)</code>, the same one passed to <code>systemauth.WithSocialAuthzSyncer</code>; the packaged service (<code>identity/systemauthsvc</code>) does this for you. Without it nothing is written to a graph.</p>
 <h3 id="password-login">Password Login<a class="headerlink" href="#password-login" title="Permanent link">&para;</a></h3>
 <p>Password login uses an injectable verifier. Because identity IDs are principal IDs, the credential service's <code>VerifyPassword</code> plugs in directly:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">creds</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credential</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">)</span>
@@ -5409,6 +5642,8 @@ created only through <code>identity/managedprincipal</code>. See
 <p>A person who first signed in with a social provider and later sets a password authenticates as the same principal.</p>
 <h3 id="federation-sync">Federation Sync<a class="headerlink" href="#federation-sync" title="Permanent link">&para;</a></h3>
 <p>Identities synced from a federation hub are linked as external identities with the provider <code>systemauth.FederationProvider</code> and the federation identity ID as the subject. Creating an identity whose email already exists links the existing human instead of creating a second one.</p>
+<h3 id="changing-an-email">Changing an Email<a class="headerlink" href="#changing-an-email" title="Permanent link">&para;</a></h3>
+<p>Verification belongs to an address. <code>Storage.UpdateHuman</code> (and so <code>UpdateIdentity</code> and federation <code>update</code> syncs) leaves a changed email unverified, whatever the caller's <code>EmailVerified</code> says; a change of case only keeps it. An unverified address is not used to link social logins to the account and is reported as <code>email_verified: false</code>. After proving the new address, record it with a second update that sets <code>EmailVerified</code>.</p>
 <h2 id="platform-admins">Platform Admins<a class="headerlink" href="#platform-admins" title="Permanent link">&para;</a></h2>
 <p><code>is_platform_admin</code> on the human extension grants cross-organization access:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">admin</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="kc">true</span>

@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2448,6 +2538,8 @@
       
         
       
+        
+      
     
     
     
@@ -2547,6 +2639,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3337,6 +3457,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3894,6 +4018,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4145,6 +4325,8 @@
       
         
       
+        
+      
     
     
     
@@ -4216,6 +4398,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5249,6 +5459,12 @@ relationship, not from the email
 <p>Dynamically registered clients carry the same settings on <code>OAuthApp</code>
 (<code>managed_principals_enabled</code>, <code>login_token_ttl</code>). The single check every
 path uses is <code>(*systemauth.Server).ManagedPrincipalsAllowed(ctx, clientID)</code>.</p>
+<p>The browser login session is shared by every client, so the check is made
+for each client, not only the one a login token was exchanged for:
+<code>/oauth/authorize</code> answers <code>access_denied</code>, and the token endpoint
+<code>invalid_grant</code>, when a managed principal (one with an active manager,
+whether or not it has an email) is signed in and the client does not allow
+managed principals.</p>
 <h2 id="roles">Roles<a class="headerlink" href="#roles" title="Permanent link">&para;</a></h2>
 <p>Two manager roles are built in:</p>
 <table>
@@ -5365,6 +5581,12 @@ typically sets a term or a school year on its client.</p>
 answers <code>303 See Other</code> to <code>return_to</code> (checked against the redirect
 allowlist) or the default target. The authorization-code flow then proceeds
 as for any signed-in user.</p>
+<p>The exchange replaces the browser's login session, so it accepts only a form
+posted from a page on the issuer's origin or one of
+<code>social_login.allowed_redirect_origins</code>, judged by the <code>Origin</code> header (or
+<code>Referer</code>). A post from any other site, or with neither header, receives
+<code>403</code>; an application that hosts the sign-in form on its own origin lists that
+origin in <code>allowed_redirect_origins</code>.</p>
 <p>Unknown, malformed, expired, revoked, and used tokens, a client that does
 not allow managed principals, and an inactive principal all receive the
 same <code>401</code>. The endpoint is rate limited per source address (60 a minute
@@ -5573,8 +5795,10 @@ The caller must have verified that the principal controls the address.</p>
 <a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    permission manage_managers    = guardian
 <a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>}
 </code></pre></div>
-<p>With <code>WithAuthzSyncer</code>, every committed relationship change is written to
-the authorization backend. The simple provider stores nothing; configure it
+<p>With <code>WithAuthzSyncer</code>, every relationship change is written to the
+authorization backend: removals inside the transaction, before the commit,
+so a backend failure leaves the manager in place and is returned; additions
+after the commit. The simple provider stores nothing; configure it
 with <code>simple.WithManagerRoleGetter(svc.ManagerRoles)</code> and it applies the
 same table, so both providers agree.</p>
 <p>Applications add domain permissions in their own definitions, for example

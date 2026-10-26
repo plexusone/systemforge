@@ -474,6 +474,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -938,6 +944,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2343,6 +2433,8 @@
       
         
       
+        
+      
     
     
     
@@ -2442,6 +2534,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3232,6 +3352,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3789,6 +3913,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4040,6 +4220,8 @@
       
         
       
+        
+      
     
     
     
@@ -4111,6 +4293,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5064,9 +5274,11 @@ the key never sits beside what it protects.</p>
   readable until nothing references them.</li>
 <li><strong>Audit.</strong> When you pass <code>Audit</code>, key creation, rotation, retirement and
   destruction are recorded in the platform audit trail with no key material.
-  Ordinary seal and open are not logged one by one. SystemAuth does not pass
-  an audit store to <code>keys</code> yet, so a SystemAuth deployment records no key
-  events.</li>
+  Ordinary seal and open are not logged one by one. Without an audit
+  store, <code>keys.Options.Logger</code> logs the same events instead. A host that
+  embeds SystemAuth passes <code>systemauthsvc.Options.AuditStore</code> to record key
+  and connection events in its audit trail; the <code>systemauth</code> command passes
+  none, so it logs them.</li>
 <li><strong>Backup checks.</strong> A key ring restored from a backup older than one this
   host has seen is refused unless <code>keys.Options.AcceptRollback</code> is set, so a
   stale copy is never used by mistake.</li>
@@ -5085,8 +5297,12 @@ the key never sits beside what it protects.</p>
 <td>Stop the process, copy the whole keys directory, and keep the root key separately. The key ring and the registry must come from the same moment</td>
 </tr>
 <tr>
-<td>Restore</td>
-<td>Stop the process, restore the directory, and open with <code>keys.Options.AcceptRollback</code> once to acknowledge a ring older than one this host has seen. SystemAuth's configuration does not expose it yet, so a restore there needs a one-off start of an embedding host</td>
+<td>Restore or move</td>
+<td>Stop the process, restore or copy the directory, and open with <code>keys.Options.AcceptRollback</code> once. This is needed for a ring older than one this host has seen, a ring moved to a new host without its rollback state, and once after upgrading from a release whose rollback state was not authenticated. For SystemAuth, run <code>systemauth keys accept-rollback --confirm</code> with the server's configuration, then start the server as usual; a host that embeds SystemAuth calls <code>systemauthsvc.AcceptKeyRollback</code></td>
+</tr>
+<tr>
+<td>Upgrade to SystemForge v0.21.0</td>
+<td>keyforge v0.2.0 authenticates the rollback state, so an existing keyring refuses to open after the upgrade. Stop the server, run <code>systemauth keys accept-rollback --confirm --config &lt;path&gt;</code> once, then start it</td>
 </tr>
 <tr>
 <td>Check status or rotate by hand</td>
@@ -5098,6 +5314,9 @@ the key never sits beside what it protects.</p>
 </tr>
 </tbody>
 </table>
+<p>Signing keys, client secrets, session sealing keys and SCIM tokens are not
+keyforge keys; they rotate by keeping the current and previous value valid.
+See <a href="../rotation/">Rotating keys and secrets</a>.</p>
 <h2 id="limits-to-know">Limits to know<a class="headerlink" href="#limits-to-know" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>The local provider is as safe as the host and its root key source.</strong> It is

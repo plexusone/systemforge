@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2477,6 +2567,8 @@
       
         
       
+        
+      
     
     
     
@@ -2576,6 +2668,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3366,6 +3486,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3923,6 +4047,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4174,6 +4354,8 @@
       
         
       
+        
+      
     
     
     
@@ -4245,6 +4427,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5355,19 +5565,23 @@
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;active&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}</span>
 </code></pre></div>
+<p>A DPoP-bound token's introspection also carries <code>"token_type": "DPoP"</code> and
+<code>"cnf": {"jkt": "..."}</code>, the thumbprint of the key it is bound to.</p>
 <h2 id="token-refresh">Token Refresh<a class="headerlink" href="#token-refresh" title="Permanent link">&para;</a></h2>
-<p>Exchange a refresh token for new tokens:</p>
+<p>Exchange a refresh token for new tokens, with a DPoP proof by the key the
+refresh token is bound to:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>POST<span class="w"> </span>/oauth/token
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>Content-Type:<span class="w"> </span>application/x-www-form-urlencoded
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">grant_type</span><span class="o">=</span>refresh_token<span class="p">&amp;</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nv">refresh_token</span><span class="o">=</span>8xLOxBtZp8<span class="p">&amp;</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nv">client_id</span><span class="o">=</span>my-app
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>DPoP:<span class="w"> </span>eyJ0eXAiOiJkcG9wK2p3dCIs...
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nv">grant_type</span><span class="o">=</span>refresh_token<span class="p">&amp;</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nv">refresh_token</span><span class="o">=</span>8xLOxBtZp8<span class="p">&amp;</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="nv">client_id</span><span class="o">=</span>my-app
 </code></pre></div>
 <h3 id="response">Response<a class="headerlink" href="#response" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;access_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;new_access_token...&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;token_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Bearer&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;token_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DPoP&quot;</span><span class="p">,</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">&quot;expires_in&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">900</span><span class="p">,</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">&quot;refresh_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;new_refresh_token...&quot;</span><span class="p">,</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;openid profile email&quot;</span>
@@ -5410,11 +5624,22 @@
 <a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="token-validation-middleware">Token Validation Middleware<a class="headerlink" href="#token-validation-middleware" title="Permanent link">&para;</a></h2>
+<p><code>API.Middleware</code> accepts an access token only when it is valid and
+unrevoked, was issued to a client named with <code>oauth.WithAcceptedClientIDs</code>
+that is still active, and its principal is still active (the check the
+introspection endpoint applies). Pass <code>oauth.WithAnyClient()</code> instead when
+every client of the server may call the API and scopes alone limit them.
+<code>Middleware</code> panics when the API has neither option.</p>
+<p>A DPoP-bound token is accepted only with <code>Authorization: DPoP &lt;token&gt;</code> and a
+proof by its key for the request, whose <code>htu</code> is <code>oauth.WithResourceBaseURL</code>
+(default: the issuer's origin) plus the request path; an unbound token only
+with the Bearer scheme. Behind a proxy that strips a path prefix, pass the
+external base URL including the prefix.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/oauth&quot;</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewProvider</span><span class="p">(</span><span class="nx">entClient</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">)</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nx">api</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewAPI</span><span class="p">(</span><span class="nx">provider</span><span class="p">)</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nx">api</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">NewAPI</span><span class="p">(</span><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">oauth</span><span class="p">.</span><span class="nx">WithAcceptedClientIDs</span><span class="p">(</span><span class="s">&quot;my-app&quot;</span><span class="p">))</span>
 <a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
 <a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="c1">// Protected routes</span>
 <a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nx">mux</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">NewServeMux</span><span class="p">()</span>

@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2219,6 +2309,8 @@
       
         
       
+        
+      
     
     
     
@@ -2318,6 +2410,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3527,6 +3647,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4084,6 +4208,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4335,6 +4515,8 @@
       
         
       
+        
+      
     
     
     
@@ -4406,6 +4588,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5747,9 +5957,17 @@ with the authorization syncer after commit. Any failure rolls everything
 back. There is no HTTP endpoint for the conversion yet.</p>
 <h3 id="service-identityorganization">Service (<code>identity/organization</code>)<a class="headerlink" href="#service-identityorganization" title="Permanent link">&para;</a></h3>
 <p><code>organization.Service</code> is implemented by <code>DefaultService</code> over Ent, with an
-<code>authz.RelationshipSyncer</code> (default <code>noop</code>) and an <code>authz.SyncMode</code>
-(<code>strict</code> fails the call on a sync error after the database commit;
-<code>eventual</code>, the default, logs it).</p>
+<code>authz.RelationshipSyncer</code> (default <code>noop</code>) and an <code>authz.SyncMode</code>.
+Changes that end access (<code>RemoveMember</code>, a deactivation or role change in
+<code>UpdateMember</code>, <code>TransferOwnership</code>, <code>Delete</code>) remove the relationships
+from the graph inside their transaction, before the commit, and roll back
+with the error when the graph refuses, whatever the mode; the call can then
+be retried as is. Granted relationships are written after the commit,
+holding the graph locks of the organization and the principal and only if
+the rows still call for them, so a revocation that committed in between is
+not undone: <code>strict</code> fails the call on a sync error, <code>eventual</code>, the
+default, logs it.
+See <a href="../authorization/#keeping-providers-in-step-with-identity">Keeping providers in step with identity</a>.</p>
 <table>
 <thead>
 <tr>
@@ -5776,7 +5994,7 @@ back. There is no HTTP endpoint for the conversion yet.</p>
 </tr>
 <tr>
 <td><code>Delete(id)</code></td>
-<td>Sets <code>active = false</code>; <code>syncer.UnregisterOrganization</code></td>
+<td>Sets <code>active = false</code>; <code>syncer.UnregisterOrganization</code>. A deleted organization no longer resolves by slug (<code>ResolveSlug</code>), takes no membership changes (<code>RequireMembersAllowed</code> returns <code>ErrOrganizationDeleted</code>, so <code>AddMember</code>, <code>UpdateMember</code>, invites and SCIM refuse it), and <code>MembershipRoleGetter</code> gives its members no role, so the RBAC authorizer denies them as SpiceDB does after <code>UnregisterOrganization</code></td>
 </tr>
 <tr>
 <td><code>List(input)</code></td>
@@ -5896,7 +6114,7 @@ only <code>role = owner</code> plus <code>sf_organizations.owner_principal_id</c
 </tr>
 <tr>
 <td><code>UpdateMember(membershipID, input)</code></td>
-<td>Role, permissions, active; a role change calls <code>syncer.UpdateOrgMembership(old, new)</code></td>
+<td>Role, permissions, active. A role change removes the old role from the graph before the commit and writes the new one after; a change to <code>collaborator</code> also deletes the member's application roles in the organization, removing them from the graph first, and records <code>app_role_changed</code></td>
 </tr>
 <tr>
 <td><code>RemoveMember(orgID, principalID)</code></td>
@@ -5932,7 +6150,7 @@ only <code>role = owner</code> plus <code>sf_organizations.owner_principal_id</c
 <tr>
 <td><code>addMember</code></td>
 <td><code>POST /organizations/{slug}/members</code></td>
-<td><code>invite_member</code>; granting <code>owner</code> additionally needs the owner-only permission (<code>delete</code>)</td>
+<td><code>invite_member</code>, and the caller must be allowed to enroll the principal without its consent: by default only a platform administrator; <code>APIConfig.DirectAdd</code> can allow principals the organization governs (for example managed principals the caller manages). Everyone else joins by invitation. Granting <code>owner</code> additionally needs the owner-only permission (<code>delete</code>)</td>
 </tr>
 <tr>
 <td><code>updateMember</code></td>
@@ -6063,7 +6281,7 @@ through an invite (<code>signup.SignupWithInvite</code>) applies the same match
 <tbody>
 <tr>
 <td><code>Signup(input)</code></td>
-<td>Requires a plain email, a display name and <code>PersonalOrgSlug</code>; refuses a taken email (<code>ErrEmailTaken</code>) or slug; creates the human principal with <code>AllowedScopes</code> <code>openid profile email</code>, then the personal organization (name defaults to the display name, logo to the avatar). With the default services the principal, organization and owner membership are written in one transaction (<code>principal.HumanTxCreator.CreateHumanInTx</code> and <code>organization.PersonalOrgTxCreator.CreatePersonalOrgInTx</code>), so a failure leaves nothing behind; the syncer registrations (<code>RegisterPrincipal</code>, then <code>RegisterOrganization</code>) run after the commit and, in strict sync mode, a failed one is returned with the rows kept. Services that do not implement those interfaces fall back to separate commits, and a failure after the principal exists deletes it again</td>
+<td>Requires a plain email, a display name and <code>PersonalOrgSlug</code>; refuses a taken email (<code>ErrEmailTaken</code>) or slug; creates the human principal with <code>AllowedScopes</code> <code>openid profile email</code>, then the personal organization (name defaults to the display name, logo to the avatar). With the default services the principal, organization and owner membership are written in one transaction (<code>principal.HumanTxCreator.CreateHumanInTx</code> and <code>organization.PersonalOrgTxCreator.CreatePersonalOrgInTx</code>), so a failure leaves nothing behind; the syncer registrations (<code>RegisterPrincipal</code>, then <code>RegisterOrganization</code>) run after the commit and, in strict sync mode, a failed one is returned with the rows kept. Services that do not implement those interfaces fall back to separate commits, and a failure after the principal exists deletes it again. With <code>EmailVerified</code> set, the email is recorded as verified (<code>email_verified_at</code>)</td>
 </tr>
 <tr>
 <td><code>SignupWithInvite(input)</code></td>
@@ -6071,7 +6289,7 @@ through an invite (<code>signup.SignupWithInvite</code>) applies the same match
 </tr>
 <tr>
 <td><code>SignupOrGetExisting(input)</code></td>
-<td>Returns the existing principal and personal organization for an email only when <code>EmailVerified</code> is set (<code>ErrEmailNotVerified</code> otherwise); creates them otherwise</td>
+<td>Returns the existing principal and personal organization for an email only when <code>EmailVerified</code> is set (<code>ErrEmailNotVerified</code> otherwise) and the existing account's own email is verified (<code>ErrAccountEmailUnverified</code> otherwise, so a verified login never takes over an account registered without proof of the address); creates them otherwise, recording the email as verified when <code>EmailVerified</code> is set</td>
 </tr>
 </tbody>
 </table>
@@ -6316,7 +6534,9 @@ in its hierarchy; when an owner also has a stored role the higher wins.
 Admins and members hold only stored roles, and nobody holds any by default.
 Deactivating a membership leaves the rows but they are not effective;
 removing the member deletes them, in the same transaction
-(<code>organization.Service.RemoveMember</code>, and SCIM's group member removal).</p>
+(<code>organization.Service.RemoveMember</code>, and SCIM's group member removal), and
+so does demoting the member to <code>collaborator</code> (<code>UpdateMember</code>); promoting
+them again does not restore the roles.</p>
 <p>HTTP endpoints, on the organization API when <code>APIConfig.AppRoles</code> is set
 (501 otherwise):</p>
 <table>
@@ -6404,11 +6624,11 @@ implements <code>authz.ResourceGranter</code> and <code>authz.ResourceGrantReade
 </tr>
 <tr>
 <td><code>GrantInTx(tx, ...)</code></td>
-<td>The same inside the caller's transaction, returning the function to call after commit (publishes the access changes and syncs); for flows that create membership and grant together, such as accepting an invitation</td>
+<td>The same inside the caller's transaction, returning the function to call after commit (publishes the access changes and syncs); for flows that create membership and grant together, such as accepting an invitation. A grant lowered to a lesser role is replaced in the graph before the caller commits, and its failure is returned so the caller rolls back</td>
 </tr>
 <tr>
 <td><code>RevokeResourceRole(principal, ref)</code></td>
-<td>Deletes the grant and records <code>grant_reduced</code>; when it was the principal's last grant in the organization and the membership is a <code>collaborator</code>'s, deletes the membership and records <code>membership_removed</code>. <code>ErrGrantNotFound</code> when there is none</td>
+<td>Deletes the grant and records <code>grant_reduced</code>; when it was the principal's last grant in the organization and the membership is a <code>collaborator</code>'s, deletes the membership and records <code>membership_removed</code>. Both leave the graph before the commit; a graph failure rolls the revocation back and is returned. <code>ErrGrantNotFound</code> when there is none</td>
 </tr>
 <tr>
 <td><code>ListResourceGrants(ref)</code></td>
@@ -6574,9 +6794,11 @@ fails with <code>server_error</code> rather than issuing a token without it.</p>
 </table>
 <p>Revocation by principal status: every introspection, userinfo call and
 refresh runs <code>Server.requireActiveSubject</code>, which asks
-<code>PrincipalStatus.PrincipalActive(subject)</code> (implemented by the Ent and memory
-stores); a deactivated principal's token family is revoked and the token
-reported inactive. A role or membership change does not revoke refresh
+<code>PrincipalStatus.PrincipalActive(subject)</code> (part of every <code>Storage</code>); a
+deactivated principal's token family is revoked and the token reported
+inactive. A subject that is not a principal ID, or names no principal (one
+that was hard-deleted), is inactive in the same way; only a
+client-credentials token, with an empty subject, has no principal to check. A role or membership change does not revoke refresh
 tokens: the next refresh re-evaluates the <code>orgs</code> claim (ADR-010 decision 5).
 The relying-party <code>SessionStore</code> can delete BFF sessions by SystemAuth
 session ID or subject, which is the hook back-channel logout would use.</p>

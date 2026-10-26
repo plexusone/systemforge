@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2219,6 +2309,8 @@
       
         
       
+        
+      
     
     
     
@@ -2318,6 +2410,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3393,6 +3513,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3950,6 +4074,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4201,6 +4381,8 @@
       
         
       
+        
+      
     
     
     
@@ -4272,6 +4454,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5681,9 +5891,13 @@ provider; an application maps them in its own vocabulary.</p>
 </tbody>
 </table>
 <p>Audit events go through <code>contract/audit.Emitter</code> when
-<code>WithAuditEmitter</code> is set; authorization sync follows <code>authz.SyncMode</code>
-(<code>WithAuthzSyncer</code>): a sync failure after the commit is returned in
-<code>strict</code> mode and logged in <code>eventual</code> mode.</p>
+<code>WithAuditEmitter</code> is set. With <code>WithAuthzSyncer</code>, removing a manager,
+releasing and deleting remove the relations (and, on deletion, the
+principal's memberships, application roles and resource grants) from the
+graph inside their transaction, before the commit, and roll back with the
+error when the graph refuses, in either sync mode. Added managers are
+written after the commit, following <code>authz.SyncMode</code>: a failure is
+returned in <code>strict</code> mode and logged in <code>eventual</code> mode.</p>
 <h2 id="sign-in-the-login_token-credential">Sign-in: the <code>login_token</code> credential<a class="headerlink" href="#sign-in-the-login_token-credential" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

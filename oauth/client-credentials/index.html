@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -1520,17 +1610,6 @@
     <span class="md-ellipsis">
       
         Go Client Example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#python-client-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Python Client Example
       
     </span>
   </a>
@@ -2471,6 +2550,8 @@
       
         
       
+        
+      
     
     
     
@@ -2570,6 +2651,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3360,6 +3469,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3917,6 +4030,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4168,6 +4337,8 @@
       
         
       
+        
+      
     
     
     
@@ -4239,6 +4410,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5110,17 +5309,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#python-client-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Python Client Example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#token-caching" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5265,147 +5453,141 @@
 <a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">    </span><span class="nx">Save</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="token-request">Token Request<a class="headerlink" href="#token-request" title="Permanent link">&para;</a></h2>
+<p>Tokens are DPoP-bound by default: every token request carries a <code>DPoP</code>
+header with a proof for <code>POST</code> at the token endpoint, signed by a key the
+client keeps, and the access token is bound to that key. See
+<a href="../../guides/dpop-clients/">Calling APIs with DPoP</a> for how to make the key
+and the proofs.</p>
 <h3 id="using-basic-authentication">Using Basic Authentication<a class="headerlink" href="#using-basic-authentication" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://api.example.com/oauth/token<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>-u<span class="w"> </span><span class="s2">&quot;my-backend-service:client_secret_here&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;grant_type=client_credentials&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;scope=api:read api:write&quot;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;DPoP: &lt;proof&gt;&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;grant_type=client_credentials&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;scope=api:read api:write&quot;</span>
 </code></pre></div>
 <h3 id="using-post-body">Using POST Body<a class="headerlink" href="#using-post-body" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://api.example.com/oauth/token<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/x-www-form-urlencoded&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;grant_type=client_credentials&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;client_id=my-backend-service&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;client_secret=client_secret_here&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;scope=api:read api:write&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;DPoP: &lt;proof&gt;&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;grant_type=client_credentials&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;client_id=my-backend-service&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;client_secret=client_secret_here&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">&quot;scope=api:read api:write&quot;</span>
 </code></pre></div>
 <h2 id="token-response">Token Response<a class="headerlink" href="#token-response" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;access_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eyJhbGciOiJIUzI1NiIs...&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;token_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Bearer&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">&quot;expires_in&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3600</span><span class="p">,</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;access_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eyJhbGciOiJSUzI1NiIs...&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;token_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DPoP&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">&quot;expires_in&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">600</span><span class="p">,</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api:read api:write&quot;</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">}</span>
 </code></pre></div>
 <p><strong>Note</strong>: No refresh token is issued. Request a new access token when needed.</p>
+<p>Present the token with <code>Authorization: DPoP &lt;token&gt;</code> and a new proof for
+each request. A client registered with the legacy <code>allow_bearer_tokens</code>
+exception may omit the proof and gets <code>"token_type": "Bearer"</code> instead.</p>
 <h2 id="go-client-example">Go Client Example<a class="headerlink" href="#go-client-example" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">package</span><span class="w"> </span><span class="nx">main</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="s">&quot;context&quot;</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="s">&quot;net/http&quot;</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="s">&quot;net/url&quot;</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="s">&quot;encoding/json&quot;</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="s">&quot;golang.org/x/oauth2/clientcredentials&quot;</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="p">)</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="c1">// Configure client credentials</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="nx">config</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">clientcredentials</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">        </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;my-backend-service&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">        </span><span class="nx">ClientSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;client_secret_here&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">        </span><span class="nx">TokenURL</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;https://api.example.com/oauth/token&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">        </span><span class="nx">Scopes</span><span class="p">:</span><span class="w">       </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;api:read&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;api:write&quot;</span><span class="p">},</span>
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">    </span><span class="c1">// Get HTTP client with automatic token management</span>
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">    </span><span class="nx">client</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">config</span><span class="p">.</span><span class="nx">Client</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">())</span>
-<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>
-<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">    </span><span class="c1">// Make authenticated requests</span>
-<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="w">    </span><span class="nx">resp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">Get</span><span class="p">(</span><span class="s">&quot;https://api.example.com/v1/data&quot;</span><span class="p">)</span>
-<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="w">    </span><span class="c1">// ...</span>
-<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="p">}</span>
+<p><code>golang.org/x/oauth2/clientcredentials</code> does not send DPoP proofs. Make the
+requests with <code>github.com/grokify/goauth/dpop</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">callAPI</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">secret</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">dpop</span><span class="p">.</span><span class="nx">GenerateKeyPair</span><span class="p">()</span><span class="w"> </span><span class="c1">// keep it while its tokens are in use</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="c1">// Token request with a proof for POST at the token endpoint.</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nx">tokenURL</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">&quot;https://api.example.com/oauth/token&quot;</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="nx">proof</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">dpop</span><span class="p">.</span><span class="nx">CreateProof</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">MethodPost</span><span class="p">,</span><span class="w"> </span><span class="nx">tokenURL</span><span class="p">)</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="nx">form</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">url</span><span class="p">.</span><span class="nx">Values</span><span class="p">{</span><span class="s">&quot;grant_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;client_credentials&quot;</span><span class="p">},</span><span class="w"> </span><span class="s">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;api:read api:write&quot;</span><span class="p">}}</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="nx">req</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">NewRequestWithContext</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">MethodPost</span><span class="p">,</span><span class="w"> </span><span class="nx">tokenURL</span><span class="p">,</span><span class="w"> </span><span class="nx">strings</span><span class="p">.</span><span class="nx">NewReader</span><span class="p">(</span><span class="nx">form</span><span class="p">.</span><span class="nx">Encode</span><span class="p">()))</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">    </span><span class="nx">req</span><span class="p">.</span><span class="nx">SetBasicAuth</span><span class="p">(</span><span class="s">&quot;my-backend-service&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">secret</span><span class="p">)</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">    </span><span class="nx">req</span><span class="p">.</span><span class="nx">Header</span><span class="p">.</span><span class="nx">Set</span><span class="p">(</span><span class="s">&quot;Content-Type&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/x-www-form-urlencoded&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">    </span><span class="nx">req</span><span class="p">.</span><span class="nx">Header</span><span class="p">.</span><span class="nx">Set</span><span class="p">(</span><span class="s">&quot;DPoP&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">proof</span><span class="p">)</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">    </span><span class="nx">resp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">DefaultClient</span><span class="p">.</span><span class="nx">Do</span><span class="p">(</span><span class="nx">req</span><span class="p">)</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">resp</span><span class="p">.</span><span class="nx">Body</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">tok</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="w">        </span><span class="nx">AccessToken</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;access_token&quot;`</span>
+<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="w">        </span><span class="nx">ExpiresIn</span><span class="w">   </span><span class="kt">int</span><span class="w">    </span><span class="s">`json:&quot;expires_in&quot;`</span>
+<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">json</span><span class="p">.</span><span class="nx">NewDecoder</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Body</span><span class="p">).</span><span class="nx">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tok</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a>
+<a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a><span class="w">    </span><span class="c1">// API call: a new proof bound to the token (ath).</span>
+<a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a><span class="w">    </span><span class="nx">apiURL</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">&quot;https://api.example.com/v1/data&quot;</span>
+<a id="__codelineno-5-36" name="__codelineno-5-36" href="#__codelineno-5-36"></a><span class="w">    </span><span class="nx">proof</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">dpop</span><span class="p">.</span><span class="nx">CreateProofWithOptions</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">MethodGet</span><span class="p">,</span><span class="w"> </span><span class="nx">apiURL</span><span class="p">,</span>
+<a id="__codelineno-5-37" name="__codelineno-5-37" href="#__codelineno-5-37"></a><span class="w">        </span><span class="nx">dpop</span><span class="p">.</span><span class="nx">ProofOptions</span><span class="p">{</span><span class="nx">AccessToken</span><span class="p">:</span><span class="w"> </span><span class="nx">tok</span><span class="p">.</span><span class="nx">AccessToken</span><span class="p">})</span>
+<a id="__codelineno-5-38" name="__codelineno-5-38" href="#__codelineno-5-38"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-39" name="__codelineno-5-39" href="#__codelineno-5-39"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-5-40" name="__codelineno-5-40" href="#__codelineno-5-40"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-41" name="__codelineno-5-41" href="#__codelineno-5-41"></a><span class="w">    </span><span class="nx">req</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">NewRequestWithContext</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">MethodGet</span><span class="p">,</span><span class="w"> </span><span class="nx">apiURL</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">)</span>
+<a id="__codelineno-5-42" name="__codelineno-5-42" href="#__codelineno-5-42"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-43" name="__codelineno-5-43" href="#__codelineno-5-43"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-5-44" name="__codelineno-5-44" href="#__codelineno-5-44"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-45" name="__codelineno-5-45" href="#__codelineno-5-45"></a><span class="w">    </span><span class="nx">req</span><span class="p">.</span><span class="nx">Header</span><span class="p">.</span><span class="nx">Set</span><span class="p">(</span><span class="s">&quot;Authorization&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;DPoP &quot;</span><span class="o">+</span><span class="nx">tok</span><span class="p">.</span><span class="nx">AccessToken</span><span class="p">)</span>
+<a id="__codelineno-5-46" name="__codelineno-5-46" href="#__codelineno-5-46"></a><span class="w">    </span><span class="nx">req</span><span class="p">.</span><span class="nx">Header</span><span class="p">.</span><span class="nx">Set</span><span class="p">(</span><span class="s">&quot;DPoP&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">proof</span><span class="p">)</span>
+<a id="__codelineno-5-47" name="__codelineno-5-47" href="#__codelineno-5-47"></a><span class="w">    </span><span class="c1">// ...</span>
+<a id="__codelineno-5-48" name="__codelineno-5-48" href="#__codelineno-5-48"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span>
+<a id="__codelineno-5-49" name="__codelineno-5-49" href="#__codelineno-5-49"></a><span class="p">}</span>
 </code></pre></div>
-<h2 id="python-client-example">Python Client Example<a class="headerlink" href="#python-client-example" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">requests.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">HTTPBasicAuth</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Get token</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="s1">&#39;https://api.example.com/oauth/token&#39;</span><span class="p">,</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">auth</span><span class="o">=</span><span class="n">HTTPBasicAuth</span><span class="p">(</span><span class="s1">&#39;my-backend-service&#39;</span><span class="p">,</span> <span class="s1">&#39;client_secret_here&#39;</span><span class="p">),</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">data</span><span class="o">=</span><span class="p">{</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>        <span class="s1">&#39;grant_type&#39;</span><span class="p">:</span> <span class="s1">&#39;client_credentials&#39;</span><span class="p">,</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>        <span class="s1">&#39;scope&#39;</span><span class="p">:</span> <span class="s1">&#39;api:read api:write&#39;</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="p">}</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="p">)</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="n">token</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s1">&#39;access_token&#39;</span><span class="p">]</span>
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>
-<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="c1"># Use token</span>
-<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Authorization&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;Bearer </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">}</span>
-<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="n">api_response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;https://api.example.com/v1/data&#39;</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
-</code></pre></div>
+<p>Check the response status before decoding, and retry once with the
+<code>DPoP-Nonce</code> value when the server answers <code>use_dpop_nonce</code>.</p>
 <h2 id="token-caching">Token Caching<a class="headerlink" href="#token-caching" title="Permanent link">&para;</a></h2>
-<p>Cache tokens to avoid unnecessary token requests:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">TokenCache</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">token</span><span class="w">     </span><span class="kt">string</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nx">expiresAt</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">mu</span><span class="w">        </span><span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">}</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">TokenCache</span><span class="p">)</span><span class="w"> </span><span class="nx">GetToken</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="o">*</span><span class="nx">clientcredentials</span><span class="p">.</span><span class="nx">Config</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nx">c</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nx">RLock</span><span class="p">()</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">token</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">Before</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">expiresAt</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="o">-</span><span class="mi">30</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">        </span><span class="k">defer</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nx">RUnlock</span><span class="p">()</span>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">token</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span>
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">    </span><span class="nx">c</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nx">RUnlock</span><span class="p">()</span>
-<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
-<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">    </span><span class="c1">// Fetch new token</span>
-<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">    </span><span class="nx">c</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nx">Lock</span><span class="p">()</span>
-<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nx">Unlock</span><span class="p">()</span>
-<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>
-<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="w">    </span><span class="nx">token</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">config</span><span class="p">.</span><span class="nx">Token</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span>
-<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>
-<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a><span class="w">    </span><span class="nx">c</span><span class="p">.</span><span class="nx">token</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">token</span><span class="p">.</span><span class="nx">AccessToken</span>
-<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a><span class="w">    </span><span class="nx">c</span><span class="p">.</span><span class="nx">expiresAt</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">token</span><span class="p">.</span><span class="nx">Expiry</span>
-<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">token</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span>
-<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a><span class="p">}</span>
-</code></pre></div>
+<p>Cache the token with its expiry and the key it is bound to, and request a
+new one shortly before it expires. A cached token is useless without its
+key, so keep both together and request a new token whenever the key
+changes.</p>
 <h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
 <h3 id="secret-storage">Secret Storage<a class="headerlink" href="#secret-storage" title="Permanent link">&para;</a></h3>
 <p>Store client secrets securely:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">// Environment variable</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nx">secret</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;OAUTH_CLIENT_SECRET&quot;</span><span class="p">)</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1">// Secrets manager (AWS, GCP, Azure)</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nx">secret</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">secretsManager</span><span class="p">.</span><span class="nx">GetSecret</span><span class="p">(</span><span class="s">&quot;my-service/oauth-secret&quot;</span><span class="p">)</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1">// Vault</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="nx">secret</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vaultClient</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="s">&quot;secret/data/my-service&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// Environment variable</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nx">secret</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">&quot;OAUTH_CLIENT_SECRET&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1">// Secrets manager (AWS, GCP, Azure)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nx">secret</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">secretsManager</span><span class="p">.</span><span class="nx">GetSecret</span><span class="p">(</span><span class="s">&quot;my-service/oauth-secret&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1">// Vault</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nx">secret</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vaultClient</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="s">&quot;secret/data/my-service&quot;</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="secret-rotation">Secret Rotation<a class="headerlink" href="#secret-rotation" title="Permanent link">&para;</a></h3>
-<p>Rotate secrets periodically:</p>
+<p>A client authenticates with its current secret and the one before it.
+Rotate with <code>EntStorage.RotateClientSecret</code>, which issues a new secret,
+keeps the previous one valid and revokes older ones:</p>
 <ol>
-<li>Generate new secret</li>
-<li>Add to app (both secrets valid)</li>
-<li>Update all clients to use new secret</li>
-<li>Revoke old secret after confirmation</li>
+<li>Rotate, and deploy the new secret to the client</li>
+<li>Confirm the client authenticates with it</li>
+<li>Revoke the previous secret with <code>RevokeClientSecret</code>, or leave it for
+   the next rotation</li>
 </ol>
+<p>See <a href="../../guides/rotation/#oauth-client-secrets">Rotating keys and secrets</a>.</p>
 <h3 id="scope-limitation">Scope Limitation<a class="headerlink" href="#scope-limitation" title="Permanent link">&para;</a></h3>
 <p>Grant minimum required scopes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1">// Bad: overly broad</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nx">SetAllowedScopes</span><span class="p">([]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;admin:all&quot;</span><span class="p">})</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1">// Good: specific scopes</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nx">SetAllowedScopes</span><span class="p">([]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;read:orders&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;write:shipments&quot;</span><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// Bad: overly broad</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nx">SetAllowedScopes</span><span class="p">([]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;admin:all&quot;</span><span class="p">})</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1">// Good: specific scopes</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nx">SetAllowedScopes</span><span class="p">([]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;read:orders&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;write:shipments&quot;</span><span class="p">})</span>
 </code></pre></div>
 <h3 id="ip-allowlisting">IP Allowlisting<a class="headerlink" href="#ip-allowlisting" title="Permanent link">&para;</a></h3>
 <p>Consider restricting by IP for sensitive services:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">validateClientIP</span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">,</span><span class="w"> </span><span class="nx">allowedIPs</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="nx">clientIP</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">RemoteAddr</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">allowed</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">allowedIPs</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">clientIP</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">allowed</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span>
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">validateClientIP</span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">,</span><span class="w"> </span><span class="nx">allowedIPs</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nx">clientIP</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">RemoteAddr</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">allowed</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">allowedIPs</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">clientIP</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">allowed</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="difference-from-api-keys">Difference from API Keys<a class="headerlink" href="#difference-from-api-keys" title="Permanent link">&para;</a></h2>
 <table>
@@ -5419,7 +5601,7 @@
 <tbody>
 <tr>
 <td>Token lifetime</td>
-<td>Short (hours)</td>
+<td>Short (minutes)</td>
 <td>Long (months)</td>
 </tr>
 <tr>

@@ -16,7 +16,7 @@
         <link rel="prev" href="../key-management/">
       
       
-        <link rel="next" href="../../identity/overview/">
+        <link rel="next" href="../cookies/">
       
       
         
@@ -451,6 +451,12 @@
   
     
     
+      
+        
+      
+        
+      
+        
       
         
       
@@ -935,6 +941,90 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2332,6 +2422,8 @@
       
         
       
+        
+      
     
     
     
@@ -2431,6 +2523,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3221,6 +3341,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3778,6 +3902,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4029,6 +4209,8 @@
       
         
       
+        
+      
     
     
     
@@ -4100,6 +4282,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5025,6 +5235,13 @@ deployment has not seen. To be asked again after a refusal, clear the
 <li>The refusal is remembered per browser. A person who clears their cookies
   can answer again.</li>
 <li>Accounts created before the minimum age was set are not asked.</li>
+<li>Only accounts created by an upstream social login are asked. Accounts
+  created another way are not: by an application calling <code>signup.Service</code>
+  (<code>Signup</code>, <code>SignupWithInvite</code>, <code>SignupOrGetExisting</code>), by federation sync
+  from a hub, by SCIM provisioning, or as managed principals. An application
+  that offers its own self-service sign-up must ask the age itself before it
+  calls <code>signup.Service</code>; a federation hub or SCIM client is trusted to have
+  applied its own policy.</li>
 </ul>
 
 

@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2219,6 +2309,8 @@
       
         
       
+        
+      
     
     
     
@@ -2318,6 +2410,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3504,6 +3624,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4061,6 +4185,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4312,6 +4492,8 @@
       
         
       
+        
+      
     
     
     
@@ -4383,6 +4565,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5693,7 +5903,7 @@
 <tr>
 <td><code>LicenseType</code></td>
 <td>string</td>
-<td>Type (unlimited, per_seat, trial)</td>
+<td>Type (<code>seat_based</code>, <code>team</code>, <code>unlimited</code>)</td>
 </tr>
 <tr>
 <td><code>Seats</code></td>
@@ -5708,7 +5918,7 @@
 <tr>
 <td><code>ValidUntil</code></td>
 <td>*time.Time</td>
-<td>Expiry date (nil = perpetual)</td>
+<td>End of validity, exclusive: the license is invalid from this instant on (nil = perpetual)</td>
 </tr>
 <tr>
 <td><code>PurchasedBy</code></td>
@@ -5851,6 +6061,11 @@
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="seat-management">Seat Management<a class="headerlink" href="#seat-management" title="Permanent link">&para;</a></h2>
+<p><code>EntLicenseService.AssignSeat</code> reserves a seat with a conditional increment of
+the license's used seats in the same transaction as the assignment, so
+concurrent assignments cannot exceed the purchased seats, and <code>UnassignSeat</code>
+releases it the same way. <code>Update</code> does not write <code>UsedSeats</code>; only seat
+assignment changes it.</p>
 <h3 id="assign-a-seat">Assign a Seat<a class="headerlink" href="#assign-a-seat" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">assignment</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">seatSvc</span><span class="p">.</span><span class="nx">Assign</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">marketplace</span><span class="p">.</span><span class="nx">SeatAssignment</span><span class="p">{</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">ID</span><span class="p">:</span><span class="w">          </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">New</span><span class="p">(),</span>
@@ -5881,6 +6096,10 @@
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nv">STRIPE_WEBHOOK_SECRET</span><span class="o">=</span>whsec_...<span class="w">    </span><span class="c1"># Webhook signing secret</span>
 <a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nv">STRIPE_PUBLISHABLE_KEY</span><span class="o">=</span>pk_live_...<span class="w"> </span><span class="c1"># For frontend (optional)</span>
 </code></pre></div>
+<p>The webhook signing secret is required: with an empty <code>WebhookSecret</code>,
+<code>ProcessWebhook</code> and <code>VerifyWebhook</code> refuse every event with
+<code>stripe.ErrWebhookSecretRequired</code>, because a signature made with an empty key
+can be computed by anyone.</p>
 <h3 id="webhook-events">Webhook Events<a class="headerlink" href="#webhook-events" title="Permanent link">&para;</a></h3>
 <p>The checkout service handles these Stripe events:</p>
 <table>
@@ -5893,35 +6112,49 @@
 <tbody>
 <tr>
 <td><code>checkout.session.completed</code></td>
-<td>Create license and subscription</td>
+<td>Grant the license once paid</td>
+</tr>
+<tr>
+<td><code>checkout.session.async_payment_succeeded</code></td>
+<td>Grant the license for a delayed payment</td>
 </tr>
 <tr>
 <td><code>customer.subscription.updated</code></td>
-<td>Update license status</td>
+<td>Reconcile the license with the subscription (see below)</td>
 </tr>
 <tr>
 <td><code>customer.subscription.deleted</code></td>
-<td>Revoke license</td>
+<td>Revoke the license</td>
 </tr>
 <tr>
-<td><code>invoice.paid</code></td>
-<td>Extend license validity</td>
-</tr>
-<tr>
-<td><code>invoice.payment_failed</code></td>
-<td>Mark license as past_due</td>
+<td><code>invoice.paid</code>, <code>invoice.payment_failed</code></td>
+<td>Nothing; the resulting subscription status arrives as <code>customer.subscription.updated</code></td>
 </tr>
 </tbody>
 </table>
+<p><code>customer.subscription.updated</code> reconciles the license with the subscription:</p>
+<ul>
+<li><code>active</code> or <code>trialing</code>: the license is valid. A suspended license is
+  restored and synced to the authorization system again, and a seat-based
+  license takes the subscription's quantity as its seat count. Seats already
+  assigned beyond a reduced count stay assigned, but no new seat can be
+  assigned until the count is under the limit.</li>
+<li><code>past_due</code>: unchanged while Stripe retries the payment.</li>
+<li><code>unpaid</code>, <code>paused</code>, <code>incomplete_expired</code> or <code>canceled</code>: the license is
+  suspended (<code>ValidUntil</code> is set to now, and since it is exclusive
+  <code>Check</code> and <code>CheckPrincipal</code> deny it at once) and its access is removed from the authorization system.</li>
+</ul>
 <h3 id="webhook-endpoint">Webhook Endpoint<a class="headerlink" href="#webhook-endpoint" title="Permanent link">&para;</a></h3>
 <p>Register your webhook endpoint in Stripe Dashboard:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>https://api.example.com/webhooks/stripe
 </code></pre></div>
-<p>Select events:
-- <code>checkout.session.completed</code>
-- <code>customer.subscription.*</code>
-- <code>invoice.paid</code>
-- <code>invoice.payment_failed</code></p>
+<p>Select events:</p>
+<ul>
+<li><code>checkout.session.completed</code></li>
+<li><code>customer.subscription.*</code></li>
+<li><code>invoice.paid</code></li>
+<li><code>invoice.payment_failed</code></li>
+</ul>
 <h2 id="listing-tiers">Listing Tiers<a class="headerlink" href="#listing-tiers" title="Permanent link">&para;</a></h2>
 <p>Pre-defined tier constants:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">const</span><span class="w"> </span><span class="p">(</span>

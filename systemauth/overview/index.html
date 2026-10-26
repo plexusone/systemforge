@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2388,6 +2478,8 @@
       
         
       
+        
+      
     
     
     
@@ -2487,6 +2579,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3277,6 +3397,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3834,6 +3958,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4085,6 +4265,8 @@
       
         
       
+        
+      
     
     
     
@@ -4156,6 +4338,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5164,7 +5374,7 @@ serves:</p>
 <tr>
 <td><code>/oauth/token</code></td>
 <td>POST</td>
-<td>Token endpoint (refresh tokens rotate; see <a href="../social-login/#refresh-tokens">Social Login</a>)</td>
+<td>Token endpoint; requires a DPoP proof and issues DPoP-bound tokens (<a href="../../session/dpop/">DPoP Enforcement</a>); refresh tokens rotate (see <a href="../social-login/#refresh-tokens">Social Login</a>)</td>
 </tr>
 <tr>
 <td><code>/oauth/introspect</code></td>
@@ -5191,9 +5401,13 @@ serves:</p>
 <p>With <code>social_login</code> configured, <code>/login*</code>, <code>/logout</code> and <code>/consent</code> are added
 (see <a href="../social-login/">Social Login</a>).</p>
 <h3 id="userinfo">UserInfo<a class="headerlink" href="#userinfo" title="Permanent link">&para;</a></h3>
-<p><code>/oauth/userinfo</code> implements OIDC Core §5.3. Send the access token as
+<p><code>/oauth/userinfo</code> implements OIDC Core §5.3. SystemAuth's tokens are
+DPoP-bound (<a href="../../session/dpop/">DPoP Enforcement</a>): send the access token as
+<code>Authorization: DPoP &lt;token&gt;</code> with a <code>DPoP</code> proof for the request, signed by
+the key the token is bound to and carrying the token's hash. Only a bearer
+token, issued to a client with the <code>allow_bearer_tokens</code> exception, is sent as
 <code>Authorization: Bearer &lt;token&gt;</code> (or <code>access_token</code> in a form-encoded <code>POST</code>
-body; query parameters are not accepted). The token must have been granted the
+body). Query parameters are not accepted. The token must have been granted the
 <code>openid</code> scope.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;sub&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;5f1c0a9e-...&quot;</span><span class="p">,</span>
@@ -5212,6 +5426,13 @@ returns every organization, paginated. See
 scope — <code>email</code> → <code>email</code>, <code>email_verified</code>; <code>profile</code> → <code>name</code>, <code>picture</code>, … —
 and are read live from the principal (via the <code>SessionProvider</code>), so they
 reflect the current profile rather than the one at sign-in.</p>
+<p>Token subjects are principals (ADR-004). A custom <code>SessionProvider</code> must
+return principal IDs from <code>GetAuthenticatedUser</code>: every time a token is
+used or refreshed, SystemAuth checks that its subject names an active
+principal in its storage (<code>PrincipalStatus</code>). A subject that is not a
+principal ID, or whose principal was deactivated or deleted, is refused and
+its token family revoked. Only client-credentials tokens, whose subject is
+empty, carry no principal.</p>
 <table>
 <thead>
 <tr>
@@ -5222,15 +5443,19 @@ reflect the current profile rather than the one at sign-in.</p>
 <tbody>
 <tr>
 <td>No token</td>
-<td><code>401</code>, <code>WWW-Authenticate: Bearer realm="systemauth"</code></td>
+<td><code>401</code>, <code>WWW-Authenticate: Bearer realm="systemauth"</code> and <code>WWW-Authenticate: DPoP algs="ES256 ES384 ES512"</code></td>
 </tr>
 <tr>
 <td>Unknown, expired or revoked token</td>
-<td><code>401</code>, <code>WWW-Authenticate: Bearer ..., error="invalid_token"</code></td>
+<td><code>401</code>, <code>WWW-Authenticate: ..., error="invalid_token"</code></td>
+</tr>
+<tr>
+<td>DPoP-bound token sent as Bearer, or without a valid proof</td>
+<td><code>401</code>, <code>WWW-Authenticate: DPoP ..., error="invalid_token"</code> or <code>error="invalid_dpop_proof"</code></td>
 </tr>
 <tr>
 <td>Token without <code>openid</code> scope</td>
-<td><code>403</code>, <code>WWW-Authenticate: Bearer ..., error="insufficient_scope", scope="openid"</code></td>
+<td><code>403</code>, <code>WWW-Authenticate: ..., error="insufficient_scope", scope="openid"</code></td>
 </tr>
 </tbody>
 </table>

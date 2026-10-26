@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2219,6 +2309,8 @@
       
         
       
+        
+      
     
     
     
@@ -2318,6 +2410,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3549,6 +3669,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4106,6 +4230,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4357,6 +4537,8 @@
       
         
       
+        
+      
     
     
     
@@ -4428,6 +4610,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5647,13 +5857,21 @@
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">limiter</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">())</span>
 </code></pre></div>
 <h4 id="jwt-middleware">JWT Middleware<a class="headerlink" href="#jwt-middleware" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">middleware</span><span class="p">.</span><span class="nx">HTTPAuthWithObservability</span><span class="p">(</span><span class="nx">jwtService</span><span class="p">,</span><span class="w"> </span><span class="nx">obs</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">auth</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">middleware</span><span class="p">.</span><span class="nx">HTTPAuth</span><span class="p">(</span><span class="nx">jwtService</span><span class="p">,</span><span class="w"> </span><span class="nx">middleware</span><span class="p">.</span><span class="nx">DPoPConfig</span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">ReplayCache</span><span class="p">:</span><span class="w">   </span><span class="nx">replayCache</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">Observability</span><span class="p">:</span><span class="w"> </span><span class="nx">obs</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">})</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">auth</span><span class="p">)</span>
 </code></pre></div>
 <h4 id="api-key-middleware">API Key Middleware<a class="headerlink" href="#api-key-middleware" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">config</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">middleware</span><span class="p">.</span><span class="nx">DefaultAPIKeyMiddlewareConfig</span><span class="p">()</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">config</span><span class="p">.</span><span class="nx">Service</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">apikeyService</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nx">config</span><span class="p">.</span><span class="nx">Observability</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">obs</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">middleware</span><span class="p">.</span><span class="nx">APIKeyMiddleware</span><span class="p">(</span><span class="nx">config</span><span class="p">))</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nx">config</span><span class="p">.</span><span class="nx">OwnerCheck</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">ownerCheck</span><span class="w"> </span><span class="c1">// see API Keys: Middleware Integration</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nx">config</span><span class="p">.</span><span class="nx">Observability</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">obs</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">middleware</span><span class="p">.</span><span class="nx">APIKeyMiddleware</span><span class="p">(</span><span class="nx">config</span><span class="p">))</span>
 </code></pre></div>
 <h4 id="http-request-tracing">HTTP Request Tracing<a class="headerlink" href="#http-request-tracing" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">router</span><span class="p">.</span><span class="nx">Use</span><span class="p">(</span><span class="nx">obs</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">())</span>

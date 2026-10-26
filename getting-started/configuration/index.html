@@ -613,6 +613,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -955,6 +961,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2360,6 +2450,8 @@
       
         
       
+        
+      
     
     
     
@@ -2459,6 +2551,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3249,6 +3369,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3806,6 +3930,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4057,6 +4237,8 @@
       
         
       
+        
+      
     
     
     
@@ -4128,6 +4310,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5018,11 +5228,23 @@
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nx">RefreshTokenLifespan</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">,</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nx">AuthCodeLifespan</span><span class="p">:</span><span class="w">     </span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="c1">// Optional: RSA key for JWT signing</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="c1">// If nil, a key is generated at startup</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="nx">PrivateKey</span><span class="p">:</span><span class="w"> </span><span class="nx">rsaKey</span><span class="p">,</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="p">}</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="c1">// Required: RSA signing key, the same on every instance and across</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="c1">// restarts. AllowEphemeralKey generates one instead, for development</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="c1">// and tests only.</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">    </span><span class="nx">PrivateKey</span><span class="p">:</span><span class="w"> </span><span class="nx">rsaKey</span><span class="p">,</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="c1">// Optional: key ID and the previous or pre-staged keys, for N / N-1</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">    </span><span class="c1">// rotation (see the key rotation guide).</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">    </span><span class="nx">KeyID</span><span class="p">:</span><span class="w">            </span><span class="s">&quot;signing-2&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">    </span><span class="nx">VerificationKeys</span><span class="p">:</span><span class="w"> </span><span class="nx">previousKeys</span><span class="p">,</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="p">}</span>
 </code></pre></div>
+<p>The provider issues DPoP-bound tokens: clients send a DPoP proof with every
+token request and present their tokens with <code>Authorization: DPoP</code> and a
+proof. <code>cfg.DPoP</code> sets the proof age, clock skew, replay cache and optional
+server nonces; pass a shared replay cache when several instances serve the
+provider. See <a href="../../session/dpop/#the-identityoauth-provider">DPoP Enforcement</a>
+and <a href="../../guides/rotation/">Rotating keys and secrets</a>.</p>
 <h2 id="database-configuration">Database Configuration<a class="headerlink" href="#database-configuration" title="Permanent link">&para;</a></h2>
 <p>SystemForge uses Ent with PostgreSQL:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/ent&quot;</span>

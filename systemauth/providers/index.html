@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -1667,6 +1757,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#password-attempt-lockout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Password Attempt Lockout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#example-usage_1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2439,6 +2540,8 @@
       
         
       
+        
+      
     
     
     
@@ -2538,6 +2641,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3328,6 +3459,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3885,6 +4020,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4136,6 +4327,8 @@
       
         
       
+        
+      
     
     
     
@@ -4207,6 +4400,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5029,6 +5250,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#password-attempt-lockout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Password Attempt Lockout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#example-usage_1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5229,92 +5461,113 @@
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nx">AuthMethodTOTP</span><span class="w">     </span><span class="nx">AuthMethod</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;totp&quot;</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">)</span>
 </code></pre></div>
+<p>The embedded provider verifies only <code>AuthMethodPassword</code>, with the verifier
+passed to <code>WithProviderPasswordVerifier</code>. Every other method, <code>AuthMethodOIDC</code>
+included, returns <code>ErrUnsupportedAuthMethod</code>: OIDC sign-in goes through social
+login or federation, which verify the upstream token themselves.</p>
+<h3 id="password-attempt-lockout">Password Attempt Lockout<a class="headerlink" href="#password-attempt-lockout" title="Permanent link">&para;</a></h3>
+<p>Password authentication limits failed attempts per identifier with an
+<code>identity/security</code> lockout: after <code>MaxAttempts</code> failures (default 5 within
+15 minutes) the identifier is locked for 15 minutes and <code>Authenticate</code>
+returns <code>ErrAccountLocked</code>, even for the right password. Unknown identifiers
+lock the same way, and rejecting an unknown or inactive account costs a
+password hash verification, so neither errors nor timing reveal which
+accounts exist.</p>
+<p>The default lockout is in memory. Share it between instances, or change its
+limits, with <code>WithProviderLockout</code>; <code>WithProviderLockout(nil)</code> turns it off
+for deployments that limit attempts elsewhere:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">lockout</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">security</span><span class="p">.</span><span class="nx">NewLockout</span><span class="p">(</span><span class="nx">security</span><span class="p">.</span><span class="nx">NewRedisLockoutStore</span><span class="p">(</span><span class="nx">redisClient</span><span class="p">))</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">providers</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewProviders</span><span class="p">(</span><span class="nx">server</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">WithProviderPasswordVerifier</span><span class="p">(</span><span class="nx">creds</span><span class="p">.</span><span class="nx">VerifyPassword</span><span class="p">),</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">WithProviderLockout</span><span class="p">(</span><span class="nx">lockout</span><span class="p">),</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">)</span>
+</code></pre></div>
 <h3 id="example-usage_1">Example Usage<a class="headerlink" href="#example-usage_1" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Authenticate with password</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">session</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">Authentication</span><span class="p">.</span><span class="nx">Authenticate</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">AuthenticateRequest</span><span class="p">{</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">Method</span><span class="p">:</span><span class="w">     </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">AuthMethodPassword</span><span class="p">,</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">Identifier</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user@example.com&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nx">Password</span><span class="p">:</span><span class="w">   </span><span class="s">&quot;secret&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="nx">DeviceInfo</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">DeviceInfo</span><span class="p">{</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="nx">IPAddress</span><span class="p">:</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">RemoteAddr</span><span class="p">,</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="nx">UserAgent</span><span class="p">:</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">UserAgent</span><span class="p">(),</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="p">})</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c1">// Validate session (in middleware)</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="nx">session</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">Authentication</span><span class="p">.</span><span class="nx">ValidateSession</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">sessionToken</span><span class="p">)</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span><span class="c1">// Invalid or expired session</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="p">}</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="c1">// Revoke all sessions (on password change)</span>
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">Authentication</span><span class="p">.</span><span class="nx">RevokeSessions</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">userID</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// Authenticate with password</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nx">session</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">Authentication</span><span class="p">.</span><span class="nx">Authenticate</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">AuthenticateRequest</span><span class="p">{</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nx">Method</span><span class="p">:</span><span class="w">     </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">AuthMethodPassword</span><span class="p">,</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nx">Identifier</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user@example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nx">Password</span><span class="p">:</span><span class="w">   </span><span class="s">&quot;secret&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nx">DeviceInfo</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">DeviceInfo</span><span class="p">{</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="nx">IPAddress</span><span class="p">:</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">RemoteAddr</span><span class="p">,</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="nx">UserAgent</span><span class="p">:</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">UserAgent</span><span class="p">(),</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="p">})</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1">// Validate session (in middleware)</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="nx">session</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">Authentication</span><span class="p">.</span><span class="nx">ValidateSession</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">sessionToken</span><span class="p">)</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">    </span><span class="c1">// Invalid or expired session</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="p">}</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="c1">// Revoke all sessions (on password change)</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">Authentication</span><span class="p">.</span><span class="nx">RevokeSessions</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">userID</span><span class="p">)</span>
 </code></pre></div>
 <hr />
 <h2 id="oauth-provider">OAuth Provider<a class="headerlink" href="#oauth-provider" title="Permanent link">&para;</a></h2>
 <p>Handles OAuth 2.0 / OpenID Connect operations.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">OAuthProvider</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="c1">// Token operations</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nx">Introspect</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">tokenTypeHint</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthIntrospection</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nx">Revoke</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">tokenTypeHint</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nx">UserInfo</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">accessToken</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthUserInfo</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="c1">// Login/Consent flow (for custom UI)</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nx">GetLoginRequest</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">challenge</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthLoginRequest</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="nx">AcceptLogin</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">challenge</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">accept</span><span class="w"> </span><span class="o">*</span><span class="nx">OAuthLoginAccept</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthLoginResponse</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">    </span><span class="nx">GetConsentRequest</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">challenge</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthConsentRequest</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">    </span><span class="nx">AcceptConsent</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">challenge</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">accept</span><span class="w"> </span><span class="o">*</span><span class="nx">OAuthConsentAccept</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthConsentResponse</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">OAuthProvider</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="c1">// Token operations</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nx">Introspect</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">tokenTypeHint</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthIntrospection</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">Revoke</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">tokenTypeHint</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nx">UserInfo</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">accessToken</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthUserInfo</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="c1">// Login/Consent flow (for custom UI)</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nx">GetLoginRequest</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">challenge</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthLoginRequest</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="nx">AcceptLogin</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">challenge</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">accept</span><span class="w"> </span><span class="o">*</span><span class="nx">OAuthLoginAccept</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthLoginResponse</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span><span class="nx">GetConsentRequest</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">challenge</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthConsentRequest</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">    </span><span class="nx">AcceptConsent</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">challenge</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">accept</span><span class="w"> </span><span class="o">*</span><span class="nx">OAuthConsentAccept</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthConsentResponse</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="example-usage_2">Example Usage<a class="headerlink" href="#example-usage_2" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// Introspect token (validate and get info)</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nx">introspection</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">OAuth</span><span class="p">.</span><span class="nx">Introspect</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">accessToken</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;access_token&quot;</span><span class="p">)</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">introspection</span><span class="p">.</span><span class="nx">Active</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="c1">// Token is invalid or expired</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">}</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1">// Get user info (OIDC)</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="nx">userInfo</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">OAuth</span><span class="p">.</span><span class="nx">UserInfo</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">accessToken</span><span class="p">)</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;User: %s &lt;%s&gt;\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">userInfo</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span><span class="w"> </span><span class="nx">userInfo</span><span class="p">.</span><span class="nx">Email</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">// Introspect token (validate and get info)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nx">introspection</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">OAuth</span><span class="p">.</span><span class="nx">Introspect</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">accessToken</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;access_token&quot;</span><span class="p">)</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">introspection</span><span class="p">.</span><span class="nx">Active</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="c1">// Token is invalid or expired</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">}</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1">// Get user info (OIDC)</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="nx">userInfo</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">OAuth</span><span class="p">.</span><span class="nx">UserInfo</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">accessToken</span><span class="p">)</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;User: %s &lt;%s&gt;\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">userInfo</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span><span class="w"> </span><span class="nx">userInfo</span><span class="p">.</span><span class="nx">Email</span><span class="p">)</span>
 </code></pre></div>
 <hr />
 <h2 id="oauth-client-store">OAuth Client Store<a class="headerlink" href="#oauth-client-store" title="Permanent link">&para;</a></h2>
 <p>Manages OAuth 2.0 client applications.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">OAuthClientStore</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nx">CreateClient</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">client</span><span class="w"> </span><span class="o">*</span><span class="nx">OAuthClient</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nx">GetClient</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">clientID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthClient</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nx">UpdateClient</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">client</span><span class="w"> </span><span class="o">*</span><span class="nx">OAuthClient</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nx">DeleteClient</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">clientID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nx">ListClients</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="o">*</span><span class="nx">OAuthClient</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">OAuthClientStore</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="nx">CreateClient</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">client</span><span class="w"> </span><span class="o">*</span><span class="nx">OAuthClient</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nx">GetClient</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">clientID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">OAuthClient</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nx">UpdateClient</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">client</span><span class="w"> </span><span class="o">*</span><span class="nx">OAuthClient</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nx">DeleteClient</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">clientID</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nx">ListClients</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="o">*</span><span class="nx">OAuthClient</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="client-structure">Client Structure<a class="headerlink" href="#client-structure" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">OAuthClient</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="nx">ClientID</span><span class="w">      </span><span class="kt">string</span><span class="w">   </span><span class="s">`json:&quot;client_id&quot;`</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nx">ClientSecret</span><span class="w">  </span><span class="kt">string</span><span class="w">   </span><span class="s">`json:&quot;client_secret,omitempty&quot;`</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nx">ClientName</span><span class="w">    </span><span class="kt">string</span><span class="w">   </span><span class="s">`json:&quot;client_name&quot;`</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nx">RedirectURIs</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;redirect_uris&quot;`</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nx">GrantTypes</span><span class="w">    </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;grant_types&quot;`</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nx">ResponseTypes</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;response_types&quot;`</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="nx">Scope</span><span class="w">         </span><span class="kt">string</span><span class="w">   </span><span class="s">`json:&quot;scope&quot;`</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="nx">Public</span><span class="w">        </span><span class="kt">bool</span><span class="w">     </span><span class="s">`json:&quot;public&quot;`</span><span class="w">  </span><span class="c1">// No secret (SPA, mobile)</span>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">OAuthClient</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="nx">ClientID</span><span class="w">      </span><span class="kt">string</span><span class="w">   </span><span class="s">`json:&quot;client_id&quot;`</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nx">ClientSecret</span><span class="w">  </span><span class="kt">string</span><span class="w">   </span><span class="s">`json:&quot;client_secret,omitempty&quot;`</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nx">ClientName</span><span class="w">    </span><span class="kt">string</span><span class="w">   </span><span class="s">`json:&quot;client_name&quot;`</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nx">RedirectURIs</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;redirect_uris&quot;`</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="nx">GrantTypes</span><span class="w">    </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;grant_types&quot;`</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="nx">ResponseTypes</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;response_types&quot;`</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="nx">Scope</span><span class="w">         </span><span class="kt">string</span><span class="w">   </span><span class="s">`json:&quot;scope&quot;`</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="nx">Public</span><span class="w">        </span><span class="kt">bool</span><span class="w">     </span><span class="s">`json:&quot;public&quot;`</span><span class="w">  </span><span class="c1">// No secret (SPA, mobile)</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="example-usage_3">Example Usage<a class="headerlink" href="#example-usage_3" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1">// Register OAuth client</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nx">client</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">OAuthClient</span><span class="p">{</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;my-app&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nx">ClientSecret</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;super-secret&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nx">ClientName</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;My Application&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="nx">RedirectURIs</span><span class="p">:</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;https://app.example.com/callback&quot;</span><span class="p">},</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="nx">GrantTypes</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;authorization_code&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;refresh_token&quot;</span><span class="p">},</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="nx">ResponseTypes</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;code&quot;</span><span class="p">},</span>
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="nx">Scope</span><span class="p">:</span><span class="w">         </span><span class="s">&quot;openid profile email&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="p">}</span>
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">OAuthClients</span><span class="p">.</span><span class="nx">CreateClient</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">client</span><span class="p">)</span>
-<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>
-<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="c1">// List all clients</span>
-<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="nx">clients</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">OAuthClients</span><span class="p">.</span><span class="nx">ListClients</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1">// Register OAuth client</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nx">client</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">OAuthClient</span><span class="p">{</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;my-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nx">ClientSecret</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;super-secret&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="nx">ClientName</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;My Application&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="nx">RedirectURIs</span><span class="p">:</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;https://app.example.com/callback&quot;</span><span class="p">},</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="nx">GrantTypes</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;authorization_code&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;refresh_token&quot;</span><span class="p">},</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span><span class="nx">ResponseTypes</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;code&quot;</span><span class="p">},</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">    </span><span class="nx">Scope</span><span class="p">:</span><span class="w">         </span><span class="s">&quot;openid profile email&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="p">}</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">OAuthClients</span><span class="p">.</span><span class="nx">CreateClient</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">client</span><span class="p">)</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="c1">// List all clients</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="nx">clients</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">providers</span><span class="p">.</span><span class="nx">OAuthClients</span><span class="p">.</span><span class="nx">ListClients</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 <hr />
 <h2 id="embedded-implementations">Embedded Implementations<a class="headerlink" href="#embedded-implementations" title="Permanent link">&para;</a></h2>
@@ -5351,14 +5604,14 @@
 </tbody>
 </table>
 <h3 id="creating-individual-providers">Creating Individual Providers<a class="headerlink" href="#creating-individual-providers" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">storage</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewMemoryStorage</span><span class="p">()</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nx">identityProvider</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewEmbeddedIdentityProvider</span><span class="p">(</span><span class="nx">storage</span><span class="p">)</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nx">authProvider</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewEmbeddedAuthProvider</span><span class="p">(</span><span class="nx">identityProvider</span><span class="p">,</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">WithSessionDuration</span><span class="p">(</span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">),</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">WithPasswordVerifier</span><span class="p">(</span><span class="nx">myVerifier</span><span class="p">),</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="p">)</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="nx">clientStore</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewEmbeddedOAuthClientStore</span><span class="p">(</span><span class="nx">storage</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nx">storage</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewMemoryStorage</span><span class="p">()</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="nx">identityProvider</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewEmbeddedIdentityProvider</span><span class="p">(</span><span class="nx">storage</span><span class="p">)</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nx">authProvider</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewEmbeddedAuthProvider</span><span class="p">(</span><span class="nx">identityProvider</span><span class="p">,</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">WithSessionDuration</span><span class="p">(</span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">),</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">WithPasswordVerifier</span><span class="p">(</span><span class="nx">myVerifier</span><span class="p">),</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="p">)</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="nx">clientStore</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">NewEmbeddedOAuthClientStore</span><span class="p">(</span><span class="nx">storage</span><span class="p">)</span>
 </code></pre></div>
 
 

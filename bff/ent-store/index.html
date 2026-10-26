@@ -472,6 +472,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -814,6 +820,90 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cookies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Cookies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/dpop-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calling APIs with DPoP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rotating Keys and Secrets
   
 
     
@@ -2375,6 +2465,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Encryption">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key rotation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#moving-from-encryptionkey" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moving from EncryptionKey
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2437,6 +2555,8 @@
       
         
           
+        
+      
         
       
         
@@ -2542,6 +2662,34 @@
     
   
     Invalidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/dpop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DPoP Enforcement
   
 
     
@@ -3332,6 +3480,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -3889,6 +4041,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-019-support-requests-and-feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-019: Support Requests and Feedback (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-020-customer-authorized-support-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4140,6 +4348,8 @@
       
         
       
+        
+      
     
     
     
@@ -4211,6 +4421,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.21.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.21.0
   
 
     
@@ -5112,6 +5350,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Encryption">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key rotation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#moving-from-encryptionkey" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moving from EncryptionKey
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -5177,7 +5443,7 @@
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│                                                                              │
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   type Store interface {         type EntStore struct {                      │
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│     Create(...)                    config    EntStoreConfig                  │
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│     Get(...)                       encryptor *Encryptor                      │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│     Get(...)                       sealer    SessionSealer                   │
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│     Update(...)                  }                                           │
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│     Delete(...)                                                              │
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   }                              func NewEntStore(...) (*EntStore, error)    │
@@ -5196,7 +5462,7 @@
 </code></pre></div>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Encrypted tokens</strong> - AES-256-GCM encryption for tokens at rest</li>
+<li><strong>Encrypted tokens</strong> - AES-256-GCM encryption for tokens and DPoP keys at rest, bound to the session and field, with key IDs for rotation</li>
 <li><strong>Automatic cleanup</strong> - Background goroutine removes expired sessions</li>
 <li><strong>Database agnostic</strong> - Works with PostgreSQL, MySQL, SQLite</li>
 <li><strong>Reusable schema</strong> - Ent mixin provides consistent field definitions</li>
@@ -5392,24 +5658,32 @@
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="s">&quot;myapp/internal/auth&quot;</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">)</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1">// Create the Ent store</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewEntStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">EntStoreConfig</span><span class="p">{</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="nx">Client</span><span class="p">:</span><span class="w">           </span><span class="nx">auth</span><span class="p">.</span><span class="nx">NewEntClientWrapper</span><span class="p">(</span><span class="nx">entClient</span><span class="p">),</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="nx">EncryptionKey</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">cfg</span><span class="p">.</span><span class="nx">SessionEncryptionKey</span><span class="p">),</span><span class="w"> </span><span class="c1">// 32 bytes</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nx">CleanupInterval</span><span class="p">:</span><span class="w">  </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="nx">CleanupBatchSize</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="p">})</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="p">}</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="k">defer</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
-<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>
-<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="c1">// Use with BFF handler</span>
-<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="nx">bffHandler</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewHandler</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">HandlerConfig</span><span class="p">{</span>
-<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="w">    </span><span class="nx">Store</span><span class="p">:</span><span class="w">          </span><span class="nx">store</span><span class="p">,</span>
-<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">    </span><span class="nx">AllowedOrigins</span><span class="p">:</span><span class="w"> </span><span class="nx">cfg</span><span class="p">.</span><span class="nx">AllowedOrigins</span><span class="p">,</span>
-<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">    </span><span class="c1">// ...</span>
-<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="p">})</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1">// Seal session secrets under named keys, so they can be rotated.</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nx">sealer</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewKeyringSealer</span><span class="p">(</span><span class="s">&quot;k1&quot;</span><span class="p">,</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">byte</span><span class="p">{</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="s">&quot;k1&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">cfg</span><span class="p">.</span><span class="nx">SessionEncryptionKey</span><span class="p">,</span><span class="w"> </span><span class="c1">// 32 bytes, from your secret store</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">})</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="p">}</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="c1">// Create the Ent store</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewEntStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">EntStoreConfig</span><span class="p">{</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">    </span><span class="nx">Client</span><span class="p">:</span><span class="w">           </span><span class="nx">auth</span><span class="p">.</span><span class="nx">NewEntClientWrapper</span><span class="p">(</span><span class="nx">entClient</span><span class="p">),</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">    </span><span class="nx">Sealer</span><span class="p">:</span><span class="w">           </span><span class="nx">sealer</span><span class="p">,</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">    </span><span class="nx">CleanupInterval</span><span class="p">:</span><span class="w">  </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">    </span><span class="nx">CleanupBatchSize</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="p">})</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="p">}</span>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="k">defer</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="c1">// Use with BFF handler</span>
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a><span class="nx">bffHandler</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewHandler</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">HandlerConfig</span><span class="p">{</span>
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a><span class="w">    </span><span class="nx">Store</span><span class="p">:</span><span class="w">          </span><span class="nx">store</span><span class="p">,</span>
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a><span class="w">    </span><span class="nx">AllowedOrigins</span><span class="p">:</span><span class="w"> </span><span class="nx">cfg</span><span class="p">.</span><span class="nx">AllowedOrigins</span><span class="p">,</span>
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a><span class="w">    </span><span class="c1">// ...</span>
+<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a><span class="p">})</span>
 </code></pre></div>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="entstoreconfig">EntStoreConfig<a class="headerlink" href="#entstoreconfig" title="Permanent link">&para;</a></h3>
@@ -5417,15 +5691,21 @@
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="c1">// Required: Ent client wrapper</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">Client</span><span class="w"> </span><span class="nx">EntClientInterface</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="c1">// Required: 32-byte encryption key for AES-256</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">EncryptionKey</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="c1">// Optional: cleanup interval (0 = disabled)</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nx">CleanupInterval</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="c1">// Optional: max sessions deleted per cleanup (default: 100)</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="nx">CleanupBatchSize</span><span class="w"> </span><span class="kt">int</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="p">}</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="c1">// Sealer encrypts tokens and DPoP keys (NewKeyringSealer or</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="c1">// NewKeysSealer). Either Sealer or EncryptionKey is required.</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nx">Sealer</span><span class="w"> </span><span class="nx">SessionSealer</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="c1">// A single 32-byte AES-256 key. Without a Sealer the store seals with</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="c1">// it under the key ID &quot;default&quot; (EntStoreDefaultKeyID). When set, it</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="c1">// also opens rows written by earlier versions.</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="nx">EncryptionKey</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="c1">// Optional: cleanup interval (0 = disabled)</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="nx">CleanupInterval</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">    </span><span class="c1">// Optional: max sessions deleted per cleanup (default: 100)</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">    </span><span class="nx">CleanupBatchSize</span><span class="w"> </span><span class="kt">int</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="encryption-key">Encryption Key<a class="headerlink" href="#encryption-key" title="Permanent link">&para;</a></h3>
 <p>The encryption key must be exactly 32 bytes for AES-256-GCM:</p>
@@ -5537,71 +5817,104 @@
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nx">index</span><span class="p">.</span><span class="nx">Fields</span><span class="p">(</span><span class="s">&quot;organization_id&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// Filter by organization</span>
 </code></pre></div>
 <h2 id="encryption">Encryption<a class="headerlink" href="#encryption" title="Permanent link">&para;</a></h2>
-<p>Tokens are encrypted using AES-256-GCM before storage:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// Encryption happens automatically in Create/Update</span>
+<p>The access token, refresh token and DPoP key pair are sealed with
+AES-256-GCM before storage and opened in <code>Get</code>. Each value is bound to its
+session ID and column, so a ciphertext copied into another row or column
+does not open, and names the key that sealed it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// Sealing happens automatically in Create/Update</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nx">store</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">session</span><span class="p">)</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1">// session.AccessToken and RefreshToken are encrypted</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1">// Decryption happens automatically in Get</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="nx">session</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="p">)</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1">// session.AccessToken and RefreshToken are decrypted</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1">// Opening happens automatically in Get</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nx">session</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="p">)</span>
 </code></pre></div>
+<h3 id="key-rotation">Key rotation<a class="headerlink" href="#key-rotation" title="Permanent link">&para;</a></h3>
+<p>Rotation keeps the active key N and the previous key N-1 in the keyring and
+removes only N-2. Each step is its own deploy, so rolling back any deploy
+still opens every session written so far:</p>
+<ol>
+<li><strong>Pre-stage <code>k2</code>.</strong> Add it while <code>k1</code> stays active, and wait until every
+   instance runs it:
+   <code>bff.NewKeyringSealer("k1", map[string][]byte{"k1": k1, "k2": k2})</code>.</li>
+<li><strong>Promote <code>k2</code>.</strong> Make it active and keep <code>k1</code>:
+   <code>bff.NewKeyringSealer("k2", map[string][]byte{"k1": k1, "k2": k2})</code>.
+   Rolling back returns to step 1, which still opens sessions sealed with
+   <code>k2</code>.</li>
+<li><strong>Next rotation.</strong> Pre-stage <code>k3</code> with <code>k1</code> still present, then promote
+   <code>k3</code> with <code>{"k2": k2, "k3": k3}</code>; only <code>k1</code> (N-2) is removed.</li>
+</ol>
+<p>Never add a new active key and drop the previous one in the same deploy.</p>
+<h3 id="moving-from-encryptionkey">Moving from <code>EncryptionKey</code><a class="headerlink" href="#moving-from-encryptionkey" title="Permanent link">&para;</a></h3>
+<p>Earlier versions encrypted with <code>EncryptionKey</code> alone, without a key ID or
+session binding. Such rows still open while <code>EncryptionKey</code> is set, and are
+sealed in the current form on the session's next update. A store given only
+<code>EncryptionKey</code> seals under the key ID <code>"default"</code>, so the move to a keyring
+needs no re-encryption: keep the same key under <code>bff.EntStoreDefaultKeyID</code>
+and pre-stage the next key beside it.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">sealer</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewKeyringSealer</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">EntStoreDefaultKeyID</span><span class="p">,</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">byte</span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nx">bff</span><span class="p">.</span><span class="nx">EntStoreDefaultKeyID</span><span class="p">:</span><span class="w"> </span><span class="nx">oldKey</span><span class="p">,</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="s">&quot;k2&quot;</span><span class="p">:</span><span class="w">                     </span><span class="nx">newKey</span><span class="p">,</span><span class="w"> </span><span class="c1">// pre-staged; promote in the next deploy</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="p">})</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewEntStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">EntStoreConfig</span><span class="p">{</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nx">Client</span><span class="p">:</span><span class="w">        </span><span class="nx">client</span><span class="p">,</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nx">Sealer</span><span class="p">:</span><span class="w">        </span><span class="nx">sealer</span><span class="p">,</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nx">EncryptionKey</span><span class="p">:</span><span class="w"> </span><span class="nx">oldKey</span><span class="p">,</span><span class="w"> </span><span class="c1">// still opens rows written by earlier versions</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="p">})</span>
+</code></pre></div>
+<p>Remove <code>EncryptionKey</code> when <code>"default"</code> leaves the keyring as N-2.</p>
+<p>Rows sealed by this version do not open with earlier versions of
+SystemForge, so rolling the library back signs out the users whose sessions
+were written or refreshed since the upgrade.</p>
 <p>The <code>Encryptor</code> is also available for direct use:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">encryptor</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewEncryptor</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1">// Encrypt</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nx">ciphertext</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">encryptor</span><span class="p">.</span><span class="nx">Encrypt</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;secret&quot;</span><span class="p">))</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nx">ciphertext</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">encryptor</span><span class="p">.</span><span class="nx">EncryptString</span><span class="p">(</span><span class="s">&quot;secret&quot;</span><span class="p">)</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1">// Decrypt</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="nx">plaintext</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">encryptor</span><span class="p">.</span><span class="nx">Decrypt</span><span class="p">(</span><span class="nx">ciphertext</span><span class="p">)</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="nx">str</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">encryptor</span><span class="p">.</span><span class="nx">DecryptString</span><span class="p">(</span><span class="nx">ciphertext</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">encryptor</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewEncryptor</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nx">ciphertext</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">encryptor</span><span class="p">.</span><span class="nx">Encrypt</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;secret&quot;</span><span class="p">))</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nx">plaintext</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">encryptor</span><span class="p">.</span><span class="nx">Decrypt</span><span class="p">(</span><span class="nx">ciphertext</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="automatic-cleanup">Automatic Cleanup<a class="headerlink" href="#automatic-cleanup" title="Permanent link">&para;</a></h2>
 <p>When <code>CleanupInterval</code> is set, expired sessions are automatically deleted:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewEntStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">EntStoreConfig</span><span class="p">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="c1">// ...</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nx">CleanupInterval</span><span class="p">:</span><span class="w">  </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nx">CleanupBatchSize</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="c1">// Delete at most 100 per run</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="p">})</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1">// Cleanup runs in background goroutine</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="c1">// Stop it on shutdown:</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="nx">store</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nx">store</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">bff</span><span class="p">.</span><span class="nx">NewEntStore</span><span class="p">(</span><span class="nx">bff</span><span class="p">.</span><span class="nx">EntStoreConfig</span><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="c1">// ...</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nx">CleanupInterval</span><span class="p">:</span><span class="w">  </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nx">CleanupBatchSize</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="c1">// Delete at most 100 per run</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="p">})</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1">// Cleanup runs in background goroutine</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="c1">// Stop it on shutdown:</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="nx">store</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
 </code></pre></div>
 <p>Manual cleanup is also available:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nx">deleted</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Cleanup</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Deleted %d expired sessions\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">deleted</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">deleted</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">store</span><span class="p">.</span><span class="nx">Cleanup</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Deleted %d expired sessions\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">deleted</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="database-migration">Database Migration<a class="headerlink" href="#database-migration" title="Permanent link">&para;</a></h2>
 <p>Example SQL migration (PostgreSQL):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">bff_sessions</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="n">UUID</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="n">organization_id</span><span class="w"> </span><span class="n">UUID</span><span class="p">,</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="n">access_token_encrypted</span><span class="w"> </span><span class="n">BYTEA</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="n">refresh_token_encrypted</span><span class="w"> </span><span class="n">BYTEA</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="n">access_token_expires_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span><span class="n">refresh_token_expires_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">    </span><span class="n">dpop_key_pair_encrypted</span><span class="w"> </span><span class="n">BYTEA</span><span class="p">,</span>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">    </span><span class="n">dpop_thumbprint</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">64</span><span class="p">),</span>
-<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">    </span><span class="n">ip_address</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">45</span><span class="p">),</span>
-<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="n">user_agent</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">500</span><span class="p">),</span>
-<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">    </span><span class="n">metadata</span><span class="w"> </span><span class="n">JSONB</span><span class="p">,</span>
-<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="n">last_accessed_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">    </span><span class="n">expires_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="w">    </span><span class="n">updated_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
-<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="p">);</span>
-<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>
-<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_bff_sessions_user_id</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">bff_sessions</span><span class="p">(</span><span class="n">user_id</span><span class="p">);</span>
-<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_bff_sessions_expires_at</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">bff_sessions</span><span class="p">(</span><span class="n">expires_at</span><span class="p">);</span>
-<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_bff_sessions_organization_id</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">bff_sessions</span><span class="p">(</span><span class="n">organization_id</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">bff_sessions</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="n">UUID</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="n">organization_id</span><span class="w"> </span><span class="n">UUID</span><span class="p">,</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="n">access_token_encrypted</span><span class="w"> </span><span class="n">BYTEA</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="n">refresh_token_encrypted</span><span class="w"> </span><span class="n">BYTEA</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="n">access_token_expires_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="n">refresh_token_expires_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="n">dpop_key_pair_encrypted</span><span class="w"> </span><span class="n">BYTEA</span><span class="p">,</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="n">dpop_thumbprint</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">64</span><span class="p">),</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">    </span><span class="n">ip_address</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">45</span><span class="p">),</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="n">user_agent</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">500</span><span class="p">),</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">    </span><span class="n">metadata</span><span class="w"> </span><span class="n">JSONB</span><span class="p">,</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">    </span><span class="n">last_accessed_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">    </span><span class="n">expires_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">    </span><span class="n">updated_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="p">);</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_bff_sessions_user_id</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">bff_sessions</span><span class="p">(</span><span class="n">user_id</span><span class="p">);</span>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_bff_sessions_expires_at</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">bff_sessions</span><span class="p">(</span><span class="n">expires_at</span><span class="p">);</span>
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_bff_sessions_organization_id</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">bff_sessions</span><span class="p">(</span><span class="n">organization_id</span><span class="p">);</span>
 </code></pre></div>
 <h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Protect the encryption key</strong> - Store in secrets manager, not in code</li>
-<li><strong>Rotate keys periodically</strong> - Implement key rotation strategy</li>
+<li><strong>Rotate keys periodically</strong> - Keep N and N-1 in the keyring, pre-stage each new key (see <a href="#key-rotation">Key rotation</a>)</li>
 <li><strong>Use HTTPS</strong> - Encrypted storage doesn't help if transport is insecure</li>
 <li><strong>Monitor session counts</strong> - Alert on unusual session creation rates</li>
 <li><strong>Audit access</strong> - Log session creation/deletion for security review</li>
