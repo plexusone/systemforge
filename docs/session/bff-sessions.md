@@ -57,8 +57,21 @@ store := bff.NewMemoryStore()
 For SQL databases via Ent ORM:
 
 ```go
-store := bff.NewEntStore(entClient)
+sealer, err := bff.NewKeyringSealer("k1", map[string][]byte{"k1": sessionKey})
+if err != nil {
+    return err
+}
+store, err := bff.NewEntStore(bff.EntStoreConfig{
+    Client: entClient, // implements bff.EntClientInterface
+    Sealer: sealer,    // encrypts tokens and DPoP keys at rest
+})
+if err != nil {
+    return err
+}
 ```
+
+See [Ent Store](../bff/ent-store.md) for the client adapter and key
+rotation.
 
 ### OmniStorage Store (Recommended)
 
