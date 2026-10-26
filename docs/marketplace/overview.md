@@ -290,6 +290,7 @@ https://api.example.com/webhooks/stripe
 ```
 
 Select events:
+
 - `checkout.session.completed`
 - `customer.subscription.*`
 - `invoice.paid`
