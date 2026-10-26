@@ -30,7 +30,13 @@ var (
 	// ErrDecrypt is returned when a row fails authenticated decryption
 	// (tampered, corrupted or moved between rows).
 	ErrDecrypt = errors.New("pgstore: decrypting row failed")
+	// ErrValueTooLarge is returned for a value larger than maxSealPlaintext.
+	ErrValueTooLarge = errors.New("pgstore: value too large to seal")
 )
+
+// maxSealPlaintext is the largest value seal encrypts, far above any token
+// or session row; it keeps the sealed buffer's size computation in range.
+const maxSealPlaintext = 64 << 20
 
 // DecodeKey decodes a KeySize-byte key from hex or (standard or URL-safe,
 // padded or not) base64, as typically held in an environment variable or
@@ -110,6 +116,9 @@ func aad(table, rowKey, keyID string) []byte {
 func (kr *keyring) seal(table, rowKey string, plaintext []byte) (string, []byte, error) {
 	if kr.primaryID == "" {
 		return "", plaintext, nil
+	}
+	if len(plaintext) > maxSealPlaintext {
+		return "", nil, ErrValueTooLarge
 	}
 	aead := kr.aeads[kr.primaryID]
 	// The nonce gets its own buffer filled only by crypto/rand. Slicing it

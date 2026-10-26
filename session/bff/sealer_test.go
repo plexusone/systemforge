@@ -159,3 +159,13 @@ func TestOmniStorageStore_RequiresSealer(t *testing.T) {
 		t.Errorf("NewOmniStorageStore(redis) without sealer: err = %v, want ErrSealerRequired", err)
 	}
 }
+
+func TestKeyringSealer_RefusesOversizedData(t *testing.T) {
+	s, err := NewKeyringSealer("k1", map[string][]byte{"k1": testKey(1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Seal(context.Background(), make([]byte, MaxSealPlaintext+1), nil); !errors.Is(err, ErrPlaintextTooLarge) {
+		t.Fatalf("oversized data: %v, want ErrPlaintextTooLarge", err)
+	}
+}

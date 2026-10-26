@@ -30,7 +30,14 @@ var (
 	// ErrMalformedSealedData is returned for sealed data that cannot be
 	// parsed.
 	ErrMalformedSealedData = errors.New("bff: malformed sealed session data")
+	// ErrPlaintextTooLarge is returned for session data larger than
+	// MaxSealPlaintext.
+	ErrPlaintextTooLarge = errors.New("bff: session data too large to seal")
 )
+
+// MaxSealPlaintext is the most session data a KeyringSealer seals, far
+// above any session; it keeps the sealed buffer's size computation in range.
+const MaxSealPlaintext = 64 << 20
 
 // keyringSealerVersion prefixes data sealed by KeyringSealer.
 const keyringSealerVersion byte = 1
@@ -84,6 +91,9 @@ func NewKeyringSealer(activeKeyID string, keys map[string][]byte) (*KeyringSeale
 
 // Seal encrypts plaintext under the active key, bound to aad.
 func (s *KeyringSealer) Seal(_ context.Context, plaintext, aad []byte) ([]byte, error) {
+	if len(plaintext) > MaxSealPlaintext {
+		return nil, ErrPlaintextTooLarge
+	}
 	gcm := s.aeads[s.active]
 	out := make([]byte, 0, 2+len(s.active)+gcm.NonceSize()+len(plaintext)+gcm.Overhead())
 	out = append(out, keyringSealerVersion, byte(len(s.active))) //nolint:gosec // G115: NewKeyringSealer limits key IDs to 255 bytes
