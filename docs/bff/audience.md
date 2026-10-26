@@ -42,10 +42,58 @@ signing key do not accept each other's tokens.
 
 ```go
 cfg := jwt.DefaultConfig()
-cfg.Secret = secret
+cfg.Secret = secret // at least 32 bytes for HS256 (48 for HS384, 64 for HS512)
+cfg.Issuer = "https://auth.my-app.example" // required
 cfg.Audience = []string{"my-app"}
 jwtService, err := jwt.NewService(cfg)
 ```
+
+`NewService` also requires `Issuer` (`ErrMissingIssuer`) and an HMAC secret
+at least as long as the hash output (`ErrWeakSecret`).
+
+### Key rotation
+
+Set `KeyID` to put a `kid` header on every token. A token's `kid` selects the
+verification key: `KeyID` selects the signing key, an entry in
+`VerificationKeys` selects that key, and any other `kid` is rejected. Tokens
+without a `kid` are verified with the signing key, so give the current key a
+`KeyID` first and wait until tokens issued without one have expired (the
+refresh token lifetime) before the first rotation.
+
+Rotation keeps two keys valid: the signing key N and the previous key N-1 in
+`VerificationKeys`. Only N-2 is removed. Each step is its own deploy, so
+rolling back any deploy returns to a configuration that verifies every token
+issued so far:
+
+1. **Steady state.** `k1` signs.
+
+    ```go
+    cfg.Secret, cfg.KeyID = k1, "k1"
+    ```
+
+2. **Pre-stage `k2`.** Deploy `k2` for verification only while `k1` still
+   signs, and wait until every instance runs it.
+
+    ```go
+    cfg.Secret, cfg.KeyID = k1, "k1"
+    cfg.VerificationKeys = map[string]any{"k2": k2}
+    ```
+
+3. **Promote `k2`.** `k2` signs and `k1` (now N-1) stays for verification.
+   Rolling this deploy back returns to step 2, which still verifies the
+   tokens `k2` signed in the meantime.
+
+    ```go
+    cfg.Secret, cfg.KeyID = k2, "k2"
+    cfg.VerificationKeys = map[string]any{"k1": k1}
+    ```
+
+4. **Next rotation.** Pre-stage `k3` with `k1` still listed
+   (`{"k1": k1, "k3": k3}`), then promote `k3` with `{"k2": k2}`. `k1` is
+   N-2 at that point and is the only key removed.
+
+Never introduce a new signing key and drop the previous one in the same
+deploy: a rollback would then reject every token the new key signed.
 
 The client-kind audiences below (`bff`, `api`) are added in front of the
 application audience rather than replacing it, so a BFF token for `my-app`
@@ -161,7 +209,7 @@ func BFFAuthMiddleware(jwtService *jwt.Service) func(http.Handler) http.Handler 
     return func(next http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
             // Get token from cookie
-            cookie, err := r.Cookie("sf_session")
+            cookie, err := r.Cookie(bff.DefaultCookieName)
             if err != nil {
                 http.Error(w, "unauthorized", http.StatusUnauthorized)
                 return

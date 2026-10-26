@@ -12,6 +12,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/principal"
 )
 
@@ -36,9 +37,18 @@ func (s *DefaultService) loadPrincipal(ctx context.Context, id uuid.UUID) (*ent.
 	return p, nil
 }
 
-// CreateDelegation makes an agent act for a delegator under constraints,
-// replacing any delegation the agent had. Every constraint is stored and
-// enforced by ValidateAction.
+// CreateDelegation makes an agent act for a delegator under constraints.
+// The delegator must be active with the can_delegate capability and, when
+// the agent belongs to an organization, an active member of it
+// (ErrCrossOrganization). An agent already delegated by another principal
+// is refused (ErrAlreadyDelegated) until that delegation is revoked; the
+// same delegator may replace its own.
+//
+// Every constraint is stored and intersected along the chain.
+// ValidateAction enforces actions, resources, expiry and confirmation;
+// AllowedScopes, AllowedCapabilities and MaxTokenLifetime limit tokens and
+// must be enforced by whatever issues tokens for the agent, from
+// GetChain's EffectiveConstraints.
 func (s *DefaultService) CreateDelegation(ctx context.Context, input CreateInput) (*Link, error) {
 	if input.DelegatorID == input.DelegateID {
 		return nil, ErrSelfDelegation
@@ -66,6 +76,21 @@ func (s *DefaultService) CreateDelegation(ctx context.Context, input CreateInput
 	for _, l := range chain.Links {
 		if l.PrincipalID == input.DelegateID {
 			return nil, ErrCircularDelegation
+		}
+	}
+
+	// Another principal's delegation is not silently taken over.
+	if current := delegate.Edges.Agent.DelegatingPrincipalID; current != nil && *current != input.DelegatorID {
+		return nil, ErrAlreadyDelegated
+	}
+	// An agent of an organization acts only for members of it.
+	if delegate.OrganizationID != nil {
+		member, err := s.inOrganization(ctx, delegator, *delegate.OrganizationID)
+		if err != nil {
+			return nil, err
+		}
+		if !member {
+			return nil, ErrCrossOrganization
 		}
 	}
 
@@ -98,6 +123,25 @@ func (s *DefaultService) CreateDelegation(ctx context.Context, input CreateInput
 		GrantedAt:     time.Now(),
 		Active:        delegate.Active,
 	}, nil
+}
+
+// inOrganization reports whether p belongs to orgID: as its home
+// organization, or through an active membership.
+func (s *DefaultService) inOrganization(ctx context.Context, p *ent.Principal, orgID uuid.UUID) (bool, error) {
+	if p.OrganizationID != nil && *p.OrganizationID == orgID {
+		return true, nil
+	}
+	ok, err := s.client.PrincipalMembership.Query().
+		Where(
+			principalmembership.PrincipalIDEQ(p.ID),
+			principalmembership.OrganizationIDEQ(orgID),
+			principalmembership.ActiveEQ(true),
+		).
+		Exist(ctx)
+	if err != nil {
+		return false, fmt.Errorf("checking membership of %s in %s: %w", p.ID, orgID, err)
+	}
+	return ok, nil
 }
 
 // GetChain retrieves the delegation chain ending at a principal, from its

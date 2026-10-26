@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/plexusone/connectforge/provider"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/mode"
@@ -20,9 +21,11 @@ import (
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/approle"
+	"github.com/plexusone/systemforge/identity/dpopproof"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/managedprincipal"
 	"github.com/plexusone/systemforge/identity/relyingparty"
+	"github.com/plexusone/systemforge/identity/scim/scimtoken"
 	"github.com/plexusone/systemforge/identity/signupgate"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/keys"
@@ -122,16 +125,39 @@ type Options struct {
 	// configuration enables managed principals. Optional.
 	AuditEmitter audit.Emitter
 
+	// AuditStore records key lifecycle and connection events when the
+	// configuration enables connections. When nil they are logged. Optional.
+	AuditStore audit.Store
+
 	// ManagedPrincipalRates stores the per-caller limit on redeeming claim
 	// codes and answering manager invitations. Default: in-memory storage,
 	// which suits one instance; pass shared storage, such as Redis, when
 	// several instances serve SystemAuth.
 	ManagedPrincipalRates ratelimit.Storage
 
+	// DPoPReplayCache rejects replayed DPoP proofs. Default: a Redis cache
+	// when the configuration sets dpop.replay_cache_redis_url, otherwise
+	// an in-memory one, which suits one instance; when several instances
+	// serve SystemAuth they must share it.
+	DPoPReplayCache dpopproof.ReplayCache
+
 	// ManagedPrincipalOptions are passed to managedprincipal.NewService
-	// after the logger and audit emitter, e.g. WithRoles, WithAuthorizer or
-	// WithAuthzSyncer.
+	// after the logger, audit emitter and authorization syncer, e.g.
+	// WithRoles or WithAuthorizer.
 	ManagedPrincipalOptions []managedprincipal.Option
+
+	// AuthzSyncMode decides, in mode rebac, what a failed write of granted
+	// access to the relationship graph does in the identity services the
+	// service constructs: authz.SyncModeEventual (the default) logs it and
+	// leaves it to the graph reconciler, authz.SyncModeStrict returns it.
+	// Revocations remove access from the graph before they commit in both.
+	AuthzSyncMode authz.SyncMode
+
+	// SCIM serves SCIM 2.0 provisioning at SCIMPath, authenticated by
+	// default with tenant SCIM tokens from the built-in store (see
+	// SCIMOptions and Service.SCIMTokens). It needs a database. Nil, the
+	// default, serves no SCIM.
+	SCIM *SCIMOptions
 
 	// ServerOptions are passed to systemauth.NewEmbedded after the storage,
 	// logger and readiness options New sets, e.g. WithObservability or
@@ -154,9 +180,12 @@ type Service struct {
 	dialect string
 	logger  *slog.Logger
 
-	// keys, authz and conns are set when connections are enabled.
-	keys  *keys.Keys
+	// authz is the authorization mode, built once when there is a
+	// database (openAuthz) and shared by every part of the service.
 	authz *mode.Result
+
+	// keys and conns are set when connections are enabled.
+	keys  *keys.Keys
 	conns *connections.Connections
 
 	// console is set when the organization console is enabled.
@@ -166,6 +195,12 @@ type Service struct {
 	// rate-limit storage New created for it, if any.
 	mp      *managedprincipal.Service
 	mpRates ratelimit.Storage
+
+	// scimTokens is set when SCIM is enabled.
+	scimTokens *scimtoken.Service
+	// dpopRedis is the Redis client of the DPoP replay cache, when New
+	// opened one.
+	dpopRedis *redis.Client
 }
 
 // New builds a SystemAuth server from cfg. Unless opts.Dev is set it
@@ -219,12 +254,17 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		s.closeQuietly()
 		return nil, err
 	}
+	if err := s.openAuthz(ctx, &c, opts); err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
 	if err := s.openConnections(ctx, &c, opts); err != nil {
 		s.closeQuietly()
 		return nil, err
 	}
 
-	serverOpts := []systemauth.Option{systemauth.WithLogger(logger)}
+	syncer, syncMode := s.authzSyncer()
+	serverOpts := []systemauth.Option{systemauth.WithLogger(logger), systemauth.WithSocialAuthzSyncer(syncer, syncMode)}
 	if s.client != nil {
 		if opts.Migrate {
 			logger.Info("running database migrations")
@@ -242,7 +282,13 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 			logger.Info("created the system principal that owns statically configured clients")
 		}
 		serverOpts = append(serverOpts,
-			systemauth.WithStorage(systemauth.NewEntStorage(s.client, systemauth.WithDefaultOwner(ownerID))),
+			// Federation sync and the identity provider deactivate humans
+			// through the storage; give it the syncer so a deactivated
+			// principal's access leaves the graph at once.
+			systemauth.WithStorage(systemauth.NewEntStorage(s.client,
+				systemauth.WithDefaultOwner(ownerID),
+				systemauth.WithEntAuthzSyncer(syncer, syncMode),
+				systemauth.WithEntLogger(logger))),
 			systemauth.WithReadinessCheck("database", s.ping),
 		)
 		if c.SocialLogin != nil {
@@ -286,13 +332,19 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		serverOpts = append(serverOpts, systemauth.WithSignupDeniedURL(opts.SignupDeniedURL))
 	}
 	if s.client != nil {
-		src, err := orgsSource(ctx, s.client, opts, logger)
+		src, err := orgsSource(ctx, s.client, opts, logger, syncer, syncMode)
 		if err != nil {
 			s.closeQuietly()
 			return nil, err
 		}
 		serverOpts = append(serverOpts, systemauth.WithOrgsSource(src))
 	}
+	dpopOpts, err := s.dpopReplayCache(&c, opts, logger)
+	if err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
+	serverOpts = append(serverOpts, dpopOpts...)
 	serverOpts = append(serverOpts, opts.ServerOptions...)
 
 	server, err := systemauth.NewEmbedded(c, serverOpts...)
@@ -307,6 +359,10 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		return nil, err
 	}
 	s.openManagedPrincipals(&c, opts)
+	if err := s.openSCIM(opts); err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
 	return s, nil
 }
 
@@ -314,7 +370,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 // from approle over opts.Vocabularies, with entitlements from the
 // marketplace's default entitlements; with no vocabularies the claim
 // carries organizations only.
-func orgsSource(ctx context.Context, client *ent.Client, opts Options, logger *slog.Logger) (systemauth.OrgsSource, error) {
+func orgsSource(ctx context.Context, client *ent.Client, opts Options, logger *slog.Logger, syncer authz.RelationshipSyncer, syncMode authz.SyncMode) (systemauth.OrgsSource, error) {
 	if opts.Vocabularies == nil {
 		if len(opts.DefaultEntitlements) > 0 {
 			return nil, errors.New("systemauthsvc: Options.DefaultEntitlements requires Options.Vocabularies")
@@ -332,7 +388,7 @@ func orgsSource(ctx context.Context, client *ent.Client, opts Options, logger *s
 		return nil, err
 	}
 	entitlements := marketplace.EntitlementSource(nil, nil, nil, defaults)
-	roleOpts := append([]approle.Option{approle.WithLogger(logger)}, marketplace.ApproleOptions(entitlements)...)
+	roleOpts := append([]approle.Option{approle.WithLogger(logger), approle.WithAuthzSyncer(syncer, syncMode)}, marketplace.ApproleOptions(entitlements)...)
 	return systemauth.NewEntOrgsSource(client, approle.NewService(client, opts.Vocabularies, roleOpts...)), nil
 }
 
@@ -475,7 +531,7 @@ func (s *Service) Ready(ctx context.Context) error {
 // Close releases the database New opened. Injected handles (Options.DB,
 // Options.EntClient) are left to their owner.
 func (s *Service) Close() error {
-	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeManagedPrincipals())
+	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeManagedPrincipals(), s.closeDPoP(), s.closeAuthz())
 	if s.owned == nil {
 		return err
 	}

@@ -15,7 +15,10 @@ SystemForge uses [SpiceDB](https://authzed.com/spicedb) for fine-grained, relati
 
 ### Embedded Mode (Development)
 
-For development and testing, SystemForge can run an embedded SpiceDB instance:
+For development and testing, SystemForge can run an embedded SpiceDB instance.
+The embedded server listens in memory inside the application process, so it
+opens no network port, and it is guarded by a random preshared key generated at
+startup:
 
 ```go
 import (
@@ -190,8 +193,17 @@ func setupServices(client *spicedb.Client, entClient *ent.Client) {
 
 ### Sync Modes
 
-- **`SyncModeStrict`**: Operations fail if SpiceDB sync fails. Use when authorization must be consistent.
-- **`SyncModeEventual`**: Operations succeed, sync failures are logged. Use with a retry mechanism.
+The sync mode applies to writes that grant access, which happen after the
+database commit:
+
+- **`SyncModeStrict`**: the operation returns the SpiceDB error; the database change is kept.
+- **`SyncModeEventual`**: the operation succeeds and the error is logged.
+
+Writes that revoke access happen before the commit in both modes: if
+SpiceDB refuses, the revocation is rolled back and the error returned, so it
+can be retried. In either mode the graph reconciler of `authz/mode` writes
+missing relationships and removes stale ones on its schedule; see
+[Configuring the authorization mode](../guides/authorization-mode.md#keeping-the-graph-consistent-under-rebac).
 
 ## Verification
 

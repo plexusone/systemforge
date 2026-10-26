@@ -12,16 +12,23 @@ import (
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/human"
+	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
 )
 
-// PrincipalEmailFunc returns a principal's email, or "" when it has none
-// (a managed principal).
+// PrincipalEmailFunc returns a principal's verified email, or "" when it
+// has none (a managed principal) or has not verified it. The invite API
+// treats the address it returns as proof that the caller owns it, so an
+// implementation must not return an address the principal merely claimed.
 type PrincipalEmailFunc func(ctx context.Context, principalID uuid.UUID) (string, error)
 
 // PrincipalEmail returns a principal's email from the identity database,
-// or "" when it has none. It is the API's default PrincipalEmailFunc.
+// or "" when it has none or its email is not verified (email_verified_at
+// unset). It is the API's default PrincipalEmailFunc: an address anyone can
+// claim when creating a principal (a managed principal, an unverified
+// signup or SCIM provisioning) must not list or answer the invitations sent
+// to it.
 func (s *DefaultService) PrincipalEmail(ctx context.Context, principalID uuid.UUID) (string, error) {
 	h, err := s.client.Human.Query().Where(human.PrincipalID(principalID)).Only(ctx)
 	if ent.IsNotFound(err) {
@@ -30,10 +37,59 @@ func (s *DefaultService) PrincipalEmail(ctx context.Context, principalID uuid.UU
 	if err != nil {
 		return "", fmt.Errorf("invite: principal email: %w", err)
 	}
-	if h.Email == nil {
+	if h.Email == nil || h.EmailVerifiedAt == nil {
 		return "", nil
 	}
 	return *h.Email, nil
+}
+
+// inviterActions are the organization permissions an invite's inviter must
+// still hold for it to be accepted: those the API required to create it.
+func inviterActions(inv *ent.Invite) []authz.Action {
+	actions := []authz.Action{authz.PermOrgInviteMember}
+	if inv.Role == organization.RoleOwner {
+		actions = append(actions, authz.PermOrgDelete)
+	}
+	return actions
+}
+
+// requireInviterMembership checks, through c, that the inviter of inv holds
+// an active membership in the invite's organization whose role grants
+// inviterActions.
+func requireInviterMembership(ctx context.Context, c *ent.Client, inv *ent.Invite) error {
+	m, err := c.PrincipalMembership.Query().
+		Where(
+			principalmembership.OrganizationID(inv.OrganizationID),
+			principalmembership.PrincipalID(inv.InviterPrincipalID),
+			principalmembership.Active(true),
+		).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return ErrInviterNotAuthorized
+	}
+	if err != nil {
+		return fmt.Errorf("invite: reading the inviter's membership: %w", err)
+	}
+	for _, action := range inviterActions(inv) {
+		if !authz.OrgRoleAllows(m.Role, action) {
+			return ErrInviterNotAuthorized
+		}
+	}
+	return nil
+}
+
+// checkInviterWithAuthorizer asks the configured authorizer whether the
+// inviter of inv still holds inviterActions on the organization.
+func (s *DefaultService) checkInviterWithAuthorizer(ctx context.Context, inv *ent.Invite) error {
+	ok, err := s.authorizer.CanAll(ctx, authz.NewUserPrincipal(inv.InviterPrincipalID), inviterActions(inv),
+		authz.NewResourceWithID(authz.ResourceTypeOrganization, inv.OrganizationID))
+	if err != nil {
+		return fmt.Errorf("invite: checking the inviter's authority: %w", err)
+	}
+	if !ok {
+		return ErrInviterNotAuthorized
+	}
+	return nil
 }
 
 // callerID returns the authenticated caller, or a 401.
@@ -106,7 +162,8 @@ func (a *API) inviteInOrg(ctx context.Context, rawID string, org *organization.O
 	return id, nil
 }
 
-// callerEmail returns the caller and its email; the caller must have one.
+// callerEmail returns the caller and its verified email; the caller must
+// have one.
 func (a *API) callerEmail(ctx context.Context) (uuid.UUID, string, error) {
 	caller, err := a.callerID(ctx)
 	if err != nil {
@@ -129,7 +186,7 @@ func (a *API) callerEmail(ctx context.Context) (uuid.UUID, string, error) {
 		return uuid.Nil, "", huma.Error500InternalServerError("looking up caller")
 	}
 	if email == "" {
-		return uuid.Nil, "", huma.Error403Forbidden("invites are for principals with an email")
+		return uuid.Nil, "", huma.Error403Forbidden("invites are for principals with a verified email")
 	}
 	return caller, email, nil
 }

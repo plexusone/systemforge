@@ -130,7 +130,7 @@ p, err := principals.UpdateHuman(ctx, principalID, principal.UpdateHumanInput{
 })
 ```
 
-`Deactivate` and `Reactivate` toggle `active`; a deactivated principal cannot authenticate.
+`Deactivate` and `Reactivate` toggle `active`; a deactivated principal cannot authenticate and holds no access. `Deactivate` records the `deactivated` access change and, with an authorization syncer, removes every relationship the principal holds from the graph (memberships, application roles, resource grants, platform administration and the manager relations in which it is the manager) before it commits; if the graph refuses, the principal stays active and the error is returned. The rows stay, so `Reactivate` writes the relationships they still call for back after it commits, and the graph reconciler of mode `rebac` repairs any write that fails. `Update` with `Active` does the same.
 
 ## SystemAuth Storage
 
@@ -143,10 +143,12 @@ The SystemAuth server works with humans through its `Storage` interface using on
 | `GetHumanByEmail(ctx, email)` | Look up by email, ignoring case |
 | `GetHumanByExternalIdentity(ctx, provider, subject)` | Look up through a linked upstream identity |
 | `LinkExternalIdentity(ctx, principalID, provider, subject)` | Link an upstream identity; relinking the same pair is a no-op |
-| `UpdateHuman(ctx, h)` | Replace the profile fields |
+| `UpdateHuman(ctx, h)` | Replace the profile fields; a change of `h.Active` deactivates or reactivates the principal |
 | `DeleteHuman(ctx, id)` | Delete the human with its extension, external identities, and credentials |
 
 Not-found lookups return `systemauth.ErrPrincipalNotFound`; a taken email returns `systemauth.ErrPrincipalExists`; an upstream identity already linked to another human returns `systemauth.ErrExternalIdentityExists`. Both `systemauth.NewEntStorage` and `systemauth.NewMemoryStorage` implement these methods.
+
+Federation sync (an `update` to a non-active status, or a `delete`) and `EmbeddedIdentityProvider.UpdateIdentity` deactivate humans through `UpdateHuman`. `EntStorage.UpdateHuman` saves the profile fields, then deactivates or reactivates through the principal service's `Deactivate` and `Reactivate` described above: a deactivation records the `deactivated` access change and removes the principal's relationships from the graph before it commits, and if the graph refuses, the principal stays active and the error is returned. Give the storage the authorization syncer with `systemauth.WithEntAuthzSyncer(syncer, mode)`, the same one passed to `systemauth.WithSocialAuthzSyncer`; the packaged service (`identity/systemauthsvc`) does this for you. Without it nothing is written to a graph.
 
 ### Password Login
 
@@ -172,6 +174,10 @@ A person who first signed in with a social provider and later sets a password au
 ### Federation Sync
 
 Identities synced from a federation hub are linked as external identities with the provider `systemauth.FederationProvider` and the federation identity ID as the subject. Creating an identity whose email already exists links the existing human instead of creating a second one.
+
+### Changing an Email
+
+Verification belongs to an address. `Storage.UpdateHuman` (and so `UpdateIdentity` and federation `update` syncs) leaves a changed email unverified, whatever the caller's `EmailVerified` says; a change of case only keeps it. An unverified address is not used to link social logins to the account and is reported as `email_verified: false`. After proving the new address, record it with a second update that sets `EmailVerified`.
 
 ## Platform Admins
 

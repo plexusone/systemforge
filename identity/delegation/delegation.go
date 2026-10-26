@@ -145,4 +145,10 @@ var (
 	// ErrDelegatorMismatch is returned when revoking a delegation the
 	// principal did not grant.
 	ErrDelegatorMismatch = errors.New("delegation: delegator mismatch")
+	// ErrAlreadyDelegated is returned when the agent already acts for
+	// another principal. That delegator must revoke it first.
+	ErrAlreadyDelegated = errors.New("delegation: agent is delegated by another principal")
+	// ErrCrossOrganization is returned when the agent belongs to an
+	// organization the delegator is not an active member of.
+	ErrCrossOrganization = errors.New("delegation: agent belongs to an organization the delegator is not a member of")
 )

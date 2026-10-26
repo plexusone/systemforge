@@ -8,7 +8,7 @@ Traditional SPAs store JWT tokens in localStorage or sessionStorage, which expos
 
 1. **Server-side token storage** - Access and refresh tokens never reach the browser
 2. **HTTP-only cookies** - Session IDs are stored in cookies that JavaScript cannot access
-3. **Automatic token injection** - BFF proxies API requests, injecting the Bearer token
+3. **Automatic token injection** - BFF proxies API requests, presenting the access token with a DPoP proof by the session's key (or as Bearer, for a token issued as Bearer)
 4. **Built-in CSRF protection** - Origin validation prevents cross-site request forgery
 
 ```
@@ -17,7 +17,7 @@ Traditional SPAs store JWT tokens in localStorage or sessionStorage, which expos
 │   (React)   │                              │   /bff/*        │
 └─────────────┘                              └────────┬────────┘
                                                       │
-                                                      │ Inject Bearer token
+                                                      │ Inject token + DPoP proof
                                                       ▼
                                              ┌─────────────────┐
                                              │   API Backend   │
@@ -65,7 +65,7 @@ The BFF handler provides these endpoints:
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/session` | GET | Cookie | Check session status |
-| `/logout` | POST | Cookie | Clear session and revoke tokens |
+| `/logout` | POST | Cookie | Delete the session, clear the cookie, and run `OnLogout` |
 | `/refresh` | POST | Cookie | Refresh access token |
 | `/api/*` | ANY | Cookie | Proxy to API backend |
 
@@ -98,26 +98,53 @@ type HandlerConfig struct {
 
     // Rate limiting (optional)
     RateLimitConfig *RateLimitConfig
+
+    // Session lifetime (zero = default, negative = disabled)
+    IdleTimeout time.Duration // default 24h
+    MaxLifetime time.Duration // default 7 days
 }
 ```
+
+### Session Lifetime
+
+A session ends when it has not been used for `IdleTimeout` (default
+`bff.DefaultIdleTimeout`, 24 hours) or when `MaxLifetime` (default
+`bff.DefaultMaxLifetime`, 7 days) has passed since it was created, whichever
+comes first. Refreshing tokens does not extend a session past `MaxLifetime`:
+the session and cookie expiry are capped at creation time plus `MaxLifetime`,
+and the user must sign in again. `/session` reports an ended session as
+unauthenticated, `/refresh` and the API proxy answer `401`, and the session is
+deleted. Set a negative value to disable a check. The same limits are fields
+of `MiddlewareConfig` for applications that use `bff.SessionMiddleware`
+directly.
 
 ### CookieConfig
 
 ```go
 // Secure defaults
 cookieConfig := bff.DefaultCookieConfig()
-// Name:     "sf_session"
+// Name:     "__Host-sf_session"
 // Path:     "/"
 // Secure:   true        // HTTPS only
 // HTTPOnly: true        // No JavaScript access
 // SameSite: Strict      // No cross-site requests
 
-// Development override
+// Development over plain HTTP
 if isDevelopment {
-    cookieConfig.Secure = false
-    cookieConfig.SameSite = http.SameSiteLaxMode
+    cookieConfig = bff.CookieConfig{
+        Name:          bff.InsecureCookieName, // "sf_session"
+        AllowInsecure: true,
+    }
 }
 ```
+
+The default name carries the `__Host-` prefix, so browsers accept the cookie
+only when it is `Secure`, has `Path=/` and no `Domain`; a sibling subdomain
+cannot set or overwrite it. Give each application on a host its own name.
+`NewHandler` rejects a `__Host-` name with another `Path` or without
+`Secure`. The session cookie never has a `Domain` attribute, whatever its
+name: it stays host-only, so each application keeps its own session cookie
+and no sibling subdomain can read or overwrite it.
 
 ### ClientIPConfig (Cloudflare Support)
 
@@ -155,6 +182,9 @@ func handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
         UserID:                userID,
         AccessToken:           tokens.AccessToken,
         RefreshToken:          tokens.RefreshToken,
+        TokenType:             tokens.TokenType, // "DPoP" for a DPoP-bound token
+        DPoPKeyPairJSON:       keyPairJSON,      // the key the token request proved
+        DPoPThumbprint:        keyPair.Thumbprint,
         AccessTokenExpiresIn:  15 * time.Minute,
         RefreshTokenExpiresIn: 7 * 24 * time.Hour,
         Metadata: map[string]string{
@@ -211,9 +241,14 @@ AllowedOrigins: []string{
 }
 ```
 
-- GET/HEAD/OPTIONS requests skip origin validation (safe methods)
+- GET/HEAD/OPTIONS requests to `/session` skip origin validation (safe methods)
 - Missing Origin header on POST/PUT/DELETE returns 403 Forbidden
 - Referer header is checked as fallback
+- Proxied `/api/*` requests are checked whatever the method, because an
+  upstream GET may change state and carries the user's token: a GET, HEAD or
+  OPTIONS request with a disallowed `Origin`, a `Sec-Fetch-Site` other than
+  `same-origin` (when `Origin` is absent), or a disallowed `Referer` (when
+  both are absent) returns 403 Forbidden
 
 ### Cookie Security
 
@@ -221,10 +256,16 @@ Default cookie settings:
 
 | Attribute | Value | Purpose |
 |-----------|-------|---------|
+| Name | `__Host-sf_session` | Host-only; subdomains cannot set or overwrite it |
 | HttpOnly | true | Prevents XSS from reading cookie |
-| Secure | true | HTTPS only (disable for localhost) |
+| Secure | true | HTTPS only (`AllowInsecure` for localhost) |
 | SameSite | Strict | Prevents CSRF via cookie scope |
 | Path | / | Available to all paths |
+| Domain | none | Host-only; never shared with sibling subdomains |
+
+`NewHandler` logs a warning when `AllowInsecure` leaves the cookie without
+`Secure`. See [Browser Cookies](../guides/cookies.md) for every cookie
+SystemForge sets.
 
 ### Rate Limiting
 
@@ -255,19 +296,24 @@ store := bff.NewMemoryStore(bff.DefaultStoreConfig())
 // - Not suitable for multi-instance deployments
 ```
 
-### RedisStore (Production)
+### OmniStorageStore with Redis (Production)
 
 ```go
-store, err := bff.NewRedisStore(bff.RedisStoreConfig{
-    Addr:     "localhost:6379",
-    Password: "",
-    DB:       0,
-    Prefix:   "bff:session:",
+sealer, err := bff.NewKeyringSealer("k1", map[string][]byte{"k1": sessionKey})
+// handle err
+
+store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
+    Backend:  "redis",
+    RedisURL: "redis://localhost:6379",
+    SiteID:   "myapp", // required: isolates this app's sessions
+    Sealer:   sealer,  // required: encrypts tokens and DPoP keys at rest
 })
 // - Persistent across restarts
 // - Shared across multiple instances
 // - Recommended for production
 ```
+
+See [BFF Sessions](../session/bff-sessions.md) for the full configuration.
 
 ## Frontend Integration
 
@@ -287,7 +333,7 @@ const { authenticated, user_id, expires_at } = await response.json();
 const response = await fetch('/bff/api/v1/users/me', {
     credentials: 'include',
 });
-// BFF injects Bearer token automatically
+// BFF injects the access token and a DPoP proof automatically
 ```
 
 ### Logout
@@ -299,6 +345,13 @@ await fetch('/bff/logout', {
 });
 // Session cleared, cookie removed
 ```
+
+Logout fails closed. If the session store cannot load or delete the session,
+`/logout` responds `500` with `{"error": "logout_failed"}` and leaves the
+cookie in place so the frontend can retry. The BFF does not revoke tokens on
+its own; revoke them at the authorization server in `OnLogout`. If `OnLogout`
+returns an error, the session is still deleted and the cookie cleared, but the
+response is `500` with `{"error": "revocation_failed"}`.
 
 ### Refresh Session
 

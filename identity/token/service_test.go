@@ -225,17 +225,30 @@ func TestRefreshDPoPBinding(t *testing.T) {
 	db := openSQLite(t)
 	svc := NewService(db)
 	pid := addPrincipal(t, db)
-	tok := issueFor(t, svc, pid, func(in *IssueInput) { in.DPoPJKT = "thumb-1" })
+	key, other := newKey(t), newKey(t)
+	tok := issueFor(t, svc, pid, func(in *IssueInput) { in.DPoP = verifiedProof(t, key) })
+	if tok.TokenType != "DPoP" || tok.Token.DPoPJKT != key.Thumbprint {
+		t.Fatalf("issued = %+v", tok)
+	}
 
 	if _, err := svc.Refresh(ctx, RefreshInput{RefreshToken: tok.RefreshToken}); !errors.Is(err, ErrDPoPMismatch) {
 		t.Errorf("without the key = %v", err)
 	}
-	if _, err := svc.Refresh(ctx, RefreshInput{RefreshToken: tok.RefreshToken, DPoPJKT: "thumb-2"}); !errors.Is(err, ErrDPoPMismatch) {
+	if _, err := svc.Refresh(ctx, RefreshInput{RefreshToken: tok.RefreshToken, DPoP: verifiedProof(t, other)}); !errors.Is(err, ErrDPoPMismatch) {
 		t.Errorf("with another key = %v", err)
 	}
-	next, err := svc.Refresh(ctx, RefreshInput{RefreshToken: tok.RefreshToken, DPoPJKT: "thumb-1"})
-	if err != nil || next.Token.DPoPJKT != "thumb-1" {
+	next, err := svc.Refresh(ctx, RefreshInput{RefreshToken: tok.RefreshToken, DPoP: verifiedProof(t, key)})
+	if err != nil || next.Token.DPoPJKT != key.Thumbprint || next.TokenType != "DPoP" {
 		t.Errorf("with the key = %+v, %v", next, err)
+	}
+
+	// An unbound token refreshes without a proof, and stays a bearer token.
+	plain := issueFor(t, svc, pid, nil)
+	if plain.TokenType != "Bearer" {
+		t.Errorf("unbound token type %q", plain.TokenType)
+	}
+	if next, err := svc.Refresh(ctx, RefreshInput{RefreshToken: plain.RefreshToken}); err != nil || next.TokenType != "Bearer" {
+		t.Errorf("unbound refresh = %+v, %v", next, err)
 	}
 	if _, err := svc.Refresh(ctx, RefreshInput{RefreshToken: "unknown"}); !errors.Is(err, ErrInvalidRefreshToken) {
 		t.Errorf("unknown refresh token = %v", err)

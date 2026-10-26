@@ -146,9 +146,17 @@ back. There is no HTTP endpoint for the conversion yet.
 ### Service (`identity/organization`)
 
 `organization.Service` is implemented by `DefaultService` over Ent, with an
-`authz.RelationshipSyncer` (default `noop`) and an `authz.SyncMode`
-(`strict` fails the call on a sync error after the database commit;
-`eventual`, the default, logs it).
+`authz.RelationshipSyncer` (default `noop`) and an `authz.SyncMode`.
+Changes that end access (`RemoveMember`, a deactivation or role change in
+`UpdateMember`, `TransferOwnership`, `Delete`) remove the relationships
+from the graph inside their transaction, before the commit, and roll back
+with the error when the graph refuses, whatever the mode; the call can then
+be retried as is. Granted relationships are written after the commit,
+holding the graph locks of the organization and the principal and only if
+the rows still call for them, so a revocation that committed in between is
+not undone: `strict` fails the call on a sync error, `eventual`, the
+default, logs it.
+See [Keeping providers in step with identity](authorization.md#keeping-providers-in-step-with-identity).
 
 | Method | Behavior |
 |---|---|
@@ -156,7 +164,7 @@ back. There is no HTTP endpoint for the conversion yet.
 | `CreatePersonalOrg(input)` | `Create` with `org_type = personal`, and the owner |
 | `GetByID`, `GetBySlug`, `GetPersonalOrg` | Lookups |
 | `Update(id, input)` | Name, logo, description, website, settings; never the slug or type |
-| `Delete(id)` | Sets `active = false`; `syncer.UnregisterOrganization` |
+| `Delete(id)` | Sets `active = false`; `syncer.UnregisterOrganization`. A deleted organization no longer resolves by slug (`ResolveSlug`), takes no membership changes (`RequireMembersAllowed` returns `ErrOrganizationDeleted`, so `AddMember`, `UpdateMember`, invites and SCIM refuse it), and `MembershipRoleGetter` gives its members no role, so the RBAC authorizer denies them as SpiceDB does after `UnregisterOrganization` |
 | `List(input)` | Filters: `OrgType`, `Active`, `MemberPrincipalID` (active memberships only), limit and offset |
 | `TransferOwnership(input)` | See [Ownership transfer](#ownership-transfer) |
 | `Rename(orgID, slug, actor)`, `ResolveSlug(slug)` | See [Renaming and the cooling-off period](#renaming-and-the-cooling-off-period) |
@@ -201,7 +209,7 @@ only `role = owner` plus `sf_organizations.owner_principal_id`.
 | Method | Behavior |
 |---|---|
 | `AddMember(input)` | Refuses when a membership (active or not) exists; creates it active; `syncer.AddOrgMembership(principal, org, role)` |
-| `UpdateMember(membershipID, input)` | Role, permissions, active; a role change calls `syncer.UpdateOrgMembership(old, new)` |
+| `UpdateMember(membershipID, input)` | Role, permissions, active. A role change removes the old role from the graph before the commit and writes the new one after; a change to `collaborator` also deletes the member's application roles in the organization, removing them from the graph first, and records `app_role_changed` |
 | `RemoveMember(orgID, principalID)` | Deletes the row; `syncer.RemoveOrgMembership` |
 | `GetMembership(orgID, principalID)` | Returns the row whatever its `active` value, or `ErrMembershipNotFound` |
 | `ListMembers(orgID)`, `ListMemberships(principalID)` | Active rows by default |
@@ -214,7 +222,7 @@ only `role = owner` plus `sf_organizations.owner_principal_id`.
 | Operation | Route | Rule |
 |---|---|---|
 | `listMembers`, `getMember` | `GET /organizations/{slug}/members[/{principal_id}]` | `view` |
-| `addMember` | `POST /organizations/{slug}/members` | `invite_member`; granting `owner` additionally needs the owner-only permission (`delete`) |
+| `addMember` | `POST /organizations/{slug}/members` | `invite_member`, and the caller must be allowed to enroll the principal without its consent: by default only a platform administrator; `APIConfig.DirectAdd` can allow principals the organization governs (for example managed principals the caller manages). Everyone else joins by invitation. Granting `owner` additionally needs the owner-only permission (`delete`) |
 | `updateMember` | `PATCH /organizations/{slug}/members/{principal_id}` | `change_role`; touching an owner's role, or granting `owner`, needs the owner-only permission; deactivating needs `remove_member` |
 | `removeMember` | `DELETE /organizations/{slug}/members/{principal_id}` | A member may remove themself with `view`; removing someone else needs `remove_member`, and removing the owner needs the owner-only permission |
 | `transferOwnership` | `POST /organizations/{slug}/transfer-ownership` | `delete`, and the caller must be `owner_principal_id` |
@@ -276,9 +284,9 @@ through an invite (`signup.SignupWithInvite`) applies the same match
 
 | Method | Behavior |
 |---|---|
-| `Signup(input)` | Requires a plain email, a display name and `PersonalOrgSlug`; refuses a taken email (`ErrEmailTaken`) or slug; creates the human principal with `AllowedScopes` `openid profile email`, then the personal organization (name defaults to the display name, logo to the avatar). With the default services the principal, organization and owner membership are written in one transaction (`principal.HumanTxCreator.CreateHumanInTx` and `organization.PersonalOrgTxCreator.CreatePersonalOrgInTx`), so a failure leaves nothing behind; the syncer registrations (`RegisterPrincipal`, then `RegisterOrganization`) run after the commit and, in strict sync mode, a failed one is returned with the rows kept. Services that do not implement those interfaces fall back to separate commits, and a failure after the principal exists deletes it again |
+| `Signup(input)` | Requires a plain email, a display name and `PersonalOrgSlug`; refuses a taken email (`ErrEmailTaken`) or slug; creates the human principal with `AllowedScopes` `openid profile email`, then the personal organization (name defaults to the display name, logo to the avatar). With the default services the principal, organization and owner membership are written in one transaction (`principal.HumanTxCreator.CreateHumanInTx` and `organization.PersonalOrgTxCreator.CreatePersonalOrgInTx`), so a failure leaves nothing behind; the syncer registrations (`RegisterPrincipal`, then `RegisterOrganization`) run after the commit and, in strict sync mode, a failed one is returned with the rows kept. Services that do not implement those interfaces fall back to separate commits, and a failure after the principal exists deletes it again. With `EmailVerified` set, the email is recorded as verified (`email_verified_at`) |
 | `SignupWithInvite(input)` | `Signup`, then `invite.Accept` for the invite (email must match) |
-| `SignupOrGetExisting(input)` | Returns the existing principal and personal organization for an email only when `EmailVerified` is set (`ErrEmailNotVerified` otherwise); creates them otherwise |
+| `SignupOrGetExisting(input)` | Returns the existing principal and personal organization for an email only when `EmailVerified` is set (`ErrEmailNotVerified` otherwise) and the existing account's own email is verified (`ErrAccountEmailUnverified` otherwise, so a verified login never takes over an account registered without proof of the address); creates them otherwise, recording the email as verified when `EmailVerified` is set |
 
 ### Signup on first social login
 
@@ -462,7 +470,9 @@ in its hierarchy; when an owner also has a stored role the higher wins.
 Admins and members hold only stored roles, and nobody holds any by default.
 Deactivating a membership leaves the rows but they are not effective;
 removing the member deletes them, in the same transaction
-(`organization.Service.RemoveMember`, and SCIM's group member removal).
+(`organization.Service.RemoveMember`, and SCIM's group member removal), and
+so does demoting the member to `collaborator` (`UpdateMember`); promoting
+them again does not restore the roles.
 
 HTTP endpoints, on the organization API when `APIConfig.AppRoles` is set
 (501 otherwise):
@@ -506,8 +516,8 @@ implements `authz.ResourceGranter` and `authz.ResourceGrantReader`:
 | Method | Behavior |
 |---|---|
 | `GrantResourceRole(principal, ref, role, by)` | Validates the role, the reference and, with `WithVocabularies`, that the type belongs to a registered application. In one transaction: gives the principal a `collaborator` membership when it has none in the organization (reactivating a deactivated collaborator; a deactivated member of another role is refused with `ErrInactiveMembership`), and creates the grant or replaces its role. Lowering a role records `grant_reduced`. A resource belongs to one organization: a grant naming another one for a resource that already has grants is refused with `ErrResourceOrganizationMismatch` |
-| `GrantInTx(tx, ...)` | The same inside the caller's transaction, returning the function to call after commit (publishes the access changes and syncs); for flows that create membership and grant together, such as accepting an invitation |
-| `RevokeResourceRole(principal, ref)` | Deletes the grant and records `grant_reduced`; when it was the principal's last grant in the organization and the membership is a `collaborator`'s, deletes the membership and records `membership_removed`. `ErrGrantNotFound` when there is none |
+| `GrantInTx(tx, ...)` | The same inside the caller's transaction, returning the function to call after commit (publishes the access changes and syncs); for flows that create membership and grant together, such as accepting an invitation. A grant lowered to a lesser role is replaced in the graph before the caller commits, and its failure is returned so the caller rolls back |
+| `RevokeResourceRole(principal, ref)` | Deletes the grant and records `grant_reduced`; when it was the principal's last grant in the organization and the membership is a `collaborator`'s, deletes the membership and records `membership_removed`. Both leave the graph before the commit; a graph failure rolls the revocation back and is returned. `ErrGrantNotFound` when there is none |
 | `ListResourceGrants(ref)` | The grants on a resource, highest role first |
 | `ListResources(principal, type, permission)` | Resource identifiers on which a grant gives the principal `view`, `edit` or `manage`, in organizations where its membership is active |
 | `ResourceRole(principal, ref)` | The principal's role through a grant, or empty when it has none or its membership is inactive |
@@ -614,9 +624,11 @@ fails with `server_error` rather than issuing a token without it.
 
 Revocation by principal status: every introspection, userinfo call and
 refresh runs `Server.requireActiveSubject`, which asks
-`PrincipalStatus.PrincipalActive(subject)` (implemented by the Ent and memory
-stores); a deactivated principal's token family is revoked and the token
-reported inactive. A role or membership change does not revoke refresh
+`PrincipalStatus.PrincipalActive(subject)` (part of every `Storage`); a
+deactivated principal's token family is revoked and the token reported
+inactive. A subject that is not a principal ID, or names no principal (one
+that was hard-deleted), is inactive in the same way; only a
+client-credentials token, with an empty subject, has no principal to check. A role or membership change does not revoke refresh
 tokens: the next refresh re-evaluates the `orgs` claim (ADR-010 decision 5).
 The relying-party `SessionStore` can delete BFF sessions by SystemAuth
 session ID or subject, which is the hook back-channel logout would use.

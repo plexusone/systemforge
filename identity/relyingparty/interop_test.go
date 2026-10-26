@@ -10,10 +10,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/grokify/goauth/dpop"
 
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/systemauth"
+	"github.com/plexusone/systemforge/session/middleware"
 )
 
 // headerSession authenticates SystemAuth requests by a test header and
@@ -60,7 +62,11 @@ func TestInteropWithSystemAuth(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	client, err := relyingparty.NewClient(ctx, relyingparty.Config{Issuer: srv.URL, ClientID: "app", RedirectURL: callback})
+	kp, err := dpop.GenerateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := relyingparty.NewClient(ctx, relyingparty.Config{Issuer: srv.URL, ClientID: "app", RedirectURL: callback, DPoPKey: kp})
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
@@ -84,7 +90,12 @@ func TestInteropWithSystemAuth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	subject := uuid.NewString()
+	// Token subjects are principals: the session provider names this one.
+	human := &systemauth.HumanPrincipal{Email: "dev@example.com", EmailVerified: true, Active: true}
+	if err := sa.Storage().CreateHuman(ctx, human); err != nil {
+		t.Fatal(err)
+	}
+	subject := human.ID.String()
 	authReq.Header.Set("X-Test-User", subject)
 	noRedirect := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, err := noRedirect.Do(authReq)
@@ -118,14 +129,20 @@ func TestInteropWithSystemAuth(t *testing.T) {
 		t.Fatalf("principal: %+v %v", p, err)
 	}
 
-	// 4. The SystemAuth JWT access token authenticates API calls.
+	// 4. The SystemAuth JWT access token, bound to the client's DPoP key,
+	// authenticates API calls with a proof by that key.
 	sessReq := httptest.NewRequest(http.MethodGet, "/", nil)
 	sessReq.AddCookie(sessCookie)
 	at, err := bff.AccessToken(sessReq)
 	if err != nil {
 		t.Fatal(err)
 	}
-	api := relyingparty.BearerMiddleware(relyingparty.BearerConfig{Tokens: client, Principals: store})(
+	claims, err := client.VerifyAccessToken(ctx, at)
+	if err != nil || claims.DPoPThumbprint() != kp.Thumbprint {
+		t.Fatalf("access token not bound to the client key: %+v %v", claims, err)
+	}
+	api := relyingparty.BearerMiddleware(relyingparty.BearerConfig{Tokens: client, Principals: store,
+		DPoP: &relyingparty.DPoPConfig{ReplayCache: middleware.NewMemoryReplayCache(), BaseURL: "https://api.example.com"}})(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if got, ok := relyingparty.PrincipalFromContext(r.Context()); !ok || got.ID != p.ID {
 				t.Errorf("api principal: %+v", got)
@@ -136,8 +153,19 @@ func TestInteropWithSystemAuth(t *testing.T) {
 	apiReq.Header.Set("Authorization", "Bearer "+at)
 	w = httptest.NewRecorder()
 	api.ServeHTTP(w, apiReq)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("bound SystemAuth JWT as Bearer: %d %s", w.Code, w.Body.String())
+	}
+	proof, err := dpop.CreateProofWithOptions(kp, http.MethodGet, "https://api.example.com/api/x", dpop.ProofOptions{AccessToken: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	apiReq.Header.Set("Authorization", "DPoP "+at)
+	apiReq.Header.Set("DPoP", proof)
+	w = httptest.NewRecorder()
+	api.ServeHTTP(w, apiReq)
 	if w.Code != http.StatusNoContent {
-		t.Fatalf("api with SystemAuth JWT: %d %s", w.Code, w.Body.String())
+		t.Fatalf("api with SystemAuth JWT and DPoP: %d %s", w.Code, w.Body.String())
 	}
 
 	// 5. Refresh rotates the SystemAuth refresh token.

@@ -12,7 +12,7 @@ SystemForge provides an Ent-backed session store for production BFF deployments.
 │                                                                              │
 │   type Store interface {         type EntStore struct {                      │
 │     Create(...)                    config    EntStoreConfig                  │
-│     Get(...)                       encryptor *Encryptor                      │
+│     Get(...)                       sealer    SessionSealer                   │
 │     Update(...)                  }                                           │
 │     Delete(...)                                                              │
 │   }                              func NewEntStore(...) (*EntStore, error)    │
@@ -32,7 +32,7 @@ SystemForge provides an Ent-backed session store for production BFF deployments.
 
 ## Features
 
-- **Encrypted tokens** - AES-256-GCM encryption for tokens at rest
+- **Encrypted tokens** - AES-256-GCM encryption for tokens and DPoP keys at rest, bound to the session and field, with key IDs for rotation
 - **Automatic cleanup** - Background goroutine removes expired sessions
 - **Database agnostic** - Works with PostgreSQL, MySQL, SQLite
 - **Reusable schema** - Ent mixin provides consistent field definitions
@@ -240,10 +240,18 @@ import (
     "myapp/internal/auth"
 )
 
+// Seal session secrets under named keys, so they can be rotated.
+sealer, err := bff.NewKeyringSealer("k1", map[string][]byte{
+    "k1": cfg.SessionEncryptionKey, // 32 bytes, from your secret store
+})
+if err != nil {
+    log.Fatal(err)
+}
+
 // Create the Ent store
 store, err := bff.NewEntStore(bff.EntStoreConfig{
     Client:           auth.NewEntClientWrapper(entClient),
-    EncryptionKey:    []byte(cfg.SessionEncryptionKey), // 32 bytes
+    Sealer:           sealer,
     CleanupInterval:  5 * time.Minute,
     CleanupBatchSize: 100,
 })
@@ -269,7 +277,13 @@ type EntStoreConfig struct {
     // Required: Ent client wrapper
     Client EntClientInterface
 
-    // Required: 32-byte encryption key for AES-256
+    // Sealer encrypts tokens and DPoP keys (NewKeyringSealer or
+    // NewKeysSealer). Either Sealer or EncryptionKey is required.
+    Sealer SessionSealer
+
+    // A single 32-byte AES-256 key. Without a Sealer the store seals with
+    // it under the key ID "default" (EntStoreDefaultKeyID). When set, it
+    // also opens rows written by earlier versions.
     EncryptionKey []byte
 
     // Optional: cleanup interval (0 = disabled)
@@ -329,30 +343,71 @@ index.Fields("organization_id") // Filter by organization
 
 ## Encryption
 
-Tokens are encrypted using AES-256-GCM before storage:
+The access token, refresh token and DPoP key pair are sealed with
+AES-256-GCM before storage and opened in `Get`. Each value is bound to its
+session ID and column, so a ciphertext copied into another row or column
+does not open, and names the key that sealed it:
 
 ```go
-// Encryption happens automatically in Create/Update
+// Sealing happens automatically in Create/Update
 store.Create(ctx, session)
-// session.AccessToken and RefreshToken are encrypted
 
-// Decryption happens automatically in Get
-session, _ := store.Get(ctx, id)
-// session.AccessToken and RefreshToken are decrypted
+// Opening happens automatically in Get
+session, err := store.Get(ctx, id)
 ```
+
+### Key rotation
+
+Rotation keeps the active key N and the previous key N-1 in the keyring and
+removes only N-2. Each step is its own deploy, so rolling back any deploy
+still opens every session written so far:
+
+1. **Pre-stage `k2`.** Add it while `k1` stays active, and wait until every
+   instance runs it:
+   `bff.NewKeyringSealer("k1", map[string][]byte{"k1": k1, "k2": k2})`.
+2. **Promote `k2`.** Make it active and keep `k1`:
+   `bff.NewKeyringSealer("k2", map[string][]byte{"k1": k1, "k2": k2})`.
+   Rolling back returns to step 1, which still opens sessions sealed with
+   `k2`.
+3. **Next rotation.** Pre-stage `k3` with `k1` still present, then promote
+   `k3` with `{"k2": k2, "k3": k3}`; only `k1` (N-2) is removed.
+
+Never add a new active key and drop the previous one in the same deploy.
+
+### Moving from `EncryptionKey`
+
+Earlier versions encrypted with `EncryptionKey` alone, without a key ID or
+session binding. Such rows still open while `EncryptionKey` is set, and are
+sealed in the current form on the session's next update. A store given only
+`EncryptionKey` seals under the key ID `"default"`, so the move to a keyring
+needs no re-encryption: keep the same key under `bff.EntStoreDefaultKeyID`
+and pre-stage the next key beside it.
+
+```go
+sealer, err := bff.NewKeyringSealer(bff.EntStoreDefaultKeyID, map[string][]byte{
+    bff.EntStoreDefaultKeyID: oldKey,
+    "k2":                     newKey, // pre-staged; promote in the next deploy
+})
+store, err := bff.NewEntStore(bff.EntStoreConfig{
+    Client:        client,
+    Sealer:        sealer,
+    EncryptionKey: oldKey, // still opens rows written by earlier versions
+})
+```
+
+Remove `EncryptionKey` when `"default"` leaves the keyring as N-2.
+
+Rows sealed by this version do not open with earlier versions of
+SystemForge, so rolling the library back signs out the users whose sessions
+were written or refreshed since the upgrade.
 
 The `Encryptor` is also available for direct use:
 
 ```go
-encryptor, _ := bff.NewEncryptor(key)
+encryptor, err := bff.NewEncryptor(key)
 
-// Encrypt
-ciphertext, _ := encryptor.Encrypt([]byte("secret"))
-ciphertext, _ := encryptor.EncryptString("secret")
-
-// Decrypt
-plaintext, _ := encryptor.Decrypt(ciphertext)
-str, _ := encryptor.DecryptString(ciphertext)
+ciphertext, err := encryptor.Encrypt([]byte("secret"))
+plaintext, err := encryptor.Decrypt(ciphertext)
 ```
 
 ## Automatic Cleanup
@@ -410,7 +465,7 @@ CREATE INDEX idx_bff_sessions_organization_id ON bff_sessions(organization_id);
 ## Security Considerations
 
 1. **Protect the encryption key** - Store in secrets manager, not in code
-2. **Rotate keys periodically** - Implement key rotation strategy
+2. **Rotate keys periodically** - Keep N and N-1 in the keyring, pre-stage each new key (see [Key rotation](#key-rotation))
 3. **Use HTTPS** - Encrypted storage doesn't help if transport is insecure
 4. **Monitor session counts** - Alert on unusual session creation rates
 5. **Audit access** - Log session creation/deletion for security review

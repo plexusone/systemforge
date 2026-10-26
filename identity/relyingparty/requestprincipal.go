@@ -11,29 +11,32 @@ import (
 // credentials.
 const bearerChallenge = `Bearer realm="api"` //nolint:gosec // G101: an authentication challenge, not a credential
 
+// dpopChallenge is the WWW-Authenticate challenge advertising the DPoP
+// scheme.
+const dpopChallenge = `DPoP algs="ES256 ES384 ES512"`
+
 // RequestAuthenticator adapts BearerConfig to a
 // requestprincipal.Authenticator, so SystemAuth access tokens, API keys and
 // BFF sessions can share one requestprincipal.Middleware with other
 // protocols (such as AAuth for AI agents).
 type RequestAuthenticator struct {
-	cfg BearerConfig
+	cfg  BearerConfig
+	dpop *dpopVerifier
 }
 
 // NewRequestAuthenticator returns an Authenticator accepting what
 // BearerMiddleware accepts with cfg. Requests with no Authorization or
 // X-API-Key header and no BFF session are left to the next authenticator.
 func NewRequestAuthenticator(cfg BearerConfig) *RequestAuthenticator {
-	if cfg.Principals == nil {
-		panic("relyingparty: BearerConfig.Principals is required")
-	}
+	dv := cfg.mustVerifier()
 	cfg.Memberships = defaultMembershipSource(cfg.Memberships)
-	return &RequestAuthenticator{cfg: cfg}
+	return &RequestAuthenticator{cfg: cfg, dpop: dv}
 }
 
 // Authenticate implements requestprincipal.Authenticator. The result's
 // Native is the *AuthenticatedPrincipal, which carries the memberships.
 func (a *RequestAuthenticator) Authenticate(r *http.Request) (*requestprincipal.RequestPrincipal, error) {
-	p, err := a.cfg.authenticate(r)
+	p, err := a.cfg.authenticate(r, a.dpop)
 	if err != nil {
 		if errors.Is(err, errNoCredentials) {
 			return nil, requestprincipal.ErrNoCredentials
@@ -42,10 +45,10 @@ func (a *RequestAuthenticator) Authenticate(r *http.Request) (*requestprincipal.
 		if !errors.As(err, &authErr) {
 			return nil, err
 		}
-		challenge := bearerChallenge + authErr.challengeParams()
+		challenges := authErr.challenges(a.dpop != nil)
 		return nil, &requestprincipal.Error{
 			Status:  http.StatusUnauthorized,
-			Header:  http.Header{"Www-Authenticate": {challenge}},
+			Header:  http.Header{"Www-Authenticate": challenges},
 			Code:    "UNAUTHENTICATED",
 			Message: authErr.message,
 			Err:     err,
@@ -57,6 +60,9 @@ func (a *RequestAuthenticator) Authenticate(r *http.Request) (*requestprincipal.
 // Challenge implements requestprincipal.Challenger.
 func (a *RequestAuthenticator) Challenge(h http.Header) {
 	h.Add("WWW-Authenticate", bearerChallenge)
+	if a.dpop != nil {
+		h.Add("WWW-Authenticate", dpopChallenge)
+	}
 }
 
 // ToRequestPrincipal converts an AuthenticatedPrincipal to the

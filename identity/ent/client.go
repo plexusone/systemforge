@@ -43,6 +43,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
+	"github.com/plexusone/systemforge/identity/ent/scimtoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
@@ -112,6 +113,8 @@ type Client struct {
 	PrincipalToken *PrincipalTokenClient
 	// ResourceGrant is the client for interacting with the ResourceGrant builders.
 	ResourceGrant *ResourceGrantClient
+	// ScimToken is the client for interacting with the ScimToken builders.
+	ScimToken *ScimTokenClient
 	// SeatAssignment is the client for interacting with the SeatAssignment builders.
 	SeatAssignment *SeatAssignmentClient
 	// ServicePrincipal is the client for interacting with the ServicePrincipal builders.
@@ -162,6 +165,7 @@ func (c *Client) init() {
 	c.PrincipalMembership = NewPrincipalMembershipClient(c.config)
 	c.PrincipalToken = NewPrincipalTokenClient(c.config)
 	c.ResourceGrant = NewResourceGrantClient(c.config)
+	c.ScimToken = NewScimTokenClient(c.config)
 	c.SeatAssignment = NewSeatAssignmentClient(c.config)
 	c.ServicePrincipal = NewServicePrincipalClient(c.config)
 	c.SignupInvite = NewSignupInviteClient(c.config)
@@ -287,6 +291,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PrincipalMembership: NewPrincipalMembershipClient(cfg),
 		PrincipalToken:      NewPrincipalTokenClient(cfg),
 		ResourceGrant:       NewResourceGrantClient(cfg),
+		ScimToken:           NewScimTokenClient(cfg),
 		SeatAssignment:      NewSeatAssignmentClient(cfg),
 		ServicePrincipal:    NewServicePrincipalClient(cfg),
 		SignupInvite:        NewSignupInviteClient(cfg),
@@ -339,6 +344,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PrincipalMembership: NewPrincipalMembershipClient(cfg),
 		PrincipalToken:      NewPrincipalTokenClient(cfg),
 		ResourceGrant:       NewResourceGrantClient(cfg),
+		ScimToken:           NewScimTokenClient(cfg),
 		SeatAssignment:      NewSeatAssignmentClient(cfg),
 		ServicePrincipal:    NewServicePrincipalClient(cfg),
 		SignupInvite:        NewSignupInviteClient(cfg),
@@ -379,9 +385,9 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerInvite,
 		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
 		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
-		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.SeatAssignment,
-		c.ServicePrincipal, c.SignupInvite, c.SignupWaitlistEntry, c.SlugReservation,
-		c.Subscription,
+		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.ScimToken,
+		c.SeatAssignment, c.ServicePrincipal, c.SignupInvite, c.SignupWaitlistEntry,
+		c.SlugReservation, c.Subscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -396,9 +402,9 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerInvite,
 		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
 		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
-		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.SeatAssignment,
-		c.ServicePrincipal, c.SignupInvite, c.SignupWaitlistEntry, c.SlugReservation,
-		c.Subscription,
+		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.ScimToken,
+		c.SeatAssignment, c.ServicePrincipal, c.SignupInvite, c.SignupWaitlistEntry,
+		c.SlugReservation, c.Subscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -461,6 +467,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PrincipalToken.mutate(ctx, m)
 	case *ResourceGrantMutation:
 		return c.ResourceGrant.mutate(ctx, m)
+	case *ScimTokenMutation:
+		return c.ScimToken.mutate(ctx, m)
 	case *SeatAssignmentMutation:
 		return c.SeatAssignment.mutate(ctx, m)
 	case *ServicePrincipalMutation:
@@ -5189,6 +5197,139 @@ func (c *ResourceGrantClient) mutate(ctx context.Context, m *ResourceGrantMutati
 	}
 }
 
+// ScimTokenClient is a client for the ScimToken schema.
+type ScimTokenClient struct {
+	config
+}
+
+// NewScimTokenClient returns a client for the ScimToken from the given config.
+func NewScimTokenClient(c config) *ScimTokenClient {
+	return &ScimTokenClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `scimtoken.Hooks(f(g(h())))`.
+func (c *ScimTokenClient) Use(hooks ...Hook) {
+	c.hooks.ScimToken = append(c.hooks.ScimToken, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `scimtoken.Intercept(f(g(h())))`.
+func (c *ScimTokenClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ScimToken = append(c.inters.ScimToken, interceptors...)
+}
+
+// Create returns a builder for creating a ScimToken entity.
+func (c *ScimTokenClient) Create() *ScimTokenCreate {
+	mutation := newScimTokenMutation(c.config, OpCreate)
+	return &ScimTokenCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ScimToken entities.
+func (c *ScimTokenClient) CreateBulk(builders ...*ScimTokenCreate) *ScimTokenCreateBulk {
+	return &ScimTokenCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ScimTokenClient) MapCreateBulk(slice any, setFunc func(*ScimTokenCreate, int)) *ScimTokenCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ScimTokenCreateBulk{err: fmt.Errorf("calling to ScimTokenClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ScimTokenCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ScimTokenCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ScimToken.
+func (c *ScimTokenClient) Update() *ScimTokenUpdate {
+	mutation := newScimTokenMutation(c.config, OpUpdate)
+	return &ScimTokenUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ScimTokenClient) UpdateOne(_m *ScimToken) *ScimTokenUpdateOne {
+	mutation := newScimTokenMutation(c.config, OpUpdateOne, withScimToken(_m))
+	return &ScimTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ScimTokenClient) UpdateOneID(id uuid.UUID) *ScimTokenUpdateOne {
+	mutation := newScimTokenMutation(c.config, OpUpdateOne, withScimTokenID(id))
+	return &ScimTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ScimToken.
+func (c *ScimTokenClient) Delete() *ScimTokenDelete {
+	mutation := newScimTokenMutation(c.config, OpDelete)
+	return &ScimTokenDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ScimTokenClient) DeleteOne(_m *ScimToken) *ScimTokenDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ScimTokenClient) DeleteOneID(id uuid.UUID) *ScimTokenDeleteOne {
+	builder := c.Delete().Where(scimtoken.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ScimTokenDeleteOne{builder}
+}
+
+// Query returns a query builder for ScimToken.
+func (c *ScimTokenClient) Query() *ScimTokenQuery {
+	return &ScimTokenQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeScimToken},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ScimToken entity by its id.
+func (c *ScimTokenClient) Get(ctx context.Context, id uuid.UUID) (*ScimToken, error) {
+	return c.Query().Where(scimtoken.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ScimTokenClient) GetX(ctx context.Context, id uuid.UUID) *ScimToken {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ScimTokenClient) Hooks() []Hook {
+	return c.hooks.ScimToken
+}
+
+// Interceptors returns the client interceptors.
+func (c *ScimTokenClient) Interceptors() []Interceptor {
+	return c.inters.ScimToken
+}
+
+func (c *ScimTokenClient) mutate(ctx context.Context, m *ScimTokenMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ScimTokenCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ScimTokenUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ScimTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ScimTokenDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ScimToken mutation op: %q", m.Op())
+	}
+}
+
 // SeatAssignmentClient is a client for the SeatAssignment schema.
 type SeatAssignmentClient struct {
 	config
@@ -6122,18 +6263,18 @@ type (
 		Credential, ExternalIdentity, Human, Invite, License, Listing, LoginSession,
 		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
 		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
-		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, SeatAssignment,
-		ServicePrincipal, SignupInvite, SignupWaitlistEntry, SlugReservation,
-		Subscription []ent.Hook
+		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, ScimToken,
+		SeatAssignment, ServicePrincipal, SignupInvite, SignupWaitlistEntry,
+		SlugReservation, Subscription []ent.Hook
 	}
 	inters struct {
 		AccessChange, Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant,
 		Credential, ExternalIdentity, Human, Invite, License, Listing, LoginSession,
 		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
 		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
-		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, SeatAssignment,
-		ServicePrincipal, SignupInvite, SignupWaitlistEntry, SlugReservation,
-		Subscription []ent.Interceptor
+		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, ScimToken,
+		SeatAssignment, ServicePrincipal, SignupInvite, SignupWaitlistEntry,
+		SlugReservation, Subscription []ent.Interceptor
 	}
 )
 

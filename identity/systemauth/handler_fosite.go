@@ -10,6 +10,7 @@ import (
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/token/jwt"
 	"github.com/plexusone/omniobserve/observops"
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 	"github.com/plexusone/systemforge/observability"
 )
 
@@ -183,6 +184,22 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A managed principal is authorized only for clients that allow
+	// managed principals, whichever client its login session began with.
+	allowed, err := s.clientAllowsSubject(ctx, userID, clientID)
+	if err != nil {
+		logger.Error("checking managed principal client", "user_id", userID, "client_id", clientID, "error", err)
+		s.recordAuthMetrics(ctx, "authorize", clientID, observability.StatusError, start)
+		s.oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrServerError.WithWrap(err))
+		return
+	}
+	if !allowed {
+		logger.Info("managed principal refused by client", "user_id", userID, "client_id", clientID)
+		s.recordAuthMetrics(ctx, "authorize", clientID, observability.StatusError, start)
+		s.oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrAccessDenied.WithHint("This application does not allow managed accounts."))
+		return
+	}
+
 	// Step 2: Check if user has already consented to these scopes
 	if !s.sessionProvider.HasConsent(ctx, userID, clientID, requestedScopes) {
 		// Redirect to consent
@@ -207,6 +224,16 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 	session := s.OIDCSession(userID, claims)
 	session.Claims.AuthTime = s.authTime(r)
 	session.Claims.RequestedAt = ar.GetRequestedAt()
+
+	// dpop_jkt binds the code to a DPoP key: only a token request with a
+	// proof by that key can redeem it (RFC 9449 §10).
+	jkt, err := oauthcore.AuthorizationDPoPJKT(ar)
+	if err != nil {
+		s.recordAuthMetrics(ctx, "authorize", clientID, observability.StatusError, start)
+		s.oauth2.WriteAuthorizeError(ctx, w, ar, err)
+		return
+	}
+	session.DPoPJKT = jkt
 
 	// Grant the requested scopes (user has consented)
 	for _, scope := range requestedScopes {
@@ -241,7 +268,14 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	logger := LoggerFromContext(ctx)
 	start := time.Now()
 
-	grantType := r.FormValue("grant_type")
+	// The body is limited before anything reads it.
+	if err := oauthcore.ParseTokenRequest(w, r); err != nil {
+		logger.Info("token request rejected: unreadable body", "error", err)
+		s.recordAuthMetrics(ctx, "", "", observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, nil, err)
+		return
+	}
+	grantType := r.PostForm.Get("grant_type")
 
 	// Start span if observability is configured
 	if s.observability != nil {
@@ -255,12 +289,30 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 		defer span.End()
 	}
 
-	// Limit request body size to prevent memory exhaustion (1MB max for token requests)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
-
 	// Create session (will be populated by the grant handler)
 	session := s.Session("")
 	logger.Debug("token request", "grant_type", grantType)
+
+	// A DPoP proof, when sent, is checked before anything else: a request
+	// with a bad proof is refused whatever its grant (RFC 9449 §5).
+	if s.dpop.NoncesRequired() {
+		s.setDPoPNonce(ctx, w)
+	}
+	proof, err := s.tokenRequestProof(ctx, r)
+	if err == nil {
+		err = s.requireProofBeforeGrant(ctx, r, proof)
+	}
+	if err == nil {
+		// A code bound to a key is checked before Fosite handles it, so a
+		// refused exchange leaves the code usable with every storage.
+		err = s.checkCodeDPoPBinding(ctx, r, proof)
+	}
+	if err != nil {
+		logger.Info("token request rejected: DPoP proof", "grant_type", grantType, "error", err)
+		s.recordAuthMetrics(ctx, grantType, "", observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, nil, err)
+		return
+	}
 
 	// Process the token request
 	ar, err := s.oauth2.NewAccessRequest(ctx, r, session)
@@ -273,12 +325,38 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	clientID := ar.GetClient().GetID()
 
+	// Tokens are bound to the proof's key, and a client must send one
+	// unless it is registered with the bearer-token exception; a grant
+	// already bound to a key needs a proof by it.
+	if err := s.bindDPoP(ar, proof); err != nil {
+		logger.Info("token request rejected: DPoP", "grant_type", grantType, "client_id", clientID, "error", err)
+		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, ar, err)
+		return
+	}
+
 	// Tokens are not issued or refreshed for a principal that is no longer
 	// active, and its token family is revoked.
 	if err := s.requireActiveSubject(ctx, ar); err != nil {
 		logger.Info("token request rejected", "grant_type", grantType, "client_id", clientID, "error", err)
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrInvalidGrant.WithHint("The principal is no longer active."))
+		return
+	}
+
+	// Nor for a managed principal and a client that no longer allows
+	// managed principals.
+	allowed, err := s.clientAllowsSubject(ctx, sessionSubject(ar.GetSession()), clientID)
+	if err != nil {
+		logger.Error("checking managed principal client", "grant_type", grantType, "client_id", clientID, "error", err)
+		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrServerError.WithWrap(err))
+		return
+	}
+	if !allowed {
+		logger.Info("token request rejected: managed principal refused by client", "grant_type", grantType, "client_id", clientID)
+		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrInvalidGrant.WithHint("This application does not allow managed accounts."))
 		return
 	}
 
@@ -312,6 +390,9 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, err)
 		return
+	}
+	if sess, ok := ar.GetSession().(*Session); ok {
+		response.SetTokenType(sess.TokenType())
 	}
 
 	logger.Info("token issued",
@@ -400,6 +481,7 @@ func (s *Server) prepareAccessClaims(ctx context.Context, ar fosite.AccessReques
 	claims.NotBefore = time.Time{}
 	claims.JTI = ""
 	claims.Add("client_id", clientID)
+	oauthcore.SetConfirmationClaim(sess.DPoPJKT, claims)
 	// Always reset the header: a session stored before access tokens were
 	// typed, or before a key rotation, must not keep its old header.
 	sess.AccessHeader = s.accessTokenHeaders()
@@ -458,9 +540,11 @@ func (s *Server) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 			}
 			return true, c.IsPublic()
 		},
-		func(token string) []string {
-			ar, err := s.introspect(ctx, token, fosite.AccessToken, s.Session(""))
-			if err != nil {
+		func(string) []string {
+			// The caller's own token is checked as at any resource: a
+			// DPoP-bound one needs the DPoP scheme and a proof by its key.
+			ar, authErr := s.authenticateAccessToken(r, s.endpointURL("/oauth/introspect"))
+			if authErr != nil {
 				return nil
 			}
 			return ar.GetGrantedScopes()
@@ -474,6 +558,12 @@ func (s *Server) introspectionEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	session := s.Session("")
 
+	// Fosite reads only the Bearer scheme; a DPoP caller's token and proof
+	// were checked above, so hand it the token as Bearer.
+	if scheme, token := oauthcore.AccessTokenCredentials(r); scheme == "dpop" {
+		r = r.Clone(ctx)
+		r.Header.Set("Authorization", "Bearer "+token)
+	}
 	ir, err := s.oauth2.NewIntrospectionRequest(ctx, r, session)
 	if err == nil && ir.IsActive() {
 		// A token of a principal that is no longer active is inactive.

@@ -20,6 +20,8 @@ func (a *API) registerBulkEndpoints() {
 		Description:   "Processes multiple SCIM operations in a single request (RFC 7644 Section 3.7)",
 		Tags:          []string{"Bulk"},
 		DefaultStatus: http.StatusOK,
+		// The advertised maxPayloadSize is the body limit (413 beyond it).
+		MaxBodyBytes: int64(a.provider.Config().BulkMaxPayloadSize),
 	}, a.processBulk)
 }
 
@@ -29,7 +31,7 @@ func (a *API) processBulk(ctx context.Context, input *BulkInput) (*BulkOutput, e
 
 	response, err := service.ProcessBulk(ctx, input.Body)
 	if err != nil {
-		return nil, toHumaErrorFromErr(err)
+		return nil, toHumaErrorFromErr(ctx, err)
 	}
 
 	return &BulkOutput{Body: response}, nil

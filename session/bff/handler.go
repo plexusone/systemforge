@@ -3,6 +3,7 @@ package bff
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -16,9 +17,13 @@ type HandlerConfig struct {
 	// Store is the session store. Required.
 	Store Store
 
-	// CookieConfig configures session cookies.
-	// If zero value, uses DefaultCookieConfig().
+	// CookieConfig configures session cookies. Fields left out take the
+	// defaults of DefaultCookieConfig().
 	CookieConfig CookieConfig
+
+	// Logger receives operational errors and the startup warning for an
+	// insecure (development) cookie. Default: slog.Default().
+	Logger *slog.Logger
 
 	// ProxyConfig configures the API proxy.
 	// TargetURL is required if using the proxy.
@@ -45,8 +50,11 @@ type HandlerConfig struct {
 	// If nil, the /refresh endpoint returns 501 Not Implemented.
 	OnRefresh func(ctx context.Context, session *Session) (*TokenRefreshResult, error)
 
-	// OnLogout is called when a session is logged out.
-	// Can be used to revoke refresh tokens in the database.
+	// OnLogout is called when a session is logged out, before it is
+	// deleted. The BFF does not revoke tokens itself: set OnLogout to
+	// revoke the refresh token (and access token, if supported) at the
+	// authorization server. If it returns an error the session is still
+	// deleted, but /logout responds 500.
 	OnLogout func(ctx context.Context, session *Session) error
 
 	// OnSessionLoad is called after a session is loaded from the store.
@@ -69,6 +77,16 @@ type HandlerConfig struct {
 	// RateLimitConfig configures rate limiting for BFF endpoints.
 	// If nil, rate limiting is disabled.
 	RateLimitConfig *RateLimitConfig
+
+	// IdleTimeout ends a session not used for this long. Zero means
+	// DefaultIdleTimeout; a negative value disables the check.
+	IdleTimeout time.Duration
+
+	// MaxLifetime ends a session this long after it was created, however
+	// often its tokens are refreshed, so the user must sign in again. The
+	// session and cookie expiry never extend past it. Zero means
+	// DefaultMaxLifetime; a negative value disables the check.
+	MaxLifetime time.Duration
 }
 
 // TokenRefreshResult contains the result of a token refresh operation.
@@ -103,9 +121,8 @@ func NewHandler(config HandlerConfig) (*Handler, error) {
 	}
 
 	// Apply defaults
-	cookieConfig := config.CookieConfig
-	if cookieConfig.Name == "" {
-		cookieConfig = DefaultCookieConfig()
+	if config.Logger == nil {
+		config.Logger = slog.Default()
 	}
 
 	clientIPConfig := config.ClientIPConfig
@@ -116,9 +133,20 @@ func NewHandler(config HandlerConfig) (*Handler, error) {
 	if config.APIPathPrefix == "" {
 		config.APIPathPrefix = "/api"
 	}
+	config.IdleTimeout = resolveLifetimeLimit(config.IdleTimeout, DefaultIdleTimeout)
+	config.MaxLifetime = resolveLifetimeLimit(config.MaxLifetime, DefaultMaxLifetime)
 
 	// Create components
-	cookieManager := NewCookieManager(cookieConfig)
+	// NewCookieManager applies the cookie defaults, so a config that sets
+	// only some fields (AllowInsecure for development, say) keeps them.
+	cookieManager := NewCookieManager(config.CookieConfig)
+	if err := cookieManager.Config().Validate(); err != nil {
+		return nil, err
+	}
+	if !cookieManager.Config().Secure {
+		config.Logger.Warn("bff: the session cookie is not Secure (AllowInsecure); use this for local development over plain HTTP only",
+			"cookie", cookieManager.Config().Name)
+	}
 
 	originValidator := NewOriginValidator(OriginConfig{
 		AllowedOrigins: config.AllowedOrigins,
@@ -181,16 +209,37 @@ func (h *Handler) Router() chi.Router {
 	// API proxy
 	if h.proxy != nil {
 		r.Route(h.config.APIPathPrefix, func(r chi.Router) {
-			if h.config.EnableProxyForPublicRoutes {
-				r.Use(OptionalSessionMiddleware(h.store, h.cookieManager))
-			} else {
-				r.Use(RequireSessionMiddleware(h.store, h.cookieManager))
-			}
+			// Proxied requests carry the user's token whatever the method,
+			// so reads are origin-checked too.
+			r.Use(h.originValidator.SafeMethodMiddleware())
+			r.Use(SessionMiddleware(MiddlewareConfig{
+				Store:          h.store,
+				CookieManager:  h.cookieManager,
+				RequireSession: !h.config.EnableProxyForPublicRoutes,
+				TouchOnAccess:  true,
+				IdleTimeout:    h.lifetimeLimit(h.config.IdleTimeout),
+				MaxLifetime:    h.lifetimeLimit(h.config.MaxLifetime),
+			}))
 			r.HandleFunc("/*", h.handleProxy)
 		})
 	}
 
 	return r
+}
+
+// lifetimeLimit converts a resolved limit (0 = unchecked) back to the
+// MiddlewareConfig convention (negative = unchecked).
+func (h *Handler) lifetimeLimit(d time.Duration) time.Duration {
+	if d == 0 {
+		return -1
+	}
+	return d
+}
+
+// sessionLifetimeExceeded reports whether a loaded session has run past
+// the handler's idle or absolute limit.
+func (h *Handler) sessionLifetimeExceeded(session *Session) bool {
+	return session.LifetimeExceeded(time.Now(), h.config.IdleTimeout, h.config.MaxLifetime)
 }
 
 // Store returns the session store.
@@ -224,6 +273,7 @@ func (h *Handler) CreateSession(ctx context.Context, w http.ResponseWriter, r *h
 		UserID:                params.UserID,
 		OrganizationID:        params.OrganizationID,
 		AccessToken:           params.AccessToken,
+		TokenType:             normalizeTokenType(params.TokenType),
 		RefreshToken:          params.RefreshToken,
 		AccessTokenExpiresAt:  now.Add(params.AccessTokenExpiresIn),
 		RefreshTokenExpiresAt: now.Add(params.RefreshTokenExpiresIn),
@@ -231,10 +281,11 @@ func (h *Handler) CreateSession(ctx context.Context, w http.ResponseWriter, r *h
 		CreatedAt:             now,
 		UpdatedAt:             now,
 		LastAccessedAt:        now,
-		ExpiresAt:             now.Add(params.RefreshTokenExpiresIn),
 		IPAddress:             h.ipExtractor.GetClientIP(r),
 		UserAgent:             r.UserAgent(),
 	}
+
+	session.ExpiresAt = session.capExpiry(now.Add(params.RefreshTokenExpiresIn), h.config.MaxLifetime)
 
 	// Add Cloudflare metadata if available
 	if h.ipExtractor.IsCloudflareRequest(r) {
@@ -283,7 +334,11 @@ type CreateSessionParams struct {
 	RefreshTokenExpiresIn time.Duration
 	DPoPKeyPairJSON       []byte // Serialized DPoP key pair (from dpop.KeyPair.SerializeJSON())
 	DPoPThumbprint        string // JWK thumbprint of the DPoP key pair
-	Metadata              map[string]string
+	// TokenType is the token_type the token endpoint returned: "DPoP"
+	// for a token bound to the DPoP key pair above (sent with the DPoP
+	// scheme and a proof), "Bearer" for an unbound one.
+	TokenType string
+	Metadata  map[string]string
 }
 
 // handleGetSession returns the current session status.
@@ -297,6 +352,13 @@ func (h *Handler) handleGetSession(w http.ResponseWriter, r *http.Request) {
 	session, err := h.store.Get(r.Context(), sessionID)
 	if err != nil {
 		// Clear invalid cookie
+		h.cookieManager.ClearSessionCookie(w)
+		h.writeJSON(w, http.StatusOK, SessionInfoResponse{Authenticated: false})
+		return
+	}
+
+	if h.sessionLifetimeExceeded(session) {
+		endSession(r.Context(), h.store, session.ID)
 		h.cookieManager.ClearSessionCookie(w)
 		h.writeJSON(w, http.StatusOK, SessionInfoResponse{Authenticated: false})
 		return
@@ -325,29 +387,64 @@ type SessionInfoResponse struct {
 	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
 }
 
-// handleLogout clears the session.
+// handleLogout ends the session. It fails closed: if the session cannot be
+// loaded or deleted it responds 500 and keeps the cookie, so the client
+// still holds the session and can retry, instead of reporting success while
+// the server-side session stays valid. If the OnLogout hook fails the
+// session is still deleted and the cookie cleared, but the response is 500
+// so the client knows token revocation did not complete.
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	sessionID := h.cookieManager.GetSessionID(r)
+	if sessionID == "" {
+		h.cookieManager.ClearSessionCookie(w)
+		h.writeJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
+		return
+	}
+
 	// Delete only a session the store returns for the cookie: the cookie
 	// value is client-controlled and must never be passed to Delete
 	// unchecked, since a store may keep other records (such as per-user
 	// session indexes) in the same key space.
-	ctx := r.Context()
-	if sessionID := h.cookieManager.GetSessionID(r); sessionID != "" {
-		if session, err := h.store.Get(ctx, sessionID); err == nil {
-			if h.config.OnLogout != nil {
-				// Call logout hook (e.g., to revoke refresh token in DB)
-				if err := h.config.OnLogout(ctx, session); err != nil {
-					slog.ErrorContext(ctx, "bff: logout hook failed", "error", err)
-				}
-			}
-			if err := h.store.Delete(ctx, session.ID); err != nil {
-				slog.ErrorContext(ctx, "bff: deleting session at logout failed", "error", err)
-			}
+	session, err := h.store.Get(ctx, sessionID)
+	if err != nil {
+		// A session that is gone, expired or unreadable (for example
+		// stored before sealing was enabled) cannot be used either, so
+		// only the cookie is left to clear.
+		if errors.Is(err, ErrSessionNotFound) || errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrInvalidSession) {
+			h.cookieManager.ClearSessionCookie(w)
+			h.writeJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
+			return
+		}
+		h.config.Logger.ErrorContext(ctx, "bff: loading session at logout failed", "error", err)
+		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "logout_failed", "message": "Logout failed; retry"})
+		return
+	}
+
+	revokeFailed := false
+	if h.config.OnLogout != nil {
+		// Call logout hook (e.g., to revoke refresh token in DB)
+		if err := h.config.OnLogout(ctx, session); err != nil {
+			h.config.Logger.ErrorContext(ctx, "bff: logout hook failed", "error", err)
+			revokeFailed = true
 		}
 	}
 
-	// Clear cookie
+	if err := h.store.Delete(ctx, session.ID); err != nil && !errors.Is(err, ErrSessionNotFound) {
+		h.config.Logger.ErrorContext(ctx, "bff: deleting session at logout failed", "error", err)
+		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "logout_failed", "message": "Logout failed; retry"})
+		return
+	}
+
 	h.cookieManager.ClearSessionCookie(w)
+
+	if revokeFailed {
+		h.writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error":   "revocation_failed",
+			"message": "Session ended, but token revocation failed",
+		})
+		return
+	}
 
 	h.writeJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 }
@@ -372,9 +469,13 @@ func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if refresh token is still valid
-	if session.IsRefreshTokenExpired() {
-		_ = h.store.Delete(r.Context(), sessionID)
+	// Check if refresh token is still valid and the session within its
+	// idle and absolute limits; refreshing must not keep a session alive
+	// past them.
+	if session.IsRefreshTokenExpired() || h.sessionLifetimeExceeded(session) {
+		if err := h.store.Delete(r.Context(), session.ID); err != nil && !errors.Is(err, ErrSessionNotFound) {
+			h.config.Logger.ErrorContext(r.Context(), "bff: deleting expired session failed", "error", err)
+		}
 		h.cookieManager.ClearSessionCookie(w)
 		http.Error(w, "Unauthorized: Session expired", http.StatusUnauthorized)
 		return
@@ -393,11 +494,12 @@ func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	session.AccessToken = result.AccessToken
 	session.AccessTokenExpiresAt = now.Add(result.AccessTokenExpiresIn)
 	session.UpdatedAt = now
+	session.LastAccessedAt = now
 
 	if result.RefreshToken != "" {
 		session.RefreshToken = result.RefreshToken
 		session.RefreshTokenExpiresAt = now.Add(result.RefreshTokenExpiresIn)
-		session.ExpiresAt = session.RefreshTokenExpiresAt
+		session.ExpiresAt = session.capExpiry(session.RefreshTokenExpiresAt, h.config.MaxLifetime)
 	}
 
 	// Update session in store

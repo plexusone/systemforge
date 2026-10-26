@@ -247,6 +247,9 @@ func (a *API) addMember(ctx context.Context, input *AddMemberRequest) (*AddMembe
 			return nil, err
 		}
 	}
+	if err := a.requireDirectAdd(ctx, caller, org.ID, principalID); err != nil {
+		return nil, err
+	}
 
 	member, err := a.service.AddMember(ctx, AddMemberInput{
 		OrganizationID: org.ID,
@@ -377,6 +380,31 @@ func (a *API) transferOwnership(ctx context.Context, input *TransferOwnershipReq
 
 // memberError maps a membership service error to an API error: a personal
 // organization's one-member rule is a conflict, anything else a bad request.
+// requireDirectAdd checks that caller may add principalID to the
+// organization without the principal's consent (APIConfig.DirectAdd). The
+// answer does not depend on whether principalID exists, so it reveals
+// nothing about other tenants' principals.
+func (a *API) requireDirectAdd(ctx context.Context, caller, orgID, principalID uuid.UUID) error {
+	var ok bool
+	var err error
+	if a.config.DirectAdd != nil {
+		ok, err = a.config.DirectAdd(ctx, caller, orgID, principalID)
+		if err != nil {
+			a.config.Logger.ErrorContext(ctx, "organization: direct add check", "organization_id", orgID, "error", err)
+			return huma.Error500InternalServerError("checking authorization")
+		}
+	} else {
+		ok, err = a.isPlatformAdmin(ctx, caller)
+		if err != nil {
+			return err
+		}
+	}
+	if !ok {
+		return huma.Error403Forbidden("members join by invitation; this principal cannot be added directly")
+	}
+	return nil
+}
+
 func memberError(err error) error {
 	if errors.Is(err, ErrPersonalOrganization) {
 		return huma.Error409Conflict(err.Error())

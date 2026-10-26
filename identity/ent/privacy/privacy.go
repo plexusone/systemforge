@@ -759,6 +759,30 @@ func (f ResourceGrantMutationRuleFunc) EvalMutation(ctx context.Context, m ent.M
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ResourceGrantMutation", m)
 }
 
+// The ScimTokenQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type ScimTokenQueryRuleFunc func(context.Context, *ent.ScimTokenQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f ScimTokenQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ScimTokenQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ScimTokenQuery", q)
+}
+
+// The ScimTokenMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type ScimTokenMutationRuleFunc func(context.Context, *ent.ScimTokenMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f ScimTokenMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.ScimTokenMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ScimTokenMutation", m)
+}
+
 // The SeatAssignmentQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type SeatAssignmentQueryRuleFunc func(context.Context, *ent.SeatAssignmentQuery) error
@@ -992,6 +1016,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.ResourceGrantQuery:
 		return q.Filter(), nil
+	case *ent.ScimTokenQuery:
+		return q.Filter(), nil
 	case *ent.SeatAssignmentQuery:
 		return q.Filter(), nil
 	case *ent.ServicePrincipalQuery:
@@ -1064,6 +1090,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.PrincipalTokenMutation:
 		return m.Filter(), nil
 	case *ent.ResourceGrantMutation:
+		return m.Filter(), nil
+	case *ent.ScimTokenMutation:
 		return m.Filter(), nil
 	case *ent.SeatAssignmentMutation:
 		return m.Filter(), nil

@@ -21,11 +21,11 @@ func TestBearerPrincipal(t *testing.T) {
 		return r
 	}
 
-	id, err := f.s.BearerPrincipal(req("Bearer "+tok), "profile")
+	id, err := f.s.BearerPrincipal(withAuth(req(""), dpopAuth(t, tok)), "profile")
 	if err != nil || id != f.principal {
 		t.Fatalf("valid token: %s, %v", id, err)
 	}
-	if _, err := f.s.BearerPrincipal(req("Bearer "+tok), "systemforge:connections:write"); !errors.Is(err, ErrBearerScope) {
+	if _, err := f.s.BearerPrincipal(withAuth(req(""), dpopAuth(t, tok)), "systemforge:connections:write"); !errors.Is(err, ErrBearerScope) {
 		t.Fatalf("missing scope: %v", err)
 	}
 	if _, err := f.s.BearerPrincipal(req("Bearer not-a-token"), "profile"); !errors.Is(err, ErrBearerInvalid) {
@@ -52,7 +52,7 @@ func TestBearerAccessCarriesTheClient(t *testing.T) {
 	f := newOrgsFixture(t)
 	tok := f.tokens(t, "openid profile")["access_token"].(string) //nolint:forcetypeassert // the token endpoint returns a string
 	r := httptest.NewRequest(http.MethodGet, "/api", nil)
-	r.Header.Set("Authorization", "Bearer "+tok)
+	dpopAuth(t, tok)(r)
 
 	g, err := f.s.BearerAccess(r, "profile")
 	if err != nil {
@@ -77,9 +77,14 @@ func TestBearerAuthenticator(t *testing.T) {
 			served = true
 			w.WriteHeader(http.StatusNoContent)
 		}))
+	withDPoP := "dpop"
 	call := func(authz string) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(http.MethodGet, "/api", nil)
-		if authz != "" {
+		switch authz {
+		case "":
+		case withDPoP:
+			dpopAuth(t, tok)(r)
+		default:
 			r.Header.Set("Authorization", authz)
 		}
 		w := httptest.NewRecorder()
@@ -87,7 +92,7 @@ func TestBearerAuthenticator(t *testing.T) {
 		return w
 	}
 
-	if w := call("Bearer " + tok); w.Code != http.StatusNoContent || !served {
+	if w := call(withDPoP); w.Code != http.StatusNoContent || !served {
 		t.Fatalf("valid token: %d", w.Code)
 	}
 	for name, tc := range map[string]struct {
@@ -105,7 +110,7 @@ func TestBearerAuthenticator(t *testing.T) {
 	scoped := requestprincipal.Middleware(requestprincipal.Options{}, f.s.BearerAuthenticator("systemforge:other"))(
 		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
 	r := httptest.NewRequest(http.MethodGet, "/api", nil)
-	r.Header.Set("Authorization", "Bearer "+tok)
+	dpopAuth(t, tok)(r)
 	w := httptest.NewRecorder()
 	scoped.ServeHTTP(w, r)
 	if w.Code != http.StatusForbidden || !strings.Contains(w.Header().Get("WWW-Authenticate"), "insufficient_scope") {

@@ -1,6 +1,6 @@
 // Package multiapp provides infrastructure for running multiple apps on shared
 // or dedicated backend infrastructure. Each app implements the AppBackend interface
-// and is fully self-contained with its own users, organizations, and data.
+// and has its own users, organizations, and data, in its own schema.
 //
 // Apps can be deployed in two modes:
 //   - Multi-app mode: Multiple apps share a server, routed by X-App-ID header

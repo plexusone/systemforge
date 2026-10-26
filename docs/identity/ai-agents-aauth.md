@@ -115,6 +115,7 @@ if err != nil {
 
 humans := relyingparty.NewRequestAuthenticator(relyingparty.BearerConfig{
     Tokens:     client,   // *relyingparty.Client
+    DPoP:       &relyingparty.DPoPConfig{ReplayCache: replayCache}, // SystemAuth tokens are DPoP-bound
     APIKeys:    apiKeys,  // *apikey.Service
     Principals: principals,
     Sessions:   bff,      // optional: browser sessions too

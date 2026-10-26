@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
@@ -89,11 +88,8 @@ func (s *DefaultService) ConvertToTeam(ctx context.Context, orgID uuid.UUID, tea
 		return nil, err
 	}
 
-	if syncErr := s.syncer.RegisterOrganization(ctx, personal.ID, actor); syncErr != nil {
-		if s.syncMode == authz.SyncModeStrict {
-			return nil, fmt.Errorf("failed to sync organization to authz: %w", syncErr)
-		}
-		s.logger.Warn("failed to sync organization to authz", "org_id", personal.ID, "error", syncErr)
+	if err := s.syncCreated(ctx, personal.ID, &actor); err != nil {
+		return nil, err
 	}
 	return &ConvertResult{Team: entOrgToModel(team), Personal: entOrgToModel(personal)}, nil
 }

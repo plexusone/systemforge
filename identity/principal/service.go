@@ -15,6 +15,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/graphlock"
 )
 
 // DefaultService implements the Service interface.
@@ -246,12 +247,7 @@ func (s *DefaultService) syncHuman(ctx context.Context, id uuid.UUID, platformAd
 
 	// Set platform admin if applicable
 	if platformAdmin {
-		if syncErr := s.syncer.SetPlatformAdmin(ctx, id, true); syncErr != nil {
-			if s.syncMode == authz.SyncModeStrict {
-				return fmt.Errorf("failed to sync platform admin to authz: %w", syncErr)
-			}
-			s.logger.Warn("failed to sync platform admin to authz", "principal_id", id, "error", syncErr)
-		}
+		return s.grantPlatformAdmin(ctx, id)
 	}
 	return nil
 }
@@ -631,15 +627,14 @@ func (s *DefaultService) CreateService(ctx context.Context, input CreateServiceI
 	return result, nil
 }
 
-// Update updates an existing principal.
+// Update updates an existing principal. A change of Active deactivates or
+// reactivates it as Deactivate and Reactivate do, after the other fields
+// are saved.
 func (s *DefaultService) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (*Principal, error) {
 	update := s.client.Principal.UpdateOneID(id)
 
 	if input.DisplayName != nil {
 		update.SetDisplayName(*input.DisplayName)
-	}
-	if input.Active != nil {
-		update.SetActive(*input.Active)
 	}
 	if input.AllowedScopes != nil {
 		update.SetAllowedScopes(input.AllowedScopes)
@@ -654,6 +649,16 @@ func (s *DefaultService) Update(ctx context.Context, id uuid.UUID, input UpdateI
 	p, err := update.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update principal: %w", err)
+	}
+	if input.Active != nil && *input.Active != p.Active {
+		if *input.Active {
+			err = s.Reactivate(ctx, id)
+		} else {
+			err = s.Deactivate(ctx, id)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return s.GetByID(ctx, p.ID)
@@ -684,7 +689,15 @@ func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input Up
 		return nil, fmt.Errorf("principal is not a human: %s", id)
 	}
 
-	update := s.client.Human.UpdateOne(p.Edges.Human)
+	// Revoking platform administration removes it from the authorization
+	// backend inside the transaction, before the commit: if the backend
+	// refuses, the flag stays set and the error is returned.
+	revokeAdmin := input.IsPlatformAdmin != nil && !*input.IsPlatformAdmin
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	update := tx.Human.UpdateOne(p.Edges.Human)
 
 	if input.GivenName != nil {
 		update.SetGivenName(*input.GivenName)
@@ -706,17 +719,25 @@ func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input Up
 	}
 
 	if _, err = update.Save(ctx); err != nil {
+		return nil, errors.Join(fmt.Errorf("failed to update human extension: %w", err), tx.Rollback())
+	}
+	if revokeAdmin {
+		if err = graphlock.Lock(ctx, tx, graphlock.Principal(id)); err != nil {
+			return nil, errors.Join(err, tx.Rollback())
+		}
+		if err = s.syncer.SetPlatformAdmin(ctx, id, false); err != nil {
+			return nil, errors.Join(fmt.Errorf("failed to remove platform admin from authz, change not saved: %w", err), tx.Rollback())
+		}
+	}
+	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to update human extension: %w", err)
 	}
 
-	// Platform administration lives in the authorization backend too;
-	// granting or revoking it must reach it.
-	if input.IsPlatformAdmin != nil {
-		if syncErr := s.syncer.SetPlatformAdmin(ctx, id, *input.IsPlatformAdmin); syncErr != nil {
-			if s.syncMode == authz.SyncModeStrict {
-				return nil, fmt.Errorf("failed to sync platform admin to authz: %w", syncErr)
-			}
-			s.logger.Warn("failed to sync platform admin to authz", "principal_id", id, "error", syncErr)
+	// Granted platform administration is written to the authorization
+	// backend after the commit.
+	if input.IsPlatformAdmin != nil && *input.IsPlatformAdmin {
+		if err := s.grantPlatformAdmin(ctx, id); err != nil {
+			return nil, err
 		}
 	}
 
@@ -876,7 +897,12 @@ func (s *DefaultService) UpdateService(ctx context.Context, id uuid.UUID, input 
 	return s.GetByID(ctx, id)
 }
 
-// Deactivate deactivates a principal.
+// Deactivate deactivates a principal. A deactivated principal holds no
+// access: its memberships, application roles, resource grants, platform
+// administration and manager relations stay in the tables, but their
+// relationships are removed from the authorization graph before the
+// deactivation commits. If the graph refuses, the principal stays active
+// and the error is returned, so the call can be retried.
 func (s *DefaultService) Deactivate(ctx context.Context, id uuid.UUID) error {
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
@@ -890,6 +916,9 @@ func (s *DefaultService) Deactivate(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
+	if err = s.revokeGraphAccess(ctx, tx, id); err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to deactivate principal: %w", err)
 	}
@@ -897,7 +926,10 @@ func (s *DefaultService) Deactivate(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// Reactivate reactivates a principal.
+// Reactivate reactivates a principal and, after the change commits, writes
+// back to the authorization graph the relationships its rows call for
+// (failures returned in SyncModeStrict and logged otherwise; the graph
+// reconciler repairs what is left).
 func (s *DefaultService) Reactivate(ctx context.Context, id uuid.UUID) error {
 	_, err := s.client.Principal.UpdateOneID(id).
 		SetActive(true).
@@ -905,7 +937,7 @@ func (s *DefaultService) Reactivate(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("failed to reactivate principal: %w", err)
 	}
-	return nil
+	return s.restoreGraphAccess(ctx, id)
 }
 
 // Helper functions

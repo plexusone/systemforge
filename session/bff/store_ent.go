@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +12,9 @@ import (
 
 // EntClientInterface abstracts the Ent client to avoid import cycles.
 // Apps implement this interface wrapping their generated Ent client.
+// The wrapper must persist every field of Session it is given, including
+// TokenType, which decides whether the proxy presents the access token
+// with the DPoP or the Bearer scheme.
 //
 // Example implementation:
 //
@@ -58,8 +62,22 @@ type EntStoreConfig struct {
 	// Apps must provide a wrapper that implements EntClientInterface.
 	Client EntClientInterface
 
-	// EncryptionKey for encrypting tokens at rest.
-	// Must be 32 bytes for AES-256.
+	// Sealer encrypts the access token, refresh token and DPoP key pair
+	// before they reach the database. Each value is bound to its session ID
+	// and field, so a ciphertext copied to another row or column does not
+	// open. Use NewKeyringSealer to rotate keys (keep the active key N and
+	// the previous key N-1 in the ring), or NewKeysSealer for a keyforge
+	// purpose key. Either Sealer or EncryptionKey is required.
+	Sealer SessionSealer
+
+	// EncryptionKey is a single 32-byte AES-256 key. Without a Sealer the
+	// store seals with it under the key ID EntStoreDefaultKeyID, which is
+	// equivalent to NewKeyringSealer(EntStoreDefaultKeyID, {EntStoreDefaultKeyID:
+	// EncryptionKey}). Whenever it is set, the store also opens values that
+	// earlier versions wrote with it (without key ID or session binding);
+	// such values are sealed again on the session's next update. Keep it set
+	// until those sessions have expired, as long as it is N or N-1 in the
+	// keyring.
 	EncryptionKey []byte
 
 	// CleanupInterval is how often to run automatic cleanup.
@@ -71,12 +89,23 @@ type EntStoreConfig struct {
 	CleanupBatchSize int
 }
 
+// EntStoreDefaultKeyID is the key ID EntStore seals under when it is
+// given only EntStoreConfig.EncryptionKey. Keep the same key under this ID
+// in a KeyringSealer when moving to key rotation.
+const EntStoreDefaultKeyID = "default"
+
+// entSealAADPrefix versions the associated data of sealed EntStore fields.
+const entSealAADPrefix = "systemforge/bff-ent-session/v1"
+
 // EntStore implements Store using Ent.
 type EntStore struct {
-	config    EntStoreConfig
-	encryptor *Encryptor
-	cleanup   *time.Ticker
-	done      chan struct{}
+	config EntStoreConfig
+	sealer SessionSealer
+	// legacy opens values written before sessions were sealed with key IDs
+	// and session binding; nil when EncryptionKey is unset.
+	legacy  *Encryptor
+	cleanup *time.Ticker
+	done    chan struct{}
 }
 
 // NewEntStore creates a new Ent-backed session store.
@@ -84,13 +113,25 @@ func NewEntStore(config EntStoreConfig) (*EntStore, error) {
 	if config.Client == nil {
 		return nil, errors.New("client is required")
 	}
-	if len(config.EncryptionKey) != 32 {
-		return nil, ErrInvalidKeySize
+	if config.Sealer == nil && config.EncryptionKey == nil {
+		return nil, ErrSealerRequired
 	}
 
-	encryptor, err := NewEncryptor(config.EncryptionKey)
-	if err != nil {
-		return nil, fmt.Errorf("creating encryptor: %w", err)
+	var legacy *Encryptor
+	if config.EncryptionKey != nil {
+		var err error
+		legacy, err = NewEncryptor(config.EncryptionKey)
+		if err != nil {
+			return nil, fmt.Errorf("creating encryptor: %w", err)
+		}
+	}
+	sealer := config.Sealer
+	if sealer == nil {
+		var err error
+		sealer, err = NewKeyringSealer(EntStoreDefaultKeyID, map[string][]byte{EntStoreDefaultKeyID: config.EncryptionKey})
+		if err != nil {
+			return nil, fmt.Errorf("creating sealer: %w", err)
+		}
 	}
 
 	if config.CleanupBatchSize <= 0 {
@@ -98,9 +139,10 @@ func NewEntStore(config EntStoreConfig) (*EntStore, error) {
 	}
 
 	store := &EntStore{
-		config:    config,
-		encryptor: encryptor,
-		done:      make(chan struct{}),
+		config: config,
+		sealer: sealer,
+		legacy: legacy,
+		done:   make(chan struct{}),
 	}
 
 	if config.CleanupInterval > 0 {
@@ -113,7 +155,7 @@ func NewEntStore(config EntStoreConfig) (*EntStore, error) {
 // Create stores a new session.
 func (s *EntStore) Create(ctx context.Context, session *Session) error {
 	// Encrypt tokens before storage
-	encryptedSession, err := s.encryptSession(session)
+	encryptedSession, err := s.encryptSession(ctx, session)
 	if err != nil {
 		return fmt.Errorf("encrypting session: %w", err)
 	}
@@ -134,7 +176,7 @@ func (s *EntStore) Get(ctx context.Context, id string) (*Session, error) {
 	}
 
 	// Decrypt tokens
-	decryptedSession, err := s.decryptSession(session)
+	decryptedSession, err := s.decryptSession(ctx, session)
 	if err != nil {
 		return nil, fmt.Errorf("decrypting session: %w", err)
 	}
@@ -145,7 +187,7 @@ func (s *EntStore) Get(ctx context.Context, id string) (*Session, error) {
 // Update updates an existing session.
 func (s *EntStore) Update(ctx context.Context, session *Session) error {
 	// Encrypt tokens before storage
-	encryptedSession, err := s.encryptSession(session)
+	encryptedSession, err := s.encryptSession(ctx, session)
 	if err != nil {
 		return fmt.Errorf("encrypting session: %w", err)
 	}
@@ -196,7 +238,9 @@ func (s *EntStore) startCleanup() {
 			case <-s.cleanup.C:
 				// Run cleanup in a background context
 				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-				_, _ = s.Cleanup(ctx) // Ignore errors in background cleanup
+				if _, err := s.Cleanup(ctx); err != nil {
+					slog.Default().ErrorContext(ctx, "bff: cleaning up expired sessions", "error", err)
+				}
 				cancel()
 			case <-s.done:
 				return
@@ -205,39 +249,67 @@ func (s *EntStore) startCleanup() {
 	}()
 }
 
+// sealAAD binds a sealed field to one session and one field.
+func entSealAAD(sessionID, field string) []byte {
+	return []byte(entSealAADPrefix + "\x00" + field + "\x00" + sessionID)
+}
+
+// Field names bound into the associated data.
+const (
+	entFieldAccessToken  = "access_token"
+	entFieldRefreshToken = "refresh_token"
+	entFieldDPoPKeyPair  = "dpop_key_pair"
+)
+
+func (s *EntStore) seal(ctx context.Context, sessionID, field string, plaintext []byte) ([]byte, error) {
+	sealed, err := s.sealer.Seal(ctx, plaintext, entSealAAD(sessionID, field))
+	if err != nil {
+		return nil, fmt.Errorf("sealing %s: %w", field, err)
+	}
+	return sealed, nil
+}
+
+// open decrypts a sealed field, falling back to the legacy format written
+// by earlier versions when EncryptionKey is set.
+func (s *EntStore) open(ctx context.Context, sessionID, field string, sealed []byte) ([]byte, error) {
+	plaintext, err := s.sealer.Open(ctx, sealed, entSealAAD(sessionID, field))
+	if err == nil {
+		return plaintext, nil
+	}
+	if s.legacy != nil {
+		if pt, lerr := s.legacy.Decrypt(sealed); lerr == nil {
+			return pt, nil
+		}
+	}
+	return nil, fmt.Errorf("opening %s: %w", field, err)
+}
+
 // encryptSession encrypts the tokens in a session.
 // Returns a new Session with encrypted token fields.
-func (s *EntStore) encryptSession(session *Session) (*Session, error) {
+func (s *EntStore) encryptSession(ctx context.Context, session *Session) (*Session, error) {
 	// Make a copy to avoid modifying the original
 	encrypted := *session
 
-	// Encrypt access token
-	accessEncrypted, err := s.encryptor.EncryptString(session.AccessToken)
+	accessEncrypted, err := s.seal(ctx, session.ID, entFieldAccessToken, []byte(session.AccessToken))
 	if err != nil {
-		return nil, fmt.Errorf("encrypting access token: %w", err)
+		return nil, err
+	}
+	refreshEncrypted, err := s.seal(ctx, session.ID, entFieldRefreshToken, []byte(session.RefreshToken))
+	if err != nil {
+		return nil, err
 	}
 
-	// Encrypt refresh token
-	refreshEncrypted, err := s.encryptor.EncryptString(session.RefreshToken)
-	if err != nil {
-		return nil, fmt.Errorf("encrypting refresh token: %w", err)
-	}
-
-	// Store encrypted values in metadata (the actual encrypted bytes will be
-	// passed to the client interface separately)
+	// The client wrapper stores the sealed bytes, read through
+	// EncryptedAccessToken and friends.
 	encrypted.AccessToken = ""
 	encrypted.RefreshToken = ""
-
-	// Use a special field to pass encrypted data to the client
-	// The client wrapper is responsible for storing these bytes
 	encrypted.encryptedAccessToken = accessEncrypted
 	encrypted.encryptedRefreshToken = refreshEncrypted
 
-	// Encrypt DPoP key pair if present
 	if len(session.DPoPKeyPairJSON) > 0 {
-		dpopEncrypted, err := s.encryptor.Encrypt(session.DPoPKeyPairJSON)
+		dpopEncrypted, err := s.seal(ctx, session.ID, entFieldDPoPKeyPair, session.DPoPKeyPairJSON)
 		if err != nil {
-			return nil, fmt.Errorf("encrypting dpop key pair: %w", err)
+			return nil, err
 		}
 		encrypted.DPoPKeyPairJSON = nil
 		encrypted.encryptedDPoPKeyPair = dpopEncrypted
@@ -248,33 +320,30 @@ func (s *EntStore) encryptSession(session *Session) (*Session, error) {
 
 // decryptSession decrypts the tokens in a session.
 // Returns a new Session with decrypted token fields.
-func (s *EntStore) decryptSession(session *Session) (*Session, error) {
+func (s *EntStore) decryptSession(ctx context.Context, session *Session) (*Session, error) {
 	// Make a copy to avoid modifying the original
 	decrypted := *session
 
-	// Decrypt access token
 	if len(session.encryptedAccessToken) > 0 {
-		accessToken, err := s.encryptor.DecryptString(session.encryptedAccessToken)
+		accessToken, err := s.open(ctx, session.ID, entFieldAccessToken, session.encryptedAccessToken)
 		if err != nil {
-			return nil, fmt.Errorf("decrypting access token: %w", err)
+			return nil, err
 		}
-		decrypted.AccessToken = accessToken
+		decrypted.AccessToken = string(accessToken)
 	}
 
-	// Decrypt refresh token
 	if len(session.encryptedRefreshToken) > 0 {
-		refreshToken, err := s.encryptor.DecryptString(session.encryptedRefreshToken)
+		refreshToken, err := s.open(ctx, session.ID, entFieldRefreshToken, session.encryptedRefreshToken)
 		if err != nil {
-			return nil, fmt.Errorf("decrypting refresh token: %w", err)
+			return nil, err
 		}
-		decrypted.RefreshToken = refreshToken
+		decrypted.RefreshToken = string(refreshToken)
 	}
 
-	// Decrypt DPoP key pair if present
 	if len(session.encryptedDPoPKeyPair) > 0 {
-		dpopKeyPair, err := s.encryptor.Decrypt(session.encryptedDPoPKeyPair)
+		dpopKeyPair, err := s.open(ctx, session.ID, entFieldDPoPKeyPair, session.encryptedDPoPKeyPair)
 		if err != nil {
-			return nil, fmt.Errorf("decrypting dpop key pair: %w", err)
+			return nil, err
 		}
 		decrypted.DPoPKeyPairJSON = dpopKeyPair
 	}

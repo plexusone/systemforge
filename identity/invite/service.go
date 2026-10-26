@@ -19,6 +19,8 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/invite"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
+	"github.com/plexusone/systemforge/identity/graphlock"
+	"github.com/plexusone/systemforge/identity/graphstate"
 	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/identity/resourcegrant"
 )
@@ -68,6 +70,9 @@ type DefaultService struct {
 	logger   *slog.Logger
 	appRoles *approle.Service
 	grants   *resourcegrant.Service
+	// authorizer, when set, decides whether an invite's inviter still
+	// holds the authority the invite carries.
+	authorizer authz.Authorizer
 }
 
 // ServiceOption configures a DefaultService.
@@ -99,6 +104,17 @@ func WithAppRoles(svc *approle.Service) ServiceOption {
 // service's own syncer, grants through the grant service's.
 func WithResourceGrants(svc *resourcegrant.Service) ServiceOption {
 	return func(s *DefaultService) { s.grants = svc }
+}
+
+// WithAuthorizer makes Accept ask authorizer whether an invite's inviter
+// still holds authz.PermOrgInviteMember on the organization (and the
+// owner-only authz.PermOrgDelete for an owner invite), the permissions the
+// API required to create it. Use it when invitations may be created by
+// principals whose authority is not an organization membership, such as
+// platform administrators. Without it, the inviter must hold an active
+// membership whose role grants those permissions (authz.OrgRoleAllows).
+func WithAuthorizer(a authz.Authorizer) ServiceOption {
+	return func(s *DefaultService) { s.authorizer = a }
 }
 
 // WithLogger sets the logger for the service.
@@ -295,6 +311,13 @@ func (s *DefaultService) GetByID(ctx context.Context, id uuid.UUID) (*Invite, er
 }
 
 // Accept accepts an invite and creates the membership.
+//
+// The invite must still be pending and unexpired when the acceptance is
+// written: the status change is a conditional update in the same
+// transaction as the membership, so an invite revoked or declined while it
+// is being accepted is not accepted. The inviter must still be allowed to
+// invite to the organization, and to invite an owner when the invite is
+// for one; otherwise Accept returns ErrInviterNotAuthorized.
 func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*Invite, error) {
 	// Get invite
 	inv, err := s.client.Invite.Query().
@@ -309,21 +332,27 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 
 	// Check status
 	if inv.Status != invite.StatusPending {
-		return nil, fmt.Errorf("invite is no longer pending (status: %s)", inv.Status)
+		return nil, fmt.Errorf("%w (status: %s)", ErrNotPending, inv.Status)
 	}
 
 	// Check expiry
 	if time.Now().After(inv.ExpiresAt) {
-		// Mark as expired
-		_, _ = s.client.Invite.UpdateOne(inv).
-			SetStatus(invite.StatusExpired).
-			Save(ctx)
-		return nil, fmt.Errorf("invite has expired")
+		if err := s.markExpired(ctx, inv.ID); err != nil {
+			return nil, err
+		}
+		return nil, ErrExpired
 	}
 
 	// An organization may have become personal after the invite was sent.
 	if err = organization.RequireMembersAllowed(ctx, s.client, inv.OrganizationID, inv.Role); err != nil {
 		return nil, err
+	}
+
+	// With an authorizer, the inviter's authority is asked of it.
+	if s.authorizer != nil {
+		if err = s.checkInviterWithAuthorizer(ctx, inv); err != nil {
+			return nil, err
+		}
 	}
 
 	// Start transaction
@@ -333,9 +362,19 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 	}
 	defer func() {
 		if err != nil {
-			_ = tx.Rollback()
+			if rerr := tx.Rollback(); rerr != nil {
+				s.logger.ErrorContext(ctx, "invite: rolling back acceptance", "invite_id", inv.ID, "error", rerr)
+			}
 		}
 	}()
+
+	// Without an authorizer, the inviter's authority is its active
+	// membership role, read in this transaction.
+	if s.authorizer == nil {
+		if err = requireInviterMembership(ctx, tx.Client(), inv); err != nil {
+			return nil, err
+		}
+	}
 
 	// Check if already a member
 	exists, err := tx.PrincipalMembership.Query().
@@ -408,15 +447,30 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 		}
 	}
 
-	// Update invite status
+	// Update invite status, only while it is still pending and
+	// unexpired: a revoke, decline or acceptance that committed first
+	// wins.
 	now := time.Now()
-	inv, err = tx.Invite.UpdateOne(inv).
+	n, err := tx.Invite.Update().
+		Where(
+			invite.ID(inv.ID),
+			invite.StatusEQ(invite.StatusPending),
+			invite.ExpiresAtGT(now),
+		).
 		SetStatus(invite.StatusAccepted).
 		SetAcceptedAt(now).
 		SetAcceptedByPrincipalID(input.PrincipalID).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update invite: %w", err)
+	}
+	if n != 1 {
+		err = ErrNotPending
+		return nil, err
+	}
+	inv, err = tx.Invite.Get(ctx, inv.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read invite: %w", err)
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -426,7 +480,7 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 	// Sync the new membership to the authorization backend after commit.
 	// A resource invite to an existing member created none.
 	if membershipCreated {
-		if syncErr := s.syncer.AddOrgMembership(ctx, input.PrincipalID, inv.OrganizationID, inv.Role); syncErr != nil {
+		if syncErr := s.grantMembership(ctx, input.PrincipalID, inv.OrganizationID, inv.Role); syncErr != nil {
 			if s.syncMode == authz.SyncModeStrict {
 				return nil, fmt.Errorf("failed to sync membership to authz: %w", syncErr)
 			}
@@ -456,7 +510,7 @@ func sortedApps(roles map[string]string) []string {
 	return apps
 }
 
-// Decline declines an invite.
+// Decline declines an invite. Only a pending invite can be declined.
 func (s *DefaultService) Decline(ctx context.Context, token string) (*Invite, error) {
 	inv, err := s.client.Invite.Query().
 		Where(invite.Token(hashToken(token))).
@@ -468,30 +522,48 @@ func (s *DefaultService) Decline(ctx context.Context, token string) (*Invite, er
 		return nil, fmt.Errorf("failed to get invite: %w", err)
 	}
 
-	if inv.Status != invite.StatusPending {
-		return nil, fmt.Errorf("invite is no longer pending")
+	if err := s.transition(ctx, inv.ID, invite.StatusDeclined); err != nil {
+		return nil, err
 	}
-
-	inv, err = s.client.Invite.UpdateOne(inv).
-		SetStatus(invite.StatusDeclined).
-		Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decline invite: %w", err)
-	}
-
-	return entInviteToModel(inv), nil
+	return s.GetByID(ctx, inv.ID)
 }
 
-// Revoke revokes an invite.
+// Revoke revokes an invite. Only a pending invite can be revoked; an
+// accepted invite's membership is removed through the organization.
 func (s *DefaultService) Revoke(ctx context.Context, id uuid.UUID) error {
-	_, err := s.client.Invite.UpdateOneID(id).
-		SetStatus(invite.StatusRevoked).
+	return s.transition(ctx, id, invite.StatusRevoked)
+}
+
+// transition moves a pending invite to status with a conditional update,
+// so it never overwrites a transition that committed first.
+func (s *DefaultService) transition(ctx context.Context, id uuid.UUID, status invite.Status) error {
+	n, err := s.client.Invite.Update().
+		Where(invite.ID(id), invite.StatusEQ(invite.StatusPending)).
+		SetStatus(status).
 		Save(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("invite not found: %s", id)
-		}
-		return fmt.Errorf("failed to revoke invite: %w", err)
+		return fmt.Errorf("failed to set invite %s: %w", status, err)
+	}
+	if n == 1 {
+		return nil
+	}
+	exists, err := s.client.Invite.Query().Where(invite.ID(id)).Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get invite: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("invite not found: %s", id)
+	}
+	return ErrNotPending
+}
+
+// markExpired records that a pending invite has expired.
+func (s *DefaultService) markExpired(ctx context.Context, id uuid.UUID) error {
+	if _, err := s.client.Invite.Update().
+		Where(invite.ID(id), invite.StatusEQ(invite.StatusPending)).
+		SetStatus(invite.StatusExpired).
+		Save(ctx); err != nil {
+		return fmt.Errorf("failed to mark invite expired: %w", err)
 	}
 	return nil
 }
@@ -516,8 +588,9 @@ func (s *DefaultService) Resend(ctx context.Context, id uuid.UUID) (*InviteResul
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	// Update invite
-	inv, err = s.client.Invite.UpdateOne(inv).
+	// Update invite, only while it is still pending.
+	n, err := s.client.Invite.Update().
+		Where(invite.ID(inv.ID), invite.StatusEQ(invite.StatusPending)).
 		SetToken(hashToken(token)).
 		SetResendCount(inv.ResendCount + 1).
 		SetLastSentAt(time.Now()).
@@ -525,6 +598,13 @@ func (s *DefaultService) Resend(ctx context.Context, id uuid.UUID) (*InviteResul
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update invite: %w", err)
+	}
+	if n != 1 {
+		return nil, ErrNotPending
+	}
+	inv, err = s.client.Invite.Get(ctx, inv.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get invite: %w", err)
 	}
 
 	return &InviteResult{
@@ -653,4 +733,23 @@ func entInviteToModel(inv *ent.Invite) *Invite {
 	}
 
 	return model
+}
+
+// grantMembership writes an accepted invitation's membership to the
+// authorization graph after the acceptance committed, holding the graph
+// locks of the organization and the principal, and only if the membership
+// still holds the role: a removal or demotion that committed in between is
+// not undone. Without a graph (the no-op syncer) it does nothing.
+func (s *DefaultService) grantMembership(ctx context.Context, principalID, orgID uuid.UUID, role string) error {
+	if _, isNoop := s.syncer.(*noop.Syncer); isNoop {
+		return nil
+	}
+	keys := []string{graphlock.Organization(orgID), graphlock.Principal(principalID)}
+	return graphlock.Grant(ctx, s.client, keys, func(ctx context.Context, c *ent.Client) error {
+		held, err := graphstate.Membership(ctx, c, orgID, principalID, role)
+		if err != nil || !held {
+			return err
+		}
+		return s.syncer.AddOrgMembership(ctx, principalID, orgID, role)
+	})
 }

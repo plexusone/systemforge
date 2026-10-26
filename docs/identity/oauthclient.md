@@ -129,16 +129,28 @@ type User struct {
 The package includes a `StateManager` for cookie-based CSRF protection:
 
 ```go
-// Create state manager (defaults to Secure: true, requires HTTPS)
+// Create state manager (Secure, __Host- name, requires HTTPS)
 stateManager := cfoauth.NewStateManager()
 
-// For local development over HTTP only:
-// stateManager := cfoauth.NewStateManagerInsecure()
+// For local development over HTTP only (logs a warning):
+// stateManager := cfoauth.NewStateManagerInsecure(logger)
+
+// At startup: refuse a configuration browsers would reject
+if err := stateManager.Validate(); err != nil {
+    log.Fatal(err)
+}
 
 // In redirect handler: set state cookie
 func handleRedirect(w http.ResponseWriter, r *http.Request) {
-    state, _ := cfoauth.GenerateState()
-    stateManager.SetStateCookie(w, state)
+    state, err := cfoauth.GenerateState()
+    if err != nil {
+        http.Error(w, "internal error", http.StatusInternalServerError)
+        return
+    }
+    if err := stateManager.SetStateCookie(w, state); err != nil {
+        http.Error(w, "internal error", http.StatusInternalServerError)
+        return
+    }
 
     redirectURL := oauthConfig.AuthCodeURL(state)
     http.Redirect(w, r, redirectURL, http.StatusFound)
@@ -156,6 +168,23 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
     // State is valid, continue with code exchange...
 }
 ```
+
+The state cookie is always HttpOnly, `SameSite=Lax`, `Path=/` and
+host-only. Fields left out of a hand-built `StateManager{}` take the secure
+defaults, so a zero value writes the same cookie as `NewStateManager()`:
+
+| Mode | Name | Secure | SameSite |
+|------|------|--------|----------|
+| Default | `__Host-sf_oauth_client_state` (`StateCookieName`) | Yes | Lax |
+| `AllowInsecure` (development) | `sf_oauth_client_state` (`InsecureStateCookieName`) | No | Lax |
+
+`SameSite` must be Lax: Strict would drop the cookie on the provider's
+cross-site redirect back to the callback, and None would send it with every
+cross-site request. `Validate`, `SetStateCookie` and `ValidateState` refuse
+SameSite Strict or None, a negative `MaxAge`, and a `__Host-` or
+`__Secure-` name without Secure (`ErrInvalidStateCookieConfig`). The
+cookie is Secure unless `AllowInsecure` is set; `NewStateManagerInsecure`
+sets it and logs a warning when it is called.
 
 ### Server-side state store
 
@@ -208,8 +237,14 @@ func NewAuthHandler(cfg *Config) *AuthHandler {
 }
 
 func (h *AuthHandler) GitHubRedirect(w http.ResponseWriter, r *http.Request) {
-    state, _ := cfoauth.GenerateState()
-    h.stateManager.SetStateCookie(w, state)
+    state, err := cfoauth.GenerateState()
+    if err == nil {
+        err = h.stateManager.SetStateCookie(w, state)
+    }
+    if err != nil {
+        http.Error(w, "internal error", http.StatusInternalServerError)
+        return
+    }
     http.Redirect(w, r, h.githubConfig.AuthCodeURL(state), http.StatusFound)
 }
 
@@ -351,7 +386,7 @@ The returned `HumanPrincipal.ID` is the principal ID to issue tokens for. `NewEn
 ## Security Considerations
 
 1. **Always validate state** - Use `StateManager` or your own CSRF protection
-2. **Use HTTPS in production** - `NewStateManager()` defaults to `Secure: true`; only use `NewStateManagerInsecure()` for local HTTP development
+2. **Use HTTPS in production** - the state cookie is Secure with a `__Host-` name unless `AllowInsecure` is set; only use `NewStateManagerInsecure(logger)` for local HTTP development
 3. **Store tokens securely** - Encrypt any provider tokens you keep at rest
 4. **Validate email ownership** - Key accounts by `Provider` + `ProviderID`; only use `Email` to link to an existing account when `EmailVerified` is true
 5. **Check token expiry** - Refresh tokens before they expire

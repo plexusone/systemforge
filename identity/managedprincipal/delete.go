@@ -2,13 +2,14 @@ package managedprincipal
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/loginsession"
@@ -19,6 +20,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
+	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 )
 
 // EventDeleted records that a managed principal was deleted.
@@ -40,7 +42,10 @@ const deletedDisplayName = "Deleted account"
 // and claims are removed; its OAuth and principal token families are
 // revoked; its memberships and manager relationships are deactivated; and
 // invitations to its address are withdrawn. An access change is recorded
-// so tokens already issued stop being honored at once (ADR-010). Data an
+// so tokens already issued stop being honored at once (ADR-010). The
+// principal's relationships leave the authorization graph before the
+// deletion commits; if the graph refuses, nothing is deleted and the error
+// is returned, so the call can be retried. Data an
 // application keeps about the person, and any personal organization it
 // owns, are the application's to remove.
 func (s *Service) Delete(ctx context.Context, actorID, managedID uuid.UUID) error {
@@ -65,6 +70,13 @@ func (s *Service) Delete(ctx context.Context, actorID, managedID uuid.UUID) erro
 			Where(managerrelationship.ManagedPrincipalID(managedID), managerrelationship.Active(true)).
 			All(ctx); err != nil {
 			return fmt.Errorf("managedprincipal: list managers: %w", err)
+		}
+		// The application roles and resource grants the principal holds
+		// through the memberships deactivated below leave the graph with
+		// them.
+		roles, grants, err := activeAccess(ctx, tx, managedID)
+		if err != nil {
+			return err
 		}
 		if h.Email != nil {
 			if counts["invites"], err = tx.ManagerInvite.Update().
@@ -138,7 +150,12 @@ func (s *Service) Delete(ctx context.Context, actorID, managedID uuid.UUID) erro
 			return fmt.Errorf("managedprincipal: deactivate principal: %w", err)
 		}
 		change, err = accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: managedID, Reason: accesschange.Deactivated})
-		return err
+		if err != nil {
+			return err
+		}
+		return s.revoke(ctx, tx, managedID, "remove deleted principal", func() error {
+			return s.unregister(ctx, managedID, rels, roles, grants)
+		})
 	})
 	if err != nil {
 		return err
@@ -149,10 +166,66 @@ func (s *Service) Delete(ctx context.Context, actorID, managedID uuid.UUID) erro
 		details[k] = v
 	}
 	s.emit(ctx, EventDeleted, "delete", actorID, managedID, details)
+	return nil
+}
 
-	var syncErr error
-	for _, r := range rels {
-		syncErr = errors.Join(syncErr, s.sync(ctx, "remove manager", managedID, s.syncer.RemovePrincipalManager(ctx, managedID, r.ManagerPrincipalID, r.Role)))
+// activeAccess returns the application roles and resource grants a
+// principal holds in the organizations where its membership is active.
+func activeAccess(ctx context.Context, tx *ent.Tx, principalID uuid.UUID) ([]*ent.AppRole, []*ent.ResourceGrant, error) {
+	memberships, err := tx.PrincipalMembership.Query().
+		Where(principalmembership.PrincipalID(principalID), principalmembership.Active(true)).
+		All(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("managedprincipal: list memberships: %w", err)
 	}
-	return errors.Join(syncErr, s.sync(ctx, "unregister principal", managedID, s.syncer.UnregisterPrincipal(ctx, managedID)))
+	orgIDs := make([]uuid.UUID, len(memberships))
+	for i, m := range memberships {
+		orgIDs[i] = m.OrganizationID
+	}
+	if len(orgIDs) == 0 {
+		return nil, nil, nil
+	}
+	roles, err := tx.AppRole.Query().
+		Where(approle.PrincipalID(principalID), approle.OrganizationIDIn(orgIDs...)).
+		All(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("managedprincipal: list application roles: %w", err)
+	}
+	grants, err := tx.ResourceGrant.Query().
+		Where(resourcegrant.PrincipalID(principalID), resourcegrant.OrganizationIDIn(orgIDs...)).
+		All(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("managedprincipal: list resource grants: %w", err)
+	}
+	return roles, grants, nil
+}
+
+// unregister removes a deleted principal from the authorization graph: its
+// managers, its memberships and platform administration (UnregisterPrincipal),
+// and the application roles and resource grants of its memberships.
+func (s *Service) unregister(ctx context.Context, managedID uuid.UUID, rels []*ent.ManagerRelationship, roles []*ent.AppRole, grants []*ent.ResourceGrant) error {
+	for _, r := range rels {
+		if err := s.syncer.RemovePrincipalManager(ctx, managedID, r.ManagerPrincipalID, r.Role); err != nil {
+			return err
+		}
+	}
+	if err := s.syncer.UnregisterPrincipal(ctx, managedID); err != nil {
+		return err
+	}
+	if appSyncer, ok := s.syncer.(authz.AppRoleSyncer); ok {
+		for _, r := range roles {
+			if err := appSyncer.RemoveAppRole(ctx, managedID, r.OrganizationID, r.Application, r.Role); err != nil {
+				return err
+			}
+		}
+	}
+	if grantSyncer, ok := s.syncer.(authz.ResourceGrantSyncer); ok {
+		for _, g := range grants {
+			ref := authz.ResourceRef{Type: g.ResourceType, ID: g.ResourceID, OrganizationID: g.OrganizationID}
+			if err := grantSyncer.RemoveResourceGrant(ctx, managedID, ref); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

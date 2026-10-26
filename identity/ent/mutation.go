@@ -40,6 +40,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
+	"github.com/plexusone/systemforge/identity/ent/scimtoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
@@ -84,6 +85,7 @@ const (
 	TypePrincipalMembership = "PrincipalMembership"
 	TypePrincipalToken      = "PrincipalToken"
 	TypeResourceGrant       = "ResourceGrant"
+	TypeScimToken           = "ScimToken"
 	TypeSeatAssignment      = "SeatAssignment"
 	TypeServicePrincipal    = "ServicePrincipal"
 	TypeSignupInvite        = "SignupInvite"
@@ -17099,6 +17101,7 @@ type OAuthAppMutation struct {
 	backchannel_logout_uri       *string
 	refresh_token_rotation       *bool
 	managed_principals_enabled   *bool
+	allow_bearer_tokens          *bool
 	first_party                  *bool
 	public                       *bool
 	active                       *bool
@@ -18030,6 +18033,42 @@ func (m *OAuthAppMutation) ResetManagedPrincipalsEnabled() {
 	m.managed_principals_enabled = nil
 }
 
+// SetAllowBearerTokens sets the "allow_bearer_tokens" field.
+func (m *OAuthAppMutation) SetAllowBearerTokens(b bool) {
+	m.allow_bearer_tokens = &b
+}
+
+// AllowBearerTokens returns the value of the "allow_bearer_tokens" field in the mutation.
+func (m *OAuthAppMutation) AllowBearerTokens() (r bool, exists bool) {
+	v := m.allow_bearer_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAllowBearerTokens returns the old "allow_bearer_tokens" field's value of the OAuthApp entity.
+// If the OAuthApp object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OAuthAppMutation) OldAllowBearerTokens(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAllowBearerTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAllowBearerTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAllowBearerTokens: %w", err)
+	}
+	return oldValue.AllowBearerTokens, nil
+}
+
+// ResetAllowBearerTokens resets all changes to the "allow_bearer_tokens" field.
+func (m *OAuthAppMutation) ResetAllowBearerTokens() {
+	m.allow_bearer_tokens = nil
+}
+
 // SetFirstParty sets the "first_party" field.
 func (m *OAuthAppMutation) SetFirstParty(b bool) {
 	m.first_party = &b
@@ -18612,7 +18651,7 @@ func (m *OAuthAppMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuthAppMutation) Fields() []string {
-	fields := make([]string, 0, 24)
+	fields := make([]string, 0, 25)
 	if m.client_id != nil {
 		fields = append(fields, oauthapp.FieldClientID)
 	}
@@ -18663,6 +18702,9 @@ func (m *OAuthAppMutation) Fields() []string {
 	}
 	if m.managed_principals_enabled != nil {
 		fields = append(fields, oauthapp.FieldManagedPrincipalsEnabled)
+	}
+	if m.allow_bearer_tokens != nil {
+		fields = append(fields, oauthapp.FieldAllowBearerTokens)
 	}
 	if m.first_party != nil {
 		fields = append(fields, oauthapp.FieldFirstParty)
@@ -18727,6 +18769,8 @@ func (m *OAuthAppMutation) Field(name string) (ent.Value, bool) {
 		return m.RefreshTokenRotation()
 	case oauthapp.FieldManagedPrincipalsEnabled:
 		return m.ManagedPrincipalsEnabled()
+	case oauthapp.FieldAllowBearerTokens:
+		return m.AllowBearerTokens()
 	case oauthapp.FieldFirstParty:
 		return m.FirstParty()
 	case oauthapp.FieldPublic:
@@ -18784,6 +18828,8 @@ func (m *OAuthAppMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldRefreshTokenRotation(ctx)
 	case oauthapp.FieldManagedPrincipalsEnabled:
 		return m.OldManagedPrincipalsEnabled(ctx)
+	case oauthapp.FieldAllowBearerTokens:
+		return m.OldAllowBearerTokens(ctx)
 	case oauthapp.FieldFirstParty:
 		return m.OldFirstParty(ctx)
 	case oauthapp.FieldPublic:
@@ -18925,6 +18971,13 @@ func (m *OAuthAppMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetManagedPrincipalsEnabled(v)
+		return nil
+	case oauthapp.FieldAllowBearerTokens:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAllowBearerTokens(v)
 		return nil
 	case oauthapp.FieldFirstParty:
 		v, ok := value.(bool)
@@ -19158,6 +19211,9 @@ func (m *OAuthAppMutation) ResetField(name string) error {
 		return nil
 	case oauthapp.FieldManagedPrincipalsEnabled:
 		m.ResetManagedPrincipalsEnabled()
+		return nil
+	case oauthapp.FieldAllowBearerTokens:
+		m.ResetAllowBearerTokens()
 		return nil
 	case oauthapp.FieldFirstParty:
 		m.ResetFirstParty()
@@ -31915,6 +31971,1031 @@ func (m *ResourceGrantMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown ResourceGrant edge %s", name)
+}
+
+// ScimTokenMutation represents an operation that mutates the ScimToken nodes in the graph.
+type ScimTokenMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	organization_id *uuid.UUID
+	generation      *int
+	addgeneration   *int
+	token_prefix    *string
+	token_hash      *string
+	description     *string
+	created_by      *uuid.UUID
+	created_at      *time.Time
+	last_used_at    *time.Time
+	expires_at      *time.Time
+	revoked_at      *time.Time
+	revoked_by      *uuid.UUID
+	clearedFields   map[string]struct{}
+	done            bool
+	oldValue        func(context.Context) (*ScimToken, error)
+	predicates      []predicate.ScimToken
+}
+
+var _ ent.Mutation = (*ScimTokenMutation)(nil)
+
+// scimtokenOption allows management of the mutation configuration using functional options.
+type scimtokenOption func(*ScimTokenMutation)
+
+// newScimTokenMutation creates new mutation for the ScimToken entity.
+func newScimTokenMutation(c config, op Op, opts ...scimtokenOption) *ScimTokenMutation {
+	m := &ScimTokenMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeScimToken,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withScimTokenID sets the ID field of the mutation.
+func withScimTokenID(id uuid.UUID) scimtokenOption {
+	return func(m *ScimTokenMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ScimToken
+		)
+		m.oldValue = func(ctx context.Context) (*ScimToken, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ScimToken.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withScimToken sets the old ScimToken of the mutation.
+func withScimToken(node *ScimToken) scimtokenOption {
+	return func(m *ScimTokenMutation) {
+		m.oldValue = func(context.Context) (*ScimToken, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ScimTokenMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ScimTokenMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ScimToken entities.
+func (m *ScimTokenMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ScimTokenMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ScimTokenMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ScimToken.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetOrganizationID sets the "organization_id" field.
+func (m *ScimTokenMutation) SetOrganizationID(u uuid.UUID) {
+	m.organization_id = &u
+}
+
+// OrganizationID returns the value of the "organization_id" field in the mutation.
+func (m *ScimTokenMutation) OrganizationID() (r uuid.UUID, exists bool) {
+	v := m.organization_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrganizationID returns the old "organization_id" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldOrganizationID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrganizationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrganizationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrganizationID: %w", err)
+	}
+	return oldValue.OrganizationID, nil
+}
+
+// ResetOrganizationID resets all changes to the "organization_id" field.
+func (m *ScimTokenMutation) ResetOrganizationID() {
+	m.organization_id = nil
+}
+
+// SetGeneration sets the "generation" field.
+func (m *ScimTokenMutation) SetGeneration(i int) {
+	m.generation = &i
+	m.addgeneration = nil
+}
+
+// Generation returns the value of the "generation" field in the mutation.
+func (m *ScimTokenMutation) Generation() (r int, exists bool) {
+	v := m.generation
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGeneration returns the old "generation" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldGeneration(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGeneration is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGeneration requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGeneration: %w", err)
+	}
+	return oldValue.Generation, nil
+}
+
+// AddGeneration adds i to the "generation" field.
+func (m *ScimTokenMutation) AddGeneration(i int) {
+	if m.addgeneration != nil {
+		*m.addgeneration += i
+	} else {
+		m.addgeneration = &i
+	}
+}
+
+// AddedGeneration returns the value that was added to the "generation" field in this mutation.
+func (m *ScimTokenMutation) AddedGeneration() (r int, exists bool) {
+	v := m.addgeneration
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetGeneration resets all changes to the "generation" field.
+func (m *ScimTokenMutation) ResetGeneration() {
+	m.generation = nil
+	m.addgeneration = nil
+}
+
+// SetTokenPrefix sets the "token_prefix" field.
+func (m *ScimTokenMutation) SetTokenPrefix(s string) {
+	m.token_prefix = &s
+}
+
+// TokenPrefix returns the value of the "token_prefix" field in the mutation.
+func (m *ScimTokenMutation) TokenPrefix() (r string, exists bool) {
+	v := m.token_prefix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTokenPrefix returns the old "token_prefix" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldTokenPrefix(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTokenPrefix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTokenPrefix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTokenPrefix: %w", err)
+	}
+	return oldValue.TokenPrefix, nil
+}
+
+// ResetTokenPrefix resets all changes to the "token_prefix" field.
+func (m *ScimTokenMutation) ResetTokenPrefix() {
+	m.token_prefix = nil
+}
+
+// SetTokenHash sets the "token_hash" field.
+func (m *ScimTokenMutation) SetTokenHash(s string) {
+	m.token_hash = &s
+}
+
+// TokenHash returns the value of the "token_hash" field in the mutation.
+func (m *ScimTokenMutation) TokenHash() (r string, exists bool) {
+	v := m.token_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTokenHash returns the old "token_hash" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldTokenHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTokenHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTokenHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTokenHash: %w", err)
+	}
+	return oldValue.TokenHash, nil
+}
+
+// ResetTokenHash resets all changes to the "token_hash" field.
+func (m *ScimTokenMutation) ResetTokenHash() {
+	m.token_hash = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *ScimTokenMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *ScimTokenMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ClearDescription clears the value of the "description" field.
+func (m *ScimTokenMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[scimtoken.FieldDescription] = struct{}{}
+}
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *ScimTokenMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[scimtoken.FieldDescription]
+	return ok
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *ScimTokenMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, scimtoken.FieldDescription)
+}
+
+// SetCreatedBy sets the "created_by" field.
+func (m *ScimTokenMutation) SetCreatedBy(u uuid.UUID) {
+	m.created_by = &u
+}
+
+// CreatedBy returns the value of the "created_by" field in the mutation.
+func (m *ScimTokenMutation) CreatedBy() (r uuid.UUID, exists bool) {
+	v := m.created_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedBy returns the old "created_by" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldCreatedBy(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedBy: %w", err)
+	}
+	return oldValue.CreatedBy, nil
+}
+
+// ClearCreatedBy clears the value of the "created_by" field.
+func (m *ScimTokenMutation) ClearCreatedBy() {
+	m.created_by = nil
+	m.clearedFields[scimtoken.FieldCreatedBy] = struct{}{}
+}
+
+// CreatedByCleared returns if the "created_by" field was cleared in this mutation.
+func (m *ScimTokenMutation) CreatedByCleared() bool {
+	_, ok := m.clearedFields[scimtoken.FieldCreatedBy]
+	return ok
+}
+
+// ResetCreatedBy resets all changes to the "created_by" field.
+func (m *ScimTokenMutation) ResetCreatedBy() {
+	m.created_by = nil
+	delete(m.clearedFields, scimtoken.FieldCreatedBy)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ScimTokenMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ScimTokenMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ScimTokenMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetLastUsedAt sets the "last_used_at" field.
+func (m *ScimTokenMutation) SetLastUsedAt(t time.Time) {
+	m.last_used_at = &t
+}
+
+// LastUsedAt returns the value of the "last_used_at" field in the mutation.
+func (m *ScimTokenMutation) LastUsedAt() (r time.Time, exists bool) {
+	v := m.last_used_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastUsedAt returns the old "last_used_at" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldLastUsedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastUsedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastUsedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastUsedAt: %w", err)
+	}
+	return oldValue.LastUsedAt, nil
+}
+
+// ClearLastUsedAt clears the value of the "last_used_at" field.
+func (m *ScimTokenMutation) ClearLastUsedAt() {
+	m.last_used_at = nil
+	m.clearedFields[scimtoken.FieldLastUsedAt] = struct{}{}
+}
+
+// LastUsedAtCleared returns if the "last_used_at" field was cleared in this mutation.
+func (m *ScimTokenMutation) LastUsedAtCleared() bool {
+	_, ok := m.clearedFields[scimtoken.FieldLastUsedAt]
+	return ok
+}
+
+// ResetLastUsedAt resets all changes to the "last_used_at" field.
+func (m *ScimTokenMutation) ResetLastUsedAt() {
+	m.last_used_at = nil
+	delete(m.clearedFields, scimtoken.FieldLastUsedAt)
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (m *ScimTokenMutation) SetExpiresAt(t time.Time) {
+	m.expires_at = &t
+}
+
+// ExpiresAt returns the value of the "expires_at" field in the mutation.
+func (m *ScimTokenMutation) ExpiresAt() (r time.Time, exists bool) {
+	v := m.expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresAt returns the old "expires_at" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldExpiresAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresAt: %w", err)
+	}
+	return oldValue.ExpiresAt, nil
+}
+
+// ClearExpiresAt clears the value of the "expires_at" field.
+func (m *ScimTokenMutation) ClearExpiresAt() {
+	m.expires_at = nil
+	m.clearedFields[scimtoken.FieldExpiresAt] = struct{}{}
+}
+
+// ExpiresAtCleared returns if the "expires_at" field was cleared in this mutation.
+func (m *ScimTokenMutation) ExpiresAtCleared() bool {
+	_, ok := m.clearedFields[scimtoken.FieldExpiresAt]
+	return ok
+}
+
+// ResetExpiresAt resets all changes to the "expires_at" field.
+func (m *ScimTokenMutation) ResetExpiresAt() {
+	m.expires_at = nil
+	delete(m.clearedFields, scimtoken.FieldExpiresAt)
+}
+
+// SetRevokedAt sets the "revoked_at" field.
+func (m *ScimTokenMutation) SetRevokedAt(t time.Time) {
+	m.revoked_at = &t
+}
+
+// RevokedAt returns the value of the "revoked_at" field in the mutation.
+func (m *ScimTokenMutation) RevokedAt() (r time.Time, exists bool) {
+	v := m.revoked_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRevokedAt returns the old "revoked_at" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldRevokedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRevokedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRevokedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRevokedAt: %w", err)
+	}
+	return oldValue.RevokedAt, nil
+}
+
+// ClearRevokedAt clears the value of the "revoked_at" field.
+func (m *ScimTokenMutation) ClearRevokedAt() {
+	m.revoked_at = nil
+	m.clearedFields[scimtoken.FieldRevokedAt] = struct{}{}
+}
+
+// RevokedAtCleared returns if the "revoked_at" field was cleared in this mutation.
+func (m *ScimTokenMutation) RevokedAtCleared() bool {
+	_, ok := m.clearedFields[scimtoken.FieldRevokedAt]
+	return ok
+}
+
+// ResetRevokedAt resets all changes to the "revoked_at" field.
+func (m *ScimTokenMutation) ResetRevokedAt() {
+	m.revoked_at = nil
+	delete(m.clearedFields, scimtoken.FieldRevokedAt)
+}
+
+// SetRevokedBy sets the "revoked_by" field.
+func (m *ScimTokenMutation) SetRevokedBy(u uuid.UUID) {
+	m.revoked_by = &u
+}
+
+// RevokedBy returns the value of the "revoked_by" field in the mutation.
+func (m *ScimTokenMutation) RevokedBy() (r uuid.UUID, exists bool) {
+	v := m.revoked_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRevokedBy returns the old "revoked_by" field's value of the ScimToken entity.
+// If the ScimToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScimTokenMutation) OldRevokedBy(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRevokedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRevokedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRevokedBy: %w", err)
+	}
+	return oldValue.RevokedBy, nil
+}
+
+// ClearRevokedBy clears the value of the "revoked_by" field.
+func (m *ScimTokenMutation) ClearRevokedBy() {
+	m.revoked_by = nil
+	m.clearedFields[scimtoken.FieldRevokedBy] = struct{}{}
+}
+
+// RevokedByCleared returns if the "revoked_by" field was cleared in this mutation.
+func (m *ScimTokenMutation) RevokedByCleared() bool {
+	_, ok := m.clearedFields[scimtoken.FieldRevokedBy]
+	return ok
+}
+
+// ResetRevokedBy resets all changes to the "revoked_by" field.
+func (m *ScimTokenMutation) ResetRevokedBy() {
+	m.revoked_by = nil
+	delete(m.clearedFields, scimtoken.FieldRevokedBy)
+}
+
+// Where appends a list predicates to the ScimTokenMutation builder.
+func (m *ScimTokenMutation) Where(ps ...predicate.ScimToken) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ScimTokenMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ScimTokenMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ScimToken, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ScimTokenMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ScimTokenMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ScimToken).
+func (m *ScimTokenMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ScimTokenMutation) Fields() []string {
+	fields := make([]string, 0, 11)
+	if m.organization_id != nil {
+		fields = append(fields, scimtoken.FieldOrganizationID)
+	}
+	if m.generation != nil {
+		fields = append(fields, scimtoken.FieldGeneration)
+	}
+	if m.token_prefix != nil {
+		fields = append(fields, scimtoken.FieldTokenPrefix)
+	}
+	if m.token_hash != nil {
+		fields = append(fields, scimtoken.FieldTokenHash)
+	}
+	if m.description != nil {
+		fields = append(fields, scimtoken.FieldDescription)
+	}
+	if m.created_by != nil {
+		fields = append(fields, scimtoken.FieldCreatedBy)
+	}
+	if m.created_at != nil {
+		fields = append(fields, scimtoken.FieldCreatedAt)
+	}
+	if m.last_used_at != nil {
+		fields = append(fields, scimtoken.FieldLastUsedAt)
+	}
+	if m.expires_at != nil {
+		fields = append(fields, scimtoken.FieldExpiresAt)
+	}
+	if m.revoked_at != nil {
+		fields = append(fields, scimtoken.FieldRevokedAt)
+	}
+	if m.revoked_by != nil {
+		fields = append(fields, scimtoken.FieldRevokedBy)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ScimTokenMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case scimtoken.FieldOrganizationID:
+		return m.OrganizationID()
+	case scimtoken.FieldGeneration:
+		return m.Generation()
+	case scimtoken.FieldTokenPrefix:
+		return m.TokenPrefix()
+	case scimtoken.FieldTokenHash:
+		return m.TokenHash()
+	case scimtoken.FieldDescription:
+		return m.Description()
+	case scimtoken.FieldCreatedBy:
+		return m.CreatedBy()
+	case scimtoken.FieldCreatedAt:
+		return m.CreatedAt()
+	case scimtoken.FieldLastUsedAt:
+		return m.LastUsedAt()
+	case scimtoken.FieldExpiresAt:
+		return m.ExpiresAt()
+	case scimtoken.FieldRevokedAt:
+		return m.RevokedAt()
+	case scimtoken.FieldRevokedBy:
+		return m.RevokedBy()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ScimTokenMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case scimtoken.FieldOrganizationID:
+		return m.OldOrganizationID(ctx)
+	case scimtoken.FieldGeneration:
+		return m.OldGeneration(ctx)
+	case scimtoken.FieldTokenPrefix:
+		return m.OldTokenPrefix(ctx)
+	case scimtoken.FieldTokenHash:
+		return m.OldTokenHash(ctx)
+	case scimtoken.FieldDescription:
+		return m.OldDescription(ctx)
+	case scimtoken.FieldCreatedBy:
+		return m.OldCreatedBy(ctx)
+	case scimtoken.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case scimtoken.FieldLastUsedAt:
+		return m.OldLastUsedAt(ctx)
+	case scimtoken.FieldExpiresAt:
+		return m.OldExpiresAt(ctx)
+	case scimtoken.FieldRevokedAt:
+		return m.OldRevokedAt(ctx)
+	case scimtoken.FieldRevokedBy:
+		return m.OldRevokedBy(ctx)
+	}
+	return nil, fmt.Errorf("unknown ScimToken field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ScimTokenMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case scimtoken.FieldOrganizationID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrganizationID(v)
+		return nil
+	case scimtoken.FieldGeneration:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGeneration(v)
+		return nil
+	case scimtoken.FieldTokenPrefix:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTokenPrefix(v)
+		return nil
+	case scimtoken.FieldTokenHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTokenHash(v)
+		return nil
+	case scimtoken.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	case scimtoken.FieldCreatedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedBy(v)
+		return nil
+	case scimtoken.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case scimtoken.FieldLastUsedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastUsedAt(v)
+		return nil
+	case scimtoken.FieldExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresAt(v)
+		return nil
+	case scimtoken.FieldRevokedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRevokedAt(v)
+		return nil
+	case scimtoken.FieldRevokedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRevokedBy(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ScimToken field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ScimTokenMutation) AddedFields() []string {
+	var fields []string
+	if m.addgeneration != nil {
+		fields = append(fields, scimtoken.FieldGeneration)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ScimTokenMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case scimtoken.FieldGeneration:
+		return m.AddedGeneration()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ScimTokenMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case scimtoken.FieldGeneration:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddGeneration(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ScimToken numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ScimTokenMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(scimtoken.FieldDescription) {
+		fields = append(fields, scimtoken.FieldDescription)
+	}
+	if m.FieldCleared(scimtoken.FieldCreatedBy) {
+		fields = append(fields, scimtoken.FieldCreatedBy)
+	}
+	if m.FieldCleared(scimtoken.FieldLastUsedAt) {
+		fields = append(fields, scimtoken.FieldLastUsedAt)
+	}
+	if m.FieldCleared(scimtoken.FieldExpiresAt) {
+		fields = append(fields, scimtoken.FieldExpiresAt)
+	}
+	if m.FieldCleared(scimtoken.FieldRevokedAt) {
+		fields = append(fields, scimtoken.FieldRevokedAt)
+	}
+	if m.FieldCleared(scimtoken.FieldRevokedBy) {
+		fields = append(fields, scimtoken.FieldRevokedBy)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ScimTokenMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ScimTokenMutation) ClearField(name string) error {
+	switch name {
+	case scimtoken.FieldDescription:
+		m.ClearDescription()
+		return nil
+	case scimtoken.FieldCreatedBy:
+		m.ClearCreatedBy()
+		return nil
+	case scimtoken.FieldLastUsedAt:
+		m.ClearLastUsedAt()
+		return nil
+	case scimtoken.FieldExpiresAt:
+		m.ClearExpiresAt()
+		return nil
+	case scimtoken.FieldRevokedAt:
+		m.ClearRevokedAt()
+		return nil
+	case scimtoken.FieldRevokedBy:
+		m.ClearRevokedBy()
+		return nil
+	}
+	return fmt.Errorf("unknown ScimToken nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ScimTokenMutation) ResetField(name string) error {
+	switch name {
+	case scimtoken.FieldOrganizationID:
+		m.ResetOrganizationID()
+		return nil
+	case scimtoken.FieldGeneration:
+		m.ResetGeneration()
+		return nil
+	case scimtoken.FieldTokenPrefix:
+		m.ResetTokenPrefix()
+		return nil
+	case scimtoken.FieldTokenHash:
+		m.ResetTokenHash()
+		return nil
+	case scimtoken.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case scimtoken.FieldCreatedBy:
+		m.ResetCreatedBy()
+		return nil
+	case scimtoken.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case scimtoken.FieldLastUsedAt:
+		m.ResetLastUsedAt()
+		return nil
+	case scimtoken.FieldExpiresAt:
+		m.ResetExpiresAt()
+		return nil
+	case scimtoken.FieldRevokedAt:
+		m.ResetRevokedAt()
+		return nil
+	case scimtoken.FieldRevokedBy:
+		m.ResetRevokedBy()
+		return nil
+	}
+	return fmt.Errorf("unknown ScimToken field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ScimTokenMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ScimTokenMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ScimTokenMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ScimTokenMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ScimTokenMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ScimTokenMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ScimTokenMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ScimToken unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ScimTokenMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ScimToken edge %s", name)
 }
 
 // SeatAssignmentMutation represents an operation that mutates the SeatAssignment nodes in the graph.

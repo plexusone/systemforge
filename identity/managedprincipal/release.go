@@ -25,9 +25,11 @@ var ErrEmailNotVerified = errors.New("managedprincipal: release requires a verif
 // transaction, after which the principal is self-managed. It requires a
 // verified email (ErrEmailNotVerified otherwise) and the manage_managers
 // permission, which guardians hold and which is checked under the
-// principal's row lock. Release is an explicit, audited event
-// (managed_principal.released); whether the person being released must
-// confirm first is the application's decision.
+// principal's row lock. The manager relations leave the authorization
+// graph before the release commits; if the graph refuses, the principal
+// stays managed and the error is returned. Release is an explicit,
+// audited event (managed_principal.released); whether the person being
+// released must confirm first is the application's decision.
 func (s *Service) Release(ctx context.Context, actorID, managedID uuid.UUID) error {
 	var (
 		released []Relationship
@@ -61,6 +63,16 @@ func (s *Service) Release(ctx context.Context, actorID, managedID uuid.UUID) err
 				ManagedPrincipalID: r.ManagedPrincipalID, ManagerPrincipalID: r.ManagerPrincipalID, Role: r.Role,
 			})
 		}
+		if err := s.revoke(ctx, tx, managedID, "remove managers", func() error {
+			for _, r := range rels {
+				if err := s.syncer.RemovePrincipalManager(ctx, managedID, r.ManagerPrincipalID, r.Role); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
 		change, err = endManagement(ctx, tx, managedID)
 		return err
 	})
@@ -73,12 +85,7 @@ func (s *Service) Release(ctx context.Context, actorID, managedID uuid.UUID) err
 		managers = append(managers, ManagerInput{PrincipalID: r.ManagerPrincipalID, Role: r.Role})
 	}
 	s.emit(ctx, EventReleased, "release", actorID, managedID, map[string]any{"managers": managerDetails(managers)})
-
-	var syncErr error
-	for _, m := range managers {
-		syncErr = errors.Join(syncErr, s.sync(ctx, "remove manager", managedID, s.syncer.RemovePrincipalManager(ctx, managedID, m.PrincipalID, m.Role)))
-	}
-	return syncErr
+	return nil
 }
 
 // endManagement restores the capabilities a managed principal gave up

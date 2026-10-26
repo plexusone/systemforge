@@ -68,7 +68,7 @@ func TestBearerMiddlewareJWT(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	cfg := BearerConfig{Tokens: client, Principals: store, Memberships: LocalMemberships(store)}
+	cfg := BearerConfig{Tokens: client, Principals: store, Memberships: LocalMemberships(store), AllowBearerTokens: true}
 
 	w, got := runBearer(t, cfg, withBearer(fake.accessJWT(fake.subject, testClientID, []string{"openid", "things:read"}, time.Minute)))
 	if w.Code != http.StatusOK || got.ID != p.ID || got.Method != AuthMethodAccessToken || got.Subject != fake.subject ||
@@ -198,7 +198,7 @@ func TestBearerMiddlewareAPIKey(t *testing.T) {
 func TestBearerMiddlewareSessionFallback(t *testing.T) {
 	h := newHarness(t)
 	sess := h.sessionCookie()
-	cfg := BearerConfig{Tokens: h.bff.cfg.Client, Principals: h.store, Sessions: h.bff}
+	cfg := BearerConfig{Tokens: h.bff.cfg.Client, Principals: h.store, Sessions: h.bff, AllowBearerTokens: true}
 	w, got := runBearer(t, cfg, func(r *http.Request) { r.AddCookie(sess) })
 	if w.Code != http.StatusOK || got.Method != AuthMethodSession {
 		t.Fatalf("session fallback: %d %+v", w.Code, got)

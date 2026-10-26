@@ -9,6 +9,580 @@
   ],
   "releases": [
     {
+      "version": "v0.21.0",
+      "date": "2026-10-25",
+      "highlights": [
+        {
+          "description": "Tokens are DPoP-bound by default: SystemAuth and the identity/oauth provider verify DPoP proofs (RFC 9449) at the token endpoint and bind access and refresh tokens to the proof's key, the relying-party, session and multi-app middleware accept a bound token only with a proof by its key, and the BFF presents tokens with proofs by the session's key; unbound bearer tokens remain only as an explicit per-client opt-out (`allow_bearer_tokens`)"
+        },
+        {
+          "description": "Keys and secrets rotate N / N-1: JWT signing keys carry key IDs and pre-staged verification keys, and client secrets, BFF session sealing keys and SCIM tokens keep the current and previous value valid, so a rotation can be rolled back without signing anyone out"
+        },
+        {
+          "description": "Built-in per-tenant SCIM tokens: the `scimtoken` store issues, rotates and revokes hashed tokens bound to one organization, and the packaged SystemAuth service serves SCIM 2.0 and token management with them"
+        },
+        {
+          "description": "Revocations reach the ReBAC graph first: removing access deletes the relationships under advisory graph locks before the database change commits and fails when the graph refuses, a reconciler repairs the graph from the identity tables, and the packaged service runs in mode rebac"
+        },
+        {
+          "description": "Each multi-app application connects with its own database login, verified at startup to be confined to its schema, reads the shared identity tables read-only, and is migrated by a separate step that keeps the owner login out of app servers"
+        }
+      ],
+      "security": [
+        {
+          "description": "The Go directive was 1.26.6, which misses standard-library security fixes in net/http and HTTP/2, crypto/tls, crypto/x509, html/template, net/textproto and os that are reachable from this module; it is now 1.26.10, so dependent applications build with the fixes"
+        },
+        {
+          "description": "SystemAuth issued only bearer tokens, which work for whoever holds a copy, and nothing on the resource side verified the DPoP proofs the BFF sent, so a stolen DPoP-bound token worked as an ordinary bearer token; tokens are now bound to a proven key and every SystemForge resource middleware refuses a bound token presented as Bearer"
+        },
+        {
+          "description": "`identity/token` bound tokens to whatever DPoP thumbprint its caller passed, so a caller that skipped proof verification could bind tokens to a key nobody had proved to hold; it now binds only to a `dpopproof.Proof` that a `Checker` verified"
+        },
+        {
+          "description": "SystemAuth treated a token subject that was not a UUID or named no principal as active, so the tokens of a hard-deleted principal kept working; such subjects are now inactive and their token family is revoked"
+        },
+        {
+          "description": "The embedded auth provider created a session for the `oidc` method without checking any token, so a caller passing a request-supplied method could sign in as any active user by email; it now verifies only passwords and returns `ErrUnsupportedAuthMethod` for other methods"
+        },
+        {
+          "description": "Password authentication had no attempt limit and returned faster for unknown accounts, allowing unbounded guessing and account enumeration by timing; failures now lock an identifier (`ErrAccountLocked`) whether or not the account exists, and unknown accounts spend one Argon2id verification"
+        },
+        {
+          "description": "A login session created for a managed principal could authorize any client, including ones that never allowed managed principals; `/oauth/authorize` and the token endpoint now refuse them for such clients"
+        },
+        {
+          "description": "`POST /login-token` did not check where the form came from, so any site could sign a visitor into an account it controlled; the exchange now requires an allowed Origin or Referer"
+        },
+        {
+          "description": "Signup created accounts without proof of the address and `SignupOrGetExisting` handed an existing unverified account to a verified login, letting someone pre-register another person's address; it now returns `ErrAccountEmailUnverified`"
+        },
+        {
+          "description": "`UpdateHuman` kept the verified flag when callers such as federation sync changed a human's email, so an unproven address linked social logins and was published as `email_verified=true`; a changed email is now unverified"
+        },
+        {
+          "description": "The invite API listed and answered invitations for the caller's email without checking that it was verified, so a principal claiming someone's address could see their invitations across organizations"
+        },
+        {
+          "description": "Accepting an invitation did not check that the inviter could still invite, so a removed admin could rejoin through invitations sent to addresses it controlled; acceptance now requires the inviter's current authority, and removing or demoting a member revokes its pending invitations"
+        },
+        {
+          "description": "Invite status writes were unconditional, so an accept racing a revoke or decline still created the membership, and revoking an accepted invite left the membership; every transition is now conditional on the invite being pending"
+        },
+        {
+          "description": "Under RBAC a deleted organization stayed usable: its slug resolved, its members kept their roles and could add members and accept invitations; deleted organizations now resolve to nothing, give no roles and refuse membership writes (`ErrOrganizationDeleted`)"
+        },
+        {
+          "description": "Any organization admin could add any principal, including another tenant's managed principals, as an active member without consent, and the answers revealed which principal IDs exist; direct adds now need `APIConfig.DirectAdd` or platform administration and refusals are indistinguishable"
+        },
+        {
+          "description": "API key middleware built the principal from a valid key alone, so an organization-scoped key kept working after its owner was removed or deactivated; an owner check now runs on every request"
+        },
+        {
+          "description": "identity/oauth `API.Middleware` accepted any token its storage held, regardless of the issuing client or whether the client or principal was still active; it now requires an accepted, active client and an active principal"
+        },
+        {
+          "description": "`CreateDelegation` let any principal with `can_delegate` take over any agent, including another organization's or one already delegated; it now returns `ErrAlreadyDelegated` and `ErrCrossOrganization`"
+        },
+        {
+          "description": "`GET /access-changes` returned every organization's changes to any client with `access_changes:read`, and back-channel deliveries went to every client; the feed is now scoped to each client's organizations"
+        },
+        {
+          "description": "The contract audit stream state was process-wide, so a token allowed to configure one hosted application's audit stream could repoint or disable another's; the state now belongs to each `contract.API`"
+        },
+        {
+          "description": "The embedded SpiceDB server listened on a local TCP port guarded by a key derived from the startup time, which another local process could guess to write relationships; it now uses an in-memory listener and a random 32-byte key"
+        },
+        {
+          "description": "`CanAll` returned true for an empty action list in the rbac and SpiceDB providers, so a route registered with no actions allowed every authenticated caller; it now denies, and `RequireAllActions` and `RequireAnyAction` panic without actions"
+        },
+        {
+          "description": "authzguardsql's `DefaultResourceBuilder` gave every entity and field the same ID-less resource, so a role granted `guardsql_field.read` could read every field and SpiceDB checks always failed; each entity and field now has a concrete resource ID and organization"
+        },
+        {
+          "description": "Targeted feature flags were on for every caller that passed no evaluation context; a flag with targets or a partial rollout is now off without a subject"
+        },
+        {
+          "description": "The observability middleware recorded full request URLs and raw paths, sending OAuth codes, API keys in query strings and invite tokens to the tracing backend; spans and metrics now carry the matched route pattern"
+        },
+        {
+          "description": "productgraph took the event user from the `X-User-ID` request header and sent raw request paths, so callers could attribute events to other users; the user comes from the session and paths are recorded as route patterns"
+        },
+        {
+          "description": "Marketplace seat assignment read and wrote `used_seats` outside a transaction, so concurrent assignments overran the seat limit; seats are now reserved with a conditional increment in a transaction"
+        },
+        {
+          "description": "Stripe webhooks were verified with an empty key when no signing secret was configured, so a forged checkout event granted a license; verification now fails closed with `ErrWebhookSecretRequired`"
+        },
+        {
+          "description": "Stripe subscription updates were ignored, so unpaid, paused or canceled subscriptions and portal seat reductions left licenses unchanged; licenses now follow the subscription status and quantity"
+        },
+        {
+          "description": "The Redis sliding-window rate limiter could count two requests in the same millisecond as one, letting a parallel burst exceed the limit; each entry now has a unique random member"
+        },
+        {
+          "description": "The BFF proxy forwarded dot segments, so `/api/../../other` reached the upstream outside its base path with the session's token; such paths are refused with 400"
+        },
+        {
+          "description": "The BFF proxy ignored `HeadersToForward` and passed client identity headers such as `X-User-Id` and `X-App-ID` to upstreams; the list is now enforced and identity, routing and forwarding headers are stripped"
+        },
+        {
+          "description": "BFF logout answered success when the session store failed, leaving the session and refresh token valid; it now answers 500 and keeps the cookie so the client can retry"
+        },
+        {
+          "description": "BFF sessions were extended by every refresh and never expired from inactivity; sessions now have an idle timeout and a maximum lifetime"
+        },
+        {
+          "description": "BFF per-endpoint rate limits shared one bucket per client and never matched under a mount prefix; each endpoint limit now has its own bucket and matches relative to the mount point"
+        },
+        {
+          "description": "The BFF session cookie was named `sf_session` and could be shared across subdomains, letting a sibling subdomain set or overwrite it; it is now `__Host-sf_session` and always host-only"
+        },
+        {
+          "description": "BFF proxy routes skipped the origin check for GET, HEAD and OPTIONS, so a cross-site top-level GET reached the upstream as the user; proxied safe methods are now origin-checked"
+        },
+        {
+          "description": "The omnistorage BFF store dropped the site ID on update, logging users out at their first refresh and pushing operators to run without site isolation, and its default key prefix shared the per-user session index between applications; the site ID is kept, required for Redis, and scopes the default prefix"
+        },
+        {
+          "description": "The omnistorage BFF store wrote access tokens, refresh tokens and DPoP private keys to Redis in plaintext; they are now sealed with a `SessionSealer`"
+        },
+        {
+          "description": "The Ent BFF store encrypted session fields under one key with no associated data, so ciphertext could be moved between rows or columns and the key could not be rotated; fields are now sealed with key IDs and bound to the session and column"
+        },
+        {
+          "description": "The session JWT service accepted HMAC secrets of any length and checked the issuer only when configured; it now requires an issuer and secrets at least as long as the hash output"
+        },
+        {
+          "description": "multiapp's Ent hook set `search_path` at session level, so a pooled connection kept another application's schema, and schema names reached SQL unvalidated; the hook now uses `SET LOCAL` in a transaction and every schema path validates names"
+        },
+        {
+          "description": "The rls migrator and policy SQL interpolated table, column, policy and role names unquoted; they are now quoted as identifiers"
+        },
+        {
+          "description": "SCIM filters the store could not evaluate were dropped, so an unsupported filter matched every user and an identity provider could be handed the wrong account; such filters now fail with `invalidFilter`"
+        },
+        {
+          "description": "SCIM PATCH stored a new password in plaintext and PUT never hashed it and echoed it back; both now hash, and no response carries a password or hash"
+        },
+        {
+          "description": "SCIM group writes bypassed the organization service, accepting invalid or cooling-off slugs, renaming personal organizations and hard-deleting organizations without graph cleanup; they now go through the organization service"
+        },
+        {
+          "description": "SCIM returned database and internal error text to clients; unexpected errors are logged and answered with a generic 500"
+        },
+        {
+          "description": "SCIM bulk payload limits were advertised but not applied and every operation could run a bcrypt hash; the payload limit is enforced and password operations per request are capped"
+        },
+        {
+          "description": "Deactivating a principal, demoting a member to collaborator, deleting a SCIM user and deactivating a human through SystemAuth storage left the principal's relationships in the authorization graph, so under mode rebac the access remained; each now removes them before committing"
+        },
+        {
+          "description": "Revocations committed the database change before removing the relationship from the graph, so a failed graph write left access granted with no retry, and a late grant write could undo a concurrent revocation; revocations now remove graph access first and grants re-read the rows under graph locks"
+        },
+        {
+          "description": "A file vault pointed at the keys directory kept the root key beside the keyring, so one backup held everything needed to decrypt connection credentials; root keys in or under the keys directory are refused"
+        },
+        {
+          "description": "The OAuth client state cookie could be written without Secure or with an unsafe SameSite mode; it is now `__Host-sf_oauth_client_state`, Secure, HttpOnly and SameSite=Lax by default"
+        },
+        {
+          "description": "The token endpoints parsed the request form before installing their 1 MB body limit; the limit now applies before parsing"
+        },
+        {
+          "description": "The BFF omnistorage session store's Redis connection is refused for a server that is not on loopback unless it uses TLS with certificate verification and a password, so session IDs and sealed sessions no longer cross the network in clear text by default",
+          "commit": "ca5266c"
+        },
+        {
+          "description": "Connections' development egress setting lets provider requests reach only the address ranges listed, instead of every non-public address; link-local and cloud metadata addresses are refused even when listed",
+          "commit": "506c9ed"
+        },
+        {
+          "description": "The BFF session sealer and the relying-party store's row keyring sized their output from the plaintext length without an upper bound; both now refuse plaintext over 64 MiB",
+          "commit": "eb05028"
+        }
+      ],
+      "added": [
+        {
+          "description": "systemauth: DPoP proof checks at the token endpoint, DPoP-bound access and refresh tokens (`cnf.jkt`, `token_type` DPoP), `dpop_jkt` code binding, optional server nonces (`dpop.require_nonce`), a Redis replay cache (`dpop.replay_cache_redis_url`) and `dpop.resource_base_url` for routes behind a proxy"
+        },
+        {
+          "description": "systemauth: per-client `allow_bearer_tokens`, the legacy exception that keeps unbound bearer tokens, stored in `sf_oauth_apps.allow_bearer_tokens`"
+        },
+        {
+          "description": "systemauth: `keys.verification_keys` publishes previous and pre-staged signing keys in the JWKS for verification only, and a token's `kid` selects its key"
+        },
+        {
+          "description": "systemauth: `EntStorage.RotateClientSecret` and `RevokeClientSecret`, keeping the current and previous secret and revoking older ones; `ClientSecretHasher` verifies bcrypt and Argon2id hashes"
+        },
+        {
+          "description": "systemauth: `WithLockout` and `WithProviderLockout` for password lockout, `WithEntAuthzSyncer` and `WithEntLogger` for `EntStorage`, and `AccessChangeScope` with `AllOrganizations`"
+        },
+        {
+          "description": "oauth: DPoP-bound tokens, `Config.KeyID` and `Config.VerificationKeys` for N / N-1 signing key rotation, `Config.JWTAccessTokens` for RFC 9068 JWT access tokens, `WithResourceBaseURL`, `WithAcceptedClientIDs`, `WithAnyClient` and `Config.AllowEphemeralKey`"
+        },
+        {
+          "description": "identity/dpopproof: a DPoP proof checker with replay and stateless nonce checks whose `Proof` exists only after verification"
+        },
+        {
+          "description": "relyingparty: `BearerConfig.DPoP` verifies proofs for DPoP-bound access tokens and `BearerConfig.AllowBearerTokens` opts in to unbound ones; `Client` proves possession of `Config.DPoPKey` in token requests"
+        },
+        {
+          "description": "session/middleware: DPoP-requiring `HTTPAuth` family with `DPoPConfig`, `NewDPoPAuth`, `DPoPAuth.OptionalMiddleware`, `NewMemoryReplayCache` and `NewRedisReplayCache`; the bearer-only middleware remains as `HTTPAuthBearer` and its variants"
+        },
+        {
+          "description": "session/middleware: `APIKeyMiddlewareConfig.OwnerCheck` and `ErrAPIKeyOwnerNotAllowed`"
+        },
+        {
+          "description": "session/jwt: `Config.KeyID` and `Config.VerificationKeys` for signing key rotation, `ErrMissingIssuer` and `ErrWeakSecret`"
+        },
+        {
+          "description": "bff: `SessionSealer` with `KeyringSealer` and `NewKeysSealer` for the omnistorage and Ent stores, `EntStoreDefaultKeyID`, `ErrSealerRequired` and `ErrSiteIDRequired`"
+        },
+        {
+          "description": "bff: `IdleTimeout` and `MaxLifetime` (defaults 24 hours and 7 days) with `Session.LifetimeExceeded`, `Session.TokenType`, `RateLimitConfig.BasePath`, `OriginValidator.SafeMethodMiddleware`, `CookieConfig.Validate`, `InsecureCookieName`, `HandlerConfig.Logger` and `ErrInvalidProxyPath`"
+        },
+        {
+          "description": "scim/scimtoken: per-tenant SCIM tokens (`sf_scim_tokens`) with issue, N / N-1 rotate, revoke, list and authenticate, a `CredentialFunc`, and an HTTP API under `/api/v1/organizations/{slug}/scim-tokens`"
+        },
+        {
+          "description": "systemauthsvc: `Options.SCIM` serves SCIM 2.0 at `/scim/v2` with stored tenant tokens, `Service.SCIMTokens`, `Options.AuthzSyncMode`, `Service.Authz`, `AuthzReconciler`, and `Options.AuditStore` for key lifecycle and connection events"
+        },
+        {
+          "description": "scim: `InternalError`, `BatchMembershipStore`, `Config.BulkMaxPasswordOperations` and `filter.MaxDepth`; scim/store `Config.Organizations` and `Config.Syncer`"
+        },
+        {
+          "description": "identity/graphlock: transaction-scoped PostgreSQL advisory locks per organization and principal, and `Grant` for writing granted access under them"
+        },
+        {
+          "description": "identity/graphstate: the single statement of which graph relationships the identity tables call for"
+        },
+        {
+          "description": "authz/mode: the graph reconciler (`Result.Reconciler`, `Reconcile`, `RunReconciler`, `Stats`) with schedule settings in `authz.ModeConfig`, and `Result.SyncMode`"
+        },
+        {
+          "description": "spicedb: `Client.ReadRelationships` reads by page as one snapshot and `DeleteRelationshipsExact` deletes a set in one request; authz `VocabularyRegistry.HasOrgFacet`"
+        },
+        {
+          "description": "multiapp: `Config.AppDatabases`, `MigrationDatabaseURL`, `MigrationRole`, `AllowInProcessMigrations` and `AllowSharedDatabaseLogin`; `RoleProvisioning`, `ApplyRoleProvisioning`, `OwnerRoleSQL`, `DefaultSharedReadTables`, `NoSharedReadTables`, `RestrictedSharedTables`, `CheckDatabaseIsolation`, `VerifyDatabaseIsolation` and `EntConnHook.SetSchemaInTx`"
+        },
+        {
+          "description": "cmd/multiappdb: print, apply and verify per-app database login provisioning, reading connection strings and passwords from named environment variables"
+        },
+        {
+          "description": "invite: `WithAuthorizer`, `ErrNotPending` and `ErrInviterNotAuthorized`; organization `APIConfig.DirectAdd` and `ErrOrganizationDeleted`; delegation `ErrAlreadyDelegated` and `ErrCrossOrganization`"
+        },
+        {
+          "description": "oauthclient: `StateManager.AllowInsecure` and `ErrInvalidStateCookieConfig`; startup warnings when cookies are not Secure in the BFF handler, relying-party BFF and social login"
+        },
+        {
+          "description": "keys: `CheckRootKeyLocation`"
+        },
+        {
+          "description": "marketplace/stripe: `ErrWebhookSecretRequired`"
+        },
+        {
+          "description": "`systemauth keys accept-rollback --confirm` and `systemauthsvc.AcceptKeyRollback`, which open the connections keyring once accepting a restored or moved copy, or one from before its rollback state was authenticated",
+          "commit": "2927336"
+        },
+        {
+          "description": "Connections settings `egress_allow_prefixes` (CIDR ranges provider requests may reach in development) and `allow_http_egress`, with a startup warning when either is set",
+          "commit": "506c9ed"
+        },
+        {
+          "description": "`bff.OmniStorageConfig.AllowInsecureRedis` for a development Redis without TLS or a password, with a warning when set",
+          "commit": "ca5266c"
+        },
+        {
+          "description": "`bff.MaxSealPlaintext` and `bff.ErrPlaintextTooLarge`, and `pgstore.ErrValueTooLarge`, for data too large to seal",
+          "commit": "eb05028"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "oauth: confidential clients authenticate with their stored bcrypt or Argon2id secret hashes, so `client_secret_basic`, `client_secret_post` and client credentials work"
+        },
+        {
+          "description": "oauth: discovery lists only the `code` response type and the JWKS publishes the provider's key"
+        },
+        {
+          "description": "systemauth: a token request for a DPoP-bound code with a missing or mismatched proof is refused before Fosite runs, so the code stays usable with every storage"
+        },
+        {
+          "description": "systemauth: `EntStorage.CreateClient` returns the cleanup error when it cannot remove a half-created client"
+        },
+        {
+          "description": "bff: tokens are presented with the scheme they were issued for, and refreshes prove possession of the session's existing key"
+        },
+        {
+          "description": "bff: `NewHandler` applies cookie defaults field by field instead of replacing a config without a name, which dropped fields such as `AllowInsecure`"
+        },
+        {
+          "description": "signup: an account created through an invite has its email marked verified"
+        },
+        {
+          "description": "organization: generated slugs skip those in their cooling-off period, and rollback failures are reported instead of discarded"
+        },
+        {
+          "description": "observability: a disabled instance creates noop metrics instead of panicking"
+        },
+        {
+          "description": "session/middleware: API key usage recording failures are logged"
+        },
+        {
+          "description": "marketplace: a license suspended by setting `ValidUntil` to the current time stayed valid at that same instant, which a coarse clock such as Windows' could observe; `ValidUntil` is now the first instant the license is no longer valid, in `License.IsValid` and `CheckPrincipal`",
+          "commit": "d5b716b"
+        }
+      ],
+      "removed": [
+        {
+          "description": "multiapp: `Config.DatabaseURL`; use `MigrationDatabaseURL` and `AppDatabases`"
+        },
+        {
+          "description": "bff: `CookieConfig.Domain`; the session cookie is always host-only"
+        },
+        {
+          "description": "contract: the package functions `RecordAuditEvent`, `GetAuditStreamConfig` and `IsAuditStreamEnabled`; use the methods on `*contract.API`"
+        }
+      ],
+      "deprecated": [
+        {
+          "description": "bff: `StoreConfig.EncryptionKey`, which no store read; configure a `Sealer`"
+        },
+        {
+          "description": "multiapp: `EntConnHook.SetSchemaFromContext`; use `SetSchemaInTx`"
+        },
+        {
+          "description": "rls: `SystemForgeTables`; RLS on the identity tables breaks their cross-organization queries"
+        },
+        {
+          "description": "productgraph: `HeaderUserID`; set the user from the authenticated session with `WithUserID`"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "systemauth: token requests without a DPoP proof are refused unless the client sets `allow_bearer_tokens`; tokens are DPoP-bound and must be presented with the DPoP scheme and a proof. Existing databases need `migrations/0010_oauth_app_allow_bearer_tokens.sql`. `EmbeddedOAuthProvider.UserInfo` refuses DPoP-bound tokens, and `AuthorizeIntrospectionCaller` also accepts the DPoP scheme"
+        },
+        {
+          "description": "systemauth: a token subject must be a principal ID; tokens for other subjects are refused, and custom `Storage` implementations must implement `PrincipalActive`"
+        },
+        {
+          "description": "systemauth: a client secret older than the two newest active secrets no longer authenticates"
+        },
+        {
+          "description": "systemauth: `WithAccessChanges` takes an `AccessChangeScope`; without one `/access-changes` answers 501"
+        },
+        {
+          "description": "systemauth: `EntStorage.UpdateHuman` with `Active` false fails, and the principal stays active, when the graph refuses to remove its relationships, and it records a deactivation access change"
+        },
+        {
+          "description": "oauth: clients without `allow_bearer_tokens` must send DPoP proofs and present tokens with the DPoP scheme; `NewProvider` requires `Config.PrivateKey` or `AllowEphemeralKey`; `API.Middleware` panics without `WithAcceptedClientIDs` or `WithAnyClient`; `Provider.Session` returns `*systemauth.Session`"
+        },
+        {
+          "description": "token: `IssueInput.DPoPJKT` and `RefreshInput.DPoPJKT` are replaced by `DPoP *dpopproof.Proof`, and bound tokens have `TokenType` DPoP"
+        },
+        {
+          "description": "relyingparty: `BearerMiddleware` and `RequestAuthenticator` panic when `Tokens` is set without `BearerConfig.DPoP` or `AllowBearerTokens`, and always refuse a DPoP-bound token sent as Bearer; relying-party instances sharing sessions must share `Config.DPoPKey`"
+        },
+        {
+          "description": "session/middleware: `HTTPAuth`, `HTTPAuthForAudience`, `HTTPAuthOptional`, `ChiAuth` and `ChiAuthOptional` take a `DPoPConfig`, return an error and refuse unbound tokens unless `DPoPConfig.AllowBearer` is set; the bearer-only middleware is renamed `HTTPAuthBearer` and its variants"
+        },
+        {
+          "description": "session/middleware: `APIKeyMiddleware` panics without `OwnerCheck`, and `RequireAPIKey`, `RequireAPIKeyWithScopes` and `OptionalAPIKey` take an `APIKeyOwnerCheck`"
+        },
+        {
+          "description": "session/jwt: `NewService` fails with `ErrMissingIssuer` without `Config.Issuer` and with `ErrWeakSecret` for an HMAC secret shorter than the hash output"
+        },
+        {
+          "description": "multiapp: `AuthMiddleware` returns `(middleware, error)`, needs `MiddlewareConfig.JWTService` and `DPoP.ReplayCache`, and refuses unbound tokens unless `DPoP.AllowBearer` is set"
+        },
+        {
+          "description": "multiapp: every app needs its own database login in `Config.AppDatabases`; `Config.DatabaseURL` is removed, `MigrationDatabaseURL` is refused without `AllowInProcessMigrations` or `AllowSharedDatabaseLogin`, `RegisterApp` fails when the app schema is missing, and an `AppAwareDB` serves one schema unless opened with `AllowSharedLogin` or `AsMigrationLogin`"
+        },
+        {
+          "description": "multiapp: `RoleProvisioning` with nil `SharedReadTables`, and `multiappdb` without `--shared-table`, grant SELECT on the default shared identity tables; restricted tables are refused"
+        },
+        {
+          "description": "bff: the default session cookie is `__Host-sf_session` (`sf_session` when insecure), `NewHandler` refuses invalid `__Host-` and `__Secure-` cookie configs, and `CookieConfig.Domain` is removed"
+        },
+        {
+          "description": "bff: `NewOmniStorageStore` with the redis backend requires `SiteID` and a `Sealer` (or `InsecurePlaintext`), `NewOmniStorageStoreWithKVS` returns an error and requires both, and the default key prefix is `session:<SiteID>:`"
+        },
+        {
+          "description": "bff: `NewEntStore` requires a `Sealer` or `EncryptionKey` (`ErrSealerRequired`) and writes sealed fields in a format earlier versions cannot open"
+        },
+        {
+          "description": "oauthclient: the state cookie is `__Host-sf_oauth_client_state`; `SetStateCookie` returns an error, `NewStateManagerInsecure` takes a `*slog.Logger`, a `StateManager` is Secure unless `AllowInsecure` is set, and SameSite Strict or None is refused"
+        },
+        {
+          "description": "organization, approle, resourcegrant, managedprincipal, principal: a revocation whose graph removal fails returns the error and leaves the database unchanged, also in `SyncModeEventual`; `approle.RemoveForMember` removes nothing on a graph error, and `resourcegrant.GrantInTx` may write to the graph before commit when lowering a grant"
+        },
+        {
+          "description": "principal: `Deactivate` fails, and the principal stays active, when the graph refuses to remove its relationships; `Update` with `Active` false records a deactivation access change"
+        },
+        {
+          "description": "organization: demoting a member to collaborator deletes their application roles in the organization, and admins can add members directly only when `APIConfig.DirectAdd` allows it"
+        },
+        {
+          "description": "authz/mode: in mode rebac the reconciler removes the relationships of deactivated principals and collaborators' application-role relationships"
+        },
+        {
+          "description": "scim/store: `DeleteUser` answers 409 for a user who actively manages other accounts; platform `CreateGroup` refuses an `externalId` that is not a valid, available slug, and `DeleteGroup` soft-deletes and refuses personal organizations"
+        },
+        {
+          "description": "contract: `RecordAuditEvent`, `GetAuditStreamConfig` and `IsAuditStreamEnabled` are methods of `*contract.API` (`AuditStreamConfig` for the second)"
+        },
+        {
+          "description": "systemauth: the connections setting `allow_private_egress` is removed; use `egress_allow_prefixes` and `allow_http_egress`",
+          "commit": "506c9ed"
+        },
+        {
+          "description": "bff: a redis backend whose `RedisURL` names a non-loopback server without `rediss://`, a password or certificate verification fails with an error wrapping omnistorage-core's `ErrInsecureConnection` unless `AllowInsecureRedis` is set",
+          "commit": "ca5266c"
+        },
+        {
+          "description": "keys: an existing connections keyring refuses to open after the upgrade until it is accepted once with `systemauth keys accept-rollback --confirm`, since keyforge v0.2.0 authenticates the keyring's rollback state; a keyring moved to a new host without that state needs the same",
+          "commit": "89719ae"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "DPoP enforcement page: where proofs are checked, the bearer-token exception, the SCIM tenant token exception and the base URL each component builds a proof's `htu` from"
+        },
+        {
+          "description": "Browser cookies page: every cookie's production and development names, attributes, development switches and refused configurations"
+        },
+        {
+          "description": "Key rotation guidance for JWT signing keys, BFF session sealing keys, client secrets and SCIM tokens through a pre-stage step that survives rollback"
+        },
+        {
+          "description": "Revoke-first graph sync, the reconciler and the packaged service in mode rebac in the authorization mode guide and designs"
+        },
+        {
+          "description": "Multi-app database isolation: per-app logins, out-of-band migrations, the startup isolation check and provisioning with `multiappdb`"
+        },
+        {
+          "description": "Built-in SCIM tenant token store, sign-up age scope, and the rls isolation model"
+        },
+        {
+          "description": "Key management guide describes accepting a restored or moved keyring in SystemAuth",
+          "commit": "b55d034"
+        },
+        {
+          "description": "ADRs for customer-authorized, time-limited support access and for organization admins seeing their support request index",
+          "commit": "40d5008"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The syncer recorder records every call and can fail removals alone, to check that a refused removal aborts a revocation"
+        },
+        {
+          "description": "The managed-principal concurrency test builds its service with direct manager adds"
+        },
+        {
+          "description": "The multi-app PostgreSQL fixture gives the logins it provisions a password, so the tests pass against a server that checks passwords",
+          "commit": "611ee57"
+        },
+        {
+          "description": "The redirect policy test covers more bypass forms: a triple slash, a leading space, `https:` without slashes and a NUL byte",
+          "commit": "03e245b"
+        }
+      ],
+      "infrastructure": [
+        {
+          "description": "Scan for known vulnerabilities with govulncheck on pushes to main and weekly"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "Build with Go 1.26.10 or later"
+        },
+        {
+          "description": "systemauth: run `migrations/0010_oauth_app_allow_bearer_tokens.sql` on an existing database; clients must send DPoP proofs, or set `allow_bearer_tokens` on clients that cannot yet. Several instances share `dpop.replay_cache_redis_url`; behind a proxy that strips a prefix set `dpop.resource_base_url`"
+        },
+        {
+          "description": "relyingparty: set `Config.DPoPKey` (shared by instances that share sessions) and `BearerConfig.DPoP` with a replay cache, or `AllowBearerTokens` for legacy clients"
+        },
+        {
+          "description": "session/middleware: pass a `DPoPConfig` to `HTTPAuth` and handle its error, or switch to `HTTPAuthBearer` to keep accepting only bearer tokens; give `APIKeyMiddleware` an `OwnerCheck`"
+        },
+        {
+          "description": "session/jwt: set `Config.Issuer` and an HMAC secret of at least 32, 48 or 64 bytes for HS256, HS384 or HS512"
+        },
+        {
+          "description": "multiapp: handle the error from `AuthMiddleware` and set `MiddlewareConfig.JWTService` and `DPoP.ReplayCache`, or `DPoP.AllowBearer`"
+        },
+        {
+          "description": "multiapp: provision a login per app with `RoleProvisioning` or `multiappdb`, set `AppDatabases` and `MigrationRole`, and run `multiapp.Migrate` with the owner login as a separate step; for local development set `AllowSharedDatabaseLogin` or `AllowInProcessMigrations`"
+        },
+        {
+          "description": "bff: give the omnistorage store a `SiteID` and a `Sealer`, give the Ent store a `Sealer` or keep `EncryptionKey`, and drop `CookieConfig.Domain`; users sign in again when the cookie name, prefix or sealing changes"
+        },
+        {
+          "description": "oauth: configure `Config.PrivateKey` and choose `WithAcceptedClientIDs` or `WithAnyClient`"
+        },
+        {
+          "description": "systemauth: pass an `AccessChangeScope` to `WithAccessChanges` (`AllOrganizations` for one application), and make custom session providers return principal IDs"
+        },
+        {
+          "description": "organization: allow governed principals through `APIConfig.DirectAdd`; reassign application roles after promoting a collaborator"
+        },
+        {
+          "description": "scim/store: set `Config.Syncer` to the deployment's syncer"
+        },
+        {
+          "description": "multiapp: to keep an app login without the shared identity tables, set `SharedReadTables` to `NoSharedReadTables` or pass `--no-shared-tables`, then apply the provisioning again"
+        },
+        {
+          "description": "oauthclient: handle the error from `SetStateCookie` and pass a logger to `NewStateManagerInsecure`; flows in progress during the upgrade fail once"
+        },
+        {
+          "description": "contract: call the audit stream functions as methods of `*contract.API`"
+        },
+        {
+          "description": "With connections enabled, stop SystemAuth, run `systemauth keys accept-rollback --confirm` once with the server's configuration, then start it"
+        },
+        {
+          "description": "Replace `allow_private_egress: true` with `egress_allow_prefixes` listing the ranges local fakes use, for example `[127.0.0.0/8]`, and `allow_http_egress: true`"
+        },
+        {
+          "description": "Point the BFF omnistorage store at `rediss://` with a password, or set `AllowInsecureRedis` for a development Redis on a local network"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump `github.com/plexusone/connectforge` from 0.4.0 to 0.6.0",
+          "commit": "8ce2f15"
+        },
+        {
+          "description": "Bump `github.com/plexusone/keyforge` from 0.1.0 to 0.2.0",
+          "commit": "89719ae"
+        },
+        {
+          "description": "Bump `github.com/plexusone/omnistorage-core` from 0.5.2 to 0.6.0",
+          "commit": "8ce2f15"
+        },
+        {
+          "description": "Bump `github.com/plexusone/omnivault` from 0.5.0 to 0.6.0",
+          "commit": "89719ae"
+        },
+        {
+          "description": "Bump `github.com/grokify/oscompat` from 0.7.0 to 0.9.0",
+          "commit": "89719ae"
+        },
+        {
+          "description": "Bump `modernc.org/sqlite` from 1.60.1 to 1.61.0",
+          "commit": "89719ae"
+        }
+      ],
+      "changed": [
+        {
+          "description": "The organization and principal services log a failed graph write with the constant message \"failed to sync granted access to authz\" and the kind of change in a `change` attribute",
+          "commit": "cc190c2"
+        }
+      ]
+    },
+    {
       "version": "v0.20.0",
       "date": "2026-10-23",
       "highlights": [

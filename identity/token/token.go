@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/plexusone/systemforge/identity/dpopproof"
 	"github.com/plexusone/systemforge/identity/principal"
 )
 
@@ -42,7 +43,7 @@ type IssuedToken struct {
 	Token        *Token `json:"token"`
 	AccessToken  string `json:"access_token"`  // JWT or opaque token
 	RefreshToken string `json:"refresh_token"` // Optional
-	TokenType    string `json:"token_type"`    // "Bearer"
+	TokenType    string `json:"token_type"`    // "DPoP" when bound to a key, else "Bearer"
 	ExpiresIn    int    `json:"expires_in"`    // Seconds until access token expires
 }
 
@@ -66,22 +67,30 @@ type IssueInput struct {
 	Audience        []string
 	Capabilities    map[string]bool
 	DelegationChain []string
-	DPoPJKT         string // DPoP JWK thumbprint for proof-of-possession
-	SessionID       string
-	AccessTTL       time.Duration
-	RefreshTTL      time.Duration // 0 means no refresh token
-	ClientIP        string
-	UserAgent       string
-	ParentTokenID   *uuid.UUID // For delegation
+	// DPoP, when set, binds the tokens to the key of this verified DPoP
+	// proof (RFC 9449): the token's DPoPJKT is the proof's thumbprint,
+	// and a refresh needs a proof by the same key. Only a
+	// dpopproof.Checker yields a Proof, so a binding always names a key
+	// whose possession was proved, never a thumbprint a caller supplied.
+	DPoP          *dpopproof.Proof
+	SessionID     string
+	AccessTTL     time.Duration
+	RefreshTTL    time.Duration // 0 means no refresh token
+	ClientIP      string
+	UserAgent     string
+	ParentTokenID *uuid.UUID // For delegation
 }
 
 // RefreshInput contains fields for refreshing a token.
 type RefreshInput struct {
 	RefreshToken string   `json:"-"` //nolint:gosec // G117: field holds runtime token value, not a hardcoded secret
 	Scopes       []string // Optional: narrow scopes
-	DPoPJKT      string   // For DPoP binding continuity
-	ClientIP     string
-	UserAgent    string
+	// DPoP is the verified proof sent with the refresh. A token bound to
+	// a key refreshes only with a proof by that key; an unbound one gets
+	// bound to the proof's key when one is given.
+	DPoP      *dpopproof.Proof
+	ClientIP  string
+	UserAgent string
 }
 
 // Service defines the business logic interface for tokens.

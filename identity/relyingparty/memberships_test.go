@@ -110,7 +110,7 @@ func membershipsServer(t *testing.T, total int, token string, calls *int) *Clien
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		*calls++
-		if r.URL.Path != "/userinfo/memberships" || r.Header.Get("Authorization") != "Bearer "+token {
+		if r.URL.Path != "/userinfo/memberships" || r.Header.Get("Authorization") != "DPoP "+token || r.Header.Get("DPoP") == "" {
 			http.Error(w, "no", http.StatusUnauthorized)
 			return
 		}
@@ -130,8 +130,7 @@ func membershipsServer(t *testing.T, total int, token string, calls *int) *Clien
 		writeJSON(w, http.StatusOK, map[string]any{"orgs": orgs, "next_cursor": next})
 	}))
 	t.Cleanup(srv.Close)
-	c := &Client{cfg: Config{HTTPClient: srv.Client()}}
-	c.metadata.UserinfoEndpoint = srv.URL + "/userinfo"
+	c := newTestClient(t, "", srv.Client(), Metadata{UserinfoEndpoint: srv.URL + "/userinfo"})
 	return c
 }
 

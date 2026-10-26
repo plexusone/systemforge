@@ -32,8 +32,10 @@ type RefreshConfig struct {
 	// ClientSecret is the OAuth client secret (optional for public clients).
 	ClientSecret string //nolint:gosec // G117: config field, not a hardcoded secret
 
-	// UseDPoP enables DPoP for token refresh requests.
-	// When true, generates a new DPoP key pair and binds the new tokens to it.
+	// UseDPoP sends a DPoP proof with refresh requests (RFC 9449). The
+	// proof is signed by the session's key pair, since a DPoP-bound
+	// refresh token works only with the key it is bound to; a session
+	// without one gets a new key pair, to which the new tokens are bound.
 	// Default: true.
 	UseDPoP bool
 
@@ -223,62 +225,29 @@ func (r *Refresher) RefreshSession(ctx context.Context, session *Session) error 
 		return ErrRefreshTokenExpired
 	}
 
-	// Generate new DPoP key pair if enabled
-	var newKeyPair *dpop.KeyPair
-	var dpopProof string
+	// Prove possession of the session's DPoP key: a DPoP-bound refresh
+	// token works only with the key it is bound to. A session without a
+	// key gets a new one, to which the new tokens are bound.
+	var key, newKeyPair *dpop.KeyPair
 	if r.config.UseDPoP {
 		var err error
-		newKeyPair, err = dpop.GenerateKeyPair()
-		if err != nil {
-			return fmt.Errorf("generate DPoP key pair: %w", err)
+		if session.HasDPoP() {
+			key, err = session.GetDPoPKeyPair()
+			if err != nil {
+				return fmt.Errorf("load DPoP key pair: %w", err)
+			}
+		} else {
+			newKeyPair, err = dpop.GenerateKeyPair()
+			if err != nil {
+				return fmt.Errorf("generate DPoP key pair: %w", err)
+			}
+			key = newKeyPair
 		}
-
-		// Create DPoP proof for the token request
-		dpopProof, err = dpop.CreateProof(newKeyPair, "POST", r.config.TokenEndpoint)
-		if err != nil {
-			return fmt.Errorf("create DPoP proof: %w", err)
-		}
 	}
 
-	// Build refresh request
-	data := url.Values{}
-	data.Set("grant_type", "refresh_token")
-	data.Set("refresh_token", session.RefreshToken)
-	data.Set("client_id", r.config.ClientID)
-	if r.config.ClientSecret != "" {
-		data.Set("client_secret", r.config.ClientSecret)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", r.config.TokenEndpoint, strings.NewReader(data.Encode()))
+	body, err := r.requestRefresh(ctx, session.RefreshToken, key)
 	if err != nil {
-		return fmt.Errorf("create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if dpopProof != "" {
-		req.Header.Set("DPoP", dpopProof)
-	}
-
-	// Send request
-	resp, err := r.client.Do(req) //nolint:gosec // G704: request to configured token endpoint URL
-	if err != nil {
-		return fmt.Errorf("send request: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("read response: %w", err)
-	}
-
-	// Handle error response
-	if resp.StatusCode != http.StatusOK {
-		var errResp TokenErrorResponse
-		if err := json.Unmarshal(body, &errResp); err == nil && errResp.Error != "" {
-			return fmt.Errorf("%w: %s - %s", ErrRefreshFailed, errResp.Error, errResp.ErrorDescription)
-		}
-		return fmt.Errorf("%w: status %d", ErrRefreshFailed, resp.StatusCode)
+		return err
 	}
 
 	// Parse token response
@@ -295,6 +264,7 @@ func (r *Refresher) RefreshSession(ctx context.Context, session *Session) error 
 	// Update session with new tokens
 	now := time.Now()
 	session.AccessToken = tokenResp.AccessToken
+	session.TokenType = normalizeTokenType(tokenResp.TokenType)
 	session.AccessTokenExpiresAt = now.Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 	session.UpdatedAt = now
 
@@ -324,6 +294,72 @@ func (r *Refresher) RefreshSession(ctx context.Context, session *Session) error 
 	}
 
 	return nil
+}
+
+// requestRefresh posts the refresh grant to the token endpoint, with a
+// DPoP proof by key when key is set, and returns the successful response
+// body. When the server asks for a DPoP nonce (use_dpop_nonce, RFC 9449
+// §8) it retries once with the nonce.
+func (r *Refresher) requestRefresh(ctx context.Context, refreshToken string, key *dpop.KeyPair) ([]byte, error) {
+	nonce := ""
+	for attempt := 0; ; attempt++ {
+		body, status, respNonce, err := r.postRefresh(ctx, refreshToken, key, nonce)
+		if err != nil {
+			return nil, err
+		}
+		if status == http.StatusOK {
+			return body, nil
+		}
+		var errResp TokenErrorResponse
+		if jerr := json.Unmarshal(body, &errResp); jerr != nil || errResp.Error == "" {
+			return nil, fmt.Errorf("%w: status %d", ErrRefreshFailed, status)
+		}
+		if errResp.Error == "use_dpop_nonce" && key != nil && respNonce != "" && attempt == 0 {
+			nonce = respNonce
+			continue
+		}
+		return nil, fmt.Errorf("%w: %s - %s", ErrRefreshFailed, errResp.Error, errResp.ErrorDescription)
+	}
+}
+
+// postRefresh sends one refresh request and returns the response body,
+// status and DPoP-Nonce header.
+func (r *Refresher) postRefresh(ctx context.Context, refreshToken string, key *dpop.KeyPair, nonce string) (body []byte, status int, respNonce string, err error) {
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("refresh_token", refreshToken)
+	data.Set("client_id", r.config.ClientID)
+	if r.config.ClientSecret != "" {
+		data.Set("client_secret", r.config.ClientSecret)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.config.TokenEndpoint, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, 0, "", fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if key != nil {
+		proof, err := dpop.CreateProofWithOptions(key, http.MethodPost, r.config.TokenEndpoint, dpop.ProofOptions{Nonce: nonce})
+		if err != nil {
+			return nil, 0, "", fmt.Errorf("create DPoP proof: %w", err)
+		}
+		req.Header.Set("DPoP", proof)
+	}
+
+	resp, err := r.client.Do(req) //nolint:gosec // G704: request to configured token endpoint URL
+	if err != nil {
+		return nil, 0, "", fmt.Errorf("send request: %w", err)
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("close response: %w", cerr)
+		}
+	}()
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, 0, "", fmt.Errorf("read response: %w", err)
+	}
+	return body, resp.StatusCode, resp.Header.Get("DPoP-Nonce"), nil
 }
 
 // handleRefreshError handles token refresh errors.

@@ -64,6 +64,7 @@ func tokenRequest(t *testing.T, s *Server, form url.Values) (int, map[string]any
 	form.Set("client_id", "spa")
 	req := httptest.NewRequest(http.MethodPost, "/oauth/token", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	withTokenProof(t, req)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	var body map[string]any
@@ -108,6 +109,17 @@ func headerUser(id string) func(*http.Request) {
 	return func(r *http.Request) { r.Header.Set("X-User-ID", id) }
 }
 
+// newPrincipal creates an active human in s's storage and returns its ID:
+// token subjects are principals, so a session provider must name one.
+func newPrincipal(t *testing.T, s *Server) string {
+	t.Helper()
+	h := &HumanPrincipal{Email: uuid.NewString() + "@example.com", EmailVerified: true, DisplayName: "Test", Active: true}
+	if err := s.storage.CreateHuman(context.Background(), h); err != nil {
+		t.Fatalf("CreateHuman: %v", err)
+	}
+	return h.ID.String()
+}
+
 func newRefreshTestServer(t *testing.T, opts ...Option) *Server {
 	t.Helper()
 	opts = append([]Option{WithSessionProvider(NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", TrustAllRequests), WithSkipConsent(true)))}, opts...)
@@ -132,7 +144,7 @@ func newRefreshTestServer(t *testing.T, opts ...Option) *Server {
 // checkRefreshRotation drives rotation and reuse detection end to end.
 func checkRefreshRotation(t *testing.T, s *Server) {
 	t.Helper()
-	subject := uuid.NewString()
+	subject := newPrincipal(t, s)
 	code := authorizeCode(t, s, "openid offline_access", headerUser(subject))
 	first := exchangeCode(t, s, code)
 	rt1, _ := first["refresh_token"].(string)
@@ -311,7 +323,7 @@ func newSocialFlowServer(t *testing.T, skipConsent bool) *Server {
 			AllowedRedirectOrigins: []string{"https://app.example.com"},
 			SkipConsent:            skipConsent,
 		},
-	}, WithSocialConnector(f.connector()), WithPrincipalDirectory(NewMemoryPrincipalDirectory()))
+	}, WithSocialConnector(f.connector()))
 	if err != nil {
 		t.Fatalf("NewEmbedded: %v", err)
 	}

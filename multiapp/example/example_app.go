@@ -41,7 +41,8 @@ func (a *ExampleApp) EntSchemas() []ent.Schema {
 }
 
 // Migrations returns database migrations for this app.
-// Each migration runs in the app's schema (e.g., app_example).
+// Each migration runs in the app's schema (e.g., app_example) with the
+// migration (owner) login, never the app's own login.
 func (a *ExampleApp) Migrations() []multiapp.Migration {
 	return []multiapp.Migration{
 		{

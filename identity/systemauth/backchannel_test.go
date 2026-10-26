@@ -165,6 +165,39 @@ func TestBackchannelDeliversAccessChanges(t *testing.T) {
 	}
 }
 
+// TestBackchannelFollowsAccessChangeScope verifies that, with an access
+// change scope, a client is sent only its organizations' changes and the
+// changes that name no organization.
+func TestBackchannelFollowsAccessChangeScope(t *testing.T) {
+	mine := uuid.New()
+	scope := func(_ context.Context, clientID string) ([]uuid.UUID, bool, error) {
+		if clientID == "rp" {
+			return []uuid.UUID{mine}, false, nil
+		}
+		return nil, false, nil
+	}
+	rp, other := newReceiver(t, http.StatusOK), newReceiver(t, http.StatusOK)
+	s, err := NewEmbedded(Config{Issuer: testIssuer, Clients: []ClientConfig{
+		{ID: "rp", Type: "public", Name: "RP", BackchannelLogoutURI: rp.srv.URL},
+		{ID: "other", Type: "public", Name: "Other", BackchannelLogoutURI: other.srv.URL},
+	}}, WithAccessChanges(nil, scope))
+	if err != nil {
+		t.Fatalf("NewEmbedded: %v", err)
+	}
+	b := s.NewBackchannel(WithBackchannelBackoff(5*time.Millisecond, 20*time.Millisecond))
+	runBackchannel(t, b)
+
+	b.AccessChange(accesschange.Change{PrincipalID: uuid.New(), OrganizationID: &mine, ChangedAt: time.Now(), Reason: accesschange.MembershipRemoved})
+	rp.waitFor(t, 1)
+	b.AccessChange(accesschange.Change{PrincipalID: uuid.New(), ChangedAt: time.Now(), Reason: accesschange.Deactivated})
+	rp.waitFor(t, 2)
+	other.waitFor(t, 1)
+	time.Sleep(50 * time.Millisecond)
+	if n := other.count(); n != 1 {
+		t.Errorf("a client outside the organization received %d changes, want only the principal-wide one", n)
+	}
+}
+
 func TestBackchannelRetriesTransientFailures(t *testing.T) {
 	rcv := newReceiver(t, http.StatusServiceUnavailable, http.StatusBadGateway, http.StatusOK)
 	_, b := backchannelServer(t, ClientConfig{ID: "rp", Type: "public", Name: "RP", BackchannelLogoutURI: rcv.srv.URL})

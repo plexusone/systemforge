@@ -16,9 +16,10 @@ func TestNewService(t *testing.T) {
 
 	// Test with valid secret
 	cfg := &Config{
-		Secret:            []byte("test-secret-key-32-bytes-long!!"),
+		Secret:            []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:         "HS256",
 		Audience:          []string{"test-app"},
+		Issuer:            "test-issuer",
 		AccessTokenExpiry: 15 * time.Minute,
 	}
 	svc, err := NewService(cfg)
@@ -32,7 +33,7 @@ func TestNewService(t *testing.T) {
 
 func TestGenerateAndValidateAccessToken(t *testing.T) {
 	cfg := &Config{
-		Secret:            []byte("test-secret-key-32-bytes-long!!"),
+		Secret:            []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:         "HS256",
 		Audience:          []string{"test-app"},
 		Issuer:            "test-issuer",
@@ -76,9 +77,10 @@ func TestGenerateAndValidateAccessToken(t *testing.T) {
 
 func TestGenerateAndValidateRefreshToken(t *testing.T) {
 	cfg := &Config{
-		Secret:             []byte("test-secret-key-32-bytes-long!!"),
+		Secret:             []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:          "HS256",
 		Audience:           []string{"test-app"},
+		Issuer:             "test-issuer",
 		RefreshTokenExpiry: 7 * 24 * time.Hour,
 	}
 	svc, err := NewService(cfg)
@@ -112,9 +114,10 @@ func TestGenerateAndValidateRefreshToken(t *testing.T) {
 
 func TestWrongTokenType(t *testing.T) {
 	cfg := &Config{
-		Secret:             []byte("test-secret-key-32-bytes-long!!"),
+		Secret:             []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:          "HS256",
 		Audience:           []string{"test-app"},
+		Issuer:             "test-issuer",
 		AccessTokenExpiry:  15 * time.Minute,
 		RefreshTokenExpiry: 7 * 24 * time.Hour,
 	}
@@ -152,9 +155,10 @@ func TestWrongTokenType(t *testing.T) {
 
 func TestTokenPair(t *testing.T) {
 	cfg := &Config{
-		Secret:             []byte("test-secret-key-32-bytes-long!!"),
+		Secret:             []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:          "HS256",
 		Audience:           []string{"test-app"},
+		Issuer:             "test-issuer",
 		AccessTokenExpiry:  15 * time.Minute,
 		RefreshTokenExpiry: 7 * 24 * time.Hour,
 	}
@@ -182,9 +186,10 @@ func TestTokenPair(t *testing.T) {
 
 func TestOrganizationContext(t *testing.T) {
 	cfg := &Config{
-		Secret:            []byte("test-secret-key-32-bytes-long!!"),
+		Secret:            []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:         "HS256",
 		Audience:          []string{"test-app"},
+		Issuer:            "test-issuer",
 		AccessTokenExpiry: 15 * time.Minute,
 	}
 	svc, err := NewService(cfg)
@@ -228,9 +233,10 @@ func TestOrganizationContext(t *testing.T) {
 
 func TestInvalidToken(t *testing.T) {
 	cfg := &Config{
-		Secret:            []byte("test-secret-key-32-bytes-long!!"),
+		Secret:            []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:         "HS256",
 		Audience:          []string{"test-app"},
+		Issuer:            "test-issuer",
 		AccessTokenExpiry: 15 * time.Minute,
 	}
 	svc, err := NewService(cfg)
@@ -246,9 +252,10 @@ func TestInvalidToken(t *testing.T) {
 
 func TestGenerateAccessTokenWithOptions_DPoP(t *testing.T) {
 	cfg := &Config{
-		Secret:            []byte("test-secret-key-32-bytes-long!!"),
+		Secret:            []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:         "HS256",
 		Audience:          []string{"test-app"},
+		Issuer:            "test-issuer",
 		AccessTokenExpiry: 15 * time.Minute,
 	}
 	svc, err := NewService(cfg)
@@ -281,9 +288,10 @@ func TestGenerateAccessTokenWithOptions_DPoP(t *testing.T) {
 
 func TestGenerateAccessTokenWithOrgAndOptions_DPoP(t *testing.T) {
 	cfg := &Config{
-		Secret:            []byte("test-secret-key-32-bytes-long!!"),
+		Secret:            []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:         "HS256",
 		Audience:          []string{"test-app"},
+		Issuer:            "test-issuer",
 		AccessTokenExpiry: 15 * time.Minute,
 	}
 	svc, err := NewService(cfg)
@@ -328,9 +336,10 @@ func TestGenerateAccessTokenWithOrgAndOptions_DPoP(t *testing.T) {
 
 func TestGenerateTokenPairWithOptions_DPoP(t *testing.T) {
 	cfg := &Config{
-		Secret:             []byte("test-secret-key-32-bytes-long!!"),
+		Secret:             []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:          "HS256",
 		Audience:           []string{"test-app"},
+		Issuer:             "test-issuer",
 		AccessTokenExpiry:  15 * time.Minute,
 		RefreshTokenExpiry: 7 * 24 * time.Hour,
 	}
@@ -375,9 +384,10 @@ func TestGenerateTokenPairWithOptions_DPoP(t *testing.T) {
 
 func TestGenerateAccessTokenWithOptions_NoDPoP(t *testing.T) {
 	cfg := &Config{
-		Secret:            []byte("test-secret-key-32-bytes-long!!"),
+		Secret:            []byte("test-secret-key-at-least-32-bytes-long"),
 		Algorithm:         "HS256",
 		Audience:          []string{"test-app"},
+		Issuer:            "test-issuer",
 		AccessTokenExpiry: 15 * time.Minute,
 	}
 	svc, err := NewService(cfg)

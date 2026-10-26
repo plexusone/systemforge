@@ -7,17 +7,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
 
+	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/clientassertion"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/oauthapp"
-	"github.com/plexusone/systemforge/identity/ent/oauthappsecret"
 	"github.com/plexusone/systemforge/identity/ent/oauthauthcode"
 	"github.com/plexusone/systemforge/identity/ent/oauthtoken"
 )
@@ -35,6 +36,12 @@ type EntStorage struct {
 	db             *ent.Client
 	defaultOwnerID uuid.UUID
 	accessSink     accesschange.Sink
+
+	// syncer and syncMode are passed to the principal service that
+	// deactivates and reactivates humans (UpdateHuman).
+	syncer   authz.RelationshipSyncer
+	syncMode authz.SyncMode
+	logger   *slog.Logger
 }
 
 // EntStorageOption configures EntStorage.
@@ -53,6 +60,28 @@ func WithDefaultOwner(ownerID uuid.UUID) EntStorageOption {
 // sink is set.
 func WithEntAccessChangeSink(sink accesschange.Sink) EntStorageOption {
 	return func(s *EntStorage) { s.accessSink = sink }
+}
+
+// WithEntAuthzSyncer sets the authorization syncer UpdateHuman deactivates
+// and reactivates principals with (package identity/principal): a
+// deactivation removes the principal's relationships from the
+// authorization graph before it commits, and a reactivation writes back
+// those its rows still call for, honoring mode. Set it whenever
+// authorization is relationship-based (mode rebac), with the syncer given
+// to WithSocialAuthzSyncer; without it nothing is written to a graph.
+func WithEntAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) EntStorageOption {
+	return func(s *EntStorage) {
+		s.syncer = syncer
+		s.syncMode = mode
+	}
+}
+
+// WithEntLogger sets the logger for failures EntStorage logs instead of
+// returning, such as a reactivated principal's access that could not be
+// written to the graph in authz.SyncModeEventual. Defaults to
+// slog.Default.
+func WithEntLogger(logger *slog.Logger) EntStorageOption {
+	return func(s *EntStorage) { s.logger = logger }
 }
 
 // NewEntStorage creates a new Ent-backed storage.
@@ -96,30 +125,23 @@ func (s *EntStorage) GetClient(ctx context.Context, clientID string) (fosite.Cli
 }
 
 // loadSecrets sets the client's secret hashes from its active secrets
-// (not revoked, not expired): the newest is SecretHash, which new client
-// authentication is checked against first, and the others are accepted as
-// rotated secrets. A public client has none.
+// (see ActiveClientSecretHashes): the newest is SecretHash, which new
+// client authentication is checked against first, and the others are
+// accepted as rotated secrets. A public client has none.
 func (s *EntStorage) loadSecrets(ctx context.Context, app *ent.OAuthApp, client *Client) error {
 	if app.Public {
 		return nil
 	}
-	secrets, err := s.db.OAuthAppSecret.Query().
-		Where(
-			oauthappsecret.AppIDEQ(app.ID),
-			oauthappsecret.RevokedEQ(false),
-			oauthappsecret.Or(oauthappsecret.ExpiresAtIsNil(), oauthappsecret.ExpiresAtGT(time.Now())),
-		).
-		Order(ent.Desc(oauthappsecret.FieldCreatedAt)).
-		All(ctx)
+	hashes, err := ActiveClientSecretHashes(ctx, s.db, app.ID)
 	if err != nil {
-		return fmt.Errorf("load client secrets: %w", err)
+		return err
 	}
-	for i, sec := range secrets {
+	for i, h := range hashes {
 		if i == 0 {
-			client.SecretHash = sec.SecretHash
+			client.SecretHash = h
 			continue
 		}
-		client.RotatedSecretHashes = append(client.RotatedSecretHashes, sec.SecretHash)
+		client.RotatedSecretHashes = append(client.RotatedSecretHashes, h)
 	}
 	return nil
 }
@@ -142,7 +164,8 @@ func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
 		SetAllowedGrants(client.GrantTypes).
 		SetAllowedResponseTypes(client.ResponseTypes).
 		SetPublic(client.IsPublic()).
-		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled)
+		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled).
+		SetAllowBearerTokens(client.AllowBearerTokens)
 
 	if client.Description != "" {
 		builder.SetDescription(client.Description)
@@ -194,9 +217,13 @@ func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
 			SetSecretPrefix(client.ID[:min(8, len(client.ID))]).
 			Save(ctx)
 		if err != nil {
-			// Clean up the app if secret creation fails
-			_ = s.db.OAuthApp.DeleteOne(app).Exec(ctx)
-			return fmt.Errorf("failed to create client secret: %w", err)
+			// Clean up the app if secret creation fails; a failed cleanup
+			// leaves a client without a secret, so report it too.
+			err = fmt.Errorf("failed to create client secret: %w", err)
+			if derr := s.db.OAuthApp.DeleteOne(app).Exec(ctx); derr != nil {
+				return errors.Join(err, fmt.Errorf("removing the client after the failure: %w", derr))
+			}
+			return err
 		}
 	}
 
@@ -240,7 +267,8 @@ func (s *EntStorage) UpdateClient(ctx context.Context, client *Client) error {
 		SetAllowedScopes(client.Scopes).
 		SetAllowedGrants(client.GrantTypes).
 		SetAllowedResponseTypes(client.ResponseTypes).
-		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled)
+		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled).
+		SetAllowBearerTokens(client.AllowBearerTokens)
 
 	if client.Description != "" {
 		builder.SetDescription(client.Description)
@@ -869,6 +897,7 @@ func (s *EntStorage) entAppToClient(app *ent.OAuthApp) *Client {
 		CreatedAt:     app.CreatedAt,
 		// Managed principals are opt-in per client.
 		ManagedPrincipalsEnabled: app.ManagedPrincipalsEnabled,
+		AllowBearerTokens:        app.AllowBearerTokens,
 		UpdatedAt:                app.UpdatedAt,
 	}
 

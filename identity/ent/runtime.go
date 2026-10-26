@@ -34,6 +34,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/principaltoken"
 	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
 	"github.com/plexusone/systemforge/identity/ent/schema"
+	"github.com/plexusone/systemforge/identity/ent/scimtoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
@@ -599,24 +600,28 @@ func init() {
 	oauthappDescManagedPrincipalsEnabled := oauthappFields[17].Descriptor()
 	// oauthapp.DefaultManagedPrincipalsEnabled holds the default value on creation for the managed_principals_enabled field.
 	oauthapp.DefaultManagedPrincipalsEnabled = oauthappDescManagedPrincipalsEnabled.Default.(bool)
+	// oauthappDescAllowBearerTokens is the schema descriptor for allow_bearer_tokens field.
+	oauthappDescAllowBearerTokens := oauthappFields[18].Descriptor()
+	// oauthapp.DefaultAllowBearerTokens holds the default value on creation for the allow_bearer_tokens field.
+	oauthapp.DefaultAllowBearerTokens = oauthappDescAllowBearerTokens.Default.(bool)
 	// oauthappDescFirstParty is the schema descriptor for first_party field.
-	oauthappDescFirstParty := oauthappFields[18].Descriptor()
+	oauthappDescFirstParty := oauthappFields[19].Descriptor()
 	// oauthapp.DefaultFirstParty holds the default value on creation for the first_party field.
 	oauthapp.DefaultFirstParty = oauthappDescFirstParty.Default.(bool)
 	// oauthappDescPublic is the schema descriptor for public field.
-	oauthappDescPublic := oauthappFields[19].Descriptor()
+	oauthappDescPublic := oauthappFields[20].Descriptor()
 	// oauthapp.DefaultPublic holds the default value on creation for the public field.
 	oauthapp.DefaultPublic = oauthappDescPublic.Default.(bool)
 	// oauthappDescActive is the schema descriptor for active field.
-	oauthappDescActive := oauthappFields[20].Descriptor()
+	oauthappDescActive := oauthappFields[21].Descriptor()
 	// oauthapp.DefaultActive holds the default value on creation for the active field.
 	oauthapp.DefaultActive = oauthappDescActive.Default.(bool)
 	// oauthappDescCreatedAt is the schema descriptor for created_at field.
-	oauthappDescCreatedAt := oauthappFields[23].Descriptor()
+	oauthappDescCreatedAt := oauthappFields[24].Descriptor()
 	// oauthapp.DefaultCreatedAt holds the default value on creation for the created_at field.
 	oauthapp.DefaultCreatedAt = oauthappDescCreatedAt.Default.(func() time.Time)
 	// oauthappDescUpdatedAt is the schema descriptor for updated_at field.
-	oauthappDescUpdatedAt := oauthappFields[24].Descriptor()
+	oauthappDescUpdatedAt := oauthappFields[25].Descriptor()
 	// oauthapp.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	oauthapp.DefaultUpdatedAt = oauthappDescUpdatedAt.Default.(func() time.Time)
 	// oauthapp.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -917,6 +922,49 @@ func init() {
 	resourcegrantDescID := resourcegrantMixinFields0[0].Descriptor()
 	// resourcegrant.DefaultID holds the default value on creation for the id field.
 	resourcegrant.DefaultID = resourcegrantDescID.Default.(func() uuid.UUID)
+	scimtokenMixin := schema.ScimToken{}.Mixin()
+	scimtokenMixinFields0 := scimtokenMixin[0].Fields()
+	_ = scimtokenMixinFields0
+	scimtokenFields := schema.ScimToken{}.Fields()
+	_ = scimtokenFields
+	// scimtokenDescGeneration is the schema descriptor for generation field.
+	scimtokenDescGeneration := scimtokenFields[1].Descriptor()
+	// scimtoken.GenerationValidator is a validator for the "generation" field. It is called by the builders before save.
+	scimtoken.GenerationValidator = scimtokenDescGeneration.Validators[0].(func(int) error)
+	// scimtokenDescTokenPrefix is the schema descriptor for token_prefix field.
+	scimtokenDescTokenPrefix := scimtokenFields[2].Descriptor()
+	// scimtoken.TokenPrefixValidator is a validator for the "token_prefix" field. It is called by the builders before save.
+	scimtoken.TokenPrefixValidator = func() func(string) error {
+		validators := scimtokenDescTokenPrefix.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(token_prefix string) error {
+			for _, fn := range fns {
+				if err := fn(token_prefix); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// scimtokenDescTokenHash is the schema descriptor for token_hash field.
+	scimtokenDescTokenHash := scimtokenFields[3].Descriptor()
+	// scimtoken.TokenHashValidator is a validator for the "token_hash" field. It is called by the builders before save.
+	scimtoken.TokenHashValidator = scimtokenDescTokenHash.Validators[0].(func(string) error)
+	// scimtokenDescDescription is the schema descriptor for description field.
+	scimtokenDescDescription := scimtokenFields[4].Descriptor()
+	// scimtoken.DescriptionValidator is a validator for the "description" field. It is called by the builders before save.
+	scimtoken.DescriptionValidator = scimtokenDescDescription.Validators[0].(func(string) error)
+	// scimtokenDescCreatedAt is the schema descriptor for created_at field.
+	scimtokenDescCreatedAt := scimtokenFields[6].Descriptor()
+	// scimtoken.DefaultCreatedAt holds the default value on creation for the created_at field.
+	scimtoken.DefaultCreatedAt = scimtokenDescCreatedAt.Default.(func() time.Time)
+	// scimtokenDescID is the schema descriptor for id field.
+	scimtokenDescID := scimtokenMixinFields0[0].Descriptor()
+	// scimtoken.DefaultID holds the default value on creation for the id field.
+	scimtoken.DefaultID = scimtokenDescID.Default.(func() uuid.UUID)
 	seatassignmentMixin := schema.SeatAssignment{}.Mixin()
 	seatassignmentMixinFields0 := seatassignmentMixin[0].Fields()
 	_ = seatassignmentMixinFields0

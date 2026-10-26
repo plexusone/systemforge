@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,6 +32,12 @@ type Session struct {
 
 	// RefreshToken is the OAuth refresh token.
 	RefreshToken string `json:"refresh_token"`
+
+	// TokenType is the token_type the token endpoint returned with
+	// AccessToken: "DPoP" for a token bound to the session's DPoP key,
+	// which the proxy presents with the DPoP scheme and a proof, or
+	// "Bearer" for an unbound token, presented as Bearer.
+	TokenType string `json:"token_type,omitempty"`
 
 	// AccessTokenExpiresAt is when the access token expires.
 	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
@@ -92,6 +99,89 @@ func (s *Session) IsRefreshTokenExpired() bool {
 // This returns true if the access token is expired or will expire soon.
 func (s *Session) NeedsRefresh(threshold time.Duration) bool {
 	return time.Now().Add(threshold).After(s.AccessTokenExpiresAt)
+}
+
+// Default session lifetime limits, applied when IdleTimeout or MaxLifetime
+// is left zero in HandlerConfig or MiddlewareConfig.
+const (
+	// DefaultIdleTimeout ends a session that has not been used for a day.
+	DefaultIdleTimeout = 24 * time.Hour
+
+	// DefaultMaxLifetime ends a session a week after it was created, however
+	// often its tokens are refreshed; the user must sign in again.
+	DefaultMaxLifetime = 7 * 24 * time.Hour
+)
+
+// resolveLifetimeLimit returns def for a zero limit and 0 (unchecked) for a
+// negative one.
+func resolveLifetimeLimit(limit, def time.Duration) time.Duration {
+	switch {
+	case limit == 0:
+		return def
+	case limit < 0:
+		return 0
+	default:
+		return limit
+	}
+}
+
+// LifetimeExceeded reports whether, at now, the session has been idle for
+// longer than idleTimeout (measured from LastAccessedAt, or CreatedAt if
+// it was never accessed) or has existed for longer than maxLifetime
+// (measured from CreatedAt). A non-positive limit is not checked. A session
+// with no CreatedAt fails a maxLifetime check, since its age is unknown.
+func (s *Session) LifetimeExceeded(now time.Time, idleTimeout, maxLifetime time.Duration) bool {
+	if maxLifetime > 0 {
+		if s.CreatedAt.IsZero() || now.After(s.CreatedAt.Add(maxLifetime)) {
+			return true
+		}
+	}
+	if idleTimeout > 0 {
+		last := s.LastAccessedAt
+		if last.IsZero() {
+			last = s.CreatedAt
+		}
+		if last.IsZero() || now.After(last.Add(idleTimeout)) {
+			return true
+		}
+	}
+	return false
+}
+
+// capExpiry returns expiry, moved back to CreatedAt+maxLifetime if it is
+// later. A non-positive maxLifetime leaves expiry unchanged.
+func (s *Session) capExpiry(expiry time.Time, maxLifetime time.Duration) time.Time {
+	if maxLifetime <= 0 || s.CreatedAt.IsZero() {
+		return expiry
+	}
+	if limit := s.CreatedAt.Add(maxLifetime); expiry.After(limit) {
+		return limit
+	}
+	return expiry
+}
+
+// UsesDPoP reports whether the session's access token was issued as a
+// DPoP-bound token (token_type DPoP), so it must be presented with the
+// DPoP scheme and a proof by the session's key.
+func (s *Session) UsesDPoP() bool {
+	return strings.EqualFold(s.TokenType, TokenTypeDPoP)
+}
+
+// Token types of the token endpoint (RFC 9449, RFC 6750).
+const (
+	TokenTypeDPoP   = "DPoP"
+	TokenTypeBearer = "Bearer"
+)
+
+// normalizeTokenType returns the canonical spelling of a token_type.
+func normalizeTokenType(t string) string {
+	switch {
+	case strings.EqualFold(t, TokenTypeDPoP):
+		return TokenTypeDPoP
+	case strings.EqualFold(t, TokenTypeBearer):
+		return TokenTypeBearer
+	}
+	return t
 }
 
 // HasDPoP returns true if the session has a DPoP key pair.

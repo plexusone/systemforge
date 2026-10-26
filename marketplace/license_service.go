@@ -2,13 +2,16 @@ package marketplace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/license"
+	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 )
 
@@ -124,12 +127,13 @@ func (s *EntLicenseService) GetByStripeSubscriptionID(ctx context.Context, subsc
 	return entLicenseToLicense(entLicense), nil
 }
 
-// Update updates a license's details.
+// Update updates a license's details. UsedSeats is not written: it is
+// maintained by AssignSeat and UnassignSeat, and writing a value read
+// earlier would undo concurrent assignments.
 func (s *EntLicenseService) Update(ctx context.Context, l *License) error {
 	builder := s.client.License.UpdateOneID(l.ID).
 		SetLicenseType(license.LicenseType(l.LicenseType)).
-		SetValidFrom(l.ValidFrom).
-		SetUsedSeats(l.UsedSeats)
+		SetValidFrom(l.ValidFrom)
 
 	if l.Seats != nil {
 		builder.SetSeats(*l.Seats)
@@ -215,7 +219,7 @@ func (s *EntLicenseService) CheckPrincipal(ctx context.Context, listingID, princ
 		if now.Before(l.ValidFrom) {
 			continue
 		}
-		if l.ValidUntil != nil && now.After(*l.ValidUntil) {
+		if l.ValidUntil != nil && !now.Before(*l.ValidUntil) {
 			continue
 		}
 
@@ -278,52 +282,68 @@ func (s *EntLicenseService) ListByListing(ctx context.Context, listingID uuid.UU
 }
 
 // AssignSeat assigns a user to a license seat.
+//
+// The seat is reserved by a conditional increment of used_seats in the same
+// transaction as the assignment, so concurrent assignments cannot exceed
+// the license's seats.
 func (s *EntLicenseService) AssignSeat(ctx context.Context, assignment *SeatAssignment) error {
-	// Get the license
-	l, err := s.client.License.Get(ctx, assignment.LicenseID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return ErrLicenseNotFound
+	var created *ent.SeatAssignment
+	err := withTx(ctx, s.client, func(tx *ent.Tx) error {
+		// Check if already assigned
+		exists, err := tx.SeatAssignment.Query().
+			Where(
+				seatassignment.LicenseIDEQ(assignment.LicenseID),
+				seatassignment.PrincipalIDEQ(assignment.PrincipalID),
+			).
+			Exist(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check existing assignment: %w", err)
 		}
-		return fmt.Errorf("failed to get license: %w", err)
-	}
+		if exists {
+			return ErrSeatAlreadyAssigned
+		}
 
-	// Check if seats are available
-	if l.Seats != nil && l.UsedSeats >= *l.Seats {
-		return ErrNoSeatsAvailable
-	}
+		// Reserve a seat: increment used_seats only while one is free.
+		n, err := tx.License.Update().
+			Where(
+				license.IDEQ(assignment.LicenseID),
+				license.Or(
+					license.SeatsIsNil(),
+					predicate.License(sql.FieldsLT(license.FieldUsedSeats, license.FieldSeats)),
+				),
+			).
+			AddUsedSeats(1).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to reserve seat: %w", err)
+		}
+		if n == 0 {
+			found, err := tx.License.Query().Where(license.IDEQ(assignment.LicenseID)).Exist(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get license: %w", err)
+			}
+			if !found {
+				return ErrLicenseNotFound
+			}
+			return ErrNoSeatsAvailable
+		}
 
-	// Check if already assigned
-	exists, err := s.client.SeatAssignment.Query().
-		Where(
-			seatassignment.LicenseIDEQ(assignment.LicenseID),
-			seatassignment.PrincipalIDEQ(assignment.PrincipalID),
-		).
-		Exist(ctx)
+		created, err = tx.SeatAssignment.Create().
+			SetID(assignment.ID).
+			SetLicenseID(assignment.LicenseID).
+			SetPrincipalID(assignment.PrincipalID).
+			SetAssignedBy(assignment.AssignedBy).
+			Save(ctx)
+		if ent.IsConstraintError(err) {
+			return ErrSeatAlreadyAssigned
+		}
+		if err != nil {
+			return fmt.Errorf("failed to create seat assignment: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("failed to check existing assignment: %w", err)
-	}
-	if exists {
-		return ErrSeatAlreadyAssigned
-	}
-
-	// Create the assignment
-	created, err := s.client.SeatAssignment.Create().
-		SetID(assignment.ID).
-		SetLicenseID(assignment.LicenseID).
-		SetPrincipalID(assignment.PrincipalID).
-		SetAssignedBy(assignment.AssignedBy).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create seat assignment: %w", err)
-	}
-
-	// Increment used seats
-	_, err = s.client.License.UpdateOneID(assignment.LicenseID).
-		SetUsedSeats(l.UsedSeats + 1).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to update used seats: %w", err)
+		return err
 	}
 
 	assignment.ID = created.ID
@@ -341,39 +361,40 @@ func (s *EntLicenseService) AssignSeat(ctx context.Context, assignment *SeatAssi
 
 // UnassignSeat removes a user from a license seat.
 func (s *EntLicenseService) UnassignSeat(ctx context.Context, licenseID, principalID uuid.UUID) error {
-	// Get the license
-	l, err := s.client.License.Get(ctx, licenseID)
-	if err != nil {
-		if ent.IsNotFound(err) {
+	err := withTx(ctx, s.client, func(tx *ent.Tx) error {
+		found, err := tx.License.Query().Where(license.IDEQ(licenseID)).Exist(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get license: %w", err)
+		}
+		if !found {
 			return ErrLicenseNotFound
 		}
-		return fmt.Errorf("failed to get license: %w", err)
-	}
 
-	// Delete the assignment
-	affected, err := s.client.SeatAssignment.Delete().
-		Where(
-			seatassignment.LicenseIDEQ(licenseID),
-			seatassignment.PrincipalIDEQ(principalID),
-		).
-		Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to delete seat assignment: %w", err)
-	}
-	if affected == 0 {
-		return ErrSeatNotAssigned
-	}
+		// Delete the assignment
+		affected, err := tx.SeatAssignment.Delete().
+			Where(
+				seatassignment.LicenseIDEQ(licenseID),
+				seatassignment.PrincipalIDEQ(principalID),
+			).
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to delete seat assignment: %w", err)
+		}
+		if affected == 0 {
+			return ErrSeatNotAssigned
+		}
 
-	// Decrement used seats
-	newUsedSeats := l.UsedSeats - 1
-	if newUsedSeats < 0 {
-		newUsedSeats = 0
-	}
-	_, err = s.client.License.UpdateOneID(licenseID).
-		SetUsedSeats(newUsedSeats).
-		Save(ctx)
+		// Release the seat with an atomic decrement.
+		if _, err := tx.License.Update().
+			Where(license.IDEQ(licenseID), license.UsedSeatsGT(0)).
+			AddUsedSeats(-1).
+			Save(ctx); err != nil {
+			return fmt.Errorf("failed to update used seats: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("failed to update used seats: %w", err)
+		return err
 	}
 
 	// Sync to authorization system
@@ -383,6 +404,25 @@ func (s *EntLicenseService) UnassignSeat(ctx context.Context, licenseID, princip
 		}
 	}
 
+	return nil
+}
+
+// withTx runs fn in a transaction, committing when fn returns nil and
+// rolling back otherwise.
+func withTx(ctx context.Context, client *ent.Client, fn func(tx *ent.Tx) error) error {
+	tx, err := client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	if err := fn(tx); err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			return errors.Join(err, fmt.Errorf("rolling back: %w", rerr))
+		}
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
 	return nil
 }
 

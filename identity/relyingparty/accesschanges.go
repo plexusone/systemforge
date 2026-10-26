@@ -215,7 +215,7 @@ type accessChangesPage struct {
 type remoteAccessChanges struct {
 	endpoint string
 	token    func(ctx context.Context) (string, error)
-	http     *http.Client
+	client   *Client
 }
 
 // AccessChangesSource reads changes from SystemAuth's GET /access-changes
@@ -225,7 +225,7 @@ type remoteAccessChanges struct {
 func (c *Client) AccessChangesSource(token func(ctx context.Context) (string, error)) AccessChangeSource {
 	return &remoteAccessChanges{
 		endpoint: strings.TrimRight(c.cfg.Issuer, "/") + AccessChangesPath,
-		token:    token, http: c.cfg.HTTPClient,
+		token:    token, client: c,
 	}
 }
 
@@ -276,9 +276,8 @@ func (r *remoteAccessChanges) page(ctx context.Context, since time.Time) (page *
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
-	resp, err := r.http.Do(req)
+	resp, err := r.client.doWithToken(req, token)
 	if err != nil {
 		return nil, fmt.Errorf("relyingparty: access changes: %w", err)
 	}

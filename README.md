@@ -45,6 +45,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 - 🔗 **External Identities** - Upstream logins (GitHub, Google, federation) linked to a principal by provider and subject
 - 🌐 **Social Login** - GitHub/Google login served centrally by SystemAuth (`__Host-sf_login` session, provider-subject account linking, logout, consent)
 - 🧒 **Managed Principals** - People without an email (a child, a dependent) whose accounts managers create and control: guardian and educator roles, QR-friendly login tokens, claims, and manager invitations; relying-party apps use SystemAuth's `/managed-principals` API through `managedprincipal/mpclient`
+- 📇 **SCIM 2.0 Provisioning** - `identity/scim`: tenant-scoped SCIM for enterprise identity providers, with a built-in per-tenant bearer token store (`identity/scim/scimtoken`) whose rotation keeps the previous token valid and revokes older ones
 - 🤝 **Relying Parties** - `identity/relyingparty`: apps federate to SystemAuth via OIDC (ID-token/JWKS verification, `sub` → `sf_principal_id` linking), mount the `/bff/*` cookie-session surface, and accept SystemAuth JWTs or API keys from programmatic clients
 - 🧩 **Embeddable SystemAuth** - `identity/systemauthsvc` builds a production-checked SystemAuth `http.Handler` a host binary can mount next to its own apps, with provider metadata for discovery-free in-process relying parties
 - 🤖 **AI Agent Requests** - `identity/requestprincipal`: one protocol-neutral request principal for people and agents; `aauthrs` verifies AAuth-signed agent requests (HTTP message signatures, person/auth tokens from trusted issuers, resource-token challenges) next to the relying-party human paths
@@ -114,7 +115,8 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 ### Multi-App Platform
 
 - 🏗️ **Multi-App Server** - Run multiple SaaS apps on shared infrastructure
-- 📦 **Schema Isolation** - Each app gets its own PostgreSQL schema
+- 📦 **Schema per App** - Each app gets its own PostgreSQL schema
+- 🔐 **Database Login per App** - Each app connects with its own role, confined to its schema and checked at startup; migrations use a separate owner login, and `cmd/multiappdb` provisions and verifies the roles (see [Database isolation](docs/multiapp/overview.md#database-isolation))
 - 🔀 **X-App-ID Routing** - Header-based request routing to app backends
 - 🔌 **AppBackend Interface** - Composable app registration with lifecycle hooks
 - 💾 **Shared Caching** - Redis or in-memory with app-scoped prefixes
@@ -212,10 +214,11 @@ import (
 
 // Create JWT service
 svc, err := jwt.NewService(&jwt.Config{
-    Secret:             []byte("your-secret-key"),
+    Secret:             secret, // at least 32 random bytes for HS256
+    KeyID:              "k1",   // optional "kid" header, enables key rotation
     AccessTokenExpiry:  15 * time.Minute,
     RefreshTokenExpiry: 7 * 24 * time.Hour,
-    Issuer:             "your-app",
+    Issuer:             "your-app",           // required; tokens from other issuers are refused
     Audience:           []string{"your-app"}, // required; tokens without it are refused
 })
 
@@ -241,16 +244,26 @@ proof, err := dpop.CreateProofWithOptions(keyPair, "POST", "https://api.example.
     AccessToken: accessToken,
 })
 
-// Verify proof (API side)
-verifier := dpop.NewVerifier(dpop.VerificationConfig{
-    MaxAge: 5 * time.Minute,
+// Enforce DPoP on the API side
+auth, err := middleware.HTTPAuth(jwtService, middleware.DPoPConfig{
+    ReplayCache: middleware.NewRedisReplayCache(redisClient, "dpop-jti:"), // or NewMemoryReplayCache()
+    BaseURL:     "https://api.example.com", // the scheme and host clients use
 })
-result, err := verifier.Verify(proofJWT, dpop.VerificationRequest{
-    Method:      "POST",
-    URI:         "https://api.example.com/data",
-    AccessToken: accessToken,
-})
+r.Use(auth)
 ```
+
+DPoP is the default. SystemAuth issues DPoP-bound tokens to every client:
+token requests must carry a DPoP proof, access tokens carry `cnf.jkt`, and
+refresh tokens work only with a proof by the same key. A client gets bearer
+tokens only when its registration sets the legacy `allow_bearer_tokens`
+exception. `HTTPAuth` accepts a DPoP-bound access token only with the `DPoP`
+authorization scheme and a proof signed by the bound key that matches the
+request method and URI, carries the token hash (`ath`), is fresh, and has not
+been seen before; unbound tokens are refused unless `DPoPConfig.AllowBearer`
+is set. The legacy `HTTPAuthBearer` middlewares accept only unbound tokens.
+Relying parties of SystemAuth get the same checks from
+`relyingparty.BearerConfig.DPoP`, and `relyingparty.Client` binds the tokens
+it obtains to its `DPoPKey`. See [DPoP Enforcement](docs/session/dpop.md).
 
 ### BFF Pattern
 
@@ -345,7 +358,9 @@ github.com/plexusone/systemforge/
 ├── multiapp/              # Multi-app platform
 │   ├── server.go          # Multi-app server with routing
 │   ├── app.go             # AppBackend interface
-│   ├── database.go        # Schema-per-app isolation
+│   ├── database.go        # Schema-per-app pools, one login per app
+│   ├── provision.go       # Per-app role provisioning SQL
+│   ├── isolation.go       # Startup database isolation check
 │   ├── cache.go           # Redis and memory cache
 │   └── context.go         # App context helpers
 │

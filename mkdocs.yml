@@ -62,6 +62,9 @@ nav:
     - The Organization Console: guides/console.md
     - Key Management: guides/key-management.md
     - Minimum Sign-Up Age: guides/signup-age.md
+    - Browser Cookies: guides/cookies.md
+    - Calling APIs with DPoP: guides/dpop-clients.md
+    - Rotating Keys and Secrets: guides/rotation.md
   - Identity:
     - Overview: identity/overview.md
     - Users: identity/users.md
@@ -105,6 +108,7 @@ nav:
     - Overview: session/index.md
     - BFF Sessions: session/bff-sessions.md
     - Invalidation: session/invalidation.md
+    - DPoP Enforcement: session/dpop.md
   - Architecture:
     - Application Architecture: architecture/systemforge-application-architecture.md
   - Multi-App:
@@ -142,6 +146,8 @@ nav:
       - "ADR-016: No Static API Keys (Proposed)": design/adrs/ADR-016-no-static-api-keys.md
       - "ADR-017: External Connections (Proposed)": design/adrs/ADR-017-external-connections.md
       - "ADR-018: The Organization Console (Proposed)": design/adrs/ADR-018-organization-console.md
+      - "ADR-019: Support Requests and Feedback (Proposed)": design/adrs/ADR-019-support-requests-and-feedback.md
+      - "ADR-020: Customer-Authorized Support Access (Proposed)": design/adrs/ADR-020-customer-authorized-support-access.md
     - ProductGraph:
       - PRD: design/productgraph/PRD.md
       - TRD: design/productgraph/TRD.md
@@ -150,6 +156,7 @@ nav:
   - Releases:
     - Overview: releases/index.md
     - Changelog: releases/changelog.md
+    - v0.21.0: releases/v0.21.0.md
     - v0.20.0: releases/v0.20.0.md
     - v0.19.0: releases/v0.19.0.md
     - v0.18.0: releases/v0.18.0.md

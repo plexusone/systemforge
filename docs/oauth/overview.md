@@ -71,6 +71,8 @@ import (
 
 // Create provider
 cfg := oauth.DefaultConfig("https://api.example.com", []byte("secret"))
+cfg.PrivateKey = signingKey // required: the same on every instance
+cfg.DPoP.ReplayCache = middleware.NewRedisReplayCache(redisClient, "dpop-jti:")
 provider, _ := oauth.NewProvider(entClient, cfg)
 
 // Create API (all endpoints auto-registered)
@@ -81,6 +83,26 @@ http.Handle("/", api.Router())
 ```
 
 ## Security Features
+
+### DPoP-Bound Tokens
+
+The provider issues DPoP-bound tokens (RFC 9449) by default: every token
+request carries a DPoP proof, and the access and refresh tokens are bound to
+its key (`token_type: DPoP`). Only a client registered with the legacy
+`allow_bearer_tokens` exception may get unbound bearer tokens. See
+[DPoP Enforcement](../session/dpop.md#the-identityoauth-provider).
+
+### Signing Key Rotation
+
+`Config.KeyID` names the signing key and `Config.VerificationKeys` holds
+keys that verify but never sign. Rotate N / N-1 in two deploys:
+
+1. Pre-stage: add the new key N to `VerificationKeys` while N-1 still signs.
+2. Promote: make N `PrivateKey`, move N-1 into `VerificationKeys`, and drop
+   N-2. Never drop N-1 in the deploy that promotes N.
+
+The JWKS publishes the signing key and every verification key; a token
+whose `kid` names no key is refused.
 
 ### PKCE Enforcement
 

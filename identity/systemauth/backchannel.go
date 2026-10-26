@@ -9,6 +9,7 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -79,10 +80,13 @@ func ValidateBackchannelLogoutURI(raw string) error {
 // and each failure is logged against the client ID. A response of 4xx other
 // than 408 and 429 is permanent and not retried.
 //
-// Every registered client receives every change: the token carries only
-// opaque principal and organization identifiers, but an operator who does
-// not want a client to see other tenants' changes should not register an
-// endpoint for it.
+// A registered client receives the changes the server's AccessChangeScope
+// (WithAccessChanges) allows it, and every change that names no
+// organization. Without a scope, every registered client receives every
+// change: the token carries only opaque principal and organization
+// identifiers, but an operator who does not want a client to see other
+// tenants' changes should configure a scope or not register an endpoint
+// for it.
 type Backchannel struct {
 	s        *Server
 	client   *http.Client
@@ -180,6 +184,9 @@ func (b *Backchannel) Run(ctx context.Context) error {
 				if cl.BackchannelLogoutURI == "" {
 					continue
 				}
+				if !b.inScope(ctx, cl.ID, c) {
+					continue
+				}
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
@@ -188,6 +195,23 @@ func (b *Backchannel) Run(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+// inScope reports whether client may receive c: always when the server has
+// no AccessChangeScope (WithAccessChanges) or c names no organization,
+// otherwise when the scope includes c's organization. A scope that fails
+// is logged and the change is not delivered to that client; the token
+// lifetime bounds what it misses.
+func (b *Backchannel) inScope(ctx context.Context, clientID string, c accesschange.Change) bool {
+	if b.s.accessScope == nil || c.OrganizationID == nil {
+		return true
+	}
+	orgIDs, all, err := b.s.accessScope(ctx, clientID)
+	if err != nil {
+		b.logger.ErrorContext(ctx, "back-channel: resolving the client's organizations", "client_id", clientID, "error", err)
+		return false
+	}
+	return all || slices.Contains(orgIDs, *c.OrganizationID)
 }
 
 // deliver sends one change to one client, retrying until it is accepted,

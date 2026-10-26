@@ -140,6 +140,14 @@ func (c *Config) expandEnvVars() {
 	c.Keys.KeyID = os.ExpandEnv(c.Keys.KeyID)
 	c.Keys.PrivateKeyFile = os.ExpandEnv(c.Keys.PrivateKeyFile)
 	c.Keys.PrivateKeyPEM = expandWholeEnv(c.Keys.PrivateKeyPEM)
+	c.DPoP.NonceSecret = os.ExpandEnv(c.DPoP.NonceSecret)
+	c.DPoP.ReplayCacheRedisURL = os.ExpandEnv(c.DPoP.ReplayCacheRedisURL)
+	for i := range c.Keys.VerificationKeys {
+		v := &c.Keys.VerificationKeys[i]
+		v.KeyID = os.ExpandEnv(v.KeyID)
+		v.PublicKeyFile = os.ExpandEnv(v.PublicKeyFile)
+		v.PublicKeyPEM = expandWholeEnv(v.PublicKeyPEM)
+	}
 
 	// Expand in database DSN
 	if c.Database != nil {

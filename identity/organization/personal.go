@@ -38,23 +38,38 @@ func ValidRole(role string) bool {
 // decision 3), and collaborators.
 var ErrPersonalOrganization = errors.New("operation not allowed on a personal organization")
 
+// ErrOrganizationDeleted means the organization was deleted (it is
+// inactive): it takes no new members, and no membership changes.
+var ErrOrganizationDeleted = errors.New("organization has been deleted")
+
 // RequireMembersAllowed returns ErrInvalidRole when role is not an
-// organization role, and ErrPersonalOrganization when orgID is a personal
-// organization and role is not RoleCollaborator. It is the check every path
-// that creates or changes a membership applies, including the invite
-// service and SCIM group membership.
+// organization role, ErrOrganizationDeleted when orgID is a deleted
+// (inactive) organization, and ErrPersonalOrganization when orgID is a
+// personal organization and role is not RoleCollaborator. It is the check
+// every path that creates or changes a membership applies, including the
+// invite service and SCIM group membership.
 func RequireMembersAllowed(ctx context.Context, client *ent.Client, orgID uuid.UUID, role string) error {
 	if !ValidRole(role) {
 		return fmt.Errorf("%w: %q (want owner, admin, member or collaborator)", ErrInvalidRole, role)
 	}
+	org, err := client.Organization.Query().
+		Where(organization.IDEQ(orgID)).
+		Select(organization.FieldOrgType, organization.FieldActive).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		// An unknown organization: the caller's own write reports it.
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to read organization: %w", err)
+	}
+	if !org.Active {
+		return ErrOrganizationDeleted
+	}
 	if role == RoleCollaborator {
 		return nil
 	}
-	personal, err := isPersonal(ctx, client, orgID)
-	if err != nil {
-		return err
-	}
-	if personal {
+	if org.OrgType == organization.OrgTypePersonal {
 		return fmt.Errorf("%w: only its owner and collaborators may belong to it", ErrPersonalOrganization)
 	}
 	return nil

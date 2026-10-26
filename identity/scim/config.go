@@ -31,8 +31,17 @@ type Config struct {
 	// BulkMaxOperations is the maximum number of operations in a bulk request.
 	BulkMaxOperations int
 
-	// BulkMaxPayloadSize is the maximum size of a bulk request in bytes.
+	// BulkMaxPayloadSize is the maximum size of a bulk request in bytes. It
+	// is enforced as the /Bulk endpoint's body limit (413 when exceeded).
+	// Zero leaves Huma's default limit (1 MB) in place.
 	BulkMaxPayloadSize int
+
+	// BulkMaxPasswordOperations is the maximum number of operations in one
+	// bulk request that set a password. Each one costs a password hash
+	// (bcrypt by default), so the limit bounds the CPU a single request can
+	// consume. Zero uses DefaultBulkMaxPasswordOperations; a negative value
+	// refuses passwords in bulk requests.
+	BulkMaxPasswordOperations int
 
 	// SupportChangePassword indicates whether password changes via SCIM are supported.
 	SupportChangePassword bool
@@ -57,20 +66,38 @@ type AuthenticationScheme struct {
 	Primary          bool   `json:"primary,omitempty"`
 }
 
+// DefaultBulkMaxPasswordOperations is the number of password-setting
+// operations a bulk request may carry when Config.BulkMaxPasswordOperations
+// is zero.
+const DefaultBulkMaxPasswordOperations = 50
+
+// bulkMaxPasswordOperations returns the effective password-operation limit
+// for a bulk request.
+func (c *Config) bulkMaxPasswordOperations() int {
+	switch {
+	case c.BulkMaxPasswordOperations == 0:
+		return DefaultBulkMaxPasswordOperations
+	case c.BulkMaxPasswordOperations < 0:
+		return 0
+	}
+	return c.BulkMaxPasswordOperations
+}
+
 // DefaultConfig returns a Config with sensible defaults.
 func DefaultConfig() *Config {
 	return &Config{
-		BaseURL:               "/scim/v2",
-		MaxResults:            1000,
-		DefaultPageSize:       100,
-		SupportFiltering:      true,
-		SupportSorting:        true,
-		SupportPatch:          true,
-		SupportBulk:           true,
-		BulkMaxOperations:     1000,
-		BulkMaxPayloadSize:    1048576, // 1 MB
-		SupportChangePassword: true,
-		SupportETag:           true,
+		BaseURL:                   "/scim/v2",
+		MaxResults:                1000,
+		DefaultPageSize:           100,
+		SupportFiltering:          true,
+		SupportSorting:            true,
+		SupportPatch:              true,
+		SupportBulk:               true,
+		BulkMaxOperations:         1000,
+		BulkMaxPayloadSize:        1048576, // 1 MB
+		BulkMaxPasswordOperations: DefaultBulkMaxPasswordOperations,
+		SupportChangePassword:     true,
+		SupportETag:               true,
 		AuthenticationSchemes: []AuthenticationScheme{
 			{
 				Type:        "oauthbearertoken",

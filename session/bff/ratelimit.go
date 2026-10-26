@@ -3,8 +3,11 @@ package bff
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // RateLimitConfig contains configuration for rate limiting.
@@ -18,7 +21,10 @@ type RateLimitConfig struct {
 	BurstSize int
 
 	// EndpointLimits allows per-endpoint rate limit overrides.
-	// Key is the endpoint path (e.g., "/refresh", "/logout").
+	// Key is the endpoint path relative to where the BFF router is
+	// mounted (e.g., "/refresh", "/logout"); see BasePath. Each endpoint
+	// listed here has its own bucket per client, separate from the
+	// default bucket shared by all other paths.
 	EndpointLimits map[string]EndpointLimit
 
 	// KeyFunc extracts the rate limit key from a request.
@@ -29,9 +35,17 @@ type RateLimitConfig struct {
 	// If nil, returns 429 Too Many Requests with standard headers.
 	OnLimitExceeded func(w http.ResponseWriter, r *http.Request, info RateLimitInfo)
 
-	// ExcludePaths are paths that bypass rate limiting.
+	// ExcludePaths are paths that bypass rate limiting, matched like
+	// EndpointLimits keys.
 	// Example: []string{"/health", "/metrics"}
 	ExcludePaths []string
+
+	// BasePath is stripped from the request path before EndpointLimits and
+	// ExcludePaths are matched, for routers that do not strip the mount
+	// prefix themselves. When the limiter runs inside a chi router mounted
+	// with Mount (as Handler.Router is), the path relative to the mount
+	// point is used automatically and BasePath is not needed.
+	BasePath string
 
 	// ClientIPConfig configures client address extraction for the default
 	// key. NewHandler fills it from HandlerConfig.ClientIPConfig when it is
@@ -134,17 +148,19 @@ func NewRateLimiter(config RateLimitConfig) *RateLimiter {
 func (rl *RateLimiter) Middleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			path := rl.routePath(r)
+
 			// Check if path is excluded
-			if rl.excludePaths[r.URL.Path] {
+			if rl.excludePaths[path] {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			// Get rate limit key
-			key := rl.getKey(r)
-
-			// Get limits for this endpoint
-			limit, burst := rl.getLimits(r.URL.Path)
+			// Get limits for this endpoint. An endpoint with its own
+			// limits gets its own bucket, so traffic to other paths cannot
+			// fix its capacity and it cannot drain theirs.
+			limit, burst, class := rl.getLimits(path)
+			key := class + "\x00" + rl.getKey(r)
 
 			// Check rate limit
 			info, allowed := rl.allow(key, limit, burst)
@@ -170,12 +186,40 @@ func (rl *RateLimiter) getKey(r *http.Request) string {
 	return rl.ipExtractor.GetClientIP(r)
 }
 
-// getLimits returns the rate limits for a path.
-func (rl *RateLimiter) getLimits(path string) (requestsPerMinute, burstSize int) {
-	if limit, ok := rl.config.EndpointLimits[path]; ok {
-		return limit.RequestsPerMinute, limit.BurstSize
+// routePath returns the request path relative to the router the limiter is
+// mounted in: chi's remaining route path when mounted with chi, otherwise
+// the URL path with BasePath removed.
+func (rl *RateLimiter) routePath(r *http.Request) string {
+	if rctx := chi.RouteContext(r.Context()); rctx != nil && rctx.RoutePath != "" {
+		return rctx.RoutePath
 	}
-	return rl.config.RequestsPerMinute, rl.config.BurstSize
+	path := r.URL.Path
+	if rl.config.BasePath != "" {
+		if rest, ok := strings.CutPrefix(path, strings.TrimSuffix(rl.config.BasePath, "/")); ok && (rest == "" || strings.HasPrefix(rest, "/")) {
+			path = rest
+			if path == "" {
+				path = "/"
+			}
+		}
+	}
+	return path
+}
+
+// getLimits returns the rate limits for a path and the bucket class they
+// belong to: the path itself for an EndpointLimits entry, "" for the
+// default limits.
+func (rl *RateLimiter) getLimits(path string) (requestsPerMinute, burstSize int, class string) {
+	if limit, ok := rl.config.EndpointLimits[path]; ok {
+		rpm, burst := limit.RequestsPerMinute, limit.BurstSize
+		if rpm <= 0 {
+			rpm = rl.config.RequestsPerMinute
+		}
+		if burst <= 0 {
+			burst = rl.config.BurstSize
+		}
+		return rpm, burst, path
+	}
+	return rl.config.RequestsPerMinute, rl.config.BurstSize, ""
 }
 
 // allow checks if a request is allowed and consumes a token.

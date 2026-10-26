@@ -24,6 +24,9 @@ const (
 	TokenRightParen
 	TokenLeftBracket
 	TokenRightBracket
+	// TokenIllegal is a character that starts no token; the parser
+	// refuses it.
+	TokenIllegal
 )
 
 // Token represents a lexical token.
@@ -80,6 +83,12 @@ func (l *Lexer) NextToken() Token {
 
 	switch l.ch {
 	case 0:
+		if l.pos < len(l.input) {
+			// A NUL byte inside the input is not its end.
+			tok = Token{Type: TokenIllegal, Value: "\x00"}
+			l.readChar()
+			break
+		}
 		tok = Token{Type: TokenEOF, Value: ""}
 	case '(':
 		tok = Token{Type: TokenLeftParen, Value: "("}
@@ -101,7 +110,7 @@ func (l *Lexer) NextToken() Token {
 		} else if isDigit(l.ch) || l.ch == '-' {
 			return l.readNumber()
 		} else {
-			tok = Token{Type: TokenEOF, Value: string(l.ch)}
+			tok = Token{Type: TokenIllegal, Value: string(l.ch)}
 			l.readChar()
 		}
 	}

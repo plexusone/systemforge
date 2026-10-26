@@ -170,3 +170,13 @@ func TestDecodeKey(t *testing.T) {
 		}
 	}
 }
+
+func TestKeyringRefusesOversizedValues(t *testing.T) {
+	kr := mustKeyring(t, WithEncryptionKey("k1", randomKey(t)))
+	if _, _, err := kr.seal("t", "row", make([]byte, maxSealPlaintext+1)); !errors.Is(err, ErrValueTooLarge) {
+		t.Fatalf("oversized value: %v, want ErrValueTooLarge", err)
+	}
+	if _, _, err := kr.seal("t", "row", make([]byte, maxSealPlaintext)); err != nil {
+		t.Fatalf("value at the limit: %v", err)
+	}
+}

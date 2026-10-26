@@ -63,7 +63,14 @@ router.Use(limiter.Middleware())
 #### JWT Middleware
 
 ```go
-router.Use(middleware.HTTPAuthWithObservability(jwtService, obs))
+auth, err := middleware.HTTPAuth(jwtService, middleware.DPoPConfig{
+    ReplayCache:   replayCache,
+    Observability: obs,
+})
+if err != nil {
+    return err
+}
+router.Use(auth)
 ```
 
 #### API Key Middleware
@@ -71,6 +78,7 @@ router.Use(middleware.HTTPAuthWithObservability(jwtService, obs))
 ```go
 config := middleware.DefaultAPIKeyMiddlewareConfig()
 config.Service = apikeyService
+config.OwnerCheck = ownerCheck // see API Keys: Middleware Integration
 config.Observability = obs
 router.Use(middleware.APIKeyMiddleware(config))
 ```

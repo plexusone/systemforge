@@ -100,10 +100,62 @@ func (f *loginTokenFixture) issue(t *testing.T, principalID uuid.UUID, singleUse
 func postLoginToken(s *Server, form url.Values) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", testIssuer)
 	req.RemoteAddr = "198.51.100.7:4242"
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	return w
+}
+
+// TestLoginTokenExchangeRejectsCrossSiteForms verifies that a form posted
+// from another site, or with no Origin or Referer, cannot exchange a token,
+// so a hostile page cannot sign a visitor into an account it controls,
+// and that the visitor's existing session is kept.
+func TestLoginTokenExchangeRejectsCrossSiteForms(t *testing.T) {
+	f := newLoginTokenFixture(t)
+	learner := f.managedHuman(t)
+	plain := f.issue(t, learner, false)
+	victim := f.loginSession(t, seedHuman(t, f.db, "adult@example.com", true))
+
+	for name, headers := range map[string]map[string]string{
+		"foreign origin":  {"Origin": "https://evil.example"},
+		"foreign referer": {"Referer": "https://evil.example/page"},
+		"no origin":       {},
+		"null origin":     {"Origin": "null"},
+	} {
+		form := url.Values{"token": {plain}, "client_id": {"learning"}}
+		req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+		req.AddCookie(victim)
+		w := httptest.NewRecorder()
+		f.srv.ServeHTTP(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("%s: status %d, want 403", name, w.Code)
+		}
+		if len(w.Result().Cookies()) != 0 {
+			t.Errorf("%s: response sets cookies %v", name, w.Result().Cookies())
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(victim)
+	if _, err := f.srv.CurrentLoginSession(req); err != nil {
+		t.Errorf("victim session after rejected exchanges: %v", err)
+	}
+
+	// The issuer's own page, identified by its Referer, still works.
+	form := url.Values{"token": {plain}, "client_id": {"learning"}}
+	req = httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Referer", testIssuer+"/sign-in")
+	w := httptest.NewRecorder()
+	f.srv.ServeHTTP(w, req)
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("same-origin referer: status %d %s", w.Code, w.Body.String())
+	}
 }
 
 func TestLoginTokenExchange(t *testing.T) {
@@ -250,6 +302,7 @@ func TestLoginTokenExchangeRateLimit(t *testing.T) {
 	}
 	req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", testIssuer)
 	req.RemoteAddr = "203.0.113.9:1"
 	rec := httptest.NewRecorder()
 	g.srv.ServeHTTP(rec, req)
@@ -357,6 +410,7 @@ func TestLoginTokenRateLimitIgnoresForwardingHeaders(t *testing.T) {
 	send := func(forwarded, clientID string) int {
 		req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(url.Values{"token": {"nope"}, "client_id": {clientID}}.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", testIssuer)
 		req.Header.Set("X-Forwarded-For", forwarded)
 		req.RemoteAddr = "203.0.113.9:4000"
 		w := httptest.NewRecorder()
@@ -377,6 +431,7 @@ func TestLoginTokenRateLimitIgnoresForwardingHeaders(t *testing.T) {
 	for i := range 200 {
 		req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(url.Values{"token": {"x"}, "client_id": {fmt.Sprintf("made-up-%d", i)}}.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", testIssuer)
 		req.RemoteAddr = "203.0.113.10:1"
 		g.srv.ServeHTTP(httptest.NewRecorder(), req)
 	}
@@ -390,6 +445,7 @@ func TestLoginTokenRateLimitIgnoresForwardingHeaders(t *testing.T) {
 	for i := range 100 {
 		req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(url.Values{"token": {"x"}, "client_id": {fmt.Sprintf("made-up-%d", i)}}.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", testIssuer)
 		req.RemoteAddr = "203.0.113.11:1"
 		w := httptest.NewRecorder()
 		h.srv.ServeHTTP(w, req)
@@ -412,6 +468,7 @@ func TestLoginTokenRateLimitIgnoresForwardingHeaders(t *testing.T) {
 		if got := func() int {
 			req := httptest.NewRequest(http.MethodPost, LoginTokenPath, strings.NewReader(url.Values{"token": {"x"}, "client_id": {"learning"}}.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Origin", testIssuer)
 			req.Header.Set("X-Forwarded-For", c.ip)
 			req.RemoteAddr = "203.0.113.9:1"
 			w := httptest.NewRecorder()
@@ -421,4 +478,66 @@ func TestLoginTokenRateLimitIgnoresForwardingHeaders(t *testing.T) {
 			t.Errorf("client %s behind the proxy: %d, want %d", c.ip, got, c.want)
 		}
 	}
+}
+
+// TestManagedPrincipalAuthorizeRequiresOptedInClient verifies that the
+// login session a managed principal gets from a login token, exchanged for
+// a client that allows managed principals, cannot authorize a client that
+// does not, while an ordinary human's session can.
+func TestManagedPrincipalAuthorizeRequiresOptedInClient(t *testing.T) {
+	f := newLoginTokenFixture(t)
+	learner := f.managedHuman(t)
+	w := postLoginToken(f.srv, url.Values{"token": {f.issue(t, learner, false)}, "client_id": {"learning"}})
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("login token: status %d %s", w.Code, w.Body.String())
+	}
+	sess := findCookie(t, w.Result(), LoginCookieName)
+
+	authorize := func(clientID string, cookie *http.Cookie) *url.URL {
+		t.Helper()
+		params := url.Values{
+			"response_type":         {"code"},
+			"client_id":             {clientID},
+			"redirect_uri":          {testRPCB},
+			"scope":                 {"openid"},
+			"state":                 {"rp-state-12345"},
+			"code_challenge":        {"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"},
+			"code_challenge_method": {"S256"},
+		}
+		req := httptest.NewRequest(http.MethodGet, "/oauth/authorize?"+params.Encode(), nil)
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		f.srv.ServeHTTP(rec, req)
+		loc, err := url.Parse(rec.Header().Get("Location"))
+		if err != nil {
+			t.Fatalf("location: %v", err)
+		}
+		return loc
+	}
+
+	if loc := authorize("ordinary", sess); loc.Query().Get("error") != "access_denied" {
+		t.Errorf("managed principal at a client without managed principals: redirect %s, want access_denied", loc)
+	}
+	if loc := authorize("learning", sess); loc.Query().Get("error") != "" {
+		t.Errorf("managed principal at an opted-in client: redirect %s, want no error", loc)
+	}
+
+	// An ordinary human is not affected.
+	adult := seedHuman(t, f.db, "adult@example.com", true)
+	adultSess := f.loginSession(t, adult)
+	if loc := authorize("ordinary", adultSess); loc.Query().Get("error") != "" {
+		t.Errorf("ordinary human: redirect %s, want no error", loc)
+	}
+}
+
+// loginSession establishes a login session for principalID and returns its
+// cookie.
+func (f *loginTokenFixture) loginSession(t *testing.T, principalID uuid.UUID) *http.Cookie {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	if err := f.srv.social.establishSession(req.Context(), rec, req, principalID, "test"); err != nil {
+		t.Fatalf("establishSession: %v", err)
+	}
+	return findCookie(t, rec.Result(), LoginCookieName)
 }

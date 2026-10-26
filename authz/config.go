@@ -3,6 +3,7 @@ package authz
 import (
 	"fmt"
 	"slices"
+	"time"
 )
 
 // Mode names how a deployment evaluates authorization (ADR-008). The modes
@@ -56,6 +57,98 @@ type ModeConfig struct {
 	// SpiceDB configures the spicedb engine. Nil means an embedded
 	// in-memory instance, for development and tests.
 	SpiceDB *SpiceDBConfig `json:"spicedb,omitempty" yaml:"spicedb,omitempty" jsonschema:"description=SpiceDB engine settings for mode rebac"`
+
+	// Reconcile schedules the repair of the relationship graph from the
+	// identity tables in mode rebac (authz/mode.Reconciler). Nil means the
+	// defaults: at startup and every 15 minutes.
+	Reconcile *ReconcileConfig `json:"reconcile,omitempty" yaml:"reconcile,omitempty" jsonschema:"description=Repair of the relationship graph from the identity tables in mode rebac"`
+}
+
+// Defaults of ReconcileConfig.
+const (
+	DefaultReconcileInterval = 15 * time.Minute
+	DefaultReconcilePageSize = 500
+)
+
+// ReconcileConfig schedules the graph reconciler of mode rebac, which
+// writes the relationships the identity tables call for that the graph
+// lacks and deletes those the tables no longer call for. The zero value is
+// the default: on, at startup and every 15 minutes with up to a tenth of
+// that added at random.
+//
+//	authz:
+//	  mode: rebac
+//	  reconcile:
+//	    interval: 30m
+type ReconcileConfig struct {
+	// Disabled turns the reconciler off. The services still remove
+	// access from the graph before committing a revocation, but nothing
+	// repairs the graph after a failed grant or an interrupted commit.
+	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty" jsonschema:"default=false,description=Turn the graph reconciler off"`
+
+	// SkipStartup does not reconcile at startup.
+	SkipStartup bool `json:"skip_startup,omitempty" yaml:"skip_startup,omitempty" jsonschema:"default=false,description=Do not reconcile at startup"`
+
+	// Interval is the time between periodic reconciliations, a Go
+	// duration such as "15m" (the default). "0" reconciles only at
+	// startup.
+	Interval string `json:"interval,omitempty" yaml:"interval,omitempty" jsonschema:"default=15m,description=Time between periodic reconciliations (Go duration; 0 for startup only)"`
+
+	// Jitter is the most added at random to each interval, so instances
+	// do not reconcile in step. Default a tenth of the interval.
+	Jitter string `json:"jitter,omitempty" yaml:"jitter,omitempty" jsonschema:"description=Most added at random to each interval (Go duration; default a tenth of the interval)"`
+
+	// PageSize is how many rows or relationships are read per request.
+	// Default 500.
+	PageSize int `json:"page_size,omitempty" yaml:"page_size,omitempty" jsonschema:"default=500,minimum=0,description=Rows or relationships read per request"`
+}
+
+// IntervalDuration returns the interval between reconciliations.
+func (c *ReconcileConfig) IntervalDuration() (time.Duration, error) {
+	if c == nil || c.Interval == "" {
+		return DefaultReconcileInterval, nil
+	}
+	d, err := time.ParseDuration(c.Interval)
+	if err != nil {
+		return 0, fmt.Errorf("authz: reconcile.interval %q: %w", c.Interval, err)
+	}
+	if d < 0 {
+		return 0, fmt.Errorf("authz: reconcile.interval %q is negative", c.Interval)
+	}
+	return d, nil
+}
+
+// JitterDuration returns the most added at random to each interval.
+func (c *ReconcileConfig) JitterDuration() (time.Duration, error) {
+	if c == nil || c.Jitter == "" {
+		interval, err := c.IntervalDuration()
+		return interval / 10, err
+	}
+	d, err := time.ParseDuration(c.Jitter)
+	if err != nil {
+		return 0, fmt.Errorf("authz: reconcile.jitter %q: %w", c.Jitter, err)
+	}
+	if d < 0 {
+		return 0, fmt.Errorf("authz: reconcile.jitter %q is negative", c.Jitter)
+	}
+	return d, nil
+}
+
+// Validate checks the durations and page size.
+func (c *ReconcileConfig) Validate() error {
+	if c == nil {
+		return nil
+	}
+	if _, err := c.IntervalDuration(); err != nil {
+		return err
+	}
+	if _, err := c.JitterDuration(); err != nil {
+		return err
+	}
+	if c.PageSize < 0 {
+		return fmt.Errorf("authz: reconcile.page_size %d is negative", c.PageSize)
+	}
+	return nil
 }
 
 // SpiceDBConfig holds the settings of the SpiceDB engine. It is the
@@ -128,6 +221,9 @@ func (c ModeConfig) Validate() error {
 		if c.SpiceDB != nil {
 			return fmt.Errorf("authz: spicedb settings are given but mode is rbac; they apply to mode rebac")
 		}
+		if c.Reconcile != nil {
+			return fmt.Errorf("authz: reconcile settings are given but mode is rbac; they apply to mode rebac")
+		}
 		return nil
 	case ModeReBAC:
 	case "":
@@ -136,6 +232,9 @@ func (c ModeConfig) Validate() error {
 		return fmt.Errorf("authz: unknown mode %q (want rbac or rebac)", c.Mode)
 	}
 
+	if err := c.Reconcile.Validate(); err != nil {
+		return err
+	}
 	if !slices.Contains(Engines(), c.Engine) {
 		return fmt.Errorf("authz: unknown engine %q for mode rebac (want %v)", c.Engine, Engines())
 	}

@@ -12,7 +12,6 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
-	"github.com/ory/fosite"
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
@@ -289,21 +288,16 @@ func (s *Server) membershipsEndpoint(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := LoggerFromContext(ctx)
 
-	token := bearerToken(r)
-	if token == "" {
-		writeBearerError(w, http.StatusUnauthorized, "", "", "")
-		return
-	}
-	ar, err := s.introspect(ctx, token, fosite.AccessToken, s.Session(""))
-	if err != nil {
-		logger.Debug("memberships: invalid access token", "error", err)
-		writeBearerError(w, http.StatusUnauthorized, "invalid_token", "The access token is invalid, expired or revoked.", "")
+	ar, authErr := s.authenticateAccessToken(r, s.endpointURL(MembershipsPath))
+	if authErr != nil {
+		logger.Debug("memberships: access token refused", "error", authErr)
+		s.writeTokenAuthError(w, authErr)
 		return
 	}
 	subject := sessionSubject(ar.GetSession())
 	principalID, isPrincipal := principalSubject(subject)
 	if !ar.GetGrantedScopes().Has("openid") || !isPrincipal {
-		writeBearerError(w, http.StatusForbidden, "insufficient_scope", "The access token was not granted the openid scope.", "openid")
+		writeScopeError(w, ar, "The access token was not granted the openid scope.", "openid")
 		return
 	}
 	if s.orgs == nil {

@@ -2,8 +2,12 @@ package oauth
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -71,9 +75,9 @@ func TestOpenIDConfiguration(t *testing.T) {
 		t.Errorf("expected jwks_uri %q, got %q", expectedJWKSURI, oidc.JWKSURI)
 	}
 
-	// Verify response types supported
-	if len(oidc.ResponseTypesSupported) != 2 {
-		t.Errorf("expected 2 response types, got %d", len(oidc.ResponseTypesSupported))
+	// Only the authorization code flow is supported.
+	if len(oidc.ResponseTypesSupported) != 1 || oidc.ResponseTypesSupported[0] != "code" {
+		t.Errorf("expected response_types_supported [code], got %v", oidc.ResponseTypesSupported)
 	}
 
 	// Verify grant types supported
@@ -89,30 +93,30 @@ func TestOpenIDConfiguration(t *testing.T) {
 
 // TestJWKS tests the JSON Web Key Set endpoint.
 func TestJWKS(t *testing.T) {
-	config := &Config{
-		Issuer:     "https://auth.example.com",
-		HashSecret: []byte("test-secret-32-bytes-long-xxxxx"),
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	provider := &Provider{
-		config: config,
+	cfg := DefaultConfig("https://auth.example.com", []byte("test-secret-32-bytes-long-xxxxx"))
+	cfg.PrivateKey = key
+	p, err := NewProvider(nil, cfg)
+	if err != nil {
+		t.Fatalf("NewProvider: %v", err)
 	}
-
-	api := &API{
-		provider: provider,
-	}
-
-	// Call the handler directly
-	output, err := api.getJWKS(context.Background(), &struct{}{})
+	output, err := (&API{provider: p}).getJWKS(context.Background(), &struct{}{})
 	if err != nil {
 		t.Fatalf("getJWKS returned error: %v", err)
 	}
-
-	jwks := output.Body
-
-	// Currently returns empty JWKS
-	if jwks.Keys == nil {
-		t.Error("expected Keys to be non-nil (empty slice)")
+	if len(output.Body.Keys) != 1 {
+		t.Fatalf("expected the provider's key, got %d keys", len(output.Body.Keys))
+	}
+	k := output.Body.Keys[0]
+	n, err := base64.RawURLEncoding.DecodeString(k.N)
+	if err != nil {
+		t.Fatalf("decode n: %v", err)
+	}
+	if k.Kty != "RSA" || k.Alg != "RS256" || k.Kid == "" || new(big.Int).SetBytes(n).Cmp(key.N) != 0 {
+		t.Errorf("JWK does not describe the provider key: %+v", k)
 	}
 }
 
@@ -179,13 +183,9 @@ func TestOpenIDConfigurationHTTP(t *testing.T) {
 
 // TestJWKSHTTP tests the JWKS endpoint via HTTP.
 func TestJWKSHTTP(t *testing.T) {
-	config := &Config{
-		Issuer:     "https://auth.example.com",
-		HashSecret: []byte("test-secret-32-bytes-long-xxxxx"),
-	}
-
-	provider := &Provider{
-		config: config,
+	provider, err := NewProvider(nil, ephemeralConfig(DefaultConfig("https://auth.example.com", []byte("test-secret-32-bytes-long-xxxxx"))))
+	if err != nil {
+		t.Fatalf("NewProvider: %v", err)
 	}
 
 	api := &API{
@@ -287,7 +287,8 @@ func TestMiddlewareMissingToken(t *testing.T) {
 	}
 
 	api := &API{
-		provider: provider,
+		provider:  provider,
+		anyClient: true,
 	}
 
 	// Create a handler that should not be called

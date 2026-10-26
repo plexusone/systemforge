@@ -37,6 +37,15 @@ type APIConfig struct {
 	// AppRoles manages application roles. Until it is set, the
 	// application role endpoints answer 501.
 	AppRoles *approle.Service
+	// DirectAdd decides whether caller, who holds invite_member on the
+	// organization, may add principalID as a member directly
+	// (POST /organizations/{slug}/members), without the principal's
+	// consent. Everyone else must be invited, and accepts the invitation.
+	// Allow the principals the organization already governs, for example
+	// managed principals the caller manages or accounts it provisioned.
+	// When nil, only platform administrators (authz.PlatformAuthorizer)
+	// may add members directly.
+	DirectAdd func(ctx context.Context, caller, orgID, principalID uuid.UUID) (bool, error)
 }
 
 // DefaultAPIConfig returns the default API configuration.

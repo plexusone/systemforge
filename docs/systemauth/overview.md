@@ -74,7 +74,7 @@ serves:
 | `/.well-known/openid-configuration` | GET | OIDC discovery |
 | `/.well-known/jwks.json` | GET | JSON Web Key Set |
 | `/oauth/authorize` | GET/POST | Authorization endpoint |
-| `/oauth/token` | POST | Token endpoint (refresh tokens rotate; see [Social Login](social-login.md#refresh-tokens)) |
+| `/oauth/token` | POST | Token endpoint; requires a DPoP proof and issues DPoP-bound tokens ([DPoP Enforcement](../session/dpop.md)); refresh tokens rotate (see [Social Login](social-login.md#refresh-tokens)) |
 | `/oauth/introspect` | POST | Token introspection (RFC 7662) |
 | `/oauth/revoke` | POST | Token revocation (RFC 7009) |
 | `/oauth/userinfo` | GET/POST | OpenID Connect UserInfo |
@@ -85,9 +85,13 @@ With `social_login` configured, `/login*`, `/logout` and `/consent` are added
 
 ### UserInfo
 
-`/oauth/userinfo` implements OIDC Core §5.3. Send the access token as
+`/oauth/userinfo` implements OIDC Core §5.3. SystemAuth's tokens are
+DPoP-bound ([DPoP Enforcement](../session/dpop.md)): send the access token as
+`Authorization: DPoP <token>` with a `DPoP` proof for the request, signed by
+the key the token is bound to and carrying the token's hash. Only a bearer
+token, issued to a client with the `allow_bearer_tokens` exception, is sent as
 `Authorization: Bearer <token>` (or `access_token` in a form-encoded `POST`
-body; query parameters are not accepted). The token must have been granted the
+body). Query parameters are not accepted. The token must have been granted the
 `openid` scope.
 
 ```json
@@ -111,11 +115,20 @@ scope — `email` → `email`, `email_verified`; `profile` → `name`, `picture`
 and are read live from the principal (via the `SessionProvider`), so they
 reflect the current profile rather than the one at sign-in.
 
+Token subjects are principals (ADR-004). A custom `SessionProvider` must
+return principal IDs from `GetAuthenticatedUser`: every time a token is
+used or refreshed, SystemAuth checks that its subject names an active
+principal in its storage (`PrincipalStatus`). A subject that is not a
+principal ID, or whose principal was deactivated or deleted, is refused and
+its token family revoked. Only client-credentials tokens, whose subject is
+empty, carry no principal.
+
 | Condition | Response |
 |-----------|----------|
-| No token | `401`, `WWW-Authenticate: Bearer realm="systemauth"` |
-| Unknown, expired or revoked token | `401`, `WWW-Authenticate: Bearer ..., error="invalid_token"` |
-| Token without `openid` scope | `403`, `WWW-Authenticate: Bearer ..., error="insufficient_scope", scope="openid"` |
+| No token | `401`, `WWW-Authenticate: Bearer realm="systemauth"` and `WWW-Authenticate: DPoP algs="ES256 ES384 ES512"` |
+| Unknown, expired or revoked token | `401`, `WWW-Authenticate: ..., error="invalid_token"` |
+| DPoP-bound token sent as Bearer, or without a valid proof | `401`, `WWW-Authenticate: DPoP ..., error="invalid_token"` or `error="invalid_dpop_proof"` |
+| Token without `openid` scope | `403`, `WWW-Authenticate: ..., error="insufficient_scope", scope="openid"` |
 
 ## Embedded vs Ory
 

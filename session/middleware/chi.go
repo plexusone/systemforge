@@ -6,28 +6,26 @@ import (
 	"github.com/plexusone/systemforge/session/jwt"
 )
 
-// ChiAuth returns a Chi-compatible middleware that validates JWT tokens.
-// This is an alias for HTTPAuth since Chi uses the standard http.Handler interface.
+// ChiAuth returns a Chi-compatible middleware that validates DPoP-bound
+// access tokens. This is an alias for HTTPAuth since Chi uses the standard
+// http.Handler interface.
 //
 // Usage with Chi:
 //
+//	auth, err := middleware.ChiAuth(jwtService, middleware.DPoPConfig{ReplayCache: cache})
+//	if err != nil { ... }
 //	r := chi.NewRouter()
-//	r.Use(middleware.ChiAuth(jwtService))
+//	r.Use(auth)
 //	r.Get("/api/protected", protectedHandler)
-func ChiAuth(jwtService *jwt.Service) func(http.Handler) http.Handler {
-	return HTTPAuth(jwtService)
+func ChiAuth(jwtService *jwt.Service, cfg DPoPConfig) (func(http.Handler) http.Handler, error) {
+	return HTTPAuth(jwtService, cfg)
 }
 
-// ChiAuthOptional returns a Chi-compatible middleware that validates JWT tokens if present.
-// This is an alias for HTTPAuthOptional since Chi uses the standard http.Handler interface.
-//
-// Usage with Chi:
-//
-//	r := chi.NewRouter()
-//	r.Use(middleware.ChiAuthOptional(jwtService))
-//	r.Get("/api/public", publicHandler)
-func ChiAuthOptional(jwtService *jwt.Service) func(http.Handler) http.Handler {
-	return HTTPAuthOptional(jwtService)
+// ChiAuthOptional returns a Chi-compatible middleware that validates
+// DPoP-bound access tokens if present. This is an alias for
+// HTTPAuthOptional since Chi uses the standard http.Handler interface.
+func ChiAuthOptional(jwtService *jwt.Service, cfg DPoPConfig) (func(http.Handler) http.Handler, error) {
+	return HTTPAuthOptional(jwtService, cfg)
 }
 
 // ChiRequireRole returns a Chi-compatible middleware that requires a specific role.
@@ -35,7 +33,7 @@ func ChiAuthOptional(jwtService *jwt.Service) func(http.Handler) http.Handler {
 // Usage with Chi:
 //
 //	r.Group(func(r chi.Router) {
-//	    r.Use(middleware.ChiAuth(jwtService))
+//	    r.Use(auth) // from middleware.ChiAuth
 //	    r.Use(middleware.ChiRequireRole("admin"))
 //	    r.Get("/api/admin", adminHandler)
 //	})

@@ -100,7 +100,7 @@ social_login:
 | `session_lifetime` | `12h` | Absolute lifetime of the login session. |
 | `skip_consent` | `false` | Auto-grant consent for users signed in via social login. Only for deployments where every client is first-party; otherwise users see the `/consent` page. |
 | `signup_minimum_age` | `0` | Asks a person's birth month and year before their first login creates an account, and refuses anyone younger, keeping nothing. See [Deploying SystemAuth](deployment.md#minimum-sign-up-age). |
-| `insecure_cookies` | `false` | Drops the `__Host-` prefix and `Secure` flag for local HTTP development. Never enable in production. |
+| `insecure_cookies` | `false` | Drops the `__Host-` prefix and `Secure` flag for local HTTP development, and logs a warning at startup. Never enable in production. See [Browser Cookies](../guides/cookies.md). |
 
 Programmatic setup:
 

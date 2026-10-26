@@ -113,4 +113,5 @@ clients:
 #   keys_dir: /var/lib/systemauth/keys   # back this up with the database
 #   vault: env://                        # omnivault URI: env://, file:///etc/systemauth/secrets, ...
 #   root_key: SYSTEMAUTH_KEYS_ROOT       # path in the vault; 32 bytes, e.g. openssl rand -base64 32
-#   allow_private_egress: false          # development only: reach local fake providers over HTTP
+#   egress_allow_prefixes: []            # development only: e.g. [127.0.0.0/8] to reach local fake providers
+#   allow_http_egress: false             # development only: reach local fake providers over plain HTTP

@@ -4,6 +4,8 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"net/netip"
+	"net/url"
 	"time"
 
 	"github.com/invopop/jsonschema"
@@ -59,6 +61,55 @@ type Config struct {
 	// Console serves the organization console under /console (ADR-018);
 	// nil disables it. It signs in with social login's session.
 	Console *ConsoleConfig `json:"console,omitempty" yaml:"console,omitempty" jsonschema:"description=Organization console under /console (ADR-018)"`
+
+	// DPoP tunes DPoP proof checking (RFC 9449). DPoP itself is always on:
+	// every client must prove possession of a key at the token endpoint and
+	// gets tokens bound to it, unless its registration sets
+	// allow_bearer_tokens.
+	DPoP DPoPConfig `json:"dpop,omitempty" yaml:"dpop,omitempty" jsonschema:"description=DPoP proof checking (RFC 9449)"`
+}
+
+// DPoPConfig tunes how SystemAuth checks DPoP proofs. The replay cache is
+// set with WithDPoPReplayCache.
+type DPoPConfig struct {
+	// ProofMaxAge is how old a proof's iat may be. Default: 5 minutes.
+	ProofMaxAge Duration `json:"proof_max_age,omitempty" yaml:"proof_max_age,omitempty" jsonschema:"default=5m,description=Maximum age of a DPoP proof"`
+
+	// ClockSkew is how far a proof's iat may be in the future, and is added
+	// to ProofMaxAge. Default: 30 seconds.
+	ClockSkew Duration `json:"clock_skew,omitempty" yaml:"clock_skew,omitempty" jsonschema:"default=30s,description=Allowed clock skew of DPoP proofs"`
+
+	// RequireNonce makes every proof carry a nonce SystemAuth issued
+	// (RFC 9449 §8): a proof without one is refused with use_dpop_nonce
+	// and a DPoP-Nonce header the client retries with. It requires
+	// NonceSecret.
+	RequireNonce bool `json:"require_nonce,omitempty" yaml:"require_nonce,omitempty" jsonschema:"default=false,description=Require server-provided DPoP nonces"`
+
+	// NonceSecret keys the nonces: at least 32 bytes, the same on every
+	// instance. Supports environment variable expansion:
+	// ${SYSTEMAUTH_DPOP_NONCE_SECRET}.
+	NonceSecret string `json:"nonce_secret,omitempty" yaml:"nonce_secret,omitempty" jsonschema:"description=Secret keying DPoP nonces (32+ bytes; supports env var expansion)"`
+
+	// NonceLifetime is how long a nonce is accepted. Default: 5 minutes.
+	NonceLifetime Duration `json:"nonce_lifetime,omitempty" yaml:"nonce_lifetime,omitempty" jsonschema:"default=5m,description=How long a DPoP nonce is accepted"`
+
+	// ReplayCacheRedisURL is a Redis URL (redis://user:pass@host:6379/0)
+	// for the cache that rejects replayed proofs, shared by every
+	// instance. The packaged service (systemauthsvc) connects to it; an
+	// embedding application passes WithDPoPReplayCache instead. Empty
+	// keeps the cache in memory, which suits a single instance. Supports
+	// environment variable expansion: ${SYSTEMAUTH_DPOP_REDIS_URL}.
+	ReplayCacheRedisURL string `json:"replay_cache_redis_url,omitempty" yaml:"replay_cache_redis_url,omitempty" jsonschema:"description=Redis URL of the shared DPoP replay cache (supports env var expansion)"`
+
+	// ResourceBaseURL is the external base URL of the routes this server
+	// protects outside SystemAuth's own endpoints (BearerAccess,
+	// BearerPrincipal, Middleware): a DPoP proof's htu must equal it plus
+	// the request path as this server sees it. Default: the issuer's
+	// origin (scheme and host). Set it when a proxy maps the external path
+	// to another one, for example "https://example.com/api" when the proxy
+	// strips /api. SystemAuth's own endpoints are always checked against
+	// the issuer URL.
+	ResourceBaseURL string `json:"resource_base_url,omitempty" yaml:"resource_base_url,omitempty" jsonschema:"description=External base URL of protected routes for DPoP htu (default: the issuer origin)"`
 }
 
 // ConsoleConfig configures the organization console (ADR-018).
@@ -88,9 +139,29 @@ type ConnectionsConfig struct {
 	// as base64 or hex, for example the output of openssl rand -base64 32.
 	RootKey string `json:"root_key" yaml:"root_key" jsonschema:"required,description=Path in the vault of the key ring's 32-byte root key"`
 
-	// AllowPrivateEgress lets provider requests reach private and loopback
-	// addresses and plain HTTP. For development against local fakes only.
-	AllowPrivateEgress bool `json:"allow_private_egress,omitempty" yaml:"allow_private_egress,omitempty" jsonschema:"description=Development only: allow provider requests to private addresses and plain HTTP"`
+	// EgressAllowPrefixes lists address ranges in CIDR notation, such as
+	// 127.0.0.0/8, that provider requests may reach although they are not
+	// public. For development against local fakes only: list just the
+	// ranges the fakes use. Link-local and cloud metadata addresses are
+	// refused even when listed.
+	EgressAllowPrefixes []string `json:"egress_allow_prefixes,omitempty" yaml:"egress_allow_prefixes,omitempty" jsonschema:"description=Development only: CIDR ranges provider requests may reach although not public (link-local and metadata addresses are always refused)"`
+
+	// AllowHTTPEgress lets provider requests use plain HTTP. For
+	// development against local fakes only.
+	AllowHTTPEgress bool `json:"allow_http_egress,omitempty" yaml:"allow_http_egress,omitempty" jsonschema:"description=Development only: allow provider requests over plain HTTP"`
+}
+
+// EgressPrefixes parses EgressAllowPrefixes.
+func (c *ConnectionsConfig) EgressPrefixes() ([]netip.Prefix, error) {
+	out := make([]netip.Prefix, 0, len(c.EgressAllowPrefixes))
+	for _, s := range c.EgressAllowPrefixes {
+		p, err := netip.ParsePrefix(s)
+		if err != nil {
+			return nil, fmt.Errorf("%w: egress_allow_prefixes: %w", ErrInvalidConnectionsConfig, err)
+		}
+		out = append(out, p.Masked())
+	}
+	return out, nil
 }
 
 // ErrInvalidConnectionsConfig is returned for an incomplete connections
@@ -102,6 +173,9 @@ func (c *ConnectionsConfig) validate() error {
 		if v == "" {
 			return fmt.Errorf("%w: %s is required", ErrInvalidConnectionsConfig, name)
 		}
+	}
+	if _, err := c.EgressPrefixes(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -184,7 +258,28 @@ type KeyConfig struct {
 
 	// KeyID is the "kid" published in the JWKS and set on every JWT.
 	// Default: the RFC 7638 thumbprint of the key.
+	//
+	// A token's kid selects the key that verifies it: KeyID selects the
+	// signing key, a VerificationKeys entry selects that key, and any other
+	// kid is refused. Rotate in two deploys, keeping the current key N and
+	// the previous key N-1:
+	//
+	//  1. Pre-stage: add the new key N to VerificationKeys while N-1 still
+	//     signs. Relying parties pick N up from the JWKS before any token
+	//     signed by it exists.
+	//  2. Promote: make N the signing key, move N-1 into VerificationKeys,
+	//     and drop N-2. Rolling this deploy back to step 1 keeps verifying
+	//     the tokens N signed meanwhile.
+	//
+	// Never drop N-1 in the deploy that promotes N: tokens it signed are
+	// still in use until they expire.
 	KeyID string `json:"key_id,omitempty" yaml:"key_id,omitempty" jsonschema:"description=JWKS key ID (default: RFC 7638 thumbprint of the key)"`
+
+	// VerificationKeys are keys published in the JWKS and accepted when
+	// verifying tokens, but never used to sign: the previous signing key
+	// N-1 after a rotation, and a pre-staged next key N+1 before it is
+	// promoted. See KeyID for the rotation steps.
+	VerificationKeys []VerificationKeyConfig `json:"verification_keys,omitempty" yaml:"verification_keys,omitempty" jsonschema:"description=Previous or pre-staged keys published in the JWKS for verification only"`
 
 	// PrivateKeyFile is the path of a PEM-encoded RSA private key (PKCS#1
 	// or PKCS#8, at least 2048 bits). Supports environment variable
@@ -201,6 +296,29 @@ type KeyConfig struct {
 	// ephemeral key is generated (development only).
 	// This field is not serialized - for programmatic use only.
 	PrivateKey *rsa.PrivateKey `json:"-" yaml:"-" jsonschema:"-"`
+}
+
+// VerificationKeyConfig is an RSA key SystemAuth publishes and verifies
+// with but does not sign with. Give exactly one of PublicKeyPEM,
+// PublicKeyFile or PublicKey. The PEM may be a public key (PKIX "PUBLIC
+// KEY" or PKCS#1 "RSA PUBLIC KEY") or a private key, of which only the
+// public part is used, so the file of a pre-staged key can be the one it
+// signs with once promoted.
+type VerificationKeyConfig struct {
+	// KeyID is the key's "kid". Default: the RFC 7638 thumbprint of the
+	// key, which is also the default KeyID of a signing key.
+	KeyID string `json:"key_id,omitempty" yaml:"key_id,omitempty" jsonschema:"description=Key ID (default: RFC 7638 thumbprint of the key)"`
+
+	// PublicKeyFile is the path of the PEM-encoded key. Supports
+	// environment variable expansion.
+	PublicKeyFile string `json:"public_key_file,omitempty" yaml:"public_key_file,omitempty" jsonschema:"description=Path of the PEM RSA key (supports env var expansion)"`
+
+	// PublicKeyPEM is the PEM-encoded key. Supports a whole-value
+	// environment variable reference such as ${SYSTEMAUTH_PREVIOUS_KEY}.
+	PublicKeyPEM string `json:"public_key_pem,omitempty" yaml:"public_key_pem,omitempty" jsonschema:"description=PEM RSA key (supports env var expansion)"`
+
+	// PublicKey is the key, for programmatic use; it is not serialized.
+	PublicKey *rsa.PublicKey `json:"-" yaml:"-" jsonschema:"-"`
 }
 
 // TokenConfig configures token lifetimes.
@@ -347,6 +465,15 @@ type ClientConfig struct {
 	// login tokens issued for this client's managed principals, for example
 	// a school year. It never exceeds managed_principals.login_token_max_ttl.
 	LoginTokenTTL *Duration `json:"login_token_ttl,omitempty" yaml:"login_token_ttl,omitempty" jsonschema:"description=Client-specific default lifetime of reusable login tokens (e.g. 7200h)"`
+
+	// AllowBearerTokens is a legacy exception that lets this client get
+	// unbound bearer tokens by calling the token endpoint without a DPoP
+	// proof. By default every client must send a proof and gets tokens
+	// bound to its key (RFC 9449 client metadata dpop_bound_access_tokens
+	// true). With it set, a request that does carry a proof still gets
+	// bound tokens. Use it only for a client that cannot do DPoP yet:
+	// bearer tokens work for whoever holds them.
+	AllowBearerTokens bool `json:"allow_bearer_tokens,omitempty" yaml:"allow_bearer_tokens,omitempty" jsonschema:"default=false,description=Legacy exception: allow unbound bearer tokens for this client"`
 }
 
 // ManagedPrincipalsConfig configures managed principals: humans without an
@@ -450,6 +577,9 @@ func (c *Config) Validate() error {
 			return err
 		}
 	}
+	if err := c.DPoP.validate(); err != nil {
+		return err
+	}
 	if c.Console != nil && c.SocialLogin == nil {
 		return fmt.Errorf("%w: the console signs in with social login, which is not configured", ErrInvalidConsoleConfig)
 	}
@@ -459,6 +589,22 @@ func (c *Config) Validate() error {
 	az.ApplyDefaults()
 	if err := az.Validate(); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidConfig, err)
+	}
+	return nil
+}
+
+func (c *DPoPConfig) validate() error {
+	if c.ProofMaxAge < 0 || c.ClockSkew < 0 || c.NonceLifetime < 0 {
+		return fmt.Errorf("%w: dpop durations must not be negative", ErrInvalidConfig)
+	}
+	if c.RequireNonce && len(c.NonceSecret) < 32 {
+		return fmt.Errorf("%w: dpop.require_nonce needs a dpop.nonce_secret of at least 32 bytes", ErrInvalidConfig)
+	}
+	if c.ResourceBaseURL != "" {
+		u, err := url.Parse(c.ResourceBaseURL)
+		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {
+			return fmt.Errorf("%w: dpop.resource_base_url must be an http(s) URL without query or fragment", ErrInvalidConfig)
+		}
 	}
 	return nil
 }

@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/plexusone/systemforge/identity/security"
 )
 
 // Providers holds all provider implementations for SystemAuth.
@@ -22,6 +24,16 @@ type ProvidersOption func(*providersConfig)
 type providersConfig struct {
 	sessionDuration  time.Duration
 	passwordVerifier func(ctx context.Context, identityID uuid.UUID, password string) (bool, error)
+	authOpts         []EmbeddedAuthProviderOption
+}
+
+// WithProviderLockout sets the lockout that limits failed password
+// attempts per identifier; see WithLockout. The default is an in-memory
+// lockout, and nil turns the limit off.
+func WithProviderLockout(l *security.Lockout) ProvidersOption {
+	return func(c *providersConfig) {
+		c.authOpts = append(c.authOpts, WithLockout(l))
+	}
 }
 
 // WithProviderSessionDuration sets the session duration for the auth provider.
@@ -67,6 +79,7 @@ func NewProviders(server *Server, opts ...ProvidersOption) *Providers {
 	if cfg.passwordVerifier != nil {
 		authOpts = append(authOpts, WithPasswordVerifier(cfg.passwordVerifier))
 	}
+	authOpts = append(authOpts, cfg.authOpts...)
 
 	return &Providers{
 		Identity:       identityProvider,
@@ -100,6 +113,7 @@ func NewProvidersFromStorage(storage Storage, opts ...ProvidersOption) *Provider
 	if cfg.passwordVerifier != nil {
 		authOpts = append(authOpts, WithPasswordVerifier(cfg.passwordVerifier))
 	}
+	authOpts = append(authOpts, cfg.authOpts...)
 
 	return &Providers{
 		Identity:       identityProvider,

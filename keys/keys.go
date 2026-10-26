@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/plexusone/keyforge"
 	"github.com/plexusone/keyforge/embedded"
@@ -29,8 +30,11 @@ type Options struct {
 	// Purposes are the purposes to manage. Each gets a key on first start.
 	// Required.
 	Purposes []keyforge.Purpose
-	// Audit receives key lifecycle events. Optional.
+	// Audit receives key lifecycle events. When it is nil and Logger is set,
+	// the events are logged instead. Optional.
 	Audit sfaudit.Store
+	// Logger receives key lifecycle events when Audit is nil. Optional.
+	Logger *slog.Logger
 	// AcceptRollback opens a keyring older than one this host has seen, as
 	// restoring from backup produces. Set it only after confirming the restore.
 	AcceptRollback bool
@@ -52,6 +56,13 @@ func Open(ctx context.Context, o Options) (*Keys, error) {
 	if len(o.Purposes) == 0 {
 		return nil, errors.New("keys: Options.Purposes is required")
 	}
+	// A root key read from a file must not live in or under Dir, where a
+	// backup of the keyring would carry it too.
+	if p, ok := o.Root.(interface{ Path() string }); ok {
+		if err := checkOutside(p.Path(), o.Dir); err != nil {
+			return nil, err
+		}
+	}
 	purposes := make(map[keyforge.Purpose]embedded.PurposeOptions, len(o.Purposes))
 	for _, p := range o.Purposes {
 		purposes[p] = embedded.PurposeOptions{}
@@ -62,8 +73,11 @@ func Open(ctx context.Context, o Options) (*Keys, error) {
 		Purposes:       purposes,
 		AcceptRollback: o.AcceptRollback,
 	}
-	if o.Audit != nil {
+	switch {
+	case o.Audit != nil:
 		eo.Audit = auditSink{store: o.Audit}
+	case o.Logger != nil:
+		eo.Audit = logSink{logger: o.Logger}
 	}
 	sys, err := embedded.Open(ctx, eo)
 	if err != nil {

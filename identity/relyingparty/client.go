@@ -14,6 +14,7 @@ import (
 	"time"
 
 	gojwt "github.com/golang-jwt/jwt/v5"
+	"github.com/grokify/goauth/dpop"
 	"golang.org/x/oauth2"
 )
 
@@ -59,6 +60,15 @@ type Config struct {
 	// HTTPClient is used for all calls to SystemAuth. Default:
 	// http.DefaultClient.
 	HTTPClient *http.Client
+
+	// DPoPKey is the key the Client proves possession of to SystemAuth
+	// (RFC 9449): every token request carries a proof by it, so the tokens
+	// SystemAuth issues are bound to it, and refreshing them needs it.
+	// Default: a key generated when the Client is created, which suits one
+	// instance. When several instances share sessions, give them all the
+	// same key (dpop.DeserializeKeyPairJSON, from a secret), or a refresh
+	// on another instance than the one that signed in is refused.
+	DPoPKey *dpop.KeyPair
 }
 
 // Client is an OpenID Connect relying-party client for SystemAuth.
@@ -67,7 +77,10 @@ type Client struct {
 	metadata Metadata
 	keys     *KeySet
 	oauth    *oauth2.Config
-	now      func() time.Time
+	dpop     *dpopSigner
+	// tokenHTTP is cfg.HTTPClient adding DPoP proofs to token requests.
+	tokenHTTP *http.Client
+	now       func() time.Time
 }
 
 // NewClient discovers SystemAuth at cfg.Issuer and returns a Client.
@@ -102,10 +115,16 @@ func NewClientWithMetadata(cfg Config, md Metadata) (*Client, error) {
 	if cfg.ClientSecret == "" {
 		authStyle = oauth2.AuthStyleInParams
 	}
+	signer, err := newDPoPSigner(cfg.DPoPKey)
+	if err != nil {
+		return nil, err
+	}
 	return &Client{
-		cfg:      cfg,
-		metadata: md,
-		keys:     NewKeySet(md.JWKSURI, cfg.HTTPClient),
+		cfg:       cfg,
+		metadata:  md,
+		dpop:      signer,
+		tokenHTTP: tokenHTTPClient(cfg.HTTPClient, signer, md.TokenEndpoint),
+		keys:      NewKeySet(md.JWKSURI, cfg.HTTPClient),
 		oauth: &oauth2.Config{
 			ClientID:     cfg.ClientID,
 			ClientSecret: cfg.ClientSecret,
@@ -178,7 +197,7 @@ func (c *Client) Refresh(ctx context.Context, refreshToken string) (*oauth2.Toke
 }
 
 func (c *Client) httpContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, oauth2.HTTPClient, c.cfg.HTTPClient)
+	return context.WithValue(ctx, oauth2.HTTPClient, c.tokenHTTP)
 }
 
 // Revoke revokes token at SystemAuth (RFC 7009). hint is "refresh_token"
@@ -294,8 +313,28 @@ type AccessTokenClaims struct {
 	ClientID string   `json:"client_id,omitempty"`
 	Scopes   []string `json:"scp,omitempty"`
 
+	// Confirmation is the cnf claim (RFC 7800); its JKT binds the token to
+	// a DPoP key (RFC 9449).
+	Confirmation *TokenConfirmation `json:"cnf,omitempty"`
+
 	// Raw holds every claim of the verified token.
 	Raw map[string]any `json:"-"`
+}
+
+// TokenConfirmation is the cnf claim of an access token.
+type TokenConfirmation struct {
+	// JKT is the JWK SHA-256 thumbprint of the DPoP key the token is bound
+	// to.
+	JKT string `json:"jkt,omitempty"`
+}
+
+// DPoPThumbprint returns the thumbprint of the DPoP key the token is bound
+// to, or "" for an unbound bearer token.
+func (c *AccessTokenClaims) DPoPThumbprint() string {
+	if c.Confirmation == nil {
+		return ""
+	}
+	return c.Confirmation.JKT
 }
 
 // HasScope reports whether the token was granted scope.
@@ -383,9 +422,8 @@ func (c *Client) UserInfo(ctx context.Context, accessToken string) (info *UserIn
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
-	resp, err := c.cfg.HTTPClient.Do(req)
+	resp, err := c.doWithToken(req, accessToken)
 	if err != nil {
 		return nil, fmt.Errorf("relyingparty: userinfo: %w", err)
 	}

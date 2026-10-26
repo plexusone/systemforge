@@ -35,11 +35,11 @@ func (OAuthAppSecret) Fields() []ent.Field {
 		field.UUID("app_id", uuid.UUID{}).
 			Comment("OAuth app this secret belongs to"),
 
-		// Secret is hashed with Argon2id
+		// Secret is hashed with bcrypt or Argon2id
 		field.String("secret_hash").
 			Sensitive().
 			NotEmpty().
-			Comment("Argon2id hash of the secret"),
+			Comment("bcrypt or Argon2id (PHC string) hash of the secret"),
 
 		// Prefix for identification (first 8 chars of original secret)
 		field.String("secret_prefix").

@@ -12,6 +12,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
+	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/invite"
 	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/identity/principal"
@@ -102,9 +103,30 @@ func TestSignupOrGetExisting(t *testing.T) {
 	if _, _, err := f.svc.SignupOrGetExisting(ctx, unverified); !errors.Is(err, ErrEmailNotVerified) {
 		t.Errorf("unverified email for an existing account = %v, want ErrEmailNotVerified", err)
 	}
+
+	// The account was registered without proof of the address, so a
+	// verified login for it does not take it over.
 	verified := unverified
 	verified.EmailVerified = true
-	got, isNew, err := f.svc.SignupOrGetExisting(ctx, verified)
+	if got, _, err := f.svc.SignupOrGetExisting(ctx, verified); !errors.Is(err, ErrAccountEmailUnverified) {
+		t.Errorf("verified sign-in to an unverified account = %+v, %v; want ErrAccountEmailUnverified", got, err)
+	}
+	if created.Principal.Human.EmailVerifiedAt != nil {
+		t.Error("an unverified signup recorded the email as verified")
+	}
+
+	// An account created by a verified login records the verification,
+	// and later verified logins return it.
+	first := SignupInput{Email: "lin@example.com", DisplayName: "Lin", PersonalOrgSlug: "lin", EmailVerified: true}
+	created, isNew, err = f.svc.SignupOrGetExisting(ctx, first)
+	if err != nil || !isNew || created.Principal.Human.EmailVerifiedAt == nil {
+		t.Fatalf("verified first sign-in = %+v, %v, %v", created, isNew, err)
+	}
+	stored, err := f.db.Human.Query().Where(human.PrincipalID(created.Principal.ID)).Only(ctx)
+	if err != nil || stored.EmailVerifiedAt == nil {
+		t.Fatalf("stored human = %+v, %v; want a verified email", stored, err)
+	}
+	got, isNew, err := f.svc.SignupOrGetExisting(ctx, first)
 	if err != nil || isNew || got.Principal.ID != created.Principal.ID || got.Membership == nil {
 		t.Errorf("verified sign-in = %+v, %v, %v", got, isNew, err)
 	}
@@ -148,5 +170,10 @@ func TestSignupWithInvite(t *testing.T) {
 	}
 	if m, err := f.orgs.GetMembership(ctx, team.ID, joined.Principal.ID); err != nil || m.Role != "member" {
 		t.Errorf("team membership = %+v, %v", m, err)
+	}
+	// Signing up through the invite link proves the address, so the new
+	// member can list and answer later invitations.
+	if email, err := f.invites.(*invite.DefaultService).PrincipalEmail(ctx, joined.Principal.ID); err != nil || email != "new@example.com" {
+		t.Errorf("verified email after invite signup = %q, %v", email, err)
 	}
 }

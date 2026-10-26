@@ -9,7 +9,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// auditStreamState holds the audit stream configuration state.
+// auditStreamState holds one API's audit stream configuration state. Each
+// API (one per application) has its own, so a token for one application
+// cannot change another application's audit stream.
 type auditStreamState struct {
 	mu              sync.RWMutex
 	config          *AuditStreamConfig
@@ -17,12 +19,15 @@ type auditStreamState struct {
 	lastAckSequence int64
 }
 
-var globalAuditState = &auditStreamState{
-	config: &AuditStreamConfig{
-		Enabled:         false,
-		BatchSize:       100,
-		FlushIntervalMs: 5000,
-	},
+// newAuditStreamState returns the state of a new API: streaming disabled.
+func newAuditStreamState() *auditStreamState {
+	return &auditStreamState{
+		config: &AuditStreamConfig{
+			Enabled:         false,
+			BatchSize:       100,
+			FlushIntervalMs: 5000,
+		},
+	}
 }
 
 // registerAuditEndpoints registers audit endpoints.
@@ -74,10 +79,10 @@ func (a *API) getAuditStreamConfig(ctx context.Context, input *struct{}) (*Audit
 		return nil, err
 	}
 
-	globalAuditState.mu.RLock()
-	config := *globalAuditState.config
-	config.LastSequence = globalAuditState.lastSequence
-	globalAuditState.mu.RUnlock()
+	a.audit.mu.RLock()
+	config := *a.audit.config
+	config.LastSequence = a.audit.lastSequence
+	a.audit.mu.RUnlock()
 
 	return &AuditStreamConfigOutput{Body: config}, nil
 }
@@ -96,8 +101,8 @@ func (a *API) updateAuditStreamConfig(ctx context.Context, input *UpdateAuditStr
 	}
 
 	// Update configuration
-	globalAuditState.mu.Lock()
-	globalAuditState.config = &AuditStreamConfig{
+	a.audit.mu.Lock()
+	a.audit.config = &AuditStreamConfig{
 		Enabled:         input.Body.Enabled,
 		Endpoint:        input.Body.Endpoint,
 		BatchSize:       input.Body.BatchSize,
@@ -105,12 +110,12 @@ func (a *API) updateAuditStreamConfig(ctx context.Context, input *UpdateAuditStr
 		AuthMethod:      "bearer",
 	}
 	if input.Body.BatchSize == 0 {
-		globalAuditState.config.BatchSize = 100
+		a.audit.config.BatchSize = 100
 	}
 	if input.Body.FlushIntervalMs == 0 {
-		globalAuditState.config.FlushIntervalMs = 5000
+		a.audit.config.FlushIntervalMs = 5000
 	}
-	globalAuditState.mu.Unlock()
+	a.audit.mu.Unlock()
 
 	return &UpdateAuditStreamConfigOutput{
 		Body: struct {
@@ -132,12 +137,12 @@ func (a *API) acknowledgeAuditEvents(ctx context.Context, input *AuditAckInput) 
 	}
 
 	// Update acknowledged sequence
-	globalAuditState.mu.Lock()
-	if input.Body.Sequence > globalAuditState.lastAckSequence {
-		globalAuditState.lastAckSequence = input.Body.Sequence
+	a.audit.mu.Lock()
+	if input.Body.Sequence > a.audit.lastAckSequence {
+		a.audit.lastAckSequence = input.Body.Sequence
 	}
-	nextSequence := globalAuditState.lastSequence + 1
-	globalAuditState.mu.Unlock()
+	nextSequence := a.audit.lastSequence + 1
+	a.audit.mu.Unlock()
 
 	return &AuditAckOutput{
 		Body: struct {
@@ -150,27 +155,31 @@ func (a *API) acknowledgeAuditEvents(ctx context.Context, input *AuditAckInput) 
 	}, nil
 }
 
-// RecordAuditEvent records an audit event and returns its sequence number.
-// This is called internally by the application when emitting audit events.
-func RecordAuditEvent() int64 {
-	globalAuditState.mu.Lock()
-	defer globalAuditState.mu.Unlock()
-	globalAuditState.lastSequence++
-	return globalAuditState.lastSequence
+// RecordAuditEvent records an audit event of this API's application and
+// returns its sequence number. The application calls it when emitting
+// audit events.
+func (a *API) RecordAuditEvent() int64 {
+	a.audit.mu.Lock()
+	defer a.audit.mu.Unlock()
+	a.audit.lastSequence++
+	return a.audit.lastSequence
 }
 
-// GetAuditStreamConfig returns the current audit stream configuration.
-func GetAuditStreamConfig() AuditStreamConfig {
-	globalAuditState.mu.RLock()
-	defer globalAuditState.mu.RUnlock()
-	return *globalAuditState.config
+// AuditStreamConfig returns this API's current audit stream configuration.
+func (a *API) AuditStreamConfig() AuditStreamConfig {
+	a.audit.mu.RLock()
+	defer a.audit.mu.RUnlock()
+	config := *a.audit.config
+	config.LastSequence = a.audit.lastSequence
+	return config
 }
 
-// IsAuditStreamEnabled returns true if audit streaming is enabled.
-func IsAuditStreamEnabled() bool {
-	globalAuditState.mu.RLock()
-	defer globalAuditState.mu.RUnlock()
-	return globalAuditState.config.Enabled
+// IsAuditStreamEnabled reports whether this API's audit streaming is
+// enabled.
+func (a *API) IsAuditStreamEnabled() bool {
+	a.audit.mu.RLock()
+	defer a.audit.mu.RUnlock()
+	return a.audit.config.Enabled
 }
 
 // AuditEvent represents a standardized audit event.

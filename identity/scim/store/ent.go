@@ -4,24 +4,30 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/authz/noop"
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
+	"github.com/plexusone/systemforge/identity/ent/resourcegrant"
+	"github.com/plexusone/systemforge/identity/graphlock"
 	orgsvc "github.com/plexusone/systemforge/identity/organization"
 	principalsvc "github.com/plexusone/systemforge/identity/principal"
 	"github.com/plexusone/systemforge/identity/scim"
-	"github.com/plexusone/systemforge/identity/scim/filter"
 )
 
 // EntStore implements the scim.Store interface using Ent ORM.
@@ -58,6 +64,31 @@ type Config struct {
 	// change that stops existing tokens being honored. Default:
 	// principal.NewService on the store's client.
 	Principals Principals
+
+	// Organizations creates, renames and deletes the organizations a
+	// platform-scoped credential manages as groups, with the organization
+	// service's slug rules and authorization-graph sync. Default: Memberships
+	// when it also implements Organizations (as organization.Service does),
+	// otherwise organization.NewService on the store's client.
+	Organizations Organizations
+
+	// Syncer removes a deleted user's relationships from the authorization
+	// graph: its memberships, platform administration, manager relations
+	// (both those on the user and those it holds), application roles and
+	// resource grants. DeleteUser removes them before the deletion commits,
+	// holding the graph locks; if the graph refuses, the user is not
+	// deleted. Pass the same syncer as Memberships and Principals use.
+	// Default: none, for deployments without a graph.
+	Syncer authz.RelationshipSyncer
+}
+
+// Organizations is the part of organization.Service the SCIM store uses to
+// manage groups.
+type Organizations interface {
+	Create(ctx context.Context, input orgsvc.CreateOrganizationInput) (*orgsvc.Organization, error)
+	Update(ctx context.Context, id uuid.UUID, input orgsvc.UpdateOrganizationInput) (*orgsvc.Organization, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+	GenerateSlug(ctx context.Context, name string) (string, error)
 }
 
 // Memberships is the part of organization.Service the SCIM store uses.
@@ -93,6 +124,13 @@ func NewEntStore(client *ent.Client, config *Config) *EntStore {
 	}
 	if cfg.Principals == nil {
 		cfg.Principals = principalsvc.NewService(client)
+	}
+	if cfg.Organizations == nil {
+		if o, ok := cfg.Memberships.(Organizations); ok {
+			cfg.Organizations = o
+		} else {
+			cfg.Organizations = orgsvc.NewService(client)
+		}
 	}
 	return &EntStore{
 		client: client,
@@ -187,7 +225,7 @@ func (s *EntStore) onlyUser(ctx context.Context, q *ent.PrincipalQuery) (*scim.U
 		if ent.IsNotFound(err) {
 			return nil, scim.ErrNotFound("user not found")
 		}
-		return nil, scim.ErrInternal(err.Error())
+		return nil, internalError(ctx, err)
 	}
 	return s.principalToSCIMUser(p), nil
 }
@@ -245,7 +283,7 @@ func (s *EntStore) ListUsers(ctx context.Context, opts scim.ListOptions) ([]*sci
 	// Get total count
 	total, err := query.Clone().Count(ctx)
 	if err != nil {
-		return nil, 0, scim.ErrInternal(err.Error())
+		return nil, 0, internalError(ctx, err)
 	}
 
 	// Apply sorting
@@ -260,7 +298,7 @@ func (s *EntStore) ListUsers(ctx context.Context, opts scim.ListOptions) ([]*sci
 
 	principals, err := query.All(ctx)
 	if err != nil {
-		return nil, 0, scim.ErrInternal(err.Error())
+		return nil, 0, internalError(ctx, err)
 	}
 
 	result := make([]*scim.User, len(principals))
@@ -293,22 +331,27 @@ func primaryPhoto(photos []scim.MultiValue) (string, bool) {
 func (s *EntStore) withTx(ctx context.Context, fn func(tx *ent.Tx) error) error {
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
-		return scim.ErrInternal(err.Error())
+		return internalError(ctx, err)
 	}
 	if err := fn(tx); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return scim.ErrInternal(errors.Join(err, rbErr).Error())
+			return internalError(ctx, errors.Join(err, rbErr))
 		}
 		return err
 	}
 	if err := tx.Commit(); err != nil {
-		return scim.ErrInternal(err.Error())
+		return internalError(ctx, err)
 	}
 	return nil
 }
 
+// internalError logs err and returns a 500 SCIM error without its text.
+func internalError(ctx context.Context, err error) error {
+	return scim.InternalError(ctx, err)
+}
+
 // asSCIMError passes SCIM errors through and wraps anything else as internal.
-func asSCIMError(err error) error {
+func asSCIMError(ctx context.Context, err error) error {
 	var se *scim.Error
 	if errors.As(err, &se) {
 		return se
@@ -316,7 +359,7 @@ func asSCIMError(err error) error {
 	if ent.IsConstraintError(err) {
 		return scim.ErrConflict("user already exists")
 	}
-	return scim.ErrInternal(err.Error())
+	return internalError(ctx, err)
 }
 
 // CreateUser creates a new user as a human principal. For a tenant, the
@@ -424,7 +467,7 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		return err
 	})
 	if err != nil {
-		return nil, asSCIMError(err)
+		return nil, asSCIMError(ctx, err)
 	}
 	if !sc.Platform {
 		if err := s.addMember(ctx, sc.OrganizationID, id); err != nil {
@@ -499,7 +542,7 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 		return s.updateIdentity(ctx, tx, p, scimUser)
 	})
 	if err != nil {
-		return nil, asSCIMError(err)
+		return nil, asSCIMError(ctx, err)
 	}
 
 	if scimUser.Active != nil {
@@ -512,7 +555,7 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 			err = s.config.Principals.Deactivate(ctx, uid)
 		}
 		if err != nil {
-			return nil, asSCIMError(err)
+			return nil, asSCIMError(ctx, err)
 		}
 	}
 	return s.GetUserByID(ctx, id)
@@ -563,8 +606,10 @@ func (s *EntStore) updateIdentity(ctx context.Context, tx *ent.Tx, p *ent.Princi
 // only loses the membership in the tenant's organization. Otherwise every
 // membership is removed through the membership service, the account is
 // deactivated so existing tokens stop being honored, and the account and
-// the records that belong only to it are deleted. An organization owner
-// is never deleted through SCIM.
+// the records that belong only to it, its manager relations included, are
+// deleted, after its relationships are removed from the authorization
+// graph (Config.Syncer). An organization owner, and a user who actively
+// manages other accounts, are never deleted through SCIM.
 func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -581,7 +626,7 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	}
 	exists, err := s.client.Principal.Query().Where(where...).Exist(ctx)
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	if !exists {
 		return scim.ErrNotFound("user not found")
@@ -589,7 +634,7 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 	if !sc.Platform {
 		owned, err := ownedBy(ctx, s.client, uid, sc.OrganizationID)
 		if err != nil {
-			return asSCIMError(err)
+			return asSCIMError(ctx, err)
 		}
 		if !owned {
 			return s.removeMember(ctx, sc.OrganizationID, uid)
@@ -600,12 +645,23 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 		Where(principalmembership.PrincipalIDEQ(uid)).
 		All(ctx)
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	for _, m := range memberships {
 		if m.Role == orgsvc.RoleOwner {
 			return errOwnerDeprovision()
 		}
+	}
+	// A user who manages other accounts keeps them reachable; deleting it
+	// would leave them without that manager.
+	manages, err := s.client.ManagerRelationship.Query().
+		Where(managerrelationship.ManagerPrincipalID(uid), managerrelationship.Active(true)).
+		Exist(ctx)
+	if err != nil {
+		return asSCIMError(ctx, err)
+	}
+	if manages {
+		return scim.ErrConflict("the user manages other accounts; transfer their management first")
 	}
 	for _, m := range memberships {
 		if err := s.removeMember(ctx, m.OrganizationID, uid); err != nil {
@@ -613,11 +669,19 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 		}
 	}
 	if err := s.config.Principals.Deactivate(ctx, uid); err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 
 	err = s.withTx(ctx, func(tx *ent.Tx) error {
+		if err := s.unregister(ctx, tx, uid); err != nil {
+			return err
+		}
 		if _, err := tx.PrincipalMembership.Delete().Where(principalmembership.PrincipalIDEQ(uid)).Exec(ctx); err != nil {
+			return err
+		}
+		if _, err := tx.ManagerRelationship.Delete().
+			Where(managerrelationship.Or(managerrelationship.ManagedPrincipalID(uid), managerrelationship.ManagerPrincipalID(uid))).
+			Exec(ctx); err != nil {
 			return err
 		}
 		if _, err := tx.Human.Delete().Where(human.PrincipalIDEQ(uid)).Exec(ctx); err != nil {
@@ -632,7 +696,69 @@ func (s *EntStore) DeleteUser(ctx context.Context, id string) error {
 		return tx.Principal.DeleteOneID(uid).Exec(ctx)
 	})
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
+	}
+	return nil
+}
+
+// unregister removes, inside tx, the transaction that deletes the user,
+// every relationship the user holds or is the resource of from the
+// authorization graph, holding the graph locks of the user and of the
+// principals on the other side of its manager relations. It runs before
+// the deletion commits, so if the graph refuses, nothing is deleted.
+func (s *EntStore) unregister(ctx context.Context, tx *ent.Tx, uid uuid.UUID) error {
+	syncer := s.config.Syncer
+	if syncer == nil {
+		return nil
+	}
+	if _, isNoop := syncer.(*noop.Syncer); isNoop {
+		return nil
+	}
+	rels, err := tx.ManagerRelationship.Query().
+		Where(managerrelationship.Or(managerrelationship.ManagedPrincipalID(uid), managerrelationship.ManagerPrincipalID(uid))).
+		All(ctx)
+	if err != nil {
+		return err
+	}
+	roles, err := tx.AppRole.Query().Where(approle.PrincipalID(uid)).All(ctx)
+	if err != nil {
+		return err
+	}
+	grants, err := tx.ResourceGrant.Query().Where(resourcegrant.PrincipalID(uid)).All(ctx)
+	if err != nil {
+		return err
+	}
+	keys := []string{graphlock.Principal(uid)}
+	for _, r := range rels {
+		keys = append(keys, graphlock.Principal(r.ManagedPrincipalID), graphlock.Principal(r.ManagerPrincipalID))
+	}
+	if err := graphlock.Lock(ctx, tx, keys...); err != nil {
+		return err
+	}
+	// UnregisterPrincipal removes the memberships, the platform
+	// administration and the manager relations on both sides.
+	if err := syncer.UnregisterPrincipal(ctx, uid); err != nil {
+		return fmt.Errorf("removing the user from authz, user not deleted: %w", err)
+	}
+	for _, r := range rels {
+		if err := syncer.RemovePrincipalManager(ctx, r.ManagedPrincipalID, r.ManagerPrincipalID, r.Role); err != nil {
+			return fmt.Errorf("removing a manager relation from authz, user not deleted: %w", err)
+		}
+	}
+	if appSyncer, ok := syncer.(authz.AppRoleSyncer); ok {
+		for _, r := range roles {
+			if err := appSyncer.RemoveAppRole(ctx, uid, r.OrganizationID, r.Application, r.Role); err != nil {
+				return fmt.Errorf("removing an application role from authz, user not deleted: %w", err)
+			}
+		}
+	}
+	if grantSyncer, ok := syncer.(authz.ResourceGrantSyncer); ok {
+		for _, g := range grants {
+			ref := authz.ResourceRef{Type: g.ResourceType, ID: g.ResourceID, OrganizationID: g.OrganizationID}
+			if err := grantSyncer.RemoveResourceGrant(ctx, uid, ref); err != nil {
+				return fmt.Errorf("removing a resource grant from authz, user not deleted: %w", err)
+			}
+		}
 	}
 	return nil
 }
@@ -668,7 +794,7 @@ func (s *EntStore) membership(ctx context.Context, orgID, id uuid.UUID) (*ent.Pr
 func (s *EntStore) addMember(ctx context.Context, orgID, id uuid.UUID) error {
 	m, err := s.membership(ctx, orgID, id)
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	if m != nil {
 		return s.setMemberActive(ctx, orgID, id, true)
@@ -678,7 +804,7 @@ func (s *EntStore) addMember(ctx context.Context, orgID, id uuid.UUID) error {
 		PrincipalID:    id,
 		Role:           s.config.DefaultRole,
 	})
-	return membershipError(err)
+	return membershipError(ctx, err)
 }
 
 // setMemberActive suspends or restores principal id's membership in orgID.
@@ -686,7 +812,7 @@ func (s *EntStore) addMember(ctx context.Context, orgID, id uuid.UUID) error {
 func (s *EntStore) setMemberActive(ctx context.Context, orgID, id uuid.UUID, active bool) error {
 	m, err := s.membership(ctx, orgID, id)
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	if m == nil {
 		return scim.ErrNotFound("user not found")
@@ -702,7 +828,7 @@ func (s *EntStore) setMemberActive(ctx context.Context, orgID, id uuid.UUID, act
 		return errOwnerDeprovision()
 	}
 	_, err = s.config.Memberships.UpdateMember(ctx, m.ID, in)
-	return membershipError(err)
+	return membershipError(ctx, err)
 }
 
 // removeMember removes principal id from orgID; removing a non-member is a
@@ -710,7 +836,7 @@ func (s *EntStore) setMemberActive(ctx context.Context, orgID, id uuid.UUID, act
 func (s *EntStore) removeMember(ctx context.Context, orgID, id uuid.UUID) error {
 	m, err := s.membership(ctx, orgID, id)
 	if err != nil {
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 	if m == nil {
 		return nil
@@ -722,18 +848,18 @@ func (s *EntStore) removeMember(ctx context.Context, orgID, id uuid.UUID) error 
 	if errors.Is(err, orgsvc.ErrMembershipNotFound) {
 		return nil
 	}
-	return membershipError(err)
+	return membershipError(ctx, err)
 }
 
 // membershipError maps a membership service error to a SCIM error.
-func membershipError(err error) error {
+func membershipError(ctx context.Context, err error) error {
 	switch {
 	case err == nil:
 		return nil
 	case errors.Is(err, orgsvc.ErrPersonalOrganization):
 		return scim.ErrInvalidValue("a personal organization cannot have members")
 	default:
-		return asSCIMError(err)
+		return asSCIMError(ctx, err)
 	}
 }
 
@@ -745,9 +871,10 @@ func tenantGroup(sc scim.Scope, gid uuid.UUID) bool {
 	return sc.Platform || gid == sc.OrganizationID
 }
 
-// orgQuery returns a query over the organizations visible in scope.
+// orgQuery returns a query over the organizations visible in scope. A
+// deleted (inactive) organization is not a group.
 func (s *EntStore) orgQuery(sc scim.Scope) *ent.OrganizationQuery {
-	q := s.client.Organization.Query()
+	q := s.client.Organization.Query().Where(organization.Active(true))
 	if !sc.Platform {
 		q = q.Where(organization.IDEQ(sc.OrganizationID))
 	}
@@ -760,7 +887,7 @@ func onlyGroup(ctx context.Context, s *EntStore, q *ent.OrganizationQuery) (*sci
 		if ent.IsNotFound(err) {
 			return nil, scim.ErrNotFound("group not found")
 		}
-		return nil, scim.ErrInternal(err.Error())
+		return nil, internalError(ctx, err)
 	}
 	return s.entOrgToSCIM(org), nil
 }
@@ -821,7 +948,7 @@ func (s *EntStore) ListGroups(ctx context.Context, opts scim.ListOptions) ([]*sc
 	// Get total count
 	total, err := query.Clone().Count(ctx)
 	if err != nil {
-		return nil, 0, scim.ErrInternal(err.Error())
+		return nil, 0, internalError(ctx, err)
 	}
 
 	// Apply sorting
@@ -836,7 +963,7 @@ func (s *EntStore) ListGroups(ctx context.Context, opts scim.ListOptions) ([]*sc
 
 	orgs, err := query.All(ctx)
 	if err != nil {
-		return nil, 0, scim.ErrInternal(err.Error())
+		return nil, 0, internalError(ctx, err)
 	}
 
 	result := make([]*scim.Group, len(orgs))
@@ -855,6 +982,9 @@ func errTenantGroups() error {
 }
 
 // CreateGroup creates a new group. Only a platform scope may create groups.
+// The organization is created through the organization service, so its
+// slug obeys the same rules as any other: a valid format, not reserved, not
+// taken and not in another organization's cooling-off period.
 func (s *EntStore) CreateGroup(ctx context.Context, scimGroup *scim.Group) (*scim.Group, error) {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -867,38 +997,68 @@ func (s *EntStore) CreateGroup(ctx context.Context, scimGroup *scim.Group) (*sci
 		return nil, scim.ErrInvalidValue("displayName is required")
 	}
 
-	// Generate slug from displayName
-	slug := generateSlug(scimGroup.DisplayName)
-	if scimGroup.ExternalID != "" {
-		slug = scimGroup.ExternalID
-	}
-
-	if orgsvc.IsReservedSlug(slug) {
-		return nil, scim.ErrInvalidValue("group slug is reserved")
-	}
-
-	// Check for existing organization with same slug
-	exists, err := s.client.Organization.Query().Where(organization.SlugEQ(slug)).Exist(ctx)
-	if err != nil {
-		return nil, scim.ErrInternal(err.Error())
-	}
-	if exists {
-		return nil, scim.ErrConflict("group with this slug already exists")
-	}
-
-	org, err := s.client.Organization.Create().
-		SetName(scimGroup.DisplayName).
-		SetSlug(slug).
-		SetActive(true).
-		Save(ctx)
-	if err != nil {
-		if ent.IsConstraintError(err) {
-			return nil, scim.ErrConflict("group already exists")
+	// The slug is the group's externalId when one is given, held to the
+	// organization slug rules; otherwise it is generated from displayName.
+	slug := scimGroup.ExternalID
+	if slug == "" {
+		generated, err := s.config.Organizations.GenerateSlug(ctx, scimGroup.DisplayName)
+		if err != nil {
+			return nil, internalError(ctx, err)
 		}
-		return nil, scim.ErrInternal(err.Error())
+		slug = generated
+	}
+	if !orgsvc.IsValidSlug(slug) {
+		if scimGroup.ExternalID == "" {
+			return nil, scim.ErrInvalidValue("displayName does not yield a valid organization slug; supply externalId")
+		}
+		return nil, scim.ErrInvalidValue("externalId is not a valid organization slug: 3 to 63 lowercase letters, digits and hyphens, starting with a letter")
 	}
 
-	return s.entOrgToSCIM(org), nil
+	org, err := s.config.Organizations.Create(ctx, orgsvc.CreateOrganizationInput{
+		Name:    scimGroup.DisplayName,
+		Slug:    slug,
+		OrgType: orgsvc.OrgTypeTeam,
+	})
+	if err != nil {
+		return nil, groupError(ctx, err)
+	}
+	return s.GetGroupByID(ctx, org.ID.String())
+}
+
+// groupError maps an organization service error on a group write to a SCIM
+// error.
+func groupError(ctx context.Context, err error) error {
+	switch {
+	case errors.Is(err, orgsvc.ErrSlugReserved):
+		return scim.ErrInvalidValue("group slug is reserved")
+	case errors.Is(err, orgsvc.ErrSlugTaken), errors.Is(err, orgsvc.ErrSlugCoolingOff):
+		return scim.ErrConflict("group slug is not available")
+	case errors.Is(err, orgsvc.ErrPersonalOrganization):
+		return errPersonalGroup()
+	}
+	return internalError(ctx, err)
+}
+
+// errPersonalGroup is returned when a platform credential tries to rename or
+// delete a personal organization, which belongs to its owner.
+func errPersonalGroup() error {
+	return scim.ErrForbidden("a personal organization belongs to its owner and cannot be renamed or deleted through SCIM")
+}
+
+// platformGroup returns the active, non-personal organization gid for a
+// platform-scoped rename or delete.
+func (s *EntStore) platformGroup(ctx context.Context, sc scim.Scope, gid uuid.UUID) (*ent.Organization, error) {
+	org, err := s.orgQuery(sc).Where(organization.IDEQ(gid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, scim.ErrNotFound("group not found")
+		}
+		return nil, internalError(ctx, err)
+	}
+	if org.OrgType == organization.OrgTypePersonal {
+		return nil, errPersonalGroup()
+	}
+	return org, nil
 }
 
 // UpdateGroup updates an existing group. A tenant may not rename its
@@ -925,24 +1085,23 @@ func (s *EntStore) UpdateGroup(ctx context.Context, id string, scimGroup *scim.G
 		return current, nil
 	}
 
-	update := s.client.Organization.UpdateOneID(gid)
-
-	if scimGroup.DisplayName != "" {
-		update = update.SetName(scimGroup.DisplayName)
-	}
-
-	org, err := update.Save(ctx)
+	org, err := s.platformGroup(ctx, sc, gid)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, scim.ErrNotFound("group not found")
-		}
-		return nil, scim.ErrInternal(err.Error())
+		return nil, err
 	}
-
-	return s.entOrgToSCIM(org), nil
+	if scimGroup.DisplayName == "" || scimGroup.DisplayName == org.Name {
+		return s.entOrgToSCIM(org), nil
+	}
+	name := scimGroup.DisplayName
+	if _, err := s.config.Organizations.Update(ctx, gid, orgsvc.UpdateOrganizationInput{Name: &name}); err != nil {
+		return nil, groupError(ctx, err)
+	}
+	return s.GetGroupByID(ctx, id)
 }
 
-// DeleteGroup deletes a group. Only a platform scope may delete groups.
+// DeleteGroup deletes a group. Only a platform scope may delete groups, and
+// never a personal organization. The organization is soft-deleted through
+// the organization service, as an administrator's delete is.
 func (s *EntStore) DeleteGroup(ctx context.Context, id string) error {
 	sc, err := scopeOf(ctx)
 	if err != nil {
@@ -956,14 +1115,14 @@ func (s *EntStore) DeleteGroup(ctx context.Context, id string) error {
 		return scim.ErrNotFound("invalid group ID")
 	}
 
-	err = s.client.Organization.DeleteOneID(gid).Exec(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return scim.ErrNotFound("group not found")
-		}
-		return scim.ErrInternal(err.Error())
+	if _, err := s.platformGroup(ctx, sc, gid); err != nil {
+		return err
 	}
-
+	// The organization service soft-deletes the organization and removes it
+	// from the authorization graph; its memberships, roles and history stay.
+	if err := s.config.Organizations.Delete(ctx, gid); err != nil {
+		return groupError(ctx, err)
+	}
 	return nil
 }
 
@@ -974,32 +1133,51 @@ func (s *EntStore) DeleteGroup(ctx context.Context, id string) error {
 //
 //nolint:dupl // Mirrors GetMembersForGroup - intentional symmetry for membership queries
 func (s *EntStore) GetGroupsForUser(ctx context.Context, userID string) ([]scim.GroupRef, error) {
+	if _, err := uuid.Parse(userID); err != nil {
+		return nil, scim.ErrNotFound("invalid user ID")
+	}
+	groups, err := s.GetGroupsForUsers(ctx, []string{userID})
+	if err != nil {
+		return nil, err
+	}
+	if groups[userID] == nil {
+		return []scim.GroupRef{}, nil
+	}
+	return groups[userID], nil
+}
+
+// GetGroupsForUsers returns the groups of each user in one query,
+// implementing scim.BatchMembershipStore. A tenant sees only its own
+// organization; IDs that are not UUIDs are skipped.
+func (s *EntStore) GetGroupsForUsers(ctx context.Context, userIDs []string) (map[string][]scim.GroupRef, error) {
 	sc, err := scopeOf(ctx)
 	if err != nil {
 		return nil, err
 	}
-	uid, err := uuid.Parse(userID)
-	if err != nil {
-		return nil, scim.ErrNotFound("invalid user ID")
+	uids := parseIDs(userIDs)
+	out := make(map[string][]scim.GroupRef, len(uids))
+	if len(uids) == 0 {
+		return out, nil
 	}
 
 	q := s.client.PrincipalMembership.Query().
 		Where(
-			principalmembership.PrincipalIDEQ(uid),
+			principalmembership.PrincipalIDIn(uids...),
 			principalmembership.ActiveEQ(true),
+			principalmembership.HasOrganizationWith(organization.Active(true)),
 		)
 	if !sc.Platform {
 		q = q.Where(principalmembership.OrganizationIDEQ(sc.OrganizationID))
 	}
 	memberships, err := q.WithOrganization().All(ctx)
 	if err != nil {
-		return nil, scim.ErrInternal(err.Error())
+		return nil, internalError(ctx, err)
 	}
 
-	groups := make([]scim.GroupRef, 0, len(memberships))
 	for _, m := range memberships {
 		if m.Edges.Organization != nil {
-			groups = append(groups, scim.GroupRef{
+			id := m.PrincipalID.String()
+			out[id] = append(out[id], scim.GroupRef{
 				Value:   m.OrganizationID.String(),
 				Ref:     s.config.BaseURL + "/Groups/" + m.OrganizationID.String(),
 				Display: m.Edges.Organization.Name,
@@ -1007,8 +1185,18 @@ func (s *EntStore) GetGroupsForUser(ctx context.Context, userID string) ([]scim.
 			})
 		}
 	}
+	return out, nil
+}
 
-	return groups, nil
+// parseIDs returns the UUIDs among ids, skipping any that do not parse.
+func parseIDs(ids []string) []uuid.UUID {
+	out := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		if u, err := uuid.Parse(id); err == nil {
+			out = append(out, u)
+		}
+	}
+	return out
 }
 
 // GetMembersForGroup returns all human members of a group.
@@ -1023,23 +1211,51 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 	if err != nil || !tenantGroup(sc, gid) {
 		return nil, scim.ErrNotFound("group not found")
 	}
+	members, err := s.GetMembersForGroups(ctx, []string{groupID})
+	if err != nil {
+		return nil, err
+	}
+	if members[groupID] == nil {
+		return []scim.MemberRef{}, nil
+	}
+	return members[groupID], nil
+}
+
+// GetMembersForGroups returns the members of each group in one query,
+// implementing scim.BatchMembershipStore. A tenant sees only its own
+// organization; other IDs, and IDs that are not UUIDs, are skipped.
+func (s *EntStore) GetMembersForGroups(ctx context.Context, groupIDs []string) (map[string][]scim.MemberRef, error) {
+	sc, err := scopeOf(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var gids []uuid.UUID
+	for _, gid := range parseIDs(groupIDs) {
+		if tenantGroup(sc, gid) {
+			gids = append(gids, gid)
+		}
+	}
+	out := make(map[string][]scim.MemberRef, len(gids))
+	if len(gids) == 0 {
+		return out, nil
+	}
 
 	memberships, err := s.client.PrincipalMembership.Query().
 		Where(
-			principalmembership.OrganizationIDEQ(gid),
+			principalmembership.OrganizationIDIn(gids...),
 			principalmembership.ActiveEQ(true),
 			principalmembership.HasPrincipalWith(scimHuman()...),
 		).
 		WithPrincipal().
 		All(ctx)
 	if err != nil {
-		return nil, scim.ErrInternal(err.Error())
+		return nil, internalError(ctx, err)
 	}
 
-	members := make([]scim.MemberRef, 0, len(memberships))
 	for _, m := range memberships {
 		if m.Edges.Principal != nil {
-			members = append(members, scim.MemberRef{
+			id := m.OrganizationID.String()
+			out[id] = append(out[id], scim.MemberRef{
 				Value:   m.PrincipalID.String(),
 				Ref:     s.config.BaseURL + "/Users/" + m.PrincipalID.String(),
 				Display: m.Edges.Principal.DisplayName,
@@ -1047,8 +1263,7 @@ func (s *EntStore) GetMembersForGroup(ctx context.Context, groupID string) ([]sc
 			})
 		}
 	}
-
-	return members, nil
+	return out, nil
 }
 
 // AddMemberToGroup adds a user to a group. Adding an existing member is a
@@ -1074,7 +1289,7 @@ func (s *EntStore) AddMemberToGroup(ctx context.Context, groupID, userID string)
 	}
 	known, err := s.client.Principal.Query().Where(where...).Exist(ctx)
 	if err != nil {
-		return scim.ErrInternal(err.Error())
+		return internalError(ctx, err)
 	}
 	if !known {
 		return scim.ErrNotFound("user not found")
@@ -1180,139 +1395,6 @@ func (s *EntStore) entOrgToSCIM(org *ent.Organization) *scim.Group {
 	}
 }
 
-// buildUserPredicates builds Ent predicates from a SCIM filter.
-func (s *EntStore) buildUserPredicates(filterExpr string) ([]predicate.Principal, error) {
-	node, err := filter.ParseFilter(filterExpr)
-	if err != nil {
-		return nil, scim.ErrInvalidFilter(err.Error())
-	}
-	if node == nil {
-		return nil, nil
-	}
-
-	return s.collectUserPredicates(node), nil
-}
-
-// collectUserPredicates recursively collects predicates from a filter node.
-//
-//nolint:dupl // Mirrors collectGroupPredicates - same traversal logic for different predicate types
-func (s *EntStore) collectUserPredicates(node filter.Node) []predicate.Principal {
-	var predicates []predicate.Principal
-
-	switch n := node.(type) {
-	case *filter.ComparisonNode:
-		if p := s.userComparisonToPredicate(n); p != nil {
-			predicates = append(predicates, p)
-		}
-	case *filter.LogicalAndNode:
-		predicates = append(predicates, s.collectUserPredicates(n.Left)...)
-		predicates = append(predicates, s.collectUserPredicates(n.Right)...)
-	case *filter.LogicalOrNode:
-		left := s.collectUserPredicates(n.Left)
-		right := s.collectUserPredicates(n.Right)
-		if len(left) > 0 && len(right) > 0 {
-			predicates = append(predicates, principal.Or(append(left, right...)...))
-		}
-	case *filter.LogicalNotNode:
-		inner := s.collectUserPredicates(n.Operand)
-		if len(inner) > 0 {
-			predicates = append(predicates, principal.Not(principal.And(inner...)))
-		}
-	}
-
-	return predicates
-}
-
-// hasEmail wraps a Human email predicate as a Principal predicate.
-func hasEmail(p predicate.Human) predicate.Principal {
-	return principal.HasHumanWith(p)
-}
-
-// userComparisonToPredicate converts a comparison node to a principal
-// predicate. userName and emails.value are not case-exact (RFC 7643), so
-// equality and containment ignore case.
-func (s *EntStore) userComparisonToPredicate(node *filter.ComparisonNode) predicate.Principal {
-	attr := strings.ToLower(node.AttributePath)
-	value, _ := node.Value.(string)
-
-	switch attr {
-	case "id":
-		id, err := uuid.Parse(value)
-		if err != nil {
-			return nil
-		}
-		switch node.Operator {
-		case filter.OpEqual:
-			return principal.IDEQ(id)
-		case filter.OpNotEqual:
-			return principal.IDNEQ(id)
-		}
-	case "username", "emails.value":
-		switch node.Operator {
-		case filter.OpEqual:
-			return hasEmail(human.EmailEqualFold(value))
-		case filter.OpNotEqual:
-			return principal.Not(hasEmail(human.EmailEqualFold(value)))
-		case filter.OpContains:
-			return hasEmail(human.EmailContainsFold(value))
-		case filter.OpStartsWith:
-			return hasEmail(human.EmailHasPrefix(value))
-		case filter.OpEndsWith:
-			return hasEmail(human.EmailHasSuffix(value))
-		case filter.OpPresent:
-			return hasEmail(human.EmailNEQ(""))
-		}
-	case "displayname", "name.formatted":
-		switch node.Operator {
-		case filter.OpEqual:
-			return principal.DisplayNameEQ(value)
-		case filter.OpNotEqual:
-			return principal.DisplayNameNEQ(value)
-		case filter.OpContains:
-			return principal.DisplayNameContains(value)
-		case filter.OpStartsWith:
-			return principal.DisplayNameHasPrefix(value)
-		case filter.OpEndsWith:
-			return principal.DisplayNameHasSuffix(value)
-		case filter.OpPresent:
-			return principal.DisplayNameNEQ("")
-		}
-	case "active":
-		boolValue, ok := node.Value.(bool)
-		if ok && node.Operator == filter.OpEqual {
-			return principal.ActiveEQ(boolValue)
-		}
-	case "meta.created":
-		if t, err := time.Parse(time.RFC3339, value); err == nil {
-			switch node.Operator {
-			case filter.OpGreaterThan:
-				return principal.CreatedAtGT(t)
-			case filter.OpGreaterThanOrEqual:
-				return principal.CreatedAtGTE(t)
-			case filter.OpLessThan:
-				return principal.CreatedAtLT(t)
-			case filter.OpLessThanOrEqual:
-				return principal.CreatedAtLTE(t)
-			}
-		}
-	case "meta.lastmodified":
-		if t, err := time.Parse(time.RFC3339, value); err == nil {
-			switch node.Operator {
-			case filter.OpGreaterThan:
-				return principal.UpdatedAtGT(t)
-			case filter.OpGreaterThanOrEqual:
-				return principal.UpdatedAtGTE(t)
-			case filter.OpLessThan:
-				return principal.UpdatedAtLT(t)
-			case filter.OpLessThanOrEqual:
-				return principal.UpdatedAtLTE(t)
-			}
-		}
-	}
-
-	return nil
-}
-
 // applySortUser applies sorting to a user query.
 func (s *EntStore) applySortUser(q *ent.PrincipalQuery, sortBy, sortOrder string) *ent.PrincipalQuery {
 	desc := strings.EqualFold(sortOrder, "descending")
@@ -1337,119 +1419,6 @@ func (s *EntStore) applySortUser(q *ent.PrincipalQuery, sortBy, sortOrder string
 	default:
 		return q.Order(principal.ByCreatedAt(orderOpts...))
 	}
-}
-
-// buildGroupPredicates builds Ent predicates from a SCIM filter.
-func (s *EntStore) buildGroupPredicates(filterExpr string) ([]predicate.Organization, error) {
-	node, err := filter.ParseFilter(filterExpr)
-	if err != nil {
-		return nil, scim.ErrInvalidFilter(err.Error())
-	}
-	if node == nil {
-		return nil, nil
-	}
-
-	return s.collectGroupPredicates(node), nil
-}
-
-// collectGroupPredicates recursively collects predicates from a filter node.
-//
-//nolint:dupl // Mirrors collectUserPredicates - same traversal logic for different predicate types
-func (s *EntStore) collectGroupPredicates(node filter.Node) []predicate.Organization {
-	var predicates []predicate.Organization
-
-	switch n := node.(type) {
-	case *filter.ComparisonNode:
-		if p := s.groupComparisonToPredicate(n); p != nil {
-			predicates = append(predicates, p)
-		}
-	case *filter.LogicalAndNode:
-		predicates = append(predicates, s.collectGroupPredicates(n.Left)...)
-		predicates = append(predicates, s.collectGroupPredicates(n.Right)...)
-	case *filter.LogicalOrNode:
-		left := s.collectGroupPredicates(n.Left)
-		right := s.collectGroupPredicates(n.Right)
-		if len(left) > 0 && len(right) > 0 {
-			predicates = append(predicates, organization.Or(append(left, right...)...))
-		}
-	case *filter.LogicalNotNode:
-		inner := s.collectGroupPredicates(n.Operand)
-		if len(inner) > 0 {
-			predicates = append(predicates, organization.Not(organization.And(inner...)))
-		}
-	}
-
-	return predicates
-}
-
-// groupComparisonToPredicate converts a comparison node to an organization predicate.
-func (s *EntStore) groupComparisonToPredicate(node *filter.ComparisonNode) predicate.Organization {
-	attr := strings.ToLower(node.AttributePath)
-	value, _ := node.Value.(string)
-
-	switch attr {
-	case "id":
-		id, err := uuid.Parse(value)
-		if err != nil {
-			return nil
-		}
-		switch node.Operator {
-		case filter.OpEqual:
-			return organization.IDEQ(id)
-		case filter.OpNotEqual:
-			return organization.IDNEQ(id)
-		}
-	case "displayname":
-		switch node.Operator {
-		case filter.OpEqual:
-			return organization.NameEQ(value)
-		case filter.OpNotEqual:
-			return organization.NameNEQ(value)
-		case filter.OpContains:
-			return organization.NameContains(value)
-		case filter.OpStartsWith:
-			return organization.NameHasPrefix(value)
-		case filter.OpEndsWith:
-			return organization.NameHasSuffix(value)
-		case filter.OpPresent:
-			return organization.NameNEQ("")
-		}
-	case "externalid":
-		switch node.Operator {
-		case filter.OpEqual:
-			return organization.SlugEQ(value)
-		case filter.OpNotEqual:
-			return organization.SlugNEQ(value)
-		}
-	case "meta.created":
-		if t, err := time.Parse(time.RFC3339, value); err == nil {
-			switch node.Operator {
-			case filter.OpGreaterThan:
-				return organization.CreatedAtGT(t)
-			case filter.OpGreaterThanOrEqual:
-				return organization.CreatedAtGTE(t)
-			case filter.OpLessThan:
-				return organization.CreatedAtLT(t)
-			case filter.OpLessThanOrEqual:
-				return organization.CreatedAtLTE(t)
-			}
-		}
-	case "meta.lastmodified":
-		if t, err := time.Parse(time.RFC3339, value); err == nil {
-			switch node.Operator {
-			case filter.OpGreaterThan:
-				return organization.UpdatedAtGT(t)
-			case filter.OpGreaterThanOrEqual:
-				return organization.UpdatedAtGTE(t)
-			case filter.OpLessThan:
-				return organization.UpdatedAtLT(t)
-			case filter.OpLessThanOrEqual:
-				return organization.UpdatedAtLTE(t)
-			}
-		}
-	}
-
-	return nil
 }
 
 // applySortGroup applies sorting to a group query.
@@ -1478,22 +1447,8 @@ func (s *EntStore) applySortGroup(q *ent.OrganizationQuery, sortBy, sortOrder st
 	}
 }
 
-// generateSlug generates a URL-safe slug from a name.
-func generateSlug(name string) string {
-	var sb strings.Builder
-	for _, r := range name {
-		if r >= 'a' && r <= 'z' {
-			sb.WriteRune(r)
-		} else if r >= 'A' && r <= 'Z' {
-			sb.WriteRune(r + 32) // lowercase
-		} else if r >= '0' && r <= '9' {
-			sb.WriteRune(r)
-		} else if r == ' ' || r == '-' || r == '_' {
-			sb.WriteByte('-')
-		}
-	}
-	return sb.String()
-}
-
-// Ensure EntStore implements scim.Store
-var _ scim.Store = (*EntStore)(nil)
+// Ensure EntStore implements scim.Store and scim.BatchMembershipStore.
+var (
+	_ scim.Store                = (*EntStore)(nil)
+	_ scim.BatchMembershipStore = (*EntStore)(nil)
+)

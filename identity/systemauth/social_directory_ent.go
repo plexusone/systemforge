@@ -16,6 +16,8 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/graphlock"
+	"github.com/plexusone/systemforge/identity/graphstate"
 	"github.com/plexusone/systemforge/identity/signup"
 )
 
@@ -68,8 +70,23 @@ func NewEntPrincipalDirectory(db *ent.Client, opts ...EntPrincipalDirectoryOptio
 
 // syncOrg registers a personal organization and its owner with the
 // authorization syncer. It must be called after the transaction committed.
+// It holds the graph locks of the organization and the owner and writes
+// only while the owner's membership still holds, so a revocation that
+// committed in between is not undone.
 func (d *EntPrincipalDirectory) syncOrg(ctx context.Context, org *signup.PersonalOrg) error {
-	if err := d.syncer.RegisterOrganization(ctx, org.Organization.ID, *org.Organization.OwnerPrincipalID); err != nil {
+	if _, isNoop := d.syncer.(*noop.Syncer); isNoop {
+		return nil
+	}
+	orgID, owner := org.Organization.ID, *org.Organization.OwnerPrincipalID
+	keys := []string{graphlock.Organization(orgID), graphlock.Principal(owner)}
+	err := graphlock.Grant(ctx, d.db, keys, func(ctx context.Context, c *ent.Client) error {
+		held, err := graphstate.Membership(ctx, c, orgID, owner, graphstate.RoleOwner)
+		if err != nil || !held {
+			return err
+		}
+		return d.syncer.RegisterOrganization(ctx, orgID, owner)
+	})
+	if err != nil {
 		if d.syncMode == authz.SyncModeStrict {
 			return fmt.Errorf("failed to sync organization to authz: %w", err)
 		}

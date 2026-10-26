@@ -478,7 +478,7 @@ Holds client secrets for OAuth apps. Multiple secrets can exist for rotation pur
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `id` | UUID | PK, immutable | Primary key |
-| `secret_hash` | string | not empty, sensitive | Argon2id hash of the secret |
+| `secret_hash` | string | not empty, sensitive | bcrypt or Argon2id (PHC string) hash of the secret |
 | `secret_prefix` | string | — | First few chars for identification |
 | `expires_at` | time | nullable | When this secret expires |
 | `last_used_at` | time | nullable |  |

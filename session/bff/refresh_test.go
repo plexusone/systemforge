@@ -412,7 +412,7 @@ func TestRefreshHandler_ExpiredRefreshToken(t *testing.T) {
 	cookies := rr.Result().Cookies()
 	var sessionCookie *http.Cookie
 	for _, c := range cookies {
-		if c.Name == "sf_session" {
+		if c.Name == DefaultCookieName {
 			sessionCookie = c
 			break
 		}

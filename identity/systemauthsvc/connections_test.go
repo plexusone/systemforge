@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/identity/systemauthsvc"
+	"github.com/plexusone/systemforge/keys"
 )
 
 const rootKeyEnv = "SF_TEST_CONNECTIONS_ROOT_KEY"
@@ -124,6 +125,15 @@ func TestConnectionsConfigErrors(t *testing.T) {
 	cfg.Authz = authz.ModeConfig{Mode: authz.ModeReBAC, Engine: authz.EngineSpiceDB}
 	if _, err := systemauthsvc.New(t.Context(), cfg, opts); err == nil {
 		t.Error("connections with rebac accepted")
+	}
+
+	// A file vault that would keep the root key inside the keys directory,
+	// where a backup of the keyring would carry it too.
+	cfg = connectionsConfig(t)
+	cfg.Connections.Vault = "file://" + cfg.Connections.KeysDir
+	cfg.Connections.RootKey = "root"
+	if _, err := systemauthsvc.New(t.Context(), cfg, opts); !errors.Is(err, keys.ErrRootKeyInKeysDir) {
+		t.Errorf("root key in the keys directory: err = %v", err)
 	}
 
 	cfg = connectionsConfig(t)

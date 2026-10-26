@@ -6,10 +6,16 @@ import (
 	"strings"
 )
 
+// MaxDepth is the deepest nesting of parentheses, not and value-path
+// brackets a filter may have; a deeper one is refused rather than parsed,
+// so a request cannot make the parser recurse without bound.
+const MaxDepth = 32
+
 // Parser parses SCIM filter expressions into an AST.
 type Parser struct {
 	lexer    *Lexer
 	curToken Token
+	depth    int
 }
 
 // NewParser creates a new parser for the given input.
@@ -26,8 +32,28 @@ func (p *Parser) Parse() (Node, error) {
 	if p.curToken.Type == TokenEOF {
 		return nil, nil
 	}
-	return p.parseOr()
+	node, err := p.parseOr()
+	if err != nil {
+		return nil, err
+	}
+	// The whole input must be one expression: trailing tokens are an
+	// error, not ignored.
+	if p.curToken.Type != TokenEOF {
+		return nil, fmt.Errorf("unexpected %s after the filter expression", p.curToken.Value)
+	}
+	return node, nil
 }
+
+// enter records one more level of nesting and refuses one beyond MaxDepth.
+func (p *Parser) enter() error {
+	p.depth++
+	if p.depth > MaxDepth {
+		return fmt.Errorf("filter is nested more than %d levels deep", MaxDepth)
+	}
+	return nil
+}
+
+func (p *Parser) leave() { p.depth-- }
 
 // nextToken advances to the next token.
 func (p *Parser) nextToken() {
@@ -95,6 +121,10 @@ func (p *Parser) parseNot() (Node, error) {
 
 // parsePrimary parses primary expressions (comparisons, groupings, value paths).
 func (p *Parser) parsePrimary() (Node, error) {
+	if err := p.enter(); err != nil {
+		return nil, err
+	}
+	defer p.leave()
 	// Handle parenthesized expressions
 	if p.curToken.Type == TokenLeftParen {
 		p.nextToken() // consume '('

@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/plexusone/connectforge/egress"
@@ -12,54 +14,85 @@ import (
 	"github.com/plexusone/keyforge"
 	"github.com/plexusone/omnivault"
 
-	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/mode"
-	"github.com/plexusone/systemforge/authz/rbac"
 	"github.com/plexusone/systemforge/connections"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/keys"
 )
 
-// openConnections opens the key system, the authorization provider and the
-// connections store when the configuration enables connections (ADR-017).
+// openConnectionKeys opens the connections key system described by cc.
+// o supplies Audit, Logger and AcceptRollback; the directory, root key
+// and purposes come from cc. It also returns the vault holding the root
+// key, which the connections store reads credentials from.
+func openConnectionKeys(ctx context.Context, cc *systemauth.ConnectionsConfig, o keys.Options) (*keys.Keys, omnivault.Vault, error) {
+	if err := keys.CheckRootKeyLocation(cc.Vault, cc.RootKey, cc.KeysDir); err != nil {
+		return nil, nil, fmt.Errorf("systemauthsvc: connections: %w", err)
+	}
+	v, err := omnivault.VaultFromURI(cc.Vault)
+	if err != nil {
+		return nil, nil, fmt.Errorf("systemauthsvc: connections vault: %w", err)
+	}
+	o.Dir = cc.KeysDir
+	o.Root = keys.VaultSource(v, cc.RootKey)
+	o.Purposes = []keyforge.Purpose{connections.Purpose}
+	k, err := keys.Open(ctx, o)
+	if err != nil {
+		return nil, nil, err
+	}
+	return k, v, nil
+}
+
+// AcceptKeyRollback opens the connections keyring once with
+// keys.Options.AcceptRollback and closes it again. Run it after restoring
+// the keys directory from a backup, after moving it to a new host without
+// its rollback state, or once after upgrading from a release whose
+// rollback state was not authenticated. Opening it records the accepted
+// generation, so later starts succeed without the option. Confirm the
+// keyring is the one you mean to keep before running it: accepting an
+// older keyring brings back the key versions it holds.
+func AcceptKeyRollback(ctx context.Context, cfg *Config, logger *slog.Logger) error {
+	if cfg == nil || cfg.Connections == nil {
+		return errors.New("systemauthsvc: no connections keyring is configured")
+	}
+	k, _, err := openConnectionKeys(ctx, cfg.Connections, keys.Options{
+		Logger:         logger,
+		AcceptRollback: true,
+	})
+	if err != nil {
+		return err
+	}
+	return k.Close()
+}
+
+// openConnections opens the key system and the connections store when the
+// configuration enables connections (ADR-017), checking with the
+// service's authorization mode (openAuthz), which must be rbac.
 func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) error {
 	cc := c.Connections
 	if cc == nil {
 		return nil
 	}
-	if s.client == nil || s.db == nil {
+	if s.client == nil || s.db == nil || s.authz == nil {
 		return errors.New("systemauthsvc: connections need a database with a connection pool")
 	}
-	if c.Authz.Mode != authz.ModeRBAC {
-		return fmt.Errorf("systemauthsvc: connections support authz mode %q only, not %q", authz.ModeRBAC, c.Authz.Mode)
-	}
-	v, err := omnivault.VaultFromURI(cc.Vault)
-	if err != nil {
-		return fmt.Errorf("systemauthsvc: connections vault: %w", err)
-	}
-	s.keys, err = keys.Open(ctx, keys.Options{
-		Dir:      cc.KeysDir,
-		Root:     keys.VaultSource(v, cc.RootKey),
-		Purposes: []keyforge.Purpose{connections.Purpose},
+	var (
+		v   omnivault.Vault
+		err error
+	)
+	s.keys, v, err = openConnectionKeys(ctx, cc, keys.Options{
+		Audit:  opts.AuditStore,
+		Logger: s.logger,
 	})
 	if err != nil {
 		return err
 	}
-	// Grants on a connection are accepted when the deployment restricts them
-	// to registered applications' resource types, so register ours.
-	if err := connections.RegisterVocabulary(opts.Vocabularies); err != nil {
-		return fmt.Errorf("systemauthsvc: connections vocabulary: %w", err)
-	}
-	s.authz, err = mode.New(ctx, c.Authz, mode.Deps{
-		DB:       s.client,
-		Registry: opts.Vocabularies,
-		Logger:   s.logger,
-		RBACOptions: []rbac.Option{
-			rbac.WithPermissions(connections.RolePermissions(authz.DefaultRolePermissions)),
-		},
-	})
+	prefixes, err := cc.EgressPrefixes()
 	if err != nil {
-		return fmt.Errorf("systemauthsvc: connections authorization: %w", err)
+		return err
+	}
+	if len(prefixes) > 0 || cc.AllowHTTPEgress {
+		s.logger.Warn("connections: provider requests may reach non-public addresses or use plain HTTP; use this for development only",
+			"egress_allow_prefixes", cc.EgressAllowPrefixes, "allow_http_egress", cc.AllowHTTPEgress)
 	}
 	s.conns, err = connections.Open(connections.Options{
 		DB:         s.db,
@@ -68,9 +101,10 @@ func (s *Service) openConnections(ctx context.Context, c *Config, opts Options) 
 		Authorizer: s.authz.Provider,
 		Grants:     s.authz.Provider,
 		Vault:      v,
+		Audit:      opts.AuditStore,
 		Logger:     s.logger,
 		Providers:  opts.Providers,
-		Egress:     egress.Policy{AllowPrivate: cc.AllowPrivateEgress, AllowHTTP: cc.AllowPrivateEgress},
+		Egress:     egress.Policy{AllowPrefixes: prefixes, AllowHTTP: cc.AllowHTTPEgress},
 	})
 	if err != nil {
 		return err
@@ -98,26 +132,46 @@ func (s *Service) mountConnections() {
 // providers through Options.Providers.
 func (s *Service) Connections() *connections.Connections { return s.conns }
 
-// RunJobs runs background work, the key lifecycle jobs when connections are
-// enabled, until ctx is cancelled. It returns at once when there is none.
+// RunJobs runs background work until ctx is cancelled: the key lifecycle
+// jobs when connections are enabled, and, when the authorization mode is
+// rebac, the authorization graph reconciler at startup and on its
+// configured schedule (authz.reconcile). Run it beside the server for as
+// long as the service serves. It returns at once when there is none, and
+// the jobs' errors joined when they end.
 func (s *Service) RunJobs(ctx context.Context) error {
-	if s.keys == nil {
+	var jobs []func(context.Context) error
+	if s.keys != nil {
+		jobs = append(jobs, s.keys.Run)
+	}
+	if s.authz != nil && s.authz.Reconciler != nil {
+		jobs = append(jobs, s.authz.RunReconciler)
+	}
+	errs := make([]error, len(jobs))
+	var wg sync.WaitGroup
+	for i, job := range jobs {
+		wg.Go(func() { errs[i] = job(ctx) })
+	}
+	wg.Wait()
+	return errors.Join(errs...)
+}
+
+// AuthzReconciler returns the authorization graph reconciler, for an
+// on-demand Reconcile, or nil when the authorization mode built by the
+// service has no graph.
+func (s *Service) AuthzReconciler() *mode.Reconciler {
+	if s.authz == nil {
 		return nil
 	}
-	return s.keys.Run(ctx)
+	return s.authz.Reconciler
 }
 
 // closeConnections releases what openConnections opened.
 func (s *Service) closeConnections() error {
-	var errs []error
-	if s.authz != nil {
-		errs = append(errs, s.authz.Close())
-		s.authz = nil
-	}
+	var err error
 	if s.keys != nil {
-		errs = append(errs, s.keys.Close())
+		err = s.keys.Close()
 		s.keys = nil
 	}
 	s.conns = nil
-	return errors.Join(errs...)
+	return err
 }

@@ -118,6 +118,10 @@ social_login:
   with login tokens, sign in as before. With invite-only sign-up, an
   uninvited login is refused before it is asked, and the invite is used only
   once the age is confirmed.
+- **It is a stated age, screened at social sign-up only.** The refusal is
+  remembered per browser, so a person who clears cookies can answer again.
+  Accounts created through `signup.Service`, federation sync or SCIM are not
+  asked; see [Minimum Sign-Up Age](../guides/signup-age.md#limits).
 - **In a host binary,** set the wording with `Options.SignupAgePage`.
 
 See [Minimum Sign-Up Age](../guides/signup-age.md) for what a person sees
@@ -169,9 +173,51 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out systemauth-sig
 
 Provide it as a file readable only by the service user, or as PEM content in
 `SYSTEMAUTH_SIGNING_KEY`. The JWKS `kid` defaults to the key's RFC 7638
-thumbprint, so rotating the key changes the `kid` and relying parties fetch the
-new JWKS on the first token signed with it. Tokens signed with the old key stop
-verifying once it is replaced (overlapping keys are not supported yet).
+thumbprint, so a new key gets a new `kid`.
+
+### Rotating the signing key
+
+SystemAuth keeps two keys: the current key N, which signs, and the previous
+key N-1, which only verifies. `keys.verification_keys` lists the keys that
+are published in the JWKS and accepted when verifying tokens without ever
+signing. A token's `kid` selects its key; a token with any other `kid` is
+refused. Rotate in two deploys, so that both a rollout and a rollback keep
+every live token verifying:
+
+1. **Pre-stage.** Generate key N and add it as a verification key while
+   N-1 still signs. Relying parties see N in the JWKS before any token
+   signed with it exists.
+
+    ```yaml
+    keys:
+      private_key_file: /etc/systemauth/signing-2.pem   # N-1, signing
+      key_id: signing-2
+      verification_keys:
+        - key_id: signing-3                               # N, pre-staged
+          public_key_file: /etc/systemauth/signing-3.pem
+    ```
+
+2. **Promote.** Make N the signing key and move N-1 into
+   `verification_keys`. Drop N-2 now, never N-1: tokens N-1 signed are in
+   use until they expire. Rolling this deploy back to step 1 still verifies
+   the tokens N signed meanwhile, because step 1 publishes N.
+
+    ```yaml
+    keys:
+      private_key_file: /etc/systemauth/signing-3.pem   # N, signing
+      key_id: signing-3
+      verification_keys:
+        - key_id: signing-2                               # N-1
+          public_key_file: /etc/systemauth/signing-2.pem
+    ```
+
+A verification key may be a public key (`PUBLIC KEY` or `RSA PUBLIC KEY`
+PEM) or the private key file, of which only the public part is used; give
+it as `public_key_file` or `public_key_pem`. Its `key_id` defaults to the
+key's thumbprint, which is also the default `kid` of a signing key. Keep N-1
+until the longest-lived token it signed has expired: ID tokens (1 hour by
+default) and JWT access tokens (at most 15 minutes); opaque tokens and
+refresh tokens are not signed with it.
 
 ## Example: systemd + Caddy
 
@@ -243,6 +289,30 @@ auth.example.com {
 
 Embedding applications add their own checks with
 `systemauth.WithReadinessCheck(name, func(ctx) error)`.
+
+## DPoP
+
+SystemAuth issues DPoP-bound tokens (RFC 9449): every client must send a DPoP
+proof with its token requests unless its registration sets the legacy
+`allow_bearer_tokens` exception. See [DPoP Enforcement](../session/dpop.md).
+When several instances serve SystemAuth, share the replay cache that rejects
+reused proofs:
+
+```yaml
+dpop:
+  replay_cache_redis_url: ${SYSTEMAUTH_DPOP_REDIS_URL}   # redis://host:6379/0
+  # Optional server nonces (RFC 9449 §8):
+  # require_nonce: true
+  # nonce_secret: ${SYSTEMAUTH_DPOP_NONCE_SECRET}         # 32+ bytes, same on every instance
+  # External base URL of the APIs SystemAuth protects (Middleware,
+  # BearerAccess), when a proxy strips a path prefix:
+  # resource_base_url: https://example.com/api
+```
+
+Without `replay_cache_redis_url` the cache is in memory, which suits a single
+instance. An existing database gains the `sf_oauth_apps.allow_bearer_tokens`
+column on startup migration (or with `migrations/0010_oauth_app_allow_bearer_tokens.sql`);
+every existing application then requires DPoP until the column is set for it.
 
 ## Upgrading
 

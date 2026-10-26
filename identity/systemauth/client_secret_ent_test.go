@@ -73,7 +73,7 @@ func confidentialCode(t *testing.T, s *Server) string {
 		"code_challenge_method": {"S256"},
 	}
 	req := httptest.NewRequest(http.MethodGet, "/oauth/authorize?"+params.Encode(), nil)
-	headerUser("3f9b7c1e-1d2a-4b8e-9c3d-5a6f7e8d9c0b")(req)
+	headerUser(newPrincipal(t, s))(req)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	cb, err := url.Parse(w.Header().Get("Location"))
@@ -99,6 +99,7 @@ func confidentialExchange(t *testing.T, s *Server, code, secret string, basic bo
 	}
 	req := httptest.NewRequest(http.MethodPost, "/oauth/token", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	withTokenProof(t, req)
 	if basic {
 		req.SetBasicAuth(confidentialID, secret)
 	}

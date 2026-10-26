@@ -62,8 +62,11 @@ type StoreConfig struct {
 	// MaxSessions is the maximum number of sessions to store (0 = unlimited).
 	MaxSessions int
 
-	// EncryptionKey is used to encrypt sensitive session data.
-	// If nil, session data is stored unencrypted.
+	// EncryptionKey is not read by any store.
+	//
+	// Deprecated: set EntStoreConfig.Sealer for EntStore or
+	// OmniStorageConfig.Sealer for OmniStorageStore. MemoryStore keeps
+	// sessions in process memory and does not encrypt them.
 	EncryptionKey []byte
 }
 

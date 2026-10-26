@@ -64,6 +64,13 @@ Dynamically registered clients carry the same settings on `OAuthApp`
 (`managed_principals_enabled`, `login_token_ttl`). The single check every
 path uses is `(*systemauth.Server).ManagedPrincipalsAllowed(ctx, clientID)`.
 
+The browser login session is shared by every client, so the check is made
+for each client, not only the one a login token was exchanged for:
+`/oauth/authorize` answers `access_denied`, and the token endpoint
+`invalid_grant`, when a managed principal (one with an active manager,
+whether or not it has an email) is signed in and the client does not allow
+managed principals.
+
 ## Roles
 
 Two manager roles are built in:
@@ -168,6 +175,13 @@ On success SystemAuth establishes its usual login session cookie and
 answers `303 See Other` to `return_to` (checked against the redirect
 allowlist) or the default target. The authorization-code flow then proceeds
 as for any signed-in user.
+
+The exchange replaces the browser's login session, so it accepts only a form
+posted from a page on the issuer's origin or one of
+`social_login.allowed_redirect_origins`, judged by the `Origin` header (or
+`Referer`). A post from any other site, or with neither header, receives
+`403`; an application that hosts the sign-in form on its own origin lists that
+origin in `allowed_redirect_origins`.
 
 Unknown, malformed, expired, revoked, and used tokens, a client that does
 not allow managed principals, and an inactive principal all receive the
@@ -383,8 +397,10 @@ definition principal {
 }
 ```
 
-With `WithAuthzSyncer`, every committed relationship change is written to
-the authorization backend. The simple provider stores nothing; configure it
+With `WithAuthzSyncer`, every relationship change is written to the
+authorization backend: removals inside the transaction, before the commit,
+so a backend failure leaves the manager in place and is returned; additions
+after the commit. The simple provider stores nothing; configure it
 with `simple.WithManagerRoleGetter(svc.ManagerRoles)` and it applies the
 same table, so both providers agree.
 

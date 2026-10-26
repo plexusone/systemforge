@@ -22,6 +22,8 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/graphlock"
+	"github.com/plexusone/systemforge/identity/graphstate"
 	"github.com/plexusone/systemforge/identity/principal"
 )
 
@@ -75,9 +77,12 @@ func WithAuditEmitter(e audit.Emitter) Option {
 }
 
 // WithAuthzSyncer mirrors manager relationships into the authorization
-// backend as guardian and educator relations on the managed principal. In
-// authz.SyncModeStrict a sync failure is returned, after the database
-// change has committed; otherwise it is logged.
+// backend as guardian and educator relations on the managed principal.
+// Removing a manager, releasing and deleting remove the relations inside
+// their transaction, before the commit; if the backend refuses, the change
+// is not made and the error is returned, whatever the mode. An added
+// manager is written after the commit: in authz.SyncModeStrict a sync
+// failure is returned, otherwise it is logged.
 func WithAuthzSyncer(syncer authz.RelationshipSyncer, mode authz.SyncMode) Option {
 	return func(s *Service) {
 		s.syncer = syncer
@@ -238,7 +243,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (uuid.UUID, error)
 
 	syncErr := s.sync(ctx, "register principal", id, s.syncer.RegisterPrincipal(ctx, id))
 	for _, m := range in.Managers {
-		syncErr = errors.Join(syncErr, s.sync(ctx, "add manager", id, s.syncer.AddPrincipalManager(ctx, id, m.PrincipalID, m.Role)))
+		syncErr = errors.Join(syncErr, s.grantManager(ctx, id, m.PrincipalID, m.Role))
 	}
 	if syncErr != nil {
 		return id, syncErr
@@ -281,7 +286,7 @@ func (s *Service) AddManager(ctx context.Context, managedID uuid.UUID, m Manager
 	}
 	s.emit(ctx, EventManagerAdded, "add_manager", actorID, managedID,
 		map[string]any{"manager_principal_id": m.PrincipalID.String(), "role": m.Role})
-	return s.sync(ctx, "add manager", managedID, s.syncer.AddPrincipalManager(ctx, managedID, m.PrincipalID, m.Role))
+	return s.grantManager(ctx, managedID, m.PrincipalID, m.Role)
 }
 
 // RemoveManager deactivates a manager relationship. It refuses with
@@ -334,6 +339,11 @@ func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m Mana
 		if err := tx.ManagerRelationship.UpdateOne(rel).SetActive(false).Exec(ctx); err != nil {
 			return fmt.Errorf("managedprincipal: deactivate relationship: %w", err)
 		}
+		if err := s.revoke(ctx, tx, managedID, "remove manager", func() error {
+			return s.syncer.RemovePrincipalManager(ctx, managedID, m.PrincipalID, m.Role)
+		}); err != nil {
+			return err
+		}
 		// Only a principal with a verified email gets here with no manager
 		// left: removing its last manager releases it (ADR-009).
 		remaining, err := tx.ManagerRelationship.Query().
@@ -361,7 +371,7 @@ func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m Mana
 		s.emit(ctx, EventReleased, "release", actorID, managedID,
 			map[string]any{"managers": managerDetails([]ManagerInput{m})})
 	}
-	return s.sync(ctx, "remove manager", managedID, s.syncer.RemovePrincipalManager(ctx, managedID, m.PrincipalID, m.Role))
+	return nil
 }
 
 // IssueLoginToken issues a login token for a managed principal on behalf
@@ -694,8 +704,45 @@ func (s *Service) withTx(ctx context.Context, fn func(*ent.Tx) error) error {
 	return nil
 }
 
+// revoke removes relationships from the authorization graph inside tx, the
+// transaction whose change ends them, holding the managed principal's
+// graphlock. Its error aborts the transaction whatever the sync mode, so
+// the graph never keeps a relation the database no longer records, and the
+// operation can be retried.
+func (s *Service) revoke(ctx context.Context, tx *ent.Tx, managedID uuid.UUID, op string, fn func() error) error {
+	if err := graphlock.Lock(ctx, tx, graphlock.Principal(managedID)); err != nil {
+		return err
+	}
+	if err := fn(); err != nil {
+		return fmt.Errorf("managedprincipal: %s in authz, change not saved: %w", op, err)
+	}
+	return nil
+}
+
+// grantManager writes a manager relation to the authorization graph after
+// the change establishing it committed, holding the graph locks of both
+// principals, and only if the relationship is still active and the
+// manager still active: a removal or deactivation that committed in
+// between is not undone. Without a graph (the no-op syncer) it does
+// nothing.
+func (s *Service) grantManager(ctx context.Context, managedID, managerID uuid.UUID, role string) error {
+	if _, isNoop := s.syncer.(*noop.Syncer); isNoop {
+		return nil
+	}
+	keys := []string{graphlock.Principal(managedID), graphlock.Principal(managerID)}
+	err := graphlock.Grant(ctx, s.client, keys, func(ctx context.Context, c *ent.Client) error {
+		held, err := graphstate.Manager(ctx, c, managedID, managerID, role)
+		if err != nil || !held {
+			return err
+		}
+		return s.syncer.AddPrincipalManager(ctx, managedID, managerID, role)
+	})
+	return s.sync(ctx, "add manager", managedID, err)
+}
+
 // sync applies the sync mode to the result of an authorization backend
-// write made after the database change committed.
+// write made after the database change committed. Only writes that grant
+// go through it; removals go through revoke.
 func (s *Service) sync(ctx context.Context, op string, managedID uuid.UUID, err error) error {
 	if err == nil {
 		return nil

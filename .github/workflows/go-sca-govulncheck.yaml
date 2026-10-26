@@ -1,0 +1,21 @@
+name: Go SCA (govulncheck)
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/go-sca-govulncheck.yaml'
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  govulncheck:
+    uses: plexusone/.github/.github/workflows/go-sca-govulncheck.yaml@main

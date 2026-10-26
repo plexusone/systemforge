@@ -20,10 +20,13 @@ const IntrospectionScope = "introspect"
 //
 //   - a confidential client, authenticating with HTTP Basic or a client
 //     assertion (Fosite verifies the secret or signature afterwards), or
-//   - the bearer of an access token carrying IntrospectionScope.
+//   - the holder of an access token carrying IntrospectionScope, sent with
+//     the Bearer or DPoP scheme.
 //
 // clientPublic reports whether a client ID is registered and public.
-// bearerScopes returns the scopes of an active access token, or nil.
+// bearerScopes returns the scopes of an active access token, or nil; for
+// the DPoP scheme, or a DPoP-bound token, it must also verify the
+// request's DPoP proof.
 func AuthorizeIntrospectionCaller(r *http.Request, clientPublic func(clientID string) (known, public bool), bearerScopes func(token string) []string) bool {
 	if user, _, ok := r.BasicAuth(); ok {
 		id, err := url.QueryUnescape(user)
@@ -35,7 +38,7 @@ func AuthorizeIntrospectionCaller(r *http.Request, clientPublic func(clientID st
 	}
 	if auth := r.Header.Get("Authorization"); auth != "" {
 		scheme, token, ok := strings.Cut(auth, " ")
-		if !ok || !strings.EqualFold(scheme, "Bearer") {
+		if !ok || (!strings.EqualFold(scheme, "Bearer") && !strings.EqualFold(scheme, "DPoP")) {
 			return false
 		}
 		for _, sc := range bearerScopes(strings.TrimSpace(token)) {

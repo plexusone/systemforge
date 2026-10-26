@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/plexusone/keyforge/provider/local"
@@ -55,4 +56,44 @@ func decodeRootKey(text []byte) ([]byte, error) {
 		return b, nil
 	}
 	return nil, local.ErrBadRootKey
+}
+
+// ErrRootKeyInKeysDir is returned when the root key would be stored in or
+// under the keys directory. A backup or copy of that directory would then
+// hold everything needed to decrypt the data the keys protect.
+var ErrRootKeyInKeysDir = errors.New("keys: the root key must not be stored in or under the keys directory")
+
+// CheckRootKeyLocation refuses a root key that an omnivault file vault
+// (a "file://" URI) would read from a file in or under dir. Other vaults keep
+// secrets outside the filesystem layout and pass.
+func CheckRootKeyLocation(vaultURI, secretPath, dir string) error {
+	vaultDir, ok := strings.CutPrefix(vaultURI, "file://")
+	if !ok {
+		return nil
+	}
+	if vaultDir == "" {
+		vaultDir = "."
+	}
+	// The file vault stores secret p at <dir>/p.json.
+	return checkOutside(filepath.Join(vaultDir, secretPath+".json"), dir)
+}
+
+// checkOutside returns ErrRootKeyInKeysDir when file is in or under dir.
+func checkOutside(file, dir string) error {
+	f, err := filepath.Abs(file)
+	if err != nil {
+		return fmt.Errorf("keys: root key location: %w", err)
+	}
+	d, err := filepath.Abs(dir)
+	if err != nil {
+		return fmt.Errorf("keys: keys directory: %w", err)
+	}
+	rel, err := filepath.Rel(d, f)
+	if err != nil {
+		return fmt.Errorf("keys: root key location: %w", err)
+	}
+	if rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("%w: %s", ErrRootKeyInKeysDir, f)
+	}
+	return nil
 }

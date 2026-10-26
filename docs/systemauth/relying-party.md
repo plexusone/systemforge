@@ -77,7 +77,8 @@ r.With(bff.RequireSession).Get("/app/api/projects", listProjects)
 // API used by browsers and programmatic clients alike.
 r.Route("/api/v1", func(r chi.Router) {
     r.Use(relyingparty.BearerMiddleware(relyingparty.BearerConfig{
-        Tokens:     client,         // SystemAuth JWT access tokens
+        Tokens:     client,         // SystemAuth JWT access tokens (DPoP-bound)
+        DPoP:       &relyingparty.DPoPConfig{ReplayCache: replayCache, BaseURL: "https://app.example.com"},
         APIKeys:    apiKeyService,  // *apikey.Service
         Principals: principals,
         Sessions:   bff,            // also accept the BFF cookie
@@ -117,6 +118,9 @@ Security properties:
   every login and any presented session is deleted (no fixation).
 - Login state is single-use, server-side, and bound to the browser with a
   `__Host-sf_rp_state` cookie; PKCE and the OIDC `nonce` are always used.
+- `InsecureCookies` drops `Secure` and the `__Host-` prefix for local
+  development over plain HTTP; `NewBFF` logs a warning when it is set. See
+  [Browser Cookies](../guides/cookies.md).
 - The ID token is verified per OIDC Core §3.1.3.7 (RS256 signature against
   the JWKS, `iss`, `aud`/`azp`, `exp`, `nonce`), and the UserInfo `sub` must
   match it.
@@ -200,6 +204,7 @@ orgs := organization.NewService(db, organization.WithAccessChangeSink(accesschan
 
 mw := relyingparty.BearerMiddleware(relyingparty.BearerConfig{
     Tokens: client, Principals: principals,
+    DPoP:         &relyingparty.DPoPConfig{ReplayCache: replayCache, BaseURL: "https://api.example.com"},
     Revocation:   cache,
     Organization: func(r *http.Request) string { return r.PathValue("org") }, // optional
 })
@@ -259,7 +264,10 @@ limited to 1 to 2 seconds. `accesschange.NewSource(entClient)` reads the same
 table through Ent.
 
 SystemAuth serves `GET /access-changes?since=<RFC 3339>[&limit=]` when built
-with `systemauth.WithAccessChanges(accesschange.NewSource(db))`. The caller
+with `systemauth.WithAccessChanges(accesschange.NewSource(db), scope)`. The
+scope (`systemauth.AccessChangeScope`) limits each client to its
+organizations' changes; `systemauth.AllOrganizations` serves the whole feed,
+for a deployment of one application. The caller
 needs a token with the `access_changes:read` scope, for example from the
 client-credentials grant for a client registered with that scope. The
 response is `{"changes": [{"principal_id", "organization_id", "changed_at",
@@ -290,8 +298,10 @@ for deactivation and session revocation the standard
 Delivery is queued, retried with exponential backoff until one maximum
 access-token lifetime after the change, and each failure is logged against the
 client ID; a `4xx` other than 408 and 429 is not retried, and redirects are
-never followed. Every registered client receives every change; the token holds
-only opaque identifiers.
+never followed. With an access change scope, a client receives only its
+organizations' changes and the changes that name no organization; without
+one, every registered client receives every change. The token holds only
+opaque identifiers.
 
 The receiver is `relyingparty.BackchannelHandler(cache, client,
 relyingparty.WithBackchannelSessions(store))`: it verifies the token against
@@ -347,7 +357,13 @@ func (s entPrincipals) FindBySubject(ctx context.Context, sub string) (*relyingp
 
 `BearerMiddleware` accepts, in order:
 
-- `Authorization: Bearer <JWT>` — a SystemAuth JWT access token, verified
+- `Authorization: DPoP <JWT>` with a `DPoP` proof header — a SystemAuth JWT
+  access token bound to a DPoP key (`cnf.jkt`) and a proof signed by that key
+  for this request (see [DPoP Enforcement](../session/dpop.md)). SystemAuth
+  binds every token it issues, so `DPoP` is required whenever `Tokens` is set;
+  the token is then checked as below.
+- `Authorization: Bearer <JWT>`, only with `AllowBearerTokens` — an unbound
+  SystemAuth JWT access token (a legacy client's), verified
   against the JWKS (`iss`, `exp`, a `typ` of `at+jwt` or `JWT`, and
   `Config.AccessTokenAudience` when set). The token must have been issued to
   an accepted client (see below); ID tokens are refused. Its `sub` must
@@ -359,8 +375,18 @@ func (s entPrincipals) FindBySubject(ctx context.Context, sub string) (*relyingp
   an organization-scoped key only carries that organization's membership.
 - The BFF session cookie, when `Sessions` is set.
 
-Failures return `401` with `WWW-Authenticate: Bearer realm="api"` (plus
-`error="invalid_token"` for bad credentials).
+A DPoP-bound access token presented as `Bearer` is always refused, so a
+stolen bound token cannot be replayed as a bearer token.
+
+Failures return `401` with a `DPoP` challenge (carrying the error of a
+failed DPoP request) and `WWW-Authenticate: Bearer realm="api"` (plus
+`error="invalid_token"` for bad bearer credentials).
+
+The `Client` itself proves possession of `Config.DPoPKey` in every token
+request, so the tokens it obtains for the BFF are bound to that key, and it
+presents them to SystemAuth with the DPoP scheme. Several instances that
+share sessions must share the key (`dpop.DeserializeKeyPairJSON` from a
+secret); otherwise a refresh on another instance is refused.
 
 ### Which clients' tokens are accepted
 

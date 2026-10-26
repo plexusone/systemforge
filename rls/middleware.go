@@ -35,7 +35,9 @@ func NewMiddleware(db *sql.DB, cfg *Config) *Middleware {
 //
 // Usage with Chi:
 //
-//	r.Use(middleware.ChiAuth(jwtService))
+//	auth, err := middleware.ChiAuth(jwtService, middleware.DPoPConfig{ReplayCache: cache})
+//	if err != nil { ... }
+//	r.Use(auth)
 //	r.Use(rlsMiddleware.SetRLSContext())
 func (m *Middleware) SetRLSContext() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

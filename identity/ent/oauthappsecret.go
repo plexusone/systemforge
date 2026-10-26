@@ -21,7 +21,7 @@ type OAuthAppSecret struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// OAuth app this secret belongs to
 	AppID uuid.UUID `json:"app_id,omitempty"`
-	// Argon2id hash of the secret
+	// bcrypt or Argon2id (PHC string) hash of the secret
 	SecretHash string `json:"-"`
 	// First few chars for identification
 	SecretPrefix string `json:"secret_prefix,omitempty"`

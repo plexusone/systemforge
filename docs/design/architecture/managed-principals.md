@@ -177,9 +177,13 @@ provider; an application maps them in its own vocabulary.
 | `RedeemClaim(code, claimantID)` | Normalizes the code (case, spaces, hyphens), compares the hash in constant time, spends the claim with a conditional update so two redemptions cannot both succeed, validates the claimant as a manager, and makes them `guardian`; `managed_principal.claim_redeemed`; syncs |
 
 Audit events go through `contract/audit.Emitter` when
-`WithAuditEmitter` is set; authorization sync follows `authz.SyncMode`
-(`WithAuthzSyncer`): a sync failure after the commit is returned in
-`strict` mode and logged in `eventual` mode.
+`WithAuditEmitter` is set. With `WithAuthzSyncer`, removing a manager,
+releasing and deleting remove the relations (and, on deletion, the
+principal's memberships, application roles and resource grants) from the
+graph inside their transaction, before the commit, and roll back with the
+error when the graph refuses, in either sync mode. Added managers are
+written after the commit, following `authz.SyncMode`: a failure is
+returned in `strict` mode and logged in `eventual` mode.
 
 ## Sign-in: the `login_token` credential
 

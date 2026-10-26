@@ -7,6 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-jose/go-jose/v3"
+	"github.com/plexusone/systemforge/identity/dpopproof"
 )
 
 // registerDiscoveryEndpoints registers OIDC discovery endpoints.
@@ -51,6 +52,7 @@ type OpenIDConfiguration struct {
 	TokenEndpointAuthMethodsSupported []string `json:"token_endpoint_auth_methods_supported,omitempty"`
 	ClaimsSupported                   []string `json:"claims_supported,omitempty"`
 	CodeChallengeMethodsSupported     []string `json:"code_challenge_methods_supported,omitempty"`
+	DPoPSigningAlgValuesSupported     []string `json:"dpop_signing_alg_values_supported,omitempty"`
 }
 
 // OpenIDConfigInput is the input for the discovery endpoint (no params).
@@ -122,6 +124,8 @@ func (s *Server) OpenIDConfiguration() OpenIDConfiguration {
 		CodeChallengeMethodsSupported: []string{
 			"S256",
 		},
+		// RFC 9449 §5.1: the algorithms accepted for DPoP proofs.
+		DPoPSigningAlgValuesSupported: append([]string(nil), dpopproof.Algorithms...),
 	}
 
 	return config
@@ -136,19 +140,9 @@ type JWKSOutput struct {
 }
 
 func (s *Server) jwksHandler(_ context.Context, _ *JWKSInput) (*JWKSOutput, error) {
-	// Create JWK from the RSA public key
-	jwk := jose.JSONWebKey{
-		Key:       &s.key.PublicKey,
-		KeyID:     s.keyID,
-		Algorithm: string(jose.RS256),
-		Use:       "sig",
-	}
-
-	jwks := jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{jwk},
-	}
-
-	return &JWKSOutput{Body: jwks}, nil
+	// The signing key first, then the previous or pre-staged verification
+	// keys (keys.verification_keys).
+	return &JWKSOutput{Body: s.keys.JWKS()}, nil
 }
 
 // PublicKey returns the public RSA key for external verification.

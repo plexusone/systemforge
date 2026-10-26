@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/mail"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -112,9 +113,15 @@ func (s *DefaultService) Signup(ctx context.Context, input SignupInput) (*Signup
 	humanTx, humanOK := s.principalSvc.(principal.HumanTxCreator)
 	orgTx, orgOK := s.orgSvc.(organization.PersonalOrgTxCreator)
 	if humanOK && orgOK && s.client != nil {
-		return s.signupInTx(ctx, humanTx, orgTx, humanInput, orgInput)
+		return s.signupInTx(ctx, humanTx, orgTx, humanInput, orgInput, input.EmailVerified)
 	}
-	return s.signupSeparately(ctx, humanInput, orgInput)
+	return s.signupSeparately(ctx, humanInput, orgInput, input.EmailVerified)
+}
+
+// emailVerificationMarker is implemented by principal services that can
+// record a verified email, such as principal.DefaultService.
+type emailVerificationMarker interface {
+	MarkEmailVerified(ctx context.Context, id uuid.UUID) error
 }
 
 // signupInTx creates the principal, personal organization and owner
@@ -128,6 +135,7 @@ func (s *DefaultService) signupInTx(
 	orgTx organization.PersonalOrgTxCreator,
 	humanInput principal.CreateHumanInput,
 	orgInput organization.CreatePersonalOrgInput,
+	emailVerified bool,
 ) (*SignupResult, error) {
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
@@ -143,6 +151,15 @@ func (s *DefaultService) signupInTx(
 	humanPrincipal, syncPrincipal, err := humanTx.CreateHumanInTx(ctx, tx, humanInput)
 	if err != nil {
 		return nil, rollback(fmt.Errorf("failed to create user: %w", err))
+	}
+	if emailVerified {
+		now := time.Now()
+		if err := tx.Human.Update().Where(human.PrincipalID(humanPrincipal.ID)).SetEmailVerifiedAt(now).Exec(ctx); err != nil {
+			return nil, rollback(fmt.Errorf("failed to record verified email: %w", err))
+		}
+		if humanPrincipal.Human != nil {
+			humanPrincipal.Human.EmailVerifiedAt = &now
+		}
 	}
 	orgInput.OwnerPrincipalID = humanPrincipal.ID
 	personalOrg, membership, syncOrg, err := orgTx.CreatePersonalOrgInTx(ctx, tx, orgInput)
@@ -170,10 +187,15 @@ func (s *DefaultService) signupInTx(
 // that cannot write inside a caller's transaction. They each commit their
 // own, so a failure after the principal exists is undone by deleting it;
 // otherwise a retry would find the email taken.
-func (s *DefaultService) signupSeparately(ctx context.Context, humanInput principal.CreateHumanInput, orgInput organization.CreatePersonalOrgInput) (*SignupResult, error) {
+func (s *DefaultService) signupSeparately(ctx context.Context, humanInput principal.CreateHumanInput, orgInput organization.CreatePersonalOrgInput, emailVerified bool) (*SignupResult, error) {
 	humanPrincipal, err := s.principalSvc.CreateHuman(ctx, humanInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+	if emailVerified {
+		if err := s.markEmailVerified(ctx, humanPrincipal); err != nil {
+			return nil, errors.Join(err, s.deletePrincipal(ctx, humanPrincipal.ID))
+		}
 	}
 
 	// Create personal organization (this also creates the owner membership)
@@ -230,6 +252,18 @@ func (s *DefaultService) SignupWithInvite(ctx context.Context, input AcceptInvit
 		return nil, fmt.Errorf("failed to accept invite: %w", err)
 	}
 
+	// The invite token was delivered to this address, and the address
+	// matches the invite, so holding it shows the person controls the
+	// address. Without this the new member's own invitations would stay
+	// hidden from them, since listing and answering them needs a verified
+	// email.
+	if _, err := s.client.Human.Update().
+		Where(human.PrincipalIDEQ(result.Principal.ID), human.EmailVerifiedAtIsNil()).
+		SetEmailVerifiedAt(time.Now()).
+		Save(ctx); err != nil {
+		return nil, fmt.Errorf("failed to mark email verified: %w", err)
+	}
+
 	return &AcceptInviteOnSignupResult{
 		SignupResult:          *result,
 		InvitedOrganizationID: inv.OrganizationID,
@@ -254,6 +288,12 @@ func (s *DefaultService) SignupOrGetExisting(ctx context.Context, input SignupIn
 		// who claims it sign in as its owner.
 		if !input.EmailVerified {
 			return nil, false, ErrEmailNotVerified
+		}
+		// Nor may a verified login take over an account whose own email
+		// was never proven: whoever registered it, possibly before the
+		// address's owner, could still hold its other credentials.
+		if existing.Human == nil || existing.Human.EmailVerifiedAt == nil {
+			return nil, false, ErrAccountEmailUnverified
 		}
 		// User exists, get their personal org
 		personalOrg, err := s.orgSvc.GetPersonalOrg(ctx, existing.ID)
@@ -308,6 +348,12 @@ var ErrEmailTaken = errors.New("signup: email already has an account")
 // exists for an email the caller has not verified.
 var ErrEmailNotVerified = errors.New("signup: email not verified; cannot sign in to the existing account")
 
+// ErrAccountEmailUnverified is returned by SignupOrGetExisting when an
+// account exists for the email but its own email was never verified. The
+// verified login is not linked to it: the account's holder must sign in
+// with its existing credentials and verify the address first.
+var ErrAccountEmailUnverified = errors.New("signup: the existing account's email is not verified; cannot sign in to it with this login")
+
 // ErrInviteEmailMismatch is returned when signing up with an invite under
 // an email other than the one invited.
 var ErrInviteEmailMismatch = errors.New("signup: email does not match the invite")
@@ -320,6 +366,28 @@ func (s *DefaultService) deletePrincipal(ctx context.Context, id uuid.UUID) erro
 	}
 	if err := s.client.Principal.DeleteOneID(id).Exec(ctx); err != nil {
 		return fmt.Errorf("undoing signup: deleting principal: %w", err)
+	}
+	return nil
+}
+
+// markEmailVerified records that p's email is verified, through the
+// principal service when it can, else directly in the database.
+func (s *DefaultService) markEmailVerified(ctx context.Context, p *principal.Principal) error {
+	now := time.Now()
+	switch m, ok := s.principalSvc.(emailVerificationMarker); {
+	case ok:
+		if err := m.MarkEmailVerified(ctx, p.ID); err != nil {
+			return fmt.Errorf("failed to record verified email: %w", err)
+		}
+	case s.client != nil:
+		if err := s.client.Human.Update().Where(human.PrincipalID(p.ID)).SetEmailVerifiedAt(now).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to record verified email: %w", err)
+		}
+	default:
+		return errors.New("signup: the principal service cannot record a verified email")
+	}
+	if p.Human != nil {
+		p.Human.EmailVerifiedAt = &now
 	}
 	return nil
 }

@@ -39,10 +39,17 @@
 //
 //   - X-Session-ID: Frontend session identifier
 //   - X-Request-ID: Per-request identifier (generated if not provided)
-//   - X-User-ID: Authenticated user identifier
+//
+// The user ID is never taken from a request header. Set it from the
+// authenticated session or token with [WithUserID], in middleware that runs
+// after authentication and before the request tracker.
 //
 // Use [SessionIDFromContext], [RequestIDFromContext], and [UserIDFromContext]
 // to retrieve these values in your handlers.
+//
+// [RequestTrackerMiddleware] records the matched route pattern
+// (http.ServeMux's Request.Pattern or chi's route pattern, or "unmatched"),
+// never the raw request path, which can carry tokens.
 //
 // # Event Types
 //

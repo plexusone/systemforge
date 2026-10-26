@@ -95,15 +95,11 @@ func TestOrganizationAPIAuthorization(t *testing.T) {
 		t.Fatalf("owner membership = %+v, %v", m, err)
 	}
 
-	add := func(as, who uuid.UUID, role string) int {
-		code, _ := api.do(http.MethodPost, "/organizations/acme/members", as, map[string]any{"principal_id": who.String(), "role": role})
-		return code
-	}
-	if code := add(owner, admin, "admin"); code >= 300 {
-		t.Fatalf("owner adds admin: %d", code)
-	}
-	if code := add(admin, member, "member"); code >= 300 {
-		t.Fatalf("admin adds member: %d", code)
+	// Members join by invitation; the fixture adds them directly.
+	for who, role := range map[uuid.UUID]string{admin: "admin", member: "member"} {
+		if _, err := api.svc.AddMember(ctx, organization.AddMemberInput{OrganizationID: org.ID, PrincipalID: who, Role: role}); err != nil {
+			t.Fatalf("AddMember: %v", err)
+		}
 	}
 
 	for _, tc := range []struct {

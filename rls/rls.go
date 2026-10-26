@@ -1,4 +1,25 @@
-// Package rls provides PostgreSQL Row-Level Security helpers for SystemForge.
+// Package rls provides PostgreSQL Row-Level Security helpers for
+// applications built on SystemForge.
+//
+// # Isolation model
+//
+// RLS here is a library for an application's own tenant-scoped tables. It
+// is not how SystemForge isolates its identity tables: the identity
+// services (organizations, memberships, invites, application roles,
+// resource grants, principals) never set the tenant session variable, and
+// they rely on tenant predicates in application code. Some of their queries
+// span organizations by design (a principal's memberships, the orgs claim,
+// signup), so forcing RLS on an identity table makes them return nothing.
+//
+// Run RLS-protected tables through a database role that is neither the
+// tables' owner nor BYPASSRLS, separate from any role that must bypass RLS
+// (migrations, SystemForge's identity services). Granting BYPASSRLS to a
+// role shared with RLS-protected stores switches their isolation off.
+//
+// Names given to the SQL builders (tables, columns, roles, policies) are
+// quoted as identifiers, and session variable names as string literals, so
+// none is read as SQL. Quoted identifiers are case-sensitive: pass names as
+// PostgreSQL stores them (lower case for names created unquoted).
 package rls
 
 import (
@@ -6,6 +27,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ErrNotInTransaction is returned when a session variable is set through a
@@ -108,6 +131,12 @@ func (h *Helper) SetContext(ctx context.Context, db Executor, tenantID, userID s
 
 // ClearContext clears the tenant and user session variables.
 func (h *Helper) ClearContext(ctx context.Context, db Executor) error {
+	// RESET takes no bind parameter, so the names must be plain.
+	for _, name := range []string{h.config.SessionVariable, h.config.UserSessionVariable} {
+		if err := checkSettingName(name); err != nil {
+			return err
+		}
+	}
 	queries := []string{
 		fmt.Sprintf("RESET %s", h.config.SessionVariable),
 		fmt.Sprintf("RESET %s", h.config.UserSessionVariable),
@@ -148,51 +177,61 @@ func NewPolicySQL(tableName, policyName string, cfg *Config) *PolicySQL {
 
 // EnableRLS returns SQL to enable RLS on the table.
 func (p *PolicySQL) EnableRLS() string {
-	return fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY", p.tableName)
+	return fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY", quoteIdent(p.tableName))
 }
 
 // ForceRLS returns SQL to force RLS even for table owners.
 func (p *PolicySQL) ForceRLS() string {
-	return fmt.Sprintf("ALTER TABLE %s FORCE ROW LEVEL SECURITY", p.tableName)
+	return fmt.Sprintf("ALTER TABLE %s FORCE ROW LEVEL SECURITY", quoteIdent(p.tableName))
+}
+
+// policy returns the quoted name of the policy for operation.
+func (p *PolicySQL) policy(operation string) string {
+	return quoteIdent(p.policyName + "_" + operation)
+}
+
+// tenantMatch is the tenant predicate of every policy: the tenant column
+// equals the session variable.
+func (p *PolicySQL) tenantMatch() string {
+	return fmt.Sprintf("%s::text = current_setting(%s, true)",
+		quoteIdent(p.config.TenantColumn), quoteLiteral(p.config.SessionVariable))
 }
 
 // CreateSelectPolicy returns SQL to create a SELECT policy.
 func (p *PolicySQL) CreateSelectPolicy() string {
 	return fmt.Sprintf(`
-CREATE POLICY %s_select ON %s
+CREATE POLICY %s ON %s
     FOR SELECT
-    USING (%s::text = current_setting('%s', true))`,
-		p.policyName, p.tableName, p.config.TenantColumn, p.config.SessionVariable)
+    USING (%s)`,
+		p.policy("select"), quoteIdent(p.tableName), p.tenantMatch())
 }
 
 // CreateInsertPolicy returns SQL to create an INSERT policy.
 func (p *PolicySQL) CreateInsertPolicy() string {
 	return fmt.Sprintf(`
-CREATE POLICY %s_insert ON %s
+CREATE POLICY %s ON %s
     FOR INSERT
-    WITH CHECK (%s::text = current_setting('%s', true))`,
-		p.policyName, p.tableName, p.config.TenantColumn, p.config.SessionVariable)
+    WITH CHECK (%s)`,
+		p.policy("insert"), quoteIdent(p.tableName), p.tenantMatch())
 }
 
 // CreateUpdatePolicy returns SQL to create an UPDATE policy.
 func (p *PolicySQL) CreateUpdatePolicy() string {
 	return fmt.Sprintf(`
-CREATE POLICY %s_update ON %s
+CREATE POLICY %s ON %s
     FOR UPDATE
-    USING (%s::text = current_setting('%s', true))
-    WITH CHECK (%s::text = current_setting('%s', true))`,
-		p.policyName, p.tableName,
-		p.config.TenantColumn, p.config.SessionVariable,
-		p.config.TenantColumn, p.config.SessionVariable)
+    USING (%s)
+    WITH CHECK (%s)`,
+		p.policy("update"), quoteIdent(p.tableName), p.tenantMatch(), p.tenantMatch())
 }
 
 // CreateDeletePolicy returns SQL to create a DELETE policy.
 func (p *PolicySQL) CreateDeletePolicy() string {
 	return fmt.Sprintf(`
-CREATE POLICY %s_delete ON %s
+CREATE POLICY %s ON %s
     FOR DELETE
-    USING (%s::text = current_setting('%s', true))`,
-		p.policyName, p.tableName, p.config.TenantColumn, p.config.SessionVariable)
+    USING (%s)`,
+		p.policy("delete"), quoteIdent(p.tableName), p.tenantMatch())
 }
 
 // CreateAllPolicies returns SQL to enable RLS and create all CRUD policies.
@@ -213,8 +252,8 @@ func (p *PolicySQL) CreateAllPolicies() string {
 
 // DropPolicy returns SQL to drop a policy.
 func (p *PolicySQL) DropPolicy(operation string) string {
-	return fmt.Sprintf("DROP POLICY IF EXISTS %s_%s ON %s",
-		p.policyName, operation, p.tableName)
+	return fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s",
+		p.policy(operation), quoteIdent(p.tableName))
 }
 
 // DropAllPolicies returns SQL to drop all policies and disable RLS.
@@ -228,16 +267,16 @@ ALTER TABLE %s DISABLE ROW LEVEL SECURITY;`,
 		p.DropPolicy("insert"),
 		p.DropPolicy("update"),
 		p.DropPolicy("delete"),
-		p.tableName)
+		quoteIdent(p.tableName))
 }
 
 // BypassRLS returns SQL to grant RLS bypass to a role.
 // This is typically used for admin/migration roles.
 func BypassRLS(roleName string) string {
-	return fmt.Sprintf("ALTER ROLE %s BYPASSRLS", roleName)
+	return fmt.Sprintf("ALTER ROLE %s BYPASSRLS", pgx.Identifier{roleName}.Sanitize())
 }
 
 // NoBypassRLS returns SQL to revoke RLS bypass from a role.
 func NoBypassRLS(roleName string) string {
-	return fmt.Sprintf("ALTER ROLE %s NOBYPASSRLS", roleName)
+	return fmt.Sprintf("ALTER ROLE %s NOBYPASSRLS", pgx.Identifier{roleName}.Sanitize())
 }

@@ -1,9 +1,31 @@
 package productgraph
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
+
+// RouteUnmatched is the path recorded for a request that no route pattern
+// matched.
+const RouteUnmatched = "unmatched"
+
+// routePattern returns the route pattern that matched r, or RouteUnmatched.
+// The raw request path is never returned, because it can carry tokens and
+// is unbounded.
+func routePattern(r *http.Request) string {
+	if r.Pattern != "" {
+		return r.Pattern
+	}
+	if rctx := chi.RouteContext(r.Context()); rctx != nil {
+		if p := rctx.RoutePattern(); p != "" {
+			return p
+		}
+	}
+	return RouteUnmatched
+}
 
 // responseWriter wraps http.ResponseWriter to capture the status code.
 type responseWriter struct {
@@ -29,7 +51,9 @@ func (w *responseWriter) Write(b []byte) (int, error) {
 }
 
 // RequestTrackerMiddleware creates middleware that tracks HTTP requests to ProductGraph.
-// It records api.response events with method, path, status code, and duration.
+// It records api.response events with method, route pattern, status code,
+// and duration. The route is the pattern http.ServeMux or chi matched, or
+// RouteUnmatched, never the request path.
 func RequestTrackerMiddleware(client *Client) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -46,13 +70,15 @@ func RequestTrackerMiddleware(client *Client) func(http.Handler) http.Handler {
 			duration := time.Since(start)
 
 			// Track the request asynchronously
-			_ = client.TrackAPICall(
+			if err := client.TrackAPICall(
 				r.Context(),
 				r.Method,
-				r.URL.Path,
+				routePattern(r),
 				ww.status,
 				duration,
-			)
+			); err != nil {
+				slog.WarnContext(r.Context(), "productgraph: tracking request", "error", err)
+			}
 		})
 	}
 }

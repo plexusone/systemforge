@@ -76,6 +76,8 @@ import (
 // Create session store (using omnistorage for Redis support)
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:        "redis",
+    SiteID:         "myapp", // required for redis
+    Sealer:         sealer,  // required for redis: encrypts tokens at rest
     RedisURL:       "redis://localhost:6379",
     MaxSessionSize: 1024 * 1024, // 1MB
     DefaultTTL:     24 * time.Hour,
@@ -83,12 +85,9 @@ store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
 
 // Create cookie manager
 cookies := bff.NewCookieManager(bff.CookieConfig{
-    Name:     "session",
-    Domain:   "example.com",
+    Name:     "__Host-myapp_session",
     Path:     "/",
-    Secure:   true,
-    HTTPOnly: true,
-    SameSite: http.SameSiteLaxMode,
+    SameSite: http.SameSiteStrictMode,
     MaxAge:   86400,
 })
 
@@ -134,6 +133,8 @@ The OmniStorage backend provides:
 ```go
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:        "redis",
+    SiteID:         "myapp", // required for redis
+    Sealer:         sealer,  // required for redis: encrypts tokens at rest
     RedisURL:       os.Getenv("REDIS_URL"),
     MaxSessionSize: 1024 * 1024,
     ControlOptions: []omnisession.ControlOption{
@@ -156,10 +157,11 @@ type Session struct {
     // OAuth tokens (stored server-side)
     AccessToken           string
     RefreshToken          string
+    TokenType             string // "DPoP": sent with the DPoP scheme and a proof; "Bearer": as Bearer
     AccessTokenExpiresAt  time.Time
     RefreshTokenExpiresAt time.Time
 
-    // DPoP (if using OAuth 2.1)
+    // DPoP key pair the tokens are bound to
     DPoPKeyPairJSON       []byte
     DPoPThumbprint        string
 

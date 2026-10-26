@@ -2,6 +2,8 @@ package bff
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -43,7 +45,18 @@ type MiddlewareConfig struct {
 	RequireSession bool
 
 	// TouchOnAccess when true updates LastAccessedAt on each request.
+	// IdleTimeout is measured from LastAccessedAt, so without it a session
+	// ends IdleTimeout after its last refresh even while in use.
 	TouchOnAccess bool
+
+	// IdleTimeout ends a session not used for this long. Zero means
+	// DefaultIdleTimeout; a negative value disables the check.
+	IdleTimeout time.Duration
+
+	// MaxLifetime ends a session this long after it was created, however
+	// often its tokens are refreshed. Zero means DefaultMaxLifetime; a
+	// negative value disables the check.
+	MaxLifetime time.Duration
 }
 
 // SessionMiddleware creates middleware that loads sessions from cookies.
@@ -51,6 +64,8 @@ func SessionMiddleware(config MiddlewareConfig) func(http.Handler) http.Handler 
 	if config.RefreshThreshold == 0 {
 		config.RefreshThreshold = 5 * time.Minute
 	}
+	idleTimeout := resolveLifetimeLimit(config.IdleTimeout, DefaultIdleTimeout)
+	maxLifetime := resolveLifetimeLimit(config.MaxLifetime, DefaultMaxLifetime)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -87,9 +102,19 @@ func SessionMiddleware(config MiddlewareConfig) func(http.Handler) http.Handler 
 				return
 			}
 
+			// End a session that has been idle or alive too long.
+			if session.LifetimeExceeded(time.Now(), idleTimeout, maxLifetime) {
+				endSession(r.Context(), config.Store, session.ID)
+				config.CookieManager.ClearSessionCookie(w)
+				handleSessionExpired(w, r, config)
+				return
+			}
+
 			// Touch session if configured
 			if config.TouchOnAccess {
-				_ = config.Store.Touch(r.Context(), sessionID)
+				if err := config.Store.Touch(r.Context(), session.ID); err != nil {
+					slog.ErrorContext(r.Context(), "bff: touching session failed", "error", err)
+				}
 			}
 
 			// Call session load hook if configured
@@ -105,6 +130,15 @@ func SessionMiddleware(config MiddlewareConfig) func(http.Handler) http.Handler 
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
+	}
+}
+
+// endSession deletes a session that has run past its lifetime, logging a
+// failure: the request is refused either way, since the session is checked
+// again on every load.
+func endSession(ctx context.Context, store Store, id string) {
+	if err := store.Delete(ctx, id); err != nil && !errors.Is(err, ErrSessionNotFound) {
+		slog.ErrorContext(ctx, "bff: deleting expired session failed", "error", err)
 	}
 }
 

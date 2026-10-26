@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/plexusone/systemforge/identity/appcatalog"
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
@@ -22,6 +23,7 @@ import (
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
 	"github.com/plexusone/systemforge/identity/credential"
+	"github.com/plexusone/systemforge/identity/dpopproof"
 	"github.com/plexusone/systemforge/observability"
 )
 
@@ -33,6 +35,10 @@ type Server struct {
 	oauth2          fosite.OAuth2Provider
 	key             *rsa.PrivateKey
 	keyID           string
+	keys            *oauthcore.KeyRing
+	codeStrategy    oauth2.AuthorizeCodeStrategy
+	dpop            *dpopproof.Checker
+	dpopCache       dpopproof.ReplayCache
 	huma            huma.API
 	router          chi.Router
 	logger          *slog.Logger
@@ -43,6 +49,7 @@ type Server struct {
 	orgs            OrgsSource
 	appCatalog      *appcatalog.Catalog
 	accessChanges   AccessChangeLister
+	accessScope     AccessChangeScope
 }
 
 // Option configures a Server.
@@ -127,9 +134,16 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		}
 		s.keyID = kid
 	}
+	if err := s.config.Keys.LoadVerificationKeys(s.keyID); err != nil {
+		return nil, err
+	}
+	s.keys = oauthcore.NewKeyRing(key, s.keyID, verificationKeys(s.config.Keys.VerificationKeys))
 
-	// Set up Fosite
+	// Set up Fosite and DPoP proof checking
 	if err := s.setupFosite(); err != nil {
+		return nil, err
+	}
+	if err := s.setupDPoP(); err != nil {
 		return nil, err
 	}
 
@@ -187,25 +201,23 @@ func (s *Server) setupFosite() error {
 		EnforcePKCE:                    s.config.Features.RequirePKCE,
 		EnforcePKCEForPublicClients:    true,
 		EnablePKCEPlainChallengeMethod: false,
+		ClientSecretsHasher:            ClientSecretHasher{},
 	}
 
-	// Key getter function for JWT signing
-	keyGetter := func(_ context.Context) (interface{}, error) {
-		return s.key, nil
-	}
-
-	// Create JWT signer
-	jwtSigner := &jwt.DefaultSigner{
-		GetPrivateKey: keyGetter,
-	}
+	// JWTs are signed with the signing key and verified with the key their
+	// kid selects from the key ring (the signing key and the verification
+	// keys), so tokens signed before a rotation keep verifying.
+	jwtSigner := s.keys.Signer()
 
 	// Access tokens are opaque (HMAC) by default, or RS256 JWTs verifiable
 	// against the JWKS when features.enable_jwt_access_tokens is set. Either
 	// way they are also stored, so revocation and introspection work.
 	var coreStrategy oauth2.CoreStrategy = compose.NewOAuth2HMACStrategy(fositeConfig)
 	if s.config.Features.EnableJWTAccessTokens {
-		coreStrategy = compose.NewOAuth2JWTStrategy(keyGetter, coreStrategy, fositeConfig)
+		coreStrategy = &oauth2.DefaultJWTStrategy{Signer: jwtSigner, HMACSHAStrategy: coreStrategy, Config: fositeConfig}
 	}
+
+	s.codeStrategy = coreStrategy
 
 	// Build OAuth2 provider with all needed components
 	s.oauth2 = compose.Compose(
@@ -213,7 +225,7 @@ func (s *Server) setupFosite() error {
 		s.storage,
 		&compose.CommonStrategy{
 			CoreStrategy:               coreStrategy,
-			OpenIDConnectTokenStrategy: compose.NewOpenIDConnectStrategy(keyGetter, fositeConfig),
+			OpenIDConnectTokenStrategy: &openid.DefaultStrategy{Signer: jwtSigner, Config: fositeConfig},
 			Signer:                     jwtSigner,
 		},
 		compose.OAuth2AuthorizeExplicitFactory,
@@ -455,7 +467,10 @@ func (s *Server) LoginTokenPolicy(ctx context.Context, clientID string) (credent
 }
 
 // Middleware returns HTTP middleware that validates access tokens.
-// Use this to protect your API endpoints.
+// Use this to protect your API endpoints. A DPoP-bound token is accepted
+// only with the DPoP scheme and a proof by its key whose htu is
+// dpop.resource_base_url (default: the issuer's origin) plus the request
+// path; an unbound one only with the Bearer scheme.
 //
 // Example:
 //
@@ -466,22 +481,12 @@ func (s *Server) Middleware() func(http.Handler) http.Handler {
 			ctx := r.Context()
 			logger := LoggerFromContext(ctx)
 
-			// Extract token from Authorization header
-			token := fosite.AccessTokenFromRequest(r)
-			if token == "" {
-				logger.Debug("missing access token", "path", r.URL.Path)
-				http.Error(w, "missing access token", http.StatusUnauthorized)
-				return
-			}
-
-			// Create session for introspection
-			session := s.Session("")
-
-			// Validate the token
-			ar, err := s.introspect(ctx, token, fosite.AccessToken, session)
-			if err != nil {
-				logger.Debug("invalid access token", "path", r.URL.Path, "error", err)
-				http.Error(w, "invalid access token", http.StatusUnauthorized)
+			// Validate the token: a DPoP-bound one needs the DPoP scheme and
+			// a proof by its key for this request.
+			ar, authErr := s.authenticateAccessToken(r, s.requestURL(r))
+			if authErr != nil {
+				logger.Debug("access token refused", "path", r.URL.Path, "error", authErr)
+				s.writeTokenAuthError(w, authErr)
 				return
 			}
 

@@ -10,19 +10,40 @@ import (
 type Client struct {
 	app     *ent.OAuthApp
 	storage *Storage
+	// secretHashes are the client's active secret hashes, newest first.
+	secretHashes []string
 }
 
-var _ fosite.Client = (*Client)(nil)
+var (
+	_ fosite.Client                   = (*Client)(nil)
+	_ fosite.ClientWithSecretRotation = (*Client)(nil)
+)
 
 // GetID returns the client ID.
 func (c *Client) GetID() string {
 	return c.app.ClientID
 }
 
-// GetHashedSecret returns nothing - we use custom validation.
+// GetHashedSecret returns the hash of the client's newest active secret,
+// or nil for a client without one.
 func (c *Client) GetHashedSecret() []byte {
-	// We use Argon2id and validate separately
-	return nil
+	if len(c.secretHashes) == 0 {
+		return nil
+	}
+	return []byte(c.secretHashes[0])
+}
+
+// GetRotatedHashes returns the hashes of the client's other active
+// secrets, accepted during a secret rotation.
+func (c *Client) GetRotatedHashes() [][]byte {
+	if len(c.secretHashes) < 2 {
+		return nil
+	}
+	out := make([][]byte, 0, len(c.secretHashes)-1)
+	for _, h := range c.secretHashes[1:] {
+		out = append(out, []byte(h))
+	}
+	return out
 }
 
 // GetRedirectURIs returns the registered redirect URIs.
@@ -48,6 +69,21 @@ func (c *Client) GetScopes() fosite.Arguments {
 // IsPublic returns true if this is a public client (SPA, native app).
 func (c *Client) IsPublic() bool {
 	return c.app.Public
+}
+
+// DPoPBoundAccessTokens reports whether the client must use DPoP (RFC
+// 9449's dpop_bound_access_tokens): every client except one registered
+// with the allow_bearer_tokens legacy exception, which may get unbound
+// bearer tokens.
+func (c *Client) DPoPBoundAccessTokens() bool {
+	return !c.app.AllowBearerTokens
+}
+
+// requiresDPoP reports whether a client must send DPoP proofs. Only a
+// Client registered with the bearer-token exception is exempt.
+func requiresDPoP(c fosite.Client) bool {
+	oc, ok := c.(*Client)
+	return !ok || oc.DPoPBoundAccessTokens()
 }
 
 // GetAudience returns the audience for this client.

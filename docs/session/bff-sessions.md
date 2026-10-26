@@ -57,8 +57,21 @@ store := bff.NewMemoryStore()
 For SQL databases via Ent ORM:
 
 ```go
-store := bff.NewEntStore(entClient)
+sealer, err := bff.NewKeyringSealer("k1", map[string][]byte{"k1": sessionKey})
+if err != nil {
+    return err
+}
+store, err := bff.NewEntStore(bff.EntStoreConfig{
+    Client: entClient, // implements bff.EntClientInterface
+    Sealer: sealer,    // encrypts tokens and DPoP keys at rest
+})
+if err != nil {
+    return err
+}
 ```
+
+See [Ent Store](../bff/ent-store.md) for the client adapter and key
+rotation.
 
 ### OmniStorage Store (Recommended)
 
@@ -67,7 +80,9 @@ For production with Redis and security controls:
 ```go
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:         "redis",
-    RedisURL:        "redis://localhost:6379",
+    SiteID:          "myapp", // required for redis
+    Sealer:          sealer,  // required for redis; see below
+    RedisURL:        "rediss://:password@redis.internal:6379", // TLS and a password
     MaxSessionSize:  1024 * 1024, // 1MB
     DefaultTTL:      24 * time.Hour,
     CleanupInterval: 5 * time.Minute,
@@ -75,16 +90,63 @@ store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
 })
 ```
 
+Tokens and DPoP private keys are sealed before they reach Redis. `Sealer` is
+required for the redis backend (`bff.ErrSealerRequired` otherwise). Each
+session's data is encrypted with AES-256-GCM and bound to its session ID and
+`SiteID`, so a ciphertext copied to another record does not open. Two sealers
+are provided:
+
+```go
+// Application-held keys, with key IDs for rotation (see below).
+sealer, err := bff.NewKeyringSealer("k1", map[string][]byte{
+    "k1": sessionKey, // 32 bytes, from your secret store
+})
+
+// Or a keyforge purpose key from the keys package, which versions and
+// rotates keys itself.
+sealer := bff.NewKeysSealer(sysKeys, "bff-session")
+```
+
+##### Rotating keyring keys
+
+Every sealed value names the key that sealed it. A rotation keeps the active
+key N and the previous key N-1 in the ring and removes only N-2, and each
+step is its own deploy, so rolling back any deploy still opens every session
+written so far:
+
+1. **Pre-stage `k2`.** Add it to the ring while `k1` stays active, and wait
+   until every instance runs it:
+   `bff.NewKeyringSealer("k1", map[string][]byte{"k1": k1, "k2": k2})`.
+2. **Promote `k2`.** Make it active and keep `k1`:
+   `bff.NewKeyringSealer("k2", map[string][]byte{"k1": k1, "k2": k2})`.
+   Rolling this deploy back returns to step 1, which still opens sessions
+   sealed with `k2`.
+3. **Next rotation.** Pre-stage `k3` with `k1` still in the ring, then
+   promote `k3` with `{"k2": k2, "k3": k3}`. Sessions still sealed with `k1`
+   (N-2) no longer open and their users sign in again; a session is sealed
+   again under the active key whenever it is updated, for example on token
+   refresh.
+
+Never add a new active key and drop the previous one in the same deploy.
+
+Once a sealer is configured, sessions stored in plaintext are rejected and
+their users sign in again. `InsecurePlaintext: true` disables the requirement
+for local development only.
+
 #### OmniStorage Configuration
 
 | Field | Description | Default |
 |-------|-------------|---------|
 | `Backend` | `"memory"` or `"redis"` | `"memory"` |
-| `RedisURL` | Redis connection URL | Required for redis |
+| `RedisURL` | Redis connection URL. A server that is not on loopback must use TLS (`rediss://`) with certificate verification and a password | Required for redis |
+| `AllowInsecureRedis` | Permit a non-loopback Redis without TLS, a password or certificate verification, such as a local container network (development only; logs a warning) | `false` |
+| `SiteID` | Tags every session with this application; a session tagged for another site is not found | Required for redis |
+| `Sealer` | Encrypts tokens and DPoP keys at rest (`NewKeyringSealer`, `NewKeysSealer`) | Required for redis |
+| `InsecurePlaintext` | Store secrets unencrypted without a `Sealer` (development only) | `false` |
 | `MaxSessionSize` | Max session size in bytes | 1MB |
 | `DefaultTTL` | Session lifetime | 24 hours |
 | `CleanupInterval` | Cleanup frequency | 5 minutes |
-| `KeyPrefix` | Redis key prefix | `"session:"` |
+| `KeyPrefix` | Prefix of session keys and the per-user session index | `"session:<SiteID>:"` |
 | `ControlOptions` | Logger, violation handler | None |
 
 #### With Observability
@@ -94,6 +156,8 @@ import omnisession "github.com/plexusone/omnistorage-core/session"
 
 store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
     Backend:        "redis",
+    SiteID:         "myapp", // required for redis
+    Sealer:         sealer,  // required for redis
     RedisURL:       os.Getenv("REDIS_URL"),
     MaxSessionSize: 1024 * 1024,
     ControlOptions: []omnisession.ControlOption{
@@ -115,15 +179,21 @@ store, err := bff.NewOmniStorageStore(bff.OmniStorageConfig{
 
 ```go
 cookies := bff.NewCookieManager(bff.CookieConfig{
-    Name:     "session",      // Cookie name
-    Domain:   "example.com",  // Cookie domain
-    Path:     "/",            // Cookie path
-    Secure:   true,           // HTTPS only (set false for local dev)
-    HTTPOnly: true,           // Not accessible to JavaScript
-    SameSite: http.SameSiteLaxMode,
-    MaxAge:   86400,          // 24 hours in seconds
+    Name:     "__Host-myapp_session", // Default: bff.DefaultCookieName ("__Host-sf_session")
+    Path:     "/",                    // Required for a __Host- cookie
+    SameSite: http.SameSiteStrictMode,
+    MaxAge:   86400,                  // 24 hours in seconds
 })
 ```
+
+The cookie is always `HttpOnly`, and `Secure` unless `AllowInsecure` is set
+for plain-HTTP development (the default name is then `bff.InsecureCookieName`,
+`sf_session`, because browsers reject a `__Host-` cookie that is not
+`Secure`). The cookie is always host-only: `CookieConfig` has no `Domain`
+field, because a `Domain` would share the session with every subdomain, any
+of which could then read or overwrite it. `CookieConfig.Validate` (which
+`bff.NewHandler` calls) rejects a `__Host-` name with another `Path` or
+without `Secure`.
 
 ## Middleware
 

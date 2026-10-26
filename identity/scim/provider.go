@@ -192,19 +192,66 @@ func (s *providerService) ListUsers(ctx context.Context, opts ListOptions) (*Lis
 	}
 
 	// Convert to interface slice and populate metadata
+	groupsOf, err := s.groupsForUsers(ctx, users)
+	if err != nil {
+		return nil, err
+	}
 	resources := make([]any, len(users))
 	for i, user := range users {
-		// Populate groups for each user
-		groups, err := s.p.store.GetGroupsForUser(ctx, user.ID)
-		if err != nil {
-			return nil, err
-		}
-		user.Groups = groups
+		user.Groups = groupsOf[user.ID]
 		s.populateUserMeta(user)
 		resources[i] = user
 	}
 
 	return NewListResponse(resources, total, opts.StartIndex, len(users)), nil
+}
+
+// groupsForUsers loads the groups of a page of users: in one call when the
+// store implements BatchMembershipStore, otherwise one call per user.
+func (s *providerService) groupsForUsers(ctx context.Context, users []*User) (map[string][]GroupRef, error) {
+	if len(users) == 0 {
+		return nil, nil
+	}
+	if b, ok := s.p.store.(BatchMembershipStore); ok {
+		ids := make([]string, len(users))
+		for i, u := range users {
+			ids[i] = u.ID
+		}
+		return b.GetGroupsForUsers(ctx, ids)
+	}
+	out := make(map[string][]GroupRef, len(users))
+	for _, u := range users {
+		groups, err := s.p.store.GetGroupsForUser(ctx, u.ID)
+		if err != nil {
+			return nil, err
+		}
+		out[u.ID] = groups
+	}
+	return out, nil
+}
+
+// membersForGroups loads the members of a page of groups: in one call when
+// the store implements BatchMembershipStore, otherwise one call per group.
+func (s *providerService) membersForGroups(ctx context.Context, groups []*Group) (map[string][]MemberRef, error) {
+	if len(groups) == 0 {
+		return nil, nil
+	}
+	if b, ok := s.p.store.(BatchMembershipStore); ok {
+		ids := make([]string, len(groups))
+		for i, g := range groups {
+			ids[i] = g.ID
+		}
+		return b.GetMembersForGroups(ctx, ids)
+	}
+	out := make(map[string][]MemberRef, len(groups))
+	for _, g := range groups {
+		members, err := s.p.store.GetMembersForGroup(ctx, g.ID)
+		if err != nil {
+			return nil, err
+		}
+		out[g.ID] = members
+	}
+	return out, nil
 }
 
 // CreateUser creates a new user.
@@ -219,12 +266,8 @@ func (s *providerService) CreateUser(ctx context.Context, user *User) (*User, er
 	}
 
 	// Hash password if provided
-	if user.Password != "" {
-		hashed, err := s.p.passwordHasher.Hash(user.Password)
-		if err != nil {
-			return nil, ErrInternal("failed to hash password: " + err.Error())
-		}
-		user.Password = hashed
+	if err := s.hashPassword(ctx, user); err != nil {
+		return nil, err
 	}
 
 	// Set schemas if not present
@@ -247,6 +290,20 @@ func (s *providerService) CreateUser(ctx context.Context, user *User) (*User, er
 	return created, nil
 }
 
+// hashPassword replaces a password supplied in a write with its hash, so a
+// store never receives a plaintext password.
+func (s *providerService) hashPassword(ctx context.Context, user *User) error {
+	if user.Password == "" {
+		return nil
+	}
+	hashed, err := s.p.passwordHasher.Hash(user.Password)
+	if err != nil {
+		return InternalError(ctx, err)
+	}
+	user.Password = hashed
+	return nil
+}
+
 // UpdateUser replaces a user (PUT semantics).
 func (s *providerService) UpdateUser(ctx context.Context, id string, user *User, etag string) (*User, error) {
 	if err := s.p.auth.CanUpdate(ctx, ResourceTypeUser, id); err != nil {
@@ -267,6 +324,11 @@ func (s *providerService) UpdateUser(ctx context.Context, id string, user *User,
 	}
 
 	user.ID = id
+	// A password in the replacement is hashed before the store sees it,
+	// as on create.
+	if err := s.hashPassword(ctx, user); err != nil {
+		return nil, err
+	}
 	updated, err := s.p.store.UpdateUser(ctx, id, user)
 	if err != nil {
 		return nil, err
@@ -308,19 +370,22 @@ func (s *providerService) PatchUser(ctx context.Context, id string, patch *Patch
 		}
 	}
 
-	// Apply patch operations
+	// Apply patch operations. The patch is applied to existing in place,
+	// so the stored password is set aside first: a password present after
+	// the patch came from the request and is hashed; otherwise the stored
+	// value is passed back unchanged.
+	stored := existing.Password
+	existing.Password = ""
 	patched, err := applyUserPatch(existing, patch.Operations)
 	if err != nil {
 		return nil, err
 	}
-
-	// Hash password if it was changed
-	if patched.Password != "" && patched.Password != existing.Password {
-		hashed, err := s.p.passwordHasher.Hash(patched.Password)
-		if err != nil {
-			return nil, ErrInternal("failed to hash password: " + err.Error())
+	if patched.Password != "" {
+		if err := s.hashPassword(ctx, patched); err != nil {
+			return nil, err
 		}
-		patched.Password = hashed
+	} else {
+		patched.Password = stored
 	}
 
 	// Update in store
@@ -394,14 +459,13 @@ func (s *providerService) ListGroups(ctx context.Context, opts ListOptions) (*Li
 	}
 
 	// Convert to interface slice and populate metadata
+	membersOf, err := s.membersForGroups(ctx, groups)
+	if err != nil {
+		return nil, err
+	}
 	resources := make([]any, len(groups))
 	for i, group := range groups {
-		// Populate members for each group
-		members, err := s.p.store.GetMembersForGroup(ctx, group.ID)
-		if err != nil {
-			return nil, err
-		}
-		group.Members = members
+		group.Members = membersOf[group.ID]
 		s.populateGroupMeta(group)
 		resources[i] = group
 	}
@@ -608,6 +672,10 @@ func (s *providerService) ProcessBulk(ctx context.Context, req *BulkRequest) (*B
 	if len(req.Operations) > s.p.config.BulkMaxOperations {
 		return nil, ErrTooMany(fmt.Sprintf("bulk request exceeds maximum of %d operations", s.p.config.BulkMaxOperations))
 	}
+	// Each password costs a hash; bound the hashing one request can cause.
+	if n, limit := countBulkPasswords(req.Operations), s.p.config.bulkMaxPasswordOperations(); n > limit {
+		return nil, ErrTooMany(fmt.Sprintf("bulk request sets %d passwords; at most %d are allowed per request", n, limit))
+	}
 
 	response := &BulkResponse{
 		Schemas:    []string{SchemaBulkResponse},
@@ -642,6 +710,54 @@ func (s *providerService) ProcessBulk(ctx context.Context, req *BulkRequest) (*B
 	}
 
 	return response, nil
+}
+
+// countBulkPasswords counts the operations that set a password: a user
+// create or replace whose data has a password attribute, or a PATCH with a
+// password path or a value carrying one.
+func countBulkPasswords(ops []BulkOperation) int {
+	n := 0
+	for _, op := range ops {
+		if bulkSetsPassword(op.Data) {
+			n++
+		}
+	}
+	return n
+}
+
+func bulkSetsPassword(data any) bool {
+	m, ok := data.(map[string]any)
+	if !ok {
+		return false
+	}
+	for k, v := range m {
+		switch {
+		case strings.EqualFold(k, "password"):
+			return true
+		case strings.EqualFold(k, "Operations"):
+			patchOps, ok := v.([]any)
+			if !ok {
+				continue
+			}
+			for _, po := range patchOps {
+				pm, ok := po.(map[string]any)
+				if !ok {
+					continue
+				}
+				for pk, pv := range pm {
+					if strings.EqualFold(pk, "path") {
+						if path, ok := pv.(string); ok && strings.EqualFold(path, "password") {
+							return true
+						}
+					}
+					if strings.EqualFold(pk, "value") && bulkSetsPassword(pv) {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 // resolveBulkIdReferences replaces bulkId:xxx references with actual resource IDs.
@@ -755,8 +871,8 @@ func (s *providerService) processBulkCreate(ctx context.Context, resourceType st
 		}
 		created, err := s.CreateUser(ctx, user)
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "201"
@@ -771,8 +887,8 @@ func (s *providerService) processBulkCreate(ctx context.Context, resourceType st
 		}
 		created, err := s.CreateGroup(ctx, group)
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "201"
@@ -802,8 +918,8 @@ func (s *providerService) processBulkUpdate(ctx context.Context, resourceType, i
 		}
 		updated, err := s.UpdateUser(ctx, id, user, "")
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "200"
@@ -818,8 +934,8 @@ func (s *providerService) processBulkUpdate(ctx context.Context, resourceType, i
 		}
 		updated, err := s.UpdateGroup(ctx, id, group, "")
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "200"
@@ -850,8 +966,8 @@ func (s *providerService) processBulkPatch(ctx context.Context, resourceType, id
 	case "Users":
 		updated, err := s.PatchUser(ctx, id, patch, "")
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "200"
@@ -860,8 +976,8 @@ func (s *providerService) processBulkPatch(ctx context.Context, resourceType, id
 	case "Groups":
 		updated, err := s.PatchGroup(ctx, id, patch, "")
 		if err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "200"
@@ -884,15 +1000,15 @@ func (s *providerService) processBulkDelete(ctx context.Context, resourceType, i
 	switch resourceType {
 	case "Users":
 		if err := s.DeleteUser(ctx, id); err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "204"
 	case "Groups":
 		if err := s.DeleteGroup(ctx, id); err != nil {
-			result.Status = fmt.Sprintf("%d", ToSCIMError(err).Status)
-			result.Response = ToSCIMError(err)
+			result.Status = fmt.Sprintf("%d", toSCIMError(ctx, err).Status)
+			result.Response = toSCIMError(ctx, err)
 			return result
 		}
 		result.Status = "204"
@@ -922,7 +1038,11 @@ func (s *providerService) PatchMe(ctx context.Context, patch *PatchRequest, etag
 }
 
 // populateUserMeta sets metadata fields on a user.
+//
+// It also clears the password: every user the service returns passes
+// through here, and a password, or its hash, is never returned.
 func (s *providerService) populateUserMeta(user *User) {
+	user.Password = ""
 	if user.Meta == nil {
 		user.Meta = &Meta{}
 	}
@@ -988,7 +1108,7 @@ func applyUserAddReplace(user *User, path string, value any) error {
 		}
 	case "password":
 		if v, ok := value.(string); ok {
-			// Store the password - the store implementation is responsible for hashing
+			// The provider hashes a password set by PATCH before the store sees it.
 			user.Password = v
 		}
 	case "active":

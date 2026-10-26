@@ -1,3 +1,9 @@
+// Package authzguardsql builds GuardSQL policies from SystemForge
+// authorization. PolicyBuilder checks read on every entity and read, list
+// and sort on every field of a GuardSQL schema, and compiles the answers
+// into a guardsql.Policy. Entities and fields are mapped to resources by a
+// ResourceBuilder; DefaultResourceBuilder gives each one a concrete,
+// organization-scoped resource ID.
 package authzguardsql
 
 import (
@@ -6,6 +12,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/grokify/guardsql"
 	gqlauthz "github.com/grokify/guardsql/authz"
 	"github.com/plexusone/systemforge/authz"
@@ -41,17 +48,74 @@ func (f ResourceBuilderFunc) FieldResource(entity, field string) authz.Resource 
 	return DefaultResourceBuilder{}.FieldResource(entity, field)
 }
 
-// DefaultResourceBuilder uses stable resource type names suitable for examples.
-type DefaultResourceBuilder struct{}
+// Resource types produced by DefaultResourceBuilder.
+const (
+	ResourceTypeEntity authz.ResourceType = "guardsql_entity"
+	ResourceTypeField  authz.ResourceType = "guardsql_field"
+)
+
+// resourceIDNamespace is the UUID namespace of the deterministic entity and
+// field resource IDs.
+var resourceIDNamespace = uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://github.com/plexusone/systemforge/authzguardsql"))
+
+// DefaultResourceBuilder maps every entity and every field to its own
+// concrete resource: type ResourceTypeEntity or ResourceTypeField, with a
+// deterministic ID derived from the organization, entity and field names
+// (see EntityResourceID and FieldResourceID), and the organization as the
+// resource's OrgID. The names are also kept in the "entity" and "field"
+// attributes for logging, but no provider evaluates attributes.
+//
+// Policy follows from the provider:
+//
+//   - SpiceDB checks the concrete object, so each field has its own
+//     relationships; write them for guardsql_field:<FieldResourceID>.
+//   - rbac checks role permissions keyed by type ("guardsql_field.read"),
+//     so such a permission grants every field of every entity. For
+//     column-level policy with rbac, use a ResourceBuilder whose resource
+//     types name the entity and field.
+//
+// Set OrgID: without it, rbac answers only for the resource owner, and IDs
+// are shared by every organization.
+type DefaultResourceBuilder struct {
+	// OrgID is the organization the schema's data belongs to.
+	OrgID *uuid.UUID
+}
+
+// EntityResourceID returns the deterministic resource ID of entity.
+func (b DefaultResourceBuilder) EntityResourceID(entity string) uuid.UUID {
+	return uuid.NewSHA1(resourceIDNamespace, []byte(b.scope()+"\x00entity\x00"+strings.ToLower(entity)))
+}
+
+// FieldResourceID returns the deterministic resource ID of entity's field.
+func (b DefaultResourceBuilder) FieldResourceID(entity, field string) uuid.UUID {
+	return uuid.NewSHA1(resourceIDNamespace, []byte(b.scope()+"\x00field\x00"+strings.ToLower(entity)+"\x00"+strings.ToLower(field)))
+}
+
+// scope returns the organization part of the resource IDs.
+func (b DefaultResourceBuilder) scope() string {
+	if b.OrgID == nil {
+		return ""
+	}
+	return b.OrgID.String()
+}
+
+// withOrg sets the builder's organization on r.
+func (b DefaultResourceBuilder) withOrg(r authz.Resource) authz.Resource {
+	if b.OrgID != nil {
+		r = r.WithOrg(*b.OrgID)
+	}
+	return r
+}
 
 // EntityResource implements ResourceBuilder.
-func (DefaultResourceBuilder) EntityResource(entity string) authz.Resource {
-	return authz.NewResource(authz.ResourceType("guardsql_entity")).WithAttr("entity", strings.ToLower(entity))
+func (b DefaultResourceBuilder) EntityResource(entity string) authz.Resource {
+	return b.withOrg(authz.NewResourceWithID(ResourceTypeEntity, b.EntityResourceID(entity))).
+		WithAttr("entity", strings.ToLower(entity))
 }
 
 // FieldResource implements ResourceBuilder.
-func (DefaultResourceBuilder) FieldResource(entity, field string) authz.Resource {
-	return authz.NewResource(authz.ResourceType("guardsql_field")).
+func (b DefaultResourceBuilder) FieldResource(entity, field string) authz.Resource {
+	return b.withOrg(authz.NewResourceWithID(ResourceTypeField, b.FieldResourceID(entity, field))).
 		WithAttr("entity", strings.ToLower(entity)).
 		WithAttr("field", strings.ToLower(field))
 }

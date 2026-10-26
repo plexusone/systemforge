@@ -480,12 +480,36 @@ import (
     "github.com/plexusone/systemforge/session/middleware"
 )
 
+// The owner check runs on every request: a valid key is refused once its
+// owner is deactivated or leaves the key's organization.
+ownerCheck := func(ctx context.Context, key *apikey.APIKey) error {
+    p, err := principals.GetByID(ctx, key.OwnerID)
+    if errors.Is(err, principal.ErrNotFound) {
+        return middleware.ErrAPIKeyOwnerNotAllowed
+    }
+    if err != nil {
+        return err
+    }
+    if !p.Active {
+        return middleware.ErrAPIKeyOwnerNotAllowed
+    }
+    if key.OrganizationID != nil {
+        m, err := orgs.GetMembership(ctx, *key.OrganizationID, key.OwnerID)
+        if errors.Is(err, organization.ErrMembershipNotFound) {
+            return middleware.ErrAPIKeyOwnerNotAllowed
+        }
+        if err != nil {
+            return err
+        }
+        if !m.Active {
+            return middleware.ErrAPIKeyOwnerNotAllowed
+        }
+    }
+    return nil
+}
+
 // Use the built-in middleware
-apiAuth := middleware.APIKeyAuth(middleware.APIKeyConfig{
-    Service:      service,
-    RecordUsage:  true,
-    ContextKey:   "api_key",
-})
+apiAuth := middleware.RequireAPIKey(service, ownerCheck)
 
 // Apply to routes
 r.Route("/api/v1", func(r chi.Router) {
@@ -496,7 +520,15 @@ r.Route("/api/v1", func(r chi.Router) {
 // Access in handler
 func listProjects(w http.ResponseWriter, r *http.Request) {
     principal := middleware.GetPrincipal(r.Context())
-    // principal.ID = owner_id
+    // principal.UserID = owner_id
     // principal.Scopes = granted scopes
 }
 ```
+
+`APIKeyMiddleware`, `RequireAPIKey`, `RequireAPIKeyWithScopes` and
+`OptionalAPIKey` require the owner check and panic without one. A key proves
+only who created it and what it was scoped to at the time; the check is what
+stops a key from asserting its organization after its owner was removed from
+it. Any error from the check refuses the request (`OptionalAPIKey` leaves it
+unauthenticated). `relyingparty.BearerMiddleware` performs the equivalent
+checks itself.

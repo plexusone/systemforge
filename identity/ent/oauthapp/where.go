@@ -116,6 +116,11 @@ func ManagedPrincipalsEnabled(v bool) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldEQ(FieldManagedPrincipalsEnabled, v))
 }
 
+// AllowBearerTokens applies equality check predicate on the "allow_bearer_tokens" field. It's identical to AllowBearerTokensEQ.
+func AllowBearerTokens(v bool) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldEQ(FieldAllowBearerTokens, v))
+}
+
 // FirstParty applies equality check predicate on the "first_party" field. It's identical to FirstPartyEQ.
 func FirstParty(v bool) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldEQ(FieldFirstParty, v))
@@ -719,6 +724,16 @@ func ManagedPrincipalsEnabledEQ(v bool) predicate.OAuthApp {
 // ManagedPrincipalsEnabledNEQ applies the NEQ predicate on the "managed_principals_enabled" field.
 func ManagedPrincipalsEnabledNEQ(v bool) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldNEQ(FieldManagedPrincipalsEnabled, v))
+}
+
+// AllowBearerTokensEQ applies the EQ predicate on the "allow_bearer_tokens" field.
+func AllowBearerTokensEQ(v bool) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldEQ(FieldAllowBearerTokens, v))
+}
+
+// AllowBearerTokensNEQ applies the NEQ predicate on the "allow_bearer_tokens" field.
+func AllowBearerTokensNEQ(v bool) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldNEQ(FieldAllowBearerTokens, v))
 }
 
 // FirstPartyEQ applies the EQ predicate on the "first_party" field.

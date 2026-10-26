@@ -38,6 +38,7 @@ a clock-skew margin (30 seconds by default, never below 15).
 cache := relyingparty.NewRevocationCache()
 mw := relyingparty.BearerMiddleware(relyingparty.BearerConfig{
     Tokens: client, Principals: principals, Revocation: cache,
+    DPoP: &relyingparty.DPoPConfig{ReplayCache: replayCache},
 })
 ```
 
@@ -55,16 +56,28 @@ restart never widens the window.
 ## Replay endpoint
 
 Enable `GET /access-changes?since=<RFC 3339>[&limit=]` with
-`systemauth.WithAccessChanges(accesschange.NewSource(db))`. The caller needs
-a client-credentials token with the `access_changes:read` scope. The
-response is `{"changes": [...], "next_since": ...}`.
+`systemauth.WithAccessChanges(accesschange.NewSource(db), scope)`. The caller
+needs a client-credentials token with the `access_changes:read` scope. The
+response is `{"changes": [...], "next_since": ...}`; a page filtered by the
+scope may be short or empty and still carry `next_since`.
+
+The second argument, a `systemauth.AccessChangeScope`, limits each client to
+the organizations whose changes it may read; changes that name no
+organization (a deactivation, revoked sessions) reach every client. It is
+called with the token's client ID and returns organization IDs, or `all` for
+a client that may read everything. In a deployment of several applications,
+return the organizations that use the client's application, so one
+application does not learn about another's members.
+`systemauth.AllOrganizations` gives every client the whole feed, for a
+deployment of one application. Without a scope the endpoint answers `501`.
+The same scope filters back-channel deliveries.
 
 | Status | Cause |
 |---|---|
 | `401` | Missing or invalid token |
 | `403` | The token lacks `access_changes:read` |
 | `400` | `since` is not RFC 3339, or `limit` is not a positive integer |
-| `501` | Access changes are not configured |
+| `501` | Access changes, or their scope, are not configured |
 
 ## Back-channel delivery
 
@@ -80,7 +93,8 @@ go bc.Run(ctx)
 ```
 
 SystemAuth POSTs an OpenID Connect Back-Channel Logout token carrying the
-`urn:systemforge:event:access_change` event to every registered client,
+`urn:systemforge:event:access_change` event to every registered client
+(within the access change scope, when one is configured),
 retrying with backoff for up to one maximum token lifetime and never
 following redirects; a `4xx` other than 408 and 429 is not retried. The
 receiver is `relyingparty.BackchannelHandler(cache, client, ...)`; the BFF
@@ -90,7 +104,7 @@ serves it at `<BasePath>/auth/backchannel-logout`.
 
 | Situation | Response |
 |---|---|
-| Token issued before a recorded change | `401` with `WWW-Authenticate: Bearer error="invalid_token", error_description="token expired"`; refresh and retry |
+| Token issued before a recorded change | `401` with `error="invalid_token", error_description="token expired"` on the `WWW-Authenticate` challenge of the scheme used: `DPoP algs="ES256 ES384 ES512", error=...` for a DPoP-bound token, `Bearer realm="api", error=...` for a bearer token; refresh and retry |
 | BFF session after a change | The session refreshes its tokens and claims and stays signed in with reduced claims |
 | Refresh refused (deactivation, revoked sessions) | The session ends |
 | Back-channel token invalid (signature, issuer, audience, `typ`, `jti` replay) | The receiver refuses it; a failure to end sessions answers `500` so SystemAuth retries |

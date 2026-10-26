@@ -20,7 +20,8 @@ type Config struct {
 	// SecretKey is the Stripe secret API key.
 	SecretKey string
 
-	// WebhookSecret is the Stripe webhook signing secret.
+	// WebhookSecret is the Stripe webhook signing secret. ProcessWebhook
+	// refuses every event with ErrWebhookSecretRequired while it is empty.
 	WebhookSecret string
 
 	// ConnectAccountID is the Stripe Connect account ID (optional, for platforms).
@@ -188,8 +189,12 @@ func (s *CheckoutService) buildLineItems(listing *marketplace.Listing, seats *in
 	}, nil
 }
 
-// ProcessWebhook handles Stripe webhook events.
+// ProcessWebhook handles Stripe webhook events. It refuses every event
+// with ErrWebhookSecretRequired when Config.WebhookSecret is empty.
 func (s *CheckoutService) ProcessWebhook(ctx context.Context, payload []byte, signature string) error {
+	if s.config.WebhookSecret == "" {
+		return ErrWebhookSecretRequired
+	}
 	event, err := VerifyWebhook(payload, signature, s.config.WebhookSecret)
 	if err != nil {
 		return fmt.Errorf("invalid webhook signature: %w", err)
@@ -296,17 +301,103 @@ func (s *CheckoutService) handleSubscriptionCreated(ctx context.Context, event *
 	return nil
 }
 
-// handleSubscriptionUpdated handles subscription updates.
-func (s *CheckoutService) handleSubscriptionUpdated(_ context.Context, event *stripe.Event) error {
+// handleSubscriptionUpdated reconciles the license a subscription pays for
+// with the subscription's status and quantity:
+//
+//   - active or trialing: the license is valid; a license suspended
+//     earlier is restored, and a seat-based license takes the
+//     subscription's quantity as its seat count.
+//   - past_due: unchanged while Stripe retries the payment; Stripe moves
+//     the subscription to unpaid or canceled when its retries end.
+//   - unpaid, paused, incomplete_expired or canceled: the license is
+//     suspended (ValidUntil is set to now) and its access is removed from
+//     the authorization system, so that a later payment can restore it.
+//   - incomplete: unchanged; checkout grants no license before payment.
+//
+// A subscription with no license is ignored.
+func (s *CheckoutService) handleSubscriptionUpdated(ctx context.Context, event *stripe.Event) error {
 	sub, err := parseSubscription(event)
 	if err != nil {
 		return err
 	}
+	lic, err := s.licenses.GetByStripeSubscriptionID(ctx, sub.ID)
+	if errors.Is(err, marketplace.ErrLicenseNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 
-	// Find the license by Stripe subscription ID and update it
-	// This would require adding a method to find license by Stripe subscription ID
-	_ = sub // TODO: Implement license update based on subscription status
+	switch sub.Status {
+	case stripe.SubscriptionStatusActive, stripe.SubscriptionStatusTrialing:
+		return s.activateLicense(ctx, lic, sub)
+	case stripe.SubscriptionStatusUnpaid, stripe.SubscriptionStatusPaused,
+		stripe.SubscriptionStatusIncompleteExpired, stripe.SubscriptionStatusCanceled:
+		return s.suspendLicense(ctx, lic)
+	default:
+		return nil
+	}
+}
+
+// activateLicense restores a suspended license and applies the
+// subscription's quantity to a seat-based license.
+func (s *CheckoutService) activateLicense(ctx context.Context, lic *marketplace.License, sub *stripe.Subscription) error {
+	suspended := lic.ValidUntil != nil
+	changed := suspended
+	lic.ValidUntil = nil
+	if lic.LicenseType == marketplace.LicenseSeatBased {
+		if q := subscriptionQuantity(sub); q > 0 && (lic.Seats == nil || *lic.Seats != q) {
+			lic.Seats = &q
+			changed = true
+		}
+	}
+	if !changed {
+		return nil
+	}
+	if err := s.licenses.Update(ctx, lic); err != nil {
+		return fmt.Errorf("failed to update license for subscription %s: %w", sub.ID, err)
+	}
+	if suspended && s.authzSync != nil {
+		if err := s.authzSync.SyncLicense(ctx, lic); err != nil {
+			return fmt.Errorf("failed to sync restored license to authz: %w", err)
+		}
+	}
 	return nil
+}
+
+// suspendLicense ends a license's validity now and removes its access from
+// the authorization system. A license already suspended is left as it is,
+// so redelivered events are harmless.
+func (s *CheckoutService) suspendLicense(ctx context.Context, lic *marketplace.License) error {
+	now := time.Now()
+	if lic.ValidUntil != nil && !lic.ValidUntil.After(now) {
+		return nil
+	}
+	lic.ValidUntil = &now
+	if err := s.licenses.Update(ctx, lic); err != nil {
+		return fmt.Errorf("failed to suspend license %s: %w", lic.ID, err)
+	}
+	if s.authzSync != nil {
+		if err := s.authzSync.SyncLicenseRevocation(ctx, lic); err != nil {
+			return fmt.Errorf("failed to sync suspended license to authz: %w", err)
+		}
+	}
+	return nil
+}
+
+// subscriptionQuantity returns the total quantity of a subscription's
+// items, or 0 when it has none.
+func subscriptionQuantity(sub *stripe.Subscription) int {
+	if sub.Items == nil {
+		return 0
+	}
+	var total int64
+	for _, item := range sub.Items.Data {
+		if item != nil {
+			total += item.Quantity
+		}
+	}
+	return int(total)
 }
 
 // handleSubscriptionDeleted revokes the license an ended subscription paid
@@ -331,14 +422,19 @@ func (s *CheckoutService) handleSubscriptionDeleted(ctx context.Context, event *
 }
 
 // handleInvoicePaid handles successful invoice payment.
+// It changes nothing: a subscription whose payment recovers is reported by
+// customer.subscription.updated with status active, which restores a
+// suspended license.
 func (s *CheckoutService) handleInvoicePaid(ctx context.Context, event *stripe.Event) error {
-	// Extend license validity if needed
 	return nil
 }
 
 // handleInvoicePaymentFailed handles failed invoice payment.
+// It changes nothing: Stripe reports the subscription's resulting status
+// (past_due while retrying, then unpaid or canceled) through
+// customer.subscription.updated and customer.subscription.deleted, which
+// suspend or revoke the license.
 func (s *CheckoutService) handleInvoicePaymentFailed(ctx context.Context, event *stripe.Event) error {
-	// Mark license as past_due or revoke after grace period
 	return nil
 }
 

@@ -94,3 +94,10 @@ deployment has not seen. To be asked again after a refusal, clear the
 - The refusal is remembered per browser. A person who clears their cookies
   can answer again.
 - Accounts created before the minimum age was set are not asked.
+- Only accounts created by an upstream social login are asked. Accounts
+  created another way are not: by an application calling `signup.Service`
+  (`Signup`, `SignupWithInvite`, `SignupOrGetExisting`), by federation sync
+  from a hub, by SCIM provisioning, or as managed principals. An application
+  that offers its own self-service sign-up must ask the age itself before it
+  calls `signup.Service`; a federation hub or SCIM client is trusted to have
+  applied its own policy.

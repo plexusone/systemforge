@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
 
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
 )
 
@@ -52,21 +53,25 @@ func (s *Server) BearerPrincipal(r *http.Request, scope string) (uuid.UUID, erro
 // BearerAccess authenticates an API request as BearerPrincipal does, and
 // also returns the client the token was issued to and its scopes, for APIs
 // whose checks depend on the calling application.
+//
+// A DPoP-bound token is accepted only with the DPoP scheme and a proof by
+// its key whose htu is dpop.resource_base_url (default: the issuer's
+// origin) plus the request path; an unbound token only with the Bearer
+// scheme.
 func (s *Server) BearerAccess(r *http.Request, scope string) (*BearerGrant, error) {
-	token := bearerToken(r)
-	if token == "" {
-		return nil, ErrBearerMissing
-	}
-	ar, err := s.introspect(r.Context(), token, fosite.AccessToken, s.Session(""))
-	if err != nil {
-		return nil, ErrBearerInvalid
+	ar, authErr := s.authenticateAccessToken(r, s.requestURL(r))
+	if authErr != nil {
+		if authErr.NoToken() {
+			return nil, ErrBearerMissing
+		}
+		return nil, &bearerError{base: ErrBearerInvalid, auth: authErr}
 	}
 	id, ok := principalSubject(sessionSubject(ar.GetSession()))
 	if !ok {
 		return nil, ErrBearerInvalid
 	}
 	if !ar.GetGrantedScopes().Has(scope) {
-		return nil, ErrBearerScope
+		return nil, &bearerError{base: ErrBearerScope, ar: ar}
 	}
 	g := &BearerGrant{
 		PrincipalID: id,
@@ -132,19 +137,47 @@ func (a bearerAuthenticator) Authenticate(r *http.Request) (*requestprincipal.Re
 
 // Challenge implements requestprincipal.Challenger.
 func (a bearerAuthenticator) Challenge(h http.Header) {
-	h.Set("WWW-Authenticate", `Bearer realm="systemauth"`)
+	h.Add("WWW-Authenticate", `Bearer realm="systemauth"`)
+	h.Add("WWW-Authenticate", oauthcore.DPoPChallenge("", ""))
 }
 
-// WriteBearerError writes the RFC 6750 response for an error from
-// BearerPrincipal: 401 with a challenge for a missing or invalid token, 403
-// naming the scope for an insufficient one.
+// bearerError is an error from BearerAccess that carries what
+// WriteBearerError needs to answer with the right challenge: the token
+// authentication failure, or the access request of a token lacking scope.
+type bearerError struct {
+	base error
+	auth *oauthcore.TokenAuthError
+	ar   fosite.AccessRequester
+}
+
+func (e *bearerError) Error() string {
+	if e.auth != nil {
+		return e.base.Error() + ": " + e.auth.Error()
+	}
+	return e.base.Error()
+}
+
+func (e *bearerError) Unwrap() error { return e.base }
+
+// WriteBearerError writes the RFC 6750 / RFC 9449 response for an error
+// from BearerPrincipal: 401 with challenges for a missing or invalid token
+// or DPoP proof, 403 naming the scope for an insufficient one.
 func WriteBearerError(w http.ResponseWriter, err error, scope string) {
+	var be *bearerError
+	hasDetail := errors.As(err, &be)
 	switch {
 	case errors.Is(err, ErrBearerScope):
-		writeBearerError(w, http.StatusForbidden, "insufficient_scope", "The access token was not granted the required scope.", scope)
+		description := "The access token was not granted the required scope."
+		if hasDetail && be.ar != nil {
+			writeScopeError(w, be.ar, description, scope)
+			return
+		}
+		writeBearerError(w, http.StatusForbidden, "insufficient_scope", description, scope)
+	case hasDetail && be.auth != nil:
+		oauthcore.WriteTokenAuthError(w, be.auth)
 	case errors.Is(err, ErrBearerInvalid):
-		writeBearerError(w, http.StatusUnauthorized, "invalid_token", "The access token is invalid, expired or revoked.", "")
+		oauthcore.WriteTokenAuthError(w, oauthcore.UnauthorizedError("invalid_token", "The access token is invalid, expired or revoked."))
 	default:
-		writeBearerError(w, http.StatusUnauthorized, "", "", "")
+		oauthcore.WriteTokenAuthError(w, oauthcore.UnauthorizedError("", ""))
 	}
 }

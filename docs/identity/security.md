@@ -208,7 +208,9 @@ valid. The mitigations are structural:
   20 minutes for single-use tokens, which succeed at most once even under
   concurrent presentation.
 - The `POST /login-token` exchange gives every failure the same response
-  and is rate limited per source address and per client.
+  and is rate limited per source address and per client. It accepts only
+  forms posted from the issuer's origin or an allowed redirect origin, so
+  another site cannot sign a visitor into an account it controls.
 - Managed principals carry reduced capabilities: they cannot manage their
   own profile or delegate.
 - Managers see every live token and session and can revoke any of them, or

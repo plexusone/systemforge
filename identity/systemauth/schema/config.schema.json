@@ -51,6 +51,28 @@
           "type": "string",
           "description": "JWKS key ID (default: RFC 7638 thumbprint of the key)"
         },
+        "verification_keys": {
+          "items": {
+            "properties": {
+              "key_id": {
+                "type": "string",
+                "description": "Key ID (default: RFC 7638 thumbprint of the key)"
+              },
+              "public_key_file": {
+                "type": "string",
+                "description": "Path of the PEM RSA key (supports env var expansion)"
+              },
+              "public_key_pem": {
+                "type": "string",
+                "description": "PEM RSA key (supports env var expansion)"
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "array",
+          "description": "Previous or pre-staged keys published in the JWKS for verification only"
+        },
         "private_key_file": {
           "type": "string",
           "description": "Path of the PEM RSA signing key (supports env var expansion)"
@@ -233,6 +255,11 @@
               "168h",
               "720h"
             ]
+          },
+          "allow_bearer_tokens": {
+            "type": "boolean",
+            "description": "Legacy exception: allow unbound bearer tokens for this client",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -475,6 +502,38 @@
           "additionalProperties": false,
           "type": "object",
           "description": "SpiceDB engine settings for mode rebac"
+        },
+        "reconcile": {
+          "properties": {
+            "disabled": {
+              "type": "boolean",
+              "description": "Turn the graph reconciler off",
+              "default": false
+            },
+            "skip_startup": {
+              "type": "boolean",
+              "description": "Do not reconcile at startup",
+              "default": false
+            },
+            "interval": {
+              "type": "string",
+              "description": "Time between periodic reconciliations (Go duration; 0 for startup only)",
+              "default": "15m"
+            },
+            "jitter": {
+              "type": "string",
+              "description": "Most added at random to each interval (Go duration; default a tenth of the interval)"
+            },
+            "page_size": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Rows or relationships read per request",
+              "default": 500
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Repair of the relationship graph from the identity tables in mode rebac"
         }
       },
       "additionalProperties": false,
@@ -542,9 +601,16 @@
           "type": "string",
           "description": "Path in the vault of the key ring's 32-byte root key"
         },
-        "allow_private_egress": {
+        "egress_allow_prefixes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Development only: CIDR ranges provider requests may reach although not public (link-local and metadata addresses are always refused)"
+        },
+        "allow_http_egress": {
           "type": "boolean",
-          "description": "Development only: allow provider requests to private addresses and plain HTTP"
+          "description": "Development only: allow provider requests over plain HTTP"
         }
       },
       "additionalProperties": false,
@@ -566,6 +632,66 @@
       "additionalProperties": false,
       "type": "object",
       "description": "Organization console under /console (ADR-018)"
+    },
+    "dpop": {
+      "properties": {
+        "proof_max_age": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "Maximum age of a DPoP proof",
+          "default": "5m",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
+        "clock_skew": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "Allowed clock skew of DPoP proofs",
+          "default": "30s",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
+        "require_nonce": {
+          "type": "boolean",
+          "description": "Require server-provided DPoP nonces",
+          "default": false
+        },
+        "nonce_secret": {
+          "type": "string",
+          "description": "Secret keying DPoP nonces (32+ bytes; supports env var expansion)"
+        },
+        "nonce_lifetime": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "How long a DPoP nonce is accepted",
+          "default": "5m",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
+        "replay_cache_redis_url": {
+          "type": "string",
+          "description": "Redis URL of the shared DPoP replay cache (supports env var expansion)"
+        },
+        "resource_base_url": {
+          "type": "string",
+          "description": "External base URL of protected routes for DPoP htu (default: the issuer origin)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "DPoP proof checking (RFC 9449)"
     }
   },
   "additionalProperties": false,

@@ -28,7 +28,7 @@ func TestRequestAuthenticator(t *testing.T) {
 	keys := fakeAPIKeys{"sf_live_svc": {ID: keyID, OwnerID: uuid.MustParse(svc.ID), Scopes: []string{"things:write"}}}
 	auth := NewRequestAuthenticator(BearerConfig{Tokens: fake.clientWith(t, func(c *Config) {
 		c.AcceptedClientIDs = []string{testClientID, "svc-client"}
-	}), APIKeys: keys, Principals: store, AllowClientTokens: true})
+	}), APIKeys: keys, Principals: store, AllowClientTokens: true, AllowBearerTokens: true})
 
 	authenticate := func(decorate func(*http.Request)) (*requestprincipal.RequestPrincipal, error) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/things", nil)

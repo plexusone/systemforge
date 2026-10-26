@@ -2,6 +2,7 @@ package scim
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -163,7 +164,7 @@ func (a *API) CredentialMiddleware(authFn func(r *http.Request) (Credential, err
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cred, err := authFn(r)
 			if err != nil {
-				writeHumaError(w, http.StatusUnauthorized, err.Error())
+				a.writeAuthError(w, r, err)
 				return
 			}
 			if !cred.Scope.Valid() {
@@ -178,6 +179,20 @@ func (a *API) CredentialMiddleware(authFn func(r *http.Request) (Credential, err
 	}
 }
 
+// writeAuthError answers a request whose credential was refused. A SCIM
+// error from the credential function is answered as it is; any other error,
+// which may come from a token store or database, is logged and answered
+// with a generic 401 so its text does not reach the client.
+func (a *API) writeAuthError(w http.ResponseWriter, r *http.Request, err error) {
+	var se *Error
+	if errors.As(err, &se) {
+		WriteError(w, se)
+		return
+	}
+	a.logger.WarnContext(r.Context(), "scim: credential refused", "error", err)
+	writeHumaError(w, http.StatusUnauthorized, "invalid or missing SCIM credential")
+}
+
 // Middleware returns HTTP middleware for SCIM authentication.
 // The authFn should validate the request and return the subject and scopes.
 //
@@ -188,7 +203,7 @@ func (a *API) Middleware(authFn func(r *http.Request) (subject string, scopes []
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			subject, scopes, err := authFn(r)
 			if err != nil {
-				writeHumaError(w, http.StatusUnauthorized, err.Error())
+				a.writeAuthError(w, r, err)
 				return
 			}
 

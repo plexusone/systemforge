@@ -2,8 +2,11 @@ package oauth
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -12,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ory/fosite"
 
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 	"github.com/plexusone/systemforge/identity/systemauth"
 )
 
@@ -27,6 +31,46 @@ type API struct {
 	authenticate func(r *http.Request) string
 	loginURL     string
 	consent      ConsentFunc
+
+	// acceptedClients are the clients whose access tokens Middleware
+	// accepts; anyClient accepts every client. Middleware panics when
+	// neither was configured.
+	acceptedClients []string
+	anyClient       bool
+
+	// resourceBaseURL is the external base URL of routes behind
+	// Middleware; empty uses the issuer's origin.
+	resourceBaseURL string
+}
+
+// WithResourceBaseURL sets the external base URL of the routes behind
+// Middleware, such as "https://api.example.com" or, behind a proxy that
+// strips a path prefix, "https://example.com/api". A DPoP proof's htu must
+// equal it plus the request path as this server sees it. Default: the
+// issuer's origin (scheme and host). Forwarded headers are never trusted.
+func WithResourceBaseURL(baseURL string) Option {
+	return func(a *API) {
+		a.resourceBaseURL = strings.TrimSuffix(baseURL, "/")
+	}
+}
+
+// WithAcceptedClientIDs sets the OAuth clients whose access tokens
+// Middleware accepts. A token issued to any other client is refused, so a
+// client a user authorized for one purpose cannot call APIs meant for
+// another.
+func WithAcceptedClientIDs(clientIDs ...string) Option {
+	return func(a *API) {
+		a.acceptedClients = append(a.acceptedClients, clientIDs...)
+	}
+}
+
+// WithAnyClient makes Middleware accept access tokens issued to any active
+// client of this server. Use it only when every client may call the
+// protected API and scopes alone limit what each may do.
+func WithAnyClient() Option {
+	return func(a *API) {
+		a.anyClient = true
+	}
 }
 
 // ConsentFunc reports whether userID has consented to client receiving
@@ -199,28 +243,74 @@ func (a *API) registerEndpoints() {
 	a.registerFositeEndpoints()
 }
 
-// Middleware provides OAuth token validation middleware.
+// errTokenRefused is returned by acceptToken for a valid token that
+// Middleware does not accept.
+var errTokenRefused = errors.New("oauth: access token refused")
+
+// acceptToken applies Middleware's checks beyond the token's own validity:
+// the issuing client is accepted and active, and the principal is active.
+// Storage errors refuse the token as well.
+func (a *API) acceptToken(ctx context.Context, ar fosite.AccessRequester) error {
+	clientID := ar.GetClient().GetID()
+	if !a.anyClient && !slices.Contains(a.acceptedClients, clientID) {
+		return fmt.Errorf("%w: issued to client %q", errTokenRefused, clientID)
+	}
+	// GetClient finds active clients only.
+	if _, err := a.provider.storage.GetClient(ctx, clientID); err != nil {
+		if errors.Is(err, fosite.ErrNotFound) {
+			return fmt.Errorf("%w: client %q is not active", errTokenRefused, clientID)
+		}
+		LoggerFromContext(ctx).Error("checking client", "client_id", clientID, "error", err)
+		return err
+	}
+	active, err := a.provider.storage.grants.PrincipalActive(ctx, ar.GetSession().GetSubject())
+	if err != nil {
+		LoggerFromContext(ctx).Error("checking principal", "error", err)
+		return err
+	}
+	if !active {
+		return fmt.Errorf("%w: principal is not active", errTokenRefused)
+	}
+	return nil
+}
+
+// Middleware provides OAuth token validation middleware. It accepts an
+// access token only when it is valid and unrevoked, was issued to a client
+// accepted by WithAcceptedClientIDs (or WithAnyClient) that is still
+// active, and its principal is still active, the same principal check the
+// introspection endpoint applies.
+//
+// A DPoP-bound token (RFC 9449) is accepted only with the DPoP
+// authorization scheme and a fresh, unreplayed proof by its key for the
+// request's method and URL, carrying the token's hash; the URL is
+// WithResourceBaseURL (default: the issuer's origin) plus the request
+// path. An unbound token, which only a client registered with the
+// allow_bearer_tokens exception gets, is accepted only with the Bearer
+// scheme. Refusals carry WWW-Authenticate challenges.
+//
+// Middleware panics when the API was created with neither
+// WithAcceptedClientIDs nor WithAnyClient.
 func (a *API) Middleware(next http.Handler) http.Handler {
+	if len(a.acceptedClients) == 0 && !a.anyClient {
+		panic("oauth: Middleware needs WithAcceptedClientIDs or WithAnyClient")
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := LoggerFromContext(ctx)
 
-		// Extract token from Authorization header
-		token := fosite.AccessTokenFromRequest(r)
-		if token == "" {
-			logger.Debug("missing access token", "path", r.URL.Path)
-			http.Error(w, "missing access token", http.StatusUnauthorized)
-			return
-		}
-
-		// Create session for introspection
-		session := a.provider.Session("")
-
-		// Validate the token
-		_, ar, err := a.provider.OAuth2Provider().IntrospectToken(ctx, token, fosite.AccessToken, session)
-		if err != nil {
-			logger.Debug("invalid access token", "path", r.URL.Path, "error", err)
-			http.Error(w, "invalid access token", http.StatusUnauthorized)
+		ar, authErr := oauthcore.AuthenticateAccessToken(r, a.provider.dpop, a.resourceURL(r), func(ctx context.Context, token string) (fosite.AccessRequester, error) {
+			ar, err := a.provider.introspect(ctx, token)
+			if err != nil {
+				return nil, err
+			}
+			if err := a.acceptToken(ctx, ar); err != nil {
+				return nil, err
+			}
+			return ar, nil
+		}, sessionDPoPJKT)
+		if authErr != nil {
+			logger.Debug("access token refused", "path", r.URL.Path, "error", authErr)
+			oauthcore.WriteTokenAuthError(w, authErr)
 			return
 		}
 
@@ -230,4 +320,14 @@ func (a *API) Middleware(next http.Handler) http.Handler {
 		ctx = WithAccessRequest(ctx, ar)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// resourceURL is the htu a proof for a request to a protected route must
+// name: the resource base URL and the request path.
+func (a *API) resourceURL(r *http.Request) string {
+	base := a.resourceBaseURL
+	if base == "" {
+		base = a.provider.issuerOrigin()
+	}
+	return base + r.URL.Path
 }

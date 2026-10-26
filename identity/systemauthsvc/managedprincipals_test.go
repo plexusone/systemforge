@@ -8,9 +8,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/grokify/goauth/dpop"
 	"golang.org/x/oauth2"
 
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
@@ -85,6 +87,18 @@ func addManager(t *testing.T, svc *systemauthsvc.Service, email string) uuid.UUI
 	return id
 }
 
+// mpDPoP is the DPoP key the test relying party binds its tokens to.
+var mpDPoP = sync.OnceValues(dpop.GenerateKeyPair)
+
+func mpDPoPKey(t *testing.T) *dpop.KeyPair {
+	t.Helper()
+	kp, err := mpDPoP()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return kp
+}
+
 // accessToken signs principal in to the app client and returns its access
 // token for scopes.
 func accessToken(t *testing.T, svc *systemauthsvc.Service, principal uuid.UUID, scopes ...string) string {
@@ -95,7 +109,7 @@ func accessToken(t *testing.T, svc *systemauthsvc.Service, principal uuid.UUID, 
 	}
 	rp, err := relyingparty.NewClientWithMetadata(relyingparty.Config{
 		Issuer: mpIssuer, ClientID: "app", RedirectURL: mpCallback, HTTPClient: hc,
-		Scopes: append([]string{"openid"}, scopes...),
+		Scopes: append([]string{"openid"}, scopes...), DPoPKey: mpDPoPKey(t),
 	}, svc.Metadata())
 	if err != nil {
 		t.Fatal(err)
@@ -135,7 +149,13 @@ func callAPI(t *testing.T, svc *systemauthsvc.Service, token, method, path strin
 	}
 	r := httptest.NewRequest(method, mpIssuer+path, &buf)
 	if token != "" {
-		r.Header.Set("Authorization", "Bearer "+token)
+		// The token is bound to the test DPoP key: present it with a proof.
+		proof, err := dpop.CreateProofWithOptions(mpDPoPKey(t), method, mpIssuer+path, dpop.ProofOptions{AccessToken: token})
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Header.Set("Authorization", "DPoP "+token)
+		r.Header.Set("DPoP", proof)
 	}
 	w := httptest.NewRecorder()
 	svc.Handler().ServeHTTP(w, r)
@@ -189,6 +209,7 @@ func TestManagedPrincipalsAPIEndToEnd(t *testing.T) {
 		form := url.Values{"token": {issued.Token}, "client_id": {"app"}}
 		r := httptest.NewRequest(http.MethodPost, mpIssuer+systemauth.LoginTokenPath, strings.NewReader(form.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.Header.Set("Origin", mpIssuer)
 		w := httptest.NewRecorder()
 		svc.Handler().ServeHTTP(w, r)
 		return w
@@ -234,6 +255,7 @@ func TestManagedPrincipalsAPIIsOffByDefault(t *testing.T) {
 	form := url.Values{"token": {"SFLTX"}, "client_id": {"app"}}
 	r := httptest.NewRequest(http.MethodPost, mpIssuer+systemauth.LoginTokenPath, strings.NewReader(form.Encode()))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Set("Origin", mpIssuer)
 	w := httptest.NewRecorder()
 	svc.Handler().ServeHTTP(w, r)
 	if w.Code == http.StatusSeeOther || w.Code == http.StatusUnauthorized {

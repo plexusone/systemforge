@@ -133,10 +133,10 @@ Grants access to a listing for an organization.
 | `ID` | UUID | Unique identifier |
 | `ListingID` | UUID | Associated listing |
 | `OrganizationID` | UUID | Owning organization |
-| `LicenseType` | string | Type (unlimited, per_seat, trial) |
+| `LicenseType` | string | Type (`seat_based`, `team`, `unlimited`) |
 | `Seats` | *int | Seat limit (nil = unlimited) |
 | `ValidFrom` | time.Time | Start date |
-| `ValidUntil` | *time.Time | Expiry date (nil = perpetual) |
+| `ValidUntil` | *time.Time | End of validity, exclusive: the license is invalid from this instant on (nil = perpetual) |
 | `PurchasedBy` | UUID | Principal who purchased |
 | `StripeSubscriptionID` | string | Stripe subscription ID |
 
@@ -200,6 +200,12 @@ if !hasAccess {
 
 ## Seat Management
 
+`EntLicenseService.AssignSeat` reserves a seat with a conditional increment of
+the license's used seats in the same transaction as the assignment, so
+concurrent assignments cannot exceed the purchased seats, and `UnassignSeat`
+releases it the same way. `Update` does not write `UsedSeats`; only seat
+assignment changes it.
+
 ### Assign a Seat
 
 ```go
@@ -246,17 +252,34 @@ STRIPE_WEBHOOK_SECRET=whsec_...    # Webhook signing secret
 STRIPE_PUBLISHABLE_KEY=pk_live_... # For frontend (optional)
 ```
 
+The webhook signing secret is required: with an empty `WebhookSecret`,
+`ProcessWebhook` and `VerifyWebhook` refuse every event with
+`stripe.ErrWebhookSecretRequired`, because a signature made with an empty key
+can be computed by anyone.
+
 ### Webhook Events
 
 The checkout service handles these Stripe events:
 
 | Event | Action |
 |-------|--------|
-| `checkout.session.completed` | Create license and subscription |
-| `customer.subscription.updated` | Update license status |
-| `customer.subscription.deleted` | Revoke license |
-| `invoice.paid` | Extend license validity |
-| `invoice.payment_failed` | Mark license as past_due |
+| `checkout.session.completed` | Grant the license once paid |
+| `checkout.session.async_payment_succeeded` | Grant the license for a delayed payment |
+| `customer.subscription.updated` | Reconcile the license with the subscription (see below) |
+| `customer.subscription.deleted` | Revoke the license |
+| `invoice.paid`, `invoice.payment_failed` | Nothing; the resulting subscription status arrives as `customer.subscription.updated` |
+
+`customer.subscription.updated` reconciles the license with the subscription:
+
+- `active` or `trialing`: the license is valid. A suspended license is
+  restored and synced to the authorization system again, and a seat-based
+  license takes the subscription's quantity as its seat count. Seats already
+  assigned beyond a reduced count stay assigned, but no new seat can be
+  assigned until the count is under the limit.
+- `past_due`: unchanged while Stripe retries the payment.
+- `unpaid`, `paused`, `incomplete_expired` or `canceled`: the license is
+  suspended (`ValidUntil` is set to now, and since it is exclusive
+  `Check` and `CheckPrincipal` deny it at once) and its access is removed from the authorization system.
 
 ### Webhook Endpoint
 
@@ -267,6 +290,7 @@ https://api.example.com/webhooks/stripe
 ```
 
 Select events:
+
 - `checkout.session.completed`
 - `customer.subscription.*`
 - `invoice.paid`

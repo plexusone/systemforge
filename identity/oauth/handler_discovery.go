@@ -2,9 +2,14 @@ package oauth
 
 import (
 	"context"
+	"crypto/rsa"
+	"encoding/base64"
+	"math/big"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/plexusone/systemforge/identity/dpopproof"
 )
 
 // OpenIDConfiguration represents the OpenID Connect discovery document.
@@ -19,6 +24,7 @@ type OpenIDConfiguration struct {
 	GrantTypesSupported               []string `json:"grant_types_supported" doc:"List of supported grant types"`
 	TokenEndpointAuthMethodsSupported []string `json:"token_endpoint_auth_methods_supported" doc:"List of supported token endpoint authentication methods"`
 	CodeChallengeMethodsSupported     []string `json:"code_challenge_methods_supported" doc:"List of supported PKCE code challenge methods"`
+	DPoPSigningAlgValuesSupported     []string `json:"dpop_signing_alg_values_supported" doc:"JWS algorithms accepted for DPoP proofs (RFC 9449)"`
 }
 
 // JWKS represents a JSON Web Key Set.
@@ -82,9 +88,10 @@ func (a *API) getOpenIDConfiguration(ctx context.Context, input *struct{}) (*Ope
 		IntrospectionEndpoint: issuer + "/oauth/introspect",
 		RevocationEndpoint:    issuer + "/oauth/revoke",
 		JWKSURI:               issuer + "/.well-known/jwks.json",
+		// Only the authorization code flow is composed; there is no
+		// implicit grant.
 		ResponseTypesSupported: []string{
 			"code",
-			"token",
 		},
 		GrantTypesSupported: []string{
 			"authorization_code",
@@ -99,14 +106,30 @@ func (a *API) getOpenIDConfiguration(ctx context.Context, input *struct{}) (*Ope
 		CodeChallengeMethodsSupported: []string{
 			"S256",
 		},
+		DPoPSigningAlgValuesSupported: dpopproof.Algorithms,
 	}
 
 	return &OpenIDConfigOutput{Body: config}, nil
 }
 
-// getJWKS returns the JSON Web Key Set for token verification.
+// getJWKS returns the JSON Web Key Set: the signing key first, then the
+// verification keys (the previous key N-1 or a pre-staged next key).
 func (a *API) getJWKS(ctx context.Context, input *struct{}) (*JWKSOutput, error) {
-	// Return empty JWKS for now - in production, this would return actual public keys
-	// TODO: Add actual JWK generation from the provider's RSA key
-	return &JWKSOutput{Body: JWKS{Keys: []JWK{}}}, nil
+	set := a.provider.keys.JWKS()
+	keys := make([]JWK, 0, len(set.Keys))
+	for _, k := range set.Keys {
+		pub, ok := k.Key.(*rsa.PublicKey)
+		if !ok {
+			return nil, huma.Error500InternalServerError("signing key unavailable")
+		}
+		keys = append(keys, JWK{
+			Kty: "RSA",
+			Use: k.Use,
+			Kid: k.KeyID,
+			Alg: k.Algorithm,
+			N:   base64.RawURLEncoding.EncodeToString(pub.N.Bytes()),
+			E:   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(pub.E)).Bytes()),
+		})
+	}
+	return &JWKSOutput{Body: JWKS{Keys: keys}}, nil
 }

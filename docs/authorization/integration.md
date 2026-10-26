@@ -352,10 +352,29 @@ func (h *Handler) DeleteProject(ctx context.Context, req *DeleteRequest) error {
 
 ### Sync Failures
 
-With `SyncModeEventual`, sync failures are logged but don't fail operations:
+Revocations and grants fail differently, so that the graph never grants
+more than the database records.
+
+A revocation removes the relationship inside its database transaction,
+before the commit, and rolls the transaction back when the graph refuses.
+The caller gets the error in either sync mode and nothing has changed, so
+it retries the same call; removing a relationship that is already gone
+succeeds.
 
 ```go
-// In service code
+// Removing a member: the graph is changed first, then the database.
+if err := orgs.RemoveMember(ctx, orgID, principalID); err != nil {
+    // Nothing was removed; retry later.
+    return err
+}
+```
+
+A grant commits first and writes the relationship after. `SyncModeStrict`
+returns a failed write to the caller; `SyncModeEventual`, the default, logs
+it and lets the operation succeed:
+
+```go
+// In service code, after the grant committed
 if syncErr := s.syncer.AddOrgMembership(ctx, principalID, orgID, role); syncErr != nil {
     if s.syncMode == authz.SyncModeStrict {
         return nil, fmt.Errorf("authz sync failed: %w", syncErr)
@@ -368,20 +387,22 @@ if syncErr := s.syncer.AddOrgMembership(ctx, principalID, orgID, role); syncErr 
 }
 ```
 
-For eventual consistency, implement a retry mechanism:
+Either way the access is missing rather than extra. In mode `rebac` the graph
+reconciler of `authz/mode` writes it on its next run, and also removes
+anything a revocation left behind when its commit failed after the graph
+change; see
+[Configuring the authorization mode](../guides/authorization-mode.md#keeping-the-graph-consistent-under-rebac).
+A deployment that builds its syncer without `authz/mode` can run the
+reconciler itself:
 
 ```go
-// Background job to retry failed syncs
-func (j *SyncRetryJob) Run(ctx context.Context) {
-    pending, _ := j.repo.GetPendingSyncs(ctx)
-    for _, sync := range pending {
-        if err := j.syncer.Execute(ctx, sync); err != nil {
-            j.logger.Error("sync retry failed", "id", sync.ID, "error", err)
-            continue
-        }
-        j.repo.MarkComplete(ctx, sync.ID)
+rc := mode.NewReconciler(db, spicedbClient, mode.WithReconcileRegistry(registry))
+go func() {
+    schedule := mode.ReconcileSchedule{OnStartup: true, Interval: 15 * time.Minute, Jitter: time.Minute}
+    if err := rc.Run(ctx, schedule); err != nil {
+        logger.Error("graph reconciler stopped", "error", err)
     }
-}
+}()
 ```
 
 ## Testing

@@ -2,13 +2,13 @@ package spicedb
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"slices"
-	"time"
 
 	pb "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
@@ -79,23 +79,19 @@ func newEmbeddedClient(ctx context.Context, cfg Config, logger *slog.Logger) (*C
 		return nil, fmt.Errorf("failed to create datastore: %w", err)
 	}
 
-	// Use a random preshared key for embedded mode
-	presharedKey := "embedded-dev-key-" + fmt.Sprintf("%d", time.Now().UnixNano())
-
-	// Find an available port
-	port, err := findAvailablePort()
+	// The embedded server listens in memory, so it opens no network port
+	// another process could reach. It is still guarded by a random
+	// preshared key.
+	presharedKey, err := newPresharedKey()
 	if err != nil {
-		return nil, fmt.Errorf("failed to find available port: %w", err)
+		return nil, err
 	}
-	address := fmt.Sprintf("127.0.0.1:%d", port)
 
-	// Create server configuration with TCP on the available port
 	serverCfg := server.NewConfigWithOptionsAndDefaults(
 		server.WithDatastore(ds),
 		server.WithPresharedSecureKey(presharedKey),
 		server.WithGRPCServer(util.GRPCServerConfig{
-			Network: "tcp",
-			Address: address,
+			Network: util.BufferedNetwork,
 			Enabled: true,
 		}),
 		server.WithDispatchServer(util.GRPCServerConfig{
@@ -119,20 +115,14 @@ func newEmbeddedClient(ctx context.Context, cfg Config, logger *slog.Logger) (*C
 		}
 	}()
 
-	// Give server time to start
-	time.Sleep(100 * time.Millisecond)
-
-	// Connect to the running server via gRPC
-	conn, err := grpc.NewClient(address,
+	// Connect to the server through its in-memory listener.
+	conn, err := runnableServer.NewClient(
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpcutil.WithInsecureBearerToken(presharedKey),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial embedded SpiceDB: %w", err)
 	}
-
-	// Suppress unused variable warning - server runs in background goroutine
-	_ = runnableServer
 
 	logger.Info("started embedded SpiceDB", "engine", engine)
 
@@ -409,6 +399,81 @@ func (c *Client) DeleteRelationships(ctx context.Context, filter *RelationshipFi
 	return nil
 }
 
+// ReadRelationships calls fn for every stored relationship matching
+// filter, reading pageSize relationships per request (0 means 1000). The
+// first page is read fully consistent, and each later page continues from
+// the previous one's cursor, which carries the revision it was read at, so
+// the pages together are one consistent view of the graph even while it
+// changes. A relationship to a subject relation (such as
+// "group:g#member") is passed with only its subject object. An error from
+// fn stops the read and is returned.
+func (c *Client) ReadRelationships(ctx context.Context, filter *RelationshipFilter, pageSize int, fn func(*Relationship) error) error {
+	if filter.ResourceType == "" {
+		return fmt.Errorf("read relationships: filter requires a resource type")
+	}
+	if filter.SubjectID != "" && filter.SubjectType == "" {
+		return fmt.Errorf("read relationships: a subject ID requires a subject type")
+	}
+	if pageSize <= 0 {
+		pageSize = 1000
+	}
+	f := &pb.RelationshipFilter{
+		ResourceType:       filter.ResourceType,
+		OptionalResourceId: filter.ResourceID,
+		OptionalRelation:   filter.Relation,
+	}
+	if filter.SubjectType != "" {
+		f.OptionalSubjectFilter = &pb.SubjectFilter{
+			SubjectType:       filter.SubjectType,
+			OptionalSubjectId: filter.SubjectID,
+		}
+	}
+	consistency := &pb.Consistency{Requirement: &pb.Consistency_FullyConsistent{FullyConsistent: true}}
+	var cursor *pb.Cursor
+	for {
+		stream, err := c.permClient.ReadRelationships(ctx, &pb.ReadRelationshipsRequest{
+			Consistency:        consistency,
+			RelationshipFilter: f,
+			OptionalLimit:      uint32(pageSize), //nolint:gosec // G115: pageSize is positive and caller-bounded
+			OptionalCursor:     cursor,
+		})
+		if err != nil {
+			return fmt.Errorf("read relationships: %w", err)
+		}
+		n := 0
+		for {
+			resp, err := stream.Recv()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil {
+				return fmt.Errorf("read relationships: %w", err)
+			}
+			n++
+			cursor = resp.AfterResultCursor
+			r := resp.Relationship
+			if err := fn(&Relationship{
+				ResourceType: r.GetResource().GetObjectType(),
+				ResourceID:   r.GetResource().GetObjectId(),
+				Relation:     r.GetRelation(),
+				SubjectType:  r.GetSubject().GetObject().GetObjectType(),
+				SubjectID:    r.GetSubject().GetObject().GetObjectId(),
+			}); err != nil {
+				return err
+			}
+		}
+		if n < pageSize || cursor == nil {
+			return nil
+		}
+	}
+}
+
+// DeleteRelationshipsExact deletes the given relationship tuples in one
+// atomic request. Deleting a tuple that does not exist is not an error.
+func (c *Client) DeleteRelationshipsExact(ctx context.Context, rels []*Relationship) error {
+	return c.ReplaceRelationships(ctx, rels, nil)
+}
+
 // LookupSubjects finds all subjects with a given permission on a resource.
 func (c *Client) LookupSubjects(ctx context.Context, req *LookupSubjectsRequest) ([]string, error) {
 	stream, err := c.permClient.LookupSubjects(ctx, &pb.LookupSubjectsRequest{
@@ -473,15 +538,12 @@ func (c *Client) LookupResources(ctx context.Context, req *LookupResourcesReques
 	return resources, nil
 }
 
-// findAvailablePort finds an available TCP port by listening on :0 and then closing.
-func findAvailablePort() (int, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
+// newPresharedKey returns 32 random bytes, hex encoded, for the embedded
+// server's preshared key.
+func newPresharedKey() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generating embedded SpiceDB key: %w", err)
 	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	if err := listener.Close(); err != nil {
-		return 0, fmt.Errorf("releasing port %d: %w", port, err)
-	}
-	return port, nil
+	return hex.EncodeToString(b), nil
 }

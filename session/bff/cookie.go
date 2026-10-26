@@ -1,20 +1,45 @@
 package bff
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
-// DefaultCookieName is the session cookie name used when none is configured.
-const DefaultCookieName = "sf_session"
+// DefaultCookieName is the session cookie name used when none is
+// configured. The __Host- prefix makes browsers accept the cookie only
+// when it is Secure, has Path=/ and no Domain, so a sibling subdomain
+// cannot set or overwrite it (cookie tossing or session fixation).
+const DefaultCookieName = "__Host-sf_session"
+
+// InsecureCookieName is the default name when the cookie is not Secure
+// (CookieConfig.AllowInsecure for local development over plain HTTP),
+// since browsers reject a __Host- cookie without Secure.
+const InsecureCookieName = "sf_session"
+
+const (
+	hostCookiePrefix   = "__Host-"
+	secureCookiePrefix = "__Secure-"
+)
+
+// ErrInvalidCookieConfig is returned by CookieConfig.Validate for a cookie
+// browsers would reject or that could be shared beyond the application.
+var ErrInvalidCookieConfig = errors.New("invalid session cookie configuration")
 
 // CookieConfig contains configuration for session cookies.
+//
+// The session cookie is always host-only: it has no Domain attribute, so
+// it is never shared with sibling subdomains, any of which could otherwise
+// read, set or overwrite it. Applications on different hosts each keep
+// their own session cookie.
 type CookieConfig struct {
-	// Name is the cookie name. Default: DefaultCookieName ("sf_session").
+	// Name is the cookie name. Default: DefaultCookieName
+	// ("__Host-sf_session"), or InsecureCookieName ("sf_session") when the
+	// cookie is not Secure. Give each application its own name when
+	// several share a host.
 	Name string
-
-	// Domain is the cookie domain. If empty, uses the request host.
-	Domain string
 
 	// Path is the cookie path. Default: "/".
 	Path string
@@ -30,7 +55,7 @@ type CookieConfig struct {
 
 	// AllowInsecure permits a cookie without the Secure flag when Secure
 	// is false, for local development over plain HTTP. Never set it in
-	// production.
+	// production; NewHandler logs a warning when the cookie is not Secure.
 	AllowInsecure bool
 
 	// HTTPOnly prevents JavaScript access to the cookie. The session
@@ -60,16 +85,6 @@ type CookieManager struct {
 
 // NewCookieManager creates a new cookie manager with the given configuration.
 func NewCookieManager(config CookieConfig) *CookieManager {
-	// Apply defaults for zero values
-	if config.Name == "" {
-		config.Name = DefaultCookieName
-	}
-	if config.Path == "" {
-		config.Path = "/"
-	}
-	if config.SameSite == 0 {
-		config.SameSite = http.SameSiteStrictMode
-	}
 	// A bool left out of a config is indistinguishable from false, so the
 	// flags that protect the session are not configurable downward: the
 	// cookie is always HttpOnly, and Secure unless AllowInsecure says
@@ -79,7 +94,41 @@ func NewCookieManager(config CookieConfig) *CookieManager {
 		config.Secure = true
 	}
 
+	// Apply defaults for zero values
+	if config.Name == "" {
+		if config.Secure {
+			config.Name = DefaultCookieName
+		} else {
+			config.Name = InsecureCookieName
+		}
+	}
+	if config.Path == "" {
+		config.Path = "/"
+	}
+	if config.SameSite == 0 {
+		config.SameSite = http.SameSiteStrictMode
+	}
+
 	return &CookieManager{config: config}
+}
+
+// Validate reports a cookie configuration browsers would reject: a
+// __Host- name with a Path other than "/" or without Secure, or a
+// __Secure- name without Secure. Call it on CookieManager.Config(), after
+// defaults are applied; NewHandler does.
+func (c CookieConfig) Validate() error {
+	if strings.HasPrefix(c.Name, hostCookiePrefix) {
+		if c.Path != "/" {
+			return fmt.Errorf("%w: a %s cookie must have Path=/", ErrInvalidCookieConfig, hostCookiePrefix)
+		}
+		if !c.Secure {
+			return fmt.Errorf("%w: a %s cookie must be Secure; use InsecureCookieName for plain-HTTP development", ErrInvalidCookieConfig, hostCookiePrefix)
+		}
+	}
+	if strings.HasPrefix(c.Name, secureCookiePrefix) && !c.Secure {
+		return fmt.Errorf("%w: a %s cookie must be Secure", ErrInvalidCookieConfig, secureCookiePrefix)
+	}
+	return nil
 }
 
 // SetSessionCookie creates and sets a session cookie on the response.
@@ -89,7 +138,6 @@ func (m *CookieManager) SetSessionCookie(w http.ResponseWriter, sessionID string
 		Name:     m.config.Name,
 		Value:    sessionID,
 		Path:     m.config.Path,
-		Domain:   m.config.Domain,
 		Expires:  expiry,
 		MaxAge:   m.config.MaxAge,
 		Secure:   m.config.Secure,
@@ -118,7 +166,6 @@ func (m *CookieManager) ClearSessionCookie(w http.ResponseWriter) {
 		Name:     m.config.Name,
 		Value:    "",
 		Path:     m.config.Path,
-		Domain:   m.config.Domain,
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
 		Secure:   m.config.Secure,

@@ -87,6 +87,9 @@ type PrincipalToken func(*sql.Selector)
 // ResourceGrant is the predicate function for resourcegrant builders.
 type ResourceGrant func(*sql.Selector)
 
+// ScimToken is the predicate function for scimtoken builders.
+type ScimToken func(*sql.Selector)
+
 // SeatAssignment is the predicate function for seatassignment builders.
 type SeatAssignment func(*sql.Selector)
 

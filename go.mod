@@ -1,6 +1,6 @@
 module github.com/plexusone/systemforge
 
-go 1.26.6
+go 1.26.10
 
 // github.com/authzed/cel-go v0.30.0 rewrote cel.NewStaticOptimizer to return
 // (*StaticOptimizer, error) instead of *StaticOptimizer, breaking the build
@@ -27,11 +27,11 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/ory/fosite v0.49.0
-	github.com/plexusone/connectforge v0.4.0
-	github.com/plexusone/keyforge v0.1.0
+	github.com/plexusone/connectforge v0.6.0
+	github.com/plexusone/keyforge v0.2.0
 	github.com/plexusone/omniobserve v0.12.0
-	github.com/plexusone/omnistorage-core v0.5.2
-	github.com/plexusone/omnivault v0.5.0
+	github.com/plexusone/omnistorage-core v0.6.0
+	github.com/plexusone/omnivault v0.6.0
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -139,7 +139,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.26.2 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grokify/datacatalog v0.1.0 // indirect
-	github.com/grokify/oscompat v0.7.0 // indirect
+	github.com/grokify/oscompat v0.9.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.1.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.4 // indirect
@@ -282,6 +282,6 @@ require (
 	modernc.org/libc v1.79.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
-	modernc.org/sqlite v1.60.1 // indirect
+	modernc.org/sqlite v1.61.0 // indirect
 	resenje.org/singleflight v0.4.3 // indirect
 )

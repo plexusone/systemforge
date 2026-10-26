@@ -1,4 +1,9 @@
 // Package signup provides user signup and personal organization creation.
+//
+// The service applies no sign-up policy of SystemAuth's social login, such
+// as social_login.signup_minimum_age or invite-only sign-up: an application
+// that offers self-service sign-up through it enforces its own policy
+// before calling it.
 package signup
 
 import (
@@ -33,8 +38,9 @@ type SignupInput struct {
 	Metadata map[string]any
 	// EmailVerified asserts that the caller verified Email belongs to the
 	// person signing up, for example an identity provider's verified
-	// flag. SignupOrGetExisting returns an existing account for an email
-	// only when it is set.
+	// flag. A new account records the email as verified when it is set.
+	// SignupOrGetExisting returns an existing account for an email only
+	// when it is set and the existing account's own email is verified.
 	EmailVerified bool
 }
 

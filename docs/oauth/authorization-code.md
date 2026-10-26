@@ -116,11 +116,16 @@ https://app.example.com/callback?
 
 ## Step 4: Token Exchange
 
-Exchange the code for tokens:
+Exchange the code for tokens. The request carries a DPoP proof for `POST`
+at the token endpoint, and the tokens are bound to the proof's key; see
+[Calling APIs with DPoP](../guides/dpop-clients.md). If the authorization
+request named the key in `dpop_jkt`, only a proof by that key redeems the
+code.
 
 ```bash
 POST /oauth/token
 Content-Type: application/x-www-form-urlencoded
+DPoP: <proof>
 
 grant_type=authorization_code&
 code=SplxlOBeZQQYbYS6WxSbIA&
@@ -137,6 +142,7 @@ Add client authentication:
 POST /oauth/token
 Content-Type: application/x-www-form-urlencoded
 Authorization: Basic base64(client_id:client_secret)
+DPoP: <proof>
 
 grant_type=authorization_code&
 code=SplxlOBeZQQYbYS6WxSbIA&
@@ -147,13 +153,17 @@ redirect_uri=https://app.example.com/callback
 
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIs...",
-  "token_type": "Bearer",
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "DPoP",
   "expires_in": 900,
   "refresh_token": "8xLOxBtZp8",
   "scope": "openid profile email"
 }
 ```
+
+The refresh token is bound to the same key: a refresh needs a proof by it.
+A client registered with the legacy `allow_bearer_tokens` exception may
+omit the proof and gets `"token_type": "Bearer"`.
 
 ## Complete Example (JavaScript)
 
@@ -204,7 +214,10 @@ class OAuthClient {
         const response = await fetch(this.tokenEndpoint, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
+                'Content-Type': 'application/x-www-form-urlencoded',
+                // A DPoP proof for POST at the token endpoint, signed with
+                // a non-extractable WebCrypto key kept for this session.
+                'DPoP': await this.dpopProof('POST', this.tokenEndpoint)
             },
             body: new URLSearchParams({
                 grant_type: 'authorization_code',
@@ -219,6 +232,13 @@ class OAuthClient {
     }
 }
 ```
+
+`dpopProof` stands for the application's own proof builder: a JWT with the
+public key in its header and `htm`, `htu`, `iat` and a fresh `jti`, signed
+with the session's key (see
+[Calling APIs with DPoP](../guides/dpop-clients.md#build-a-proof)). A
+browser application behind the [BFF](../bff/overview.md) needs none of
+this: the BFF holds the key and sends the proofs.
 
 ## Server-Side Implementation
 

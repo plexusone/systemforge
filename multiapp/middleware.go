@@ -1,8 +1,12 @@
 package multiapp
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
+	"github.com/plexusone/systemforge/identity/dpopproof"
 	"github.com/plexusone/systemforge/rls"
 	"github.com/plexusone/systemforge/session/jwt"
 	"github.com/plexusone/systemforge/session/middleware"
@@ -10,11 +14,11 @@ import (
 
 // MiddlewareConfig configures the multiapp middleware stack.
 type MiddlewareConfig struct {
-	// JWTService validates JWT tokens.
+	// JWTService validates JWT tokens (required).
 	JWTService *jwt.Service
 
 	// RequireAuth requires authentication for all requests.
-	// If false, unauthenticated requests are allowed through.
+	// If false, requests without credentials are allowed through.
 	RequireAuth bool
 
 	// SetRLSContext automatically sets RLS context from JWT claims.
@@ -33,28 +37,54 @@ type MiddlewareConfig struct {
 	// token is meant to be valid in every app.
 	AllowCrossAppTokens bool
 
+	// DPoP configures DPoP (RFC 9449), which AuthMiddleware requires by
+	// default: a token must be bound to a key (cnf.jkt) and come with the
+	// DPoP scheme and a fresh proof by that key for the request, carrying
+	// the token's hash. DPoP.ReplayCache is required (NewRedisReplayCache
+	// when several instances serve the apps). Set DPoP.BaseURL to the
+	// external base URL clients use, including any path prefix a proxy
+	// strips: the proof's htu must equal it plus the request path as this
+	// server sees it. DPoP.AllowBearer is the explicit opt-in that also
+	// accepts unbound bearer tokens; a DPoP-bound token is never accepted
+	// as Bearer.
+	DPoP middleware.DPoPConfig
+
 	// OnError is called when authentication fails.
 	// If nil, a default error response is sent.
 	OnError func(w http.ResponseWriter, r *http.Request, err error)
 }
 
-// AuthMiddleware returns middleware that validates JWT tokens and sets
+// ErrJWTServiceRequired is returned by AuthMiddleware without a
+// MiddlewareConfig.JWTService.
+var ErrJWTServiceRequired = errors.New("multiapp: MiddlewareConfig.JWTService is required")
+
+// AuthMiddleware returns middleware that validates access tokens and sets
 // authentication context. This works with the app context middleware.
+//
+// It requires DPoP-bound tokens with a valid proof (see
+// MiddlewareConfig.DPoP); unbound bearer tokens are refused unless
+// DPoP.AllowBearer is set. It returns an error without a JWT service or a
+// replay cache.
 //
 // The middleware chain should be:
 //  1. appContextMiddleware (set by Server in multi-app mode)
-//  2. AuthMiddleware (validates JWT, sets claims)
+//  2. AuthMiddleware (validates the token and its proof, sets claims)
 //  3. Your handlers
-func AuthMiddleware(cfg MiddlewareConfig) func(http.Handler) http.Handler {
+func AuthMiddleware(cfg MiddlewareConfig) (func(http.Handler) http.Handler, error) {
+	if cfg.JWTService == nil {
+		return nil, ErrJWTServiceRequired
+	}
+	auth, err := middleware.NewDPoPAuth(cfg.JWTService, cfg.DPoP)
+	if err != nil {
+		return nil, fmt.Errorf("multiapp: %w", err)
+	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			// Extract token from Authorization header
-			token := extractBearerToken(r)
-
-			if token == "" {
+			if !hasTokenCredentials(r) {
 				if cfg.RequireAuth {
+					writeChallenges(w, cfg.DPoP.AllowBearer)
 					handleAuthError(w, r, cfg.OnError, ErrNotAuthenticated)
 					return
 				}
@@ -63,20 +93,19 @@ func AuthMiddleware(cfg MiddlewareConfig) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Validate token
-			if cfg.JWTService == nil {
-				handleAuthError(w, r, cfg.OnError, ErrNotAuthenticated)
-				return
-			}
-
-			var claims *jwt.Claims
-			var err error
+			// On an app route the token must be addressed to the app.
+			var audiences []string
 			if appCtx := AppContextFromContext(ctx); appCtx != nil && !cfg.AllowCrossAppTokens {
-				claims, err = cfg.JWTService.ValidateAccessTokenForAudience(token, cfg.appAudiences(appCtx)...)
-			} else {
-				claims, err = cfg.JWTService.ValidateAccessToken(token)
+				audiences = cfg.appAudiences(appCtx)
+				if len(audiences) == 0 {
+					writeChallenges(w, cfg.DPoP.AllowBearer)
+					handleAuthError(w, r, cfg.OnError, jwt.ErrAudienceMismatch)
+					return
+				}
 			}
+			claims, err := auth.Authenticate(r, audiences...)
 			if err != nil {
+				writeChallenges(w, cfg.DPoP.AllowBearer)
 				handleAuthError(w, r, cfg.OnError, err)
 				return
 			}
@@ -91,7 +120,7 @@ func AuthMiddleware(cfg MiddlewareConfig) func(http.Handler) http.Handler {
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
-	}
+	}, nil
 }
 
 // appAudiences returns the audiences a token must carry for app.
@@ -105,13 +134,28 @@ func (cfg MiddlewareConfig) appAudiences(app *AppContext) []string {
 	return []string{app.AppID}
 }
 
-// extractBearerToken extracts the Bearer token from the Authorization header.
-func extractBearerToken(r *http.Request) string {
-	auth := r.Header.Get("Authorization")
-	if len(auth) > 7 && auth[:7] == "Bearer " {
-		return auth[7:]
+// hasTokenCredentials reports whether the request carries an access token
+// with the Bearer or DPoP scheme.
+func hasTokenCredentials(r *http.Request) bool {
+	scheme, token, ok := strings.Cut(r.Header.Get("Authorization"), " ")
+	if !ok || strings.TrimSpace(token) == "" {
+		return false
 	}
-	return ""
+	switch strings.ToLower(scheme) {
+	case "bearer", "dpop":
+		return true
+	}
+	return false
+}
+
+// writeChallenges sets the WWW-Authenticate challenges of a refused
+// request (RFC 9449 §7.1): DPoP, and Bearer when bearer tokens are
+// allowed.
+func writeChallenges(w http.ResponseWriter, allowBearer bool) {
+	w.Header().Add("WWW-Authenticate", `DPoP algs="`+strings.Join(dpopproof.Algorithms, " ")+`"`)
+	if allowBearer {
+		w.Header().Add("WWW-Authenticate", "Bearer")
+	}
 }
 
 // handleAuthError sends an authentication error response.

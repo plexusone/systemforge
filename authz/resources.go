@@ -281,6 +281,17 @@ func (r *VocabularyRegistry) ValidateResourceType(resourceType string) error {
 	return nil
 }
 
+// HasOrgFacet reports whether an application's SpiceDB fragment defines
+// its organization facet, "{app}_org", which holds the application roles
+// in the graph.
+func (r *VocabularyRegistry) HasOrgFacet(app string) bool {
+	v, ok := r.Get(app)
+	if !ok {
+		return false
+	}
+	return slices.Contains(findSchemaDefinitions(v.SpiceDBSchema()), app+"_org")
+}
+
 // CollaboratorResourceTypes returns the resource types of an application
 // that accept collaborators according to its SpiceDB fragment, sorted. It
 // is empty for an unregistered application or one with no fragment.

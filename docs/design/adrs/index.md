@@ -25,6 +25,8 @@ under `docs/specs/` and execute these decisions.
 | [ADR-016](ADR-016-no-static-api-keys.md) | No Static API Keys: OAuth Grants for Non-Interactive Access | Proposed |
 | [ADR-017](ADR-017-external-connections.md) | External Connections | Proposed |
 | [ADR-018](ADR-018-organization-console.md) | The Organization Console on the SystemAuth Host | Proposed |
+| [ADR-019](ADR-019-support-requests-and-feedback.md) | Support Requests and Feedback in Every Application | Proposed |
+| [ADR-020](ADR-020-customer-authorized-support-access.md) | Customer-Authorized Support Access | Proposed |
 
 ## Statuses
 

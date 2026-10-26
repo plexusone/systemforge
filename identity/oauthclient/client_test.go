@@ -256,7 +256,9 @@ func TestStateManagerValidate(t *testing.T) {
 	m := NewStateManager()
 
 	rec := httptest.NewRecorder()
-	m.SetStateCookie(rec, "s1")
+	if err := m.SetStateCookie(rec, "s1"); err != nil {
+		t.Fatal(err)
+	}
 	cookie := rec.Result().Cookies()[0]
 	if !cookie.Secure || !cookie.HttpOnly {
 		t.Errorf("state cookie not hardened: %+v", cookie)

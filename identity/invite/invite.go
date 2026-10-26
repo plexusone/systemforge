@@ -117,5 +117,19 @@ var ErrAppRoleRequired = errors.New("invite: choose an application role for at l
 // is not for a collaborator, or cannot be honored by the service.
 var ErrResourceInvite = errors.New("invite: invalid resource target")
 
+// ErrNotPending means an invite is no longer pending: it was accepted,
+// declined, revoked or expired, possibly by a concurrent request.
+var ErrNotPending = errors.New("invite is no longer pending")
+
+// ErrExpired means an invite passed its expiration time.
+var ErrExpired = errors.New("invite has expired")
+
+// ErrInviterNotAuthorized means the principal who created an invite may no
+// longer invite to the organization, or no longer to the invite's role (it
+// was removed, deactivated or demoted), so the invite cannot be accepted:
+// an invitation carries its inviter's current authority, not the authority
+// it had when the invite was sent.
+var ErrInviterNotAuthorized = errors.New("invite: the inviter may no longer invite to this organization")
+
 // Default invite expiration time.
 const DefaultInviteExpiry = 7 * 24 * time.Hour // 7 days

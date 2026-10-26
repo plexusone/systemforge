@@ -10,8 +10,8 @@ import (
 func TestDefaultCookieConfig(t *testing.T) {
 	cfg := DefaultCookieConfig()
 
-	if cfg.Name != "sf_session" {
-		t.Errorf("Name = %s, want sf_session", cfg.Name)
+	if cfg.Name != DefaultCookieName {
+		t.Errorf("Name = %s, want "+DefaultCookieName, cfg.Name)
 	}
 	if cfg.Path != "/" {
 		t.Errorf("Path = %s, want /", cfg.Path)
@@ -31,8 +31,8 @@ func TestNewCookieManager(t *testing.T) {
 	mgr := NewCookieManager(CookieConfig{})
 
 	// Should apply defaults
-	if mgr.config.Name != "sf_session" {
-		t.Errorf("Name = %s, want sf_session", mgr.config.Name)
+	if mgr.config.Name != DefaultCookieName {
+		t.Errorf("Name = %s, want "+DefaultCookieName, mgr.config.Name)
 	}
 	if mgr.config.Path != "/" {
 		t.Errorf("Path = %s, want /", mgr.config.Path)
@@ -45,7 +45,6 @@ func TestNewCookieManager(t *testing.T) {
 func TestNewCookieManager_CustomConfig(t *testing.T) {
 	cfg := CookieConfig{
 		Name:     "custom_session",
-		Domain:   "example.com",
 		Path:     "/api",
 		Secure:   true,
 		HTTPOnly: true,
@@ -56,9 +55,6 @@ func TestNewCookieManager_CustomConfig(t *testing.T) {
 
 	if mgr.config.Name != "custom_session" {
 		t.Errorf("Name = %s, want custom_session", mgr.config.Name)
-	}
-	if mgr.config.Domain != "example.com" {
-		t.Errorf("Domain = %s, want example.com", mgr.config.Domain)
 	}
 	if mgr.config.Path != "/api" {
 		t.Errorf("Path = %s, want /api", mgr.config.Path)
@@ -82,8 +78,8 @@ func TestCookieManager_SetSessionCookie(t *testing.T) {
 	}
 
 	cookie := cookies[0]
-	if cookie.Name != "sf_session" {
-		t.Errorf("Cookie name = %s, want sf_session", cookie.Name)
+	if cookie.Name != DefaultCookieName {
+		t.Errorf("Cookie name = %s, want "+DefaultCookieName, cookie.Name)
 	}
 	if cookie.Value != sessionID {
 		t.Errorf("Cookie value = %s, want %s", cookie.Value, sessionID)
@@ -109,7 +105,7 @@ func TestCookieManager_GetSessionID(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	//nolint:gosec // G124: Test code - security attributes not needed for httptest
 	req.AddCookie(&http.Cookie{
-		Name:  "sf_session",
+		Name:  DefaultCookieName,
 		Value: sessionID,
 	})
 
@@ -158,8 +154,8 @@ func TestCookieManager_ClearSessionCookie(t *testing.T) {
 	}
 
 	cookie := cookies[0]
-	if cookie.Name != "sf_session" {
-		t.Errorf("Cookie name = %s, want sf_session", cookie.Name)
+	if cookie.Name != DefaultCookieName {
+		t.Errorf("Cookie name = %s, want "+DefaultCookieName, cookie.Name)
 	}
 	if cookie.Value != "" {
 		t.Errorf("Cookie value = %s, want empty", cookie.Value)
@@ -171,17 +167,13 @@ func TestCookieManager_ClearSessionCookie(t *testing.T) {
 
 func TestCookieManager_Config(t *testing.T) {
 	cfg := CookieConfig{
-		Name:   "test",
-		Domain: "example.com",
+		Name: "test",
 	}
 	mgr := NewCookieManager(cfg)
 
 	result := mgr.Config()
 	if result.Name != "test" {
 		t.Errorf("Config().Name = %s, want test", result.Name)
-	}
-	if result.Domain != "example.com" {
-		t.Errorf("Config().Domain = %s, want example.com", result.Domain)
 	}
 }
 
@@ -254,8 +246,8 @@ func TestCookieKeepsItsProtectionsWhenPartiallyConfigured(t *testing.T) {
 		}
 		return cookies[0]
 	}
-	c := set(CookieConfig{Name: "app_session", Domain: "example.com"})
-	if !c.Secure || !c.HttpOnly {
+	c := set(CookieConfig{Name: "app_session"})
+	if !c.Secure || !c.HttpOnly || c.Domain != "" {
 		t.Errorf("partial config gave Secure=%v HttpOnly=%v", c.Secure, c.HttpOnly)
 	}
 	// Local development can opt out of Secure, never out of HttpOnly.

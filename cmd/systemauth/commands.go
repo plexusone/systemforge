@@ -157,6 +157,7 @@ Run without a subcommand it serves (same as "systemauth serve").
 				return runValidate(cmd, opts)
 			},
 		},
+		newKeysCmd(opts),
 		newInviteCmd(opts),
 		newWaitlistCmd(opts),
 		&cobra.Command{
