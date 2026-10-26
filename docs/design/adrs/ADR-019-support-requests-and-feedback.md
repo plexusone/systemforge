@@ -99,8 +99,12 @@ adopts it, as ADR-017 does for connectforge.
 6. **Support has its own permissions.** `support.request.read` lets a
    holder list and read requests through the API, which matters when mail is
    the only desk. `support.desk.configure` lets a holder change the desk
-   order. They are held by a platform role, `support_agent`, separate from
-   platform administration, in the vocabulary of ADR-007 and ADR-012. Reading a
+   order and redeliver. `support.reply.draft` lets a holder draft a reply,
+   and `support.reply.approve` lets a holder approve and send one. They are
+   held by a platform role, `support_agent`, separate from platform
+   administration, in the vocabulary of ADR-007 and ADR-012. A grant issued to
+   an agent (decision 13) never carries `support.reply.approve`, even when
+   the person who authorized it holds the role. Reading a
    request's own text needs no customer grant. Looking at the customer's
    application data does, under ADR-020.
 7. **The API:**
@@ -111,7 +115,9 @@ adopts it, as ADR-017 does for connectforge.
    GET  /api/v1/support/requests/mine     signed in; the requester's own requests
    GET  /api/v1/support/requests          support_agent; list, without cleared text
    GET  /api/v1/support/requests/{ref}    support_agent
-   POST /api/v1/support/requests/{ref}/redeliver   support_agent; retry, or skip to the next desk
+   POST /api/v1/support/requests/{ref}/redeliver   support.desk.configure; retry, or skip to the next desk
+   POST /api/v1/support/requests/{ref}/replies     support.reply.draft; a draft reply
+   POST /api/v1/support/replies/{id}/approve       support.reply.approve; a person; sends it
    GET  /api/v1/organizations/{org}/support/requests        owners and admins; index, plus shared text
    GET  /api/v1/organizations/{org}/support/requests/{ref}  owners and admins
    ```
@@ -177,14 +183,24 @@ adopts it, as ADR-017 does for connectforge.
       digest of feedback by product; failed and stuck deliveries, with retry
       and skip to the next desk; and a request's conversation, read from the
       desk through its export.
-    - **Later:** an agent drafts a reply and leaves it at the desk as a note
-      or draft, and a person sends it.
-    - **Not decided:** an agent replying to a requester on its own. It needs
-      its own decision.
+    - **Next:** an agent drafts a reply, and it is sent to the requester only
+      after a person approves it:
+      - **The draft is stored by the platform,** as personal data classified
+        like the request's body, and cleared once sent or discarded.
+      - **A person approves the exact text.** Approval needs
+        `support.reply.approve`, which an agent's grant never holds, so an
+        agent cannot approve its own draft. An edit after approval needs a
+        new approval.
+      - **Sending follows approval,** through the desk, so the reply joins
+        the ticket's conversation. A desk that cannot send replies keeps the
+        draft as a note for a person to send there.
+      - **The audit trail records** who drafted, who approved, and when it
+        was sent.
+    - **Not allowed:** an agent sending a reply no person approved.
 
-    The tools act as a principal holding `support.request.read` (and
-    `support.desk.configure` for delivery operations) through an OAuth grant
-    (ADR-016), and every read is audited. A request's text needs no customer
+    The tools act as a principal holding `support.request.read`,
+    `support.reply.draft`, and `support.desk.configure` for delivery
+    operations, through an OAuth grant (ADR-016). Every read is audited. A request's text needs no customer
     grant, but the customer's application data still does (ADR-020). An
     operator who passes request text to a model provider adds that provider
     as a processor, under a processing agreement and in the privacy notice.
@@ -205,6 +221,9 @@ adopts it, as ADR-017 does for connectforge.
 - **No console to build or run at launch.** Responders use the desk's inbox
   or a mailbox, and operators use the CLI or an agent. The price is that a
   mail-only deployment has no shared view of who is answering what.
+- **Agents can answer requesters, but never alone.** Every agent reply
+  passes through a person's approval, which the platform enforces, at the
+  cost of a step before each reply.
 - **Requesters see their requests in the application,** with a status only
   as current as the desk can report, and a link out only where the desk has a
   page for them.
@@ -229,6 +248,9 @@ adopts it, as ADR-017 does for connectforge.
 - **A support console in the first release.** Rejected: the desks already
   have inboxes, and the operator's first need, knowing when delivery fails,
   is met by alerts and the agent-first tools.
+- **Approval in the agent's client only.** Rejected: a confirmation prompt
+  in a CLI or MCP client cannot be checked by the platform. Approval is a
+  separate call by a person, under a permission agents do not hold.
 - **The UI in its own repository.** Rejected for now: it calls this
   platform's API and uses its session, components and design tokens, so it
   would move in step with systemforge-web anyway. It can move later under the
