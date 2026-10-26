@@ -245,7 +245,8 @@ func (s *CodeStore) createCode(ctx context.Context, client *ent.Client, opts Cod
 		SetCreatedByLabel(opts.CreatedByLabel).
 		SetMaxUses(opts.MaxUses).
 		SetNillableCreatedByPrincipalID(opts.CreatedByPrincipal).
-		SetNillableExpiresAt(opts.ExpiresAt)
+		SetNillableExpiresAt(opts.ExpiresAt).
+		SetCreatedAt(s.now())
 	saved, err := c.Save(ctx)
 	if err != nil {
 		return Code{}, "", fmt.Errorf("signupgate: creating invite code: %w", err)

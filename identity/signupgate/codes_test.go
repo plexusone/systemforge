@@ -219,6 +219,35 @@ func TestListCodesAndRedemptions(t *testing.T) {
 	}
 }
 
+// TestListCodesKeepsCreationOrderWhenTimesTie pins the clock so every code
+// shares one created_at, as codes made in one tick of a coarse clock (such
+// as Windows') do, and checks that they still list newest first.
+func TestListCodesKeepsCreationOrderWhenTimesTie(t *testing.T) {
+	s, _ := newCodeStore(t)
+	tick := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	s.now = func() time.Time { return tick }
+	var made []uuid.UUID
+	for range 5 {
+		c, _ := operatorCode(t, s, 1)
+		made = append(made, c.ID)
+	}
+	got, err := s.ListCodes(t.Context(), CodeFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != len(made) {
+		t.Fatalf("ListCodes returned %d codes, want %d", len(got), len(made))
+	}
+	for i, c := range got {
+		if want := made[len(made)-1-i]; c.ID != want {
+			t.Errorf("position %d: got %s, want %s", i, c.ID, want)
+		}
+		if !c.CreatedAt.Equal(tick) {
+			t.Errorf("code %s created at %v, want the store clock's %v", c.ID, c.CreatedAt, tick)
+		}
+	}
+}
+
 // TestReserveIsExactUnderConcurrency races many sign-ups for one code on a
 // file database and checks that exactly its use limit is reserved.
 func TestReserveIsExactUnderConcurrency(t *testing.T) {

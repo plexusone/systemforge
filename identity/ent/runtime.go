@@ -1042,14 +1042,16 @@ func init() {
 	signupcodeMixin := schema.SignupCode{}.Mixin()
 	signupcodeMixinFields0 := signupcodeMixin[0].Fields()
 	_ = signupcodeMixinFields0
+	signupcodeMixinFields1 := signupcodeMixin[1].Fields()
+	_ = signupcodeMixinFields1
 	signupcodeFields := schema.SignupCode{}.Fields()
 	_ = signupcodeFields
 	// signupcodeDescCreatedAt is the schema descriptor for created_at field.
-	signupcodeDescCreatedAt := signupcodeMixinFields0[1].Descriptor()
+	signupcodeDescCreatedAt := signupcodeMixinFields1[0].Descriptor()
 	// signupcode.DefaultCreatedAt holds the default value on creation for the created_at field.
 	signupcode.DefaultCreatedAt = signupcodeDescCreatedAt.Default.(func() time.Time)
 	// signupcodeDescUpdatedAt is the schema descriptor for updated_at field.
-	signupcodeDescUpdatedAt := signupcodeMixinFields0[2].Descriptor()
+	signupcodeDescUpdatedAt := signupcodeMixinFields1[1].Descriptor()
 	// signupcode.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	signupcode.DefaultUpdatedAt = signupcodeDescUpdatedAt.Default.(func() time.Time)
 	// signupcode.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

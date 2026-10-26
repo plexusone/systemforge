@@ -33,7 +33,10 @@ func (SignupCode) Annotations() []schema.Annotation {
 // Mixin of the SignupCode.
 func (SignupCode) Mixin() []ent.Mixin {
 	return []ent.Mixin{
-		BaseMixin{},
+		// Codes are listed newest first; v7 IDs keep that order when
+		// created_at ties on a coarse clock.
+		TimeOrderedUUIDMixin{},
+		TimestampMixin{},
 	}
 }
 
