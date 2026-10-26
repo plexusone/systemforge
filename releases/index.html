@@ -478,6 +478,8 @@
       
         
       
+        
+      
     
     
     
@@ -820,6 +822,34 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/invite-gated-signup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Invite-Gated Sign-Up
   
 
     
@@ -4100,6 +4130,8 @@
       
         
       
+        
+      
     
     
     
@@ -4169,6 +4201,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="v0.22.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.22.0
   
 
     
@@ -4972,12 +5032,17 @@
 <p>Release notes, one file per version, newest first. The
 <a href="changelog/">changelog</a> is generated from <code>CHANGELOG.json</code> and lists every
 change with its commit.</p>
-<p>The latest release, <a href="v0.21.0/">v0.21.0</a>, is a security release: tokens are
+<p>The latest release, <a href="v0.22.0/">v0.22.0</a>, adds invite-gated sign-up:
+invite codes with use limits and cohort labels, member invites from an
+allowance, attribution of every account to its invite, an invite API, and
+operator commands. It is not breaking; existing databases run migration
+0011.</p>
+<p>The previous release, <a href="v0.21.0/">v0.21.0</a>, was a security release: tokens are
 DPoP-bound by default, keys and secrets rotate keeping the current and
 previous value, SCIM has built-in per-tenant tokens, revocations remove graph
 access before they commit, and each multi-app application gets its own
 database login. It is breaking; read its upgrade guide first.</p>
-<p>The previous release, <a href="v0.20.0/">v0.20.0</a>, was also a security release:
+<p>Before it, <a href="v0.20.0/">v0.20.0</a>, was also a security release:
 it bound tokens to the application they were issued for and SCIM
 credentials to one organization, made revocation remove access everywhere,
 and made authorization checks fail closed. It is breaking; read its upgrade

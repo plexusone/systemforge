@@ -245,6 +245,10 @@
          <lastmod>2026-10-26</lastmod>
     </url>
     <url>
+         <loc>https://plexusone.github.io/systemforge/guides/invite-gated-signup/</loc>
+         <lastmod>2026-10-26</lastmod>
+    </url>
+    <url>
          <loc>https://plexusone.github.io/systemforge/guides/invites/</loc>
          <lastmod>2026-10-26</lastmod>
     </url>
@@ -434,6 +438,10 @@
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.21.0/</loc>
+         <lastmod>2026-10-26</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/releases/v0.22.0/</loc>
          <lastmod>2026-10-26</lastmod>
     </url>
     <url>
@@ -642,6 +650,22 @@
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-012/TRD/</loc>
+         <lastmod>2026-10-26</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-013/PLAN/</loc>
+         <lastmod>2026-10-26</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-013/PRD/</loc>
+         <lastmod>2026-10-26</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-013/ROADMAP/</loc>
+         <lastmod>2026-10-26</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-013/TRD/</loc>
          <lastmod>2026-10-26</lastmod>
     </url>
     <url>

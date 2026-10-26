@@ -478,6 +478,8 @@
       
         
       
+        
+      
     
     
     
@@ -820,6 +822,34 @@
     
   
     Minimum Sign-Up Age
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/invite-gated-signup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Invite-Gated Sign-Up
   
 
     
@@ -4283,6 +4313,8 @@
       
         
       
+        
+      
     
     
     
@@ -4354,6 +4386,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.22.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.22.0
   
 
     
@@ -5413,9 +5473,11 @@ when it is not on the command line:</p>
 requirements; <code>systemauth migrate</code> runs migrations only.</p>
 <h2 id="invite-only-sign-up">Invite-only sign-up<a class="headerlink" href="#invite-only-sign-up" title="Permanent link">&para;</a></h2>
 <p>Start with <code>--invite-only</code> to let new accounts in only by invitation, for
-example while a deployment is being brought up. An invite is an email address,
-not a code: the person signs in with the upstream provider, and an account is
+example while a deployment is being brought up. An email invite names an
+address: the person signs in with the upstream provider, and an account is
 created only when the provider's <strong>verified</strong> email holds a pending invite.
+Invite codes, shared as links, are described in
+<a href="../../guides/invite-gated-signup/">Invite-Gated Sign-Up</a>.
 People who already have an account sign in as before, and an unverified
 address never matches.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>systemauth<span class="w"> </span>invite<span class="w"> </span>add<span class="w"> </span>ada@example.com<span class="w"> </span>grace@example.com<span class="w"> </span>--note<span class="w"> </span><span class="s2">&quot;launch cohort&quot;</span><span class="w"> </span>--expires-in<span class="w"> </span>168h
@@ -5446,7 +5508,11 @@ address never matches.</p>
 - <strong>Database:</strong> the commands read the configured database directly, so they
   work with the server running. The table is created by the schema migration.
 - <strong>In a host binary,</strong> set <code>Options.InviteOnly</code> and <code>Options.SignupDeniedURL</code>
-  on <code>systemauthsvc.New</code>, and manage invites with <code>Service.SignupInvites()</code>.</p>
+  on <code>systemauthsvc.New</code>, and manage invites with <code>Service.SignupInvites()</code>.
+- <strong>Invite codes, member invites and the invite API</strong> build on invite-only
+  sign-up: see <a href="../../guides/invite-gated-signup/">Invite-Gated Sign-Up</a> for
+  <code>Options.SignupCodes</code>, <code>MemberInvites</code>, <code>SignupAPI</code>, and the <code>code</code>,
+  <code>allowance</code>, <code>waitlist invite</code> and <code>admin</code> commands.</p>
 <h2 id="minimum-sign-up-age">Minimum sign-up age<a class="headerlink" href="#minimum-sign-up-age" title="Permanent link">&para;</a></h2>
 <p>Set <code>social_login.signup_minimum_age</code> to ask a person their birth month and
 year before their first upstream login creates an account:</p>
