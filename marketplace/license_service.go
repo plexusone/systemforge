@@ -219,7 +219,7 @@ func (s *EntLicenseService) CheckPrincipal(ctx context.Context, listingID, princ
 		if now.Before(l.ValidFrom) {
 			continue
 		}
-		if l.ValidUntil != nil && now.After(*l.ValidUntil) {
+		if l.ValidUntil != nil && !now.Before(*l.ValidUntil) {
 			continue
 		}
 

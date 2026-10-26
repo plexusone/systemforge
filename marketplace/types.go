@@ -204,7 +204,8 @@ type License struct {
 	// ValidFrom is when the license becomes active.
 	ValidFrom time.Time `json:"validFrom"`
 
-	// ValidUntil is when the license expires (nil for perpetual).
+	// ValidUntil is when the license ends (nil for perpetual): it is valid
+	// before this instant and not at or after it.
 	ValidUntil *time.Time `json:"validUntil,omitempty"`
 
 	// StripeSubscriptionID is the Stripe subscription (for recurring).
@@ -222,11 +223,16 @@ type License struct {
 
 // IsValid returns true if the license is currently valid.
 func (l *License) IsValid() bool {
-	now := time.Now()
+	return l.validAt(time.Now())
+}
+
+// validAt reports whether the license is valid at now: from ValidFrom, up
+// to but not including ValidUntil.
+func (l *License) validAt(now time.Time) bool {
 	if now.Before(l.ValidFrom) {
 		return false
 	}
-	if l.ValidUntil != nil && now.After(*l.ValidUntil) {
+	if l.ValidUntil != nil && !now.Before(*l.ValidUntil) {
 		return false
 	}
 	return true

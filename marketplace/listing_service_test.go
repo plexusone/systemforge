@@ -434,3 +434,28 @@ func TestSubscriptionHelpers(t *testing.T) {
 		t.Errorf("DaysRemaining() = %d, want 0 for past date", s.DaysRemaining())
 	}
 }
+
+// ValidUntil is exclusive: a license suspended by setting ValidUntil to the
+// current time is invalid at that same instant, on clocks too coarse to
+// have moved on.
+func TestLicenseValidAtBoundaries(t *testing.T) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(time.Hour)
+	l := &License{ValidFrom: start, ValidUntil: &end}
+	tests := []struct {
+		name string
+		at   time.Time
+		want bool
+	}{
+		{"before ValidFrom", start.Add(-time.Nanosecond), false},
+		{"at ValidFrom", start, true},
+		{"just before ValidUntil", end.Add(-time.Nanosecond), true},
+		{"at ValidUntil", end, false},
+		{"after ValidUntil", end.Add(time.Nanosecond), false},
+	}
+	for _, tt := range tests {
+		if got := l.validAt(tt.at); got != tt.want {
+			t.Errorf("%s: validAt = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
