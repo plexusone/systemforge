@@ -70,6 +70,20 @@ func (_c *SignupWaitlistEntryCreate) SetConsentText(v string) *SignupWaitlistEnt
 	return _c
 }
 
+// SetInvitedAt sets the "invited_at" field.
+func (_c *SignupWaitlistEntryCreate) SetInvitedAt(v time.Time) *SignupWaitlistEntryCreate {
+	_c.mutation.SetInvitedAt(v)
+	return _c
+}
+
+// SetNillableInvitedAt sets the "invited_at" field if the given value is not nil.
+func (_c *SignupWaitlistEntryCreate) SetNillableInvitedAt(v *time.Time) *SignupWaitlistEntryCreate {
+	if v != nil {
+		_c.SetInvitedAt(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *SignupWaitlistEntryCreate) SetID(v uuid.UUID) *SignupWaitlistEntryCreate {
 	_c.mutation.SetID(v)
@@ -221,6 +235,10 @@ func (_c *SignupWaitlistEntryCreate) createSpec() (*SignupWaitlistEntry, *sqlgra
 		_spec.SetField(signupwaitlistentry.FieldConsentText, field.TypeString, value)
 		_node.ConsentText = value
 	}
+	if value, ok := _c.mutation.InvitedAt(); ok {
+		_spec.SetField(signupwaitlistentry.FieldInvitedAt, field.TypeTime, value)
+		_node.InvitedAt = &value
+	}
 	return _node, _spec
 }
 
@@ -318,6 +336,24 @@ func (u *SignupWaitlistEntryUpsert) SetConsentText(v string) *SignupWaitlistEntr
 // UpdateConsentText sets the "consent_text" field to the value that was provided on create.
 func (u *SignupWaitlistEntryUpsert) UpdateConsentText() *SignupWaitlistEntryUpsert {
 	u.SetExcluded(signupwaitlistentry.FieldConsentText)
+	return u
+}
+
+// SetInvitedAt sets the "invited_at" field.
+func (u *SignupWaitlistEntryUpsert) SetInvitedAt(v time.Time) *SignupWaitlistEntryUpsert {
+	u.Set(signupwaitlistentry.FieldInvitedAt, v)
+	return u
+}
+
+// UpdateInvitedAt sets the "invited_at" field to the value that was provided on create.
+func (u *SignupWaitlistEntryUpsert) UpdateInvitedAt() *SignupWaitlistEntryUpsert {
+	u.SetExcluded(signupwaitlistentry.FieldInvitedAt)
+	return u
+}
+
+// ClearInvitedAt clears the value of the "invited_at" field.
+func (u *SignupWaitlistEntryUpsert) ClearInvitedAt() *SignupWaitlistEntryUpsert {
+	u.SetNull(signupwaitlistentry.FieldInvitedAt)
 	return u
 }
 
@@ -425,6 +461,27 @@ func (u *SignupWaitlistEntryUpsertOne) SetConsentText(v string) *SignupWaitlistE
 func (u *SignupWaitlistEntryUpsertOne) UpdateConsentText() *SignupWaitlistEntryUpsertOne {
 	return u.Update(func(s *SignupWaitlistEntryUpsert) {
 		s.UpdateConsentText()
+	})
+}
+
+// SetInvitedAt sets the "invited_at" field.
+func (u *SignupWaitlistEntryUpsertOne) SetInvitedAt(v time.Time) *SignupWaitlistEntryUpsertOne {
+	return u.Update(func(s *SignupWaitlistEntryUpsert) {
+		s.SetInvitedAt(v)
+	})
+}
+
+// UpdateInvitedAt sets the "invited_at" field to the value that was provided on create.
+func (u *SignupWaitlistEntryUpsertOne) UpdateInvitedAt() *SignupWaitlistEntryUpsertOne {
+	return u.Update(func(s *SignupWaitlistEntryUpsert) {
+		s.UpdateInvitedAt()
+	})
+}
+
+// ClearInvitedAt clears the value of the "invited_at" field.
+func (u *SignupWaitlistEntryUpsertOne) ClearInvitedAt() *SignupWaitlistEntryUpsertOne {
+	return u.Update(func(s *SignupWaitlistEntryUpsert) {
+		s.ClearInvitedAt()
 	})
 }
 
@@ -699,6 +756,27 @@ func (u *SignupWaitlistEntryUpsertBulk) SetConsentText(v string) *SignupWaitlist
 func (u *SignupWaitlistEntryUpsertBulk) UpdateConsentText() *SignupWaitlistEntryUpsertBulk {
 	return u.Update(func(s *SignupWaitlistEntryUpsert) {
 		s.UpdateConsentText()
+	})
+}
+
+// SetInvitedAt sets the "invited_at" field.
+func (u *SignupWaitlistEntryUpsertBulk) SetInvitedAt(v time.Time) *SignupWaitlistEntryUpsertBulk {
+	return u.Update(func(s *SignupWaitlistEntryUpsert) {
+		s.SetInvitedAt(v)
+	})
+}
+
+// UpdateInvitedAt sets the "invited_at" field to the value that was provided on create.
+func (u *SignupWaitlistEntryUpsertBulk) UpdateInvitedAt() *SignupWaitlistEntryUpsertBulk {
+	return u.Update(func(s *SignupWaitlistEntryUpsert) {
+		s.UpdateInvitedAt()
+	})
+}
+
+// ClearInvitedAt clears the value of the "invited_at" field.
+func (u *SignupWaitlistEntryUpsertBulk) ClearInvitedAt() *SignupWaitlistEntryUpsertBulk {
+	return u.Update(func(s *SignupWaitlistEntryUpsert) {
+		s.ClearInvitedAt()
 	})
 }
 

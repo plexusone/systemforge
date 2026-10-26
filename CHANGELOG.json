@@ -9,6 +9,47 @@
   ],
   "releases": [
     {
+      "version": "v0.22.0",
+      "date": "2026-10-25",
+      "highlights": [
+        {
+          "description": "Invite-gated sign-up grows a deployment on purpose: operators create invite codes with use limits, expiry and cohort labels, members invite people from an allowance, every account records which invite admitted it, and an HTTP API serves admin and member pages"
+        }
+      ],
+      "added": [
+        {
+          "description": "`signupgate.CodeStore`: invite codes stored as hashes and shown once, reserved with one conditional update so a code admits at most its use limit, redemptions for attribution, and member allowances with single-use member codes",
+          "commit": "8ffe82f"
+        },
+        {
+          "description": "`systemauth.WithSignupCodes`: the `/signup?code=` page and `invite_code` on provider sign-in carry a code to the sign-up gate; `SignupGateAborter` lets a gate give back a reservation when account creation fails",
+          "commit": "89d2b55"
+        },
+        {
+          "description": "`signupgate/signupapi`: operator routes for email invites, codes, the waitlist, allowances and joined accounts, and member routes for a person's own codes, with audit events",
+          "commit": "1551e8a"
+        },
+        {
+          "description": "`systemauthsvc` options `SignupCodes`, `SignupPage`, `MemberInvites` and `SignupAPI`, and `Service.SignupCodes` and `Service.SignupAPI`",
+          "commit": "93915ad"
+        },
+        {
+          "description": "Commands `code`, `allowance`, `waitlist invite` and `admin` (`principal/admincmd`) for operators, including granting the first platform administrator",
+          "commit": "e75977e"
+        },
+        {
+          "description": "Migration `0011` records who created a sign-up invite and when a waitlist entry was invited",
+          "commit": "f7ee741"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Invite-Gated Sign-Up guide",
+          "commit": "bb60e66"
+        }
+      ]
+    },
+    {
       "version": "v0.21.0",
       "date": "2026-10-25",
       "highlights": [

@@ -89,6 +89,9 @@ func (d *gatedDirectory) CreateFromExternal(ctx context.Context, login ExternalL
 	}
 	p, err := d.PrincipalDirectory.CreateFromExternal(ctx, login)
 	if err != nil {
+		if a, ok := d.gate.(SignupGateAborter); ok {
+			a.SignupAborted(ctx, login)
+		}
 		return nil, err
 	}
 	if err := d.gate.SignedUp(ctx, login, p.ID); err != nil {

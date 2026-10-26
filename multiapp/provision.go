@@ -94,6 +94,9 @@ var RestrictedSharedTables = []string{
 	"sf_oauth_tokens",
 	"sf_principal_tokens",
 	"sf_scim_tokens",
+	"sf_signup_allowances",
+	"sf_signup_code_redemptions",
+	"sf_signup_codes",
 	"sf_signup_invites",
 	"sf_signup_waitlist",
 }

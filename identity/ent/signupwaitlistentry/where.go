@@ -80,6 +80,11 @@ func ConsentText(v string) predicate.SignupWaitlistEntry {
 	return predicate.SignupWaitlistEntry(sql.FieldEQ(FieldConsentText, v))
 }
 
+// InvitedAt applies equality check predicate on the "invited_at" field. It's identical to InvitedAtEQ.
+func InvitedAt(v time.Time) predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldEQ(FieldInvitedAt, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.SignupWaitlistEntry {
 	return predicate.SignupWaitlistEntry(sql.FieldEQ(FieldCreatedAt, v))
@@ -353,6 +358,56 @@ func ConsentTextEqualFold(v string) predicate.SignupWaitlistEntry {
 // ConsentTextContainsFold applies the ContainsFold predicate on the "consent_text" field.
 func ConsentTextContainsFold(v string) predicate.SignupWaitlistEntry {
 	return predicate.SignupWaitlistEntry(sql.FieldContainsFold(FieldConsentText, v))
+}
+
+// InvitedAtEQ applies the EQ predicate on the "invited_at" field.
+func InvitedAtEQ(v time.Time) predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldEQ(FieldInvitedAt, v))
+}
+
+// InvitedAtNEQ applies the NEQ predicate on the "invited_at" field.
+func InvitedAtNEQ(v time.Time) predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldNEQ(FieldInvitedAt, v))
+}
+
+// InvitedAtIn applies the In predicate on the "invited_at" field.
+func InvitedAtIn(vs ...time.Time) predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldIn(FieldInvitedAt, vs...))
+}
+
+// InvitedAtNotIn applies the NotIn predicate on the "invited_at" field.
+func InvitedAtNotIn(vs ...time.Time) predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldNotIn(FieldInvitedAt, vs...))
+}
+
+// InvitedAtGT applies the GT predicate on the "invited_at" field.
+func InvitedAtGT(v time.Time) predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldGT(FieldInvitedAt, v))
+}
+
+// InvitedAtGTE applies the GTE predicate on the "invited_at" field.
+func InvitedAtGTE(v time.Time) predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldGTE(FieldInvitedAt, v))
+}
+
+// InvitedAtLT applies the LT predicate on the "invited_at" field.
+func InvitedAtLT(v time.Time) predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldLT(FieldInvitedAt, v))
+}
+
+// InvitedAtLTE applies the LTE predicate on the "invited_at" field.
+func InvitedAtLTE(v time.Time) predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldLTE(FieldInvitedAt, v))
+}
+
+// InvitedAtIsNil applies the IsNil predicate on the "invited_at" field.
+func InvitedAtIsNil() predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldIsNull(FieldInvitedAt))
+}
+
+// InvitedAtNotNil applies the NotNil predicate on the "invited_at" field.
+func InvitedAtNotNil() predicate.SignupWaitlistEntry {
+	return predicate.SignupWaitlistEntry(sql.FieldNotNull(FieldInvitedAt))
 }
 
 // And groups predicates with the AND operator between them.

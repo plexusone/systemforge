@@ -86,6 +86,20 @@ func (_c *SignupInviteCreate) SetNillableInvitedBy(v *string) *SignupInviteCreat
 	return _c
 }
 
+// SetInvitedByPrincipalID sets the "invited_by_principal_id" field.
+func (_c *SignupInviteCreate) SetInvitedByPrincipalID(v uuid.UUID) *SignupInviteCreate {
+	_c.mutation.SetInvitedByPrincipalID(v)
+	return _c
+}
+
+// SetNillableInvitedByPrincipalID sets the "invited_by_principal_id" field if the given value is not nil.
+func (_c *SignupInviteCreate) SetNillableInvitedByPrincipalID(v *uuid.UUID) *SignupInviteCreate {
+	if v != nil {
+		_c.SetInvitedByPrincipalID(*v)
+	}
+	return _c
+}
+
 // SetExpiresAt sets the "expires_at" field.
 func (_c *SignupInviteCreate) SetExpiresAt(v time.Time) *SignupInviteCreate {
 	_c.mutation.SetExpiresAt(v)
@@ -273,6 +287,10 @@ func (_c *SignupInviteCreate) createSpec() (*SignupInvite, *sqlgraph.CreateSpec)
 		_spec.SetField(signupinvite.FieldInvitedBy, field.TypeString, value)
 		_node.InvitedBy = value
 	}
+	if value, ok := _c.mutation.InvitedByPrincipalID(); ok {
+		_spec.SetField(signupinvite.FieldInvitedByPrincipalID, field.TypeUUID, value)
+		_node.InvitedByPrincipalID = &value
+	}
 	if value, ok := _c.mutation.ExpiresAt(); ok {
 		_spec.SetField(signupinvite.FieldExpiresAt, field.TypeTime, value)
 		_node.ExpiresAt = &value
@@ -394,6 +412,24 @@ func (u *SignupInviteUpsert) UpdateInvitedBy() *SignupInviteUpsert {
 // ClearInvitedBy clears the value of the "invited_by" field.
 func (u *SignupInviteUpsert) ClearInvitedBy() *SignupInviteUpsert {
 	u.SetNull(signupinvite.FieldInvitedBy)
+	return u
+}
+
+// SetInvitedByPrincipalID sets the "invited_by_principal_id" field.
+func (u *SignupInviteUpsert) SetInvitedByPrincipalID(v uuid.UUID) *SignupInviteUpsert {
+	u.Set(signupinvite.FieldInvitedByPrincipalID, v)
+	return u
+}
+
+// UpdateInvitedByPrincipalID sets the "invited_by_principal_id" field to the value that was provided on create.
+func (u *SignupInviteUpsert) UpdateInvitedByPrincipalID() *SignupInviteUpsert {
+	u.SetExcluded(signupinvite.FieldInvitedByPrincipalID)
+	return u
+}
+
+// ClearInvitedByPrincipalID clears the value of the "invited_by_principal_id" field.
+func (u *SignupInviteUpsert) ClearInvitedByPrincipalID() *SignupInviteUpsert {
+	u.SetNull(signupinvite.FieldInvitedByPrincipalID)
 	return u
 }
 
@@ -569,6 +605,27 @@ func (u *SignupInviteUpsertOne) UpdateInvitedBy() *SignupInviteUpsertOne {
 func (u *SignupInviteUpsertOne) ClearInvitedBy() *SignupInviteUpsertOne {
 	return u.Update(func(s *SignupInviteUpsert) {
 		s.ClearInvitedBy()
+	})
+}
+
+// SetInvitedByPrincipalID sets the "invited_by_principal_id" field.
+func (u *SignupInviteUpsertOne) SetInvitedByPrincipalID(v uuid.UUID) *SignupInviteUpsertOne {
+	return u.Update(func(s *SignupInviteUpsert) {
+		s.SetInvitedByPrincipalID(v)
+	})
+}
+
+// UpdateInvitedByPrincipalID sets the "invited_by_principal_id" field to the value that was provided on create.
+func (u *SignupInviteUpsertOne) UpdateInvitedByPrincipalID() *SignupInviteUpsertOne {
+	return u.Update(func(s *SignupInviteUpsert) {
+		s.UpdateInvitedByPrincipalID()
+	})
+}
+
+// ClearInvitedByPrincipalID clears the value of the "invited_by_principal_id" field.
+func (u *SignupInviteUpsertOne) ClearInvitedByPrincipalID() *SignupInviteUpsertOne {
+	return u.Update(func(s *SignupInviteUpsert) {
+		s.ClearInvitedByPrincipalID()
 	})
 }
 
@@ -920,6 +977,27 @@ func (u *SignupInviteUpsertBulk) UpdateInvitedBy() *SignupInviteUpsertBulk {
 func (u *SignupInviteUpsertBulk) ClearInvitedBy() *SignupInviteUpsertBulk {
 	return u.Update(func(s *SignupInviteUpsert) {
 		s.ClearInvitedBy()
+	})
+}
+
+// SetInvitedByPrincipalID sets the "invited_by_principal_id" field.
+func (u *SignupInviteUpsertBulk) SetInvitedByPrincipalID(v uuid.UUID) *SignupInviteUpsertBulk {
+	return u.Update(func(s *SignupInviteUpsert) {
+		s.SetInvitedByPrincipalID(v)
+	})
+}
+
+// UpdateInvitedByPrincipalID sets the "invited_by_principal_id" field to the value that was provided on create.
+func (u *SignupInviteUpsertBulk) UpdateInvitedByPrincipalID() *SignupInviteUpsertBulk {
+	return u.Update(func(s *SignupInviteUpsert) {
+		s.UpdateInvitedByPrincipalID()
+	})
+}
+
+// ClearInvitedByPrincipalID clears the value of the "invited_by_principal_id" field.
+func (u *SignupInviteUpsertBulk) ClearInvitedByPrincipalID() *SignupInviteUpsertBulk {
+	return u.Update(func(s *SignupInviteUpsert) {
+		s.ClearInvitedByPrincipalID()
 	})
 }
 

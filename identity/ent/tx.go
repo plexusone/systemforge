@@ -74,6 +74,12 @@ type Tx struct {
 	SeatAssignment *SeatAssignmentClient
 	// ServicePrincipal is the client for interacting with the ServicePrincipal builders.
 	ServicePrincipal *ServicePrincipalClient
+	// SignupAllowance is the client for interacting with the SignupAllowance builders.
+	SignupAllowance *SignupAllowanceClient
+	// SignupCode is the client for interacting with the SignupCode builders.
+	SignupCode *SignupCodeClient
+	// SignupCodeRedemption is the client for interacting with the SignupCodeRedemption builders.
+	SignupCodeRedemption *SignupCodeRedemptionClient
 	// SignupInvite is the client for interacting with the SignupInvite builders.
 	SignupInvite *SignupInviteClient
 	// SignupWaitlistEntry is the client for interacting with the SignupWaitlistEntry builders.
@@ -243,6 +249,9 @@ func (tx *Tx) init() {
 	tx.ScimToken = NewScimTokenClient(tx.config)
 	tx.SeatAssignment = NewSeatAssignmentClient(tx.config)
 	tx.ServicePrincipal = NewServicePrincipalClient(tx.config)
+	tx.SignupAllowance = NewSignupAllowanceClient(tx.config)
+	tx.SignupCode = NewSignupCodeClient(tx.config)
+	tx.SignupCodeRedemption = NewSignupCodeRedemptionClient(tx.config)
 	tx.SignupInvite = NewSignupInviteClient(tx.config)
 	tx.SignupWaitlistEntry = NewSignupWaitlistEntryClient(tx.config)
 	tx.SlugReservation = NewSlugReservationClient(tx.config)

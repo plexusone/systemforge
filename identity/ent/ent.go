@@ -42,6 +42,9 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/scimtoken"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
+	"github.com/plexusone/systemforge/identity/ent/signupallowance"
+	"github.com/plexusone/systemforge/identity/ent/signupcode"
+	"github.com/plexusone/systemforge/identity/ent/signupcoderedemption"
 	"github.com/plexusone/systemforge/identity/ent/signupinvite"
 	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
@@ -106,40 +109,43 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			accesschange.Table:        accesschange.ValidColumn,
-			agent.Table:               agent.ValidColumn,
-			approle.Table:             approle.ValidColumn,
-			application.Table:         application.ValidColumn,
-			clientassertionjti.Table:  clientassertionjti.ValidColumn,
-			consentgrant.Table:        consentgrant.ValidColumn,
-			credential.Table:          credential.ValidColumn,
-			externalidentity.Table:    externalidentity.ValidColumn,
-			human.Table:               human.ValidColumn,
-			invite.Table:              invite.ValidColumn,
-			license.Table:             license.ValidColumn,
-			listing.Table:             listing.ValidColumn,
-			loginsession.Table:        loginsession.ValidColumn,
-			loginstate.Table:          loginstate.ValidColumn,
-			managerclaim.Table:        managerclaim.ValidColumn,
-			managerinvite.Table:       managerinvite.ValidColumn,
-			managerrelationship.Table: managerrelationship.ValidColumn,
-			oauthapp.Table:            oauthapp.ValidColumn,
-			oauthappsecret.Table:      oauthappsecret.ValidColumn,
-			oauthauthcode.Table:       oauthauthcode.ValidColumn,
-			oauthconsent.Table:        oauthconsent.ValidColumn,
-			oauthtoken.Table:          oauthtoken.ValidColumn,
-			organization.Table:        organization.ValidColumn,
-			principal.Table:           principal.ValidColumn,
-			principalmembership.Table: principalmembership.ValidColumn,
-			principaltoken.Table:      principaltoken.ValidColumn,
-			resourcegrant.Table:       resourcegrant.ValidColumn,
-			scimtoken.Table:           scimtoken.ValidColumn,
-			seatassignment.Table:      seatassignment.ValidColumn,
-			serviceprincipal.Table:    serviceprincipal.ValidColumn,
-			signupinvite.Table:        signupinvite.ValidColumn,
-			signupwaitlistentry.Table: signupwaitlistentry.ValidColumn,
-			slugreservation.Table:     slugreservation.ValidColumn,
-			subscription.Table:        subscription.ValidColumn,
+			accesschange.Table:         accesschange.ValidColumn,
+			agent.Table:                agent.ValidColumn,
+			approle.Table:              approle.ValidColumn,
+			application.Table:          application.ValidColumn,
+			clientassertionjti.Table:   clientassertionjti.ValidColumn,
+			consentgrant.Table:         consentgrant.ValidColumn,
+			credential.Table:           credential.ValidColumn,
+			externalidentity.Table:     externalidentity.ValidColumn,
+			human.Table:                human.ValidColumn,
+			invite.Table:               invite.ValidColumn,
+			license.Table:              license.ValidColumn,
+			listing.Table:              listing.ValidColumn,
+			loginsession.Table:         loginsession.ValidColumn,
+			loginstate.Table:           loginstate.ValidColumn,
+			managerclaim.Table:         managerclaim.ValidColumn,
+			managerinvite.Table:        managerinvite.ValidColumn,
+			managerrelationship.Table:  managerrelationship.ValidColumn,
+			oauthapp.Table:             oauthapp.ValidColumn,
+			oauthappsecret.Table:       oauthappsecret.ValidColumn,
+			oauthauthcode.Table:        oauthauthcode.ValidColumn,
+			oauthconsent.Table:         oauthconsent.ValidColumn,
+			oauthtoken.Table:           oauthtoken.ValidColumn,
+			organization.Table:         organization.ValidColumn,
+			principal.Table:            principal.ValidColumn,
+			principalmembership.Table:  principalmembership.ValidColumn,
+			principaltoken.Table:       principaltoken.ValidColumn,
+			resourcegrant.Table:        resourcegrant.ValidColumn,
+			scimtoken.Table:            scimtoken.ValidColumn,
+			seatassignment.Table:       seatassignment.ValidColumn,
+			serviceprincipal.Table:     serviceprincipal.ValidColumn,
+			signupallowance.Table:      signupallowance.ValidColumn,
+			signupcode.Table:           signupcode.ValidColumn,
+			signupcoderedemption.Table: signupcoderedemption.ValidColumn,
+			signupinvite.Table:         signupinvite.ValidColumn,
+			signupwaitlistentry.Table:  signupwaitlistentry.ValidColumn,
+			slugreservation.Table:      slugreservation.ValidColumn,
+			subscription.Table:         subscription.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

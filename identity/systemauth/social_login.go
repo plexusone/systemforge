@@ -63,6 +63,9 @@ type socialOptions struct {
 
 	waitlist     SignupWaitlist
 	waitlistPage WaitlistPage
+
+	signupCodes SignupCodeLookup
+	signupPage  SignupPage
 }
 
 // WithSocialAuthzSyncer sets the authorization syncer that registers principals and
@@ -137,6 +140,11 @@ type socialLogin struct {
 	redirects        *redirectPolicy
 	cookies          loginCookies
 	now              func() time.Time
+
+	// signupCodes, when set, serves the sign-up page at SignupPath and
+	// carries invite codes to the sign-up gate.
+	signupCodes SignupCodeLookup
+	signupPage  SignupPage
 
 	// loginTokens exchanges managed principals' login tokens for
 	// sessions; nil when managed principals are off.
@@ -266,8 +274,16 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 		return nil, err
 	}
 	sl.signupDenied = denied
-	if w := s.socialOpts.waitlist; w != nil {
-		sl.waitlist, sl.waitlistPage = w, s.socialOpts.waitlistPage
+	if c := s.socialOpts.signupCodes; c != nil {
+		if rt := s.socialOpts.signupPage.ReturnTo; rt != "" {
+			if _, err := redirects.validate(rt); err != nil {
+				return nil, fmt.Errorf("signup page return_to %q: %w", rt, err)
+			}
+		}
+		sl.signupCodes, sl.signupPage = c, s.socialOpts.signupPage
+	}
+	if s.socialOpts.waitlist != nil || s.socialOpts.signupCodes != nil {
+		sl.waitlist, sl.waitlistPage = s.socialOpts.waitlist, s.socialOpts.waitlistPage
 		sl.waitlistRates, sl.waitlistClientIP = s.socialOpts.loginTokenRate, s.socialOpts.loginTokenClientIP
 		if sl.waitlistRates == nil {
 			sl.waitlistRates = ratelimit.NewMemoryStorage()
@@ -299,6 +315,9 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 		if sl.cfg.SignupMinimumAge > 0 {
 			r.Get(SignupAgePath, sl.handleAgePage)
 			r.Post(SignupAgePath, sl.handleAgeAnswer)
+		}
+		if sl.signupCodes != nil {
+			r.Get(SignupPath, sl.handleSignupPage)
 		}
 	}
 	r.Get(LogoutPath, sl.handleLogoutPage)
@@ -392,6 +411,12 @@ func (sl *socialLogin) handleStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := sl.keepInviteCode(w, r); err != nil {
+		logger.Error("keeping invite code", "error", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
 	state, err := oauthclient.GenerateState()
 	if err != nil {
 		logger.Error("generating login state", "error", err)
@@ -481,6 +506,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	if sl.cfg.SignupMinimumAge > 0 {
 		ctx = sl.takeAgeConfirmation(ctx, w, r, provider)
 	}
+	ctx = sl.withSignupCode(ctx, r)
 	p, err := ResolveExternalLogin(ctx, sl.directory, ExternalLogin{
 		Provider:      provider,
 		Subject:       user.ProviderID,
@@ -527,6 +553,10 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, status)
 		return
 	}
+
+	// The login resolved to an account, new or existing: the invite code
+	// has done its job.
+	sl.clearSignupCode(w, r)
 
 	// Re-validate the stored target in case the policy changed mid-flow.
 	target, err := sl.redirects.resolve(data.RedirectURL)

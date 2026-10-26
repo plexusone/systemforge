@@ -831,6 +831,78 @@ func (f ServicePrincipalMutationRuleFunc) EvalMutation(ctx context.Context, m en
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ServicePrincipalMutation", m)
 }
 
+// The SignupAllowanceQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type SignupAllowanceQueryRuleFunc func(context.Context, *ent.SignupAllowanceQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f SignupAllowanceQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SignupAllowanceQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.SignupAllowanceQuery", q)
+}
+
+// The SignupAllowanceMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type SignupAllowanceMutationRuleFunc func(context.Context, *ent.SignupAllowanceMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f SignupAllowanceMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.SignupAllowanceMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.SignupAllowanceMutation", m)
+}
+
+// The SignupCodeQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type SignupCodeQueryRuleFunc func(context.Context, *ent.SignupCodeQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f SignupCodeQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SignupCodeQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.SignupCodeQuery", q)
+}
+
+// The SignupCodeMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type SignupCodeMutationRuleFunc func(context.Context, *ent.SignupCodeMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f SignupCodeMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.SignupCodeMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.SignupCodeMutation", m)
+}
+
+// The SignupCodeRedemptionQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type SignupCodeRedemptionQueryRuleFunc func(context.Context, *ent.SignupCodeRedemptionQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f SignupCodeRedemptionQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SignupCodeRedemptionQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.SignupCodeRedemptionQuery", q)
+}
+
+// The SignupCodeRedemptionMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type SignupCodeRedemptionMutationRuleFunc func(context.Context, *ent.SignupCodeRedemptionMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f SignupCodeRedemptionMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.SignupCodeRedemptionMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.SignupCodeRedemptionMutation", m)
+}
+
 // The SignupInviteQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type SignupInviteQueryRuleFunc func(context.Context, *ent.SignupInviteQuery) error
@@ -1022,6 +1094,12 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.ServicePrincipalQuery:
 		return q.Filter(), nil
+	case *ent.SignupAllowanceQuery:
+		return q.Filter(), nil
+	case *ent.SignupCodeQuery:
+		return q.Filter(), nil
+	case *ent.SignupCodeRedemptionQuery:
+		return q.Filter(), nil
 	case *ent.SignupInviteQuery:
 		return q.Filter(), nil
 	case *ent.SignupWaitlistEntryQuery:
@@ -1096,6 +1174,12 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.SeatAssignmentMutation:
 		return m.Filter(), nil
 	case *ent.ServicePrincipalMutation:
+		return m.Filter(), nil
+	case *ent.SignupAllowanceMutation:
+		return m.Filter(), nil
+	case *ent.SignupCodeMutation:
+		return m.Filter(), nil
+	case *ent.SignupCodeRedemptionMutation:
 		return m.Filter(), nil
 	case *ent.SignupInviteMutation:
 		return m.Filter(), nil

@@ -52,9 +52,11 @@ requirements; `systemauth migrate` runs migrations only.
 ## Invite-only sign-up
 
 Start with `--invite-only` to let new accounts in only by invitation, for
-example while a deployment is being brought up. An invite is an email address,
-not a code: the person signs in with the upstream provider, and an account is
+example while a deployment is being brought up. An email invite names an
+address: the person signs in with the upstream provider, and an account is
 created only when the provider's **verified** email holds a pending invite.
+Invite codes, shared as links, are described in
+[Invite-Gated Sign-Up](../guides/invite-gated-signup.md).
 People who already have an account sign in as before, and an unverified
 address never matches.
 
@@ -90,6 +92,10 @@ systemauth invite revoke ada@example.com
   work with the server running. The table is created by the schema migration.
 - **In a host binary,** set `Options.InviteOnly` and `Options.SignupDeniedURL`
   on `systemauthsvc.New`, and manage invites with `Service.SignupInvites()`.
+- **Invite codes, member invites and the invite API** build on invite-only
+  sign-up: see [Invite-Gated Sign-Up](../guides/invite-gated-signup.md) for
+  `Options.SignupCodes`, `MemberInvites`, `SignupAPI`, and the `code`,
+  `allowance`, `waitlist invite` and `admin` commands.
 
 ## Minimum sign-up age
 

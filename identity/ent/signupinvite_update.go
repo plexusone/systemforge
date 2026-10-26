@@ -89,6 +89,26 @@ func (_u *SignupInviteUpdate) ClearInvitedBy() *SignupInviteUpdate {
 	return _u
 }
 
+// SetInvitedByPrincipalID sets the "invited_by_principal_id" field.
+func (_u *SignupInviteUpdate) SetInvitedByPrincipalID(v uuid.UUID) *SignupInviteUpdate {
+	_u.mutation.SetInvitedByPrincipalID(v)
+	return _u
+}
+
+// SetNillableInvitedByPrincipalID sets the "invited_by_principal_id" field if the given value is not nil.
+func (_u *SignupInviteUpdate) SetNillableInvitedByPrincipalID(v *uuid.UUID) *SignupInviteUpdate {
+	if v != nil {
+		_u.SetInvitedByPrincipalID(*v)
+	}
+	return _u
+}
+
+// ClearInvitedByPrincipalID clears the value of the "invited_by_principal_id" field.
+func (_u *SignupInviteUpdate) ClearInvitedByPrincipalID() *SignupInviteUpdate {
+	_u.mutation.ClearInvitedByPrincipalID()
+	return _u
+}
+
 // SetExpiresAt sets the "expires_at" field.
 func (_u *SignupInviteUpdate) SetExpiresAt(v time.Time) *SignupInviteUpdate {
 	_u.mutation.SetExpiresAt(v)
@@ -240,6 +260,12 @@ func (_u *SignupInviteUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.InvitedByCleared() {
 		_spec.ClearField(signupinvite.FieldInvitedBy, field.TypeString)
 	}
+	if value, ok := _u.mutation.InvitedByPrincipalID(); ok {
+		_spec.SetField(signupinvite.FieldInvitedByPrincipalID, field.TypeUUID, value)
+	}
+	if _u.mutation.InvitedByPrincipalIDCleared() {
+		_spec.ClearField(signupinvite.FieldInvitedByPrincipalID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.ExpiresAt(); ok {
 		_spec.SetField(signupinvite.FieldExpiresAt, field.TypeTime, value)
 	}
@@ -335,6 +361,26 @@ func (_u *SignupInviteUpdateOne) SetNillableInvitedBy(v *string) *SignupInviteUp
 // ClearInvitedBy clears the value of the "invited_by" field.
 func (_u *SignupInviteUpdateOne) ClearInvitedBy() *SignupInviteUpdateOne {
 	_u.mutation.ClearInvitedBy()
+	return _u
+}
+
+// SetInvitedByPrincipalID sets the "invited_by_principal_id" field.
+func (_u *SignupInviteUpdateOne) SetInvitedByPrincipalID(v uuid.UUID) *SignupInviteUpdateOne {
+	_u.mutation.SetInvitedByPrincipalID(v)
+	return _u
+}
+
+// SetNillableInvitedByPrincipalID sets the "invited_by_principal_id" field if the given value is not nil.
+func (_u *SignupInviteUpdateOne) SetNillableInvitedByPrincipalID(v *uuid.UUID) *SignupInviteUpdateOne {
+	if v != nil {
+		_u.SetInvitedByPrincipalID(*v)
+	}
+	return _u
+}
+
+// ClearInvitedByPrincipalID clears the value of the "invited_by_principal_id" field.
+func (_u *SignupInviteUpdateOne) ClearInvitedByPrincipalID() *SignupInviteUpdateOne {
+	_u.mutation.ClearInvitedByPrincipalID()
 	return _u
 }
 
@@ -518,6 +564,12 @@ func (_u *SignupInviteUpdateOne) sqlSave(ctx context.Context) (_node *SignupInvi
 	}
 	if _u.mutation.InvitedByCleared() {
 		_spec.ClearField(signupinvite.FieldInvitedBy, field.TypeString)
+	}
+	if value, ok := _u.mutation.InvitedByPrincipalID(); ok {
+		_spec.SetField(signupinvite.FieldInvitedByPrincipalID, field.TypeUUID, value)
+	}
+	if _u.mutation.InvitedByPrincipalIDCleared() {
+		_spec.ClearField(signupinvite.FieldInvitedByPrincipalID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.ExpiresAt(); ok {
 		_spec.SetField(signupinvite.FieldExpiresAt, field.TypeTime, value)

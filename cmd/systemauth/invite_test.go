@@ -104,7 +104,7 @@ func TestWaitlistCommands(t *testing.T) {
 	}
 
 	out, err := cli("waitlist", "list", "--csv")
-	if err != nil || !strings.HasPrefix(out, "email,joined_at,last_submitted_at,consent_version\n") || !strings.Contains(out, "grace@example.com,") {
+	if err != nil || !strings.HasPrefix(out, "email,joined_at,last_submitted_at,consent_version,invited_at\n") || !strings.Contains(out, "grace@example.com,") {
 		t.Fatalf("list --csv: %v\n%s", err, out)
 	}
 	if out, err := cli("waitlist", "remove", "ada@example.com"); err != nil || !strings.Contains(out, "removed ada@example.com") {

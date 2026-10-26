@@ -1,6 +1,7 @@
 // Package signupcmd provides the operator commands for invite-only sign-up
-// as cobra commands a host CLI mounts: "invite" (add, list, revoke) and
-// "waitlist" (list, remove). They open the identity database directly, so
+// as cobra commands a host CLI mounts: "invite" (add, list, revoke), "code"
+// (create, list, revoke, joined), "allowance" (set, list) and "waitlist"
+// (list, invite, remove). They open the identity database directly, so
 // they work whether or not the server is running, and never change the
 // schema; the tables come from the schema migration.
 package signupcmd
@@ -137,7 +138,7 @@ again.`,
 func WaitlistCommand(open Open) *cobra.Command {
 	waitlist := &cobra.Command{
 		Use:   "waitlist",
-		Short: "List, export and remove waitlist entries",
+		Short: "List, export, invite and remove waitlist entries",
 	}
 	var asCSV bool
 	list := &cobra.Command{
@@ -177,7 +178,56 @@ func WaitlistCommand(open Open) *cobra.Command {
 			})
 		},
 	}
-	waitlist.AddCommand(list, remove)
+	var (
+		inviteAll  bool
+		inviteNote string
+		inviteBy   string
+		inviteExp  time.Duration
+	)
+	invite := &cobra.Command{
+		Use:   "invite [<email>...]",
+		Short: "Invite waitlisted addresses (--all for every one not yet invited)",
+		Long: `Create an email invite for each address and mark its waitlist entry
+invited. Entries stay on the waitlist. With --all, every entry not yet
+invited is invited.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if inviteAll == (len(args) > 0) {
+				return errors.New("name addresses or pass --all, not both")
+			}
+			var exp *time.Time
+			if inviteExp > 0 {
+				t := time.Now().Add(inviteExp)
+				exp = &t
+			}
+			return run(cmd.Context(), open, func(ctx context.Context, client *ent.Client) error {
+				w := signupgate.NewWaitlist(client)
+				emails := args
+				if inviteAll {
+					entries, err := w.List(ctx)
+					if err != nil {
+						return err
+					}
+					for _, e := range entries {
+						if e.InvitedAt == nil {
+							emails = append(emails, e.Email)
+						}
+					}
+				}
+				invited, err := w.Invite(ctx, signupgate.NewStore(client), emails,
+					signupgate.AddOptions{Note: inviteNote, InvitedBy: inviteBy, ExpiresAt: exp})
+				for _, inv := range invited {
+					cmd.Printf("invited %s\n", inv.Email)
+				}
+				return err
+			})
+		},
+	}
+	invite.Flags().BoolVar(&inviteAll, "all", false, "Invite every entry not yet invited")
+	invite.Flags().StringVar(&inviteNote, "note", "", "Free-text context for the invites")
+	invite.Flags().StringVar(&inviteBy, "invited-by", "", "Label of the operator adding the invites")
+	invite.Flags().DurationVar(&inviteExp, "expires-in", 0, "Make the invites expire after this long; 0 means never")
+
+	waitlist.AddCommand(list, invite, remove)
 	return waitlist
 }
 

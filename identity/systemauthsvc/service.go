@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/plexusone/connectforge/provider"
@@ -111,6 +112,29 @@ type Options struct {
 	// Submissions are stored in the database (see Service.SignupWaitlist).
 	WaitlistPage systemauth.WaitlistPage
 
+	// SignupCodes lets an invite-only deployment also admit people who bring
+	// an invite code (see Service.SignupCodes): it serves the sign-up page
+	// at systemauth.SignupPath and accepts invite_code on provider sign-in.
+	// It requires InviteOnly.
+	SignupCodes bool
+
+	// SignupPage is the sign-up page's wording and where it sends people
+	// after they sign in; empty wording fields take
+	// systemauth.DefaultSignupPage.
+	SignupPage systemauth.SignupPage
+
+	// MemberInvites sets how many invite codes members may create without
+	// an allowance of their own, and how long those codes work. The default
+	// allowance is 0.
+	MemberInvites signupgate.MemberOptions
+
+	// SignupAPI serves the invite API (signupapi) at SignupAPIPath on the
+	// SystemAuth host, for the person signed in with the SystemAuth login
+	// session; its operator routes are for platform administrators. A host
+	// that serves the API behind its own session uses Service.SignupAPI
+	// instead. It requires SignupCodes.
+	SignupAPI bool
+
 	// SignupAgePage is the wording of the age question asked before an
 	// account is created when the configuration sets
 	// social_login.signup_minimum_age; empty fields take
@@ -195,6 +219,12 @@ type Service struct {
 	// rate-limit storage New created for it, if any.
 	mp      *managedprincipal.Service
 	mpRates ratelimit.Storage
+
+	// member, audit and signupURL configure invite codes and the invite
+	// API (Options.SignupCodes, Options.SignupAPI).
+	member    signupgate.MemberOptions
+	audit     audit.Emitter
+	signupURL string
 
 	// scimTokens is set when SCIM is enabled.
 	scimTokens *scimtoken.Service
@@ -309,12 +339,29 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		s.closeQuietly()
 		return nil, errors.New("systemauthsvc: Options.InviteOnly needs a database to hold invites")
 	}
+	if opts.SignupCodes && !opts.InviteOnly {
+		s.closeQuietly()
+		return nil, errors.New("systemauthsvc: Options.SignupCodes needs InviteOnly")
+	}
+	if opts.SignupAPI && !opts.SignupCodes {
+		s.closeQuietly()
+		return nil, errors.New("systemauthsvc: Options.SignupAPI needs SignupCodes")
+	}
+	s.member = opts.MemberInvites
+	s.audit = opts.AuditEmitter
+	s.signupURL = strings.TrimRight(c.Issuer, "/") + systemauth.SignupPath
 	if s.client != nil && opts.InviteOnly {
+		gateOpts := []signupgate.GateOption{signupgate.WithGateAudit(opts.AuditEmitter)}
+		if opts.SignupCodes {
+			gateOpts = append(gateOpts, signupgate.WithCodes(s.SignupCodes()))
+			serverOpts = append(serverOpts, systemauth.WithSignupCodes(s.SignupCodes(), opts.SignupPage))
+		}
 		serverOpts = append(serverOpts,
-			systemauth.WithSignupGate(signupgate.NewGate(signupgate.NewStore(s.client))),
+			systemauth.WithSignupGate(signupgate.NewGate(signupgate.NewStore(s.client), gateOpts...)),
 			systemauth.WithSignupWaitlist(signupgate.NewWaitlist(s.client), opts.WaitlistPage),
 		)
-		logger.Info("sign-up is by invitation only", "waitlist", systemauth.SignupWaitlistPath)
+		logger.Info("sign-up is by invitation only", "waitlist", systemauth.SignupWaitlistPath,
+			"invite_codes", opts.SignupCodes)
 	}
 	serverOpts = append(serverOpts, systemauth.WithSignupAgePage(opts.SignupAgePage))
 	if opts.Apps != nil {
@@ -359,6 +406,12 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		return nil, err
 	}
 	s.openManagedPrincipals(&c, opts)
+	if opts.SignupAPI {
+		if err := s.mountSignupAPI(); err != nil {
+			s.closeQuietly()
+			return nil, err
+		}
+	}
 	if err := s.openSCIM(opts); err != nil {
 		s.closeQuietly()
 		return nil, err

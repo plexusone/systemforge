@@ -1594,6 +1594,101 @@ var (
 			},
 		},
 	}
+	// SfSignupAllowancesColumns holds the columns for the "sf_signup_allowances" table.
+	SfSignupAllowancesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "principal_id", Type: field.TypeUUID, Unique: true},
+		{Name: "granted", Type: field.TypeInt, Nullable: true},
+		{Name: "note", Type: field.TypeString, Nullable: true, Size: 500},
+		{Name: "set_by_principal_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// SfSignupAllowancesTable holds the schema information for the "sf_signup_allowances" table.
+	SfSignupAllowancesTable = &schema.Table{
+		Name:       "sf_signup_allowances",
+		Columns:    SfSignupAllowancesColumns,
+		PrimaryKey: []*schema.Column{SfSignupAllowancesColumns[0]},
+	}
+	// SfSignupCodesColumns holds the columns for the "sf_signup_codes" table.
+	SfSignupCodesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "code_hash", Type: field.TypeString, Unique: true},
+		{Name: "code_hint", Type: field.TypeString, Size: 4},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"operator", "member"}},
+		{Name: "label", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "note", Type: field.TypeString, Nullable: true, Size: 500},
+		{Name: "created_by_principal_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "created_by_label", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "max_uses", Type: field.TypeInt},
+		{Name: "use_count", Type: field.TypeInt, Default: 0},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "revoked_at", Type: field.TypeTime, Nullable: true},
+	}
+	// SfSignupCodesTable holds the schema information for the "sf_signup_codes" table.
+	SfSignupCodesTable = &schema.Table{
+		Name:       "sf_signup_codes",
+		Columns:    SfSignupCodesColumns,
+		PrimaryKey: []*schema.Column{SfSignupCodesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "signupcode_created_by_principal_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfSignupCodesColumns[8]},
+			},
+			{
+				Name:    "signupcode_label",
+				Unique:  false,
+				Columns: []*schema.Column{SfSignupCodesColumns[6]},
+			},
+			{
+				Name:    "signupcode_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfSignupCodesColumns[12]},
+			},
+		},
+	}
+	// SfSignupCodeRedemptionsColumns holds the columns for the "sf_signup_code_redemptions" table.
+	SfSignupCodeRedemptionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "principal_id", Type: field.TypeUUID},
+		{Name: "email", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "code_id", Type: field.TypeUUID},
+	}
+	// SfSignupCodeRedemptionsTable holds the schema information for the "sf_signup_code_redemptions" table.
+	SfSignupCodeRedemptionsTable = &schema.Table{
+		Name:       "sf_signup_code_redemptions",
+		Columns:    SfSignupCodeRedemptionsColumns,
+		PrimaryKey: []*schema.Column{SfSignupCodeRedemptionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "sf_signup_code_redemptions_sf_signup_codes_redemptions",
+				Columns:    []*schema.Column{SfSignupCodeRedemptionsColumns[4]},
+				RefColumns: []*schema.Column{SfSignupCodesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "signupcoderedemption_code_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfSignupCodeRedemptionsColumns[4]},
+			},
+			{
+				Name:    "signupcoderedemption_principal_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfSignupCodeRedemptionsColumns[1]},
+			},
+			{
+				Name:    "signupcoderedemption_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfSignupCodeRedemptionsColumns[3]},
+			},
+		},
+	}
 	// SfSignupInvitesColumns holds the columns for the "sf_signup_invites" table.
 	SfSignupInvitesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1602,6 +1697,7 @@ var (
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "note", Type: field.TypeString, Nullable: true, Size: 500},
 		{Name: "invited_by", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "invited_by_principal_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
 		{Name: "redeemed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "redeemed_by", Type: field.TypeUUID, Nullable: true},
@@ -1615,12 +1711,12 @@ var (
 			{
 				Name:    "signupinvite_redeemed_at",
 				Unique:  false,
-				Columns: []*schema.Column{SfSignupInvitesColumns[7]},
+				Columns: []*schema.Column{SfSignupInvitesColumns[8]},
 			},
 			{
 				Name:    "signupinvite_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{SfSignupInvitesColumns[6]},
+				Columns: []*schema.Column{SfSignupInvitesColumns[7]},
 			},
 		},
 	}
@@ -1632,6 +1728,7 @@ var (
 		{Name: "email", Type: field.TypeString, Unique: true, Size: 320},
 		{Name: "consent_version", Type: field.TypeString, Size: 64},
 		{Name: "consent_text", Type: field.TypeString, Size: 2000},
+		{Name: "invited_at", Type: field.TypeTime, Nullable: true},
 	}
 	// SfSignupWaitlistTable holds the schema information for the "sf_signup_waitlist" table.
 	SfSignupWaitlistTable = &schema.Table{
@@ -1793,6 +1890,9 @@ var (
 		SfScimTokensTable,
 		SfSeatAssignmentsTable,
 		SfServicePrincipalsTable,
+		SfSignupAllowancesTable,
+		SfSignupCodesTable,
+		SfSignupCodeRedemptionsTable,
 		SfSignupInvitesTable,
 		SfSignupWaitlistTable,
 		SfSlugReservationsTable,
@@ -1931,6 +2031,16 @@ func init() {
 	SfServicePrincipalsTable.ForeignKeys[1].RefTable = SfPrincipalsTable
 	SfServicePrincipalsTable.Annotation = &entsql.Annotation{
 		Table: "sf_service_principals",
+	}
+	SfSignupAllowancesTable.Annotation = &entsql.Annotation{
+		Table: "sf_signup_allowances",
+	}
+	SfSignupCodesTable.Annotation = &entsql.Annotation{
+		Table: "sf_signup_codes",
+	}
+	SfSignupCodeRedemptionsTable.ForeignKeys[0].RefTable = SfSignupCodesTable
+	SfSignupCodeRedemptionsTable.Annotation = &entsql.Annotation{
+		Table: "sf_signup_code_redemptions",
 	}
 	SfSignupInvitesTable.Annotation = &entsql.Annotation{
 		Table: "sf_signup_invites",

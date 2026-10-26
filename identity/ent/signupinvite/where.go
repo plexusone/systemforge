@@ -80,6 +80,11 @@ func InvitedBy(v string) predicate.SignupInvite {
 	return predicate.SignupInvite(sql.FieldEQ(FieldInvitedBy, v))
 }
 
+// InvitedByPrincipalID applies equality check predicate on the "invited_by_principal_id" field. It's identical to InvitedByPrincipalIDEQ.
+func InvitedByPrincipalID(v uuid.UUID) predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldEQ(FieldInvitedByPrincipalID, v))
+}
+
 // ExpiresAt applies equality check predicate on the "expires_at" field. It's identical to ExpiresAtEQ.
 func ExpiresAt(v time.Time) predicate.SignupInvite {
 	return predicate.SignupInvite(sql.FieldEQ(FieldExpiresAt, v))
@@ -388,6 +393,56 @@ func InvitedByEqualFold(v string) predicate.SignupInvite {
 // InvitedByContainsFold applies the ContainsFold predicate on the "invited_by" field.
 func InvitedByContainsFold(v string) predicate.SignupInvite {
 	return predicate.SignupInvite(sql.FieldContainsFold(FieldInvitedBy, v))
+}
+
+// InvitedByPrincipalIDEQ applies the EQ predicate on the "invited_by_principal_id" field.
+func InvitedByPrincipalIDEQ(v uuid.UUID) predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldEQ(FieldInvitedByPrincipalID, v))
+}
+
+// InvitedByPrincipalIDNEQ applies the NEQ predicate on the "invited_by_principal_id" field.
+func InvitedByPrincipalIDNEQ(v uuid.UUID) predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldNEQ(FieldInvitedByPrincipalID, v))
+}
+
+// InvitedByPrincipalIDIn applies the In predicate on the "invited_by_principal_id" field.
+func InvitedByPrincipalIDIn(vs ...uuid.UUID) predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldIn(FieldInvitedByPrincipalID, vs...))
+}
+
+// InvitedByPrincipalIDNotIn applies the NotIn predicate on the "invited_by_principal_id" field.
+func InvitedByPrincipalIDNotIn(vs ...uuid.UUID) predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldNotIn(FieldInvitedByPrincipalID, vs...))
+}
+
+// InvitedByPrincipalIDGT applies the GT predicate on the "invited_by_principal_id" field.
+func InvitedByPrincipalIDGT(v uuid.UUID) predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldGT(FieldInvitedByPrincipalID, v))
+}
+
+// InvitedByPrincipalIDGTE applies the GTE predicate on the "invited_by_principal_id" field.
+func InvitedByPrincipalIDGTE(v uuid.UUID) predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldGTE(FieldInvitedByPrincipalID, v))
+}
+
+// InvitedByPrincipalIDLT applies the LT predicate on the "invited_by_principal_id" field.
+func InvitedByPrincipalIDLT(v uuid.UUID) predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldLT(FieldInvitedByPrincipalID, v))
+}
+
+// InvitedByPrincipalIDLTE applies the LTE predicate on the "invited_by_principal_id" field.
+func InvitedByPrincipalIDLTE(v uuid.UUID) predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldLTE(FieldInvitedByPrincipalID, v))
+}
+
+// InvitedByPrincipalIDIsNil applies the IsNil predicate on the "invited_by_principal_id" field.
+func InvitedByPrincipalIDIsNil() predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldIsNull(FieldInvitedByPrincipalID))
+}
+
+// InvitedByPrincipalIDNotNil applies the NotNil predicate on the "invited_by_principal_id" field.
+func InvitedByPrincipalIDNotNil() predicate.SignupInvite {
+	return predicate.SignupInvite(sql.FieldNotNull(FieldInvitedByPrincipalID))
 }
 
 // ExpiresAtEQ applies the EQ predicate on the "expires_at" field.

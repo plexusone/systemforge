@@ -43,5 +43,9 @@ func (SignupWaitlistEntry) Fields() []ent.Field {
 		field.String("consent_text").
 			MaxLen(2000).
 			Comment("The consent text shown when the address was last submitted"),
+		field.Time("invited_at").
+			Optional().
+			Nillable().
+			Comment("When an operator invited the address from the waitlist"),
 	}
 }
