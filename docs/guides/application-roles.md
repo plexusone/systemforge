@@ -55,6 +55,14 @@ owners' implicit roles hold no seat.
 - Owners hold the top role of every entitled application implicitly. Nobody
   else holds any by default, admins included.
 - Removing a member removes their roles and grants in the same transaction.
+- Demoting a member to collaborator deletes their application roles in the
+  organization with the demotion. Promoting them again does not restore
+  them; assign the roles again.
+- Under authorization mode `rebac`, removing or lowering a role removes it
+  from the graph inside the transaction, before the commit. If the graph
+  refuses, nothing changes and the call returns the error, in both sync
+  modes; retry it. See
+  [Authorization mode](authorization-mode.md#keeping-the-graph-consistent-under-rebac).
 
 ## Endpoints
 
@@ -76,6 +84,7 @@ claim (`apps`, a map of application to role).
 | `403` | The caller lacks `change_role`, or reads another member's roles without it |
 | `404` | `approle: role not assigned` on `DELETE`; unknown organization or member |
 | `409` | `approle: role already assigned` (service `Assign`); `approle: no seats available for the application` |
+| `500` | `application roles failed`: an unexpected error, such as the authorization graph refusing a removal; nothing changed, so retry |
 | `501` | `APIConfig.AppRoles` is not set |
 
 `PUT` assigns when there is no role and changes it otherwise, so it does not

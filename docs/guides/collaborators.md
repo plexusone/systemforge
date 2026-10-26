@@ -44,8 +44,18 @@ existing member keeps their role and gains the grant. The same grant can be
 made by accepting a [resource-targeted invite](invites.md).
 
 Removing a member from the organization deletes their grants with the
-membership. Agents and managed principals are granted through the same
-operations, which confines them to the granted resources.
+membership. Demoting a member to collaborator keeps their grants but
+deletes their application roles, since collaborators hold none. Agents and
+managed principals are granted through the same operations, which confines
+them to the granted resources.
+
+Under authorization mode `rebac`, lowering or revoking a grant removes the
+relationship from the graph inside the transaction, before the commit. If
+the graph refuses, nothing changes and the call returns the error, in both
+sync modes; retry the same call. A new or raised grant is written to the
+graph after its commit, under the graph locks, so it never undoes a
+revocation that committed meanwhile. See
+[Authorization mode](authorization-mode.md#keeping-the-graph-consistent-under-rebac).
 
 ## Checking access
 
