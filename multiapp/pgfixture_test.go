@@ -23,12 +23,15 @@ func isPermissionDenied(err error) bool {
 }
 
 // pgFixture is a scratch database plus cluster-wide roles with unique
-// names, dropped when the test ends.
+// names, dropped when the test ends. Every role it creates gets the
+// fixture's random password, so the tests also pass against a server
+// that checks passwords.
 type pgFixture struct {
-	t      *testing.T
-	dsn    string
-	admin  *pgxpool.Pool
-	suffix string
+	t        *testing.T
+	dsn      string
+	admin    *pgxpool.Pool
+	suffix   string
+	password string
 }
 
 func newPGFixture(t *testing.T) *pgFixture {
@@ -43,7 +46,16 @@ func newPGFixture(t *testing.T) *pgFixture {
 	if _, err := rand.Read(b); err != nil {
 		t.Fatal(err)
 	}
-	return &pgFixture{t: t, dsn: dsn, admin: admin, suffix: hex.EncodeToString(b)}
+	pw := make([]byte, 16)
+	if _, err := rand.Read(pw); err != nil {
+		t.Fatal(err)
+	}
+	return &pgFixture{t: t, dsn: dsn, admin: admin, suffix: hex.EncodeToString(b), password: hex.EncodeToString(pw)}
+}
+
+// passwordSource sets the fixture's password on a role it provisions.
+func (f *pgFixture) passwordSource() PasswordSource {
+	return func(context.Context) (string, error) { return f.password, nil }
 }
 
 // name returns base with the fixture's unique suffix.
@@ -84,7 +96,7 @@ func (f *pgFixture) loginURL(role string) string {
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	u.User = url.User(role)
+	u.User = url.UserPassword(role, f.password)
 	return u.String()
 }
 
@@ -111,7 +123,7 @@ func (f *pgFixture) provisionedApps(slugs ...string) (string, []*pgxpool.Pool) {
 		roles = append(roles, f.name("sfapp_"+s))
 	}
 	f.dropRolesLater(roles...)
-	if err := ApplyOwnerRole(ctx, f.admin, owner, nil); err != nil {
+	if err := ApplyOwnerRole(ctx, f.admin, owner, f.passwordSource()); err != nil {
 		f.t.Fatalf("ApplyOwnerRole: %v", err)
 	}
 	f.exec(
@@ -126,7 +138,7 @@ func (f *pgFixture) provisionedApps(slugs ...string) (string, []*pgxpool.Pool) {
 			Role:      roles[i+1],
 			OwnerRole: owner,
 		}
-		if err := ApplyRoleProvisioning(ctx, f.admin, p, nil); err != nil {
+		if err := ApplyRoleProvisioning(ctx, f.admin, p, f.passwordSource()); err != nil {
 			f.t.Fatalf("ApplyRoleProvisioning(%s): %v", s, err)
 		}
 		// The owner creates the app's tables after provisioning; default
