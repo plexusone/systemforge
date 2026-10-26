@@ -195,6 +195,10 @@
         {
           "description": "Connections' development egress setting lets provider requests reach only the address ranges listed, instead of every non-public address; link-local and cloud metadata addresses are refused even when listed",
           "commit": "506c9ed"
+        },
+        {
+          "description": "The BFF session sealer and the relying-party store's row keyring sized their output from the plaintext length without an upper bound; both now refuse plaintext over 64 MiB",
+          "commit": "eb05028"
         }
       ],
       "added": [
@@ -287,6 +291,10 @@
         {
           "description": "`bff.OmniStorageConfig.AllowInsecureRedis` for a development Redis without TLS or a password, with a warning when set",
           "commit": "ca5266c"
+        },
+        {
+          "description": "`bff.MaxSealPlaintext` and `bff.ErrPlaintextTooLarge`, and `pgstore.ErrValueTooLarge`, for data too large to seal",
+          "commit": "eb05028"
         }
       ],
       "fixed": [
@@ -319,6 +327,10 @@
         },
         {
           "description": "session/middleware: API key usage recording failures are logged"
+        },
+        {
+          "description": "marketplace: a license suspended by setting `ValidUntil` to the current time stayed valid at that same instant, which a coarse clock such as Windows' could observe; `ValidUntil` is now the first instant the license is no longer valid, in `License.IsValid` and `CheckPrincipal`",
+          "commit": "d5b716b"
         }
       ],
       "removed": [
@@ -466,6 +478,14 @@
         },
         {
           "description": "The managed-principal concurrency test builds its service with direct manager adds"
+        },
+        {
+          "description": "The multi-app PostgreSQL fixture gives the logins it provisions a password, so the tests pass against a server that checks passwords",
+          "commit": "611ee57"
+        },
+        {
+          "description": "The redirect policy test covers more bypass forms: a triple slash, a leading space, `https:` without slashes and a NUL byte",
+          "commit": "03e245b"
         }
       ],
       "infrastructure": [
@@ -553,6 +573,12 @@
         {
           "description": "Bump `modernc.org/sqlite` from 1.60.1 to 1.61.0",
           "commit": "89719ae"
+        }
+      ],
+      "changed": [
+        {
+          "description": "The organization and principal services log a failed graph write with the constant message \"failed to sync granted access to authz\" and the kind of change in a `change` attribute",
+          "commit": "cc190c2"
         }
       ]
     },
