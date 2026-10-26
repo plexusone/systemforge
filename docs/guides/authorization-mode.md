@@ -77,6 +77,11 @@ for identity services an application constructs beside the service.
 `rbac` stays the default. Connections are served in `rbac` only; a
 configuration enabling them under `rebac` is refused at startup.
 
+A host that builds `systemauth.EntStorage` itself under `rebac` passes
+`systemauth.WithEntAuthzSyncer(res.Syncer, res.SyncMode)`, so that
+deactivating a human through `UpdateHuman` removes their graph access; the
+packaged service does this for you.
+
 `Deps` also takes `SyncMode` (what a failed write of granted access does:
 `strict` returns it, `eventual`, the default, logs it), `AccessChangeSink`,
 `Logger`, `PlatformAdmin`, `ManagerRoles` and `RBACOptions`.
@@ -99,7 +104,8 @@ than the tables record.
   administration and the manager relations in which it is the manager)
   the same way, and demoting a member to collaborator deletes their
   application roles, removing them from the graph first. SCIM deletes a
-  user only after removing its relationships.
+  user only after removing its relationships, when the `scim/store`
+  `Config.Syncer` is set (the packaged service sets it).
 - **Grants write after, under the lock.** Adding a member, assigning a
   role or granting a resource commits first and then writes the graph,
   in a transaction holding the graph locks of the organization and the
