@@ -133,10 +133,10 @@ Grants access to a listing for an organization.
 | `ID` | UUID | Unique identifier |
 | `ListingID` | UUID | Associated listing |
 | `OrganizationID` | UUID | Owning organization |
-| `LicenseType` | string | Type (unlimited, per_seat, trial) |
+| `LicenseType` | string | Type (`seat_based`, `team`, `unlimited`) |
 | `Seats` | *int | Seat limit (nil = unlimited) |
 | `ValidFrom` | time.Time | Start date |
-| `ValidUntil` | *time.Time | Expiry date (nil = perpetual) |
+| `ValidUntil` | *time.Time | End of validity, exclusive: the license is invalid from this instant on (nil = perpetual) |
 | `PurchasedBy` | UUID | Principal who purchased |
 | `StripeSubscriptionID` | string | Stripe subscription ID |
 
@@ -278,8 +278,8 @@ The checkout service handles these Stripe events:
   assigned until the count is under the limit.
 - `past_due`: unchanged while Stripe retries the payment.
 - `unpaid`, `paused`, `incomplete_expired` or `canceled`: the license is
-  suspended (`ValidUntil` is set to now, so `Check` and `CheckPrincipal`
-  deny it) and its access is removed from the authorization system.
+  suspended (`ValidUntil` is set to now, and since it is exclusive
+  `Check` and `CheckPrincipal` deny it at once) and its access is removed from the authorization system.
 
 ### Webhook Endpoint
 
