@@ -224,6 +224,6 @@ func (s *DefaultService) reportGrant(what string, id uuid.UUID, syncErr error) e
 	if s.syncMode == authz.SyncModeStrict {
 		return fmt.Errorf("failed to sync %s to authz: %w", what, syncErr)
 	}
-	s.logger.Warn("failed to sync "+what+" to authz", "principal_id", id, "error", syncErr)
+	s.logger.Warn("failed to sync granted access to authz", "change", what, "principal_id", id, "error", syncErr)
 	return nil
 }

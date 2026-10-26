@@ -795,7 +795,7 @@ func (s *DefaultService) reportGrant(what string, syncErr error, attrs ...any) e
 	if s.syncMode == authz.SyncModeStrict {
 		return fmt.Errorf("failed to sync %s to authz: %w", what, syncErr)
 	}
-	s.logger.Warn("failed to sync "+what+" to authz", append(attrs, "error", syncErr)...)
+	s.logger.Warn("failed to sync granted access to authz", append([]any{"change", what}, append(attrs, "error", syncErr)...)...)
 	return nil
 }
 
