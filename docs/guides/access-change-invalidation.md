@@ -104,7 +104,7 @@ serves it at `<BasePath>/auth/backchannel-logout`.
 
 | Situation | Response |
 |---|---|
-| Token issued before a recorded change | `401` with `WWW-Authenticate: Bearer error="invalid_token", error_description="token expired"`; refresh and retry |
+| Token issued before a recorded change | `401` with `error="invalid_token", error_description="token expired"` on the `WWW-Authenticate` challenge of the scheme used: `DPoP algs="ES256 ES384 ES512", error=...` for a DPoP-bound token, `Bearer realm="api", error=...` for a bearer token; refresh and retry |
 | BFF session after a change | The session refreshes its tokens and claims and stays signed in with reduced claims |
 | Refresh refused (deactivation, revoked sessions) | The session ends |
 | Back-channel token invalid (signature, issuer, audience, `typ`, `jti` replay) | The receiver refuses it; a failure to end sessions answers `500` so SystemAuth retries |
