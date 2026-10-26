@@ -52,6 +52,10 @@ func TestRedirectPolicy(t *testing.T) {
 		"",
 		"https://evil.example.com/",
 		"//evil.example.com/",
+		"///evil.example.com/",
+		" //evil.example.com/",
+		"https:evil.example.com",
+		"/\x00/evil.example.com",
 		"/\\evil.example.com",
 		"/\t/evil.example.com",
 		"http://app.example.com/", // scheme mismatch
