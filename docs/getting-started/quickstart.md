@@ -37,13 +37,16 @@ func main() {
         "http://localhost:8080",           // Issuer URL
         []byte("your-32-byte-secret-key"), // HMAC secret
     )
+    // Development only: a signing key generated at every start. In
+    // production set cfg.PrivateKey to a key kept in your secret store.
+    cfg.AllowEphemeralKey = true
     provider, err := oauth.NewProvider(client, cfg)
     if err != nil {
         log.Fatalf("failed to create provider: %v", err)
     }
 
     // Create OAuth API (endpoints auto-registered)
-    oauthAPI, err := oauth.NewAPI(provider, oauth.WithAcceptedClientIDs("my-app"))
+    oauthAPI, err := oauth.NewAPI(provider, oauth.WithAcceptedClientIDs("my-frontend-app"))
     if err != nil {
         log.Fatalf("failed to create oauth api: %v", err)
     }
@@ -102,8 +105,14 @@ http://localhost:8080/oauth/authorize?
 
 ### Exchange Code for Token
 
+Tokens are DPoP-bound by default: every token request carries a DPoP
+proof, and the token is bound to the proof's key. See
+[Calling APIs with DPoP](../guides/dpop-clients.md) for how a client makes
+the key and the proofs.
+
 ```bash
 curl -X POST http://localhost:8080/oauth/token \
+  -H "DPoP: YOUR_DPOP_PROOF" \
   -d "grant_type=authorization_code" \
   -d "client_id=my-frontend-app" \
   -d "code=YOUR_AUTH_CODE" \
@@ -113,9 +122,13 @@ curl -X POST http://localhost:8080/oauth/token \
 
 ### Access Protected Endpoint
 
+Present the token with the `DPoP` scheme and a new proof for this request,
+carrying the token's hash:
+
 ```bash
 curl http://localhost:8080/api/me \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+  -H "Authorization: DPoP YOUR_ACCESS_TOKEN" \
+  -H "DPoP: YOUR_DPOP_PROOF_FOR_GET_API_ME"
 ```
 
 ## Step 4: Add User Registration

@@ -19,11 +19,24 @@ cfg := &oauth.Config{
     RefreshTokenLifespan: 7 * 24 * time.Hour,
     AuthCodeLifespan:     10 * time.Minute,
 
-    // Optional: RSA key for JWT signing
-    // If nil, a key is generated at startup
+    // Required: RSA signing key, the same on every instance and across
+    // restarts. AllowEphemeralKey generates one instead, for development
+    // and tests only.
     PrivateKey: rsaKey,
+
+    // Optional: key ID and the previous or pre-staged keys, for N / N-1
+    // rotation (see the key rotation guide).
+    KeyID:            "signing-2",
+    VerificationKeys: previousKeys,
 }
 ```
+
+The provider issues DPoP-bound tokens: clients send a DPoP proof with every
+token request and present their tokens with `Authorization: DPoP` and a
+proof. `cfg.DPoP` sets the proof age, clock skew, replay cache and optional
+server nonces; pass a shared replay cache when several instances serve the
+provider. See [DPoP Enforcement](../session/dpop.md#the-identityoauth-provider)
+and [Rotating keys and secrets](../guides/rotation.md).
 
 ## Database Configuration
 
