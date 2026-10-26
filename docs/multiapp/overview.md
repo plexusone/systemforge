@@ -11,7 +11,7 @@ The multiapp package enables multiple apps to share backend infrastructure while
 ┌─────────────────────────────────────────────────────────────────┐
 │                           HTTP Request                          │
 │                     X-App-ID: app1                         │
-│                     Authorization: Bearer <jwt>                 │
+│                Authorization: DPoP <jwt>, DPoP: <proof>         │
 └─────────────────────────────────┬───────────────────────────────┘
                                   │
 ┌─────────────────────────────────▼───────────────────────────────┐
@@ -475,6 +475,34 @@ func createEntClient(ctx context.Context, schemaDB *cfmultiapp.SchemaDB) (*ent.C
     return ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, db))), nil
 }
 ```
+
+## Authenticating Requests
+
+`multiapp.AuthMiddleware` validates access tokens on app routes. It requires
+DPoP-bound tokens: a token bound to a key (`cnf.jkt`) is accepted only with
+`Authorization: DPoP` and a fresh proof by that key for the request, and a
+token on an app route must be addressed to that app (`AppAudiences`, by
+default the app ID). It returns an error without a JWT service or a replay
+cache:
+
+```go
+auth, err := multiapp.AuthMiddleware(multiapp.MiddlewareConfig{
+    JWTService:  jwtService,
+    RequireAuth: true,
+    DPoP: middleware.DPoPConfig{
+        ReplayCache: middleware.NewRedisReplayCache(redisClient, "dpop-jti:"),
+        BaseURL:     "https://apps.example.com", // the URL clients use
+    },
+})
+if err != nil {
+    return err
+}
+r.Use(auth)
+```
+
+`DPoP.AllowBearer` also accepts unbound bearer tokens, for legacy clients
+only. See [DPoP Enforcement](../session/dpop.md) and, for clients,
+[Calling APIs with DPoP](../guides/dpop-clients.md).
 
 ## Context Helpers
 

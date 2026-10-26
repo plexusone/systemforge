@@ -8,7 +8,7 @@ Traditional SPAs store JWT tokens in localStorage or sessionStorage, which expos
 
 1. **Server-side token storage** - Access and refresh tokens never reach the browser
 2. **HTTP-only cookies** - Session IDs are stored in cookies that JavaScript cannot access
-3. **Automatic token injection** - BFF proxies API requests, injecting the Bearer token
+3. **Automatic token injection** - BFF proxies API requests, presenting the access token with a DPoP proof by the session's key (or as Bearer, for a token issued as Bearer)
 4. **Built-in CSRF protection** - Origin validation prevents cross-site request forgery
 
 ```
@@ -17,7 +17,7 @@ Traditional SPAs store JWT tokens in localStorage or sessionStorage, which expos
 │   (React)   │                              │   /bff/*        │
 └─────────────┘                              └────────┬────────┘
                                                       │
-                                                      │ Inject Bearer token
+                                                      │ Inject token + DPoP proof
                                                       ▼
                                              ┌─────────────────┐
                                              │   API Backend   │
@@ -333,7 +333,7 @@ const { authenticated, user_id, expires_at } = await response.json();
 const response = await fetch('/bff/api/v1/users/me', {
     credentials: 'include',
 });
-// BFF injects Bearer token automatically
+// BFF injects the access token and a DPoP proof automatically
 ```
 
 ### Logout
