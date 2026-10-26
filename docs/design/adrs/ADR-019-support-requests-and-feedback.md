@@ -129,14 +129,21 @@ adopts it, as ADR-017 does for connectforge.
      carries a `deskUrl` only when the desk has a page the requester can sign
      in to. A desk that cannot report status leaves it at `delivered`.
    - **The title is kept while the request is listed,** so a requester can
-     recognize it. The body and reply address are cleared seven days after
-     delivery (decision 8). Visitors have no list; they follow their request
+     recognize it. The body and reply address are cleared as decision 8
+     says. Visitors have no list; they follow their request
      by email.
 8. **Personal data follows the platform's rules.**
    - **Classification.** supportforge classifies every field, and SystemForge
      registers them, so `Export` and `Erase` cover requests.
-   - **Clearing.** The body and reply address are cleared seven days after
-     delivery by default. The title is cleared with the index (decision 7).
+   - **Clearing.** By default:
+     - the body is cleared seven days after delivery;
+     - the reply address is kept while the conversation may continue, and
+       cleared seven days after the latest of delivery, the last reply, and
+       the desk closing the ticket, so a reply can still reach the requester
+       through the mail desk;
+     - a ceiling clears the address after 90 days without activity, even if
+       the desk still shows the ticket open;
+     - the title is cleared with the index (decision 7).
    - **The desk.** Erasure reaches the desk where its adapter supports it.
      Where it cannot, the request is reported as retained at the desk.
    - **Holds.** A hold stops both clearing and erasure.
