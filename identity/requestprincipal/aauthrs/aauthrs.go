@@ -78,8 +78,13 @@ type Config struct {
 	KeyID string
 
 	// Audience, for four-party access, is the resource's Access Server:
-	// resource tokens are addressed to it. Empty means three-party: the
-	// Person Server named by the presented token.
+	// resource tokens are addressed to it, and it is the only issuer whose
+	// auth tokens are accepted (dwk aauth-access.json). Empty means
+	// three-party: resource tokens go to the Person Server named by the
+	// presented token, and only auth tokens a trusted Person Server issued
+	// itself (dwk aauth-person.json) are accepted. Either way a Person
+	// Server trusted for person tokens cannot grant itself scopes that
+	// bypass the Access Server.
 	Audience string
 
 	// Resolver locates person and auth token issuer keys. Default: a
@@ -170,6 +175,11 @@ func New(cfg Config) (*Authenticator, error) {
 		}
 		cfg.Signature.Authority = authority
 	}
+	if cfg.Audience != "" && !cfg.InsecureSkipIdentifierCheck {
+		if err := aauth.ValidateServerIdentifier(cfg.Audience); err != nil {
+			return nil, fmt.Errorf("aauthrs: Config.Audience: %w", err)
+		}
+	}
 	switch cfg.AccessMode {
 	case "":
 		cfg.AccessMode = aauth.AccessModeAuthToken
@@ -218,8 +228,18 @@ func New(cfg Config) (*Authenticator, error) {
 	if agentResolver == nil {
 		agentResolver = discovery
 	}
+	// The Access Server's keys are resolvable too: it issues the auth
+	// tokens in four-party, without being trusted for person tokens.
+	resolvable := trusted
+	if cfg.Audience != "" && !trusted[cfg.Audience] {
+		resolvable = make(map[string]bool, len(trusted)+1)
+		for iss := range trusted {
+			resolvable[iss] = true
+		}
+		resolvable[cfg.Audience] = true
+	}
 	a.verify = aauth.TokenVerifyOptions{
-		Resolver:                    trustedResolver{next: resolver, trusted: trusted},
+		Resolver:                    trustedResolver{next: resolver, trusted: resolvable},
 		Signature:                   cfg.Signature,
 		InsecureSkipIdentifierCheck: cfg.InsecureSkipIdentifierCheck,
 	}
@@ -288,8 +308,8 @@ func (a *Authenticator) authToken(r *http.Request, required []string) (*requestp
 	if err != nil {
 		return nil, signatureFailure(err)
 	}
-	if !a.trusted[claims.Issuer] {
-		return nil, signatureFailure(untrusted(claims.Issuer))
+	if err := a.trustAuth(claims.Issuer, claims.DWK); err != nil {
+		return nil, signatureFailure(err)
 	}
 	if missing := missingScopes(required, strings.Fields(claims.Scope)); len(missing) > 0 {
 		// Step-up: a resource token against the verified auth token
@@ -501,6 +521,29 @@ func agentBelongsToIssuer(sub, iss string) error {
 	}
 	if !strings.EqualFold(id.Domain, u.Hostname()) {
 		return fmt.Errorf("%w: agent %q is not an agent of issuer %q", aauth.ErrInvalidToken, sub, iss)
+	}
+	return nil
+}
+
+// trustAuth decides who may issue an auth token (draft §9.4, §13): in
+// four-party only the resource's Access Server, in three-party only a
+// trusted Person Server issuing for itself. Without this, a Person Server
+// trusted for person tokens could mint auth tokens for any scope and
+// bypass the Access Server.
+func (a *Authenticator) trustAuth(iss, dwk string) error {
+	if a.cfg.Audience != "" {
+		if iss != a.cfg.Audience || dwk != aauth.WellKnownAccess {
+			return fmt.Errorf("%w: %w: this resource accepts auth tokens only from its access server %s",
+				aauth.ErrInvalidToken, errUntrustedIssuer, a.cfg.Audience)
+		}
+		return nil
+	}
+	if dwk != aauth.WellKnownPerson {
+		return fmt.Errorf("%w: %w: this resource accepts auth tokens only from a person server (dwk %s)",
+			aauth.ErrInvalidToken, errUntrustedIssuer, aauth.WellKnownPerson)
+	}
+	if !a.trusted[iss] {
+		return untrusted(iss)
 	}
 	return nil
 }
