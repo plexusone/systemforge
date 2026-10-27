@@ -4,7 +4,12 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.24.0](v0.24.0.md), lets command-line tools and
+The latest release, [v0.25.0](v0.25.0.md), lets relying parties call
+SystemAuth's APIs, such as the managed-principal API with `mpclient`, with
+their people's DPoP-bound session tokens (`relyingparty.Client.Transport`).
+It is not breaking.
+
+Before it, [v0.24.0](v0.24.0.md) let command-line tools and
 other public clients sign people in to SystemAuth and call APIs with
 DPoP-bound tokens (`identity/publicclient`), with nothing to register per
 person or machine. It is not breaking.
@@ -65,6 +70,7 @@ completed the organization model. It is a breaking release with migrations
 
 | Version | Release date |
 |---|---|
+| [v0.25.0](v0.25.0.md) | 2026-10-27 |
 | [v0.24.0](v0.24.0.md) | 2026-10-27 |
 | [v0.23.0](v0.23.0.md) | 2026-10-27 |
 | [v0.22.0](v0.22.0.md) | 2026-10-25 |
