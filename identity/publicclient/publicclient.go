@@ -335,17 +335,15 @@ func (s *Session) usable(stale string) bool {
 // Another process may have refreshed meanwhile: its tokens are adopted
 // instead of redeeming a refresh token that was already used.
 func (s *Session) refreshLocked(ctx context.Context, stale string) (tok string, err error) {
-	if l, ok := s.cfg.Store.(Locker); ok {
-		unlock, err := l.Lock(ctx)
-		if err != nil {
-			return "", err
-		}
-		defer func() {
-			if uerr := unlock(); uerr != nil {
-				err = errors.Join(err, uerr)
-			}
-		}()
+	unlock, err := s.lockStore(ctx)
+	if err != nil {
+		return "", err
 	}
+	defer func() {
+		if uerr := unlock(); uerr != nil {
+			err = errors.Join(err, uerr)
+		}
+	}()
 	stored, err := s.cfg.Store.Load(ctx)
 	if err != nil {
 		return "", err // ErrNotLoggedIn: another process logged out
@@ -370,12 +368,33 @@ func (s *Session) refreshLocked(ctx context.Context, stale string) (tok string, 
 	return s.creds.AccessToken, nil
 }
 
+// lockStore takes the store's lock when it is a Locker, and returns the
+// function that releases it.
+func (s *Session) lockStore(ctx context.Context) (func() error, error) {
+	l, ok := s.cfg.Store.(Locker)
+	if !ok {
+		return func() error { return nil }, nil
+	}
+	return l.Lock(ctx)
+}
+
 // Logout revokes the refresh token at SystemAuth, which revokes its token
-// family, and deletes the stored credentials. The credentials are deleted
-// even when the revocation fails; its error is returned.
-func (s *Session) Logout(ctx context.Context) error {
+// family, and deletes the stored credentials. It holds the store's lock,
+// so a refresh in another process cannot save credentials after they are
+// deleted. The credentials are deleted even when the revocation fails;
+// its error is returned.
+func (s *Session) Logout(ctx context.Context) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	unlock, err := s.lockStore(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if uerr := unlock(); uerr != nil {
+			err = errors.Join(err, uerr)
+		}
+	}()
 	var errs []error
 	if s.creds.RefreshToken != "" {
 		if err := s.client.Revoke(ctx, s.creds.RefreshToken, "refresh_token"); err != nil {
