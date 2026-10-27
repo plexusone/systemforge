@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/grokify/goauth/dpop"
+
 	"github.com/plexusone/systemforge/identity/publicclient"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/systemauth"
@@ -424,5 +426,108 @@ func TestFileStore(t *testing.T) {
 	}
 	if err := fs.Delete(ctx); err != nil {
 		t.Errorf("deleting nothing: %v", err)
+	}
+}
+
+// lockingStore is a FileStore whose lock counts its holders and can fail
+// to release.
+type lockingStore struct {
+	publicclient.FileStore
+	locks     int
+	unlockErr error
+}
+
+func (l *lockingStore) Lock(ctx context.Context) (func() error, error) {
+	unlock, err := l.FileStore.Lock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	l.locks++
+	return func() error { return errors.Join(unlock(), l.unlockErr) }, nil
+}
+
+// TestStoreLock checks that a refresh reports a failure to release the
+// store's lock, and that logout holds the lock.
+func TestStoreLock(t *testing.T) {
+	e := newEnv(t)
+	ctx := t.Context()
+	if _, err := publicclient.Login(ctx, e.config(), e.browser(t)); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	ls := &lockingStore{FileStore: e.store, unlockErr: errors.New("unlock failed")}
+	cfg := e.config()
+	cfg.Store = ls
+
+	e.expire(t)
+	s, err := publicclient.Open(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.AccessToken(ctx); err == nil || !strings.Contains(err.Error(), "unlock failed") {
+		t.Errorf("refresh with a failing unlock: %v", err)
+	}
+
+	ls.unlockErr, ls.locks = nil, 0
+	if err := s.Logout(ctx); err != nil {
+		t.Fatalf("logout: %v", err)
+	}
+	if ls.locks != 1 {
+		t.Errorf("logout took the store's lock %d times, want 1", ls.locks)
+	}
+}
+
+// trackedBody records whether it was closed.
+type trackedBody struct {
+	io.Reader
+	closed bool
+}
+
+func (b *trackedBody) Close() error {
+	b.closed = true
+	return nil
+}
+
+// TestTransportClosesBody checks the RoundTripper contract: a request that
+// cannot be sent, here because the access token expired and there is no
+// refresh token, has its body closed.
+func TestTransportClosesBody(t *testing.T) {
+	ctx := t.Context()
+	key, err := dpop.GenerateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	serialized, err := key.SerializeJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := publicclient.FileStore{Path: filepath.Join(t.TempDir(), "credentials.json")}
+	if err := store.Save(ctx, &publicclient.Credentials{
+		Issuer: "https://auth.example.com", ClientID: "cli", DPoPKey: serialized,
+		AccessToken: "expired", Expiry: time.Now().Add(-time.Hour),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	s, err := publicclient.Open(ctx, publicclient.Config{
+		Issuer: "https://auth.example.com", ClientID: "cli", Store: store,
+		Metadata: &relyingparty.Metadata{ //nolint:gosec // G101: endpoint URLs, not credentials
+			Issuer:                "https://auth.example.com",
+			AuthorizationEndpoint: "https://auth.example.com/oauth/authorize",
+			TokenEndpoint:         "https://auth.example.com/oauth/token",
+			JWKSURI:               "https://auth.example.com/.well-known/jwks.json",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := &trackedBody{Reader: strings.NewReader("payload")}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.example.com/x", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Transport(nil).RoundTrip(req); !errors.Is(err, publicclient.ErrNotLoggedIn) {
+		t.Errorf("round trip without a usable token: %v", err)
+	}
+	if !body.closed {
+		t.Error("the request body was not closed")
 	}
 }
