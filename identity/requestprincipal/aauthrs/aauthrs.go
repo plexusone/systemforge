@@ -116,6 +116,13 @@ type Config struct {
 	// server is refused and cannot be replayed here.
 	Signature aauth.RequestVerifyOptions
 
+	// IsRevoked, when set, is asked about every token after it and the
+	// request signature verify: iss and jti name the token (draft §11.12).
+	// Return nil for a token in force, an error wrapping aauth.ErrRevoked
+	// for a revoked one (answered 401 revoked_jwt), or any other error
+	// when revocation state is unavailable (answered 500).
+	IsRevoked func(ctx context.Context, iss, jti string) error
+
 	// CheckSubject is the resource's record check for a person (draft
 	// §9.4.3.2): it confirms or establishes the resource's record for
 	// (iss, sub). Its error rejects the request.
@@ -311,6 +318,9 @@ func (a *Authenticator) authToken(r *http.Request, required []string) (*requestp
 	if err := a.trustAuth(claims.Issuer, claims.DWK); err != nil {
 		return nil, signatureFailure(err)
 	}
+	if err := a.inForce(ctx, claims.Issuer, claims.ID); err != nil {
+		return nil, err
+	}
 	if missing := missingScopes(required, strings.Fields(claims.Scope)); len(missing) > 0 {
 		// Step-up: a resource token against the verified auth token
 		// requests the full scope (draft §6.5, §6.7).
@@ -345,6 +355,9 @@ func (a *Authenticator) personToken(r *http.Request, required []string) (*reques
 	}
 	if !a.trusted[claims.Issuer] {
 		return nil, signatureFailure(untrusted(claims.Issuer))
+	}
+	if err := a.inForce(ctx, claims.Issuer, claims.ID); err != nil {
+		return nil, err
 	}
 	if a.cfg.AccessMode == aauth.AccessModeAuthToken || len(required) > 0 {
 		return nil, a.challengeAuthToken(ctx, claims, required)
@@ -390,6 +403,9 @@ func (a *Authenticator) agentToken(r *http.Request, required []string) (*request
 		if err := agentBelongsToIssuer(claims.Subject, claims.Issuer); err != nil {
 			return nil, signatureFailure(err)
 		}
+	}
+	if err := a.inForce(ctx, claims.Issuer, claims.ID); err != nil {
+		return nil, err
 	}
 	p := &requestprincipal.RequestPrincipal{
 		PrincipalID: claims.Subject,
@@ -546,6 +562,22 @@ func (a *Authenticator) trustAuth(iss, dwk string) error {
 		return untrusted(iss)
 	}
 	return nil
+}
+
+// inForce applies IsRevoked: a revoked token is a 401 revoked_jwt, and
+// revocation state that is unavailable an internal error (500).
+func (a *Authenticator) inForce(ctx context.Context, iss, jti string) error {
+	if a.cfg.IsRevoked == nil {
+		return nil
+	}
+	err := a.cfg.IsRevoked(ctx, iss, jti)
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, aauth.ErrRevoked):
+		return signatureFailure(err)
+	}
+	return fmt.Errorf("aauthrs: revocation check: %w", err)
 }
 
 // errUntrustedIssuer marks a token from an issuer outside TrustedIssuers.
