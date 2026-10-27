@@ -318,6 +318,7 @@ github.com/plexusone/systemforge/
 │   ├── apikey/            # API key service
 │   ├── oauth/             # OAuth 2.0 server (Fosite)
 │   ├── oauthclient/       # GitHub/Google/SystemAuth OAuth client primitives
+│   ├── publicclient/      # Command-line and other public clients: loopback login, DPoP-bound API calls
 │   ├── relyingparty/      # OIDC relying party for apps federating to SystemAuth (/bff, bearer)
 │   ├── requestprincipal/  # Protocol-neutral request principal and authenticator chain (aauthrs/: AAuth agents)
 │   ├── systemauth/        # SystemAuth OAuth 2.0 / OIDC server (social login, userinfo; cmd/systemauth binary)
