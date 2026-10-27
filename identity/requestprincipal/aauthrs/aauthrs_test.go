@@ -239,7 +239,7 @@ func newDeployment(t *testing.T) *deployment {
 	}
 	ap, err := agentprovider.New(agentprovider.Config{
 		HTTPClient: http.DefaultClient,
-		Issuer:     issuer, Domain: "agents.example", Key: apKey, Registrar: registrar{ps: issuer},
+		Issuer:     issuer, Key: apKey, Registrar: registrar{ps: issuer},
 	})
 	if err != nil {
 		t.Fatal(err)
