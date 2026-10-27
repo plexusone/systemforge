@@ -75,6 +75,18 @@
           ]
         },
         {
+          "description": "ADR-019 (proposed): the support UI, the requester's list of their own requests, and support tools built for agents first",
+          "commit": "e0d1bf7"
+        },
+        {
+          "description": "ADR-019: agents send a reply only after a person approves it",
+          "commit": "ddce341"
+        },
+        {
+          "description": "ADR-019: a support conversation keeps its reply address while it continues",
+          "commit": "cad9289"
+        },
+        {
           "description": "v0.24.0 release notes"
         }
       ],
