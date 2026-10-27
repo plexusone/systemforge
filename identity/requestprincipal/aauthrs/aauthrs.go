@@ -106,7 +106,9 @@ type Config struct {
 
 	// Signature tunes HTTP message signature verification: the validity
 	// window, the clock, and components agents must cover beyond the base
-	// set. The zero value uses the library defaults.
+	// set. The zero value uses the library defaults. Its Authority
+	// defaults to the host of Resource, so a request signed for another
+	// server is refused and cannot be replayed here.
 	Signature aauth.RequestVerifyOptions
 
 	// CheckSubject is the resource's record check for a person (draft
@@ -160,6 +162,13 @@ func New(cfg Config) (*Authenticator, error) {
 		if err := aauth.ValidateServerIdentifier(cfg.Resource); err != nil {
 			return nil, fmt.Errorf("aauthrs: Config.Resource: %w", err)
 		}
+	}
+	if cfg.Signature.Authority == "" {
+		authority, err := aauth.AuthorityOf(cfg.Resource)
+		if err != nil {
+			return nil, fmt.Errorf("aauthrs: Config.Resource: %w", err)
+		}
+		cfg.Signature.Authority = authority
 	}
 	switch cfg.AccessMode {
 	case "":
