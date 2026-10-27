@@ -94,7 +94,8 @@ import (
 
 agents, err := aauthrs.New(aauthrs.Config{
     Resource:       "https://api.example.com",            // this API's identifier
-    TrustedIssuers: []string{"https://agents.example.com"}, // Person/Access Server(s)
+    TrustedIssuers: []string{"https://agents.example.com"}, // Person Server(s)
+    Audience:       "https://agents.example.com",           // Access Server (four-party)
     Key:            resourceKey,                           // Ed25519 or P-256 crypto.Signer
     Scopes: func(r *http.Request) []string {               // required per route
         if r.Method == http.MethodGet {
@@ -138,14 +139,15 @@ and rejects are never passed to the next one.
 | Field | Purpose |
 |-------|---------|
 | `Resource` | The server identifier (https, host only). It is the `aud` of the tokens this API accepts and the `iss` of the resource tokens it issues. |
-| `TrustedIssuers` | The Person Servers and Access Servers whose tokens are accepted. Tokens from other issuers are refused **before** key discovery, so an attacker can't make the API fetch keys from a URL of their choosing. |
+| `TrustedIssuers` | The Person Servers whose tokens are accepted. Tokens from other issuers are refused **before** key discovery, so an attacker can't make the API fetch keys from a URL of their choosing. In four-party, the Access Server goes in `Audience`, not here. |
 | `TrustedAgentIssuers` | Optional. The agent providers whose bare agent tokens are accepted (`agent-token` mode); others are refused before key discovery. Whether or not it is set, an agent token is accepted only when the agent identifier's domain is the issuer's host, so a provider cannot claim another domain's agents. |
 | `AccessMode` | `auth-token` (default) serves only auth tokens. `person-token` also accepts person tokens, and `agent-token` also accepts bare agent tokens, in both cases only on routes that require no scopes. |
 | `Scopes` | Returns the scopes a request requires. An auth token must grant all of them, and resource tokens request them. |
 | `Key`, `KeyID` | Signs resource tokens. The key is published at `JWKSPath` (default `/.well-known/aauth-resource-jwks.json`). |
-| `Audience` | For four-party access, the resource's Access Server. Resource tokens are addressed to it instead of to the Person Server. |
+| `Audience` | For four-party access, the resource's Access Server. Resource tokens are addressed to it instead of to the Person Server, and it is the only issuer whose auth tokens are accepted (`dwk` `aauth-access.json`). Without it (three-party), only auth tokens a trusted Person Server issued itself (`dwk` `aauth-person.json`) are accepted. Either way a Person Server trusted for person tokens cannot grant itself scopes that bypass the Access Server. |
 | `Resolver`, `AgentResolver`, `HTTPClient`, `JWKSCache` | Key discovery. The default is the library's JWKS resolver and cache: metadata → `jwks_uri`, cache headers honored, refreshed at most once a minute when an unknown `kid` appears. |
-| `Signature` | Signature validity window, clock and extra required components. The library defaults apply when this is left zero. |
+| `Signature` | Signature validity window, clock and extra required components. The library defaults apply when this is left zero. `Authority` defaults to the host of `Resource`, so a request signed for another server is refused and cannot be replayed here. |
+| `IsRevoked` | Optional. Asked about every token once it and the signature verify. Return an error wrapping `aauth.ErrRevoked` for a revoked token (401 `revoked_jwt`), or another error when revocation state is unavailable (500). |
 | `CheckSubject` | The resource's record check for `(iss, sub)`. |
 | `Resolve` | Maps or rejects the principal after verification. A returned `*requestprincipal.Error` is sent as the response. |
 | `Limiter` | Rate-limits resource-token issuance per agent key. Refused requests get a 429 with `Retry-After`. |
@@ -153,17 +155,22 @@ and rejects are never passed to the next one.
 ## What is verified
 
 For an auth token, the authenticator calls the library's
-`VerifyAndExtractAuth` and enforces the issuer allowlist:
+`VerifyAndExtractAuth` and enforces who may issue it:
 
-- the token: `typ` `aa-auth+jwt`, an allowed algorithm, `dwk`, an issuer in
-  `TrustedIssuers` with its key found through JWKS discovery, `aud` equal to
+- the issuer: in four-party the `Audience` with `dwk` `aauth-access.json`;
+  in three-party an issuer in `TrustedIssuers` with `dwk`
+  `aauth-person.json`, so its `ps` is itself;
+- the token: `typ` `aa-auth+jwt`, an allowed algorithm, its key found
+  through JWKS discovery, `aud` equal to
   `Resource`, `iat` present and not ahead of the clock by more than the
   signature window, a lifetime of one hour
   or less, `exp` in the future with no skew allowance, and `sub`, `ps` and
   `cnf.jwk` present;
 - the HTTP message signature: it covers `@method`, `@authority`, `@path`
-  and `signature-key`, it was made with the key in `cnf.jwk`, and its
-  `created` time is inside the validity window.
+  and `signature-key`, its `@authority` is this resource's host, it was
+  made with the key in `cnf.jwk`, and its `created` time is inside the
+  validity window;
+- revocation, when `IsRevoked` is set.
 
 Resource tokens are issued only with `IssueResourceToken`, against the
 person or auth token just verified. This copies `sub`, `mission_s256` and
