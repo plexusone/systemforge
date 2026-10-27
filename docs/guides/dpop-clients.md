@@ -198,17 +198,24 @@ retries a refused request once: with the server's nonce for
 `use_dpop_nonce`, or with a refreshed token for `invalid_token`.
 
 **Storage.** `FileStore` writes the key and tokens to one file readable by
-its owner only, atomically, and refuses a file others can read. To keep
-them in the operating system's credential store instead, implement
-`publicclient.Store` over it. The key is as sensitive as the refresh
-token.
+its owner only, and refuses a file others can read. Each save goes to a
+temporary file that is flushed, renamed over the old one, and the
+directory flushed, so a crash leaves either the old file or the new one,
+never a partial one, and never brings back a refresh token that was
+already redeemed. To keep them in the operating system's credential store
+instead, implement `publicclient.Store` over it. The key is as sensitive as
+the refresh token.
 
 **Several processes.** SystemAuth rotates refresh tokens and treats a
 redeemed one presented again as stolen, revoking every token of the login.
 When a tool and a process it starts (an MCP server, say) share the
 credentials, the store must implement `publicclient.Locker`, as `FileStore`
-does: a session refreshes under the lock, and adopts the tokens another
-process just refreshed rather than redeeming the old refresh token.
+does: a session refreshes and logs out under the lock, and adopts the
+tokens another process just refreshed rather than redeeming the old
+refresh token. `FileStore`'s lock is an operating-system lock on a file
+next to the credentials (`flock`, or `LockFileEx` on Windows), which the
+system releases when its holder exits, so a process that dies holding it
+does not block the others. A process waits up to 30 seconds for it.
 
 **APIs that accept the tool's tokens.** An API built on
 `identity/relyingparty` accepts only tokens issued to its own client unless
