@@ -59,7 +59,8 @@ type Locker interface {
 // FileStore keeps credentials in one JSON file readable by its owner only
 // (0600, in a 0700 directory), written atomically and durably. On
 // Unix-like systems it refuses a file that others can read, as ssh does for
-// private keys.
+// private keys. Its lock is an operating-system lock on a file next to it
+// (flock, LockFileEx), which the system releases when the holder exits.
 type FileStore struct {
 	// Path is the credentials file, e.g. a file under
 	// os.UserConfigDir(). Required.
@@ -164,49 +165,48 @@ func (f FileStore) Delete(_ context.Context) error {
 	return nil
 }
 
-// Lock timing: how often a waiting process retries, how long it waits,
-// and when a lock left by a process that died counts as stale.
+// Lock timing: how often a waiting process retries, and how long it
+// waits.
 const (
 	lockRetry = 50 * time.Millisecond
 	lockWait  = 30 * time.Second
-	lockStale = time.Minute
 )
 
-// Lock implements Locker with a lock file next to Path, created
-// exclusively; a lock older than a minute is taken over, since a refresh
-// takes seconds and its holder must have died.
+// Lock implements Locker with an operating-system lock on a file next to
+// Path. The lock file is never removed, so two processes always lock the
+// same file, and the system releases the lock when its holder exits, so a
+// process that dies holding it does not block the others.
 func (f FileStore) Lock(ctx context.Context) (func() error, error) {
 	if err := os.MkdirAll(filepath.Dir(f.Path), 0o700); err != nil {
 		return nil, fmt.Errorf("publicclient: credentials directory: %w", err)
 	}
 	path := f.Path + ".lock"
+	lf, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600) //nolint:gosec // G304: the lock file sits next to the configured credentials path
+	if err != nil {
+		return nil, fmt.Errorf("publicclient: lock: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(ctx, lockWait)
 	defer cancel()
 	for {
-		lf, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600) //nolint:gosec // G304: the lock file sits next to the configured credentials path
-		if err == nil {
-			if err := lf.Close(); err != nil {
-				return nil, errors.Join(fmt.Errorf("publicclient: lock: %w", err), os.Remove(path))
-			}
+		ok, err := tryLock(lf)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("publicclient: lock: %w", err), lf.Close())
+		}
+		if ok {
 			return func() error {
-				if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-					return fmt.Errorf("publicclient: unlock: %w", err)
+				uerr := unlockFile(lf)
+				if cerr := lf.Close(); uerr == nil {
+					uerr = cerr
+				}
+				if uerr != nil {
+					return fmt.Errorf("publicclient: unlock: %w", uerr)
 				}
 				return nil
 			}, nil
 		}
-		if !errors.Is(err, os.ErrExist) {
-			return nil, fmt.Errorf("publicclient: lock: %w", err)
-		}
-		if info, serr := os.Stat(path); serr == nil && time.Since(info.ModTime()) > lockStale {
-			if rerr := os.Remove(path); rerr != nil && !errors.Is(rerr, os.ErrNotExist) {
-				return nil, fmt.Errorf("publicclient: removing a stale lock: %w", rerr)
-			}
-			continue
-		}
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("publicclient: waiting for the credentials lock %s: %w", path, ctx.Err())
+			return nil, errors.Join(fmt.Errorf("publicclient: waiting for the credentials lock %s: %w", path, ctx.Err()), lf.Close())
 		case <-time.After(lockRetry):
 		}
 	}
