@@ -1393,6 +1393,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#three-party-or-four-party" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three-party or four-party
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4249,6 +4260,8 @@
       
         
       
+        
+      
     
     
     
@@ -4320,6 +4333,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.23.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.23.0
   
 
     
@@ -5180,6 +5221,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#three-party-or-four-party" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three-party or four-party
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -5400,38 +5452,39 @@ person token, exchanges the resource token at its Person Server, and retries.</p
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nx">agents</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">aauthrs</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">aauthrs</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
 <a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="nx">Resource</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;https://api.example.com&quot;</span><span class="p">,</span><span class="w">            </span><span class="c1">// this API&#39;s identifier</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="nx">TrustedIssuers</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;https://agents.example.com&quot;</span><span class="p">},</span><span class="w"> </span><span class="c1">// Person/Access Server(s)</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="nx">Key</span><span class="p">:</span><span class="w">            </span><span class="nx">resourceKey</span><span class="p">,</span><span class="w">                           </span><span class="c1">// Ed25519 or P-256 crypto.Signer</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nx">Scopes</span><span class="p">:</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="p">{</span><span class="w">               </span><span class="c1">// required per route</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">Method</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">MethodGet</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;things:read&quot;</span><span class="p">}</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;things:write&quot;</span><span class="p">}</span>
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">    </span><span class="nx">ScopeDescriptions</span><span class="p">:</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">        </span><span class="s">&quot;things:read&quot;</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;Read your things&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">        </span><span class="s">&quot;things:write&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Create and change your things&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">    </span><span class="nx">HTTPClient</span><span class="p">:</span><span class="w"> </span><span class="nx">egressClient</span><span class="p">,</span><span class="w"> </span><span class="c1">// no private addresses, bounded timeouts</span>
-<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="nx">Limiter</span><span class="p">:</span><span class="w">    </span><span class="nx">ratelimit</span><span class="p">.</span><span class="nx">Per</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">),</span><span class="w"> </span><span class="c1">// optional, from aauth-go/ratelimit</span>
-<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="p">})</span>
-<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
-<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="p">}</span>
-<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>
-<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="nx">humans</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewRequestAuthenticator</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BearerConfig</span><span class="p">{</span>
-<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">    </span><span class="nx">Tokens</span><span class="p">:</span><span class="w">     </span><span class="nx">client</span><span class="p">,</span><span class="w">   </span><span class="c1">// *relyingparty.Client</span>
-<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">    </span><span class="nx">DPoP</span><span class="p">:</span><span class="w">       </span><span class="o">&amp;</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">DPoPConfig</span><span class="p">{</span><span class="nx">ReplayCache</span><span class="p">:</span><span class="w"> </span><span class="nx">replayCache</span><span class="p">},</span><span class="w"> </span><span class="c1">// SystemAuth tokens are DPoP-bound</span>
-<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">    </span><span class="nx">APIKeys</span><span class="p">:</span><span class="w">    </span><span class="nx">apiKeys</span><span class="p">,</span><span class="w">  </span><span class="c1">// *apikey.Service</span>
-<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">    </span><span class="nx">Principals</span><span class="p">:</span><span class="w"> </span><span class="nx">principals</span><span class="p">,</span>
-<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">    </span><span class="nx">Sessions</span><span class="p">:</span><span class="w">   </span><span class="nx">bff</span><span class="p">,</span><span class="w">      </span><span class="c1">// optional: browser sessions too</span>
-<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="p">})</span>
-<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a>
-<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="nx">mux</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">NewServeMux</span><span class="p">()</span>
-<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="nx">agents</span><span class="p">.</span><span class="nx">Register</span><span class="p">(</span><span class="nx">mux</span><span class="p">)</span><span class="w"> </span><span class="c1">// /.well-known/aauth-resource.json and the resource JWKS (public)</span>
-<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a>
-<a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="nx">protect</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">(</span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Options</span><span class="p">{},</span><span class="w"> </span><span class="nx">agents</span><span class="p">,</span><span class="w"> </span><span class="nx">humans</span><span class="p">)</span>
-<a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="nx">mux</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/api/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">protect</span><span class="p">(</span><span class="nx">apiHandler</span><span class="p">))</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="nx">TrustedIssuers</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;https://agents.example.com&quot;</span><span class="p">},</span><span class="w"> </span><span class="c1">// Person Server(s)</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="nx">Audience</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;https://agents.example.com&quot;</span><span class="p">,</span><span class="w">           </span><span class="c1">// Access Server (four-party)</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nx">Key</span><span class="p">:</span><span class="w">            </span><span class="nx">resourceKey</span><span class="p">,</span><span class="w">                           </span><span class="c1">// Ed25519 or P-256 crypto.Signer</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="nx">Scopes</span><span class="p">:</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="p">{</span><span class="w">               </span><span class="c1">// required per route</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">Method</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">MethodGet</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;things:read&quot;</span><span class="p">}</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;things:write&quot;</span><span class="p">}</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">    </span><span class="nx">ScopeDescriptions</span><span class="p">:</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">        </span><span class="s">&quot;things:read&quot;</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;Read your things&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">        </span><span class="s">&quot;things:write&quot;</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Create and change your things&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="nx">HTTPClient</span><span class="p">:</span><span class="w"> </span><span class="nx">egressClient</span><span class="p">,</span><span class="w"> </span><span class="c1">// no private addresses, bounded timeouts</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">    </span><span class="nx">Limiter</span><span class="p">:</span><span class="w">    </span><span class="nx">ratelimit</span><span class="p">.</span><span class="nx">Per</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">),</span><span class="w"> </span><span class="c1">// optional, from aauth-go/ratelimit</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="p">})</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="p">}</span>
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="nx">humans</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewRequestAuthenticator</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BearerConfig</span><span class="p">{</span>
+<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">    </span><span class="nx">Tokens</span><span class="p">:</span><span class="w">     </span><span class="nx">client</span><span class="p">,</span><span class="w">   </span><span class="c1">// *relyingparty.Client</span>
+<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">    </span><span class="nx">DPoP</span><span class="p">:</span><span class="w">       </span><span class="o">&amp;</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">DPoPConfig</span><span class="p">{</span><span class="nx">ReplayCache</span><span class="p">:</span><span class="w"> </span><span class="nx">replayCache</span><span class="p">},</span><span class="w"> </span><span class="c1">// SystemAuth tokens are DPoP-bound</span>
+<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">    </span><span class="nx">APIKeys</span><span class="p">:</span><span class="w">    </span><span class="nx">apiKeys</span><span class="p">,</span><span class="w">  </span><span class="c1">// *apikey.Service</span>
+<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">    </span><span class="nx">Principals</span><span class="p">:</span><span class="w"> </span><span class="nx">principals</span><span class="p">,</span>
+<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">    </span><span class="nx">Sessions</span><span class="p">:</span><span class="w">   </span><span class="nx">bff</span><span class="p">,</span><span class="w">      </span><span class="c1">// optional: browser sessions too</span>
+<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="p">})</span>
+<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a>
+<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="nx">mux</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">NewServeMux</span><span class="p">()</span>
+<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="nx">agents</span><span class="p">.</span><span class="nx">Register</span><span class="p">(</span><span class="nx">mux</span><span class="p">)</span><span class="w"> </span><span class="c1">// /.well-known/aauth-resource.json and the resource JWKS (public)</span>
+<a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a>
+<a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="nx">protect</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">(</span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Options</span><span class="p">{},</span><span class="w"> </span><span class="nx">agents</span><span class="p">,</span><span class="w"> </span><span class="nx">humans</span><span class="p">)</span>
+<a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="nx">mux</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/api/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">protect</span><span class="p">(</span><span class="nx">apiHandler</span><span class="p">))</span>
 </code></pre></div>
 <p>Put the AAuth authenticator first. It only acts on requests that carry a
 <code>Signature-Key</code> header, so cookies and bearer tokens still reach the
@@ -5452,7 +5505,7 @@ and rejects are never passed to the next one.</p>
 </tr>
 <tr>
 <td><code>TrustedIssuers</code></td>
-<td>The Person Servers and Access Servers whose tokens are accepted. Tokens from other issuers are refused <strong>before</strong> key discovery, so an attacker can't make the API fetch keys from a URL of their choosing.</td>
+<td>The Person Servers whose tokens are accepted. Tokens from other issuers are refused <strong>before</strong> key discovery, so an attacker can't make the API fetch keys from a URL of their choosing. In four-party, the Access Server goes in <code>Audience</code>, not here.</td>
 </tr>
 <tr>
 <td><code>TrustedAgentIssuers</code></td>
@@ -5472,7 +5525,7 @@ and rejects are never passed to the next one.</p>
 </tr>
 <tr>
 <td><code>Audience</code></td>
-<td>For four-party access, the resource's Access Server. Resource tokens are addressed to it instead of to the Person Server.</td>
+<td>For four-party access, the resource's Access Server. Resource tokens are addressed to it instead of to the Person Server, and it is the only issuer whose auth tokens are accepted (<code>dwk</code> <code>aauth-access.json</code>). Without it (three-party), only auth tokens a trusted Person Server issued itself (<code>dwk</code> <code>aauth-person.json</code>) are accepted. Either way a Person Server trusted for person tokens cannot grant itself scopes that bypass the Access Server.</td>
 </tr>
 <tr>
 <td><code>Resolver</code>, <code>AgentResolver</code>, <code>HTTPClient</code>, <code>JWKSCache</code></td>
@@ -5480,7 +5533,11 @@ and rejects are never passed to the next one.</p>
 </tr>
 <tr>
 <td><code>Signature</code></td>
-<td>Signature validity window, clock and extra required components. The library defaults apply when this is left zero.</td>
+<td>Signature validity window, clock and extra required components. The library defaults apply when this is left zero. <code>Authority</code> defaults to the host of <code>Resource</code>, so a request signed for another server is refused and cannot be replayed here.</td>
+</tr>
+<tr>
+<td><code>IsRevoked</code></td>
+<td>Optional. Asked about every token once it and the signature verify. Return an error wrapping <code>aauth.ErrRevoked</code> for a revoked token (401 <code>revoked_jwt</code>), or another error when revocation state is unavailable (500).</td>
 </tr>
 <tr>
 <td><code>CheckSubject</code></td>
@@ -5496,19 +5553,62 @@ and rejects are never passed to the next one.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="three-party-or-four-party">Three-party or four-party<a class="headerlink" href="#three-party-or-four-party" title="Permanent link">&para;</a></h3>
+<p>Who may issue the auth tokens a resource accepts depends on whether it has an
+Access Server of its own:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Set</th>
+<th>Auth tokens accepted from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Three-party</td>
+<td><code>TrustedIssuers</code> only</td>
+<td>A trusted Person Server issuing for itself (<code>dwk</code> <code>aauth-person.json</code>, so its <code>ps</code> is its <code>iss</code>)</td>
+</tr>
+<tr>
+<td>Four-party</td>
+<td><code>Audience</code> as well</td>
+<td>Only the <code>Audience</code> Access Server (<code>dwk</code> <code>aauth-access.json</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><code>TrustedIssuers</code> still governs person tokens in both modes, and the Access
+Server's keys are resolved through <code>Audience</code> without trusting it for person
+tokens. When the Person Server and the Access Server share one origin, as in a
+PS-AS collapse, name that origin in both:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">aauthrs</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">TrustedIssuers</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;https://agents.example.com&quot;</span><span class="p">},</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">Audience</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;https://agents.example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="c1">// ...</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
+</code></pre></div>
+<p>Since v0.23.0 an Access Server listed only in <code>TrustedIssuers</code> no longer has
+its auth tokens accepted: name it in <code>Audience</code>. Otherwise a Person Server
+trusted for person tokens could issue auth tokens for any scope and bypass the
+Access Server's policy.</p>
 <h2 id="what-is-verified">What is verified<a class="headerlink" href="#what-is-verified" title="Permanent link">&para;</a></h2>
 <p>For an auth token, the authenticator calls the library's
-<code>VerifyAndExtractAuth</code> and enforces the issuer allowlist:</p>
+<code>VerifyAndExtractAuth</code> and enforces who may issue it:</p>
 <ul>
-<li>the token: <code>typ</code> <code>aa-auth+jwt</code>, an allowed algorithm, <code>dwk</code>, an issuer in
-  <code>TrustedIssuers</code> with its key found through JWKS discovery, <code>aud</code> equal to
+<li>the issuer: in four-party the <code>Audience</code> with <code>dwk</code> <code>aauth-access.json</code>;
+  in three-party an issuer in <code>TrustedIssuers</code> with <code>dwk</code>
+  <code>aauth-person.json</code>, so its <code>ps</code> is itself;</li>
+<li>the token: <code>typ</code> <code>aa-auth+jwt</code>, an allowed algorithm, its key found
+  through JWKS discovery, <code>aud</code> equal to
   <code>Resource</code>, <code>iat</code> present and not ahead of the clock by more than the
   signature window, a lifetime of one hour
   or less, <code>exp</code> in the future with no skew allowance, and <code>sub</code>, <code>ps</code> and
   <code>cnf.jwk</code> present;</li>
 <li>the HTTP message signature: it covers <code>@method</code>, <code>@authority</code>, <code>@path</code>
-  and <code>signature-key</code>, it was made with the key in <code>cnf.jwk</code>, and its
-  <code>created</code> time is inside the validity window.</li>
+  and <code>signature-key</code>, its <code>@authority</code> is this resource's host, it was
+  made with the key in <code>cnf.jwk</code>, and its <code>created</code> time is inside the
+  validity window;</li>
+<li>revocation, when <code>IsRevoked</code> is set.</li>
 </ul>
 <p>Resource tokens are issued only with <code>IssueResourceToken</code>, against the
 person or auth token just verified. This copies <code>sub</code>, <code>mission_s256</code> and
