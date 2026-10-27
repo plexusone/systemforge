@@ -4,7 +4,12 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.23.0](v0.23.0.md), is a security release for
+The latest release, [v0.24.0](v0.24.0.md), lets command-line tools and
+other public clients sign people in to SystemAuth and call APIs with
+DPoP-bound tokens (`identity/publicclient`), with nothing to register per
+person or machine. It is not breaking.
+
+Before it, [v0.23.0](v0.23.0.md) was a security release for
 resource servers that accept AI agents: `aauthrs` accepts auth tokens only
 from the server entitled to issue them, binds every signature to the resource
 that receives it, and gains a revocation hook. It updates aauth-go to v0.3.0.
@@ -60,6 +65,7 @@ completed the organization model. It is a breaking release with migrations
 
 | Version | Release date |
 |---|---|
+| [v0.24.0](v0.24.0.md) | 2026-10-27 |
 | [v0.23.0](v0.23.0.md) | 2026-10-27 |
 | [v0.22.0](v0.22.0.md) | 2026-10-25 |
 | [v0.21.0](v0.21.0.md) | 2026-10-25 |
