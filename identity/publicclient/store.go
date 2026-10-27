@@ -57,8 +57,9 @@ type Locker interface {
 }
 
 // FileStore keeps credentials in one JSON file readable by its owner only
-// (0600, in a 0700 directory), written atomically. On Unix-like systems it
-// refuses a file that others can read, as ssh does for private keys.
+// (0600, in a 0700 directory), written atomically and durably. On
+// Unix-like systems it refuses a file that others can read, as ssh does for
+// private keys.
 type FileStore struct {
 	// Path is the credentials file, e.g. a file under
 	// os.UserConfigDir(). Required.
@@ -93,8 +94,11 @@ func (f FileStore) Load(_ context.Context) (*Credentials, error) {
 	return &c, nil
 }
 
-// Save implements Store: it writes a temporary file next to Path and
-// renames it over Path, so a reader never sees a partial file.
+// Save implements Store: it writes a temporary file next to Path, flushes
+// it, renames it over Path and flushes the directory, so a reader never
+// sees a partial file and a crash cannot bring back the previous one. That
+// matters: the previous refresh token has already been redeemed, and
+// presenting it again revokes the login.
 func (f FileStore) Save(_ context.Context, c *Credentials) (err error) {
 	b, err := json.MarshalIndent(c, "", "  ") //nolint:gosec // G117: the store's job is to persist these tokens, in an owner-only file
 	if err != nil {
@@ -121,11 +125,33 @@ func (f FileStore) Save(_ context.Context, c *Credentials) (err error) {
 	if _, err := tmp.Write(b); err != nil {
 		return errors.Join(fmt.Errorf("publicclient: writing credentials: %w", err), tmp.Close())
 	}
+	if err := tmp.Sync(); err != nil {
+		return errors.Join(fmt.Errorf("publicclient: writing credentials: %w", err), tmp.Close())
+	}
 	if err := tmp.Close(); err != nil {
 		return fmt.Errorf("publicclient: writing credentials: %w", err)
 	}
 	if err := os.Rename(tmp.Name(), f.Path); err != nil {
 		return fmt.Errorf("publicclient: writing credentials: %w", err)
+	}
+	return syncDir(dir)
+}
+
+// syncDir flushes a directory, so a rename in it survives a crash. Windows
+// cannot open a directory for syncing, and NTFS logs the rename itself.
+func syncDir(dir string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	d, err := os.Open(dir) //nolint:gosec // G304: the directory of the configured credentials path
+	if err != nil {
+		return fmt.Errorf("publicclient: syncing the credentials directory: %w", err)
+	}
+	if err := d.Sync(); err != nil {
+		return errors.Join(fmt.Errorf("publicclient: syncing the credentials directory: %w", err), d.Close())
+	}
+	if err := d.Close(); err != nil {
+		return fmt.Errorf("publicclient: syncing the credentials directory: %w", err)
 	}
 	return nil
 }
