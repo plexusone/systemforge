@@ -9,6 +9,86 @@
   ],
   "releases": [
     {
+      "version": "v0.24.0",
+      "date": "2026-10-27",
+      "highlights": [
+        {
+          "description": "`identity/publicclient` lets command-line tools and other public clients sign people in to SystemAuth and call SystemForge-powered APIs with DPoP-bound tokens, for tools a deployment ships to its users and tools others write against it alike. Nothing is registered per person or machine: a key is generated at login and the tokens are bound to it"
+        }
+      ],
+      "added": [
+        {
+          "description": "`publicclient.Login`: the authorization code flow with PKCE on a loopback redirect (RFC 8252, any port), a new P-256 DPoP key, ID token verification, and the key and tokens saved to a `Store`",
+          "commit": "c669c68",
+          "rmis": [
+            "RMI-SYSTEMFORGE-186"
+          ]
+        },
+        {
+          "description": "`Session.Transport` and `Session.HTTPClient`: `Authorization: DPoP` with a proof bound to the access token (RFC 9449) on every request, refresh a minute before expiry, and one retry for `use_dpop_nonce` or `invalid_token`; the request body is closed on every path",
+          "commit": "c669c68",
+          "rmis": [
+            "RMI-SYSTEMFORGE-186"
+          ]
+        },
+        {
+          "description": "`publicclient.Open` and `Session.Logout`: reuse a stored session, and revoke the refresh token and delete the credentials",
+          "commit": "c669c68",
+          "rmis": [
+            "RMI-SYSTEMFORGE-186"
+          ]
+        },
+        {
+          "description": "`publicclient.Store` and `FileStore`: one owner-only file, refused when others can read it, written atomically and flushed with its directory so a crash cannot bring back a redeemed refresh token",
+          "commit": "31ffdf7",
+          "rmis": [
+            "RMI-SYSTEMFORGE-186"
+          ]
+        },
+        {
+          "description": "`publicclient.Locker`, implemented by `FileStore` with `flock` or `LockFileEx`: processes sharing the credentials refresh and log out under the lock, and adopt tokens another process refreshed instead of redeeming the old refresh token, which SystemAuth would answer by revoking the login; the system releases the lock when its holder exits",
+          "commit": "6eaa391",
+          "rmis": [
+            "RMI-SYSTEMFORGE-186"
+          ]
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "`golang.org/x/sys` v0.49.0 is a direct dependency, for the operating-system lock",
+          "commit": "6eaa391"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Calling APIs with DPoP: command-line tools and other public clients, registration, storage and several processes",
+          "commit": "1e82ecb",
+          "rmis": [
+            "RMI-SYSTEMFORGE-186"
+          ]
+        },
+        {
+          "description": "Calling APIs with DPoP: durable saves and the operating-system lock",
+          "commit": "9c2e039",
+          "rmis": [
+            "RMI-SYSTEMFORGE-186"
+          ]
+        },
+        {
+          "description": "v0.24.0 release notes"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Against an embedded SystemAuth that requires DPoP nonces and an API behind `relyingparty.BearerMiddleware`: login, calls with proofs, Bearer refused, refresh with rotation, processes sharing credentials, logout, refused logins, the file store, unlock failures and closed request bodies",
+          "commit": "c84d638",
+          "rmis": [
+            "RMI-SYSTEMFORGE-186"
+          ]
+        }
+      ]
+    },
+    {
       "version": "v0.23.0",
       "date": "2026-10-27",
       "highlights": [
