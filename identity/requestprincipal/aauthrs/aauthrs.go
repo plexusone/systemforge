@@ -78,8 +78,13 @@ type Config struct {
 	KeyID string
 
 	// Audience, for four-party access, is the resource's Access Server:
-	// resource tokens are addressed to it. Empty means three-party: the
-	// Person Server named by the presented token.
+	// resource tokens are addressed to it, and it is the only issuer whose
+	// auth tokens are accepted (dwk aauth-access.json). Empty means
+	// three-party: resource tokens go to the Person Server named by the
+	// presented token, and only auth tokens a trusted Person Server issued
+	// itself (dwk aauth-person.json) are accepted. Either way a Person
+	// Server trusted for person tokens cannot grant itself scopes that
+	// bypass the Access Server.
 	Audience string
 
 	// Resolver locates person and auth token issuer keys. Default: a
@@ -106,8 +111,17 @@ type Config struct {
 
 	// Signature tunes HTTP message signature verification: the validity
 	// window, the clock, and components agents must cover beyond the base
-	// set. The zero value uses the library defaults.
+	// set. The zero value uses the library defaults. Its Authority
+	// defaults to the host of Resource, so a request signed for another
+	// server is refused and cannot be replayed here.
 	Signature aauth.RequestVerifyOptions
+
+	// IsRevoked, when set, is asked about every token after it and the
+	// request signature verify: iss and jti name the token (draft §11.12).
+	// Return nil for a token in force, an error wrapping aauth.ErrRevoked
+	// for a revoked one (answered 401 revoked_jwt), or any other error
+	// when revocation state is unavailable (answered 500).
+	IsRevoked func(ctx context.Context, iss, jti string) error
 
 	// CheckSubject is the resource's record check for a person (draft
 	// §9.4.3.2): it confirms or establishes the resource's record for
@@ -161,6 +175,18 @@ func New(cfg Config) (*Authenticator, error) {
 			return nil, fmt.Errorf("aauthrs: Config.Resource: %w", err)
 		}
 	}
+	if cfg.Signature.Authority == "" {
+		authority, err := aauth.AuthorityOf(cfg.Resource)
+		if err != nil {
+			return nil, fmt.Errorf("aauthrs: Config.Resource: %w", err)
+		}
+		cfg.Signature.Authority = authority
+	}
+	if cfg.Audience != "" && !cfg.InsecureSkipIdentifierCheck {
+		if err := aauth.ValidateServerIdentifier(cfg.Audience); err != nil {
+			return nil, fmt.Errorf("aauthrs: Config.Audience: %w", err)
+		}
+	}
 	switch cfg.AccessMode {
 	case "":
 		cfg.AccessMode = aauth.AccessModeAuthToken
@@ -209,8 +235,18 @@ func New(cfg Config) (*Authenticator, error) {
 	if agentResolver == nil {
 		agentResolver = discovery
 	}
+	// The Access Server's keys are resolvable too: it issues the auth
+	// tokens in four-party, without being trusted for person tokens.
+	resolvable := trusted
+	if cfg.Audience != "" && !trusted[cfg.Audience] {
+		resolvable = make(map[string]bool, len(trusted)+1)
+		for iss := range trusted {
+			resolvable[iss] = true
+		}
+		resolvable[cfg.Audience] = true
+	}
 	a.verify = aauth.TokenVerifyOptions{
-		Resolver:                    trustedResolver{next: resolver, trusted: trusted},
+		Resolver:                    trustedResolver{next: resolver, trusted: resolvable},
 		Signature:                   cfg.Signature,
 		InsecureSkipIdentifierCheck: cfg.InsecureSkipIdentifierCheck,
 	}
@@ -279,8 +315,11 @@ func (a *Authenticator) authToken(r *http.Request, required []string) (*requestp
 	if err != nil {
 		return nil, signatureFailure(err)
 	}
-	if !a.trusted[claims.Issuer] {
-		return nil, signatureFailure(untrusted(claims.Issuer))
+	if err := a.trustAuth(claims.Issuer, claims.DWK); err != nil {
+		return nil, signatureFailure(err)
+	}
+	if err := a.inForce(ctx, claims.Issuer, claims.ID); err != nil {
+		return nil, err
 	}
 	if missing := missingScopes(required, strings.Fields(claims.Scope)); len(missing) > 0 {
 		// Step-up: a resource token against the verified auth token
@@ -316,6 +355,9 @@ func (a *Authenticator) personToken(r *http.Request, required []string) (*reques
 	}
 	if !a.trusted[claims.Issuer] {
 		return nil, signatureFailure(untrusted(claims.Issuer))
+	}
+	if err := a.inForce(ctx, claims.Issuer, claims.ID); err != nil {
+		return nil, err
 	}
 	if a.cfg.AccessMode == aauth.AccessModeAuthToken || len(required) > 0 {
 		return nil, a.challengeAuthToken(ctx, claims, required)
@@ -361,6 +403,9 @@ func (a *Authenticator) agentToken(r *http.Request, required []string) (*request
 		if err := agentBelongsToIssuer(claims.Subject, claims.Issuer); err != nil {
 			return nil, signatureFailure(err)
 		}
+	}
+	if err := a.inForce(ctx, claims.Issuer, claims.ID); err != nil {
+		return nil, err
 	}
 	p := &requestprincipal.RequestPrincipal{
 		PrincipalID: claims.Subject,
@@ -494,6 +539,45 @@ func agentBelongsToIssuer(sub, iss string) error {
 		return fmt.Errorf("%w: agent %q is not an agent of issuer %q", aauth.ErrInvalidToken, sub, iss)
 	}
 	return nil
+}
+
+// trustAuth decides who may issue an auth token (draft §9.4, §13): in
+// four-party only the resource's Access Server, in three-party only a
+// trusted Person Server issuing for itself. Without this, a Person Server
+// trusted for person tokens could mint auth tokens for any scope and
+// bypass the Access Server.
+func (a *Authenticator) trustAuth(iss, dwk string) error {
+	if a.cfg.Audience != "" {
+		if iss != a.cfg.Audience || dwk != aauth.WellKnownAccess {
+			return fmt.Errorf("%w: %w: this resource accepts auth tokens only from its access server %s",
+				aauth.ErrInvalidToken, errUntrustedIssuer, a.cfg.Audience)
+		}
+		return nil
+	}
+	if dwk != aauth.WellKnownPerson {
+		return fmt.Errorf("%w: %w: this resource accepts auth tokens only from a person server (dwk %s)",
+			aauth.ErrInvalidToken, errUntrustedIssuer, aauth.WellKnownPerson)
+	}
+	if !a.trusted[iss] {
+		return untrusted(iss)
+	}
+	return nil
+}
+
+// inForce applies IsRevoked: a revoked token is a 401 revoked_jwt, and
+// revocation state that is unavailable an internal error (500).
+func (a *Authenticator) inForce(ctx context.Context, iss, jti string) error {
+	if a.cfg.IsRevoked == nil {
+		return nil
+	}
+	err := a.cfg.IsRevoked(ctx, iss, jti)
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, aauth.ErrRevoked):
+		return signatureFailure(err)
+	}
+	return fmt.Errorf("aauthrs: revocation check: %w", err)
 }
 
 // errUntrustedIssuer marks a token from an issuer outside TrustedIssuers.

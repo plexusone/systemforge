@@ -29,8 +29,9 @@ import (
 
 // --- A fake issuer whose tokens the test mints by hand. ---
 
-// fakeIssuer is a Person Server stand-in: it publishes aauth-person.json
-// and a JWKS, and the test mints auth tokens with its key.
+// fakeIssuer is a Person Server or Access Server stand-in: it publishes
+// aauth-person.json, aauth-access.json and a JWKS, and the test mints auth
+// tokens with its key.
 type fakeIssuer struct {
 	url     string
 	key     crypto.Signer
@@ -52,7 +53,7 @@ func newFakeIssuer(t *testing.T) *fakeIssuer {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.fetches.Add(1)
 		switch r.URL.Path {
-		case "/.well-known/" + aauth.WellKnownPerson:
+		case "/.well-known/" + aauth.WellKnownPerson, "/.well-known/" + aauth.WellKnownAccess:
 			writeJSON(t, w, map[string]string{"issuer": f.url, "jwks_uri": f.url + "/jwks"})
 		case "/jwks":
 			writeJSON(t, w, aauth.JWKS{Keys: []aauth.JWK{f.jwk}})
@@ -65,13 +66,20 @@ func newFakeIssuer(t *testing.T) *fakeIssuer {
 	return f
 }
 
-// authToken mints an aa-auth+jwt from f for aud, bound to cnf, granting
-// things:read.
+// authToken mints an aa-auth+jwt from f as a Person Server (three-party)
+// for aud, bound to cnf, granting things:read.
 func (f *fakeIssuer) authToken(t *testing.T, aud string, cnf aauth.JWK, iat, exp time.Time) string {
 	t.Helper()
+	return f.authTokenAs(t, aauth.WellKnownPerson, f.url, aud, cnf, iat, exp)
+}
+
+// authTokenAs mints an aa-auth+jwt from f with the given dwk and ps: dwk
+// aauth-access.json and the agent's ps make f an Access Server.
+func (f *fakeIssuer) authTokenAs(t *testing.T, dwk, ps, aud string, cnf aauth.JWK, iat, exp time.Time) string {
+	t.Helper()
 	tok, err := aauth.MintAuthToken(aauth.AuthClaims{
-		DWK:         aauth.WellKnownPerson,
-		PS:          f.url,
+		DWK:         dwk,
+		PS:          ps,
 		Scope:       "things:read",
 		MissionS256: "mission-digest",
 		Tenant:      "org-1",
@@ -239,7 +247,7 @@ func newDeployment(t *testing.T) *deployment {
 	}
 	ap, err := agentprovider.New(agentprovider.Config{
 		HTTPClient: http.DefaultClient,
-		Issuer:     issuer, Domain: "agents.example", Key: apKey, Registrar: registrar{ps: issuer},
+		Issuer:     issuer, Key: apKey, Registrar: registrar{ps: issuer},
 	})
 	if err != nil {
 		t.Fatal(err)
