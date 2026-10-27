@@ -4,13 +4,20 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.22.0](v0.22.0.md), adds invite-gated sign-up:
+The latest release, [v0.23.0](v0.23.0.md), is a security release for
+resource servers that accept AI agents: `aauthrs` accepts auth tokens only
+from the server entitled to issue them, binds every signature to the resource
+that receives it, and gains a revocation hook. It updates aauth-go to v0.3.0.
+It is breaking for resources that accept an Access Server's auth tokens; read
+its upgrade notes first.
+
+Before it, [v0.22.0](v0.22.0.md) added invite-gated sign-up:
 invite codes with use limits and cohort labels, member invites from an
 allowance, attribution of every account to its invite, an invite API, and
 operator commands. It is not breaking; existing databases run migration
 0011.
 
-The previous release, [v0.21.0](v0.21.0.md), was a security release: tokens are
+Before it, [v0.21.0](v0.21.0.md) was a security release: tokens are
 DPoP-bound by default, keys and secrets rotate keeping the current and
 previous value, SCIM has built-in per-tenant tokens, revocations remove graph
 access before they commit, and each multi-app application gets its own
@@ -53,6 +60,8 @@ completed the organization model. It is a breaking release with migrations
 
 | Version | Release date |
 |---|---|
+| [v0.23.0](v0.23.0.md) | 2026-10-27 |
+| [v0.22.0](v0.22.0.md) | 2026-10-25 |
 | [v0.21.0](v0.21.0.md) | 2026-10-25 |
 | [v0.20.0](v0.20.0.md) | 2026-10-23 |
 | [v0.19.0](v0.19.0.md) | 2026-10-22 |
