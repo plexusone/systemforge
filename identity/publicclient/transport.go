@@ -1,6 +1,7 @@
 package publicclient
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,7 +52,7 @@ type transport struct {
 func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	tok, err := t.s.token(r.Context(), "")
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(err, closeBody(r))
 	}
 	resp, err := t.send(r, tok)
 	if err != nil || resp.StatusCode != http.StatusUnauthorized || (r.Body != nil && r.Body != http.NoBody && r.GetBody == nil) {
@@ -68,7 +69,7 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	if retryToken {
 		if tok, err = t.s.token(r.Context(), tok); err != nil {
-			return nil, err
+			return nil, err // the body went with the first attempt
 		}
 	}
 	retry := r.Clone(r.Context())
@@ -81,14 +82,15 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 // send sends a copy of r with the token and a proof, and records the
-// nonce the server returns.
+// nonce the server returns. Like any RoundTripper, it closes r's body,
+// also when it fails before sending.
 func (t *transport) send(r *http.Request, tok string) (*http.Response, error) {
 	origin := r.URL.Scheme + "://" + r.URL.Host
 	proof, err := dpop.CreateProofWithOptions(t.s.key, r.Method, htu(r), dpop.ProofOptions{
 		AccessToken: tok, Nonce: t.s.nonce(origin),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("publicclient: DPoP proof: %w", err)
+		return nil, errors.Join(fmt.Errorf("publicclient: DPoP proof: %w", err), closeBody(r))
 	}
 	out := r.Clone(r.Context())
 	out.Header.Set("Authorization", "DPoP "+tok)
@@ -119,6 +121,18 @@ func htu(r *http.Request) string {
 	u := *r.URL
 	u.RawQuery, u.Fragment, u.RawFragment = "", "", ""
 	return u.String()
+}
+
+// closeBody closes a request body that will not be sent, as the
+// RoundTripper contract requires.
+func closeBody(r *http.Request) error {
+	if r.Body == nil || r.Body == http.NoBody {
+		return nil
+	}
+	if err := r.Body.Close(); err != nil {
+		return fmt.Errorf("publicclient: closing the request body: %w", err)
+	}
+	return nil
 }
 
 // drain reads and closes a response that will be retried.
