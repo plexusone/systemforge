@@ -4223,6 +4223,8 @@
       
         
       
+        
+      
     
     
     
@@ -4294,6 +4296,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.24.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.24.0
   
 
     
@@ -5208,7 +5238,8 @@
 ADR-012 (classification, privacy rights and holds, which cover support
 requests), ADR-013 (keys, which can seal message text), ADR-017 (the same
 adoption pattern as connectforge), ADR-007 (organization and platform roles),
-ADR-020 (customer-authorized support access, and staff masking).
+ADR-020 (customer-authorized support access, and staff masking), ADR-016
+(OAuth grants, which the support tools use).
 <strong>Builds on:</strong> <a href="https://github.com/plexusone/supportforge">supportforge</a>,
 the generic support-request library, and
 <a href="https://github.com/plexusone/supportforge-core">supportforge-core</a>, its
@@ -5328,44 +5359,121 @@ adopts it, as ADR-017 does for connectforge.</p>
 6. <strong>Support has its own permissions.</strong> <code>support.request.read</code> lets a
    holder list and read requests through the API, which matters when mail is
    the only desk. <code>support.desk.configure</code> lets a holder change the desk
-   order. They are held by a platform role, <code>support_agent</code>, separate from
-   platform administration, in the vocabulary of ADR-007 and ADR-012. Reading a
+   order and redeliver. <code>support.reply.draft</code> lets a holder draft a reply,
+   and <code>support.reply.approve</code> lets a holder approve and send one. They are
+   held by a platform role, <code>support_agent</code>, separate from platform
+   administration, in the vocabulary of ADR-007 and ADR-012. A grant issued to
+   an agent (decision 13) never carries <code>support.reply.approve</code>, even when
+   the person who authorized it holds the role. Reading a
    request's own text needs no customer grant. Looking at the customer's
    application data does, under ADR-020.
 7. <strong>The API:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>POST /api/v1/support/requests          signed in; requester from the session
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>POST /api/v1/public/support/requests   visitor; bot challenge required
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>GET  /api/v1/support/requests          support_agent; list, without cleared text
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>GET  /api/v1/support/requests/{ref}    support_agent
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>GET  /api/v1/organizations/{org}/support/requests        owners and admins; index, plus shared text
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>GET  /api/v1/organizations/{org}/support/requests/{ref}  owners and admins
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>GET  /api/v1/support/requests/mine     signed in; the requester&#39;s own requests
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>GET  /api/v1/support/requests          support_agent; list, without cleared text
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>GET  /api/v1/support/requests/{ref}    support_agent
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>POST /api/v1/support/requests/{ref}/redeliver   support.desk.configure; retry, or skip to the next desk
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>POST /api/v1/support/requests/{ref}/replies     support.reply.draft; a draft reply
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>POST /api/v1/support/replies/{id}/approve       support.reply.approve; a person; sends it
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>GET  /api/v1/organizations/{org}/support/requests        owners and admins; index, plus shared text
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>GET  /api/v1/organizations/{org}/support/requests/{ref}  owners and admins
 </code></pre></div>
-<p>The response to a request is its reference and the promise of an email
-   reply, with no time given.
-8. <strong>Personal data follows the platform's rules.</strong>
-   - <strong>Classification.</strong> supportforge classifies every field, and SystemForge
-     registers them, so <code>Export</code> and <code>Erase</code> cover requests.
-   - <strong>Clearing.</strong> Message text and reply addresses are cleared seven days
-     after delivery by default.
-   - <strong>The desk.</strong> Erasure reaches the desk where its adapter supports it.
-     Where it cannot, the request is reported as retained at the desk.
-   - <strong>Holds.</strong> A hold stops both clearing and erasure.
-   - <strong>Retention of the remaining index</strong> is a deployment policy input
-     (ADR-011 decision 11).
-9. <strong>Desks are configured per deployment and per product.</strong> A desk's
+<ul>
+<li><strong>The response to a new request</strong> is its reference and the promise of an
+     email reply, with no time given.</li>
+<li><strong>A listed request</strong> carries its reference, kind, product, title, date
+     and status (<code>received</code>, <code>delivered</code>, <code>open</code>, <code>pending</code> or <code>closed</code>). It
+     carries a <code>deskUrl</code> only when the desk has a page the requester can sign
+     in to. A desk that cannot report status leaves it at <code>delivered</code>.</li>
+<li><strong>The title is kept while the request is listed,</strong> so a requester can
+     recognize it. The body and reply address are cleared as decision 8
+     says. Visitors have no list; they follow their request
+     by email.</li>
+<li><strong>Personal data follows the platform's rules.</strong></li>
+<li><strong>Classification.</strong> supportforge classifies every field, and SystemForge
+     registers them, so <code>Export</code> and <code>Erase</code> cover requests.</li>
+<li><strong>Clearing.</strong> By default:<ul>
+<li>the body is cleared seven days after delivery;</li>
+<li>the reply address is kept while the conversation may continue, and
+   cleared seven days after the latest of delivery, the last reply, and
+   the desk closing the ticket, so a reply can still reach the requester
+   through the mail desk;</li>
+<li>a ceiling clears the address after 90 days without activity, even if
+   the desk still shows the ticket open;</li>
+<li>the title is cleared with the index (decision 7).</li>
+</ul>
+</li>
+<li><strong>The desk.</strong> Erasure reaches the desk where its adapter supports it.
+     Where it cannot, the request is reported as retained at the desk.</li>
+<li><strong>Holds.</strong> A hold stops both clearing and erasure.</li>
+<li><strong>Retention of the remaining index</strong> is a deployment policy input
+     (ADR-011 decision 11).</li>
+<li><strong>Desks are configured per deployment and per product.</strong> A desk's
    credentials belong to the operator's own account at the vendor, so they are
    deployment secrets read through omnivault, not organization connections.
-   The desk order always ends with mail.
-10. <strong>The user interface is shared.</strong> "Contact support" and "Send feedback" are
-    built once over the API, and every application embeds them. Their copy
-    promises a reply by email, and nothing suggests anyone is online. Screens
-    an application marks as for children do not load them.
+   The desk order always ends with mail.</li>
+<li>
+<p><strong>The user interface is shared, and it is ours.</strong> One package in
+    systemforge-web, <code>@plexusone/support</code>, built over the API and embedded by
+    every application:</p>
+<ul>
+<li><strong>A support button and panel</strong> with "Contact support" and "Send
+  feedback". The panel holds a form, not a conversation. It shows the
+  sharing choice, says when a policy or the kind already shares the
+  request, and confirms with the reference and the promise of an email
+  reply.</li>
+<li><strong>"My requests"</strong>, from the requester's own list, with a link to the
+  desk only where <code>deskUrl</code> is given.</li>
+<li><strong>The organization view,</strong> which the organization console mounts.</li>
+<li><strong>Later, an embeddable element</strong> for pages that are not React, such as
+  a visitor contact form on a marketing site, as a second entry point of
+  the same package.</li>
+</ul>
+<p>It loads no vendor script and stores nothing in the browser. Its copy
+promises a reply by email, and nothing suggests anyone is online. Screens
+an application marks as for children do not load it. A vendor's own
+widget is not used: it brings a chat, a third-party script and browser
+storage, and a request filed there would skip the platform's store,
+fallback and privacy rules.
 11. <strong>It runs in process.</strong> Intake is part of the API, and the delivery worker
-    and clear job run as platform jobs.
-12. <strong>A console and a live channel are later products.</strong> An agent console, a
-    knowledge base with suggested answers, and a chat answered by people or
-    agents are applications or modules built on top of this one. They are not
-    part of it.</p>
+and clear job run as platform jobs.
+12. <strong>Responders answer in the desk, so the platform has no support console
+at first.</strong> A help desk such as PostHog Support brings its own inbox, and
+with the mail desk the operator's mailbox is the inbox, since each request
+arrives with <code>Reply-To</code> set to the requester. What the operator needs from
+the platform at first is an alert when delivery fails. An agent console, a
+knowledge base with suggested answers, and a chat answered by people or
+agents are later products built on top of this one, not part of it.
+13. <strong>Operators reach support through agent-first tools.</strong> A <code>support</code>
+command in the SystemForge CLI and an MCP server, both thin adapters over
+one Go client of the API in decision 7:
+- <strong>First:</strong> list and read requests by kind, product, status and date; a
+  digest of feedback by product; failed and stuck deliveries, with retry
+  and skip to the next desk; and a request's conversation, read from the
+  desk through its export.
+- <strong>Next:</strong> an agent drafts a reply, and it is sent to the requester only
+  after a person approves it:
+  - <strong>The draft is stored by the platform,</strong> as personal data classified
+    like the request's body, and cleared once sent or discarded.
+  - <strong>A person approves the exact text.</strong> Approval needs
+    <code>support.reply.approve</code>, which an agent's grant never holds, so an
+    agent cannot approve its own draft. An edit after approval needs a
+    new approval.
+  - <strong>Sending follows approval,</strong> through the desk, so the reply joins
+    the ticket's conversation. A desk that cannot send replies keeps the
+    draft as a note for a person to send there.
+  - <strong>The audit trail records</strong> who drafted, who approved, and when it
+    was sent.
+- <strong>Not allowed:</strong> an agent sending a reply no person approved.</p>
+<p>The tools act as a principal holding <code>support.request.read</code>,
+<code>support.reply.draft</code>, and <code>support.desk.configure</code> for delivery
+operations, through an OAuth grant (ADR-016). Every read is audited. A request's text needs no customer
+grant, but the customer's application data still does (ADR-020). An
+operator who passes request text to a model provider adds that provider
+as a processor, under a processing agreement and in the privacy notice.</p>
+</li>
+</ul>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Every application can hear its users at launch,</strong> with no vendor account
@@ -5379,6 +5487,15 @@ adopts it, as ADR-017 does for connectforge.</p>
   requirement.</li>
 <li><strong>Requests are personal data in the platform's governance,</strong> so privacy
   requests and holds include them without each application's help.</li>
+<li><strong>No console to build or run at launch.</strong> Responders use the desk's inbox
+  or a mailbox, and operators use the CLI or an agent. The price is that a
+  mail-only deployment has no shared view of who is answering what.</li>
+<li><strong>Agents can answer requesters, but never alone.</strong> Every agent reply
+  passes through a person's approval, which the platform enforces, at the
+  cost of a step before each reply.</li>
+<li><strong>Requesters see their requests in the application,</strong> with a status only
+  as current as the desk can report, and a link out only where the desk has a
+  page for them.</li>
 <li><strong>Visitors' text is never echoed</strong> in acknowledgments. A visitor sees only
   that their request was received, which is the price of not relaying
   arbitrary mail from the operator's domain.</li>
@@ -5394,6 +5511,19 @@ adopts it, as ADR-017 does for connectforge.</p>
 <li><strong>A vendor chat widget.</strong> Rejected for the default: it implies a live
   conversation, brings a vendor script and browser storage, and ties
   applications to one vendor. A live channel remains a later product.</li>
+<li><strong>Send requesters to the desk's own portal.</strong> Rejected: PostHog Support
+  has none, and a desk that has one, such as Zoho Desk's help center, needs a
+  second account at the vendor. A link to it is offered where it exists.</li>
+<li><strong>A support console in the first release.</strong> Rejected: the desks already
+  have inboxes, and the operator's first need, knowing when delivery fails,
+  is met by alerts and the agent-first tools.</li>
+<li><strong>Approval in the agent's client only.</strong> Rejected: a confirmation prompt
+  in a CLI or MCP client cannot be checked by the platform. Approval is a
+  separate call by a person, under a permission agents do not hold.</li>
+<li><strong>The UI in its own repository.</strong> Rejected for now: it calls this
+  platform's API and uses its session, components and design tokens, so it
+  would move in step with systemforge-web anyway. It can move later under the
+  same package name.</li>
 <li><strong>Build it inside SystemForge.</strong> Rejected for the same reasons as keyforge
   and connectforge: it is not specific to identity, it deserves its own
   review, and other hosts can use it.</li>

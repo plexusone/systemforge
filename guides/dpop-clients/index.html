@@ -1035,6 +1035,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#command-line-tools-and-other-public-clients" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command-line tools and other public clients
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#errors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4289,6 +4300,8 @@
       
         
       
+        
+      
     
     
     
@@ -4360,6 +4373,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.24.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.24.0
   
 
     
@@ -5281,6 +5322,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#command-line-tools-and-other-public-clients" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command-line tools and other public clients
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#errors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5512,6 +5564,77 @@ key.</p>
 request, presents tokens to SystemAuth with the <code>DPoP</code> scheme, and retries
 once with a server nonce. Give every instance that shares sessions the same
 <code>DPoPKey</code>; the default is a key generated per process.</p>
+<h2 id="command-line-tools-and-other-public-clients">Command-line tools and other public clients<a class="headerlink" href="#command-line-tools-and-other-public-clients" title="Permanent link">&para;</a></h2>
+<p>A command-line tool, desktop app or script that a person runs is a public
+client: it ships to people's machines, so it cannot keep a client secret.
+It signs in with the authorization code flow and PKCE on a loopback
+redirect (RFC 8252) and proves possession of a key instead.
+<code>identity/publicclient</code> does all of it, whether you ship the tool to your
+own users or are writing one against a SystemForge-powered service.</p>
+<p>Nothing is registered per person or per machine. The tool generates a key
+when the person logs in, SystemAuth binds the tokens it issues to that key,
+and the key matters only while those tokens live. Logging in again makes a
+new key; there is no key list to manage, unlike SSH keys.</p>
+<p>Register the client once per SystemAuth deployment:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">clients</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">reports-cli</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">public</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Reports CLI</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">redirect_uris</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;http://127.0.0.1/callback&quot;</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># any port matches (RFC 8252)</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">grant_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">authorization_code</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">refresh_token</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">response_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">code</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">scopes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openid</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">profile</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">email</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">offline_access</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<p>An OAuth application marked <code>first_party</code> (see
+<a href="../../oauth/apps/">OAuth Applications</a>) skips the consent screen, which
+suits a tool you ship to your own users; any other client asks the person
+to consent. Never give a client you distribute <code>allow_bearer_tokens</code>: the
+binding is what makes a leaked token useless.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">cfg</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">publicclient</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">Issuer</span><span class="p">:</span><span class="w">   </span><span class="s">&quot;https://auth.example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;reports-cli&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">Store</span><span class="p">:</span><span class="w">    </span><span class="nx">publicclient</span><span class="p">.</span><span class="nx">FileStore</span><span class="p">{</span><span class="nx">Path</span><span class="p">:</span><span class="w"> </span><span class="nx">filepath</span><span class="p">.</span><span class="nx">Join</span><span class="p">(</span><span class="nx">configDir</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;reports&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;credentials.json&quot;</span><span class="p">)},</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1">// reports login: print the URL (or open a browser) and wait for the redirect.</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="nx">s</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">publicclient</span><span class="p">.</span><span class="nx">Login</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">,</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">authURL</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Fprintln</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stderr</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Open this URL to sign in:&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">authURL</span><span class="p">)</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="p">})</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="c1">// Any later run: open the stored session and call the API.</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="nx">s</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">publicclient</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">)</span><span class="w"> </span><span class="c1">// publicclient.ErrNotLoggedIn before a login</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="nx">resp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">HTTPClient</span><span class="p">().</span><span class="nx">Get</span><span class="p">(</span><span class="s">&quot;https://api.example.com/v1/reports&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="c1">// reports logout: revoke the refresh token and delete the credentials.</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">Logout</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+<p>The session's transport sends <code>Authorization: DPoP</code> with a new proof on
+every request, refreshes the access token a minute before it expires, and
+retries a refused request once: with the server's nonce for
+<code>use_dpop_nonce</code>, or with a refreshed token for <code>invalid_token</code>.</p>
+<p><strong>Storage.</strong> <code>FileStore</code> writes the key and tokens to one file readable by
+its owner only, and refuses a file others can read. Each save goes to a
+temporary file that is flushed, renamed over the old one, and the
+directory flushed, so a crash leaves either the old file or the new one,
+never a partial one, and never brings back a refresh token that was
+already redeemed. To keep them in the operating system's credential store
+instead, implement <code>publicclient.Store</code> over it. The key is as sensitive as
+the refresh token.</p>
+<p><strong>Several processes.</strong> SystemAuth rotates refresh tokens and treats a
+redeemed one presented again as stolen, revoking every token of the login.
+When a tool and a process it starts (an MCP server, say) share the
+credentials, the store must implement <code>publicclient.Locker</code>, as <code>FileStore</code>
+does: a session refreshes and logs out under the lock, and adopts the
+tokens another process just refreshed rather than redeeming the old
+refresh token. <code>FileStore</code>'s lock is an operating-system lock on a file
+next to the credentials (<code>flock</code>, or <code>LockFileEx</code> on Windows), which the
+system releases when its holder exits, so a process that dies holding it
+does not block the others. A process waits up to 30 seconds for it.</p>
+<p><strong>APIs that accept the tool's tokens.</strong> An API built on
+<code>identity/relyingparty</code> accepts only tokens issued to its own client unless
+<code>Config.AcceptedClientIDs</code> lists the tool's client or
+<code>Config.AccessTokenAudience</code> names an audience the tool's tokens carry.</p>
 <h2 id="errors">Errors<a class="headerlink" href="#errors" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -5564,13 +5687,13 @@ once with a server nonce. Give every instance that shares sessions the same
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">clients</span><span class="p">:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">legacy-reporting</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">confidential</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Legacy reporting job</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${LEGACY_REPORTING_SECRET}</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">grant_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">client_credentials</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">allow_bearer_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># remove once the job sends DPoP proofs</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">clients</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">legacy-reporting</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">confidential</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Legacy reporting job</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${LEGACY_REPORTING_SECRET}</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">grant_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">client_credentials</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nt">allow_bearer_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># remove once the job sends DPoP proofs</span>
 </code></pre></div>
 <p>A bearer token works for whoever holds a copy, so keep the list of such
 clients short and move each to DPoP.</p>
