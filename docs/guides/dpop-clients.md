@@ -138,6 +138,83 @@ request, presents tokens to SystemAuth with the `DPoP` scheme, and retries
 once with a server nonce. Give every instance that shares sessions the same
 `DPoPKey`; the default is a key generated per process.
 
+## Command-line tools and other public clients
+
+A command-line tool, desktop app or script that a person runs is a public
+client: it ships to people's machines, so it cannot keep a client secret.
+It signs in with the authorization code flow and PKCE on a loopback
+redirect (RFC 8252) and proves possession of a key instead.
+`identity/publicclient` does all of it, whether you ship the tool to your
+own users or are writing one against a SystemForge-powered service.
+
+Nothing is registered per person or per machine. The tool generates a key
+when the person logs in, SystemAuth binds the tokens it issues to that key,
+and the key matters only while those tokens live. Logging in again makes a
+new key; there is no key list to manage, unlike SSH keys.
+
+Register the client once per SystemAuth deployment:
+
+```yaml
+clients:
+  - id: reports-cli
+    type: public
+    name: Reports CLI
+    redirect_uris: ["http://127.0.0.1/callback"]   # any port matches (RFC 8252)
+    grant_types: [authorization_code, refresh_token]
+    response_types: [code]
+    scopes: [openid, profile, email, offline_access]
+```
+
+An OAuth application marked `first_party` (see
+[OAuth Applications](../oauth/apps.md)) skips the consent screen, which
+suits a tool you ship to your own users; any other client asks the person
+to consent. Never give a client you distribute `allow_bearer_tokens`: the
+binding is what makes a leaked token useless.
+
+```go
+cfg := publicclient.Config{
+	Issuer:   "https://auth.example.com",
+	ClientID: "reports-cli",
+	Store:    publicclient.FileStore{Path: filepath.Join(configDir, "reports", "credentials.json")},
+}
+
+// reports login: print the URL (or open a browser) and wait for the redirect.
+s, err := publicclient.Login(ctx, cfg, func(authURL string) error {
+	_, err := fmt.Fprintln(os.Stderr, "Open this URL to sign in:", authURL)
+	return err
+})
+
+// Any later run: open the stored session and call the API.
+s, err = publicclient.Open(ctx, cfg) // publicclient.ErrNotLoggedIn before a login
+resp, err := s.HTTPClient().Get("https://api.example.com/v1/reports")
+
+// reports logout: revoke the refresh token and delete the credentials.
+err = s.Logout(ctx)
+```
+
+The session's transport sends `Authorization: DPoP` with a new proof on
+every request, refreshes the access token a minute before it expires, and
+retries a refused request once: with the server's nonce for
+`use_dpop_nonce`, or with a refreshed token for `invalid_token`.
+
+**Storage.** `FileStore` writes the key and tokens to one file readable by
+its owner only, atomically, and refuses a file others can read. To keep
+them in the operating system's credential store instead, implement
+`publicclient.Store` over it. The key is as sensitive as the refresh
+token.
+
+**Several processes.** SystemAuth rotates refresh tokens and treats a
+redeemed one presented again as stolen, revoking every token of the login.
+When a tool and a process it starts (an MCP server, say) share the
+credentials, the store must implement `publicclient.Locker`, as `FileStore`
+does: a session refreshes under the lock, and adopts the tokens another
+process just refreshed rather than redeeming the old refresh token.
+
+**APIs that accept the tool's tokens.** An API built on
+`identity/relyingparty` accepts only tokens issued to its own client unless
+`Config.AcceptedClientIDs` lists the tool's client or
+`Config.AccessTokenAudience` names an audience the tool's tokens carry.
+
 ## Errors
 
 | Response | Cause | What to do |
