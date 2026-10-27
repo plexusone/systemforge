@@ -152,6 +152,34 @@ and rejects are never passed to the next one.
 | `Resolve` | Maps or rejects the principal after verification. A returned `*requestprincipal.Error` is sent as the response. |
 | `Limiter` | Rate-limits resource-token issuance per agent key. Refused requests get a 429 with `Retry-After`. |
 
+### Three-party or four-party
+
+Who may issue the auth tokens a resource accepts depends on whether it has an
+Access Server of its own:
+
+| Mode | Set | Auth tokens accepted from |
+|------|-----|---------------------------|
+| Three-party | `TrustedIssuers` only | A trusted Person Server issuing for itself (`dwk` `aauth-person.json`, so its `ps` is its `iss`) |
+| Four-party | `Audience` as well | Only the `Audience` Access Server (`dwk` `aauth-access.json`) |
+
+`TrustedIssuers` still governs person tokens in both modes, and the Access
+Server's keys are resolved through `Audience` without trusting it for person
+tokens. When the Person Server and the Access Server share one origin, as in a
+PS-AS collapse, name that origin in both:
+
+```go
+aauthrs.Config{
+    TrustedIssuers: []string{"https://agents.example.com"},
+    Audience:       "https://agents.example.com",
+    // ...
+}
+```
+
+Since v0.23.0 an Access Server listed only in `TrustedIssuers` no longer has
+its auth tokens accepted: name it in `Audience`. Otherwise a Person Server
+trusted for person tokens could issue auth tokens for any scope and bypass the
+Access Server's policy.
+
 ## What is verified
 
 For an auth token, the authenticator calls the library's

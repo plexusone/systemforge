@@ -9,6 +9,72 @@
   ],
   "releases": [
     {
+      "version": "v0.23.0",
+      "date": "2026-10-27",
+      "highlights": [
+        {
+          "description": "`aauthrs` accepts auth tokens only from their rightful issuer: in four-party only the `Audience` Access Server, in three-party only a trusted Person Server issuing for itself, so a Person Server trusted for person tokens can no longer grant itself scopes that bypass the Access Server"
+        },
+        {
+          "description": "`aauthrs` refuses a request signed for another server, so an agent's signed request cannot be replayed to a resource it was not meant for"
+        },
+        {
+          "description": "Updates aauth-go to v0.3.0"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "`aauthrs`: an Access Server's auth tokens are accepted only when it is named in `Config.Audience`; listing it in `TrustedIssuers` no longer admits them, and a trusted issuer's auth token with `dwk` `aauth-access.json` is refused in three-party",
+          "commit": "051e23b"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "A resource that accepts auth tokens from an Access Server sets `aauthrs.Config.Audience` to it; when the Person Server and Access Server share one origin, name it in both `TrustedIssuers` and `Audience`"
+        },
+        {
+          "description": "An application that also depends on aauth-go directly reviews its v0.3.0 migration guide: agent identifiers must be in their provider's domain, and servers built on its `personserver` and `accessserver` stores gain new methods"
+        }
+      ],
+      "security": [
+        {
+          "description": "`aauthrs` enforces who may issue an auth token, which aauth-go leaves to the caller; before, any issuer in `TrustedIssuers` was accepted with either `dwk`",
+          "commit": "051e23b"
+        },
+        {
+          "description": "`aauthrs` defaults `Signature.Authority` to the host of `Resource`, so a verified signature is bound to this resource; agent tokens carry no audience, so a request signed for another server could otherwise be replayed in agent-token mode",
+          "commit": "4adc9f4"
+        }
+      ],
+      "added": [
+        {
+          "description": "`aauthrs.Config.IsRevoked`, asked about every token once it and the request signature verify: a revoked token is a 401 `revoked_jwt`, unavailable revocation state a 500, as in aauth-go's `ResourceGuard`",
+          "commit": "e9ac963"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "aauth-go v0.2.0 to v0.3.0",
+          "commit": "2eeeba0"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The AI Agents (AAuth) guide covers `Audience`, the signature authority, `IsRevoked`, and choosing three- or four-party",
+          "commit": "36d4c69"
+        },
+        {
+          "description": "v0.23.0 release notes"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Cover the auth-token issuer rules in three- and four-party, a request signed for another server, and the revocation hook",
+          "commit": "3ae1567"
+        }
+      ]
+    },
+    {
       "version": "v0.22.0",
       "date": "2026-10-25",
       "highlights": [
