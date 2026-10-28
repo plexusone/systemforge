@@ -76,6 +76,12 @@ type Options struct {
 	// they do not recognize, such as AAuth-signed agent requests.
 	Authenticators []requestprincipal.Authenticator
 
+	// ServiceAccounts accepts SystemAuth service accounts' tokens, creating
+	// an account's local principal on its first request
+	// (relyingparty.BearerConfig.ServicePrincipals). Principals must support
+	// service identities, as pgstore.PrincipalStore does.
+	ServiceAccounts bool
+
 	// EphemeralDPoPKey lets the application start without a DPoP key: one
 	// is generated per process, so people sign in again after every
 	// restart. For local development only.
@@ -199,6 +205,7 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 			Revocation:        opts.Revocation,
 			DPoP:              &relyingparty.DPoPConfig{ReplayCache: replay, BaseURL: a.resource},
 			AllowBearerTokens: opts.AllowBearerTokens,
+			ServicePrincipals: opts.ServiceAccounts,
 			Logger:            logger,
 		}),
 		bearer: a.bearer,

@@ -26,6 +26,7 @@ func PrincipalStore(t *testing.T, newStore func(t *testing.T) relyingparty.Princ
 	t.Run("NotFound", func(t *testing.T) { principalNotFound(t, newStore(t)) })
 	t.Run("Conflicts", func(t *testing.T) { principalConflicts(t, newStore(t)) })
 	t.Run("Managed", func(t *testing.T) { principalManaged(t, newStore(t)) })
+	t.Run("Service", func(t *testing.T) { principalService(t, newStore(t)) })
 	t.Run("LinkSubject", func(t *testing.T) { principalLinkSubject(t, newStore(t)) })
 	t.Run("RecordLogin", func(t *testing.T) { principalRecordLogin(t, newStore(t)) })
 }
@@ -177,5 +178,23 @@ func principalRecordLogin(t *testing.T, s relyingparty.PrincipalStore) {
 	got, err = s.GetPrincipal(ctx, p.ID)
 	if err != nil || got.Name != "Renamed" || got.AvatarURL != id.Picture {
 		t.Errorf("empty profile: %+v %v", got, err)
+	}
+}
+
+func principalService(t *testing.T, s relyingparty.PrincipalStore) {
+	ctx := t.Context()
+	for range 2 {
+		sub := uuid.NewString()
+		p, err := s.CreatePrincipal(ctx, relyingparty.VerifiedIdentity{Subject: sub, Name: "ci-publisher", Service: true})
+		if err != nil {
+			t.Fatalf("service identity: %v", err)
+		}
+		if p.Type != "service" || p.Email != "" || p.EmailVerified || p.Managed || !p.Active || p.Name != "ci-publisher" {
+			t.Errorf("service: %+v", p)
+		}
+		got, err := s.FindBySubject(ctx, sub)
+		if err != nil || got.Type != "service" {
+			t.Errorf("find service: %+v %v", got, err)
+		}
 	}
 }

@@ -93,8 +93,9 @@ func (s *PrincipalStore) LinkSubject(ctx context.Context, principalID, subject s
 }
 
 // CreatePrincipal implements relyingparty.PrincipalStore: an active human
-// principal linked to the identity's subject. An identity without an email
-// (a managed principal) is stored without one.
+// principal linked to the identity's subject, or a service principal for a
+// service identity. An identity without an email (a managed principal or a
+// service account) is stored without one.
 func (s *PrincipalStore) CreatePrincipal(ctx context.Context, id relyingparty.VerifiedIdentity) (*relyingparty.Principal, error) {
 	name := id.Name
 	if name == "" {
@@ -105,15 +106,19 @@ func (s *PrincipalStore) CreatePrincipal(ctx context.Context, id relyingparty.Ve
 		email = sql.NullString{String: id.Email, Valid: true}
 	}
 	verified := id.Email != "" && (id.EmailVerified || !id.Managed)
+	typ := "human"
+	if id.Service {
+		typ = "service"
+	}
 	// ON CONFLICT DO NOTHING covers both unique indexes, so a conflict is
 	// told apart afterwards without depending on driver error types.
 	p, err := scanPrincipal(s.db.QueryRowContext(ctx, `
 		INSERT INTO sf_rp_principals
 			(id, sf_principal_id, type, email, email_verified, display_name, avatar_url, managed)
-		VALUES ($1, $2, 'human', $3, $4, $5, $6, $7)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT DO NOTHING
 		RETURNING `+principalColumns,
-		uuid.New(), id.Subject, email, verified, name, id.Picture, id.Managed))
+		uuid.New(), id.Subject, typ, email, verified, name, id.Picture, id.Managed))
 	if errors.Is(err, relyingparty.ErrPrincipalNotFound) {
 		return nil, s.conflict(ctx, id)
 	}

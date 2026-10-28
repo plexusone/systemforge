@@ -3,6 +3,7 @@ package relyingparty
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -105,6 +106,15 @@ type BearerConfig struct {
 	// AllowClientTokens accepts client-credentials access tokens (subject
 	// equal to the client ID, no local principal) as a "client" principal.
 	AllowClientTokens bool
+
+	// ServicePrincipals accepts SystemAuth service accounts: a verified
+	// access token whose subject has no local principal and whose
+	// principal_type claim is "service" creates one with
+	// PrincipalStore.CreatePrincipal (VerifiedIdentity.Service), since a
+	// service account never signs in. The principal store must support
+	// service identities. Without it such a token is refused as an unknown
+	// principal.
+	ServicePrincipals bool
 
 	// Revocation, when set, refuses a JWT access token issued before a
 	// recorded change to its principal's access (ADR-010). The refusal is
@@ -361,6 +371,9 @@ func (cfg BearerConfig) principalForJWT(ctx context.Context, token string, claim
 		}
 	}
 	p, err := cfg.Principals.FindBySubject(ctx, claims.Subject)
+	if errors.Is(err, ErrPrincipalNotFound) && cfg.ServicePrincipals && isServiceToken(claims) {
+		p, err = cfg.provisionService(ctx, claims)
+	}
 	if errors.Is(err, ErrPrincipalNotFound) {
 		if cfg.AllowClientTokens && claims.ClientID != "" && claims.Subject == claims.ClientID {
 			return &AuthenticatedPrincipal{
@@ -449,4 +462,28 @@ func principalType(p *Principal) string {
 		return "human"
 	}
 	return p.Type
+}
+
+// PrincipalTypeClaim is the access token claim naming the principal's type;
+// SystemAuth sets it to "service" for a service account.
+const PrincipalTypeClaim = "principal_type"
+
+func isServiceToken(claims *AccessTokenClaims) bool {
+	t, ok := claims.Raw[PrincipalTypeClaim].(string)
+	return ok && t == "service"
+}
+
+// provisionService creates the local principal of a service account on its
+// first request. A concurrent request may create it first; the principal it
+// created is used.
+func (cfg BearerConfig) provisionService(ctx context.Context, claims *AccessTokenClaims) (*Principal, error) {
+	name, _ := claims.Raw["name"].(string) // optional: a service account may carry no name
+	p, err := cfg.Principals.CreatePrincipal(ctx, VerifiedIdentity{Subject: claims.Subject, Name: name, Service: true})
+	if errors.Is(err, ErrSubjectLinked) {
+		return cfg.Principals.FindBySubject(ctx, claims.Subject)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("relyingparty: creating the service principal: %w", err)
+	}
+	return p, nil
 }
