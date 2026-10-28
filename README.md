@@ -459,6 +459,12 @@ Guides for organizations, roles and access invalidation are in `docs/guides/`:
 - `docs/guides/connections.md`
 - `docs/guides/key-management.md`
 
+## Security
+
+Report vulnerabilities privately, not in public issues. See
+[SECURITY.md](SECURITY.md) for the reporting channel, response targets and
+supported versions.
+
 ## Contributing
 
 Contributions are welcome! Please read the contributing guidelines before submitting PRs.

@@ -111,6 +111,8 @@ nav:
     - BFF Sessions: session/bff-sessions.md
     - Invalidation: session/invalidation.md
     - DPoP Enforcement: session/dpop.md
+  - Security:
+    - Security Policy: https://github.com/plexusone/systemforge/blob/main/SECURITY.md
   - Architecture:
     - Application Architecture: architecture/systemforge-application-architecture.md
   - Multi-App:
