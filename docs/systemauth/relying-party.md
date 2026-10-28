@@ -117,6 +117,16 @@ The routes match the shared frontend auth package (`BFFClient`):
 organization_name, organization_slug, role, joined_at}], created_at,
 updated_at?}`. Errors are `{code, message}`.
 
+A failed sign-in at `GET /bff/auth/login`, `/bff/auth/{provider}` or the
+callback answers JSON by default. Set `BFFConfig.LoginErrorPath` (or
+`appauth.Options.LoginErrorPath`) to the app's sign-in page, such as `/login`,
+and the browser is redirected there with `?error=<CODE>` instead (`303`). The
+codes are `LOGIN_FAILED`, `INVALID_STATE`, `EMAIL_NOT_VERIFIED`,
+`ACCOUNT_CONFLICT`, `ACCOUNT_DISABLED`, `INVALID_RETURN_TO`, `UNKNOWN_PROVIDER`
+and `INTERNAL_ERROR`; the upstream's error text is never copied into the URL.
+A request with `Accept: application/json` (and not `text/html`) still gets
+JSON. The path must pass the same checks as a `return_to`.
+
 Security properties:
 
 - The session cookie (`__Host-sf_rp_session`) is an opaque 256-bit token,

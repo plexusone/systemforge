@@ -75,6 +75,17 @@ type BFFConfig struct {
 	// SessionLifetime is the absolute session lifetime. Default: 12h.
 	SessionLifetime time.Duration
 
+	// LoginErrorPath, when set, is the app's sign-in page. A browser whose
+	// sign-in fails at GET {BasePath}/auth/login or the callback is then
+	// redirected there with ?error=<CODE> (LOGIN_FAILED, INVALID_STATE,
+	// EMAIL_NOT_VERIFIED, ACCOUNT_CONFLICT, ACCOUNT_DISABLED,
+	// INVALID_RETURN_TO, UNKNOWN_PROVIDER or INTERNAL_ERROR) instead of
+	// shown a JSON error. A request that asks for JSON (Accept:
+	// application/json without text/html) still gets JSON. It must pass the
+	// same checks as a return_to, typically a path such as "/login". Empty
+	// keeps the JSON errors.
+	LoginErrorPath string
+
 	// DefaultReturnTo is where users land after login when no return_to is
 	// given. Default: "/".
 	DefaultReturnTo string
@@ -167,6 +178,13 @@ func NewBFF(cfg BFFConfig) (*BFF, error) {
 	}
 	if _, err := b.validateReturnTo(cfg.DefaultReturnTo); err != nil {
 		return nil, fmt.Errorf("relyingparty: DefaultReturnTo: %w", err)
+	}
+	if cfg.LoginErrorPath != "" {
+		v, err := b.validateReturnTo(cfg.LoginErrorPath)
+		if err != nil {
+			return nil, fmt.Errorf("relyingparty: LoginErrorPath: %w", err)
+		}
+		b.cfg.LoginErrorPath = v
 	}
 
 	base := cfg.BasePath
@@ -532,7 +550,7 @@ var knownProviders = map[string]bool{"github": true, "google": true}
 func (b *BFF) handleProviderLogin(w http.ResponseWriter, r *http.Request) {
 	provider := r.PathValue("provider")
 	if !knownProviders[provider] {
-		writeAuthError(w, http.StatusNotFound, "UNKNOWN_PROVIDER", "unknown login provider")
+		b.loginError(w, r, http.StatusNotFound, "UNKNOWN_PROVIDER", "unknown login provider")
 		return
 	}
 	b.startLogin(w, r, IDPHint(provider))
@@ -544,19 +562,19 @@ func (b *BFF) startLogin(w http.ResponseWriter, r *http.Request, opts ...oauth2.
 	if raw := r.URL.Query().Get("return_to"); raw != "" {
 		v, err := b.validateReturnTo(raw)
 		if err != nil {
-			writeAuthError(w, http.StatusBadRequest, "INVALID_RETURN_TO", "return_to is not allowed")
+			b.loginError(w, r, http.StatusBadRequest, "INVALID_RETURN_TO", "return_to is not allowed")
 			return
 		}
 		returnTo = v
 	}
 	state, err := randomToken()
 	if err != nil {
-		b.internalError(w, r, "generating login state", err)
+		b.loginInternalError(w, r, "generating login state", err)
 		return
 	}
 	nonce, err := randomToken()
 	if err != nil {
-		b.internalError(w, r, "generating nonce", err)
+		b.loginInternalError(w, r, "generating nonce", err)
 		return
 	}
 	verifier := oauth2.GenerateVerifier()
@@ -566,7 +584,7 @@ func (b *BFF) startLogin(w http.ResponseWriter, r *http.Request, opts ...oauth2.
 		ReturnTo:  returnTo,
 		ExpiresAt: b.now().Add(loginStateTTL),
 	}); err != nil {
-		b.internalError(w, r, "storing login state", err)
+		b.loginInternalError(w, r, "storing login state", err)
 		return
 	}
 	b.cookies.set(w, b.cookies.stateName, state, loginStateTTL)
@@ -581,45 +599,45 @@ func (b *BFF) handleCallback(w http.ResponseWriter, r *http.Request) {
 	b.cookies.clear(w, b.cookies.stateName)
 
 	if e := q.Get("error"); e != "" {
-		writeAuthError(w, http.StatusBadRequest, "LOGIN_FAILED", "login was cancelled or denied: "+e)
+		b.loginError(w, r, http.StatusBadRequest, "LOGIN_FAILED", "login was cancelled or denied: "+e)
 		return
 	}
 	state := q.Get("state")
 	if state == "" || stateCookie == "" || subtle.ConstantTimeCompare([]byte(state), []byte(stateCookie)) != 1 {
-		writeAuthError(w, http.StatusBadRequest, "INVALID_STATE", "invalid login state")
+		b.loginError(w, r, http.StatusBadRequest, "INVALID_STATE", "invalid login state")
 		return
 	}
 	ls, err := b.cfg.LoginStates.Take(ctx, state)
 	if err != nil {
 		if !errors.Is(err, ErrInvalidState) {
-			b.internalError(w, r, "reading login state", err)
+			b.loginInternalError(w, r, "reading login state", err)
 			return
 		}
-		writeAuthError(w, http.StatusBadRequest, "INVALID_STATE", "invalid login state")
+		b.loginError(w, r, http.StatusBadRequest, "INVALID_STATE", "invalid login state")
 		return
 	}
 	code := q.Get("code")
 	if code == "" {
-		writeAuthError(w, http.StatusBadRequest, "LOGIN_FAILED", "missing authorization code")
+		b.loginError(w, r, http.StatusBadRequest, "LOGIN_FAILED", "missing authorization code")
 		return
 	}
 
 	tok, err := b.cfg.Client.Exchange(ctx, code, ls.Verifier)
 	if err != nil {
 		b.logger.WarnContext(ctx, "SystemAuth code exchange failed", "error", err)
-		writeAuthError(w, http.StatusBadGateway, "LOGIN_FAILED", "login failed")
+		b.loginError(w, r, http.StatusBadGateway, "LOGIN_FAILED", "login failed")
 		return
 	}
 	rawID, _ := tok.Extra("id_token").(string)
 	if rawID == "" {
 		b.logger.WarnContext(ctx, "SystemAuth returned no id_token")
-		writeAuthError(w, http.StatusBadGateway, "LOGIN_FAILED", "login failed")
+		b.loginError(w, r, http.StatusBadGateway, "LOGIN_FAILED", "login failed")
 		return
 	}
 	idt, err := b.cfg.Client.VerifyIDToken(ctx, rawID, ls.Nonce)
 	if err != nil {
 		b.logger.WarnContext(ctx, "ID token rejected", "error", err)
-		writeAuthError(w, http.StatusUnauthorized, "LOGIN_FAILED", "login failed")
+		b.loginError(w, r, http.StatusUnauthorized, "LOGIN_FAILED", "login failed")
 		return
 	}
 	var info *UserInfo
@@ -627,14 +645,14 @@ func (b *BFF) handleCallback(w http.ResponseWriter, r *http.Request) {
 		info, err = b.cfg.Client.UserInfo(ctx, tok.AccessToken)
 		if err != nil {
 			b.logger.WarnContext(ctx, "SystemAuth userinfo failed", "error", err)
-			writeAuthError(w, http.StatusBadGateway, "LOGIN_FAILED", "login failed")
+			b.loginError(w, r, http.StatusBadGateway, "LOGIN_FAILED", "login failed")
 			return
 		}
 	}
 	identity, err := IdentityFromClaims(idt, info)
 	if err != nil {
 		b.logger.WarnContext(ctx, "userinfo rejected", "error", err)
-		writeAuthError(w, http.StatusUnauthorized, "LOGIN_FAILED", "login failed")
+		b.loginError(w, r, http.StatusUnauthorized, "LOGIN_FAILED", "login failed")
 		return
 	}
 
@@ -642,19 +660,19 @@ func (b *BFF) handleCallback(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrEmailNotVerified):
-			writeAuthError(w, http.StatusForbidden, "EMAIL_NOT_VERIFIED", "a verified email address is required to sign in")
+			b.loginError(w, r, http.StatusForbidden, "EMAIL_NOT_VERIFIED", "a verified email address is required to sign in")
 		case errors.Is(err, ErrEmailConflict):
-			writeAuthError(w, http.StatusConflict, "ACCOUNT_CONFLICT", "an account with this email already exists and cannot be linked automatically")
+			b.loginError(w, r, http.StatusConflict, "ACCOUNT_CONFLICT", "an account with this email already exists and cannot be linked automatically")
 		case errors.Is(err, ErrPrincipalInactive):
-			writeAuthError(w, http.StatusForbidden, "ACCOUNT_DISABLED", "account is disabled")
+			b.loginError(w, r, http.StatusForbidden, "ACCOUNT_DISABLED", "account is disabled")
 		default:
-			b.internalError(w, r, "resolving principal", err)
+			b.loginInternalError(w, r, "resolving principal", err)
 		}
 		return
 	}
 
 	if err := b.establishSession(ctx, w, r, p, idt, sessionClaims(idt, info), tok, rawID); err != nil {
-		b.internalError(w, r, "creating session", err)
+		b.loginInternalError(w, r, "creating session", err)
 		return
 	}
 	b.logger.InfoContext(ctx, "login succeeded", "principal_id", p.ID)
@@ -749,6 +767,38 @@ func (b *BFF) revokeTokens(ctx context.Context, sess Session) {
 	if err := b.cfg.Client.Revoke(ctx, token, hint); err != nil {
 		b.logger.WarnContext(ctx, "revoking SystemAuth token on logout", "error", err)
 	}
+}
+
+// loginError answers a failed sign-in step. With LoginErrorPath set, a
+// browser is redirected to the sign-in page with ?error=code; a request that
+// asks for JSON, or any request without LoginErrorPath, gets the JSON error.
+func (b *BFF) loginError(w http.ResponseWriter, r *http.Request, status int, code, message string) {
+	if b.cfg.LoginErrorPath == "" || wantsJSON(r) {
+		writeAuthError(w, status, code, message)
+		return
+	}
+	u, err := url.Parse(b.cfg.LoginErrorPath)
+	if err != nil {
+		// LoginErrorPath was validated in NewBFF.
+		panic(fmt.Sprintf("relyingparty: LoginErrorPath no longer parses: %v", err))
+	}
+	q := u.Query()
+	q.Set("error", code)
+	u.RawQuery = q.Encode()
+	//nolint:gosec // G710: LoginErrorPath was validated against the return_to rules in NewBFF
+	http.Redirect(w, r, u.String(), http.StatusSeeOther)
+}
+
+// loginInternalError logs err and answers INTERNAL_ERROR as loginError does.
+func (b *BFF) loginInternalError(w http.ResponseWriter, r *http.Request, msg string, err error) {
+	b.logger.ErrorContext(r.Context(), msg, "error", err)
+	b.loginError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "internal error")
+}
+
+// wantsJSON reports whether a request asks for JSON rather than a page.
+func wantsJSON(r *http.Request) bool {
+	accept := r.Header.Get("Accept")
+	return strings.Contains(accept, "application/json") && !strings.Contains(accept, "text/html")
 }
 
 func (b *BFF) internalError(w http.ResponseWriter, r *http.Request, msg string, err error) {

@@ -69,6 +69,10 @@ type Options struct {
 	// Revocation, when set, applies recorded access changes to sessions and
 	// tokens at once (ADR-010).
 	Revocation *relyingparty.RevocationCache
+	// LoginErrorPath, when set, is the app's sign-in page: a browser whose
+	// sign-in fails is redirected there with ?error=<CODE> instead of shown
+	// a JSON error. See relyingparty.BFFConfig.LoginErrorPath.
+	LoginErrorPath string
 	// ReplayCache rejects reused DPoP proofs. Default: in memory, per
 	// instance; instances that share an API need a shared cache. Unless
 	// the public URL is a loopback host or SingleInstance is set, New
@@ -177,6 +181,7 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 		Memberships:     memberships,
 		Apps:            opts.Apps,
 		Revocation:      opts.Revocation,
+		LoginErrorPath:  opts.LoginErrorPath,
 		Sessions:        opts.Sessions,
 		LoginStates:     opts.LoginStates,
 		BasePath:        cfg.basePath(),
