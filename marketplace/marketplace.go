@@ -29,6 +29,13 @@ func (s *EntService) WithCheckout(checkout CheckoutService) *EntService {
 	return s
 }
 
+// WithPublishGate makes publishing a paid listing require that gate allows
+// its creator organization; see EntListingService.WithPublishGate.
+func (s *EntService) WithPublishGate(gate PublishGate) *EntService {
+	s.listings.WithPublishGate(gate)
+	return s
+}
+
 // Listings returns the listing service.
 func (s *EntService) Listings() ListingService {
 	return s.listings

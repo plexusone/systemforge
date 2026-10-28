@@ -425,6 +425,9 @@ func (a *API) publishListing(ctx context.Context, input *PublishListingInput) (*
 		if err == ErrListingNotFound {
 			return nil, huma.Error404NotFound("listing not found")
 		}
+		if errors.Is(err, ErrSellerNotReady) {
+			return nil, huma.Error409Conflict("the organization cannot take payments yet")
+		}
 		return nil, huma.Error400BadRequest(err.Error())
 	}
 
@@ -446,6 +449,9 @@ func (a *API) archiveListing(ctx context.Context, input *ArchiveListingInput) (*
 	if err := a.listings.Archive(ctx, id); err != nil {
 		if err == ErrListingNotFound {
 			return nil, huma.Error404NotFound("listing not found")
+		}
+		if errors.Is(err, ErrSellerNotReady) {
+			return nil, huma.Error409Conflict("the organization cannot take payments yet")
 		}
 		return nil, huma.Error400BadRequest(err.Error())
 	}

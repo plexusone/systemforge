@@ -191,6 +191,13 @@ type PurchaserChecker interface {
 	IsManaged(ctx context.Context, principalID uuid.UUID) (bool, error)
 }
 
+// PublishGate decides whether a creator organization may publish a paid
+// listing: whether it can take payments. billing.SellerGate implements it
+// from the seller's connected payment account.
+type PublishGate interface {
+	CanPublish(ctx context.Context, creatorOrgID uuid.UUID) (bool, error)
+}
+
 // AuthzSyncer syncs marketplace entities to the authorization system.
 type AuthzSyncer interface {
 	// SyncListing syncs a listing to the authorization system.

@@ -15,6 +15,15 @@ import (
 type EntListingService struct {
 	client    *ent.Client
 	authzSync AuthzSyncer
+	gate      PublishGate
+}
+
+// WithPublishGate makes Publish refuse a paid listing, with
+// ErrSellerNotReady, while gate says its creator organization cannot take
+// payments. Free listings are not checked.
+func (s *EntListingService) WithPublishGate(gate PublishGate) *EntListingService {
+	s.gate = gate
+	return s
 }
 
 // NewEntListingService creates a new Ent-backed listing service.
@@ -155,6 +164,21 @@ func (s *EntListingService) Delete(ctx context.Context, id uuid.UUID) error {
 
 // Publish publishes a listing to the marketplace.
 func (s *EntListingService) Publish(ctx context.Context, id uuid.UUID) error {
+	if s.gate != nil {
+		current, err := s.Get(ctx, id)
+		if err != nil {
+			return err
+		}
+		if !current.IsFree() {
+			ok, err := s.gate.CanPublish(ctx, current.CreatorOrgID)
+			if err != nil {
+				return fmt.Errorf("failed to check the seller: %w", err)
+			}
+			if !ok {
+				return ErrSellerNotReady
+			}
+		}
+	}
 	now := time.Now()
 	updated, err := s.client.Listing.UpdateOneID(id).
 		SetStatus(listing.StatusPublished).

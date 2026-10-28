@@ -69,6 +69,18 @@ func (f BillingCustomerFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BillingCustomerMutation", m)
 }
 
+// The BillingDisputeFunc type is an adapter to allow the use of ordinary
+// function as BillingDispute mutator.
+type BillingDisputeFunc func(context.Context, *ent.BillingDisputeMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BillingDisputeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BillingDisputeMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BillingDisputeMutation", m)
+}
+
 // The BillingEventFunc type is an adapter to allow the use of ordinary
 // function as BillingEvent mutator.
 type BillingEventFunc func(context.Context, *ent.BillingEventMutation) (ent.Value, error)
@@ -79,6 +91,42 @@ func (f BillingEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BillingEventMutation", m)
+}
+
+// The BillingOrderFunc type is an adapter to allow the use of ordinary
+// function as BillingOrder mutator.
+type BillingOrderFunc func(context.Context, *ent.BillingOrderMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BillingOrderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BillingOrderMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BillingOrderMutation", m)
+}
+
+// The BillingRefundFunc type is an adapter to allow the use of ordinary
+// function as BillingRefund mutator.
+type BillingRefundFunc func(context.Context, *ent.BillingRefundMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BillingRefundFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BillingRefundMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BillingRefundMutation", m)
+}
+
+// The BillingSellerFunc type is an adapter to allow the use of ordinary
+// function as BillingSeller mutator.
+type BillingSellerFunc func(context.Context, *ent.BillingSellerMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BillingSellerFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BillingSellerMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BillingSellerMutation", m)
 }
 
 // The ClientAssertionJTIFunc type is an adapter to allow the use of ordinary

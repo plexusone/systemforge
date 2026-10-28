@@ -24,8 +24,16 @@ type Tx struct {
 	Application *ApplicationClient
 	// BillingCustomer is the client for interacting with the BillingCustomer builders.
 	BillingCustomer *BillingCustomerClient
+	// BillingDispute is the client for interacting with the BillingDispute builders.
+	BillingDispute *BillingDisputeClient
 	// BillingEvent is the client for interacting with the BillingEvent builders.
 	BillingEvent *BillingEventClient
+	// BillingOrder is the client for interacting with the BillingOrder builders.
+	BillingOrder *BillingOrderClient
+	// BillingRefund is the client for interacting with the BillingRefund builders.
+	BillingRefund *BillingRefundClient
+	// BillingSeller is the client for interacting with the BillingSeller builders.
+	BillingSeller *BillingSellerClient
 	// ClientAssertionJTI is the client for interacting with the ClientAssertionJTI builders.
 	ClientAssertionJTI *ClientAssertionJTIClient
 	// ConsentGrant is the client for interacting with the ConsentGrant builders.
@@ -228,7 +236,11 @@ func (tx *Tx) init() {
 	tx.AppRole = NewAppRoleClient(tx.config)
 	tx.Application = NewApplicationClient(tx.config)
 	tx.BillingCustomer = NewBillingCustomerClient(tx.config)
+	tx.BillingDispute = NewBillingDisputeClient(tx.config)
 	tx.BillingEvent = NewBillingEventClient(tx.config)
+	tx.BillingOrder = NewBillingOrderClient(tx.config)
+	tx.BillingRefund = NewBillingRefundClient(tx.config)
+	tx.BillingSeller = NewBillingSellerClient(tx.config)
 	tx.ClientAssertionJTI = NewClientAssertionJTIClient(tx.config)
 	tx.ConsentGrant = NewConsentGrantClient(tx.config)
 	tx.Credential = NewCredentialClient(tx.config)
