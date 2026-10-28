@@ -3,6 +3,7 @@ package systemauth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -381,6 +382,12 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// Create the token response
 	response, err := s.oauth2.NewAccessResponse(ctx, ar)
+	if errors.Is(err, fosite.ErrInvalidatedAuthorizeCode) {
+		// A concurrent exchange of the same code won at the storage's
+		// conditional update. Fosite reports any invalidation failure as a
+		// server error; this one is the client's replayed code.
+		err = fosite.ErrInvalidGrant.WithHint("The authorization code has already been used.")
+	}
 	if err != nil {
 		logger.Warn("token response failed",
 			"grant_type", grantType,

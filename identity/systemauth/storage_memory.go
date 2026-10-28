@@ -190,7 +190,9 @@ func (s *MemoryStorage) GetAuthorizeCodeSession(ctx context.Context, code string
 	}
 
 	if stored.used {
-		return nil, fosite.ErrInvalidatedAuthorizeCode
+		// Fosite needs the request to revoke the tokens issued from a
+		// replayed code.
+		return stored.request, fosite.ErrInvalidatedAuthorizeCode
 	}
 
 	if time.Now().After(stored.expiresAt) {
@@ -206,9 +208,15 @@ func (s *MemoryStorage) InvalidateAuthorizeCodeSession(ctx context.Context, code
 	defer s.mu.Unlock()
 
 	sig := hashSignature(code)
-	if stored, ok := s.authCodes[sig]; ok {
-		stored.used = true
+	stored, ok := s.authCodes[sig]
+	if !ok {
+		return fosite.ErrNotFound
 	}
+	if stored.used {
+		// Another exchange of this code already won.
+		return fosite.ErrInvalidatedAuthorizeCode
+	}
+	stored.used = true
 	return nil
 }
 
@@ -356,6 +364,13 @@ func (s *MemoryStorage) RevokeAccessToken(ctx context.Context, requestID string)
 func (s *MemoryStorage) RotateRefreshToken(ctx context.Context, requestID string, refreshTokenSignature string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Only an active presented token rotates, so of two concurrent refreshes
+	// with the same token only one succeeds.
+	presented, ok := s.refreshTokens[hashSignature(refreshTokenSignature)]
+	if !ok || presented.revoked {
+		return fosite.ErrInactiveToken
+	}
 
 	for _, token := range s.refreshTokens {
 		if token.requestID == requestID {
