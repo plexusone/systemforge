@@ -12,7 +12,9 @@ Its tokens are like a person's to an application: their subject is the
 account's principal ID, and they carry the `orgs` claim with its one
 organization and its application roles. Access ends the usual ways, each
 recorded as an access change: removing a role, disabling or deleting the
-account, or revoking its last key.
+account, or revoking a key. Removing a role takes the organization out of
+the account's memberships; the account still authenticates, and the
+application's own authorization refuses what needed the role.
 
 A person at a terminal uses [`identity/publicclient`](../guides/dpop-clients.md)
 instead, signing in with their own account.
@@ -40,13 +42,19 @@ Operators manage accounts with the `service-account` command, which
 binary (`identity/serviceaccount/serviceaccountcmd`). It opens the database
 directly.
 
+The standalone `systemauth` binary hosts no applications, so it knows no
+application roles: `role grant` works only in a host binary that mounts the
+command with its role vocabularies
+(`serviceaccountcmd.DefaultService(registry)`). The examples below use
+`notes-server`, a host that serves the `billing` application.
+
 ```bash
-systemauth service-account create --org acme --name ci-publisher --scope invoices
+notes-server service-account create --org acme --name ci-publisher --scope invoices
 # created sa_01jbk2... (7d3f...) in acme
 
-systemauth service-account role grant sa_01jbk2... --app billing --role viewer
+notes-server service-account role grant sa_01jbk2... --app billing --role viewer
 
-systemauth service-account key add sa_01jbk2... --out ci-publisher.pem
+notes-server service-account key add sa_01jbk2... --out ci-publisher.pem
 # added key 2Yk... (ES256) to sa_01jbk2...
 # private key: ci-publisher.pem (keep it secret; it is not stored anywhere else)
 #
@@ -63,7 +71,7 @@ workload's machine, generate it there and register only the public key:
 ```bash
 openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out key.pem
 openssl pkey -in key.pem -pubout -out pub.pem
-systemauth service-account key add sa_01jbk2... --public-key pub.pem
+notes-server service-account key add sa_01jbk2... --public-key pub.pem
 ```
 
 ES256 (P-256), RS256 (RSA with 2048 bits or more) and EdDSA (Ed25519) keys
@@ -75,7 +83,7 @@ each key was last used.
 | `create --org <slug> --name <name>` | Create an account with a `service_account` membership in the organization |
 | `list --org <slug>`, `show <account>` | List accounts; show one with its keys |
 | `disable`, `enable`, `delete <account>` | Disabling stops new tokens and records an access change; deleting removes keys, roles and membership |
-| `key add`, `key list`, `key revoke <account> <key-id>` | Manage keys; revoking the last usable key also ends the account's current tokens in applications with a revocation cache |
+| `key add`, `key list`, `key revoke <account> <key-id>` | Manage keys; revoking a key ends the account's current tokens in applications with a revocation cache, and a workload holding another key gets a new one |
 | `role grant --app --role`, `role remove --app` | Application roles in the account's organization |
 
 Each accepts `--json`.

@@ -74,8 +74,10 @@ func (s *Service) RemoveRole(ctx context.Context, id uuid.UUID, application stri
 - **`Disable`, `Delete` and `RevokeKey`.** `Disable` calls
   `principal.Deactivate`, which records `Deactivated`. `Delete` deactivates,
   removes roles, the membership and keys, then deletes. `RevokeKey` revokes
-  the key and, when it was the last usable one, records `SessionsRevoked`, so
-  tokens from it stop at once in applications with a revocation cache.
+  the key and, when it was usable, records `SessionsRevoked`. Tokens do not
+  record the key that obtained them, so all of the account's current tokens
+  stop at once in applications with a revocation cache, and a workload
+  holding another key exchanges it for a new token.
 - **`GrantRole` and `RemoveRole`** call `approle`, whose removal already
   records an access change.
 
@@ -151,7 +153,7 @@ systemauth service-account create --org <slug> --name <name> [--scope ...]
 systemauth service-account list --org <slug>
 systemauth service-account show <id>
 systemauth service-account disable|enable|delete <id>
-systemauth service-account key add <id> --out key.pem [--expires 90d] [--scope ...]
+systemauth service-account key add <id> --out key.pem [--expires-in 2160h] [--scope ...]
 systemauth service-account key add <id> --public-key pub.pem
 systemauth service-account key list <id>
 systemauth service-account key revoke <id> <key-id>
@@ -233,7 +235,7 @@ ADR-016 changes in two places:
 - **The service:**
   - create, in a personal organization (refused), and in an inactive one;
   - keys of each algorithm, short RSA keys refused;
-  - revoke the last key;
+  - revoke a key while another remains, and the last key;
   - disable, enable and delete, each with the access change recorded;
   - roles.
 - **The adapter:**
@@ -255,9 +257,10 @@ ADR-016 changes in two places:
   - the nonce retry;
   - an RSA assertion key with a P-256 proof key.
 - **Applications.** An `appauth` application with `ServiceAccounts` accepts
-  the account, sees its role, creates its local principal once, and refuses
-  it after the role is removed and the revocation cache learns of it.
-  Without the option it refuses.
+  the account, sees its role, and creates its local principal once. After
+  the role is removed, the account still authenticates but its memberships
+  no longer include the organization, so the application's authorization
+  refuses what needed the role. Without the option it refuses the token.
 - **Discovery** follows the enabled flag.
 
 ## Risks

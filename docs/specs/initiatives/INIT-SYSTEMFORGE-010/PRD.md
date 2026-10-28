@@ -63,6 +63,9 @@ What is missing:
    - removing a role, disabling the account, or revoking a key;
    - each recorded as an access change (ADR-010), so applications drop it
      within one token lifetime or at once through the revocation cache.
+   - Removing a role takes the organization out of the account's
+     memberships; the account still authenticates, and the application's
+     authorization refuses what needed the role.
 5. **Operators manage accounts with commands:**
    - create, list, disable, enable and delete accounts;
    - add, list and revoke keys;
@@ -139,7 +142,8 @@ What is missing:
     logout);
   - deleting it;
   - removing a role;
-  - revoking its last key.
+  - revoking a usable key, which ends all of the account's current tokens,
+    since tokens do not record the key that obtained them.
 - **F11. Off by default.** The grant is disabled unless configured.
   Discovery advertises it only when enabled.
 
@@ -162,7 +166,8 @@ What is missing:
 - **F15.** A Go package builds an `http.Client` from a private key and an
   account identifier:
   - it signs assertions;
-  - it requests DPoP-bound tokens, using the same key for proofs;
+  - it requests DPoP-bound tokens, using a P-256 assertion key for proofs
+    too, and a separate P-256 proof key for an RSA or Ed25519 assertion key;
   - it renews a token a minute before expiry;
   - it adds a proof to every API request, and retries once on
     `use_dpop_nonce`.

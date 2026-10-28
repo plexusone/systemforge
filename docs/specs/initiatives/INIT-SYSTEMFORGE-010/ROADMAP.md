@@ -34,7 +34,7 @@ item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
   - Depends on: `RMI-SYSTEMFORGE-120`
   - Depends on: `RMI-SYSTEMFORGE-192`
   - Depends on: `RMI-SYSTEMFORGE-190`
-- [x] `RMI-SYSTEMFORGE-199` End-to-end test from command to application: create an account, grant a role, add a key, call an `appauth` API with `serviceclient`, then remove the role and see the API refuse it
+- [x] `RMI-SYSTEMFORGE-199` End-to-end test from command to application: create an account, grant a role, add a key, call an `appauth` API with `serviceclient`, then remove the role and see its memberships lose the organization
   - Depends on: `RMI-SYSTEMFORGE-197`
   - Depends on: `RMI-SYSTEMFORGE-122`
   - Depends on: `RMI-SYSTEMFORGE-198`
