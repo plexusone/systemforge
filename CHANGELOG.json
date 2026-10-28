@@ -118,6 +118,10 @@
           "commit": "8fe4bc5"
         },
         {
+          "description": "The API keys page shows a truncated sample key, and the API key, marketplace and Ent store examples use the `sf` prefix",
+          "commit": "60e437f"
+        },
+        {
           "description": "v0.26.0 release notes"
         }
       ]
