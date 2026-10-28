@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/plexusone/payforge"
+	payforgestripe "github.com/plexusone/payforge/stripe"
 	"github.com/plexusone/systemspec-pricingpackaging/pricingspec"
 
 	"github.com/plexusone/systemforge/identity/requestprincipal"
@@ -21,6 +22,7 @@ import (
 
 // fakeProvider stands in for payforge's Stripe client.
 type fakeProvider struct {
+	live    bool
 	err     error
 	plans   []payforge.PlanCheckout
 	sales   []payforge.Sale
@@ -127,6 +129,14 @@ func (r *checkoutRig) call(h http.Handler, org *uuid.UUID, body string) (int, ma
 	return w.Code, out
 }
 
+// Mode reports the fake's key mode: test unless live is set.
+func (f *fakeProvider) Mode() payforgestripe.Mode {
+	if f.live {
+		return payforgestripe.ModeLive
+	}
+	return payforgestripe.ModeTest
+}
+
 func TestNewCheckoutChecksConfig(t *testing.T) {
 	r := newCheckoutRig(t)
 	cfg := r.config()
@@ -144,7 +154,26 @@ func TestNewCheckoutChecksConfig(t *testing.T) {
 	cfg = r.config()
 	cfg.URLs.PortalReturn = "http://localhost:8080/billing"
 	if _, err := NewCheckout(cfg); err != nil {
-		t.Fatalf("localhost: %v", err)
+		t.Fatalf("localhost with a test-mode provider: %v", err)
+	}
+
+	r.provider.live = true
+	for _, local := range []string{"http://localhost:8080/billing", "https://localhost/billing", "http://127.0.0.1/billing"} {
+		cfg = r.config()
+		cfg.URLs.PortalReturn = local
+		if _, err := NewCheckout(cfg); err == nil {
+			t.Errorf("%s with a live provider was accepted", local)
+		}
+	}
+	if _, err := NewCheckout(r.config()); err != nil {
+		t.Fatalf("https on an allowed host with a live provider: %v", err)
+	}
+}
+
+// A provider that does not report its mode counts as live.
+func TestProviderTestModeDefaultsToLive(t *testing.T) {
+	if providerTestMode(payforge.Disabled(loadSpec(t))) {
+		t.Fatal("a provider without a mode counted as test mode")
 	}
 }
 

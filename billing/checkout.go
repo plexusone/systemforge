@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/plexusone/payforge"
+	payforgestripe "github.com/plexusone/payforge/stripe"
 	"github.com/plexusone/systemspec-pricingpackaging/pricingspec"
 
 	"github.com/plexusone/systemforge/identity/ent"
@@ -125,6 +126,7 @@ func NewCheckout(cfg CheckoutConfig) (*Checkout, error) {
 	for _, h := range cfg.AllowedURLHosts {
 		hosts[strings.ToLower(h)] = true
 	}
+	test := providerTestMode(cfg.Billing)
 	urls := map[string]string{
 		"PlanSuccess": cfg.URLs.PlanSuccess, "PlanCancel": cfg.URLs.PlanCancel, "PortalReturn": cfg.URLs.PortalReturn,
 	}
@@ -132,7 +134,7 @@ func NewCheckout(cfg CheckoutConfig) (*Checkout, error) {
 		urls["ListingSuccess"], urls["ListingCancel"] = cfg.URLs.ListingSuccess, cfg.URLs.ListingCancel
 	}
 	for name, raw := range urls {
-		if err := checkRedirect(raw, hosts); err != nil {
+		if err := checkRedirect(raw, hosts, test); err != nil {
 			return nil, fmt.Errorf("billing: URLs.%s: %w", name, err)
 		}
 	}
@@ -148,15 +150,29 @@ func NewCheckout(cfg CheckoutConfig) (*Checkout, error) {
 	return &Checkout{cfg: cfg}, nil
 }
 
-// checkRedirect requires an absolute https URL, or http on localhost, with
-// no user information, on an allowed host.
-func checkRedirect(raw string, hosts map[string]bool) error {
+// providerTestMode reports whether the payment provider runs with a
+// test-mode key. A provider that does not report its mode counts as live, so
+// the development-only allowances below stay off unless a test key says
+// otherwise.
+func providerTestMode(b payforge.Billing) bool {
+	m, ok := b.(interface{ Mode() payforgestripe.Mode })
+	return ok && m.Mode() == payforgestripe.ModeTest
+}
+
+// checkRedirect requires an absolute https URL with no user information on an
+// allowed host. With a test-mode provider a loopback host also passes, over
+// http too, for local development; with a live one it never does, since a live
+// checkout that returns the buyer to their own machine is a misconfiguration.
+func checkRedirect(raw string, hosts map[string]bool, testMode bool) error {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" || u.User != nil {
 		return errors.New("must be an absolute URL without user information")
 	}
 	host := strings.ToLower(u.Hostname())
 	local := host == "localhost" || host == "127.0.0.1" || host == "::1"
+	if local && !testMode {
+		return fmt.Errorf("host %q is loopback, which a live payment provider never redirects to", host)
+	}
 	if u.Scheme != "https" && (u.Scheme != "http" || !local) {
 		return errors.New("must be https, or http on localhost")
 	}

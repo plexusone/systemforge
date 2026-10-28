@@ -113,7 +113,9 @@ the events payforge reads.
 - **The Stripe customer** is found from the organization, never from the
   request, and created the first time.
 - **Redirect URLs** are configured, never taken from the request, and must be
-  https on a host in `AllowedURLHosts` (http is allowed on localhost).
+  https on a host in `AllowedURLHosts`. With a test-mode Stripe key, localhost
+  and other loopback hosts also pass, over http too, for local development;
+  with a live key they are refused when the checkout is built.
 - **Errors** are fixed messages, `{"error": ...}`; causes are logged.
 
 The webhook answers 400 to a signature that does not verify, 413 to a body over
