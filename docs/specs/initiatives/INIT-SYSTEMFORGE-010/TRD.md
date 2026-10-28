@@ -190,9 +190,10 @@ func (c *Client) HTTPClient() *http.Client
   - `iat` is now and `exp` is now plus 60 seconds;
   - `jti` is 128 random bits;
   - the header carries `kid`.
-- **DPoP proofs** use the same key when it is P-256 or Ed25519. For an RSA
-  assertion key, the client makes a P-256 key for proofs at `New`. Tokens
-  are then bound to that key for the life of the process.
+- **DPoP proofs** use the assertion key when it is P-256. For an RSA or
+  Ed25519 assertion key, the client makes a P-256 key for proofs at `New`,
+  since proofs are ES256; tokens are then bound to that key for the life of
+  the process, which suits tokens without refresh.
 - **Tokens.** The token is cached and renewed a minute before expiry, under a
   mutex, so concurrent requests share one exchange.
 - **`Transport`** sets `Authorization: DPoP` with a proof for each request.
