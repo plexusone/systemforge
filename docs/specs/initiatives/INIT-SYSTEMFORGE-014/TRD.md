@@ -116,7 +116,8 @@ type Options struct {
 	Revocation        *relyingparty.RevocationCache
 	Authenticators    []requestprincipal.Authenticator // tried after the built-in ones
 
-	ResourceName string // set to serve RFC 9728 metadata
+	ResourceName string // names the app in RFC 9728 metadata
+	Labels       *Labels
 	Logger       *slog.Logger
 }
 ```
@@ -126,7 +127,11 @@ type Options struct {
   is set, it keeps an organization only when
   `KnownRole(m.Applications[Application])` is true (any role when
   `KnownRole` is nil). An application that keeps its own membership tables
-  passes `relyingparty.LocalMemberships(lister)` as `Memberships`.
+  passes `relyingparty.LocalMemberships(lister)` as `Memberships`, which is
+  used as is: `Application` filters only the default source, and `New`
+  warns when both are set.
+- **Labels.** `Options.Labels` names the settings in `New`'s configuration
+  errors; the default is `DefaultLabels`.
 - **Stores.** Without `Sessions` or `LoginStates`, `New` uses the in-memory
   stores only for a loopback `PublicURL`, and logs that sessions end at a
   restart. Otherwise it refuses.
@@ -181,11 +186,13 @@ principal at sign-in, on every session request and on every token request,
 so the package adds no lookup of its own. Applications drop the second
 `GetPrincipal` they make today.
 
-**Cookie writes.** A request authenticated by the cookie with an unsafe
-method must carry an `Origin` (or, without one, a `Referer`) equal to
-`PublicURL` or an allowed origin, and a JSON content type. Otherwise it is
-refused with `ErrForbidden`. This is the check applications now write
-themselves, and it is always on.
+**Cookie writes.** `relyingparty` already refuses a cookie-authenticated
+request with an unsafe method unless it carries an `Origin` (or, without
+one, a `Referer`) equal to `PublicURL` or an allowed origin, and a JSON
+content type. The package relies on that check rather than repeating it.
+`relyingparty.RequestAuthenticator` is fixed to answer that refusal with
+`403 CSRF_REJECTED` and no challenge, instead of a `401` that tells the
+client to sign in again.
 
 **Results.**
 

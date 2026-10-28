@@ -24,11 +24,10 @@ hundred lines that every application writes again:
   deploy.
 - **Membership filtering.** Keeping only the organizations where the person
   holds one of this application's roles.
-- **Request authentication.** Running `BearerMiddleware` and turning its
-  response into an error, then checking the origin and content type of
-  cookie requests that change state. Some applications also look up the
-  principal again to check that it is active, which `relyingparty` already
-  does on every session and token request.
+- **Request authentication.** Running `BearerMiddleware` through a recorded
+  response to read its answer. Some applications also repeat checks that
+  `relyingparty` already makes: the origin and content type of cookie
+  requests that change state, and whether the principal is active.
 - **Calling SystemAuth for the person.** Finding the session's token and
   sending it with the v0.25 transport.
 
@@ -51,7 +50,8 @@ access-change revocation.
    one way to authenticate requests.
 2. **Safe defaults that are the same everywhere.**
    - The DPoP key is required.
-   - Cookie writes are checked for origin and content type.
+   - Cookie writes are checked for origin and content type, and refused
+     with a 403 rather than a 401.
    - Cookies are insecure only for a loopback public URL.
 3. **Configuration errors that name the setting** in a form a host can
    relabel. For example, `PublicURL (APP_PUBLIC_URL)` becomes
