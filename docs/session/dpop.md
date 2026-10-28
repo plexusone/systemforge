@@ -43,9 +43,12 @@ another key gets `invalid_grant`.
 | `dpop.nonce_secret` | | Key of the nonces, at least 32 bytes, the same on every instance; required with `require_nonce` |
 | `dpop.nonce_lifetime` | `5m` | How long a nonce is accepted |
 | `dpop.replay_cache_redis_url` | | Redis shared by every instance for replay detection (`systemauthsvc`); embedded servers pass `systemauth.WithDPoPReplayCache` |
+| `dpop.single_instance` | `false` | One instance serves SystemAuth, so the in-memory replay cache is enough |
 
 Without a shared replay cache SystemAuth keeps an in-memory one, which only
-suits a single instance.
+suits a single instance. Outside development mode `systemauthsvc` refuses
+to start unless `replay_cache_redis_url` is set, a cache is injected
+(`Options.DPoPReplayCache`) or `single_instance` is `true`.
 
 ### The bearer-token exception
 
@@ -57,6 +60,12 @@ tokens with `token_type: Bearer`; if it does send a proof, its tokens are
 bound as usual. Every other client has RFC 9449's
 `dpop_bound_access_tokens` set (`Client.DPoPBoundAccessTokens`). Prefer
 moving the client to DPoP: a bearer token works for whoever holds it.
+
+Outside development mode `systemauthsvc` refuses such clients: it does not
+start with a statically configured one, and the token endpoint answers
+`unauthorized_client` to one registered at runtime, unless
+`production.allow` names `bearer_token_clients` (see
+[Deploying SystemAuth](../systemauth/deployment.md#waiving-a-production-check)).
 
 ### SystemAuth's own resources
 
@@ -172,7 +181,9 @@ mw := relyingparty.BearerMiddleware(relyingparty.BearerConfig{
 
 Use a replay cache shared by every instance that serves the API
 (`NewRedisReplayCache`); `NewMemoryReplayCache` only suits a single
-instance. Set `BaseURL` behind a proxy that terminates TLS or strips a
+instance. `appauth` uses an in-memory cache unless `Options.ReplayCache` is
+set, and logs a warning for a public URL unless `Options.SingleInstance`
+declares that one instance serves the API. Set `BaseURL` behind a proxy that terminates TLS or strips a
 path prefix: the proof's `htu` is compared with `BaseURL` plus the request
 path, and forwarded headers are never trusted (see
 [The proof's URL behind a proxy](#the-proofs-url-behind-a-proxy)).

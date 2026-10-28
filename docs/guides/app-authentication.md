@@ -99,6 +99,12 @@ mux.Handle("/api/", auth.Middleware(true)(api))
 public URL is a loopback host. A host that embeds SystemAuth passes its
 metadata as `Options.Metadata`, so no discovery request is made.
 
+DPoP proofs are checked against `Options.ReplayCache`, by default an
+in-memory cache that sees only its own instance's proofs. For a public URL
+`New` logs a warning about it unless `Options.SingleInstance` declares that
+one instance serves the API; with several instances pass a shared cache
+such as `middleware.NewRedisReplayCache`.
+
 ### Memberships
 
 With `Application` set, a person's memberships are the organizations where

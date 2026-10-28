@@ -13,10 +13,22 @@ tokens:
   id_token_lifetime: 1h          # How long ID tokens are valid
   auth_code_lifetime: 10m        # How long authorization codes are valid
   # Signs codes, refresh tokens and opaque access tokens: 32+ bytes, the same
-  # on every instance (openssl rand -hex 32). Unset, refresh tokens do not
-  # survive a restart.
-  # hmac_secret: ${SYSTEMAUTH_TOKEN_HMAC_SECRET}
+  # on every instance (openssl rand -hex 32). Required outside --dev.
+  hmac_secret: ${SYSTEMAUTH_TOKEN_HMAC_SECRET}
   # hmac_verification_secret: ${SYSTEMAUTH_TOKEN_HMAC_VERIFICATION_SECRET}   # during a rotation
+
+# DPoP replay cache. Outside --dev the server needs a cache every instance
+# shares, or the statement that one instance serves SystemAuth.
+dpop:
+  single_instance: true
+  # replay_cache_redis_url: ${SYSTEMAUTH_DPOP_REDIS_URL}   # with several instances
+
+# Production checks to waive by name; each is logged as a warning at start.
+# production:
+#   allow:
+#     - ephemeral_hmac_secret             # start without tokens.hmac_secret
+#     - client_secret_client_credentials  # serve client_credentials with a shared secret
+#     - bearer_token_clients              # serve clients with allow_bearer_tokens
 
 # Key configuration
 # Production requires a signing key (or --signing-key-file / SYSTEMAUTH_SIGNING_KEY);
@@ -55,16 +67,23 @@ clients:
       - profile
       - email
 
-  # Example: Confidential server-side client
-  - id: backend-service
+  # Example: Confidential server-side web application. Outside --dev the
+  # client_credentials grant with a shared secret is refused; automation
+  # uses service accounts with the JWT-bearer grant (oauth.jwt_bearer).
+  - id: web-app
     type: confidential
-    name: Backend Service
-    secret: ${BACKEND_CLIENT_SECRET}    # Uses environment variable
+    name: Web Application
+    secret: ${WEB_APP_CLIENT_SECRET}    # Uses environment variable
+    redirect_uris:
+      - https://app.example.com/bff/auth/callback
     grant_types:
-      - client_credentials
+      - authorization_code
+      - refresh_token
     scopes:
-      - api:read
-      - api:write
+      - openid
+      - profile
+      - email
+      - offline_access
 
 # Social login (optional)
 # Lets users sign in to SystemAuth with GitHub and/or Google. Upstream OAuth

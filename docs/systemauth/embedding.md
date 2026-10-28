@@ -49,7 +49,7 @@ auth, err := systemauthsvc.New(ctx, cfg, systemauthsvc.Options{
 	Migrate: true,
 })
 if err != nil {
-	return err // e.g. ErrNotProductionReady: missing key, http issuer, no database
+	return err // e.g. ErrNotProductionReady: missing key or token HMAC secret, http issuer, no database
 }
 defer func() {
 	if err := auth.Close(); err != nil {
