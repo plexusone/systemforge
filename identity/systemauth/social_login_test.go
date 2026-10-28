@@ -86,6 +86,11 @@ func githubLogin(subject, email string, verified bool) ExternalLogin {
 	return ExternalLogin{Provider: "github", Subject: subject, Email: email, EmailVerified: verified, Name: "Octo"}
 }
 
+// authoritativeLogin is a login from a provider authoritative for the email.
+func authoritativeLogin(subject, email string) ExternalLogin {
+	return ExternalLogin{Provider: "google", Subject: subject, Email: email, EmailVerified: true, EmailAuthoritative: true, Name: "Goo"}
+}
+
 func TestResolveExternalLoginMemory(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
@@ -112,21 +117,36 @@ func TestResolveExternalLoginMemory(t *testing.T) {
 		}
 	})
 
-	t.Run("verified email links to verified principal", func(t *testing.T) {
+	t.Run("authoritative email links to verified principal", func(t *testing.T) {
 		dir := NewMemoryPrincipalDirectory()
 		existing := HumanPrincipal{ID: uuid.New(), Email: "b@example.com", EmailVerified: true, Active: true}
 		if err := dir.AddPrincipal(existing); err != nil {
 			t.Fatal(err)
 		}
-		p, err := ResolveExternalLogin(ctx, dir, githubLogin("2", "B@example.com", true), now)
+		p, err := ResolveExternalLogin(ctx, dir, authoritativeLogin("2", "B@example.com"), now)
 		if err != nil {
 			t.Fatalf("login: %v", err)
 		}
 		if p.ID != existing.ID {
 			t.Fatalf("not linked to existing principal")
 		}
-		if got, err := dir.FindByExternalIdentity(ctx, "github", "2"); err != nil || got.ID != existing.ID {
+		if got, err := dir.FindByExternalIdentity(ctx, "google", "2"); err != nil || got.ID != existing.ID {
 			t.Fatalf("link not stored: %v", err)
+		}
+	})
+
+	t.Run("verified but not authoritative email is not linked", func(t *testing.T) {
+		dir := NewMemoryPrincipalDirectory()
+		existing := HumanPrincipal{ID: uuid.New(), Email: "b2@example.com", EmailVerified: true, Active: true}
+		if err := dir.AddPrincipal(existing); err != nil {
+			t.Fatal(err)
+		}
+		_, err := ResolveExternalLogin(ctx, dir, githubLogin("22", "b2@example.com", true), now)
+		if !errors.Is(err, ErrEmailConflict) {
+			t.Fatalf("err = %v, want ErrEmailConflict", err)
+		}
+		if _, err := dir.FindByExternalIdentity(ctx, "github", "22"); !errors.Is(err, ErrPrincipalNotFound) {
+			t.Fatalf("non-authoritative identity was linked: %v", err)
 		}
 	})
 
@@ -169,7 +189,7 @@ func TestResolveExternalLoginMemory(t *testing.T) {
 		if err := dir.AddPrincipal(HumanPrincipal{Email: "f@example.com", EmailVerified: true, Active: false}); err != nil {
 			t.Fatal(err)
 		}
-		_, err := ResolveExternalLogin(ctx, dir, githubLogin("6", "f@example.com", true), now)
+		_, err := ResolveExternalLogin(ctx, dir, authoritativeLogin("6", "f@example.com"), now)
 		if !errors.Is(err, ErrPrincipalInactive) {
 			t.Fatalf("err = %v, want ErrPrincipalInactive", err)
 		}
@@ -245,16 +265,29 @@ func TestResolveExternalLoginEnt(t *testing.T) {
 		}
 	})
 
-	t.Run("verified email links", func(t *testing.T) {
+	t.Run("authoritative email links", func(t *testing.T) {
 		db := openTestEnt(t)
 		dir := NewEntPrincipalDirectory(db)
 		existing := seedHuman(t, db, "h@example.com", true)
-		p, err := ResolveExternalLogin(ctx, dir, githubLogin("10", "H@example.com", true), now)
+		p, err := ResolveExternalLogin(ctx, dir, authoritativeLogin("10", "H@example.com"), now)
 		if err != nil {
 			t.Fatalf("login: %v", err)
 		}
 		if p.ID != existing {
 			t.Fatal("not linked to existing principal")
+		}
+	})
+
+	t.Run("verified but not authoritative email not linked", func(t *testing.T) {
+		db := openTestEnt(t)
+		dir := NewEntPrincipalDirectory(db)
+		seedHuman(t, db, "h2@example.com", true)
+		_, err := ResolveExternalLogin(ctx, dir, githubLogin("12", "h2@example.com", true), now)
+		if !errors.Is(err, ErrEmailConflict) {
+			t.Fatalf("err = %v, want ErrEmailConflict", err)
+		}
+		if _, err := dir.FindByExternalIdentity(ctx, "github", "12"); !errors.Is(err, ErrPrincipalNotFound) {
+			t.Fatalf("non-authoritative identity was linked: %v", err)
 		}
 	})
 

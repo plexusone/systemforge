@@ -508,13 +508,14 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = sl.withSignupCode(ctx, r)
 	p, err := ResolveExternalLogin(ctx, sl.directory, ExternalLogin{
-		Provider:      provider,
-		Subject:       user.ProviderID,
-		Email:         user.Email,
-		EmailVerified: user.EmailVerified,
-		Name:          user.Name,
-		Username:      user.Username,
-		AvatarURL:     user.AvatarURL,
+		Provider:           provider,
+		Subject:            user.ProviderID,
+		Email:              user.Email,
+		EmailVerified:      user.EmailVerified,
+		EmailAuthoritative: AuthoritativeEmail(user),
+		Name:               user.Name,
+		Username:           user.Username,
+		AvatarURL:          user.AvatarURL,
 	}, sl.now())
 	if err != nil {
 		status, msg := http.StatusInternalServerError, "login failed"
@@ -522,7 +523,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, ErrEmailNotVerified):
 			status, msg = http.StatusForbidden, "a verified email address is required to sign in"
 		case errors.Is(err, ErrEmailConflict):
-			status, msg = http.StatusConflict, "an account with this email already exists and cannot be linked automatically"
+			status, msg = http.StatusConflict, "an account with this email already exists; sign in the way you signed in before"
 		case errors.Is(err, ErrPrincipalInactive):
 			status, msg = http.StatusForbidden, "account is disabled"
 		case errors.Is(err, errSignupAgeRequired):
