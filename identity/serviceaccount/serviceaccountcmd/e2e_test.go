@@ -136,6 +136,13 @@ func TestServiceAccountEndToEnd(t *testing.T) {
 	if code, _ := call(); code != 0 {
 		t.Errorf("disabled account: %d", code)
 	}
+
+	// Tokens were issued to the account; deleting it still succeeds, since
+	// issued tokens name their subject without a foreign key.
+	w.mustRun("delete", account)
+	if _, err := w.run("show", account); err == nil {
+		t.Error("deleted account still shown")
+	}
 }
 
 func dpopKeyPEM(t *testing.T) string {
