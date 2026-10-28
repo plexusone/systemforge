@@ -480,6 +480,8 @@
       
         
       
+        
+      
     
     
     
@@ -526,6 +528,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4521,6 +4551,8 @@
       
         
       
+        
+      
     
     
     
@@ -4592,6 +4624,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5851,6 +5911,13 @@
 
 <h1 id="backend-for-frontend-bff-package">Backend for Frontend (BFF) Package<a class="headerlink" href="#backend-for-frontend-bff-package" title="Permanent link">&para;</a></h1>
 <p>The <code>session/bff</code> package implements the Backend for Frontend pattern for secure session management in web applications. It stores OAuth tokens server-side and uses HTTP-only cookies to identify browser sessions.</p>
+<div class="admonition note">
+<p class="admonition-title">Signing in through SystemAuth</p>
+<p><code>session/bff</code> suits an application that issues its own tokens. An
+application that signs people in through SystemAuth uses
+<a href="../../guides/app-authentication/"><code>identity/appauth</code></a>, whose <code>/bff/*</code>
+sessions hold SystemAuth's DPoP-bound tokens and its <code>orgs</code> claim.</p>
+</div>
 <h2 id="why-bff">Why BFF?<a class="headerlink" href="#why-bff" title="Permanent link">&para;</a></h2>
 <p>Traditional SPAs store JWT tokens in localStorage or sessionStorage, which exposes them to XSS attacks. The BFF pattern solves this by:</p>
 <ol>

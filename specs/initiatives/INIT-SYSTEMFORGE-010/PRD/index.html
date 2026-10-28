@@ -23,7 +23,7 @@
     
     
       
-        <title>PRD — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials - SystemForge</title>
+        <title>PRD — Service Accounts with Key-Pair Credentials - SystemForge</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#prd-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials" class="md-skip">
+        <a href="#prd-service-accounts-with-key-pair-credentials" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              PRD — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials
+              PRD — Service Accounts with Key-Pair Credentials
             
           </span>
         </div>
@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -522,6 +524,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../guides/app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4132,6 +4162,8 @@
       
         
       
+        
+      
     
     
     
@@ -4203,6 +4235,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5136,10 +5196,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#users-and-stakeholders" class="md-nav__link">
+  <a href="#users" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Users and Stakeholders
+        Users
       
     </span>
   </a>
@@ -5159,10 +5219,43 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#functional" class="md-nav__link">
+  <a href="#systemauth" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Functional
+        SystemAuth
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#applications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Applications
       
     </span>
   </a>
@@ -5208,10 +5301,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#open-questions" class="md-nav__link">
+  <a href="#decisions-taken-from-the-draft" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Open Questions
+        Decisions Taken From the Draft
       
     </span>
   </a>
@@ -5238,108 +5331,225 @@
   
 
 
-<h1 id="prd-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials">PRD — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials<a class="headerlink" href="#prd-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials" title="Permanent link">&para;</a></h1>
+<h1 id="prd-service-accounts-with-key-pair-credentials">PRD — Service Accounts with Key-Pair Credentials<a class="headerlink" href="#prd-service-accounts-with-key-pair-credentials" title="Permanent link">&para;</a></h1>
 <p><strong>Initiative:</strong> <code>INIT-SYSTEMFORGE-010</code>
 <strong>Status:</strong> Draft
-<strong>Home repo:</strong> <code>github.com/plexusone/systemforge</code></p>
+<strong>Home repo:</strong> <code>github.com/plexusone/systemforge</code>
+<strong>Target release:</strong> v0.26.0, with <code>INIT-SYSTEMFORGE-014</code>
+<strong>Implements:</strong> ADR-016 decisions 1, 2 (automation holding a key pair) and 4</p>
 <h2 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h2>
-<p>Machine-to-machine access to SystemAuth today uses the client-credentials
-grant: a backend holds a client secret and exchanges it for a token. Shared
-secrets have to be distributed, stored, and rotated on both sides, and a
-leaked secret is immediately usable by anyone.</p>
-<p>The RFC 7523 JWT-bearer grant lets a workload prove its identity with a
-private key it never shares: it signs a short-lived assertion, and the
-authorization server verifies it with the registered public key. SystemForge
-documented this capability as "service accounts" but never implemented it,
-and the tables it described have been removed (ADR-004). The building blocks
-now exist on the principal model: service principals, keypair credentials,
-and a store for used assertion IDs.</p>
+<p>ADR-016 removes static API keys: every non-interactive caller exchanges a
+credential at SystemAuth for a short-lived access token. A person at a
+terminal already can, through <code>identity/publicclient</code>. Automation that runs
+without a person cannot. Examples:</p>
+<ul>
+<li>a CI job that publishes on merge;</li>
+<li>a scheduled import;</li>
+<li>an agent running on a server.</li>
+</ul>
+<p>Today such automation has two options, and both are what ADR-016 rules out:</p>
+<ul>
+<li><strong>The client-credentials grant with a client secret.</strong> This is a static
+  secret by another name. Its token's subject is the client, not a
+  principal, so it carries no <code>orgs</code> claim, and applications cannot
+  authorize it the way they authorize people.</li>
+<li><strong>An application's own API keys.</strong> These are a second authentication path,
+  with a role frozen when the key was made.</li>
+</ul>
+<p>Applications on SystemForge are therefore keeping API keys for exactly this
+case.</p>
+<p>The parts exist but are not connected:</p>
+<ul>
+<li><code>principal.CreateService</code> makes a service principal.</li>
+<li><code>identity/credential</code> stores key-pair credentials with a key ID,
+  algorithm, public key, scopes, expiry and revocation.</li>
+<li><code>clientassertion.JTIStore</code> records used assertion IDs.</li>
+<li>Application roles and memberships produce the <code>orgs</code> claim for any
+  principal ID.</li>
+<li>SystemAuth binds every token it issues to a DPoP key.</li>
+</ul>
+<p>What is missing:</p>
+<ul>
+<li>the token grant;</li>
+<li>a service account that belongs to an organization and holds roles there;</li>
+<li>commands to manage one;</li>
+<li>a client that uses one;</li>
+<li>applications accepting its tokens, since a service principal never signs
+  in and so has no local record.</li>
+</ul>
 <h2 id="goals">Goals<a class="headerlink" href="#goals" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>SystemAuth accepts the JWT-bearer grant</strong> (<code>grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer</code>)
-   at the token endpoint and issues an access token for a service principal.</li>
-<li><strong>Keys are keypair credentials</strong> owned by the service principal, with
-   their own scopes, expiry, and revocation.</li>
-<li><strong>Assertions cannot be replayed</strong>: every assertion carries a <code>jti</code>, and a
-   used <code>jti</code> is rejected until the assertion would have expired.</li>
-<li><strong>Least privilege</strong>: a token's scopes are limited to what the key allows,
-   the principal allows, and the request asks for.</li>
-<li><strong>Documentation and a reference client</strong> so a workload can be set up end
-   to end.</li>
+<li><strong>A service account belongs to one organization.</strong> It is created there,
+   holds application roles there like a member, and its tokens carry an
+   <code>orgs</code> claim with that organization.</li>
+<li><strong>It authenticates with a private key it never shares.</strong> It signs a
+   short-lived assertion, and SystemAuth verifies it with the registered
+   public key (the RFC 7523 JWT-bearer grant). SystemAuth stores only public
+   keys.</li>
+<li><strong>Its tokens are short-lived and DPoP-bound,</strong> with no refresh token. The
+   account signs a new assertion when a token expires.</li>
+<li><strong>Access ends through the usual paths:</strong></li>
+<li>removing a role, disabling the account, or revoking a key;</li>
+<li>each recorded as an access change (ADR-010), so applications drop it
+     within one token lifetime or at once through the revocation cache.</li>
+<li>Removing a role takes the organization out of the account's
+     memberships; the account still authenticates, and the application's
+     authorization refuses what needed the role.</li>
+<li><strong>Operators manage accounts with commands:</strong></li>
+<li>create, list, disable, enable and delete accounts;</li>
+<li>add, list and revoke keys;</li>
+<li>grant and remove roles.</li>
+<li><strong>A Go client</strong> that turns a private key file into an <code>http.Client</code> which
+   calls an API: it signs assertions, adds proofs and renews tokens.</li>
+<li><strong>Applications accept service-account tokens</strong> through
+   <code>identity/relyingparty</code> and <code>identity/appauth</code>, creating the account's
+   local record on first use.</li>
 </ol>
 <h2 id="non-goals">Non-Goals<a class="headerlink" href="#non-goals" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Assertions issued by third-party identity providers (<code>iss</code> different from
-  the principal). This release accepts self-issued assertions only; a
-  trusted-issuer registry is a follow-on.</li>
-<li>JWT client authentication (<code>private_key_jwt</code>, RFC 7523 section 2.2),
-  which Fosite already supports through client keys and the existing
-  assertion-ID store.</li>
-<li>Refresh tokens for this grant. Workloads sign a new assertion instead.</li>
-<li>Human principals using this grant.</li>
+<li><strong>Assertions from other issuers</strong> (workload identity federation, such as
+  GitHub Actions OIDC). This release accepts self-issued assertions only.
+  ADR-016 lists federation as a separate grant, and a trusted-issuer
+  registry is a follow-on.</li>
+<li><strong>An HTTP API and pages for organization admins.</strong> Commands cover
+  operators first. The organization console can add pages over the same
+  service later.</li>
+<li><strong>Refresh tokens</strong> for service accounts.</li>
+<li><strong>Human principals using this grant.</strong></li>
+<li><strong>Agents using this grant.</strong> AI agents keep AAuth, as ADR-016 says.</li>
+<li><strong>Removing client credentials with a secret.</strong> It stays for development
+  and existing deployments. ADR-016 decision 3 restricts it in production
+  separately.</li>
 </ul>
-<h2 id="users-and-stakeholders">Users and Stakeholders<a class="headerlink" href="#users-and-stakeholders" title="Permanent link">&para;</a></h2>
+<h2 id="users">Users<a class="headerlink" href="#users" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Who</th>
+<th>User</th>
 <th>Needs</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Platform operators</td>
-<td>Register a service principal and its public keys, rotate and revoke keys, see when a key was last used</td>
+<td>Operator</td>
+<td>Create a service account in an organization, give it roles, register its public key, rotate and revoke keys, disable it, see when each key was last used</td>
 </tr>
 <tr>
-<td>Workload developers</td>
-<td>A documented assertion format and a small client to exchange an assertion for a token</td>
+<td>Workload developer</td>
+<td>A private key file and a client ID-like account identifier, and a Go client that does the rest</td>
 </tr>
 <tr>
-<td>Security reviewers</td>
-<td>Replay protection, short assertion lifetimes, scoped tokens, and an audit trail</td>
+<td>Application developer</td>
+<td>Service-account requests arrive like any other, as a principal with memberships, with no new code beyond one option</td>
+</tr>
+<tr>
+<td>Security reviewer</td>
+<td>No stored secrets, short assertions, replay protection, DPoP binding, and access that ends with the role</td>
 </tr>
 </tbody>
 </table>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
-<h3 id="functional">Functional<a class="headerlink" href="#functional" title="Permanent link">&para;</a></h3>
+<h3 id="systemauth">SystemAuth<a class="headerlink" href="#systemauth" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>F1.</strong> The token endpoint accepts the JWT-bearer grant and verifies the
-  assertion signature with the keypair credential named by the assertion's
-  <code>kid</code>.</li>
-<li><strong>F2.</strong> The assertion's <code>iss</code> and <code>sub</code> must both equal the service
-  principal's identifier, and the key must belong to that principal.</li>
-<li><strong>F3.</strong> <code>aud</code> must name SystemAuth's token endpoint (or issuer); <code>exp</code> is
-  required, <code>iat</code> and <code>jti</code> are required, and the assertion's lifetime may
-  not exceed a configured maximum (default one hour).</li>
-<li><strong>F4.</strong> A used <code>jti</code> is rejected until the assertion's <code>exp</code>.</li>
-<li><strong>F5.</strong> The key and the principal must be active and unexpired, and the
-  key unrevoked; the principal must be of type service.</li>
-<li><strong>F6.</strong> Granted scopes are the requested scopes intersected with the
-  key's scopes and the principal's allowed scopes; requesting no scopes
-  grants the intersection of the key's and principal's scopes.</li>
-<li><strong>F7.</strong> The issued access token's subject is the service principal's ID,
-  and no refresh token is issued.</li>
-<li><strong>F8.</strong> Successful exchanges update the key's last-used time.</li>
-<li><strong>F9.</strong> Discovery advertises the grant type when it is enabled; it is
-  disabled unless configured.</li>
+<li><strong>F1. Account in an organization.</strong></li>
+<li>A service account is a service principal whose <code>organization_id</code> is its
+    organization.</li>
+<li>It has an active membership there with the role <code>service_account</code>
+    (shown as "Service account"), and it holds application roles there
+    through <code>approle</code>. Its principal type stays <code>service</code>.</li>
+<li>Creating one records who created it.</li>
+<li><strong>F2. The grant.</strong> The token endpoint accepts
+  <code>grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer</code> and verifies the
+  assertion's signature with the key-pair credential named by its <code>kid</code>.</li>
+<li><strong>F3. Assertion rules:</strong></li>
+<li><code>iss</code> and <code>sub</code> both equal the account's identifier, and the key belongs
+    to the account;</li>
+<li><code>aud</code> names the token endpoint or the issuer;</li>
+<li><code>exp</code>, <code>iat</code> and <code>jti</code> are required;</li>
+<li>the lifetime is at most a configured maximum (default five minutes).</li>
+<li><strong>F4. No replay.</strong> A used <code>jti</code> is refused until the assertion would have
+  expired.</li>
+<li><strong>F5. Usable keys only.</strong> The key must be active, unexpired and unrevoked;
+  the account active and of type service; its organization active.</li>
+<li><strong>F6. Scopes</strong> are the requested scopes intersected with the key's scopes
+  and the account's allowed scopes.</li>
+<li><strong>F7. DPoP required.</strong> The token request must carry a DPoP proof, and the
+  token is bound to the proof's key. The bearer exception does not apply to
+  this grant.</li>
+<li><strong>F8. The token:</strong></li>
+<li>its subject is the account's principal ID;</li>
+<li>it carries the <code>orgs</code> claim and <code>principal_type: "service"</code>;</li>
+<li>its lifetime is configured (default 15 minutes);</li>
+<li>no refresh token is issued.</li>
+<li><strong>F9. Last use.</strong> Each exchange records the key's last-used time and
+  address.</li>
+<li><strong>F10. Ending access.</strong> Each of these records an access change:</li>
+<li>disabling the account (<code>Deactivated</code>, which also sends back-channel
+    logout);</li>
+<li>deleting it;</li>
+<li>removing a role;</li>
+<li>revoking a usable key, which ends all of the account's current tokens,
+    since tokens do not record the key that obtained them.</li>
+<li><strong>F11. Off by default.</strong> The grant is disabled unless configured.
+  Discovery advertises it only when enabled.</li>
+</ul>
+<h3 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>F12.</strong> <code>service-account create|list|show|disable|enable|delete</code>, as
+  cobra commands a host mounts (like the sign-up commands) and that
+  <code>cmd/systemauth</code> registers. They open the identity database directly,
+  so they need the host's shell; operators are the people who run the
+  deployment.</li>
+<li><strong>F13.</strong> <code>service-account key add|list|revoke</code>:</li>
+<li><code>key add</code> generates a P-256 key pair, stores the public key and writes
+    the private key once to a file only the owner can read;</li>
+<li>or it registers a public key the operator supplies.</li>
+<li><strong>F14.</strong> <code>service-account role grant|remove</code> for application roles in
+  the account's organization.</li>
+</ul>
+<h3 id="client">Client<a class="headerlink" href="#client" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>F15.</strong> A Go package builds an <code>http.Client</code> from a private key and an
+  account identifier:</li>
+<li>it signs assertions;</li>
+<li>it requests DPoP-bound tokens, using a P-256 assertion key for proofs
+    too, and a separate P-256 proof key for an RSA or Ed25519 assertion key;</li>
+<li>it renews a token a minute before expiry;</li>
+<li>it adds a proof to every API request, and retries once on
+    <code>use_dpop_nonce</code>.</li>
+</ul>
+<h3 id="applications">Applications<a class="headerlink" href="#applications" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>F16. Accepting service accounts.</strong> With the new option, <code>relyingparty</code>'s
+  bearer path accepts a token whose subject has no local principal when the
+  token says <code>principal_type: "service"</code>. It creates the local principal
+  with type <code>service</code> and the token's name, then authenticates it with
+  memberships from the <code>orgs</code> claim. Without the option, the request is
+  refused as today.</li>
+<li><strong>F17. The shared package.</strong> <code>appauth</code> exposes the option, and
+  <code>pgstore.PrincipalStore</code> creates service principals.</li>
 </ul>
 <h3 id="non-functional">Non-Functional<a class="headerlink" href="#non-functional" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>N1.</strong> The grant uses Fosite's RFC 7523 handler; SystemForge supplies
-  storage, not protocol code.</li>
-<li><strong>N2.</strong> Failures return RFC 6749 errors without revealing whether a key
-  or principal exists.</li>
-<li><strong>N3.</strong> Unit tests cover every rejection rule; an end-to-end test signs
-  real assertions with RSA and ECDSA keys.</li>
+<li><strong>N1.</strong> The grant uses Fosite's RFC 7523 handler. SystemForge supplies
+  storage and checks, not protocol code.</li>
+<li><strong>N2.</strong> Failures return RFC 6749 errors without saying whether a key or
+  account exists.</li>
+<li><strong>N3.</strong> Unit tests cover every refusal. An end-to-end test uses real
+  P-256 and RSA keys and ends at an application behind <code>appauth</code>.</li>
 </ul>
 <h2 id="success-criteria">Success Criteria<a class="headerlink" href="#success-criteria" title="Permanent link">&para;</a></h2>
 <ul>
-<li>A service principal with a registered public key obtains a scoped access
-  token by signing an assertion, and the token validates at a resource
-  server.</li>
-<li>Replaying the same assertion fails; an expired, revoked, or wrong-subject
-  key fails; scopes never exceed the key's or principal's.</li>
+<li>An operator creates a service account in an organization, grants it a role
+  and adds a key with three commands. A Go program with the key file then
+  calls an application's API as that account, and the application sees the
+  role in the account's memberships.</li>
+<li>A replayed assertion, an expired or revoked key, an assertion for another
+  account, a request without a DPoP proof, and a disabled account are each
+  refused.</li>
+<li>Removing the account's role makes the application refuse it within one
+  token lifetime, or at once with the revocation cache.</li>
+<li>An application that kept API keys for automation can drop them.</li>
 </ul>
 <h2 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h2>
 <table>
@@ -5352,25 +5562,47 @@ and a store for used assertion IDs.</p>
 <tbody>
 <tr>
 <td>Long-lived assertions widen the replay window</td>
-<td>Required <code>jti</code>, bounded maximum lifetime, JTI store</td>
+<td>Required <code>jti</code>, a five-minute default maximum, the JTI store</td>
 </tr>
 <tr>
 <td>Over-broad tokens</td>
-<td>Scope intersection across request, key, and principal</td>
+<td>Scopes intersected across request, key and account; roles only in one organization</td>
+</tr>
+<tr>
+<td>A leaked token is used elsewhere</td>
+<td>DPoP binding: the token is useless without the private key</td>
 </tr>
 <tr>
 <td>Key sprawl</td>
-<td>Keys carry expiry; last-used time makes unused keys visible</td>
+<td>Keys carry expiry and last-used time; <code>key list</code> shows both</td>
+</tr>
+<tr>
+<td>Applications create local records for anything claiming to be a service</td>
+<td>Only verified SystemAuth tokens are considered, the claim is set by SystemAuth, and the option is off by default</td>
 </tr>
 </tbody>
 </table>
-<h2 id="open-questions">Open Questions<a class="headerlink" href="#open-questions" title="Permanent link">&para;</a></h2>
+<h2 id="decisions-taken-from-the-draft">Decisions Taken From the Draft<a class="headerlink" href="#decisions-taken-from-the-draft" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Should the grant require client authentication in addition to the
-  assertion? Proposed: no by default, since the signed assertion is the
-  credential, with a configuration switch to require it.</li>
-<li>Should agents (principals of type agent) also be allowed to use the
-  grant? Proposed: not in this release.</li>
+<li><strong>The JWT-bearer grant, not client credentials with <code>private_key_jwt</code>.</strong>
+  With the bearer grant, the token's subject is the service principal, so the
+  existing <code>orgs</code> claim, memberships, role removal and revocation all work
+  unchanged. Client credentials would make the subject the client and need a
+  client-to-principal link everywhere. ADR-016's table is updated to match.</li>
+<li><strong>No client authentication</strong> beyond the assertion. The signed assertion and
+  the DPoP proof are the credential.</li>
+<li>
+<p><strong>Agents</strong> are out of scope; they use AAuth.</p>
+</li>
+<li>
+<p><strong>The membership role is <code>service_account</code>,</strong> the industry's most common
+  term for a non-human identity in an organization, so organization pages
+  list accounts apart from people. "Service principal" stays the identity
+  model's term (<code>Principal(type=service)</code>).</p>
+</li>
+<li><strong>Operators manage accounts</strong> with commands on the deployment's host in
+  this release. Platform administrators and organization owners get an HTTP
+  API and console pages as a follow-on.</li>
 </ul>
 
 

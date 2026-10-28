@@ -480,6 +480,8 @@
       
         
       
+        
+      
     
     
     
@@ -526,6 +528,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1891,6 +1921,34 @@
     <span class="md-ellipsis">
       
         Rotating the signing key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-hmac-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token HMAC secret
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Token HMAC secret">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rotating-the-hmac-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotating the HMAC secret
       
     </span>
   </a>
@@ -4321,6 +4379,8 @@
       
         
       
+        
+      
     
     
     
@@ -4392,6 +4452,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5386,6 +5474,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#token-hmac-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token HMAC secret
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Token HMAC secret">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rotating-the-hmac-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotating the HMAC secret
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#example-systemd-caddy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5465,10 +5581,13 @@ proxy (Caddy, nginx). To run SystemAuth inside another Go binary instead, see
 </ul>
 <p>and it rejects <code>social_login.insecure_cookies</code>. <code>--dev</code> relaxes all of these
 (ephemeral key, in-memory storage, <code>http://localhost</code> issuer).</p>
+<p>Set a <a href="#token-hmac-secret">token HMAC secret</a> as well. It is not required
+to start, but without it refresh tokens do not survive a restart.</p>
 <p>With a database configured, social login sessions, in-flight upstream logins
 and consent grants are stored in it (<code>sf_login_sessions</code>, <code>sf_login_states</code>,
-<code>sf_consent_grants</code>), so restarts keep users signed in and several instances
-can run behind a load balancer on one PostgreSQL database. Statically
+<code>sf_consent_grants</code>). With a <a href="#token-hmac-secret">token HMAC secret</a> as
+well, restarts keep users signed in and several instances can run behind a
+load balancer on one PostgreSQL database. Statically
 configured clients are updated from the configuration on each start. See
 <a href="../production-stores/">Production Stores</a>.</p>
 <h2 id="flags-and-environment">Flags and environment<a class="headerlink" href="#flags-and-environment" title="Permanent link">&para;</a></h2>
@@ -5711,53 +5830,86 @@ key's thumbprint, which is also the default <code>kid</code> of a signing key. K
 until the longest-lived token it signed has expired: ID tokens (1 hour by
 default) and JWT access tokens (at most 15 minutes); opaque tokens and
 refresh tokens are not signed with it.</p>
+<h2 id="token-hmac-secret">Token HMAC secret<a class="headerlink" href="#token-hmac-secret" title="Permanent link">&para;</a></h2>
+<p>Authorization codes, refresh tokens and opaque access tokens are signed
+with an HMAC secret, not the signing key. Set <code>tokens.hmac_secret</code> to at
+least 32 bytes, the same on every instance, and keep it in your secret
+store like the signing key:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">tokens</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">hmac_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_TOKEN_HMAC_SECRET}</span>
+</code></pre></div>
+<p>Without it, SystemAuth generates a secret at each start and logs a
+warning. Every refresh token then stops working at the next restart, so a
+relying party cannot refresh and sends its users through sign-in again
+after each deploy, and a second instance refuses the first one's codes and
+refresh tokens. The server does not refuse to start without it, so a
+deployment that upgrades keeps running; a host that wants it required can
+check <code>Tokens.HMACSecret</code> itself.</p>
+<h3 id="rotating-the-hmac-secret">Rotating the HMAC secret<a class="headerlink" href="#rotating-the-hmac-secret" title="Permanent link">&para;</a></h3>
+<p><code>tokens.hmac_verification_secret</code> is a second secret whose tokens are
+accepted but never signed with. Rotate in two deploys, as for the signing
+key:</p>
+<ol>
+<li><strong>Pre-stage.</strong> Keep N-1 as <code>hmac_secret</code> and set N as
+   <code>hmac_verification_secret</code>.</li>
+<li><strong>Promote.</strong> Make N the <code>hmac_secret</code> and move N-1 to
+   <code>hmac_verification_secret</code>. Rolling back to step 1 still accepts the
+   tokens N signed.</li>
+</ol>
+<p>Keep N-1 until <code>tokens.refresh_token_lifetime</code> (7 days by default) has
+passed since the promotion: a refresh token signed with it and not used
+since is refused once it is dropped, and its user signs in again.</p>
 <h2 id="example-systemd-caddy">Example: systemd + Caddy<a class="headerlink" href="#example-systemd-caddy" title="Permanent link">&para;</a></h2>
 <p><code>/etc/systemauth/env</code> (mode <code>0600</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">SYSTEMAUTH_ARGS</span><span class="o">=</span>-addr<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>-config<span class="w"> </span>/etc/systemauth/config.yaml<span class="w"> </span>-log-format<span class="w"> </span>json
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nv">SYSTEMAUTH_SIGNING_KEY_FILE</span><span class="o">=</span>/etc/systemauth/signing.pem
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://systemauth:secret@127.0.0.1:5432/systemauth?sslmode<span class="o">=</span>disable
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nv">GITHUB_CLIENT_ID</span><span class="o">=</span>...
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nv">GITHUB_CLIENT_SECRET</span><span class="o">=</span>...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">SYSTEMAUTH_ARGS</span><span class="o">=</span>-addr<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>-config<span class="w"> </span>/etc/systemauth/config.yaml<span class="w"> </span>-log-format<span class="w"> </span>json
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nv">SYSTEMAUTH_SIGNING_KEY_FILE</span><span class="o">=</span>/etc/systemauth/signing.pem
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://systemauth:secret@127.0.0.1:5432/systemauth?sslmode<span class="o">=</span>disable
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nv">GITHUB_CLIENT_ID</span><span class="o">=</span>...
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nv">GITHUB_CLIENT_SECRET</span><span class="o">=</span>...
 </code></pre></div>
 <p><code>/etc/systemd/system/systemauth.service</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">[Unit]</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="na">Description</span><span class="o">=</span><span class="s">SystemAuth OAuth 2.0 / OpenID Connect server</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="na">After</span><span class="o">=</span><span class="s">network-online.target postgresql.service</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="na">Wants</span><span class="o">=</span><span class="s">network-online.target</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="k">[Service]</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="na">EnvironmentFile</span><span class="o">=</span><span class="s">/etc/systemauth/env</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/local/bin/systemauth $SYSTEMAUTH_ARGS</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="na">User</span><span class="o">=</span><span class="s">systemauth</span>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="na">NoNewPrivileges</span><span class="o">=</span><span class="s">true</span>
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="na">ProtectSystem</span><span class="o">=</span><span class="s">strict</span>
-<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>
-<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="k">[Install]</span>
-<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">[Unit]</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="na">Description</span><span class="o">=</span><span class="s">SystemAuth OAuth 2.0 / OpenID Connect server</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="na">After</span><span class="o">=</span><span class="s">network-online.target postgresql.service</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="na">Wants</span><span class="o">=</span><span class="s">network-online.target</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="k">[Service]</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="na">EnvironmentFile</span><span class="o">=</span><span class="s">/etc/systemauth/env</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/local/bin/systemauth $SYSTEMAUTH_ARGS</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="na">User</span><span class="o">=</span><span class="s">systemauth</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="na">NoNewPrivileges</span><span class="o">=</span><span class="s">true</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="na">ProtectSystem</span><span class="o">=</span><span class="s">strict</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="k">[Install]</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
 </code></pre></div>
 <p>systemd splits <code>$SYSTEMAUTH_ARGS</code> into words, so the flags can live in the
 environment file. <code>/etc/systemauth/config.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">issuer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://auth.example.com</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nt">database</span><span class="p">:</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">dsn</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${DATABASE_URL}</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nt">keys</span><span class="p">:</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="nt">private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_SIGNING_KEY_FILE}</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="nt">features</span><span class="p">:</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span><span class="nt">require_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span><span class="nt">enable_jwt_access_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="nt">social_login</span><span class="p">:</span>
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">  </span><span class="nt">github</span><span class="p">:</span>
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="nt">client_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_ID}</span>
-<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">    </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_SECRET}</span>
-<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">  </span><span class="nt">allowed_redirect_origins</span><span class="p">:</span>
-<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://app.example.com</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">issuer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://auth.example.com</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">database</span><span class="p">:</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">dsn</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${DATABASE_URL}</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="nt">keys</span><span class="p">:</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="nt">private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_SIGNING_KEY_FILE}</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="nt">tokens</span><span class="p">:</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span><span class="nt">hmac_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_TOKEN_HMAC_SECRET}</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="nt">features</span><span class="p">:</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">  </span><span class="nt">require_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">  </span><span class="nt">enable_jwt_access_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="nt">social_login</span><span class="p">:</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">  </span><span class="nt">github</span><span class="p">:</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="nt">client_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_ID}</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">    </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_SECRET}</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">  </span><span class="nt">allowed_redirect_origins</span><span class="p">:</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://app.example.com</span>
 </code></pre></div>
 <p>Caddy terminates TLS and proxies to the loopback listener:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>auth.example.com {
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    reverse_proxy 127.0.0.1:8081
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>auth.example.com {
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    reverse_proxy 127.0.0.1:8081
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>}
 </code></pre></div>
 <h2 id="health-checks">Health checks<a class="headerlink" href="#health-checks" title="Permanent link">&para;</a></h2>
 <table>
@@ -5786,14 +5938,14 @@ proof with its token requests unless its registration sets the legacy
 <code>allow_bearer_tokens</code> exception. See <a href="../../session/dpop/">DPoP Enforcement</a>.
 When several instances serve SystemAuth, share the replay cache that rejects
 reused proofs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">dpop</span><span class="p">:</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">replay_cache_redis_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_DPOP_REDIS_URL}</span><span class="w">   </span><span class="c1"># redis://host:6379/0</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="c1"># Optional server nonces (RFC 9449 §8):</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="c1"># require_nonce: true</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="c1"># nonce_secret: ${SYSTEMAUTH_DPOP_NONCE_SECRET}         # 32+ bytes, same on every instance</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="c1"># External base URL of the APIs SystemAuth protects (Middleware,</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span><span class="c1"># BearerAccess), when a proxy strips a path prefix:</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span><span class="c1"># resource_base_url: https://example.com/api</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">dpop</span><span class="p">:</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">replay_cache_redis_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_DPOP_REDIS_URL}</span><span class="w">   </span><span class="c1"># redis://host:6379/0</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="c1"># Optional server nonces (RFC 9449 §8):</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="c1"># require_nonce: true</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span><span class="c1"># nonce_secret: ${SYSTEMAUTH_DPOP_NONCE_SECRET}         # 32+ bytes, same on every instance</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span><span class="c1"># External base URL of the APIs SystemAuth protects (Middleware,</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">  </span><span class="c1"># BearerAccess), when a proxy strips a path prefix:</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">  </span><span class="c1"># resource_base_url: https://example.com/api</span>
 </code></pre></div>
 <p>Without <code>replay_cache_redis_url</code> the cache is in memory, which suits a single
 instance. An existing database gains the <code>sf_oauth_apps.allow_bearer_tokens</code>

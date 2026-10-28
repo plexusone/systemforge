@@ -482,6 +482,8 @@
       
         
       
+        
+      
     
     
     
@@ -526,6 +528,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1001,6 +1031,17 @@
     <span class="md-ellipsis">
       
         SystemAuth signing keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#systemauth-token-hmac-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SystemAuth token HMAC secret
       
     </span>
   </a>
@@ -4249,6 +4290,8 @@
       
         
       
+        
+      
     
     
     
@@ -4320,6 +4363,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5242,6 +5313,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#systemauth-token-hmac-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SystemAuth token HMAC secret
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#oauth-client-secrets" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5342,6 +5424,12 @@ a rollback would then reject everything the new value produced.</p>
 <td><a href="../../systemauth/deployment/#rotating-the-signing-key">Deploying SystemAuth</a></td>
 </tr>
 <tr>
+<td>SystemAuth token HMAC secret</td>
+<td><code>tokens.hmac_secret</code>, <code>tokens.hmac_verification_secret</code></td>
+<td>Yes</td>
+<td><a href="../../systemauth/deployment/#rotating-the-hmac-secret">Deploying SystemAuth</a></td>
+</tr>
+<tr>
 <td><code>identity/oauth</code> signing key</td>
 <td><code>Config.KeyID</code>, <code>Config.VerificationKeys</code></td>
 <td>Yes</td>
@@ -5406,6 +5494,17 @@ unknown <code>kid</code> is refused.</p>
 their own <code>KeyID</code> and <code>VerificationKeys</code>. For <code>session/jwt</code>, give the
 current key a <code>KeyID</code> first and wait until tokens issued without one have
 expired before the first rotation.</p>
+<h2 id="systemauth-token-hmac-secret">SystemAuth token HMAC secret<a class="headerlink" href="#systemauth-token-hmac-secret" title="Permanent link">&para;</a></h2>
+<p>Authorization codes, refresh tokens and opaque access tokens are signed
+with <code>tokens.hmac_secret</code>. <code>tokens.hmac_verification_secret</code> holds a second
+secret that is accepted but never signs.</p>
+<ol>
+<li>Pre-stage N as <code>hmac_verification_secret</code> while N-1 is <code>hmac_secret</code>.</li>
+<li>Promote N to <code>hmac_secret</code> and move N-1 to <code>hmac_verification_secret</code>.</li>
+<li>Check that relying parties still refresh their sessions.</li>
+<li>Keep N-1 until <code>tokens.refresh_token_lifetime</code> (7 days by default) has
+   passed: an unused refresh token signed with it lives that long.</li>
+</ol>
 <h2 id="oauth-client-secrets">OAuth client secrets<a class="headerlink" href="#oauth-client-secrets" title="Permanent link">&para;</a></h2>
 <p>A confidential client authenticates with its two newest active secrets.
 <code>EntStorage.RotateClientSecret</code> issues N, keeps N-1 and revokes anything

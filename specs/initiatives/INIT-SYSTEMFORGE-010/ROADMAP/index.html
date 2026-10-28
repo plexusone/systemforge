@@ -23,7 +23,7 @@
     
     
       
-        <title>ROADMAP — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials - SystemForge</title>
+        <title>ROADMAP — Service Accounts with Key-Pair Credentials - SystemForge</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#roadmap-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials" class="md-skip">
+        <a href="#roadmap-service-accounts-with-key-pair-credentials" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ROADMAP — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials
+              ROADMAP — Service Accounts with Key-Pair Credentials
             
           </span>
         </div>
@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -522,6 +524,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../guides/app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4132,6 +4162,8 @@
       
         
       
+        
+      
     
     
     
@@ -4203,6 +4235,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5103,10 +5163,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#phase-1-storage-and-composition" class="md-nav__link">
+  <a href="#phase-1-accounts-and-the-grant" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 1 — Storage and Composition
+        Phase 1 — Accounts and the Grant
       
     </span>
   </a>
@@ -5114,10 +5174,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#phase-2-client-documentation-release" class="md-nav__link">
+  <a href="#phase-2-using-it" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 2 — Client, Documentation, Release
+        Phase 2 — Using It
       
     </span>
   </a>
@@ -5144,31 +5204,43 @@
   
 
 
-<h1 id="roadmap-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials">ROADMAP — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials<a class="headerlink" href="#roadmap-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials" title="Permanent link">&para;</a></h1>
+<h1 id="roadmap-service-accounts-with-key-pair-credentials">ROADMAP — Service Accounts with Key-Pair Credentials<a class="headerlink" href="#roadmap-service-accounts-with-key-pair-credentials" title="Permanent link">&para;</a></h1>
 <p><strong>Initiative:</strong> <code>INIT-SYSTEMFORGE-010</code>
 <strong>Repository:</strong> <code>github.com/plexusone/systemforge</code></p>
-<p>Implements the RFC 7523 JWT-bearer authorization grant on Fosite's handler,
-with service principals and keypair credentials. Commits implementing an
+<p>Service accounts that belong to an organization, hold application roles,
+authenticate with a private key through the RFC 7523 JWT-bearer grant, and
+call applications with short-lived DPoP-bound tokens. Commits implementing an
 item carry <code>Refs: RMI-SYSTEMFORGE-&lt;NNN&gt;</code>.</p>
-<h2 id="phase-1-storage-and-composition">Phase 1 — Storage and Composition<a class="headerlink" href="#phase-1-storage-and-composition" title="Permanent link">&para;</a></h2>
-<p><strong>Theme:</strong> SystemAuth verifies signed assertions and issues scoped tokens</p>
+<h2 id="phase-1-accounts-and-the-grant">Phase 1 — Accounts and the Grant<a class="headerlink" href="#phase-1-accounts-and-the-grant" title="Permanent link">&para;</a></h2>
+<p><strong>Theme:</strong> SystemAuth issues DPoP-bound tokens to service accounts in an organization</p>
 <ul>
-<li>[ ] <code>RMI-SYSTEMFORGE-118</code> Key-storage adapter implementing <code>rfc7523.RFC7523KeyStorage</code>: key lookup by <code>kid</code> with ownership, self-issuance, status, and expiry checks; JWK conversion; scope intersection; JTI delegation to the client-assertion store</li>
-<li>[ ] <code>RMI-SYSTEMFORGE-119</code> Register the JWT-bearer grant behind configuration (enabled, maximum assertion lifetime, client authentication, token lifetime) and advertise it in discovery when enabled</li>
+<li>[x] <code>RMI-SYSTEMFORGE-196</code> <code>identity/serviceaccount</code>: accounts in an organization with a <code>service_account</code> membership, key-pair keys (generated or supplied), application roles, and disable, enable, delete and key revocation recorded as access changes</li>
+<li>[x] <code>RMI-SYSTEMFORGE-118</code> Key-storage adapter implementing <code>rfc7523.RFC7523KeyStorage</code>: key lookup by <code>kid</code> with ownership, self-issuance, status, organization and expiry checks; JWK conversion; scope intersection; JTI delegation to the client-assertion store</li>
+<li>Depends on: <code>RMI-SYSTEMFORGE-196</code></li>
+<li>[x] <code>RMI-SYSTEMFORGE-119</code> Register the JWT-bearer grant behind configuration (enabled, maximum assertion lifetime, token lifetime), require a DPoP proof for it, and advertise it in discovery when enabled</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-118</code></li>
-<li>[ ] <code>RMI-SYSTEMFORGE-120</code> Record key usage on successful exchanges and issue tokens with the service principal as subject and no refresh token</li>
+<li>[x] <code>RMI-SYSTEMFORGE-120</code> Issue tokens with the service account as subject, the <code>orgs</code> and <code>principal_type</code> claims and no refresh token, and record key and account last use</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-119</code></li>
-<li>[ ] <code>RMI-SYSTEMFORGE-121</code> End-to-end tests with RSA and ECDSA keys covering issuance, introspection, replay, expiry, overlong lifetime, missing <code>jti</code>, wrong audience, and revoked keys</li>
+<li>[x] <code>RMI-SYSTEMFORGE-121</code> End-to-end tests with P-256 and RSA keys covering issuance, introspection, DPoP binding, replay, expiry, overlong lifetime, missing <code>jti</code>, wrong audience, missing proof, revoked keys and disabled accounts</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-120</code></li>
 </ul>
-<h2 id="phase-2-client-documentation-release">Phase 2 — Client, Documentation, Release<a class="headerlink" href="#phase-2-client-documentation-release" title="Permanent link">&para;</a></h2>
-<p><strong>Theme:</strong> Workloads can adopt it end to end</p>
+<h2 id="phase-2-using-it">Phase 2 — Using It<a class="headerlink" href="#phase-2-using-it" title="Permanent link">&para;</a></h2>
+<p><strong>Theme:</strong> An operator sets up an account in three commands and a workload calls an application with it</p>
 <ul>
-<li>[ ] <code>RMI-SYSTEMFORGE-122</code> Reference client helper in <code>identity/oauthclient</code> that signs an assertion and exchanges it for a token</li>
+<li>[x] <code>RMI-SYSTEMFORGE-197</code> <code>serviceaccountcmd</code>, the <code>service-account</code> commands a host mounts and <code>cmd/systemauth</code> registers: create, list, show, disable, enable and delete; <code>key add|list|revoke</code> with an owner-only private key file; <code>role grant|remove</code></li>
+<li>Depends on: <code>RMI-SYSTEMFORGE-196</code></li>
+<li>[x] <code>RMI-SYSTEMFORGE-122</code> <code>identity/serviceclient</code>: signs assertions, requests DPoP-bound tokens, renews before expiry, and adds proofs to API requests with the nonce retry</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-119</code></li>
-<li>[ ] <code>RMI-SYSTEMFORGE-123</code> Rewrite the service principals page with an end-to-end walkthrough, add release notes, tag after CI passes, and record the release</li>
-<li>Depends on: <code>RMI-SYSTEMFORGE-121</code></li>
+<li>[x] <code>RMI-SYSTEMFORGE-198</code> Applications accept service accounts: <code>BearerConfig.ServicePrincipals</code> creates the local principal on first use, <code>VerifiedIdentity.Service</code>, <code>appauth.Options.ServiceAccounts</code>, and service identities in <code>pgstore.PrincipalStore</code></li>
+<li>Depends on: <code>RMI-SYSTEMFORGE-120</code></li>
+<li>Depends on: <code>RMI-SYSTEMFORGE-192</code></li>
+<li>Depends on: <code>RMI-SYSTEMFORGE-190</code></li>
+<li>[x] <code>RMI-SYSTEMFORGE-199</code> End-to-end test from command to application: create an account, grant a role, add a key, call an <code>appauth</code> API with <code>serviceclient</code>, then remove the role and see its memberships lose the organization</li>
+<li>Depends on: <code>RMI-SYSTEMFORGE-197</code></li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-122</code></li>
+<li>Depends on: <code>RMI-SYSTEMFORGE-198</code></li>
+<li>[x] <code>RMI-SYSTEMFORGE-123</code> Rewrite the service principals page with the walkthrough, update ADR-016 decisions 2 and 4, and add the service accounts section to the v0.26.0 release notes</li>
+<li>Depends on: <code>RMI-SYSTEMFORGE-199</code></li>
 </ul>
 
 

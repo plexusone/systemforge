@@ -23,7 +23,7 @@
     
     
       
-        <title>PLAN — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials - SystemForge</title>
+        <title>PLAN — Service Accounts with Key-Pair Credentials - SystemForge</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#plan-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials" class="md-skip">
+        <a href="#plan-service-accounts-with-key-pair-credentials" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              PLAN — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials
+              PLAN — Service Accounts with Key-Pair Credentials
             
           </span>
         </div>
@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -522,6 +524,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../guides/app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4132,6 +4162,8 @@
       
         
       
+        
+      
     
     
     
@@ -4203,6 +4235,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5126,10 +5186,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#phase-1-storage-and-composition" class="md-nav__link">
+  <a href="#phase-1-accounts-and-the-grant" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 1 — Storage and Composition
+        Phase 1 — Accounts and the Grant
       
     </span>
   </a>
@@ -5137,10 +5197,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-2-client-documentation-release" class="md-nav__link">
+  <a href="#phase-2-using-it" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 2 — Client, Documentation, Release
+        Phase 2 — Using It
       
     </span>
   </a>
@@ -5149,6 +5209,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release
+      
+    </span>
+  </a>
   
 </li>
       
@@ -5194,25 +5265,45 @@
   
 
 
-<h1 id="plan-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials">PLAN — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials<a class="headerlink" href="#plan-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials" title="Permanent link">&para;</a></h1>
+<h1 id="plan-service-accounts-with-key-pair-credentials">PLAN — Service Accounts with Key-Pair Credentials<a class="headerlink" href="#plan-service-accounts-with-key-pair-credentials" title="Permanent link">&para;</a></h1>
 <p><strong>Initiative:</strong> <code>INIT-SYSTEMFORGE-010</code></p>
 <h2 id="entry-gate">Entry Gate<a class="headerlink" href="#entry-gate" title="Permanent link">&para;</a></h2>
 <ul>
-<li>PRD open questions resolved (client authentication default; agent
-  principals).</li>
+<li>PRD decisions recorded: the <code>service_account</code> membership role, and
+  operator commands first.</li>
 <li>INIT-SYSTEMFORGE-009 released, since the grant reuses its client-assertion
-  JTI store.</li>
+  JTI store. Done.</li>
 </ul>
 <h2 id="build-order">Build Order<a class="headerlink" href="#build-order" title="Permanent link">&para;</a></h2>
-<h3 id="phase-1-storage-and-composition">Phase 1 — Storage and Composition<a class="headerlink" href="#phase-1-storage-and-composition" title="Permanent link">&para;</a></h3>
-<p>Build the key-storage adapter with its rejection rules and scope
-intersection, then register the Fosite factory behind configuration and
-advertise the grant in discovery. Exit: an embedded SystemAuth issues a
-token for a correctly signed assertion and rejects every PRD failure case.</p>
-<h3 id="phase-2-client-documentation-release">Phase 2 — Client, Documentation, Release<a class="headerlink" href="#phase-2-client-documentation-release" title="Permanent link">&para;</a></h3>
-<p>Add the reference client helper, rewrite the service principals page with
-an end-to-end walkthrough, add release notes, and tag after CI passes.
-Exit: PRD success criteria hold.</p>
+<h3 id="phase-1-accounts-and-the-grant">Phase 1 — Accounts and the Grant<a class="headerlink" href="#phase-1-accounts-and-the-grant" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Build the service-account service: accounts in an organization, keys and
+   roles, with access changes.</li>
+<li>Build the key-storage adapter with its refusal rules and scope
+   intersection.</li>
+<li>Register the Fosite factory behind configuration, require DPoP for the
+   grant, and advertise the grant in discovery.</li>
+<li>Issue tokens with the account as subject, the <code>orgs</code> and
+   <code>principal_type</code> claims, and no refresh token. Record last use.</li>
+</ol>
+<p>Exit: an embedded SystemAuth issues a DPoP-bound token for a correctly signed
+assertion and refuses every PRD failure case.</p>
+<h3 id="phase-2-using-it">Phase 2 — Using It<a class="headerlink" href="#phase-2-using-it" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Add the commands.</li>
+<li>Add the client package.</li>
+<li>Add service accounts to the relying party, <code>appauth</code> and the Postgres
+   store.</li>
+<li>Write the end-to-end test from command to application.</li>
+<li>Update the service principals page and ADR-016, and write the release
+   notes with <code>INIT-SYSTEMFORGE-014</code>'s.</li>
+</ol>
+<p>Exit: PRD success criteria hold.</p>
+<h2 id="release">Release<a class="headerlink" href="#release" title="Permanent link">&para;</a></h2>
+<p>v0.26.0 carries this initiative and <code>INIT-SYSTEMFORGE-014</code>. Both add APIs
+and change none, so the release is minor. The grant is off by default, so
+deployments that do nothing see no change. <code>BearerConfig.ServicePrincipals</code>
+is off by default.</p>
 <h2 id="risks-and-mitigations">Risks and Mitigations<a class="headerlink" href="#risks-and-mitigations" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -5224,19 +5315,26 @@ Exit: PRD success criteria hold.</p>
 <tbody>
 <tr>
 <td>Accepting a key for the wrong subject</td>
-<td>Adapter enforces key ownership and self-issuance; direct tests</td>
+<td>The adapter enforces key ownership and self-issuance; direct tests</td>
 </tr>
 <tr>
 <td>Enabling the grant by accident</td>
-<td>Disabled by default; discovery only advertises it when enabled</td>
+<td>Disabled by default; discovery advertises it only when enabled</td>
+</tr>
+<tr>
+<td>Two initiatives in one release delay both</td>
+<td>Phase 1 of each is independent; either can ship in v0.26.0 alone if the other slips, with its release notes trimmed</td>
 </tr>
 </tbody>
 </table>
 <h2 id="follow-on">Follow-On<a class="headerlink" href="#follow-on" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Trusted third-party issuers (workload identity federation).</li>
-<li>Admin endpoints for keypair registration and rotation.</li>
-<li>Agent principals using the grant, if the PRD question resolves that way.</li>
+<li><strong>Trusted third-party issuers</strong> (workload identity federation, such as
+  GitHub Actions OIDC).</li>
+<li><strong>An HTTP API and console pages</strong> for organization owners to manage their
+  accounts.</li>
+<li><strong>IP restrictions</strong> from <code>ServicePrincipal.allowed_ips</code> at the token
+  endpoint.</li>
 </ul>
 
 

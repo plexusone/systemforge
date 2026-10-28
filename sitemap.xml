@@ -217,6 +217,10 @@
          <lastmod>2026-10-28</lastmod>
     </url>
     <url>
+         <loc>https://plexusone.github.io/systemforge/guides/app-authentication/</loc>
+         <lastmod>2026-10-28</lastmod>
+    </url>
+    <url>
          <loc>https://plexusone.github.io/systemforge/guides/application-roles/</loc>
          <lastmod>2026-10-28</lastmod>
     </url>
@@ -457,6 +461,10 @@
          <lastmod>2026-10-28</lastmod>
     </url>
     <url>
+         <loc>https://plexusone.github.io/systemforge/releases/v0.26.0/</loc>
+         <lastmod>2026-10-28</lastmod>
+    </url>
+    <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.3.0/</loc>
          <lastmod>2026-10-28</lastmod>
     </url>
@@ -678,6 +686,22 @@
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-013/TRD/</loc>
+         <lastmod>2026-10-28</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-014/PLAN/</loc>
+         <lastmod>2026-10-28</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-014/PRD/</loc>
+         <lastmod>2026-10-28</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-014/ROADMAP/</loc>
+         <lastmod>2026-10-28</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/specs/initiatives/INIT-SYSTEMFORGE-014/TRD/</loc>
          <lastmod>2026-10-28</lastmod>
     </url>
     <url>

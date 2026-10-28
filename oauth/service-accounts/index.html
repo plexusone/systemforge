@@ -480,6 +480,8 @@
       
         
       
+        
+      
     
     
     
@@ -526,6 +528,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1564,10 +1594,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#service-principals" class="md-nav__link">
+  <a href="#1-enable-the-grant" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Service Principals
+        1. Enable the grant
       
     </span>
   </a>
@@ -1575,10 +1605,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#keypair-credentials" class="md-nav__link">
+  <a href="#2-create-the-account" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Keypair Credentials
+        2. Create the account
       
     </span>
   </a>
@@ -1586,10 +1616,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#choosing-a-mechanism" class="md-nav__link">
+  <a href="#3-call-the-api-from-the-workload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Choosing a Mechanism
+        3. Call the API from the workload
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-accept-service-accounts-in-the-application" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Accept service accounts in the application
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#refusals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refusals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In code
       
     </span>
   </a>
@@ -4216,6 +4279,8 @@
       
         
       
+        
+      
     
     
     
@@ -4287,6 +4352,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5187,10 +5280,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#service-principals" class="md-nav__link">
+  <a href="#1-enable-the-grant" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Service Principals
+        1. Enable the grant
       
     </span>
   </a>
@@ -5198,10 +5291,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#keypair-credentials" class="md-nav__link">
+  <a href="#2-create-the-account" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Keypair Credentials
+        2. Create the account
       
     </span>
   </a>
@@ -5209,10 +5302,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#choosing-a-mechanism" class="md-nav__link">
+  <a href="#3-call-the-api-from-the-workload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Choosing a Mechanism
+        3. Call the API from the workload
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-accept-service-accounts-in-the-application" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Accept service accounts in the application
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#refusals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refusals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In code
       
     </span>
   </a>
@@ -5240,123 +5366,179 @@
 
 
 <h1 id="service-accounts">Service Accounts<a class="headerlink" href="#service-accounts" title="Permanent link">&para;</a></h1>
-<p>Non-human identities in SystemForge are <strong>service principals</strong>: a <code>Principal</code> of type <code>service</code> with a <code>ServicePrincipal</code> extension. A service principal can hold credentials such as API keys and public keys, scoped to the work it does.</p>
-<div class="admonition warning">
-<p class="admonition-title">JWT Bearer grant (RFC 7523) is not implemented</p>
-<p>SystemAuth does not currently accept the <code>urn:ietf:params:oauth:grant-type:jwt-bearer</code> grant: it is not registered with the OAuth server. Machine-to-machine clients should use the <strong>client credentials</strong> grant with an OAuth client today. The building blocks described below (service principals and keypair credentials) are what a future JWT Bearer grant will verify assertions against.</p>
-</div>
-<h2 id="service-principals">Service Principals<a class="headerlink" href="#service-principals" title="Permanent link">&para;</a></h2>
-<p>A service principal is created through the <code>identity/principal</code> service:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/identity/principal&quot;</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nx">svc</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">principal</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">)</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nx">desc</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">&quot;Deploys builds to staging and production&quot;</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nx">sp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">CreateService</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">principal</span><span class="p">.</span><span class="nx">CreateServiceInput</span><span class="p">{</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nx">Identifier</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;cicd@myorg&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;CI/CD Pipeline&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nx">ServiceType</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;worker&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nx">Description</span><span class="p">:</span><span class="w">    </span><span class="o">&amp;</span><span class="nx">desc</span><span class="p">,</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nx">OrganizationID</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">orgID</span><span class="p">,</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="nx">CreatedBy</span><span class="p">:</span><span class="w">      </span><span class="o">&amp;</span><span class="nx">adminPrincipalID</span><span class="p">,</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="nx">AllowedScopes</span><span class="p">:</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;deploy:staging&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;deploy:production&quot;</span><span class="p">},</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="nx">AllowedIPs</span><span class="p">:</span><span class="w">     </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;10.0.0.0/8&quot;</span><span class="p">},</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">})</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="p">}</span>
+<p>A service account is automation that calls an API with no person present: a
+CI job that publishes on merge, a scheduled import, an agent running on a
+server. It belongs to one organization, holds application roles there like
+a member, and authenticates with a private key it never shares. It signs a
+short assertion, and SystemAuth issues it a short-lived DPoP-bound access
+token through the JWT-bearer grant (RFC 7523 section 2.1). SystemAuth stores
+only public keys.</p>
+<p>Its tokens are like a person's to an application: their subject is the
+account's principal ID, and they carry the <code>orgs</code> claim with its one
+organization and its application roles. Access ends the usual ways, each
+recorded as an access change: removing a role, disabling or deleting the
+account, or revoking a key. Removing a role takes the organization out of
+the account's memberships; the account still authenticates, and the
+application's own authorization refuses what needed the role.</p>
+<p>A person at a terminal uses <a href="../../guides/dpop-clients/"><code>identity/publicclient</code></a>
+instead, signing in with their own account.</p>
+<h2 id="1-enable-the-grant">1. Enable the grant<a class="headerlink" href="#1-enable-the-grant" title="Permanent link">&para;</a></h2>
+<p>The grant is off by default. Turn it on in SystemAuth's configuration:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">oauth</span><span class="p">:</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">jwt_bearer</span><span class="p">:</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">max_assertion_lifetime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5m</span><span class="w">   </span><span class="c1"># the longest assertion accepted</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">token_lifetime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15m</span><span class="w">          </span><span class="c1"># the access token&#39;s lifetime; no refresh token</span>
 </code></pre></div>
-<p><code>CreateService</code> writes the <code>sf_principals</code> row (type <code>service</code>) and its <code>sf_service_principals</code> extension in one transaction. <code>Identifier</code> is the principal's unique lookup key.</p>
-<p>Service principals are updated with <code>UpdateService</code> and can be suspended and restored with <code>Deactivate</code> and <code>Reactivate</code>.</p>
-<h2 id="keypair-credentials">Keypair Credentials<a class="headerlink" href="#keypair-credentials" title="Permanent link">&para;</a></h2>
-<p>Public keys are stored as credentials of type <code>keypair</code> in <code>sf_credentials</code>, owned by the principal. The private key never reaches SystemForge: generate the key pair where the service runs and register only the public key.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="s">&quot;crypto/rand&quot;</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="s">&quot;crypto/rsa&quot;</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="s">&quot;crypto/x509&quot;</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="s">&quot;encoding/pem&quot;</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="s">&quot;github.com/plexusone/systemforge/identity/credential&quot;</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">)</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nx">privateKey</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">rsa</span><span class="p">.</span><span class="nx">GenerateKey</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nx">Reader</span><span class="p">,</span><span class="w"> </span><span class="mi">2048</span><span class="p">)</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">}</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="nx">pubBytes</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">x509</span><span class="p">.</span><span class="nx">MarshalPKIXPublicKey</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">privateKey</span><span class="p">.</span><span class="nx">PublicKey</span><span class="p">)</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="p">}</span>
-<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="nx">pubPEM</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">pem</span><span class="p">.</span><span class="nx">EncodeToMemory</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">pem</span><span class="p">.</span><span class="nx">Block</span><span class="p">{</span><span class="nx">Type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;PUBLIC KEY&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">Bytes</span><span class="p">:</span><span class="w"> </span><span class="nx">pubBytes</span><span class="p">})</span>
-<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>
-<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="nx">creds</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">credential</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">)</span>
-<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="nx">expires</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">Add</span><span class="p">(</span><span class="mi">365</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">)</span>
-<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="nx">kp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">creds</span><span class="p">.</span><span class="nx">CreateKeypair</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">credential</span><span class="p">.</span><span class="nx">CreateKeypairInput</span><span class="p">{</span>
-<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">    </span><span class="nx">PrincipalID</span><span class="p">:</span><span class="w">  </span><span class="nx">sp</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
-<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">    </span><span class="nx">Name</span><span class="p">:</span><span class="w">         </span><span class="s">&quot;deploy key&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">    </span><span class="nx">KeyAlgorithm</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;RS256&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">    </span><span class="nx">PublicKeyPEM</span><span class="p">:</span><span class="w"> </span><span class="nb">string</span><span class="p">(</span><span class="nx">pubPEM</span><span class="p">),</span>
-<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="w">    </span><span class="nx">Scopes</span><span class="p">:</span><span class="w">       </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;deploy:staging&quot;</span><span class="p">},</span>
-<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="w">    </span><span class="nx">ExpiresAt</span><span class="p">:</span><span class="w">    </span><span class="o">&amp;</span><span class="nx">expires</span><span class="p">,</span>
-<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="p">})</span>
-<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
-<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="p">}</span>
-<a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>
-<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="c1">// kp.KeyID is generated by SystemForge; use it as the JWT &quot;kid&quot; header.</span>
+<p>Discovery then lists <code>urn:ietf:params:oauth:grant-type:jwt-bearer</code> in
+<code>grant_types_supported</code>. SystemAuth issues these tokens under its reserved
+client <code>systemauth-jwt-bearer</code>, which nothing can authenticate as.</p>
+<h2 id="2-create-the-account">2. Create the account<a class="headerlink" href="#2-create-the-account" title="Permanent link">&para;</a></h2>
+<p>Operators manage accounts with the <code>service-account</code> command, which
+<code>systemauth</code> provides and a host that embeds SystemAuth mounts in its own
+binary (<code>identity/serviceaccount/serviceaccountcmd</code>). It opens the database
+directly.</p>
+<p>The standalone <code>systemauth</code> binary hosts no applications, so it knows no
+application roles: <code>role grant</code> works only in a host binary that mounts the
+command with its role vocabularies
+(<code>serviceaccountcmd.DefaultService(registry)</code>). The examples below use
+<code>notes-server</code>, a host that serves the <code>billing</code> application.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>notes-server<span class="w"> </span>service-account<span class="w"> </span>create<span class="w"> </span>--org<span class="w"> </span>acme<span class="w"> </span>--name<span class="w"> </span>ci-publisher<span class="w"> </span>--scope<span class="w"> </span>invoices
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># created sa_01jbk2... (7d3f...) in acme</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>notes-server<span class="w"> </span>service-account<span class="w"> </span>role<span class="w"> </span>grant<span class="w"> </span>sa_01jbk2...<span class="w"> </span>--app<span class="w"> </span>billing<span class="w"> </span>--role<span class="w"> </span>viewer
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>notes-server<span class="w"> </span>service-account<span class="w"> </span>key<span class="w"> </span>add<span class="w"> </span>sa_01jbk2...<span class="w"> </span>--out<span class="w"> </span>ci-publisher.pem
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># added key 2Yk... (ES256) to sa_01jbk2...</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># private key: ci-publisher.pem (keep it secret; it is not stored anywhere else)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1">#</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># The workload needs:</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1">#   issuer:  https://auth.example.com</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1">#   account: sa_01jbk2...</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1">#   key ID:  2Yk...</span>
 </code></pre></div>
-<p>Keys are looked up and managed through the same service:</p>
+<p><code>key add --out</code> generates a P-256 key pair and writes the private key to a
+new file that only its owner can read. To keep the private key on the
+workload's machine, generate it there and register only the public key:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>openssl<span class="w"> </span>genpkey<span class="w"> </span>-algorithm<span class="w"> </span>EC<span class="w"> </span>-pkeyopt<span class="w"> </span>ec_paramgen_curve:P-256<span class="w"> </span>-out<span class="w"> </span>key.pem
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>openssl<span class="w"> </span>pkey<span class="w"> </span>-in<span class="w"> </span>key.pem<span class="w"> </span>-pubout<span class="w"> </span>-out<span class="w"> </span>pub.pem
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>notes-server<span class="w"> </span>service-account<span class="w"> </span>key<span class="w"> </span>add<span class="w"> </span>sa_01jbk2...<span class="w"> </span>--public-key<span class="w"> </span>pub.pem
+</code></pre></div>
+<p>ES256 (P-256), RS256 (RSA with 2048 bits or more) and EdDSA (Ed25519) keys
+are accepted. <code>--expires-in</code> limits a key's life, and <code>key list</code> shows when
+each key was last used.</p>
 <table>
 <thead>
 <tr>
-<th>Method</th>
-<th>Purpose</th>
+<th>Command</th>
+<th>Does</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>CreateKeypair</code></td>
-<td>Register a public key for a principal; returns the generated key ID</td>
+<td><code>create --org &lt;slug&gt; --name &lt;name&gt;</code></td>
+<td>Create an account with a <code>service_account</code> membership in the organization</td>
 </tr>
 <tr>
-<td><code>GetKeypairByKeyID</code></td>
-<td>Resolve a key by its ID (the <code>kid</code> a verifier receives)</td>
+<td><code>list --org &lt;slug&gt;</code>, <code>show &lt;account&gt;</code></td>
+<td>List accounts; show one with its keys</td>
 </tr>
 <tr>
-<td><code>ListKeypairs</code></td>
-<td>List a principal's keys, for rotation and audit</td>
+<td><code>disable</code>, <code>enable</code>, <code>delete &lt;account&gt;</code></td>
+<td>Disabling stops new tokens and records an access change; deleting removes keys, roles and membership</td>
 </tr>
 <tr>
-<td><code>Revoke</code></td>
-<td>Revoke a credential by ID with a reason</td>
+<td><code>key add</code>, <code>key list</code>, <code>key revoke &lt;account&gt; &lt;key-id&gt;</code></td>
+<td>Manage keys; revoking a key ends the account's current tokens in applications with a revocation cache, and a workload holding another key gets a new one</td>
+</tr>
+<tr>
+<td><code>role grant --app --role</code>, <code>role remove --app</code></td>
+<td>Application roles in the account's organization</td>
 </tr>
 </tbody>
 </table>
-<h2 id="choosing-a-mechanism">Choosing a Mechanism<a class="headerlink" href="#choosing-a-mechanism" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Need</th>
-<th>Use</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>A backend calling SystemForge-protected APIs today</td>
-<td>An OAuth client with the client credentials grant</td>
-</tr>
-<tr>
-<td>A long-lived scoped secret for an integration</td>
-<td>An API key credential on a service principal</td>
-</tr>
-<tr>
-<td>Public-key authentication without shared secrets</td>
-<td>Keypair credentials, once the JWT Bearer grant is implemented</td>
-</tr>
-</tbody>
-</table>
+<p>Each accepts <code>--json</code>.</p>
+<h2 id="3-call-the-api-from-the-workload">3. Call the API from the workload<a class="headerlink" href="#3-call-the-api-from-the-workload" title="Permanent link">&para;</a></h2>
+<p>In Go, <code>identity/serviceclient</code> does the rest: it signs assertions, requests
+DPoP-bound tokens, renews them a minute before they expire, and adds a DPoP
+proof to every request.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">serviceclient</span><span class="p">.</span><span class="nx">LoadPrivateKey</span><span class="p">(</span><span class="s">&quot;ci-publisher.pem&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// refuses a file others can read</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nx">c</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">serviceclient</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">serviceclient</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nx">Issuer</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;https://auth.example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nx">Account</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;sa_01jbk2...&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nx">KeyID</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;2Yk...&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nx">PrivateKey</span><span class="p">:</span><span class="w"> </span><span class="nx">key</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="p">})</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="p">}</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="nx">resp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">HTTPClient</span><span class="p">().</span><span class="nx">Get</span><span class="p">(</span><span class="s">&quot;https://billing.example.com/api/invoices&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>A client in another language follows the same protocol:</p>
+<ol>
+<li>Sign a JWT with the private key: header <code>kid</code> set to the key ID; claims
+   <code>iss</code> and <code>sub</code> set to the account identifier, <code>aud</code> set to the token
+   endpoint, <code>iat</code>, <code>exp</code> at most <code>max_assertion_lifetime</code> later, and a
+   unique <code>jti</code>.</li>
+<li><code>POST</code> it to the token endpoint as
+   <code>grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&amp;assertion=&lt;jwt&gt;</code>,
+   with a DPoP proof in the <code>DPoP</code> header. A request without a proof is
+   refused. Answer <code>use_dpop_nonce</code> by retrying with the nonce.</li>
+<li>Call the API with <code>Authorization: DPoP &lt;token&gt;</code> and a new proof by the
+   same key. When the token expires, sign a new assertion; there is no
+   refresh token.</li>
+</ol>
+<h2 id="4-accept-service-accounts-in-the-application">4. Accept service accounts in the application<a class="headerlink" href="#4-accept-service-accounts-in-the-application" title="Permanent link">&para;</a></h2>
+<p>An application built on <a href="../../guides/app-authentication/"><code>identity/appauth</code></a>
+accepts service accounts with one option:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">auth</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">appauth</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">,</span><span class="w"> </span><span class="nx">appauth</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">Principals</span><span class="p">:</span><span class="w">      </span><span class="nx">stores</span><span class="p">.</span><span class="nx">Principals</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">Sessions</span><span class="p">:</span><span class="w">        </span><span class="nx">stores</span><span class="p">.</span><span class="nx">Sessions</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">LoginStates</span><span class="p">:</span><span class="w">     </span><span class="nx">stores</span><span class="p">.</span><span class="nx">LoginStates</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nx">Application</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;billing&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">ServiceAccounts</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">})</span>
+</code></pre></div>
+<p>The application then accepts tokens from <code>systemauth-jwt-bearer</code>, and an
+account's first request creates its local principal, of type <code>service</code>,
+since a service account never signs in. Requests arrive like any other: the
+principal's <code>Type</code> is <code>service</code>, and its memberships come from the <code>orgs</code>
+claim.</p>
+<p>Without <code>appauth</code>, set <code>relyingparty.BearerConfig.ServicePrincipals</code> and list
+<code>relyingparty.ServiceAccountClientID</code> in the client's <code>AcceptedClientIDs</code>.
+The principal store must create service identities
+(<code>VerifiedIdentity.Service</code>), as the in-memory and Postgres stores do.</p>
+<h2 id="refusals">Refusals<a class="headerlink" href="#refusals" title="Permanent link">&para;</a></h2>
+<p>The token endpoint refuses, with an RFC 6749 error that does not say which
+check failed:</p>
+<ul>
+<li>an unknown, revoked, expired or inactive key, or one belonging to another
+  account;</li>
+<li>an assertion whose <code>iss</code> or <code>sub</code> is not the key's account, whose audience
+  is not the token endpoint or issuer, without <code>jti</code> or <code>iat</code>, valid for
+  longer than <code>max_assertion_lifetime</code>, signed with another algorithm than
+  the key's, or replayed;</li>
+<li>a request without a DPoP proof;</li>
+<li>a disabled account, or one whose organization is inactive.</li>
+</ul>
+<h2 id="in-code">In code<a class="headerlink" href="#in-code" title="Permanent link">&para;</a></h2>
+<p>The commands are a thin layer over <code>identity/serviceaccount</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">svc</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">serviceaccount</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">serviceaccount</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">Client</span><span class="p">:</span><span class="w">     </span><span class="nx">client</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">Principals</span><span class="p">:</span><span class="w"> </span><span class="nx">principal</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">),</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">Roles</span><span class="p">:</span><span class="w">      </span><span class="nx">approle</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">vocabularies</span><span class="p">),</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">})</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nx">acct</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">serviceaccount</span><span class="p">.</span><span class="nx">CreateInput</span><span class="p">{</span><span class="nx">OrganizationID</span><span class="p">:</span><span class="w"> </span><span class="nx">orgID</span><span class="p">,</span><span class="w"> </span><span class="nx">Name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ci-publisher&quot;</span><span class="p">})</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">GrantRole</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">acct</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;billing&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;viewer&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">operatorID</span><span class="p">)</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">AddKey</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">acct</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span><span class="w"> </span><span class="nx">serviceaccount</span><span class="p">.</span><span class="nx">KeyInput</span><span class="p">{})</span><span class="w"> </span><span class="c1">// key.PrivateKeyPEM, returned once</span>
+</code></pre></div>
+<p>Accounts are service principals (<code>Principal(type=service)</code> with a
+<code>ServicePrincipal</code> row), and keys are key-pair credentials in
+<code>sf_credentials</code>; <a href="../../design/adrs/ADR-016-no-static-api-keys/">ADR-016</a>
+explains why automation uses them instead of static API keys.</p>
 
 
 

@@ -480,6 +480,8 @@
       
         
       
+        
+      
     
     
     
@@ -526,6 +528,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4136,6 +4166,8 @@
       
         
       
+        
+      
     
     
     
@@ -4207,6 +4239,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5267,6 +5327,14 @@
 
 <h1 id="session-management">Session Management<a class="headerlink" href="#session-management" title="Permanent link">&para;</a></h1>
 <p>SystemForge provides a comprehensive session management system for BFF (Backend for Frontend) architectures. It supports server-side sessions with HTTP-only cookies, OAuth token storage, and distributed storage backends.</p>
+<div class="admonition note">
+<p class="admonition-title">Signing in through SystemAuth</p>
+<p>The <code>session/bff</code> and <code>session/jwt</code> packages suit an application that
+issues its own tokens. An application that signs people in through
+SystemAuth uses <a href="../guides/app-authentication/"><code>identity/appauth</code></a>
+instead, so its sessions carry SystemAuth's tokens, DPoP binding,
+access-change revocation and the <code>orgs</code> claim.</p>
+</div>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────────────────────────┐
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│                    Frontend (Browser)                       │

@@ -480,6 +480,8 @@
       
         
       
+        
+      
     
     
     
@@ -526,6 +528,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4277,6 +4307,8 @@
       
         
       
+        
+      
     
     
     
@@ -4348,6 +4380,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5448,7 +5508,8 @@ clients are all first-party should set <code>skip_consent: true</code> instead.<
   sign in again. It must be at least <code>tokens.refresh_token_lifetime</code>.</li>
 </ul>
 <p>Persistent storage (<code>EntStorage</code>) keeps the full Fosite session with each code
-and token, so subjects, granted scopes and token families survive restarts.</p>
+and token, so subjects, granted scopes and token families survive restarts
+when <code>tokens.hmac_secret</code> is set (<a href="../deployment/#token-hmac-secret">Deploying SystemAuth</a>).</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">issuer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://auth.example.com</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>

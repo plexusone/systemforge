@@ -480,6 +480,8 @@
       
         
       
+        
+      
     
     
     
@@ -526,6 +528,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4238,6 +4268,8 @@
       
         
       
+        
+      
     
     
     
@@ -4309,6 +4341,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5347,7 +5407,7 @@ lifetime.</p>
 </tr>
 <tr>
 <td>Automation holding a key pair (servers, scripts)</td>
-<td>Client credentials, authenticated with <code>private_key_jwt</code> (RFC 7523 section 2.2)</td>
+<td>A service account's JWT-bearer grant with a self-issued assertion (RFC 7523 section 2.1), DPoP-bound</td>
 <td>A private key; SystemAuth stores only the public key</td>
 </tr>
 <tr>
@@ -5381,6 +5441,13 @@ lifetime.</p>
    when its roles are removed or the client is disabled, through the same
    access-change records (ADR-010).</p>
 </li>
+</ol>
+<p>Implemented as service accounts (<code>identity/serviceaccount</code>): the
+   account is the service principal itself rather than an OAuth client, and
+   it authenticates with the JWT-bearer grant of decision 2, so its token's
+   subject is the principal and the <code>orgs</code> claim, role removal and
+   revocation apply unchanged. See <a href="../../../oauth/service-accounts/">Service Accounts</a>.</p>
+<ol>
 <li>
 <p><strong>Refresh tokens for people keep the existing policy:</strong> rotation on use,
    family revocation on reuse, an absolute lifetime (default 30 days), and

@@ -23,7 +23,7 @@
     
     
       
-        <title>TRD — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials - SystemForge</title>
+        <title>TRD — Service Accounts with Key-Pair Credentials - SystemForge</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#trd-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials" class="md-skip">
+        <a href="#trd-service-accounts-with-key-pair-credentials" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              TRD — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials
+              TRD — Service Accounts with Key-Pair Credentials
             
           </span>
         </div>
@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -522,6 +524,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../guides/app-authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authenticating an Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4132,6 +4162,8 @@
       
         
       
+        
+      
     
     
     
@@ -4203,6 +4235,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../releases/v0.26.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.26.0
   
 
     
@@ -5126,10 +5186,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-key-storage-adapter" class="md-nav__link">
+  <a href="#1-service-accounts-in-an-organization" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Key storage adapter
+        1. Service accounts in an organization
       
     </span>
   </a>
@@ -5137,10 +5197,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-server-composition-and-configuration" class="md-nav__link">
+  <a href="#2-key-storage-adapter" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Server composition and configuration
+        2. Key storage adapter
       
     </span>
   </a>
@@ -5148,10 +5208,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-issued-tokens" class="md-nav__link">
+  <a href="#3-composition-and-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Issued tokens
+        3. Composition and configuration
       
     </span>
   </a>
@@ -5159,10 +5219,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-management" class="md-nav__link">
+  <a href="#4-issued-tokens" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Management
+        4. Issued tokens
       
     </span>
   </a>
@@ -5170,10 +5230,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5-reference-client" class="md-nav__link">
+  <a href="#5-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Reference client
+        5. Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-client-identityserviceclient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Client: identity/serviceclient
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-applications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Applications
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-adr-016" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. ADR-016
       
     </span>
   </a>
@@ -5227,97 +5320,262 @@
   
 
 
-<h1 id="trd-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials">TRD — JWT Bearer Authorization Grant — Service Principals with Keypair Credentials<a class="headerlink" href="#trd-jwt-bearer-authorization-grant-service-principals-with-keypair-credentials" title="Permanent link">&para;</a></h1>
+<h1 id="trd-service-accounts-with-key-pair-credentials">TRD — Service Accounts with Key-Pair Credentials<a class="headerlink" href="#trd-service-accounts-with-key-pair-credentials" title="Permanent link">&para;</a></h1>
 <p><strong>Initiative:</strong> <code>INIT-SYSTEMFORGE-010</code></p>
 <h2 id="current-state">Current State<a class="headerlink" href="#current-state" title="Permanent link">&para;</a></h2>
 <ul>
-<li>SystemAuth composes Fosite (v0.49) with the authorization-code, client
-  credentials, refresh, introspection, revocation, PKCE, and OpenID Connect
-  factories. The RFC 7523 factory is not registered.</li>
-<li>Fosite provides <code>compose.RFC7523AssertionGrantFactory</code> and the handler in
-  <code>handler/rfc7523</code>, which needs storage implementing
-  <code>rfc7523.RFC7523KeyStorage</code>: <code>GetPublicKey</code>, <code>GetPublicKeys</code>,
-  <code>GetPublicKeyScopes</code> (each keyed by issuer, subject, and key ID),
-  <code>IsJWTUsed</code>, and <code>MarkJWTUsedForTime</code>.</li>
-<li>Service principals are <code>Principal(type=service)</code> with a
-  <code>ServicePrincipal</code> extension (<code>identity/principal</code>).</li>
-<li>Keypair credentials are <code>sf_credentials</code> rows of type <code>keypair</code> with a
-  globally unique <code>key_id</code>, <code>key_algorithm</code>, PEM public key, scopes,
-  expiry, active, and revoked flags (<code>identity/credential</code>
-  <code>CreateKeypair</code>, <code>GetKeypairByKeyID</code>, <code>ListKeypairs</code>).</li>
-<li><code>identity/clientassertion.JTIStore</code> records used assertion IDs in
-  <code>sf_client_assertion_jtis</code> with Fosite's replay semantics.</li>
+<li><strong>Fosite.</strong> SystemAuth composes Fosite (v0.49) with the authorization-code,
+  client-credentials, refresh, introspection, revocation, PKCE and OpenID
+  Connect factories. The RFC 7523 factory is not registered.</li>
+<li>Fosite's <code>compose.RFC7523AssertionGrantFactory</code> needs storage
+    implementing <code>rfc7523.RFC7523KeyStorage</code>.</li>
+<li>Its methods are <code>GetPublicKey</code>, <code>GetPublicKeys</code> and
+    <code>GetPublicKeyScopes</code>, each keyed by issuer, subject and key ID, plus
+    <code>IsJWTUsed</code> and <code>MarkJWTUsedForTime</code>.</li>
+<li><strong>Service principals</strong> are <code>Principal(type=service)</code> with a
+  <code>ServicePrincipal</code> row (service type, description, <code>created_by</code>,
+  <code>last_used_at</code>, <code>allowed_ips</code>). <code>principal.CreateService</code> makes one.
+  <code>Principal.organization_id</code> and <code>allowed_scopes</code> exist.</li>
+<li><strong>Key-pair credentials</strong> are <code>sf_credentials</code> rows of type <code>keypair</code>:</li>
+<li>a globally unique <code>key_id</code>, <code>key_algorithm</code> and a PEM public key;</li>
+<li>scopes, expiry, and active and revoked flags;</li>
+<li>managed with <code>credential.CreateKeypair</code>, <code>GetKeypairByKeyID</code>,
+    <code>ListKeypairs</code> and <code>Revoke</code>.</li>
+<li><strong>Used assertion IDs</strong> go in <code>sf_client_assertion_jtis</code>, through
+  <code>clientassertion.JTIStore</code>.</li>
+<li><strong>The <code>orgs</code> claim</strong> is added to any access token whose subject parses as a
+  principal ID (<code>addOrgsClaims</code>). <code>EntOrgsSource</code> reads active memberships in
+  active organizations and <code>approle</code> effective roles.</li>
+<li><strong>DPoP.</strong> Every token request must carry a DPoP proof unless the client
+  holds the <code>allow_bearer_tokens</code> exception (<code>systemauth/dpop.go</code>), and
+  tokens are bound to the proof's key.</li>
+<li><strong>Ending access.</strong> <code>approle.Remove</code> and <code>principal.Deactivate</code> record access
+  changes.</li>
+<li><strong>Apps.</strong> <code>relyingparty</code>'s bearer path refuses a subject with no local
+  principal: "unknown principal; sign in to the application first"
+  (<code>middleware.go</code>).</li>
 </ul>
 <h2 id="design">Design<a class="headerlink" href="#design" title="Permanent link">&para;</a></h2>
-<h3 id="1-key-storage-adapter">1. Key storage adapter<a class="headerlink" href="#1-key-storage-adapter" title="Permanent link">&para;</a></h3>
-<p>A new type in <code>identity/systemauth</code> implementing <code>RFC7523KeyStorage</code> over
-Ent:</p>
+<h3 id="1-service-accounts-in-an-organization">1. Service accounts in an organization<a class="headerlink" href="#1-service-accounts-in-an-organization" title="Permanent link">&para;</a></h3>
+<p><code>identity/serviceaccount</code> is a small service over the existing packages:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Service</span><span class="w"> </span><span class="kd">struct</span><span class="p">{</span><span class="w"> </span><span class="cm">/* ent client, principal, credential, approle services */</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">in</span><span class="w"> </span><span class="nx">CreateInput</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">Account</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">List</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">organizationID</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="o">*</span><span class="nx">Account</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">Account</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">Disable</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">by</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">Enable</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">by</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">by</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">AddKey</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">,</span><span class="w"> </span><span class="nx">in</span><span class="w"> </span><span class="nx">KeyInput</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">Key</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">ListKeys</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="o">*</span><span class="nx">Key</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">RevokeKey</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">,</span><span class="w"> </span><span class="nx">keyID</span><span class="p">,</span><span class="w"> </span><span class="nx">reason</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">GrantRole</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">,</span><span class="w"> </span><span class="nx">application</span><span class="p">,</span><span class="w"> </span><span class="nx">role</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">by</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">Service</span><span class="p">)</span><span class="w"> </span><span class="nx">RemoveRole</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">,</span><span class="w"> </span><span class="nx">application</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">by</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">UUID</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+</code></pre></div>
 <ul>
-<li><code>GetPublicKey(ctx, issuer, subject, keyID)</code>: look up the keypair credential
-  by <code>key_id</code>; require it active, unrevoked, and unexpired; load its
-  principal and require type service, active, and <code>identifier == subject</code>;
-  require <code>issuer == subject</code> (self-issued only). Parse the PEM public key
-  into a <code>jose.JSONWebKey</code> with the stored algorithm and key ID. Any failure
-  returns <code>fosite.ErrNotFound</code> so callers cannot distinguish missing from
-  rejected keys.</li>
-<li><code>GetPublicKeys(ctx, issuer, subject)</code>: the same checks for the principal,
-  returning all of its usable keypair credentials as a JWK set (used when an
-  assertion has no <code>kid</code>).</li>
-<li><code>GetPublicKeyScopes</code>: the key's scopes intersected with the principal's
-  <code>allowed_scopes</code>.</li>
-<li><code>IsJWTUsed</code> and <code>MarkJWTUsedForTime</code>: delegate to
-  <code>clientassertion.JTIStore</code> (<code>Valid</code> reports used as <code>ErrJTIKnown</code>).</li>
-<li>On a successful exchange, update the credential's <code>last_used_at</code> and
-  <code>last_used_ip</code> through the existing credential service.</li>
+<li><strong><code>Create</code></strong> does three things in one transaction:</li>
+<li>creates the service principal, with its <code>organization_id</code>, a
+     generated identifier (<code>sa_</code> and 26 random characters, per ADR-015) and
+     its allowed scopes;</li>
+<li>creates the <code>ServicePrincipal</code> row with <code>created_by</code>;</li>
+<li>creates an active membership with the role <code>service_account</code>.</li>
 </ul>
-<h3 id="2-server-composition-and-configuration">2. Server composition and configuration<a class="headerlink" href="#2-server-composition-and-configuration" title="Permanent link">&para;</a></h3>
+<p>The organization must be active and not personal.
+- <strong><code>AddKey</code></strong> takes a PEM public key, or generates a P-256 key pair and
+  returns the private key once, never stored. It calls
+  <code>credential.CreateKeypair</code> with the key ID, algorithm (<code>ES256</code>, <code>RS256</code>
+  or <code>EdDSA</code>), scopes and expiry. RSA keys must be at least 2048 bits.
+- <strong><code>Disable</code>, <code>Delete</code> and <code>RevokeKey</code>.</strong> <code>Disable</code> calls
+  <code>principal.Deactivate</code>, which records <code>Deactivated</code>. <code>Delete</code> deactivates,
+  removes roles, the membership and keys, then deletes. <code>RevokeKey</code> revokes
+  the key and, when it was usable, records <code>SessionsRevoked</code>. Tokens do not
+  record the key that obtained them, so all of the account's current tokens
+  stop at once in applications with a revocation cache, and a workload
+  holding another key exchanges it for a new token.
+- <strong><code>GrantRole</code> and <code>RemoveRole</code></strong> call <code>approle</code>, whose removal already
+  records an access change.</p>
+<h3 id="2-key-storage-adapter">2. Key storage adapter<a class="headerlink" href="#2-key-storage-adapter" title="Permanent link">&para;</a></h3>
+<p>A type in <code>identity/systemauth</code> implementing <code>RFC7523KeyStorage</code> over Ent:</p>
 <ul>
-<li>Register <code>compose.RFC7523AssertionGrantFactory</code> when
-  <code>oauth.jwt_bearer.enabled</code> is true (default false).</li>
-<li>Configuration: <code>max_assertion_lifetime</code> (default 1h, mapped to Fosite's
-  JWT max duration), <code>require_client_auth</code> (default false, mapped to the
-  inverse of <code>GrantTypeJWTBearerCanSkipClientAuth</code>), <code>token_lifetime</code>
-  (default 1h). <code>jti</code> and <code>iat</code> are required (Fosite's ID-optional and
-  issued-date-optional settings off).</li>
-<li>The audience accepted is SystemAuth's token endpoint URL and issuer.</li>
-<li>Discovery adds the grant type to <code>grant_types_supported</code> when enabled.</li>
+<li><strong><code>GetPublicKey(ctx, issuer, subject, keyID)</code>:</strong></li>
+<li>looks up the key-pair credential by <code>key_id</code>, and requires it active,
+    unrevoked and unexpired;</li>
+<li>loads its principal, and requires type service, active,
+    <code>identifier == subject</code>, and an active organization;</li>
+<li>requires <code>issuer == subject</code>;</li>
+<li>parses the PEM into a <code>jose.JSONWebKey</code> with the stored algorithm and
+    key ID.</li>
 </ul>
-<h3 id="3-issued-tokens">3. Issued tokens<a class="headerlink" href="#3-issued-tokens" title="Permanent link">&para;</a></h3>
+<p>Every failure returns <code>fosite.ErrNotFound</code>, so a caller cannot tell a
+  missing key from a refused one.
+- <strong><code>GetPublicKeys(ctx, issuer, subject)</code>:</strong> the same principal checks,
+  returning every usable key, for an assertion without a <code>kid</code>.
+- <strong><code>GetPublicKeyScopes</code>:</strong> the key's scopes intersected with the
+  principal's <code>allowed_scopes</code>.
+- <strong><code>IsJWTUsed</code> and <code>MarkJWTUsedForTime</code>:</strong> delegate to
+  <code>clientassertion.JTIStore</code>.</p>
+<h3 id="3-composition-and-configuration">3. Composition and configuration<a class="headerlink" href="#3-composition-and-configuration" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">oauth</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">jwt_bearer</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">max_assertion_lifetime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5m</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">token_lifetime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15m</span>
+</code></pre></div>
 <ul>
-<li>Subject: the service principal's ID. No refresh token.</li>
-<li>Granted scopes: Fosite intersects requested scopes with
-  <code>GetPublicKeyScopes</code>; when none are requested, grant all of them.</li>
-<li>Tokens are stored with the existing token storage, so introspection and
+<li><strong>The factory.</strong> <code>compose.RFC7523AssertionGrantFactory</code> is registered when
+  enabled.</li>
+<li><strong>Required claims.</strong> <code>jti</code> and <code>iat</code> are required: Fosite's ID-optional and
+  issued-date-optional settings are off.</li>
+<li><strong>Client authentication.</strong> The grant may skip it
+  (<code>GrantTypeJWTBearerCanSkipClientAuth</code>), and the token is issued without a
+  client.</li>
+<li><strong>Audience.</strong> The accepted audience is the token endpoint URL or the
+  issuer.</li>
+<li><strong>Discovery</strong> adds the grant type to <code>grant_types_supported</code> when enabled.</li>
+<li><strong>DPoP.</strong> A token request with this grant type and no DPoP proof is refused
+  with <code>invalid_dpop_proof</code>, before client rules are considered, so no
+  exception can apply.</li>
+</ul>
+<h3 id="4-issued-tokens">4. Issued tokens<a class="headerlink" href="#4-issued-tokens" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Subject</strong> is the service principal's ID, so <code>addOrgsClaims</code> adds the
+  account's one organization with its application roles.</li>
+<li><strong>The <code>principal_type: "service"</code> claim</strong> is added for a service
+  principal's tokens, as <code>managed</code> is for managed principals.</li>
+<li><strong>No refresh token.</strong> Lifetime is <code>token_lifetime</code>.</li>
+<li><strong>On success,</strong> the credential's <code>last_used_at</code> and <code>last_used_ip</code> and the
+  service principal's <code>last_used_at</code> are updated.</li>
+<li><strong>Storage.</strong> Tokens use the existing token storage, so introspection and
   revocation work unchanged.</li>
 </ul>
-<h3 id="4-management">4. Management<a class="headerlink" href="#4-management" title="Permanent link">&para;</a></h3>
-<p>Keys are managed with the existing <code>identity/credential</code> API
-(<code>CreateKeypair</code>, <code>ListKeypairs</code>, <code>Revoke</code>). This initiative documents the
-flow rather than adding endpoints; admin endpoints are a follow-on if
-needed.</p>
-<h3 id="5-reference-client">5. Reference client<a class="headerlink" href="#5-reference-client" title="Permanent link">&para;</a></h3>
-<p><code>identity/oauthclient</code> gains a helper that builds and signs an assertion
-(RS256, ES256, EdDSA) from a private key and principal identifier and
-exchanges it for a token, so workloads written in Go need no JWT code of
-their own.</p>
+<h3 id="5-commands">5. Commands<a class="headerlink" href="#5-commands" title="Permanent link">&para;</a></h3>
+<p><code>identity/serviceaccount/serviceaccountcmd</code> provides <code>service-account</code> as a
+cobra command a host CLI mounts, with the same <code>Open</code> function as
+<code>signupgate/signupcmd</code>. It opens the identity database directly, so it works
+whether or not the server is running and never changes the schema.
+<code>cmd/systemauth</code> registers it, and a host that embeds SystemAuth mounts it in
+its own server binary. Each subcommand writes JSON with <code>--json</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>systemauth service-account create --org &lt;slug&gt; --name &lt;name&gt; [--scope ...]
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>systemauth service-account list --org &lt;slug&gt;
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>systemauth service-account show &lt;id&gt;
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>systemauth service-account disable|enable|delete &lt;id&gt;
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>systemauth service-account key add &lt;id&gt; --out key.pem [--expires-in 2160h] [--scope ...]
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>systemauth service-account key add &lt;id&gt; --public-key pub.pem
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>systemauth service-account key list &lt;id&gt;
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>systemauth service-account key revoke &lt;id&gt; &lt;key-id&gt;
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>systemauth service-account role grant &lt;id&gt; --app &lt;app&gt; --role &lt;role&gt;
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>systemauth service-account role remove &lt;id&gt; --app &lt;app&gt;
+</code></pre></div>
+<ul>
+<li><strong><code>key add --out</code></strong> writes the private key with mode <code>0600</code>, refuses to
+  overwrite a file, and prints the account identifier, key ID and issuer the
+  client needs.</li>
+<li><strong>Audit.</strong> <code>--by</code> names the operator's principal ID for the <code>created_by</code>
+  and <code>assigned_by</code> fields, as the <code>admin</code> commands do.</li>
+</ul>
+<h3 id="6-client-identityserviceclient">6. Client: <code>identity/serviceclient</code><a class="headerlink" href="#6-client-identityserviceclient" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Config</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">Issuer</span><span class="w">     </span><span class="kt">string</span><span class="w">        </span><span class="c1">// SystemAuth&#39;s issuer</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">Account</span><span class="w">    </span><span class="kt">string</span><span class="w">        </span><span class="c1">// the account identifier (iss and sub)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">KeyID</span><span class="w">      </span><span class="kt">string</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nx">PrivateKey</span><span class="w"> </span><span class="nx">crypto</span><span class="p">.</span><span class="nx">Signer</span><span class="w"> </span><span class="c1">// ES256, RS256 or EdDSA</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nx">Scopes</span><span class="w">     </span><span class="p">[]</span><span class="kt">string</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nx">HTTPClient</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nx">Metadata</span><span class="w">   </span><span class="o">*</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">Metadata</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">}</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="kd">func</span><span class="w"> </span><span class="nx">New</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="w"> </span><span class="nx">Config</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">Client</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="kd">func</span><span class="w"> </span><span class="nx">LoadPrivateKey</span><span class="p">(</span><span class="nx">path</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">Signer</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="c1">// PEM, owner-only file</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">Client</span><span class="p">)</span><span class="w"> </span><span class="nx">Token</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">Client</span><span class="p">)</span><span class="w"> </span><span class="nx">Transport</span><span class="p">(</span><span class="nx">base</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">RoundTripper</span><span class="p">)</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">RoundTripper</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">Client</span><span class="p">)</span><span class="w"> </span><span class="nx">HTTPClient</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span>
+</code></pre></div>
+<ul>
+<li><strong>The assertion:</strong></li>
+<li><code>iss</code> and <code>sub</code> are <code>Account</code>, <code>aud</code> is the token endpoint;</li>
+<li><code>iat</code> is now and <code>exp</code> is now plus 60 seconds;</li>
+<li><code>jti</code> is 128 random bits;</li>
+<li>the header carries <code>kid</code>.</li>
+<li><strong>DPoP proofs</strong> use the assertion key when it is P-256. For an RSA or
+  Ed25519 assertion key, the client makes a P-256 key for proofs at <code>New</code>,
+  since proofs are ES256; tokens are then bound to that key for the life of
+  the process, which suits tokens without refresh.</li>
+<li><strong>Tokens.</strong> The token is cached and renewed a minute before expiry, under a
+  mutex, so concurrent requests share one exchange.</li>
+<li><strong><code>Transport</code></strong> sets <code>Authorization: DPoP</code> with a proof for each request.
+  It retries once on <code>use_dpop_nonce</code> when the body can be sent again, and
+  once on <code>invalid_token</code> after renewing.</li>
+</ul>
+<h3 id="7-applications">7. Applications<a class="headerlink" href="#7-applications" title="Permanent link">&para;</a></h3>
+<p><code>relyingparty.BearerConfig</code> gains <code>ServicePrincipals bool</code>.</p>
+<ul>
+<li><strong>With it,</strong> a verified access token whose subject has no local principal
+  and whose <code>principal_type</code> claim is <code>service</code> creates one. It calls
+  <code>PrincipalStore.CreatePrincipal</code> with a <code>VerifiedIdentity</code> whose <code>Service</code>
+  field is true, and whose <code>Subject</code> and <code>Name</code> come from the token.</li>
+<li><strong>Without it,</strong> the request is refused as today.</li>
+<li><strong>The store contract.</strong> <code>PrincipalStore.CreatePrincipal</code>'s documentation
+  adds that an identity with <code>Service</code> set is created with type <code>service</code>
+  and no email. Stores that do not support it return an error, so an
+  application must update its store before enabling the option.</li>
+<li><strong>The request then authenticates</strong> as usual: <code>Type</code> is <code>service</code>, and
+  memberships come from the <code>orgs</code> claim.</li>
+</ul>
+<p><code>appauth.Options</code> gains <code>ServiceAccounts bool</code>, passed through, and
+<code>pgstore.PrincipalStore</code> supports service identities.</p>
+<h3 id="8-adr-016">8. ADR-016<a class="headerlink" href="#8-adr-016" title="Permanent link">&para;</a></h3>
+<p>ADR-016 changes in two places:</p>
+<ul>
+<li><strong>Decision 2, automation holding a key pair:</strong> "JWT-bearer grant with a
+  self-issued assertion (RFC 7523 section 2.1), DPoP-bound". It previously
+  said client credentials with <code>private_key_jwt</code>.</li>
+<li><strong>Decision 4</strong> is marked implemented by this initiative.</li>
+</ul>
 <h2 id="testing-strategy">Testing Strategy<a class="headerlink" href="#testing-strategy" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Adapter unit tests: unknown key, revoked, expired, inactive key; wrong
-  principal type, inactive principal, subject or issuer mismatch; scope
-  intersection; JTI delegation.</li>
-<li>End-to-end tests against an embedded SystemAuth: RSA and ECDSA keys
-  exchange signed assertions for tokens that introspect as active with the
-  expected subject and scopes; replay, expired assertion, overlong
-  lifetime, missing <code>jti</code>, and wrong audience are rejected.</li>
-<li>Discovery reflects the enabled flag.</li>
+<li><strong>The service:</strong></li>
+<li>create, in a personal organization (refused), and in an inactive one;</li>
+<li>keys of each algorithm, short RSA keys refused;</li>
+<li>revoke a key while another remains, and the last key;</li>
+<li>disable, enable and delete, each with the access change recorded;</li>
+<li>roles.</li>
+<li><strong>The adapter:</strong></li>
+<li>unknown, revoked, expired or inactive key;</li>
+<li>wrong principal type, inactive principal or organization;</li>
+<li>subject or issuer mismatch;</li>
+<li>scope intersection;</li>
+<li>the JTI delegation.</li>
+<li><strong>End to end,</strong> against an embedded SystemAuth:</li>
+<li>P-256 and RSA keys get tokens that introspect with the account as
+    subject, <code>cnf.jkt</code>, the <code>orgs</code> claim and <code>principal_type</code>;</li>
+<li>refused: replay, an expired assertion, an overlong lifetime, a missing
+    <code>jti</code>, the wrong audience, a missing DPoP proof and a disabled account.</li>
+<li><strong>Commands,</strong> run against a test database: <code>key add --out</code> file mode and
+  refusal to overwrite.</li>
+<li><strong>The client:</strong></li>
+<li>renewal before expiry;</li>
+<li>concurrent requests share one exchange;</li>
+<li>the nonce retry;</li>
+<li>an RSA assertion key with a P-256 proof key.</li>
+<li><strong>Applications.</strong> An <code>appauth</code> application with <code>ServiceAccounts</code> accepts
+  the account, sees its role, and creates its local principal once. After
+  the role is removed, the account still authenticates but its memberships
+  no longer include the organization, so the application's authorization
+  refuses what needed the role. Without the option it refuses the token.</li>
+<li><strong>Discovery</strong> follows the enabled flag.</li>
 </ul>
 <h2 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Fosite's key lookup is keyed by issuer and subject; enforcing that the
-  key belongs to the subject must happen in the adapter, and is tested
+<li><strong>Key ownership.</strong> Fosite looks keys up by issuer and subject. The
+  adapter enforces that the key belongs to the subject, and this is tested
   directly.</li>
-<li>PEM parsing of stored keys must accept the formats <code>CreateKeypair</code>
-  writes; tests round-trip keys created through the credential service.</li>
+<li><strong>PEM formats.</strong> Parsing stored keys must accept what <code>CreateKeypair</code>
+  writes; tests round-trip keys created through the service.</li>
+<li><strong>A store without service support</strong> would fail creation at the first
+  token. The option is off by default, and its documentation says to update
+  the store first.</li>
 </ul>
 
 
