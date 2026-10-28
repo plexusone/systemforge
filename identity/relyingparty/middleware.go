@@ -389,6 +389,11 @@ func (cfg BearerConfig) principalForJWT(ctx context.Context, token string, claim
 	if err != nil {
 		return nil, err
 	}
+	if isServiceToken(claims) && p.Type != "service" {
+		// SystemAuth says the subject is a service account; a local
+		// principal of another type is never that account.
+		return nil, errUnauthenticated("invalid_token", "the token's subject is not a service account")
+	}
 	if !p.Active {
 		return nil, errUnauthenticated("invalid_token", "principal is inactive")
 	}
@@ -480,15 +485,27 @@ func isServiceToken(claims *AccessTokenClaims) bool {
 
 // provisionService creates the local principal of a service account on its
 // first request. A concurrent request may create it first; the principal it
-// created is used.
+// created is used. Either way the principal must be of type service: a
+// store that ignores VerifiedIdentity.Service would otherwise turn a service
+// account into a person.
 func (cfg BearerConfig) provisionService(ctx context.Context, claims *AccessTokenClaims) (*Principal, error) {
 	name, _ := claims.Raw["name"].(string) // optional: a service account may carry no name
 	p, err := cfg.Principals.CreatePrincipal(ctx, VerifiedIdentity{Subject: claims.Subject, Name: name, Service: true})
 	if errors.Is(err, ErrSubjectLinked) {
-		return cfg.Principals.FindBySubject(ctx, claims.Subject)
+		p, err = cfg.Principals.FindBySubject(ctx, claims.Subject)
+		if err != nil {
+			return nil, err
+		}
+		if p.Type != "service" {
+			return nil, errUnauthenticated("invalid_token", "the token's subject is not a service account")
+		}
+		return p, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("relyingparty: creating the service principal: %w", err)
+	}
+	if p.Type != "service" {
+		return nil, fmt.Errorf("relyingparty: the principal store created a %q principal for a service identity; it must support VerifiedIdentity.Service before ServicePrincipals is enabled", p.Type)
 	}
 	return p, nil
 }

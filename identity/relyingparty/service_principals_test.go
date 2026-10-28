@@ -1,6 +1,7 @@
 package relyingparty
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -69,5 +70,38 @@ func TestBearerServicePrincipals(t *testing.T) {
 	}
 	if code, _ := call(cfg, serviceToken(sub, "service")); code != http.StatusUnauthorized {
 		t.Errorf("inactive service: %d", code)
+	}
+}
+
+// humanOnlyStore is a store written before VerifiedIdentity.Service: it
+// creates every principal as a human.
+type humanOnlyStore struct{ *MemoryPrincipalStore }
+
+func (s humanOnlyStore) CreatePrincipal(ctx context.Context, id VerifiedIdentity) (*Principal, error) {
+	id.Service = false
+	id.Managed = true // its only way to create a principal without an email
+	return s.MemoryPrincipalStore.CreatePrincipal(ctx, id)
+}
+
+// A store that ignores Service must not turn a service account into a
+// person: the request fails instead of authenticating a human.
+func TestBearerServicePrincipalsNeedAServiceStore(t *testing.T) {
+	fake := newFakeSystemAuth(t)
+	store := humanOnlyStore{NewMemoryPrincipalStore()}
+	cfg := BearerConfig{Tokens: fake.client(t), Principals: store, AllowBearerTokens: true, ServicePrincipals: true}
+	c := fake.accessClaims(testClientID)
+	c["sub"] = uuid.NewString()
+	c[PrincipalTypeClaim] = "service"
+	token := fake.sign(c)
+	for _, attempt := range []string{"first", "second"} {
+		reached := false
+		h := BearerMiddleware(cfg)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { reached = true }))
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api", nil)
+		withBearer(token)(req)
+		h.ServeHTTP(w, req)
+		if reached || w.Code == http.StatusOK {
+			t.Errorf("%s request with a human-only store: %d, handler reached %v", attempt, w.Code, reached)
+		}
 	}
 }
