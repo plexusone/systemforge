@@ -201,16 +201,19 @@ func (c Config) basePath() string {
 	return "/" + strings.Trim(c.BasePath, "/")
 }
 
-// acceptedClientIDs is AcceptedClientIDs with ClientID added, or nil when
-// none are listed (relyingparty then accepts ClientID alone).
-func (c Config) acceptedClientIDs() []string {
-	if len(c.AcceptedClientIDs) == 0 {
+// acceptedClientIDs is AcceptedClientIDs and extra with ClientID added, or
+// nil when none are listed (relyingparty then accepts ClientID alone).
+func (c Config) acceptedClientIDs(extra ...string) []string {
+	if len(c.AcceptedClientIDs) == 0 && len(extra) == 0 {
 		return nil
 	}
-	if slices.Contains(c.AcceptedClientIDs, c.ClientID) {
-		return slices.Clone(c.AcceptedClientIDs)
+	out := []string{c.ClientID}
+	for _, id := range append(slices.Clone(c.AcceptedClientIDs), extra...) {
+		if !slices.Contains(out, id) {
+			out = append(out, id)
+		}
 	}
-	return append([]string{c.ClientID}, c.AcceptedClientIDs...)
+	return out
 }
 
 // insecureCookies is true exactly when the application is served over

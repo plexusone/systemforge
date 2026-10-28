@@ -468,6 +468,11 @@ func principalType(p *Principal) string {
 // SystemAuth sets it to "service" for a service account.
 const PrincipalTypeClaim = "principal_type"
 
+// ServiceAccountClientID is the client_id of the tokens SystemAuth issues to
+// service accounts through the JWT-bearer grant. An API that accepts service
+// accounts lists it in Config.AcceptedClientIDs.
+const ServiceAccountClientID = "systemauth-jwt-bearer" //nolint:gosec // G101: a public client identifier, not a credential
+
 func isServiceToken(claims *AccessTokenClaims) bool {
 	t, ok := claims.Raw[PrincipalTypeClaim].(string)
 	return ok && t == "service"

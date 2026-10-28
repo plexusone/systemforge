@@ -76,8 +76,9 @@ type Options struct {
 	// they do not recognize, such as AAuth-signed agent requests.
 	Authenticators []requestprincipal.Authenticator
 
-	// ServiceAccounts accepts SystemAuth service accounts' tokens, creating
-	// an account's local principal on its first request
+	// ServiceAccounts accepts SystemAuth service accounts' tokens: their
+	// client (relyingparty.ServiceAccountClientID) is accepted, and an
+	// account's local principal is created on its first request
 	// (relyingparty.BearerConfig.ServicePrincipals). Principals must support
 	// service identities, as pgstore.PrincipalStore does.
 	ServiceAccounts bool
@@ -157,7 +158,7 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 		RedirectURL:         cfg.RedirectURL(),
 		Scopes:              scopes(cfg.Scopes),
 		AccessTokenAudience: cfg.AccessTokenAudience,
-		AcceptedClientIDs:   cfg.acceptedClientIDs(),
+		AcceptedClientIDs:   cfg.acceptedClientIDs(serviceClients(opts)...),
 		HTTPClient:          opts.HTTPClient,
 		DPoPKey:             key,
 	}, opts.Metadata)
@@ -212,6 +213,15 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 	}
 	a.chain = append(requestprincipal.Chain{own}, opts.Authenticators...)
 	return a, nil
+}
+
+// serviceClients is the client of service-account tokens when they are
+// accepted.
+func serviceClients(opts Options) []string {
+	if opts.ServiceAccounts {
+		return []string{relyingparty.ServiceAccountClientID}
+	}
+	return nil
 }
 
 func checkStores(cfg Config, opts Options, logger *slog.Logger) error {
