@@ -4136,6 +4136,8 @@
       
         
       
+        
+      
     
     
     
@@ -4205,6 +4207,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="v0.25.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.25.0
   
 
     
@@ -5092,7 +5122,11 @@
 <p>Release notes, one file per version, newest first. The
 <a href="changelog/">changelog</a> is generated from <code>CHANGELOG.json</code> and lists every
 change with its commit.</p>
-<p>The latest release, <a href="v0.24.0/">v0.24.0</a>, lets command-line tools and
+<p>The latest release, <a href="v0.25.0/">v0.25.0</a>, lets relying parties call
+SystemAuth's APIs, such as the managed-principal API with <code>mpclient</code>, with
+their people's DPoP-bound session tokens (<code>relyingparty.Client.Transport</code>).
+It is not breaking.</p>
+<p>Before it, <a href="v0.24.0/">v0.24.0</a> let command-line tools and
 other public clients sign people in to SystemAuth and call APIs with
 DPoP-bound tokens (<code>identity/publicclient</code>), with nothing to register per
 person or machine. It is not breaking.</p>
@@ -5148,6 +5182,10 @@ completed the organization model. It is a breaking release with migrations
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><a href="v0.25.0/">v0.25.0</a></td>
+<td>2026-10-27</td>
+</tr>
 <tr>
 <td><a href="v0.24.0/">v0.24.0</a></td>
 <td>2026-10-27</td>

@@ -4363,6 +4363,8 @@
       
         
       
+        
+      
     
     
     
@@ -4434,6 +4436,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.25.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.25.0
   
 
     
@@ -5825,15 +5855,25 @@ syncer to the service. A host in the same process can call
 <code>Service.ManagedPrincipals()</code> directly.</p>
 <p>Applications call the API with <code>managedprincipal/mpclient</code>, which depends on
 the standard library and <code>uuid</code> only:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">mp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="s">&quot;https://auth.example.com/managed-principals&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">httpClient</span><span class="p">)</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mp</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managerToken</span><span class="p">,</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">CreateInput</span><span class="p">{</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Robin&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nx">Role</span><span class="p">:</span><span class="w">        </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">RoleEducator</span><span class="p">,</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">})</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="nx">card</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mp</span><span class="p">.</span><span class="nx">IssueLoginToken</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managerToken</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">IssueLoginTokenInput</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Robin&#39;s card&quot;</span><span class="p">})</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="c1">// card.Token is shown once; render it as a QR code or a printed card.</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// rp is the application&#39;s relyingparty.Client: its Transport presents the</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1">// manager&#39;s DPoP-bound session token with a proof by the application&#39;s key.</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nx">mp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="s">&quot;https://auth.example.com/managed-principals&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span><span class="p">{</span><span class="nx">Transport</span><span class="p">:</span><span class="w"> </span><span class="nx">rp</span><span class="p">.</span><span class="nx">Transport</span><span class="p">(</span><span class="kc">nil</span><span class="p">)})</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mp</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managerToken</span><span class="p">,</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">CreateInput</span><span class="p">{</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Robin&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nx">Role</span><span class="p">:</span><span class="w">        </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">RoleEducator</span><span class="p">,</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">})</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="nx">card</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mp</span><span class="p">.</span><span class="nx">IssueLoginToken</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managerToken</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">IssueLoginTokenInput</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Robin&#39;s card&quot;</span><span class="p">})</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="c1">// card.Token is shown once; render it as a QR code or a printed card.</span>
 </code></pre></div>
+<p>SystemAuth binds the tokens it issues to the requesting client's DPoP key
+and refuses a bound token sent as <code>Bearer</code>. <code>mpclient</code> sets the token as
+<code>Bearer</code>; <code>relyingparty.Client.Transport</code> presents a token bound to the
+relying party's key with the <code>DPoP</code> scheme and a proof, and an unbound one
+(from a client registered with <code>allow_bearer_tokens</code>) unchanged. A reverse
+proxy that forwards the manager's calls to the API uses the same transport.
+Without it, a bound token answers <code>ErrUnauthorized</code>.</p>
 <p>Errors match <code>mpclient.ErrUnauthorized</code>, <code>ErrForbidden</code>, <code>ErrNotFound</code>,
 <code>ErrInvalidCode</code>, <code>ErrInvalidRequest</code>, <code>ErrConflict</code>, and <code>ErrRateLimited</code>
 with <code>errors.Is</code>, and unwrap to <code>*mpclient.APIError</code> for the status, message
