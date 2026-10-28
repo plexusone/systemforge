@@ -288,4 +288,4 @@ require (
 	resenje.org/singleflight v0.4.3 // indirect
 )
 
-replace github.com/plexusone/payforge => ../../../../payforge
+replace github.com/plexusone/payforge => ../payforge
