@@ -47,7 +47,7 @@ lifetime.
    |---|---|---|
    | A person at a terminal (CLI, MCP) | Authorization code with PKCE and a loopback redirect (RFC 8252), then refresh tokens | A refresh token: rotated on use, revoked as a family on reuse, bound to the client, with an absolute lifetime |
    | A person on a host without a browser | Device authorization grant (RFC 8628) | The same refresh token |
-   | Automation holding a key pair (servers, scripts) | Client credentials, authenticated with `private_key_jwt` (RFC 7523 section 2.2) | A private key; SystemAuth stores only the public key |
+   | Automation holding a key pair (servers, scripts) | A service account's JWT-bearer grant with a self-issued assertion (RFC 7523 section 2.1), DPoP-bound | A private key; SystemAuth stores only the public key |
    | CI and cloud workloads with their own identity | JWT bearer grant (RFC 7523 section 2.1) trusting the platform's token, such as GitHub Actions OIDC | Nothing stored: the platform issues the assertion per run |
    | AI agents | AAuth (agent, resource and mission tokens) | The agent's key; unchanged by this ADR |
 
@@ -66,6 +66,12 @@ lifetime.
    authorize it exactly as they authorize people. A client's access ends
    when its roles are removed or the client is disabled, through the same
    access-change records (ADR-010).
+
+   Implemented as service accounts (`identity/serviceaccount`): the
+   account is the service principal itself rather than an OAuth client, and
+   it authenticates with the JWT-bearer grant of decision 2, so its token's
+   subject is the principal and the `orgs` claim, role removal and
+   revocation apply unchanged. See [Service Accounts](../../oauth/service-accounts.md).
 
 5. **Refresh tokens for people keep the existing policy:** rotation on use,
    family revocation on reuse, an absolute lifetime (default 30 days), and
