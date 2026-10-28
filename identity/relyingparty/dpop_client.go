@@ -145,8 +145,10 @@ func tokenHTTPClient(base *http.Client, signer *dpopSigner, tokenURL string) *ht
 // token bound to this client's key or an opaque one (which this client
 // obtained, so it is bound to its key), "Bearer" for a JWT without cnf. A
 // JWT is read only once its signature verifies against SystemAuth's keys,
-// so no proof is made for a token SystemAuth did not issue; one bound to
-// another key cannot be presented.
+// so no proof is made for a token SystemAuth did not issue; a JWT bound to
+// another key cannot be presented. An opaque token's binding cannot be
+// read here, so it is presented as DPoP and SystemAuth refuses it if it is
+// bound to another key.
 func (c *Client) tokenScheme(ctx context.Context, token string) (string, error) {
 	if strings.Count(token, ".") != 2 {
 		return "DPoP", nil
@@ -188,8 +190,10 @@ func (c *Client) doWithToken(req *http.Request, token string) (*http.Response, e
 //     scheme and a new proof by the key for the request's method and URL;
 //   - an unbound JWT, from a client registered with allow_bearer_tokens,
 //     with the Bearer scheme and no proof;
-//   - a token bound to another key is refused with ErrForeignDPoPToken,
-//     since only its holder can make proofs for it;
+//   - a JWT bound to another key is refused with ErrForeignDPoPToken,
+//     since only its holder can make proofs for it. An opaque token's
+//     binding cannot be read, so it is sent with this client's proof and
+//     SystemAuth refuses it if it is bound to another key;
 //   - a JWT whose signature SystemAuth's keys do not verify, or from
 //     another issuer, is refused with ErrInvalidToken, so no proof is made
 //     for a token SystemAuth did not issue. Its expiry is not checked:

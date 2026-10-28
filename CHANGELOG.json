@@ -18,7 +18,7 @@
       ],
       "added": [
         {
-          "description": "`relyingparty.Client.Transport`: an `http.RoundTripper` that presents the token the caller set in `Authorization` with the `DPoP` scheme and a new proof when it is bound to the client's key (or opaque), as `Bearer` when unbound, refuses a token bound to another key with `ErrForeignDPoPToken`, and retries once with SystemAuth's nonce when the request body can be sent again",
+          "description": "`relyingparty.Client.Transport`: an `http.RoundTripper` that presents the token the caller set in `Authorization` with the `DPoP` scheme and a new proof when it is bound to the client's key (or opaque), as `Bearer` when unbound, refuses a JWT bound to another key with `ErrForeignDPoPToken` (SystemAuth refuses an opaque one), and retries once with SystemAuth's nonce when the request body can be sent again",
           "commit": "5538912"
         }
       ],
