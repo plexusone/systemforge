@@ -9,6 +9,47 @@
   ],
   "releases": [
     {
+      "version": "v0.25.0",
+      "date": "2026-10-27",
+      "highlights": [
+        {
+          "description": "`relyingparty.Client.Transport` lets relying parties call SystemAuth's APIs, such as the managed-principal API with `mpclient`, with their people's DPoP-bound session tokens, which SystemAuth refuses as `Bearer`"
+        }
+      ],
+      "added": [
+        {
+          "description": "`relyingparty.Client.Transport`: an `http.RoundTripper` that presents the token the caller set in `Authorization` with the `DPoP` scheme and a new proof when it is bound to the client's key (or opaque), as `Bearer` when unbound, refuses a JWT bound to another key with `ErrForeignDPoPToken` (SystemAuth refuses an opaque one), and retries once with SystemAuth's nonce when the request body can be sent again",
+          "commit": "5538912"
+        }
+      ],
+      "changed": [
+        {
+          "description": "The relying party's calls to userinfo, memberships and access changes go through `Transport`; a JWT access token is sent only once its signature verifies against SystemAuth's keys",
+          "commit": "5538912"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Cover the transport for each kind of token, another key's token, and nonce retries with and without a resendable body; against SystemAuth, `mpclient`'s bound token is refused as `Bearer` and works through the transport, with and without nonces",
+          "commit": "d5c5e4f"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "`mpclient`, Managed Principals, Relying Party and Calling APIs with DPoP: sending DPoP-bound session tokens to SystemAuth's APIs",
+          "commit": "8940e2b"
+        },
+        {
+          "description": "v0.25.0 release notes"
+        }
+      ],
+      "security": [
+        {
+          "description": "`relyingparty.Client.Transport` reads a JWT's `cnf` binding only after its signature verifies against SystemAuth's keys and its issuer matches, so it makes no DPoP proof for a token SystemAuth did not issue; a forged token is refused with `ErrInvalidToken`"
+        }
+      ]
+    },
+    {
       "version": "v0.24.0",
       "date": "2026-10-27",
       "highlights": [

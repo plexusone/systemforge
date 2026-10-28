@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/managedprincipal"
+	"github.com/plexusone/systemforge/identity/managedprincipal/mpclient"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/identity/systemauthsvc"
@@ -38,6 +40,11 @@ func (t handlerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 func managedPrincipalsService(t *testing.T, enabled bool, scopes ...string) *systemauthsvc.Service {
 	t.Helper()
+	return newManagedPrincipalsService(t, enabled, systemauth.DPoPConfig{}, scopes...)
+}
+
+func newManagedPrincipalsService(t *testing.T, enabled bool, dpopCfg systemauth.DPoPConfig, scopes ...string) *systemauthsvc.Service {
+	t.Helper()
 	cfg := &systemauthsvc.Config{
 		Issuer:   mpIssuer,
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
@@ -50,6 +57,7 @@ func managedPrincipalsService(t *testing.T, enabled bool, scopes ...string) *sys
 			ManagedPrincipals: true,
 		}},
 		Features: systemauth.FeatureConfig{RequirePKCE: true},
+		DPoP:     dpopCfg,
 	}
 	if enabled {
 		cfg.ManagedPrincipals = &systemauth.ManagedPrincipalsConfig{Enabled: true}
@@ -103,6 +111,14 @@ func mpDPoPKey(t *testing.T) *dpop.KeyPair {
 // token for scopes.
 func accessToken(t *testing.T, svc *systemauthsvc.Service, principal uuid.UUID, scopes ...string) string {
 	t.Helper()
+	_, token := relyingPartySignIn(t, svc, principal, scopes...)
+	return token
+}
+
+// relyingPartySignIn signs principal in to the app client and returns the
+// relying party and its access token for scopes.
+func relyingPartySignIn(t *testing.T, svc *systemauthsvc.Service, principal uuid.UUID, scopes ...string) (*relyingparty.Client, string) {
+	t.Helper()
 	hc := &http.Client{
 		Transport:     handlerTransport{svc.Handler()},
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
@@ -136,7 +152,7 @@ func accessToken(t *testing.T, svc *systemauthsvc.Service, principal uuid.UUID, 
 	if err != nil {
 		t.Fatalf("exchange: %v", err)
 	}
-	return tok.AccessToken
+	return rp, tok.AccessToken
 }
 
 func callAPI(t *testing.T, svc *systemauthsvc.Service, token, method, path string, body any) *httptest.ResponseRecorder {
@@ -260,5 +276,45 @@ func TestManagedPrincipalsAPIIsOffByDefault(t *testing.T) {
 	svc.Handler().ServeHTTP(w, r)
 	if w.Code == http.StatusSeeOther || w.Code == http.StatusUnauthorized {
 		t.Errorf("login token endpoint served without managed principals: %d", w.Code)
+	}
+}
+
+// TestManagedPrincipalsAPIThroughTheRelyingParty calls the API with mpclient
+// and a session's DPoP-bound token, as an application does for the person
+// signed in to it: mpclient sends the token as Bearer, which SystemAuth
+// refuses for a bound token, and the relying party's Transport presents it
+// with a proof instead, also when SystemAuth requires nonces.
+func TestManagedPrincipalsAPIThroughTheRelyingParty(t *testing.T) {
+	for name, dpopCfg := range map[string]systemauth.DPoPConfig{
+		"without nonces": {},
+		"with nonces":    {RequireNonce: true, NonceSecret: strings.Repeat("n", 32)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			svc := newManagedPrincipalsService(t, true, dpopCfg, managedprincipal.Scope)
+			teacher := addManager(t, svc, "teacher@example.com")
+			rp, token := relyingPartySignIn(t, svc, teacher, managedprincipal.Scope)
+			ctx := t.Context()
+			network := handlerTransport{svc.Handler()}
+			api := mpIssuer + systemauthsvc.ManagedPrincipalsPath
+
+			// Sent as mpclient sends it, the bound token is refused.
+			plain := mpclient.New(api, &http.Client{Transport: network})
+			if _, err := plain.List(ctx, token, uuid.Nil, 10); !errors.Is(err, mpclient.ErrUnauthorized) {
+				t.Fatalf("a bound token as Bearer: %v", err)
+			}
+
+			mp := mpclient.New(api, &http.Client{Transport: rp.Transport(network)})
+			id, err := mp.Create(ctx, token, mpclient.CreateInput{DisplayName: "Robin", Role: mpclient.RoleEducator})
+			if err != nil {
+				t.Fatalf("create: %v", err)
+			}
+			list, err := mp.List(ctx, token, uuid.Nil, 10)
+			if err != nil || len(list) != 1 || list[0].PrincipalID != id {
+				t.Fatalf("list: %+v %v", list, err)
+			}
+			if _, err := mp.IssueLoginToken(ctx, token, id, mpclient.IssueLoginTokenInput{SingleUse: true}); err != nil {
+				t.Fatalf("issue login token: %v", err)
+			}
+		})
 	}
 }

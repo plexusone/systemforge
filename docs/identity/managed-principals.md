@@ -299,7 +299,10 @@ Applications call the API with `managedprincipal/mpclient`, which depends on
 the standard library and `uuid` only:
 
 ```go
-mp := mpclient.New("https://auth.example.com/managed-principals", httpClient)
+// rp is the application's relyingparty.Client: its Transport presents the
+// manager's DPoP-bound session token with a proof by the application's key.
+mp := mpclient.New("https://auth.example.com/managed-principals",
+    &http.Client{Transport: rp.Transport(nil)})
 
 id, err := mp.Create(ctx, managerToken, mpclient.CreateInput{
     DisplayName: "Robin",
@@ -308,6 +311,14 @@ id, err := mp.Create(ctx, managerToken, mpclient.CreateInput{
 card, err := mp.IssueLoginToken(ctx, managerToken, id, mpclient.IssueLoginTokenInput{Name: "Robin's card"})
 // card.Token is shown once; render it as a QR code or a printed card.
 ```
+
+SystemAuth binds the tokens it issues to the requesting client's DPoP key
+and refuses a bound token sent as `Bearer`. `mpclient` sets the token as
+`Bearer`; `relyingparty.Client.Transport` presents a token bound to the
+relying party's key with the `DPoP` scheme and a proof, and an unbound one
+(from a client registered with `allow_bearer_tokens`) unchanged. A reverse
+proxy that forwards the manager's calls to the API uses the same transport.
+Without it, a bound token answers `ErrUnauthorized`.
 
 Errors match `mpclient.ErrUnauthorized`, `ErrForbidden`, `ErrNotFound`,
 `ErrInvalidCode`, `ErrInvalidRequest`, `ErrConflict`, and `ErrRateLimited`

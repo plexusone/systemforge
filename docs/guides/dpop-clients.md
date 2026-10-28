@@ -138,6 +138,28 @@ request, presents tokens to SystemAuth with the `DPoP` scheme, and retries
 once with a server nonce. Give every instance that shares sessions the same
 `DPoPKey`; the default is a key generated per process.
 
+To call SystemAuth's other APIs with a session's token, such as the
+managed-principal API with `managedprincipal/mpclient`, give the HTTP client
+`relyingparty.Client.Transport`. The caller sets the token in
+`Authorization`, and the transport:
+
+- presents a token bound to the client's key, or an opaque one, with the
+  `DPoP` scheme and a new proof, and an unbound JWT as `Bearer`;
+- refuses a JWT bound to another key (`ErrForeignDPoPToken`) and a JWT that
+  SystemAuth's keys do not verify (`ErrInvalidToken`) before sending it. An
+  opaque token's binding cannot be read locally, so SystemAuth refuses one
+  bound to another key;
+- retries once with a server nonce when the request body can be sent again.
+
+
+```go
+mp := mpclient.New(issuer+"/managed-principals", &http.Client{Transport: rp.Transport(nil)})
+```
+
+Send these requests to the URL SystemAuth checks proofs against, its issuer
+origin unless `dpop.resource_base_url` is set, since a proof's `htu` is the
+request's URL.
+
 ## Command-line tools and other public clients
 
 A command-line tool, desktop app or script that a person runs is a public

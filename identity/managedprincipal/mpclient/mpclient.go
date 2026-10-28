@@ -4,6 +4,13 @@
 // granted the systemforge:managed_principals scope; the API takes the
 // application from the token's client.
 //
+// SystemAuth binds the tokens it issues to the requesting client's DPoP key
+// and accepts a bound token only with a proof by that key, so a Client that
+// sends a relying party's session tokens needs an http.Client whose
+// Transport is that relying party's relyingparty.Client.Transport. The
+// Client sets the token as Bearer, and the transport presents it with the
+// DPoP scheme and a proof. Without it, SystemAuth answers ErrUnauthorized.
+//
 // The package depends on the standard library and uuid only, so an
 // application in another process does not import SystemAuth's storage.
 package mpclient
@@ -167,7 +174,10 @@ type Client struct {
 
 // New returns a Client for the API at baseURL, such as
 // "https://auth.example.com/managed-principals". A nil hc uses
-// http.DefaultClient.
+// http.DefaultClient. For DPoP-bound tokens, give hc the relying party's
+// transport:
+//
+//	mp := mpclient.New(base, &http.Client{Transport: rp.Transport(nil)})
 func New(baseURL string, hc *http.Client) *Client {
 	if hc == nil {
 		hc = http.DefaultClient

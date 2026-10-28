@@ -423,7 +423,8 @@ signed-in manager's access token through `managedprincipal/mpclient`:
 ```go
 import "github.com/plexusone/systemforge/identity/managedprincipal/mpclient"
 
-mp := mpclient.New(issuer+"/managed-principals", httpClient)
+// rp.Transport presents the manager's DPoP-bound token with a proof.
+mp := mpclient.New(issuer+"/managed-principals", &http.Client{Transport: rp.Transport(nil)})
 learnerID, err := mp.Create(ctx, managerToken, mpclient.CreateInput{
     DisplayName: "Robin",
     Role:        "educator",
