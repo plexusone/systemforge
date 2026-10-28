@@ -552,8 +552,10 @@ func (s *DefaultService) CreateService(ctx context.Context, input CreateServiceI
 	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
-	if err = s.registerPrincipal(ctx, result.ID); err != nil {
-		return nil, err
+	// A separate variable: the deferred rollback must not run for a sync
+	// failure after the transaction committed.
+	if serr := s.registerPrincipal(ctx, result.ID); serr != nil {
+		return nil, serr
 	}
 	return result, nil
 }
