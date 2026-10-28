@@ -101,13 +101,21 @@ func TestProductionRequirements(t *testing.T) {
 func TestProductionServerWithKeyFromEnv(t *testing.T) {
 	t.Setenv(signingKeyEnv, testKeyPEM(t))
 	dbPath := filepath.Join(t.TempDir(), "systemauth.db")
+	// Production also needs a token HMAC secret and a DPoP replay cache
+	// shared by every instance, or one instance declared.
+	cfgPath := filepath.Join(t.TempDir(), "config.yaml")
+	cfgYAML := "tokens:\n  hmac_secret: test-token-hmac-secret-0123456789abcdef\ndpop:\n  single_instance: true\n"
+	if err := os.WriteFile(cfgPath, []byte(cfgYAML), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	opts := &options{
-		issuer:   "https://auth.example.com",
-		addr:     "127.0.0.1:8081",
-		keyID:    "prod-1",
-		dbDriver: "sqlite",
-		dbDSN:    "file:" + dbPath + "?_fk=1",
-		migrate:  true,
+		configFile: cfgPath,
+		issuer:     "https://auth.example.com",
+		addr:       "127.0.0.1:8081",
+		keyID:      "prod-1",
+		dbDriver:   "sqlite",
+		dbDSN:      "file:" + dbPath + "?_fk=1",
+		migrate:    true,
 	}
 	a, err := newApp(t.Context(), opts, discardLogger())
 	if err != nil {

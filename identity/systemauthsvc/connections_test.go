@@ -31,6 +31,8 @@ func connectionsConfig(t *testing.T) *systemauthsvc.Config {
 	t.Setenv(rootKeyEnv, base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32)))
 	return &systemauthsvc.Config{
 		Issuer:   "https://auth.example.com",
+		Tokens:   prodTokens,
+		DPoP:     prodDPoP,
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 		Connections: &systemauth.ConnectionsConfig{
 			KeysDir: filepath.Join(t.TempDir(), "keys"),

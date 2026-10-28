@@ -18,6 +18,8 @@ func TestStaticClientsOwnedBySystemServicePrincipal(t *testing.T) {
 	dbCfg := &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)}
 	cfg := &systemauthsvc.Config{
 		Issuer:   "https://auth.example.com",
+		Tokens:   prodTokens,
+		DPoP:     prodDPoP,
 		Database: dbCfg,
 		Clients: []systemauth.ClientConfig{{
 			ID: "web", Type: "public", Name: "Web",

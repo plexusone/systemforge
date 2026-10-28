@@ -38,6 +38,13 @@ import (
 
 func discardLogger() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
+// prodTokens and prodDPoP meet the production checks on the token HMAC
+// secret and the DPoP replay cache for a single instance.
+var (
+	prodTokens = systemauth.TokenConfig{HMACSecret: "test-token-hmac-secret-0123456789abcdef"}
+	prodDPoP   = systemauth.DPoPConfig{SingleInstance: true}
+)
+
 func testKey(t *testing.T) *rsa.PrivateKey {
 	t.Helper()
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -201,6 +208,8 @@ func TestProductionRefusals(t *testing.T) {
 	good := func() *systemauthsvc.Config {
 		return &systemauthsvc.Config{
 			Issuer:   "https://auth.example.com",
+			Tokens:   prodTokens,
+			DPoP:     prodDPoP,
 			Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 		}
 	}
@@ -215,6 +224,11 @@ func TestProductionRefusals(t *testing.T) {
 		{"insecure cookies", func(c *systemauthsvc.Config, _ *systemauthsvc.Options) {
 			c.SocialLogin = &systemauth.SocialLoginConfig{InsecureCookies: true}
 		}, "insecure_cookies"},
+		{"no token HMAC secret", func(c *systemauthsvc.Config, _ *systemauthsvc.Options) { c.Tokens.HMACSecret = "" }, "tokens.hmac_secret"},
+		{"bearer-token client", func(c *systemauthsvc.Config, _ *systemauthsvc.Options) {
+			c.Clients = []systemauth.ClientConfig{{ID: "legacy", Type: "confidential", Name: "Legacy", Secret: "s", AllowBearerTokens: true}}
+		}, "clients legacy set allow_bearer_tokens"},
+		{"per-instance replay cache", func(c *systemauthsvc.Config, _ *systemauthsvc.Options) { c.DPoP.SingleInstance = false }, "dpop.single_instance"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -279,6 +293,8 @@ func TestDevMode(t *testing.T) {
 func TestMigrateIdempotent(t *testing.T) {
 	cfg := &systemauthsvc.Config{
 		Issuer:   "https://auth.example.com",
+		Tokens:   prodTokens,
+		DPoP:     prodDPoP,
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 		Clients: []systemauth.ClientConfig{{
 			ID: "web", Type: "public", Name: "Web",
@@ -333,6 +349,8 @@ func TestPostgresMigrateIdempotent(t *testing.T) {
 	dsn := pgtest.DSN(t)
 	cfg := &systemauthsvc.Config{
 		Issuer:   "https://auth.example.com",
+		Tokens:   prodTokens,
+		DPoP:     prodDPoP,
 		Database: &systemauth.DatabaseConfig{Driver: "postgres", DSN: dsn},
 	}
 	opts := systemauthsvc.Options{SigningKey: testKey(t), Logger: discardLogger(), Migrate: true}
@@ -392,7 +410,7 @@ func TestInjectedDatabase(t *testing.T) {
 			t.Errorf("close: %v", err)
 		}
 	})
-	cfg := &systemauthsvc.Config{Issuer: "https://auth.example.com"}
+	cfg := &systemauthsvc.Config{Issuer: "https://auth.example.com", Tokens: prodTokens, DPoP: prodDPoP}
 	opts := systemauthsvc.Options{SigningKey: testKey(t), Logger: discardLogger(), DB: db, Migrate: true}
 
 	if _, err := systemauthsvc.New(t.Context(), cfg, opts); err == nil {
@@ -605,6 +623,8 @@ func TestDefaultEntitlementsAreChecked(t *testing.T) {
 	newConfig := func() *systemauthsvc.Config {
 		return &systemauthsvc.Config{
 			Issuer:   "https://auth.example.com",
+			Tokens:   prodTokens,
+			DPoP:     prodDPoP,
 			Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 		}
 	}
@@ -630,6 +650,8 @@ func TestDefaultEntitlementsAreChecked(t *testing.T) {
 func TestOrgsClaimCarriesDefaultEntitledRoles(t *testing.T) {
 	cfg := &systemauthsvc.Config{
 		Issuer:   "https://auth.example.com",
+		Tokens:   prodTokens,
+		DPoP:     prodDPoP,
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 	}
 	s, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{
@@ -678,6 +700,8 @@ func TestInviteOnlyNeedsADatabase(t *testing.T) {
 func TestSignupInvitesStoreIsBackedByTheDatabase(t *testing.T) {
 	cfg := &systemauthsvc.Config{
 		Issuer:   "https://auth.example.com",
+		Tokens:   prodTokens,
+		DPoP:     prodDPoP,
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 		SocialLogin: &systemauth.SocialLoginConfig{
 			SkipConsent: true,
@@ -737,7 +761,7 @@ func mustCatalog(t *testing.T) *appcatalog.Catalog {
 }
 
 func TestAppCatalogIsServed(t *testing.T) {
-	cfg := &systemauthsvc.Config{Issuer: "https://auth.example.com", Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)}}
+	cfg := &systemauthsvc.Config{Issuer: "https://auth.example.com", Tokens: prodTokens, DPoP: prodDPoP, Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)}}
 	s, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{SigningKey: testKey(t), Logger: discardLogger(), Migrate: true, Apps: mustCatalog(t)})
 	if err != nil {
 		t.Fatal(err)

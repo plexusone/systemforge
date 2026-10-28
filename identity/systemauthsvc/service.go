@@ -44,8 +44,12 @@ const dbPingTimeout = 10 * time.Second
 // overrides, or directly on the Config.
 type Options struct {
 	// Dev relaxes the production requirements: an ephemeral signing key,
-	// in-memory storage, an http issuer and insecure login cookies are
-	// allowed. Never set it for a deployment that serves real users.
+	// in-memory storage, an http issuer, insecure login cookies, an
+	// ephemeral token HMAC secret and a per-instance DPoP replay cache are
+	// allowed, and the token endpoint serves the client_credentials grant
+	// and clients registered with allow_bearer_tokens. Never set it for a
+	// deployment that serves real users; to waive one production check,
+	// name it in the configuration's production.allow instead.
 	Dev bool
 
 	// Logger receives server logs. Default: slog.Default().
@@ -392,6 +396,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		return nil, err
 	}
 	serverOpts = append(serverOpts, dpopOpts...)
+	serverOpts = append(serverOpts, productionPolicy(&c, opts, logger)...)
 	serverOpts = append(serverOpts, opts.ServerOptions...)
 
 	server, err := systemauth.NewEmbedded(c, serverOpts...)
