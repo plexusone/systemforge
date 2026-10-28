@@ -3,18 +3,20 @@ package systemauth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"time"
 
 	"github.com/go-jose/go-jose/v3"
+	"github.com/google/uuid"
 	"github.com/ory/fosite"
-	"github.com/ory/fosite/handler/rfc7523"
 
 	"github.com/plexusone/systemforge/identity/clientassertion"
 	"github.com/plexusone/systemforge/identity/ent"
 	entcredential "github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/ent/serviceprincipal"
 	"github.com/plexusone/systemforge/identity/serviceaccount"
 )
 
@@ -40,7 +42,7 @@ type EntJWTBearerKeys struct {
 	now  func() time.Time
 }
 
-var _ rfc7523.RFC7523KeyStorage = (*EntJWTBearerKeys)(nil)
+var _ JWTBearerKeyStorage = (*EntJWTBearerKeys)(nil)
 
 // NewEntJWTBearerKeys returns the JWT-bearer key storage over db.
 func NewEntJWTBearerKeys(db *ent.Client) *EntJWTBearerKeys {
@@ -145,6 +147,42 @@ func (k *EntJWTBearerKeys) GetPublicKeyScopes(ctx context.Context, issuer, subje
 		}
 	}
 	return out, nil
+}
+
+// PrincipalID implements JWTBearerKeyStorage: the ID of the active
+// service account whose identifier is subject.
+func (k *EntJWTBearerKeys) PrincipalID(ctx context.Context, subject string) (uuid.UUID, error) {
+	p, err := k.account(ctx, subject, subject)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return p.ID, nil
+}
+
+// RecordKeyUse implements JWTBearerKeyStorage: it sets the key's
+// last_used_at and last_used_ip and the service principal's last_used_at.
+func (k *EntJWTBearerKeys) RecordKeyUse(ctx context.Context, principalID uuid.UUID, keyID, ip string) error {
+	now := k.now()
+	update := k.db.Credential.Update().
+		Where(
+			entcredential.PrincipalID(principalID),
+			entcredential.TypeEQ(entcredential.TypeKeypair),
+			entcredential.KeyIDEQ(keyID),
+		).
+		SetLastUsedAt(now)
+	if ip != "" {
+		update.SetLastUsedIP(ip)
+	}
+	if _, err := update.Save(ctx); err != nil {
+		return fmt.Errorf("systemauth: recording key use: %w", err)
+	}
+	if _, err := k.db.ServicePrincipal.Update().
+		Where(serviceprincipal.PrincipalID(principalID)).
+		SetLastUsedAt(now).
+		Save(ctx); err != nil {
+		return fmt.Errorf("systemauth: recording service principal use: %w", err)
+	}
+	return nil
 }
 
 // IsJWTUsed implements rfc7523.RFC7523KeyStorage.
