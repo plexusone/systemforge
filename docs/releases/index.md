@@ -4,7 +4,20 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.25.0](v0.25.0.md), lets relying parties call
+The latest release, [v0.27.0](v0.27.0.md), is a security release:
+SystemAuth uses codes and refresh tokens once under concurrency, links
+social sign-ins by email only when the provider owns the address, fails
+closed on unsafe production configuration, and sets security headers on
+every response; payments move onto payforge in the new `billing` package,
+replacing `marketplace/stripe`. It is breaking; read its upgrade notes
+first.
+
+Before it, [v0.26.0](v0.26.0.md) added `identity/appauth`, which
+assembles an application's relying party in a few lines, service accounts
+for automation, and a token HMAC secret that lets refresh tokens survive a
+SystemAuth restart. It is not breaking.
+
+Before it, [v0.25.0](v0.25.0.md) let relying parties call
 SystemAuth's APIs, such as the managed-principal API with `mpclient`, with
 their people's DPoP-bound session tokens (`relyingparty.Client.Transport`).
 It is not breaking.
