@@ -133,8 +133,10 @@ Security properties:
   match it.
 - `return_to` must be a same-origin path or an absolute URL on the app origin
   or `AllowedOrigins`.
-- `POST /bff/auth/logout` and unsafe methods behind `RequireSession` require a
-  JSON body and, when the browser sends one, an allowed `Origin`.
+- `POST /bff/auth/logout` and unsafe methods behind `RequireSession` require
+  an allowed `Origin`, which browsers send on such requests; any body is then
+  accepted, so file uploads work. A request without an `Origin` must have a
+  JSON body, and an allowed `Referer` when it sends one.
 
 `BFF.AccessToken(r)` returns a SystemAuth access token for the session,
 refreshing it when it is about to expire and storing the rotated refresh

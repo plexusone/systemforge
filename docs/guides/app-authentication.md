@@ -133,8 +133,9 @@ The order is: the `Authorization` header, then the session cookie, then
 `relyingparty` makes two further checks, so applications don't repeat them:
 
 - **Cookie writes.** A cookie-authenticated request that changes state must
-  come from the public URL or an allowed origin, with a JSON body. Otherwise
-  it gets a `403`.
+  carry an `Origin` of the public URL or an allowed origin, which browsers
+  send, and may then have any body, including a file upload. A request
+  without an `Origin` must have a JSON body. Otherwise it gets a `403`.
 - **Inactive principals.** An inactive principal is refused at sign-in and
   on every request.
 

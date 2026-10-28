@@ -750,19 +750,25 @@ func isUnsafeMethod(m string) bool {
 	return m != http.MethodGet && m != http.MethodHead && m != http.MethodOptions
 }
 
-// sameOriginRequest is the CSRF check for state-changing BFF requests: a
-// browser-sent Origin (or Referer) must be an allowed origin, and the body
-// must be JSON (which a cross-site HTML form cannot send without a CORS
-// preflight). The session cookie is also SameSite=Lax.
+// sameOriginRequest is the CSRF check for state-changing BFF requests.
+//
+// A browser sends Origin on every cross-origin request and on same-origin
+// requests that change state, and a page cannot forge it. When it is
+// present it must be an allowed origin, and then any body is accepted, so
+// file uploads (multipart/form-data) work with the session cookie: a
+// cross-site form arrives with its own site's Origin and is refused.
+//
+// Without an Origin (an older client, or one that strips it), the Referer,
+// when present, must be an allowed origin, and the body must be JSON, which
+// a cross-site HTML form cannot send without a CORS preflight. The session
+// cookie is also SameSite=Lax.
 func (b *BFF) sameOriginRequest(r *http.Request) bool {
-	origin := ""
 	if o := r.Header.Get("Origin"); o != "" && o != "null" {
-		origin = o
-	} else if ref := r.Header.Get("Referer"); ref != "" {
-		origin = ref
+		origin, err := parseOrigin(o)
+		return err == nil && b.origins[origin]
 	}
-	if origin != "" {
-		o, err := parseOrigin(origin)
+	if ref := r.Header.Get("Referer"); ref != "" {
+		o, err := parseOrigin(ref)
 		if err != nil || !b.origins[o] {
 			return false
 		}
