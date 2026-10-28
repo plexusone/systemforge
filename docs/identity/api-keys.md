@@ -14,7 +14,7 @@ import (
 // Create service with your store implementation
 service := apikey.NewService(apikey.ServiceConfig{
     Store:         myStore,               // Your store implementation
-    Prefix:        "myapp",               // Key prefix (default: "cf")
+    Prefix:        "myapp",               // Key prefix (default: "sf")
     AllowedScopes: []string{"read:*", "write:*"},
 })
 

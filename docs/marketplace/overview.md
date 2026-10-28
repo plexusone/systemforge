@@ -311,7 +311,7 @@ const (
 
 ## Database Tables
 
-The marketplace creates these Ent entities (prefixed with `cf_`):
+The marketplace creates these Ent entities (prefixed with `sf_`):
 
 | Table | Description |
 |-------|-------------|
