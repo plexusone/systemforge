@@ -50,7 +50,8 @@ deliberately minimal (client name, scope descriptions, Allow/Deny). Decisions
 are kept in a `ConsentStore`; with `EntStorage` the default is the database
 (`sf_consent_grants`), otherwise in-memory (users are asked again after a
 restart). See [Production Stores](production-stores.md). The consent form is protected by a CSRF token derived from the login
-session, a same-origin check, and `frame-ancestors 'none'`. Deployments whose
+session, a same-origin check, and the
+[security headers](deployment.md#security-headers) every page carries. Deployments whose
 clients are all first-party should set `skip_consent: true` instead.
 
 ## Refresh tokens

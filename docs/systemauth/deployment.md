@@ -365,6 +365,33 @@ auth.example.com {
 }
 ```
 
+## Security headers
+
+Every SystemAuth response, including the login, consent, sign-up,
+sign-up code, waitlist, age question and logout pages and their error
+pages, carries:
+
+| Header | Value |
+|--------|-------|
+| `Content-Security-Policy` | `default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; form-action 'self'` |
+| `X-Frame-Options` | `DENY` |
+| `X-Content-Type-Options` | `nosniff` |
+| `Referrer-Policy` | `same-origin` |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains`, when the issuer is https |
+
+The pages run no script and no inline style. Browsers check `form-action`
+on every redirect that follows a form submission, so a page whose form
+ends at another origin adds it: the consent page adds the origins of the
+client's redirect URIs, the logout page the `allowed_redirect_origins`,
+and the age question, whose answer continues through the upstream
+provider, `https:`. `same-origin` keeps page URLs, such as one carrying an
+invite code, from reaching a provider or an application as a referrer,
+while a same-origin form post keeps the `Origin` header the form handlers
+check. The organization console sets its own policy.
+
+A proxy in front of SystemAuth should pass these headers through rather
+than replace them.
+
 ## Health checks
 
 | Endpoint | Meaning |
