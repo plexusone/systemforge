@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -188,11 +189,38 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 	return s, nil
 }
 
+// hmacSecrets returns the secret keying Fosite's HMAC tokens (codes,
+// refresh tokens and opaque access tokens) and the verification secret
+// accepted beside it during a rotation. Fosite keys its HMAC with the first 32 bytes of the secret, so
+// a configured secret is hashed to 32 bytes to keep all of its entropy.
+// Without one, a random secret is generated for this process.
+func (s *Server) hmacSecrets() ([]byte, [][]byte, error) {
+	t := s.config.Tokens
+	if t.HMACSecret == "" {
+		secret := make([]byte, 32)
+		if _, err := rand.Read(secret); err != nil {
+			return nil, nil, fmt.Errorf("systemauth: generating the token HMAC secret: %w", err)
+		}
+		s.logger.Warn("no tokens.hmac_secret configured; generated one for this process (refresh tokens and authorization codes will not validate after a restart or on another instance)")
+		return secret, nil, nil
+	}
+	var rotated [][]byte
+	if t.HMACVerificationSecret != "" {
+		rotated = [][]byte{hmacKey(t.HMACVerificationSecret)}
+	}
+	return hmacKey(t.HMACSecret), rotated, nil
+}
+
+// hmacKey is the 32-byte Fosite key for a configured secret.
+func hmacKey(secret string) []byte {
+	k := sha256.Sum256([]byte(secret))
+	return k[:]
+}
+
 // setupFosite configures the Fosite OAuth2 provider.
 func (s *Server) setupFosite() error {
-	// Generate a hash secret if not provided
-	hashSecret := make([]byte, 32)
-	if _, err := rand.Read(hashSecret); err != nil {
+	hashSecret, rotated, err := s.hmacSecrets()
+	if err != nil {
 		return err
 	}
 
@@ -204,6 +232,7 @@ func (s *Server) setupFosite() error {
 		AuthorizeCodeLifespan:          s.config.Tokens.AuthCodeLifetime.Duration(),
 		IDTokenLifespan:                s.config.Tokens.IDTokenLifetime.Duration(),
 		GlobalSecret:                   hashSecret,
+		RotatedGlobalSecrets:           rotated,
 		SendDebugMessagesToClients:     false,
 		EnforcePKCE:                    s.config.Features.RequirePKCE,
 		EnforcePKCEForPublicClients:    true,

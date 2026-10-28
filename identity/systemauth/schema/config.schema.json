@@ -147,6 +147,14 @@
             "168h",
             "720h"
           ]
+        },
+        "hmac_secret": {
+          "type": "string",
+          "description": "Secret signing codes and refresh and opaque tokens (32+ bytes; supports env var expansion)"
+        },
+        "hmac_verification_secret": {
+          "type": "string",
+          "description": "Second HMAC secret accepted but not signed with"
         }
       },
       "additionalProperties": false,

@@ -12,6 +12,11 @@ tokens:
   refresh_token_absolute_lifetime: 720h  # Max lifetime of a rotating refresh-token family (30 days)
   id_token_lifetime: 1h          # How long ID tokens are valid
   auth_code_lifetime: 10m        # How long authorization codes are valid
+  # Signs codes, refresh tokens and opaque access tokens: 32+ bytes, the same
+  # on every instance (openssl rand -hex 32). Unset, refresh tokens do not
+  # survive a restart.
+  # hmac_secret: ${SYSTEMAUTH_TOKEN_HMAC_SECRET}
+  # hmac_verification_secret: ${SYSTEMAUTH_TOKEN_HMAC_VERIFICATION_SECRET}   # during a rotation
 
 # Key configuration
 # Production requires a signing key (or --signing-key-file / SYSTEMAUTH_SIGNING_KEY);

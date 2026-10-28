@@ -404,6 +404,41 @@ type TokenConfig struct {
 	// AuthCodeLifetime is how long authorization codes are valid.
 	// Default: 10 minutes
 	AuthCodeLifetime Duration `json:"auth_code_lifetime,omitempty" yaml:"auth_code_lifetime,omitempty" jsonschema:"default=10m,description=Authorization code lifetime (e.g. 10m)"`
+
+	// HMACSecret keys the HMAC that signs authorization codes, refresh
+	// tokens and opaque access tokens: at least 32 bytes, the same on every
+	// instance and across restarts. Unset, a random secret is generated at
+	// each start, so those tokens stop validating after a restart and on
+	// other instances. Supports env var expansion.
+	HMACSecret string `json:"hmac_secret,omitempty" yaml:"hmac_secret,omitempty" jsonschema:"description=Secret signing codes and refresh and opaque tokens (32+ bytes; supports env var expansion)"`
+
+	// HMACVerificationSecret is a second secret whose tokens are accepted
+	// but never signed: during a rotation, the next secret while it is
+	// pre-staged, then the previous one once the next is promoted to
+	// HMACSecret, so a rollback never rejects tokens already issued.
+	// Requires HMACSecret.
+	HMACVerificationSecret string `json:"hmac_verification_secret,omitempty" yaml:"hmac_verification_secret,omitempty" jsonschema:"description=Second HMAC secret accepted but not signed with, during a rotation (32+ bytes; supports env var expansion)"`
+}
+
+// MinHMACSecretLength is the shortest TokenConfig.HMACSecret accepted.
+const MinHMACSecretLength = 32
+
+func (c *TokenConfig) validate() error {
+	if c.HMACSecret != "" && len(c.HMACSecret) < MinHMACSecretLength {
+		return fmt.Errorf("%w: tokens.hmac_secret must be at least %d bytes", ErrInvalidConfig, MinHMACSecretLength)
+	}
+	if c.HMACVerificationSecret == "" {
+		return nil
+	}
+	switch {
+	case c.HMACSecret == "":
+		return fmt.Errorf("%w: tokens.hmac_verification_secret requires tokens.hmac_secret", ErrInvalidConfig)
+	case len(c.HMACVerificationSecret) < MinHMACSecretLength:
+		return fmt.Errorf("%w: tokens.hmac_verification_secret must be at least %d bytes", ErrInvalidConfig, MinHMACSecretLength)
+	case c.HMACVerificationSecret == c.HMACSecret:
+		return fmt.Errorf("%w: tokens.hmac_verification_secret must differ from tokens.hmac_secret", ErrInvalidConfig)
+	}
+	return nil
 }
 
 // Duration is a wrapper around time.Duration that supports
@@ -628,6 +663,9 @@ func (c *Config) Validate() error {
 	}
 	if abs := c.Tokens.RefreshTokenAbsoluteLifetime; abs != 0 && abs < c.Tokens.RefreshTokenLifetime {
 		return fmt.Errorf("%w: tokens.refresh_token_absolute_lifetime must be at least refresh_token_lifetime", ErrInvalidConfig)
+	}
+	if err := c.Tokens.validate(); err != nil {
+		return err
 	}
 	if c.SocialLogin != nil {
 		if err := c.SocialLogin.validate(); err != nil {

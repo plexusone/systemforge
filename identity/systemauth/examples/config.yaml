@@ -21,6 +21,11 @@ tokens:
   refresh_token_absolute_lifetime: 720h  # 30 days across rotations
   id_token_lifetime: 1h
   auth_code_lifetime: 10m
+  # Signs codes, refresh tokens and opaque access tokens: 32+ bytes, the same
+  # on every instance (openssl rand -hex 32). Unset, refresh tokens do not
+  # survive a restart.
+  # hmac_secret: ${SYSTEMAUTH_TOKEN_HMAC_SECRET}
+  # hmac_verification_secret: ${SYSTEMAUTH_TOKEN_HMAC_VERIFICATION_SECRET}   # during a rotation
 
 # Static OAuth client configurations
 clients:
