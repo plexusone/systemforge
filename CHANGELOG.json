@@ -40,7 +40,7 @@
           "commit": "e79798a"
         },
         {
-          "description": "`identity/serviceaccount`: service accounts in an organization with a `service_account` membership, generated or supplied ES256, RS256 and EdDSA keys, application roles, and disable, enable, delete and key revocation recorded as access changes",
+          "description": "`identity/serviceaccount`: service accounts in an organization with a `service_account` membership, keys generated as P-256 or supplied as ES256, RS256 or EdDSA, application roles, and disable, enable, delete and key revocation recorded as access changes; revoking a usable key ends the account's current tokens",
           "commit": "3f236a1"
         },
         {
@@ -52,7 +52,7 @@
           "commit": "425235d"
         },
         {
-          "description": "`relyingparty.BearerConfig.ServicePrincipals` and `VerifiedIdentity.Service`: an application creates a service account's local principal on its first request; `appauth.Options.ServiceAccounts` turns it on and accepts `relyingparty.ServiceAccountClientID`",
+          "description": "`relyingparty.BearerConfig.ServicePrincipals` and `VerifiedIdentity.Service`: an application creates a service account's local principal on its first request, and refuses a service-account token whose local principal is not of type service; `appauth.Options.ServiceAccounts` turns it on and accepts `relyingparty.ServiceAccountClientID`",
           "commit": "6a466d9"
         },
         {
@@ -107,7 +107,7 @@
           "commit": "9df9951"
         },
         {
-          "description": "From command to application: an account created, granted a role and given a key calls an `appauth` API through `serviceclient`, loses the role's organization after the role is removed, and gets no token once disabled",
+          "description": "From command to application: an account created, granted a role and given a key calls an `appauth` API through `serviceclient`, loses the role's organization after the role is removed, gets no token once disabled, and is deleted with its issued tokens in place",
           "commit": "633812d"
         },
         {
