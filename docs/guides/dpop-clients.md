@@ -143,8 +143,9 @@ managed-principal API with `managedprincipal/mpclient`, give the HTTP client
 `relyingparty.Client.Transport`. The caller sets the token in
 `Authorization`; the transport presents a token bound to the client's key
 with the `DPoP` scheme and a new proof, an unbound one as `Bearer`, refuses a
-token bound to another key (`ErrForeignDPoPToken`), and retries once with a
-server nonce when the request body can be sent again:
+token bound to another key (`ErrForeignDPoPToken`) and a JWT that SystemAuth's
+keys do not verify (`ErrInvalidToken`), and retries once with a server nonce
+when the request body can be sent again:
 
 ```go
 mp := mpclient.New(issuer+"/managed-principals", &http.Client{Transport: rp.Transport(nil)})

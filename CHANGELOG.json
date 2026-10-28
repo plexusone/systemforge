@@ -24,7 +24,7 @@
       ],
       "changed": [
         {
-          "description": "The relying party's calls to userinfo, memberships and access changes go through `Transport`, with the same behavior",
+          "description": "The relying party's calls to userinfo, memberships and access changes go through `Transport`; a JWT access token is sent only once its signature verifies against SystemAuth's keys",
           "commit": "5538912"
         }
       ],
@@ -41,6 +41,11 @@
         },
         {
           "description": "v0.25.0 release notes"
+        }
+      ],
+      "security": [
+        {
+          "description": "`relyingparty.Client.Transport` reads a JWT's `cnf` binding only after its signature verifies against SystemAuth's keys and its issuer matches, so it makes no DPoP proof for a token SystemAuth did not issue; a forged token is refused with `ErrInvalidToken`"
         }
       ]
     },
