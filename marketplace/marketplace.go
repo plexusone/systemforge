@@ -9,7 +9,6 @@ type EntService struct {
 	listings      *EntListingService
 	licenses      *EntLicenseService
 	subscriptions *EntSubscriptionService
-	checkout      CheckoutService
 }
 
 // NewEntService creates a new Ent-backed marketplace service.
@@ -19,14 +18,7 @@ func NewEntService(client *ent.Client, authzSync AuthzSyncer) *EntService {
 		listings:      NewEntListingService(client, authzSync),
 		licenses:      NewEntLicenseService(client, authzSync),
 		subscriptions: NewEntSubscriptionService(client),
-		checkout:      nil, // Set via WithCheckout
 	}
-}
-
-// WithCheckout sets the checkout service.
-func (s *EntService) WithCheckout(checkout CheckoutService) *EntService {
-	s.checkout = checkout
-	return s
 }
 
 // WithPublishGate makes publishing a paid listing require that gate allows
@@ -49,11 +41,6 @@ func (s *EntService) Licenses() LicenseService {
 // Subscriptions returns the subscription service.
 func (s *EntService) Subscriptions() SubscriptionService {
 	return s.subscriptions
-}
-
-// Checkout returns the checkout service.
-func (s *EntService) Checkout() CheckoutService {
-	return s.checkout
 }
 
 // Ensure EntService implements Service.

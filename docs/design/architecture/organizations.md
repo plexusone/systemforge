@@ -380,12 +380,12 @@ license, `CheckPrincipal(listingID, principalID)` which passes any valid
 `unlimited` license outright and otherwise requires a seat assignment,
 `AssignSeat`/`UnassignSeat`), `SubscriptionService` (`GetByOrg`, which returns the platform
 subscription, `IsActive`, `GetPlanTier`, `ChangePlan`, `Cancel`, `CancelImmediately`,
-`Reactivate`) and `CheckoutService` (Stripe). A `SubscriptionService` that
+`Reactivate`); payments are taken by package `billing`. A `SubscriptionService` that
 also implements the optional `SubscriptionLister` (`ListByOrg`) contributes
 every subscription of an organization to entitlements. Tiers are a property
 of a subscription, not of a listing. The
 `marketplace.PurchaserChecker` (implemented by
-`managedprincipal.Service.IsManaged`) refuses checkout for managed
+`managedprincipal.Service.IsManaged`) refuses `billing` checkout for managed
 principals. `marketplace.SpiceDBSyncer` writes listing, license, seat and
 subscription relationships for the relationship-based provider
 (`creator_org`, `owner`, `licensed_org`, `listing`, `purchased_by`,

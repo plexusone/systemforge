@@ -3,7 +3,6 @@ package marketplace
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"time"
 
@@ -19,11 +18,9 @@ type API struct {
 	config   APIConfig
 	listings ListingService
 	licenses LicenseService
-	checkout CheckoutService
 
-	caller    CallerResolver
-	purchases PurchaseAuthorizer
-	authz     authz.Authorizer
+	caller CallerResolver
+	authz  authz.Authorizer
 }
 
 // APIConfig holds API configuration.
@@ -32,16 +29,15 @@ type APIConfig struct {
 	BasePath string
 }
 
-// NewAPI creates a new marketplace API handler. Checkout acts for the
-// authenticated caller (see WithCallerResolver) and requires a
-// PurchaseAuthorizer (see WithPurchaseAuthorizer).
+// NewAPI creates a new marketplace API handler. Operations act for the
+// authenticated caller (see WithCallerResolver). Checkout is served by
+// package billing.
 func NewAPI(humaAPI huma.API, cfg APIConfig, svc Service, opts ...APIOption) *API {
 	api := &API{
 		huma:     humaAPI,
 		config:   cfg,
 		listings: svc.Listings(),
 		licenses: svc.Licenses(),
-		checkout: svc.Checkout(),
 		caller:   RequestPrincipalCaller,
 	}
 	for _, opt := range opts {
@@ -55,7 +51,6 @@ func NewAPI(humaAPI huma.API, cfg APIConfig, svc Service, opts ...APIOption) *AP
 func (a *API) registerEndpoints() {
 	a.registerListingEndpoints()
 	a.registerLicenseEndpoints()
-	a.registerCheckoutEndpoints()
 }
 
 // --- Listing Types ---
@@ -817,121 +812,6 @@ func (a *API) listSeats(ctx context.Context, input *ListSeatsInput) (*ListSeatsO
 	} else {
 		output.Body.AvailableSeats = -1 // Unlimited
 	}
-
-	return output, nil
-}
-
-// --- Checkout Types ---
-
-// CreateCheckoutInput is the request for creating a checkout session.
-type CreateCheckoutInput struct {
-	Body struct {
-		ListingID      string `json:"listing_id" required:"true" format:"uuid"`
-		OrganizationID string `json:"organization_id" required:"true" format:"uuid"`
-		// PurchaserID is deprecated: the purchaser is the authenticated
-		// caller. When present it must name the caller.
-		PurchaserID string `json:"purchaser_id,omitempty" required:"false" format:"uuid" doc:"Deprecated: the purchaser is the authenticated caller; when present it must equal the caller"`
-		Seats       *int   `json:"seats,omitempty" minimum:"1"`
-		SuccessURL  string `json:"success_url" required:"true" format:"uri"`
-		CancelURL   string `json:"cancel_url" required:"true" format:"uri"`
-	}
-}
-
-// CreateCheckoutOutput is the response for creating a checkout session.
-type CreateCheckoutOutput struct {
-	Body struct {
-		SessionID string `json:"session_id"`
-		URL       string `json:"url"`
-	}
-}
-
-// WebhookInput is the request for Stripe webhooks.
-type WebhookInput struct {
-	StripeSignature string `header:"Stripe-Signature"`
-	RawBody         []byte
-}
-
-func (a *API) registerCheckoutEndpoints() {
-	basePath := a.config.BasePath
-
-	huma.Register(a.huma, huma.Operation{
-		OperationID:   "createCheckout",
-		Method:        http.MethodPost,
-		Path:          basePath + "/checkout",
-		Summary:       "Create checkout session",
-		Description:   "Creates a Stripe checkout session in which the authenticated caller buys a listing for an organization they may purchase for",
-		Tags:          []string{"Checkout"},
-		DefaultStatus: http.StatusOK,
-	}, a.createCheckout)
-}
-
-func (a *API) createCheckout(ctx context.Context, input *CreateCheckoutInput) (*CreateCheckoutOutput, error) {
-	if a.checkout == nil {
-		return nil, huma.Error501NotImplemented("checkout not configured")
-	}
-
-	listingID, err := uuid.Parse(input.Body.ListingID)
-	if err != nil {
-		return nil, huma.Error400BadRequest("invalid listing_id")
-	}
-	orgID, err := uuid.Parse(input.Body.OrganizationID)
-	if err != nil {
-		return nil, huma.Error400BadRequest("invalid organization_id")
-	}
-	if a.purchases == nil && a.authz == nil {
-		return nil, huma.Error501NotImplemented("checkout purchase authorization not configured")
-	}
-
-	// The purchaser is whoever is authenticated, never a body field, and
-	// must be allowed to buy for the organization: by the configured
-	// PurchaseAuthorizer, or else by managing the organization.
-	purchaserID, err := a.callerID(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if input.Body.PurchaserID != "" {
-		claimed, err := uuid.Parse(input.Body.PurchaserID)
-		if err != nil {
-			return nil, huma.Error400BadRequest("invalid purchaser_id")
-		}
-		if claimed != purchaserID {
-			return nil, huma.Error403Forbidden("purchaser_id must be the authenticated caller")
-		}
-	}
-	var allowed bool
-	if a.purchases != nil {
-		allowed, err = a.purchases.CanPurchase(ctx, purchaserID, orgID)
-		if err != nil {
-			slog.ErrorContext(ctx, "marketplace: checking purchase authorization", "error", err)
-			return nil, huma.Error500InternalServerError("checking purchase authorization")
-		}
-	} else if allowed, err = a.canOrg(ctx, purchaserID, orgID, authz.PermOrgManage); err != nil {
-		return nil, err
-	}
-	if !allowed {
-		return nil, huma.Error403Forbidden("not allowed to purchase for this organization")
-	}
-
-	req := CheckoutRequest{
-		ListingID:      listingID,
-		OrganizationID: orgID,
-		PurchaserID:    purchaserID,
-		Seats:          input.Body.Seats,
-		SuccessURL:     input.Body.SuccessURL,
-		CancelURL:      input.Body.CancelURL,
-	}
-
-	session, err := a.checkout.CreateCheckoutSession(ctx, req)
-	if errors.Is(err, ErrManagedPurchaser) {
-		return nil, huma.Error403Forbidden(err.Error())
-	}
-	if err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
-	}
-
-	output := &CreateCheckoutOutput{}
-	output.Body.SessionID = session.SessionID
-	output.Body.URL = session.URL
 
 	return output, nil
 }

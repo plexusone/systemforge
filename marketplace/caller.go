@@ -75,11 +75,3 @@ type APIOption func(*API)
 func WithCallerResolver(r CallerResolver) APIOption {
 	return func(a *API) { a.caller = r }
 }
-
-// WithPurchaseAuthorizer sets who may buy for an organization, for
-// example OrgRolePurchaseAuthorizer(orgAuthorizer). Without one, buying
-// requires authz.PermOrgManage through the authorizer set by
-// WithAuthorizer; with neither, checkout is refused.
-func WithPurchaseAuthorizer(p PurchaseAuthorizer) APIOption {
-	return func(a *API) { a.purchases = p }
-}

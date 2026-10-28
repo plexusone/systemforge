@@ -120,6 +120,7 @@ nav:
     - Overview: multiapp/overview.md
   - Marketplace:
     - Overview: marketplace/overview.md
+    - Billing: marketplace/billing.md
   - Observability:
     - Overview: observability/overview.md
   - Integration:

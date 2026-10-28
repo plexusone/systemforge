@@ -1,11 +1,11 @@
 # Marketplace
 
-SystemForge provides a SaaS marketplace infrastructure with Stripe integration for subscription billing, license management, and seat-based access control.
+SystemForge provides a SaaS marketplace infrastructure: listings, license management and seat-based access control. Payments are taken by package `billing`, on [payforge](https://github.com/plexusone/payforge); see [Billing](billing.md).
 
 ## Features
 
 - **Listings** - Product catalog with multiple tiers and pricing
-- **Subscriptions** - Stripe-powered recurring billing
+- **Subscriptions** - The organization's plan, kept up to date by [billing](billing.md)
 - **Licenses** - Flexible licensing models (unlimited, per-seat, time-limited)
 - **Seat Management** - Assign and revoke user access to subscriptions
 
@@ -39,25 +39,16 @@ SystemForge provides a SaaS marketplace infrastructure with Stripe integration f
 ### 1. Create Services
 
 ```go
-import (
-    "github.com/plexusone/systemforge/marketplace"
-    "github.com/plexusone/systemforge/marketplace/stripe"
-)
+import "github.com/plexusone/systemforge/marketplace"
 
 // Create services with Ent client
 listingSvc := marketplace.NewEntListingService(entClient, nil)
 licenseSvc := marketplace.NewEntLicenseService(entClient, nil)
-seatSvc := marketplace.NewEntSeatAssignmentService(entClient, nil)
-subSvc := marketplace.NewEntSubscriptionService(entClient, nil)
-
-// Create Stripe checkout service
-checkoutSvc := stripe.NewCheckoutService(stripe.Config{
-    SecretKey:     os.Getenv("STRIPE_SECRET_KEY"),
-    WebhookSecret: os.Getenv("STRIPE_WEBHOOK_SECRET"),
-    SuccessURL:    "https://app.example.com/checkout/success",
-    CancelURL:     "https://app.example.com/checkout/cancel",
-}, licenseSvc, subSvc)
+subSvc := marketplace.NewEntSubscriptionService(entClient)
 ```
+
+Checkout, the customer portal and the payment webhook are wired with package
+`billing`; see [Billing](billing.md#wiring).
 
 ### 2. Create a Listing
 
@@ -73,37 +64,10 @@ listing, err := listingSvc.Create(ctx, &marketplace.Listing{
 })
 ```
 
-### 3. Handle Checkout
+### 3. Take Payments
 
-```go
-// Create Stripe checkout session
-session, err := checkoutSvc.CreateCheckoutSession(ctx, stripe.CheckoutRequest{
-    ListingID:      listing.ID,
-    OrganizationID: orgID,
-    PrincipalID:    userID,
-    Quantity:       1,
-})
-
-// Redirect user to session.URL
-http.Redirect(w, r, session.URL, http.StatusSeeOther)
-```
-
-### 4. Handle Webhooks
-
-```go
-// In your webhook handler
-func handleStripeWebhook(w http.ResponseWriter, r *http.Request) {
-    payload, _ := io.ReadAll(r.Body)
-    signature := r.Header.Get("Stripe-Signature")
-
-    err := checkoutSvc.HandleWebhook(r.Context(), payload, signature)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
-    w.WriteHeader(http.StatusOK)
-}
-```
+See [Billing](billing.md): a paid checkout for a listing grants the buying
+organization a license, and a full refund or a dispute suspends it.
 
 ## Entities
 
@@ -242,59 +206,11 @@ if available <= 0 {
 }
 ```
 
-## Stripe Integration
+## Payments
 
-### Environment Variables
-
-```bash
-STRIPE_SECRET_KEY=sk_live_...      # Stripe secret key
-STRIPE_WEBHOOK_SECRET=whsec_...    # Webhook signing secret
-STRIPE_PUBLISHABLE_KEY=pk_live_... # For frontend (optional)
-```
-
-The webhook signing secret is required: with an empty `WebhookSecret`,
-`ProcessWebhook` and `VerifyWebhook` refuse every event with
-`stripe.ErrWebhookSecretRequired`, because a signature made with an empty key
-can be computed by anyone.
-
-### Webhook Events
-
-The checkout service handles these Stripe events:
-
-| Event | Action |
-|-------|--------|
-| `checkout.session.completed` | Grant the license once paid |
-| `checkout.session.async_payment_succeeded` | Grant the license for a delayed payment |
-| `customer.subscription.updated` | Reconcile the license with the subscription (see below) |
-| `customer.subscription.deleted` | Revoke the license |
-| `invoice.paid`, `invoice.payment_failed` | Nothing; the resulting subscription status arrives as `customer.subscription.updated` |
-
-`customer.subscription.updated` reconciles the license with the subscription:
-
-- `active` or `trialing`: the license is valid. A suspended license is
-  restored and synced to the authorization system again, and a seat-based
-  license takes the subscription's quantity as its seat count. Seats already
-  assigned beyond a reduced count stay assigned, but no new seat can be
-  assigned until the count is under the limit.
-- `past_due`: unchanged while Stripe retries the payment.
-- `unpaid`, `paused`, `incomplete_expired` or `canceled`: the license is
-  suspended (`ValidUntil` is set to now, and since it is exclusive
-  `Check` and `CheckPrincipal` deny it at once) and its access is removed from the authorization system.
-
-### Webhook Endpoint
-
-Register your webhook endpoint in Stripe Dashboard:
-
-```
-https://api.example.com/webhooks/stripe
-```
-
-Select events:
-
-- `checkout.session.completed`
-- `customer.subscription.*`
-- `invoice.paid`
-- `invoice.payment_failed`
+Payments, webhooks and the customer portal are in package `billing`. See
+[Billing](billing.md), including
+[upgrading from `marketplace/stripe`](billing.md#upgrading-from-marketplacestripe).
 
 ## Listing Tiers
 
@@ -317,41 +233,19 @@ The marketplace creates these Ent entities (prefixed with `sf_`):
 |-------|-------------|
 | `sf_listings` | Product listings |
 | `sf_licenses` | Organization licenses |
-| `sf_subscriptions` | Stripe subscription links |
+| `sf_subscriptions` | Organization subscriptions; the one with no listing is the organization's plan |
 | `sf_seat_assignments` | User seat assignments |
 
 ## Example: Full Purchase Flow
 
+1. The buyer's client calls `POST /billing/checkout/listing` with the
+   listing's ID, acting for its organization, and is sent to the returned URL.
+2. Stripe reports the paid checkout to `POST /billing/webhook`, and the buying
+   organization is granted a license.
+3. Your application checks access:
+
 ```go
-// 1. User selects a plan
-listing, _ := listingSvc.Get(ctx, listingID)
-
-// 2. Create checkout session
-session, _ := checkoutSvc.CreateCheckoutSession(ctx, stripe.CheckoutRequest{
-    ListingID:      listing.ID,
-    OrganizationID: orgID,
-    PrincipalID:    userID,
-    Quantity:       1,
-})
-
-// 3. User completes payment on Stripe
-// ... redirect to session.URL ...
-
-// 4. Webhook creates license automatically
-// checkout.session.completed → license created
-
-// 5. Check access in your app
-hasAccess, _ := licenseSvc.CheckPrincipal(ctx, listingID, userID)
-// hasAccess = true
-
-// 6. For per-seat licenses, assign seats
-if license.LicenseType == marketplace.LicensePerSeat {
-    seatSvc.Assign(ctx, &marketplace.SeatAssignment{
-        LicenseID:   license.ID,
-        PrincipalID: teammateID,
-        AssignedBy:  userID,
-    })
-}
+hasAccess, err := licenseSvc.CheckPrincipal(ctx, listingID, userID)
 ```
 
 ## Next Steps
