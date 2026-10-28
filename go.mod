@@ -33,6 +33,7 @@ require (
 	github.com/plexusone/omnistorage-core v0.6.0
 	github.com/plexusone/omnivault v0.6.0
 	github.com/plexusone/payforge v0.0.0-00010101000000-000000000000
+	github.com/plexusone/systemspec-pricingpackaging v0.1.0
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -200,7 +201,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240917153116-6f2963f01587 // indirect
 	github.com/plexusone/omniworkflow v0.1.1 // indirect
-	github.com/plexusone/systemspec-pricingpackaging v0.1.0 // indirect
 	github.com/prometheus/client_golang v1.25.0 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
 	github.com/prometheus/common v0.72.1 // indirect
@@ -226,6 +226,7 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/viper v1.21.0 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.9.0 // indirect
+	github.com/stripe/stripe-go/v87 v87.0.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
 	github.com/yaronf/httpsign v0.5.2 // indirect
