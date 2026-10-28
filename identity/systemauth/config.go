@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/netip"
 	"net/url"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/invopop/jsonschema"
@@ -70,6 +72,53 @@ type Config struct {
 
 	// OAuth enables optional OAuth grants.
 	OAuth OAuthConfig `json:"oauth,omitempty" yaml:"oauth,omitempty" jsonschema:"description=Optional OAuth grants"`
+
+	// Production waives, by name, production checks that otherwise refuse
+	// to start the packaged service (systemauthsvc) or refuse requests.
+	Production ProductionConfig `json:"production,omitempty" yaml:"production,omitempty" jsonschema:"description=Named waivers of production checks"`
+}
+
+// Names of the production checks a deployment may waive with
+// production.allow. Each waiver is logged at startup.
+const (
+	// AllowEphemeralHMACSecret starts without tokens.hmac_secret: a secret
+	// is generated per process, so refresh tokens and authorization codes
+	// stop validating after a restart and on other instances.
+	AllowEphemeralHMACSecret = "ephemeral_hmac_secret" //nolint:gosec // G101: the name of a check, not a credential
+
+	// AllowClientSecretClientCredentials serves the client_credentials
+	// grant to clients that authenticate with a shared client secret.
+	// Service accounts with the JWT-bearer grant replace it.
+	AllowClientSecretClientCredentials = "client_secret_client_credentials"
+
+	// AllowBearerTokenClients serves clients registered with
+	// allow_bearer_tokens, which get access tokens not bound to a DPoP key.
+	AllowBearerTokenClients = "bearer_token_clients"
+)
+
+// productionAllowances are the names production.allow accepts.
+var productionAllowances = []string{AllowEphemeralHMACSecret, AllowClientSecretClientCredentials, AllowBearerTokenClients}
+
+// ProductionConfig waives production checks by name.
+type ProductionConfig struct {
+	// Allow names the production checks to waive: ephemeral_hmac_secret,
+	// client_secret_client_credentials or bearer_token_clients. An unknown
+	// name is a configuration error.
+	Allow []string `json:"allow,omitempty" yaml:"allow,omitempty" jsonschema:"enum=ephemeral_hmac_secret,enum=client_secret_client_credentials,enum=bearer_token_clients,description=Production checks to waive (each is logged at startup)"`
+}
+
+// Allows reports whether the production check name is waived.
+func (c ProductionConfig) Allows(name string) bool {
+	return slices.Contains(c.Allow, name)
+}
+
+func (c ProductionConfig) validate() error {
+	for _, name := range c.Allow {
+		if !slices.Contains(productionAllowances, name) {
+			return fmt.Errorf("%w: production.allow: unknown check %q (want one of %s)", ErrInvalidConfig, name, strings.Join(productionAllowances, ", "))
+		}
+	}
+	return nil
 }
 
 // OAuthConfig enables optional OAuth grants.
@@ -169,6 +218,13 @@ type DPoPConfig struct {
 	// keeps the cache in memory, which suits a single instance. Supports
 	// environment variable expansion: ${SYSTEMAUTH_DPOP_REDIS_URL}.
 	ReplayCacheRedisURL string `json:"replay_cache_redis_url,omitempty" yaml:"replay_cache_redis_url,omitempty" jsonschema:"description=Redis URL of the shared DPoP replay cache (supports env var expansion)"`
+
+	// SingleInstance declares that one instance serves SystemAuth, so the
+	// in-memory replay cache sees every proof. In production the packaged
+	// service (systemauthsvc) requires it, ReplayCacheRedisURL or an
+	// injected cache: with several instances and per-instance caches, a
+	// proof replayed to another instance is accepted.
+	SingleInstance bool `json:"single_instance,omitempty" yaml:"single_instance,omitempty" jsonschema:"default=false,description=One instance serves SystemAuth, so the in-memory DPoP replay cache is enough"`
 
 	// ResourceBaseURL is the external base URL of the routes this server
 	// protects outside SystemAuth's own endpoints (BearerAccess,
@@ -694,6 +750,9 @@ func (c *Config) Validate() error {
 		return err
 	}
 	if err := c.OAuth.JWTBearer.validate(); err != nil {
+		return err
+	}
+	if err := c.Production.validate(); err != nil {
 		return err
 	}
 	for _, cl := range c.Clients {

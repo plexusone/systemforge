@@ -52,6 +52,7 @@ type Server struct {
 	accessChanges   AccessChangeLister
 	accessScope     AccessChangeScope
 	jwtBearerKeys   JWTBearerKeyStorage
+	production      ProductionPolicy
 }
 
 // Option configures a Server.

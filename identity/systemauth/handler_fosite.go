@@ -326,6 +326,15 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	clientID := ar.GetClient().GetID()
 
+	// In production, grants and clients the deployment must not serve are
+	// refused once the client is authenticated.
+	if reason, err := s.checkProductionPolicy(ar); err != nil {
+		logger.Warn("token request rejected: production policy", "grant_type", grantType, "client_id", clientID, "reason", reason)
+		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
+		s.oauth2.WriteAccessError(ctx, w, ar, err)
+		return
+	}
+
 	// Tokens are bound to the proof's key, and a client must send one
 	// unless it is registered with the bearer-token exception; a grant
 	// already bound to a key needs a proof by it.
