@@ -165,6 +165,28 @@ func (k *KeySet) lookup(kid string) any {
 	return nil
 }
 
+// verifySignature checks raw's RS256 signature and its issuer, but not its
+// time claims, and returns its claims. It is for deciding how to present a
+// token to SystemAuth, which checks the times itself: an expired token
+// still reaches it and gets its usual answer.
+func (k *KeySet) verifySignature(ctx context.Context, raw, issuer string) (gojwt.MapClaims, error) {
+	claims := gojwt.MapClaims{}
+	_, err := gojwt.ParseWithClaims(raw, claims, func(tok *gojwt.Token) (any, error) {
+		kid, _ := tok.Header["kid"].(string)
+		return k.key(ctx, kid)
+	},
+		gojwt.WithValidMethods([]string{"RS256"}),
+		gojwt.WithoutClaimsValidation(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
+	}
+	if iss, _ := claims["iss"].(string); iss != issuer {
+		return nil, fmt.Errorf("%w: issuer %q is not %q", ErrInvalidToken, iss, issuer)
+	}
+	return claims, nil
+}
+
 // Verify checks raw's RS256 signature and standard time claims (exp, nbf,
 // iat with a small leeway) and the issuer, decoding the payload into
 // claims.

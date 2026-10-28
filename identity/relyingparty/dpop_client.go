@@ -2,6 +2,7 @@ package relyingparty
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -143,14 +144,16 @@ func tokenHTTPClient(base *http.Client, signer *dpopSigner, tokenURL string) *ht
 // tokenScheme is how a token is presented to SystemAuth: "DPoP" for a
 // token bound to this client's key or an opaque one (which this client
 // obtained, so it is bound to its key), "Bearer" for a JWT without cnf. A
-// JWT bound to another key cannot be presented.
-func (c *Client) tokenScheme(token string) (string, error) {
+// JWT is read only once its signature verifies against SystemAuth's keys,
+// so no proof is made for a token SystemAuth did not issue; one bound to
+// another key cannot be presented.
+func (c *Client) tokenScheme(ctx context.Context, token string) (string, error) {
 	if strings.Count(token, ".") != 2 {
 		return "DPoP", nil
 	}
-	_, claims, err := unverified(token)
+	claims, err := c.keys.verifySignature(ctx, token, c.cfg.Issuer)
 	if err != nil {
-		return "DPoP", nil
+		return "", fmt.Errorf("relyingparty: the access token is not one SystemAuth issued: %w", err)
 	}
 	cnf, _ := claims["cnf"].(map[string]any)
 	jkt, _ := cnf["jkt"].(string)
@@ -186,7 +189,11 @@ func (c *Client) doWithToken(req *http.Request, token string) (*http.Response, e
 //   - an unbound JWT, from a client registered with allow_bearer_tokens,
 //     with the Bearer scheme and no proof;
 //   - a token bound to another key is refused with ErrForeignDPoPToken,
-//     since only its holder can make proofs for it.
+//     since only its holder can make proofs for it;
+//   - a JWT whose signature SystemAuth's keys do not verify, or from
+//     another issuer, is refused with ErrInvalidToken, so no proof is made
+//     for a token SystemAuth did not issue. Its expiry is not checked:
+//     SystemAuth answers an expired token itself.
 //
 // A request refused with 401 use_dpop_nonce is retried once with
 // SystemAuth's nonce when its body can be sent again (none, or GetBody);
@@ -216,7 +223,7 @@ func (t *apiTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	if !ok {
 		return t.base.RoundTrip(r)
 	}
-	scheme, err := t.c.tokenScheme(token)
+	scheme, err := t.c.tokenScheme(r.Context(), token)
 	if err != nil {
 		return nil, errors.Join(err, closeRequestBody(r))
 	}
