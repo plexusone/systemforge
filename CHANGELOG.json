@@ -17,6 +17,9 @@
         },
         {
           "description": "Service accounts: automation that belongs to an organization, holds application roles there, and calls APIs with short-lived DPoP-bound tokens it gets by signing an assertion with a private key (the RFC 7523 JWT-bearer grant), managed with the `service-account` command and used from Go with `identity/serviceclient`"
+        },
+        {
+          "description": "Refresh tokens survive a SystemAuth restart and work on every instance with `tokens.hmac_secret`, which rotates with `tokens.hmac_verification_secret`"
         }
       ],
       "added": [
@@ -63,6 +66,10 @@
         {
           "description": "`MemoryPrincipalStore.SetActive`",
           "commit": "6a466d9"
+        },
+        {
+          "description": "`tokens.hmac_secret` and `tokens.hmac_verification_secret` (`TokenConfig.HMACSecret`, `HMACVerificationSecret`, `MinHMACSecretLength`): the secret signing authorization codes, refresh tokens and opaque access tokens, at least 32 bytes and expanded from the environment, and a second secret accepted but not signed with during a rotation",
+          "commit": "54f81f9"
         }
       ],
       "changed": [
@@ -84,6 +91,10 @@
         {
           "description": "`relyingparty.RequestAuthenticator` answers a cookie-authenticated cross-origin write with `403 CSRF_REJECTED` and no challenge, instead of a `401` that tells the client to sign in again",
           "commit": "662ffaa"
+        },
+        {
+          "description": "Refresh tokens and authorization codes no longer stop working at every SystemAuth restart and on other instances when `tokens.hmac_secret` is set; without it SystemAuth warns that they will",
+          "commit": "54f81f9"
         }
       ],
       "tests": [
@@ -98,6 +109,10 @@
         {
           "description": "From command to application: an account created, granted a role and given a key calls an `appauth` API through `serviceclient`, loses the role's organization after the role is removed, and gets no token once disabled",
           "commit": "633812d"
+        },
+        {
+          "description": "Codes and refresh tokens across a restart with and without `tokens.hmac_secret`, and a secret rotation through pre-staging, promotion, rollback and retirement",
+          "commit": "8f67e3d"
         }
       ],
       "documentation": [
@@ -120,6 +135,10 @@
         {
           "description": "The API keys page shows a truncated sample key, and the API key, marketplace and Ent store examples use the `sf` prefix",
           "commit": "60e437f"
+        },
+        {
+          "description": "The token HMAC secret and its rotation in Deploying SystemAuth and Rotating Keys and Secrets",
+          "commit": "ea624df"
         },
         {
           "description": "v0.26.0 release notes"
