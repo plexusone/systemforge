@@ -16,6 +16,8 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/approle"
+	"github.com/plexusone/systemforge/identity/ent/billingcustomer"
+	"github.com/plexusone/systemforge/identity/ent/billingevent"
 	"github.com/plexusone/systemforge/identity/ent/clientassertionjti"
 	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
@@ -113,6 +115,8 @@ func checkColumn(t, c string) error {
 			agent.Table:                agent.ValidColumn,
 			approle.Table:              approle.ValidColumn,
 			application.Table:          application.ValidColumn,
+			billingcustomer.Table:      billingcustomer.ValidColumn,
+			billingevent.Table:         billingevent.ValidColumn,
 			clientassertionjti.Table:   clientassertionjti.ValidColumn,
 			consentgrant.Table:         consentgrant.ValidColumn,
 			credential.Table:           credential.ValidColumn,

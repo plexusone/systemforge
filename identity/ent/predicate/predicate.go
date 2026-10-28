@@ -18,6 +18,12 @@ type AppRole func(*sql.Selector)
 // Application is the predicate function for application builders.
 type Application func(*sql.Selector)
 
+// BillingCustomer is the predicate function for billingcustomer builders.
+type BillingCustomer func(*sql.Selector)
+
+// BillingEvent is the predicate function for billingevent builders.
+type BillingEvent func(*sql.Selector)
+
 // ClientAssertionJTI is the predicate function for clientassertionjti builders.
 type ClientAssertionJTI func(*sql.Selector)
 

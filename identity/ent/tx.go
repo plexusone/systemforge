@@ -22,6 +22,10 @@ type Tx struct {
 	AppRole *AppRoleClient
 	// Application is the client for interacting with the Application builders.
 	Application *ApplicationClient
+	// BillingCustomer is the client for interacting with the BillingCustomer builders.
+	BillingCustomer *BillingCustomerClient
+	// BillingEvent is the client for interacting with the BillingEvent builders.
+	BillingEvent *BillingEventClient
 	// ClientAssertionJTI is the client for interacting with the ClientAssertionJTI builders.
 	ClientAssertionJTI *ClientAssertionJTIClient
 	// ConsentGrant is the client for interacting with the ConsentGrant builders.
@@ -223,6 +227,8 @@ func (tx *Tx) init() {
 	tx.Agent = NewAgentClient(tx.config)
 	tx.AppRole = NewAppRoleClient(tx.config)
 	tx.Application = NewApplicationClient(tx.config)
+	tx.BillingCustomer = NewBillingCustomerClient(tx.config)
+	tx.BillingEvent = NewBillingEventClient(tx.config)
 	tx.ClientAssertionJTI = NewClientAssertionJTIClient(tx.config)
 	tx.ConsentGrant = NewConsentGrantClient(tx.config)
 	tx.Credential = NewCredentialClient(tx.config)

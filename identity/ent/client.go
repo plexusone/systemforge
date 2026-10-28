@@ -20,6 +20,8 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/approle"
+	"github.com/plexusone/systemforge/identity/ent/billingcustomer"
+	"github.com/plexusone/systemforge/identity/ent/billingevent"
 	"github.com/plexusone/systemforge/identity/ent/clientassertionjti"
 	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
@@ -70,6 +72,10 @@ type Client struct {
 	AppRole *AppRoleClient
 	// Application is the client for interacting with the Application builders.
 	Application *ApplicationClient
+	// BillingCustomer is the client for interacting with the BillingCustomer builders.
+	BillingCustomer *BillingCustomerClient
+	// BillingEvent is the client for interacting with the BillingEvent builders.
+	BillingEvent *BillingEventClient
 	// ClientAssertionJTI is the client for interacting with the ClientAssertionJTI builders.
 	ClientAssertionJTI *ClientAssertionJTIClient
 	// ConsentGrant is the client for interacting with the ConsentGrant builders.
@@ -151,6 +157,8 @@ func (c *Client) init() {
 	c.Agent = NewAgentClient(c.config)
 	c.AppRole = NewAppRoleClient(c.config)
 	c.Application = NewApplicationClient(c.config)
+	c.BillingCustomer = NewBillingCustomerClient(c.config)
+	c.BillingEvent = NewBillingEventClient(c.config)
 	c.ClientAssertionJTI = NewClientAssertionJTIClient(c.config)
 	c.ConsentGrant = NewConsentGrantClient(c.config)
 	c.Credential = NewCredentialClient(c.config)
@@ -280,6 +288,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Agent:                NewAgentClient(cfg),
 		AppRole:              NewAppRoleClient(cfg),
 		Application:          NewApplicationClient(cfg),
+		BillingCustomer:      NewBillingCustomerClient(cfg),
+		BillingEvent:         NewBillingEventClient(cfg),
 		ClientAssertionJTI:   NewClientAssertionJTIClient(cfg),
 		ConsentGrant:         NewConsentGrantClient(cfg),
 		Credential:           NewCredentialClient(cfg),
@@ -336,6 +346,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Agent:                NewAgentClient(cfg),
 		AppRole:              NewAppRoleClient(cfg),
 		Application:          NewApplicationClient(cfg),
+		BillingCustomer:      NewBillingCustomerClient(cfg),
+		BillingEvent:         NewBillingEventClient(cfg),
 		ClientAssertionJTI:   NewClientAssertionJTIClient(cfg),
 		ConsentGrant:         NewConsentGrantClient(cfg),
 		Credential:           NewCredentialClient(cfg),
@@ -398,15 +410,15 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.AccessChange, c.Agent, c.AppRole, c.Application, c.ClientAssertionJTI,
-		c.ConsentGrant, c.Credential, c.ExternalIdentity, c.Human, c.Invite, c.License,
-		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerInvite,
-		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
-		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
-		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.ScimToken,
-		c.SeatAssignment, c.ServicePrincipal, c.SignupAllowance, c.SignupCode,
-		c.SignupCodeRedemption, c.SignupInvite, c.SignupWaitlistEntry,
-		c.SlugReservation, c.Subscription,
+		c.AccessChange, c.Agent, c.AppRole, c.Application, c.BillingCustomer,
+		c.BillingEvent, c.ClientAssertionJTI, c.ConsentGrant, c.Credential,
+		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
+		c.LoginState, c.ManagerClaim, c.ManagerInvite, c.ManagerRelationship,
+		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
+		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
+		c.ResourceGrant, c.ScimToken, c.SeatAssignment, c.ServicePrincipal,
+		c.SignupAllowance, c.SignupCode, c.SignupCodeRedemption, c.SignupInvite,
+		c.SignupWaitlistEntry, c.SlugReservation, c.Subscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -416,15 +428,15 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.AccessChange, c.Agent, c.AppRole, c.Application, c.ClientAssertionJTI,
-		c.ConsentGrant, c.Credential, c.ExternalIdentity, c.Human, c.Invite, c.License,
-		c.Listing, c.LoginSession, c.LoginState, c.ManagerClaim, c.ManagerInvite,
-		c.ManagerRelationship, c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode,
-		c.OAuthConsent, c.OAuthToken, c.Organization, c.Principal,
-		c.PrincipalMembership, c.PrincipalToken, c.ResourceGrant, c.ScimToken,
-		c.SeatAssignment, c.ServicePrincipal, c.SignupAllowance, c.SignupCode,
-		c.SignupCodeRedemption, c.SignupInvite, c.SignupWaitlistEntry,
-		c.SlugReservation, c.Subscription,
+		c.AccessChange, c.Agent, c.AppRole, c.Application, c.BillingCustomer,
+		c.BillingEvent, c.ClientAssertionJTI, c.ConsentGrant, c.Credential,
+		c.ExternalIdentity, c.Human, c.Invite, c.License, c.Listing, c.LoginSession,
+		c.LoginState, c.ManagerClaim, c.ManagerInvite, c.ManagerRelationship,
+		c.OAuthApp, c.OAuthAppSecret, c.OAuthAuthCode, c.OAuthConsent, c.OAuthToken,
+		c.Organization, c.Principal, c.PrincipalMembership, c.PrincipalToken,
+		c.ResourceGrant, c.ScimToken, c.SeatAssignment, c.ServicePrincipal,
+		c.SignupAllowance, c.SignupCode, c.SignupCodeRedemption, c.SignupInvite,
+		c.SignupWaitlistEntry, c.SlugReservation, c.Subscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -441,6 +453,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.AppRole.mutate(ctx, m)
 	case *ApplicationMutation:
 		return c.Application.mutate(ctx, m)
+	case *BillingCustomerMutation:
+		return c.BillingCustomer.mutate(ctx, m)
+	case *BillingEventMutation:
+		return c.BillingEvent.mutate(ctx, m)
 	case *ClientAssertionJTIMutation:
 		return c.ClientAssertionJTI.mutate(ctx, m)
 	case *ConsentGrantMutation:
@@ -1153,6 +1169,272 @@ func (c *ApplicationClient) mutate(ctx context.Context, m *ApplicationMutation) 
 		return (&ApplicationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Application mutation op: %q", m.Op())
+	}
+}
+
+// BillingCustomerClient is a client for the BillingCustomer schema.
+type BillingCustomerClient struct {
+	config
+}
+
+// NewBillingCustomerClient returns a client for the BillingCustomer from the given config.
+func NewBillingCustomerClient(c config) *BillingCustomerClient {
+	return &BillingCustomerClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `billingcustomer.Hooks(f(g(h())))`.
+func (c *BillingCustomerClient) Use(hooks ...Hook) {
+	c.hooks.BillingCustomer = append(c.hooks.BillingCustomer, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `billingcustomer.Intercept(f(g(h())))`.
+func (c *BillingCustomerClient) Intercept(interceptors ...Interceptor) {
+	c.inters.BillingCustomer = append(c.inters.BillingCustomer, interceptors...)
+}
+
+// Create returns a builder for creating a BillingCustomer entity.
+func (c *BillingCustomerClient) Create() *BillingCustomerCreate {
+	mutation := newBillingCustomerMutation(c.config, OpCreate)
+	return &BillingCustomerCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of BillingCustomer entities.
+func (c *BillingCustomerClient) CreateBulk(builders ...*BillingCustomerCreate) *BillingCustomerCreateBulk {
+	return &BillingCustomerCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BillingCustomerClient) MapCreateBulk(slice any, setFunc func(*BillingCustomerCreate, int)) *BillingCustomerCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BillingCustomerCreateBulk{err: fmt.Errorf("calling to BillingCustomerClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BillingCustomerCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BillingCustomerCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for BillingCustomer.
+func (c *BillingCustomerClient) Update() *BillingCustomerUpdate {
+	mutation := newBillingCustomerMutation(c.config, OpUpdate)
+	return &BillingCustomerUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BillingCustomerClient) UpdateOne(_m *BillingCustomer) *BillingCustomerUpdateOne {
+	mutation := newBillingCustomerMutation(c.config, OpUpdateOne, withBillingCustomer(_m))
+	return &BillingCustomerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BillingCustomerClient) UpdateOneID(id uuid.UUID) *BillingCustomerUpdateOne {
+	mutation := newBillingCustomerMutation(c.config, OpUpdateOne, withBillingCustomerID(id))
+	return &BillingCustomerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for BillingCustomer.
+func (c *BillingCustomerClient) Delete() *BillingCustomerDelete {
+	mutation := newBillingCustomerMutation(c.config, OpDelete)
+	return &BillingCustomerDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BillingCustomerClient) DeleteOne(_m *BillingCustomer) *BillingCustomerDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BillingCustomerClient) DeleteOneID(id uuid.UUID) *BillingCustomerDeleteOne {
+	builder := c.Delete().Where(billingcustomer.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BillingCustomerDeleteOne{builder}
+}
+
+// Query returns a query builder for BillingCustomer.
+func (c *BillingCustomerClient) Query() *BillingCustomerQuery {
+	return &BillingCustomerQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBillingCustomer},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a BillingCustomer entity by its id.
+func (c *BillingCustomerClient) Get(ctx context.Context, id uuid.UUID) (*BillingCustomer, error) {
+	return c.Query().Where(billingcustomer.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BillingCustomerClient) GetX(ctx context.Context, id uuid.UUID) *BillingCustomer {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *BillingCustomerClient) Hooks() []Hook {
+	return c.hooks.BillingCustomer
+}
+
+// Interceptors returns the client interceptors.
+func (c *BillingCustomerClient) Interceptors() []Interceptor {
+	return c.inters.BillingCustomer
+}
+
+func (c *BillingCustomerClient) mutate(ctx context.Context, m *BillingCustomerMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BillingCustomerCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BillingCustomerUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BillingCustomerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BillingCustomerDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown BillingCustomer mutation op: %q", m.Op())
+	}
+}
+
+// BillingEventClient is a client for the BillingEvent schema.
+type BillingEventClient struct {
+	config
+}
+
+// NewBillingEventClient returns a client for the BillingEvent from the given config.
+func NewBillingEventClient(c config) *BillingEventClient {
+	return &BillingEventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `billingevent.Hooks(f(g(h())))`.
+func (c *BillingEventClient) Use(hooks ...Hook) {
+	c.hooks.BillingEvent = append(c.hooks.BillingEvent, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `billingevent.Intercept(f(g(h())))`.
+func (c *BillingEventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.BillingEvent = append(c.inters.BillingEvent, interceptors...)
+}
+
+// Create returns a builder for creating a BillingEvent entity.
+func (c *BillingEventClient) Create() *BillingEventCreate {
+	mutation := newBillingEventMutation(c.config, OpCreate)
+	return &BillingEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of BillingEvent entities.
+func (c *BillingEventClient) CreateBulk(builders ...*BillingEventCreate) *BillingEventCreateBulk {
+	return &BillingEventCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BillingEventClient) MapCreateBulk(slice any, setFunc func(*BillingEventCreate, int)) *BillingEventCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BillingEventCreateBulk{err: fmt.Errorf("calling to BillingEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BillingEventCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BillingEventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for BillingEvent.
+func (c *BillingEventClient) Update() *BillingEventUpdate {
+	mutation := newBillingEventMutation(c.config, OpUpdate)
+	return &BillingEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BillingEventClient) UpdateOne(_m *BillingEvent) *BillingEventUpdateOne {
+	mutation := newBillingEventMutation(c.config, OpUpdateOne, withBillingEvent(_m))
+	return &BillingEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BillingEventClient) UpdateOneID(id uuid.UUID) *BillingEventUpdateOne {
+	mutation := newBillingEventMutation(c.config, OpUpdateOne, withBillingEventID(id))
+	return &BillingEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for BillingEvent.
+func (c *BillingEventClient) Delete() *BillingEventDelete {
+	mutation := newBillingEventMutation(c.config, OpDelete)
+	return &BillingEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BillingEventClient) DeleteOne(_m *BillingEvent) *BillingEventDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BillingEventClient) DeleteOneID(id uuid.UUID) *BillingEventDeleteOne {
+	builder := c.Delete().Where(billingevent.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BillingEventDeleteOne{builder}
+}
+
+// Query returns a query builder for BillingEvent.
+func (c *BillingEventClient) Query() *BillingEventQuery {
+	return &BillingEventQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBillingEvent},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a BillingEvent entity by its id.
+func (c *BillingEventClient) Get(ctx context.Context, id uuid.UUID) (*BillingEvent, error) {
+	return c.Query().Where(billingevent.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BillingEventClient) GetX(ctx context.Context, id uuid.UUID) *BillingEvent {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *BillingEventClient) Hooks() []Hook {
+	return c.hooks.BillingEvent
+}
+
+// Interceptors returns the client interceptors.
+func (c *BillingEventClient) Interceptors() []Interceptor {
+	return c.inters.BillingEvent
+}
+
+func (c *BillingEventClient) mutate(ctx context.Context, m *BillingEventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BillingEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BillingEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BillingEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BillingEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown BillingEvent mutation op: %q", m.Op())
 	}
 }
 
@@ -6716,24 +6998,24 @@ func (c *SubscriptionClient) mutate(ctx context.Context, m *SubscriptionMutation
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		AccessChange, Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant,
-		Credential, ExternalIdentity, Human, Invite, License, Listing, LoginSession,
-		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
-		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
-		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, ScimToken,
-		SeatAssignment, ServicePrincipal, SignupAllowance, SignupCode,
-		SignupCodeRedemption, SignupInvite, SignupWaitlistEntry, SlugReservation,
-		Subscription []ent.Hook
+		AccessChange, Agent, AppRole, Application, BillingCustomer, BillingEvent,
+		ClientAssertionJTI, ConsentGrant, Credential, ExternalIdentity, Human, Invite,
+		License, Listing, LoginSession, LoginState, ManagerClaim, ManagerInvite,
+		ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent,
+		OAuthToken, Organization, Principal, PrincipalMembership, PrincipalToken,
+		ResourceGrant, ScimToken, SeatAssignment, ServicePrincipal, SignupAllowance,
+		SignupCode, SignupCodeRedemption, SignupInvite, SignupWaitlistEntry,
+		SlugReservation, Subscription []ent.Hook
 	}
 	inters struct {
-		AccessChange, Agent, AppRole, Application, ClientAssertionJTI, ConsentGrant,
-		Credential, ExternalIdentity, Human, Invite, License, Listing, LoginSession,
-		LoginState, ManagerClaim, ManagerInvite, ManagerRelationship, OAuthApp,
-		OAuthAppSecret, OAuthAuthCode, OAuthConsent, OAuthToken, Organization,
-		Principal, PrincipalMembership, PrincipalToken, ResourceGrant, ScimToken,
-		SeatAssignment, ServicePrincipal, SignupAllowance, SignupCode,
-		SignupCodeRedemption, SignupInvite, SignupWaitlistEntry, SlugReservation,
-		Subscription []ent.Interceptor
+		AccessChange, Agent, AppRole, Application, BillingCustomer, BillingEvent,
+		ClientAssertionJTI, ConsentGrant, Credential, ExternalIdentity, Human, Invite,
+		License, Listing, LoginSession, LoginState, ManagerClaim, ManagerInvite,
+		ManagerRelationship, OAuthApp, OAuthAppSecret, OAuthAuthCode, OAuthConsent,
+		OAuthToken, Organization, Principal, PrincipalMembership, PrincipalToken,
+		ResourceGrant, ScimToken, SeatAssignment, ServicePrincipal, SignupAllowance,
+		SignupCode, SignupCodeRedemption, SignupInvite, SignupWaitlistEntry,
+		SlugReservation, Subscription []ent.Interceptor
 	}
 )
 

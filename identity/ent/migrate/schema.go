@@ -199,6 +199,33 @@ var (
 			},
 		},
 	}
+	// SfBillingCustomersColumns holds the columns for the "sf_billing_customers" table.
+	SfBillingCustomersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "customer_id", Type: field.TypeString, Unique: true, Size: 255},
+		{Name: "organization_id", Type: field.TypeUUID, Unique: true},
+	}
+	// SfBillingCustomersTable holds the schema information for the "sf_billing_customers" table.
+	SfBillingCustomersTable = &schema.Table{
+		Name:       "sf_billing_customers",
+		Columns:    SfBillingCustomersColumns,
+		PrimaryKey: []*schema.Column{SfBillingCustomersColumns[0]},
+	}
+	// SfBillingEventsColumns holds the columns for the "sf_billing_events" table.
+	SfBillingEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "event_id", Type: field.TypeString, Unique: true, Size: 255},
+	}
+	// SfBillingEventsTable holds the schema information for the "sf_billing_events" table.
+	SfBillingEventsTable = &schema.Table{
+		Name:       "sf_billing_events",
+		Columns:    SfBillingEventsColumns,
+		PrimaryKey: []*schema.Column{SfBillingEventsColumns[0]},
+	}
 	// SfClientAssertionJtisColumns holds the columns for the "sf_client_assertion_jtis" table.
 	SfClientAssertionJtisColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1864,6 +1891,8 @@ var (
 		SfAgentsTable,
 		SfAppRolesTable,
 		SfApplicationsTable,
+		SfBillingCustomersTable,
+		SfBillingEventsTable,
 		SfClientAssertionJtisTable,
 		SfConsentGrantsTable,
 		SfCredentialsTable,
@@ -1918,6 +1947,12 @@ func init() {
 	SfApplicationsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfApplicationsTable.Annotation = &entsql.Annotation{
 		Table: "sf_applications",
+	}
+	SfBillingCustomersTable.Annotation = &entsql.Annotation{
+		Table: "sf_billing_customers",
+	}
+	SfBillingEventsTable.Annotation = &entsql.Annotation{
+		Table: "sf_billing_events",
 	}
 	SfClientAssertionJtisTable.Annotation = &entsql.Annotation{
 		Table: "sf_client_assertion_jtis",

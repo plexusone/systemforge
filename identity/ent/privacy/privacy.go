@@ -207,6 +207,54 @@ func (f ApplicationMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mut
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ApplicationMutation", m)
 }
 
+// The BillingCustomerQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type BillingCustomerQueryRuleFunc func(context.Context, *ent.BillingCustomerQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f BillingCustomerQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.BillingCustomerQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.BillingCustomerQuery", q)
+}
+
+// The BillingCustomerMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type BillingCustomerMutationRuleFunc func(context.Context, *ent.BillingCustomerMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f BillingCustomerMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.BillingCustomerMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.BillingCustomerMutation", m)
+}
+
+// The BillingEventQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type BillingEventQueryRuleFunc func(context.Context, *ent.BillingEventQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f BillingEventQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.BillingEventQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.BillingEventQuery", q)
+}
+
+// The BillingEventMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type BillingEventMutationRuleFunc func(context.Context, *ent.BillingEventMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f BillingEventMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.BillingEventMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.BillingEventMutation", m)
+}
+
 // The ClientAssertionJTIQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type ClientAssertionJTIQueryRuleFunc func(context.Context, *ent.ClientAssertionJTIQuery) error
@@ -1042,6 +1090,10 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.ApplicationQuery:
 		return q.Filter(), nil
+	case *ent.BillingCustomerQuery:
+		return q.Filter(), nil
+	case *ent.BillingEventQuery:
+		return q.Filter(), nil
 	case *ent.ClientAssertionJTIQuery:
 		return q.Filter(), nil
 	case *ent.ConsentGrantQuery:
@@ -1122,6 +1174,10 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.AppRoleMutation:
 		return m.Filter(), nil
 	case *ent.ApplicationMutation:
+		return m.Filter(), nil
+	case *ent.BillingCustomerMutation:
+		return m.Filter(), nil
+	case *ent.BillingEventMutation:
 		return m.Filter(), nil
 	case *ent.ClientAssertionJTIMutation:
 		return m.Filter(), nil

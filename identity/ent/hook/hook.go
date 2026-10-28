@@ -57,6 +57,30 @@ func (f ApplicationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ApplicationMutation", m)
 }
 
+// The BillingCustomerFunc type is an adapter to allow the use of ordinary
+// function as BillingCustomer mutator.
+type BillingCustomerFunc func(context.Context, *ent.BillingCustomerMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BillingCustomerFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BillingCustomerMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BillingCustomerMutation", m)
+}
+
+// The BillingEventFunc type is an adapter to allow the use of ordinary
+// function as BillingEvent mutator.
+type BillingEventFunc func(context.Context, *ent.BillingEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BillingEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BillingEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BillingEventMutation", m)
+}
+
 // The ClientAssertionJTIFunc type is an adapter to allow the use of ordinary
 // function as ClientAssertionJTI mutator.
 type ClientAssertionJTIFunc func(context.Context, *ent.ClientAssertionJTIMutation) (ent.Value, error)
