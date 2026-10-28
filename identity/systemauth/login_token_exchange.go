@@ -71,7 +71,9 @@ func WithLoginTokenRateLimit(storage ratelimit.Storage, perAddress, perClient ra
 
 // WithLoginTokenClientIP sets how the login token endpoint finds the
 // client's address, for its per-address rate limit and the last-used
-// address recorded on the token. The default is the direct peer, which
+// address recorded on the token. The JWT-bearer grant records the same
+// address as a service account key's last use. The default is the direct
+// peer, which
 // behind a reverse proxy is the proxy: pass
 // ratelimit.ForwardedClientIP(proxyNetworks...) there. Never read
 // forwarding headers without naming the proxies that set them.

@@ -38,6 +38,16 @@ type Session struct {
 	// proof they were issued with, the access token's cnf.jkt. Refreshing
 	// requires a proof by the same key. Empty means unbound bearer tokens.
 	DPoPJKT string `json:"dpop_jkt,omitempty"`
+
+	// PrincipalType is "service" for the tokens of a service principal
+	// (the JWT-bearer grant), carried as the principal_type claim of
+	// access tokens and introspection; empty otherwise.
+	PrincipalType string `json:"principal_type,omitempty"`
+
+	// jwtBearerKeyID is the key that authenticated a JWT-bearer token
+	// request, for recording its use once the token is issued. It lives
+	// only for the request and is never stored.
+	jwtBearerKeyID string
 }
 
 var (
@@ -65,11 +75,23 @@ func (s *Session) TokenType() string {
 // GetExtraClaims implements fosite.ExtraClaimsSession: introspection
 // responses carry the token_type and, for a DPoP-bound token, its cnf.jkt
 // (RFC 9449 §6.2), so a resource server introspecting a token knows to
-// require a proof by that key.
+// require a proof by that key. They also carry the authorization claims
+// of the access token: principal_type for a service principal, and the
+// orgs claim as it was when the token was issued.
 func (s *Session) GetExtraClaims() map[string]interface{} {
 	out := map[string]interface{}{"token_type": s.TokenType()}
 	if s.DPoPJKT != "" {
 		out["cnf"] = map[string]interface{}{"jkt": s.DPoPJKT}
+	}
+	if s.PrincipalType != "" {
+		out[PrincipalTypeClaim] = s.PrincipalType
+	}
+	if s.AccessClaims != nil {
+		for _, k := range []string{OrgsClaim, OrgsTruncatedClaim} {
+			if v, ok := s.AccessClaims.Extra[k]; ok {
+				out[k] = v
+			}
+		}
 	}
 	return out
 }
@@ -99,7 +121,7 @@ func (s *Session) Clone() fosite.Session {
 	if s == nil {
 		return nil
 	}
-	c := &Session{FamilyIssuedAt: s.FamilyIssuedAt, DPoPJKT: s.DPoPJKT}
+	c := &Session{FamilyIssuedAt: s.FamilyIssuedAt, DPoPJKT: s.DPoPJKT, PrincipalType: s.PrincipalType}
 	if s.AccessClaims != nil {
 		ac := *s.AccessClaims
 		ac.Audience = slices.Clone(s.AccessClaims.Audience)

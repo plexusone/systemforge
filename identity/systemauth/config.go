@@ -67,6 +67,62 @@ type Config struct {
 	// gets tokens bound to it, unless its registration sets
 	// allow_bearer_tokens.
 	DPoP DPoPConfig `json:"dpop,omitempty" yaml:"dpop,omitempty" jsonschema:"description=DPoP proof checking (RFC 9449)"`
+
+	// OAuth enables optional OAuth grants.
+	OAuth OAuthConfig `json:"oauth,omitempty" yaml:"oauth,omitempty" jsonschema:"description=Optional OAuth grants"`
+}
+
+// OAuthConfig enables optional OAuth grants.
+type OAuthConfig struct {
+	// JWTBearer configures the JWT-bearer grant for service accounts.
+	JWTBearer JWTBearerConfig `json:"jwt_bearer,omitempty" yaml:"jwt_bearer,omitempty" jsonschema:"description=JWT-bearer grant for service accounts (RFC 7523)"`
+}
+
+// JWTBearerConfig configures the JWT-bearer grant (RFC 7523 section 2.1):
+// a service account exchanges an assertion it signed with its private key
+// for a short-lived DPoP-bound access token, with no refresh token. The
+// assertion's issuer and subject are the account's identifier, its
+// audience the token endpoint or the issuer, and exp, iat and jti are
+// required. Every request must carry a DPoP proof; no client exception
+// applies.
+type JWTBearerConfig struct {
+	// Enabled turns the grant on and advertises it in discovery.
+	// Default: false.
+	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty" jsonschema:"default=false,description=Accept the JWT-bearer grant for service accounts"`
+
+	// MaxAssertionLifetime is the longest an assertion may be valid,
+	// from its iat to its exp. Default: 5 minutes.
+	MaxAssertionLifetime Duration `json:"max_assertion_lifetime,omitempty" yaml:"max_assertion_lifetime,omitempty" jsonschema:"default=5m,description=Longest assertion lifetime from iat to exp (e.g. 5m)"`
+
+	// TokenLifetime is the lifetime of the access tokens the grant
+	// issues, at most accesschange.MaxAccessTokenLifetime (15 minutes).
+	// Default: 15 minutes.
+	TokenLifetime Duration `json:"token_lifetime,omitempty" yaml:"token_lifetime,omitempty" jsonschema:"default=15m,description=Access token lifetime for the grant (e.g. 15m; at most 15m)"`
+}
+
+// Defaults of JWTBearerConfig.
+const (
+	DefaultJWTBearerMaxAssertionLifetime = 5 * time.Minute
+	DefaultJWTBearerTokenLifetime        = 15 * time.Minute
+)
+
+func (c *JWTBearerConfig) applyDefaults() {
+	if c.MaxAssertionLifetime == 0 {
+		c.MaxAssertionLifetime = Duration(DefaultJWTBearerMaxAssertionLifetime)
+	}
+	if c.TokenLifetime == 0 {
+		c.TokenLifetime = Duration(DefaultJWTBearerTokenLifetime)
+	}
+}
+
+func (c *JWTBearerConfig) validate() error {
+	if c.MaxAssertionLifetime < 0 {
+		return fmt.Errorf("%w: oauth.jwt_bearer.max_assertion_lifetime must not be negative", ErrInvalidConfig)
+	}
+	if d := c.TokenLifetime.Duration(); d < 0 || d > accesschange.MaxAccessTokenLifetime {
+		return fmt.Errorf("%w: oauth.jwt_bearer.token_lifetime must be between 0 and %s", ErrInvalidConfig, accesschange.MaxAccessTokenLifetime)
+	}
+	return nil
 }
 
 // DPoPConfig tunes how SystemAuth checks DPoP proofs. The replay cache is
@@ -553,6 +609,12 @@ func DefaultConfig(issuer string) *Config {
 			EnableDeviceFlow:         false,
 			EnableJWTAccessTokens:    false,
 		},
+		OAuth: OAuthConfig{
+			JWTBearer: JWTBearerConfig{
+				MaxAssertionLifetime: Duration(DefaultJWTBearerMaxAssertionLifetime),
+				TokenLifetime:        Duration(DefaultJWTBearerTokenLifetime),
+			},
+		},
 	}
 }
 
@@ -579,6 +641,14 @@ func (c *Config) Validate() error {
 	}
 	if err := c.DPoP.validate(); err != nil {
 		return err
+	}
+	if err := c.OAuth.JWTBearer.validate(); err != nil {
+		return err
+	}
+	for _, cl := range c.Clients {
+		if cl.ID == JWTBearerClientID {
+			return fmt.Errorf("%w: client ID %q is reserved", ErrInvalidConfig, JWTBearerClientID)
+		}
 	}
 	if c.Console != nil && c.SocialLogin == nil {
 		return fmt.Errorf("%w: the console signs in with social login, which is not configured", ErrInvalidConsoleConfig)
@@ -651,6 +721,7 @@ func (c *Config) ApplyDefaults() {
 	}
 
 	c.Authz.ApplyDefaults()
+	c.OAuth.JWTBearer.applyDefaults()
 
 	if mp := c.ManagedPrincipals; mp != nil {
 		if mp.LoginTokenTTL == 0 {

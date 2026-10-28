@@ -393,6 +393,7 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	if sess, ok := ar.GetSession().(*Session); ok {
 		response.SetTokenType(sess.TokenType())
+		s.recordJWTBearerUse(ctx, r, sess)
 	}
 
 	logger.Info("token issued",
@@ -481,6 +482,9 @@ func (s *Server) prepareAccessClaims(ctx context.Context, ar fosite.AccessReques
 	claims.NotBefore = time.Time{}
 	claims.JTI = ""
 	claims.Add("client_id", clientID)
+	if sess.PrincipalType != "" {
+		claims.Add(PrincipalTypeClaim, sess.PrincipalType)
+	}
 	oauthcore.SetConfirmationClaim(sess.DPoPJKT, claims)
 	// Always reset the header: a session stored before access tokens were
 	// typed, or before a key rotation, must not keep its old header.

@@ -105,6 +105,9 @@ func (s *Server) requireProofBeforeGrant(ctx context.Context, r *http.Request, p
 	if proof != nil {
 		return nil
 	}
+	if err := s.requireJWTBearerProof(r); err != nil {
+		return err
+	}
 	id := r.PostFormValue("client_id")
 	if user, _, ok := r.BasicAuth(); ok {
 		if unescaped, err := url.QueryUnescape(user); err == nil {
