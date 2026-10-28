@@ -314,9 +314,16 @@ type Subscription struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-// IsActive returns true if the subscription is currently active.
+// IsActive reports whether the subscription grants its plan: while it is
+// active, in a trial, or past due. Past due keeps the plan while the payment
+// provider retries the payment, matching payforge, so a customer whose card is
+// being fixed keeps access; unpaid and canceled do not grant.
 func (s *Subscription) IsActive() bool {
-	return s.Status == SubscriptionStatusActive || s.Status == SubscriptionStatusTrialing
+	switch s.Status {
+	case SubscriptionStatusActive, SubscriptionStatusTrialing, SubscriptionStatusPastDue:
+		return true
+	}
+	return false
 }
 
 // IsInTrial returns true if the subscription is in trial period.
