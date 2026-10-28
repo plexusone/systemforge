@@ -6,7 +6,7 @@
 // schema.
 //
 // Access changes the commands make (disabling an account, removing a role,
-// revoking the last key) are recorded in the database, where applications
+// revoking a key) are recorded in the database, where applications
 // read them; announcing them to a running server's in-process sinks is the
 // server's job.
 package serviceaccountcmd
@@ -396,7 +396,7 @@ func (r *runner) keyRevokeCmd() *cobra.Command {
 	var reason string
 	c := &cobra.Command{
 		Use:   "revoke <account> <key-id>",
-		Short: "Revoke a key; revoking the last one also ends the account's tokens",
+		Short: "Revoke a key; the account's current tokens end, and other keys get new ones",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return r.run(cmd.Context(), func(ctx context.Context, e env) error {

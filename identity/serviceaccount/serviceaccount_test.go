@@ -281,7 +281,7 @@ func TestAddKeyRefusals(t *testing.T) {
 	}
 }
 
-func TestRevokeLastKeyRecordsSessionsRevoked(t *testing.T) {
+func TestRevokeKeyRecordsSessionsRevoked(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
 	acct := f.create("ci")
@@ -296,23 +296,25 @@ func TestRevokeLastKeyRecordsSessionsRevoked(t *testing.T) {
 	if err := f.svc.RevokeKey(ctx, acct.ID, k1.KeyID, "rotated"); err != nil {
 		t.Fatal(err)
 	}
-	if got := f.reasons(acct.ID); len(got) != 0 {
-		t.Fatalf("revoking one of two keys announced %v", got)
+	// Revoking a key while another remains still ends current tokens: they
+	// may have been obtained with the revoked key.
+	if got := f.reasons(acct.ID); len(got) != 1 || got[0] != accesschange.SessionsRevoked {
+		t.Fatalf("revoking one of two keys announced %v, want sessions_revoked", got)
 	}
 	if err := f.svc.RevokeKey(ctx, acct.ID, k2.KeyID, "leaked"); err != nil {
 		t.Fatal(err)
 	}
-	if got := f.reasons(acct.ID); len(got) != 1 || got[0] != accesschange.SessionsRevoked {
+	if got := f.reasons(acct.ID); len(got) != 2 || got[1] != accesschange.SessionsRevoked {
 		t.Fatalf("revoking the last key announced %v, want sessions_revoked", got)
 	}
 	if err := f.svc.RevokeKey(ctx, acct.ID, k2.KeyID, "again"); err != nil {
 		t.Fatalf("revoking a revoked key: %v", err)
 	}
-	if got := f.reasons(acct.ID); len(got) != 1 {
+	if got := f.reasons(acct.ID); len(got) != 2 {
 		t.Errorf("revoking again announced %v", got)
 	}
 	recorded, err := accesschange.Since(ctx, f.db, time.Time{}, 0)
-	if err != nil || len(recorded) != 1 || recorded[0].Reason != accesschange.SessionsRevoked {
+	if err != nil || len(recorded) != 2 || recorded[1].Reason != accesschange.SessionsRevoked {
 		t.Errorf("recorded = %+v, %v", recorded, err)
 	}
 	if err := f.svc.RevokeKey(ctx, acct.ID, "no-such-key", ""); !errors.Is(err, serviceaccount.ErrKeyNotFound) {

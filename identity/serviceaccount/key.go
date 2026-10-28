@@ -19,7 +19,6 @@ import (
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
 	entcredential "github.com/plexusone/systemforge/identity/ent/credential"
-	"github.com/plexusone/systemforge/identity/ent/predicate"
 )
 
 // Key algorithms a service account key may use.
@@ -224,10 +223,11 @@ func (s *Service) ListKeys(ctx context.Context, id uuid.UUID) ([]*Key, error) {
 	return out, nil
 }
 
-// RevokeKey revokes one of the account's keys. When it was the account's
-// last usable key, a SessionsRevoked access change is recorded with it, so
-// tokens issued with it stop at once in applications with a revocation
-// cache. Revoking a revoked key does nothing.
+// RevokeKey revokes one of the account's keys. When the key was usable, a
+// SessionsRevoked access change is recorded with it, so the account's
+// current tokens, which may have been obtained with it, stop at once in
+// applications with a revocation cache; a workload holding another key gets
+// a new token. Revoking a revoked key does nothing.
 func (s *Service) RevokeKey(ctx context.Context, id uuid.UUID, keyID, reason string) error {
 	if _, err := s.Get(ctx, id); err != nil {
 		return err
@@ -250,8 +250,9 @@ func (s *Service) RevokeKey(ctx context.Context, id uuid.UUID, keyID, reason str
 	return nil
 }
 
-// revokeInTx revokes the key and, when no usable key is left, records the
-// access change it returns.
+// revokeInTx revokes the key and, when it was usable, records the access
+// change it returns, so tokens it obtained stop at once in applications with
+// a revocation cache.
 func (s *Service) revokeInTx(ctx context.Context, tx *ent.Tx, id uuid.UUID, keyID, reason string) (*accesschange.Change, error) {
 	now := s.now()
 	cred, err := tx.Credential.Query().
@@ -282,29 +283,14 @@ func (s *Service) revokeInTx(ctx context.Context, tx *ent.Tx, id uuid.UUID, keyI
 	if !wasUsable {
 		return nil, nil
 	}
-	left, err := tx.Credential.Query().Where(usableKeys(id, now)...).Exist(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("serviceaccount: counting usable keys: %w", err)
-	}
-	if left {
-		return nil, nil
-	}
+	// Tokens do not record the key that obtained them, so ending the
+	// revoked key's tokens ends all of the account's current tokens. A
+	// workload holding another key exchanges it for a new token.
 	change, err := accesschange.Record(ctx, tx, accesschange.Change{PrincipalID: id, Reason: accesschange.SessionsRevoked})
 	if err != nil {
 		return nil, err
 	}
 	return &change, nil
-}
-
-// usableKeys selects the account's usable key-pair credentials at now.
-func usableKeys(id uuid.UUID, now time.Time) []predicate.Credential {
-	return []predicate.Credential{
-		entcredential.PrincipalID(id),
-		entcredential.TypeEQ(entcredential.TypeKeypair),
-		entcredential.Active(true),
-		entcredential.Revoked(false),
-		entcredential.Or(entcredential.ExpiresAtIsNil(), entcredential.ExpiresAtGT(now)),
-	}
 }
 
 func fromKeypair(kp *credential.KeypairCredential) *Key {

@@ -13,7 +13,7 @@
 // Ending access goes through the usual paths and is recorded as an access
 // change (ADR-010): Disable and Delete deactivate the principal
 // (Deactivated), RemoveRole removes an application role (AppRoleChanged),
-// and revoking the last usable key records SessionsRevoked.
+// and revoking a usable key records SessionsRevoked.
 package serviceaccount
 
 import (
@@ -117,7 +117,7 @@ type Config struct {
 	// and Delete.
 	Roles *approle.Service
 	// AccessChangeSink announces the access changes the service itself
-	// records (revoking the last key) after they commit.
+	// records (revoking a key) after they commit.
 	AccessChangeSink accesschange.Sink
 	// Logger records operator actions. Default: slog.Default().
 	Logger *slog.Logger
