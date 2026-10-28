@@ -86,6 +86,13 @@ func newEnv(t *testing.T) *env {
 				ResponseTypes: []string{"code"},
 				Scopes:        []string{"openid", "profile", "email", "offline_access"},
 			},
+			{
+				ID: "other", Type: "public", Name: "Another tool",
+				RedirectURIs:  []string{publicclient.RegisteredRedirectURI},
+				GrantTypes:    []string{"authorization_code", "refresh_token"},
+				ResponseTypes: []string{"code"},
+				Scopes:        []string{"openid", "profile", "email", "offline_access"},
+			},
 		},
 		Features: systemauth.FeatureConfig{RequirePKCE: true, EnableJWTAccessTokens: true},
 		DPoP:     systemauth.DPoPConfig{RequireNonce: true, NonceSecret: strings.Repeat("s", 32)},
@@ -303,19 +310,19 @@ func TestCommandLineTokens(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.app.URL+"/api/me", nil)
+	if code := e.get(sess.HTTPClient(), e.app.URL+"/api/me", ""); code != http.StatusOK {
+		t.Fatalf("DPoP call: %d", code)
+	}
+
+	// A tool whose client the application does not accept is refused,
+	// though its tokens are SystemAuth's and bound to its key.
+	otherStore := publicclient.FileStore{Path: filepath.Join(t.TempDir(), "other.json")}
+	other, err := publicclient.Login(t.Context(), publicclient.Config{Issuer: e.issuer, ClientID: "other", Store: otherStore}, e.cliBrowser())
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := sess.HTTPClient().Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := resp.Body.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("DPoP call: %d", resp.StatusCode)
+	if code := e.get(other.HTTPClient(), e.app.URL+"/api/me", ""); code != http.StatusUnauthorized {
+		t.Errorf("another client's token: %d", code)
 	}
 
 	creds, err := store.Load(t.Context())
@@ -372,5 +379,45 @@ func TestResourceMetadata(t *testing.T) {
 	if md.Resource != e.app.URL || len(md.AuthorizationServers) != 1 || md.AuthorizationServers[0] != e.issuer ||
 		!md.DPoPBoundAccessTokensRequired {
 		t.Errorf("metadata: %+v", md)
+	}
+}
+
+// get sends a GET with c and returns the status.
+func (e *env) get(c *http.Client, target, authorization string) int {
+	e.t.Helper()
+	req, err := http.NewRequestWithContext(e.t.Context(), http.MethodGet, target, nil)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	if authorization != "" {
+		req.Header.Set("Authorization", authorization)
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		e.t.Fatal(err)
+	}
+	return resp.StatusCode
+}
+
+// The application calls SystemAuth for the signed-in person with the
+// session's token: Transport presents it with a DPoP proof, which
+// SystemAuth requires for a bound token; sent as Bearer it is refused.
+func TestCallSystemAuthForThePerson(t *testing.T) {
+	e := newEnv(t)
+	cookie := e.signIn()
+	tok, err := e.auth.SessionToken(e.request(http.MethodGet, "/api/me", withCookie(cookie)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	userinfo := e.issuer + "/oauth/userinfo"
+	withProofs := &http.Client{Transport: e.auth.Transport(nil)}
+	if code := e.get(withProofs, userinfo, "Bearer "+tok); code != http.StatusOK {
+		t.Errorf("userinfo with proofs: %d", code)
+	}
+	if code := e.get(http.DefaultClient, userinfo, "Bearer "+tok); code != http.StatusUnauthorized {
+		t.Errorf("userinfo as Bearer: %d", code)
 	}
 }
