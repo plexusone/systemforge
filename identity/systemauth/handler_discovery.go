@@ -127,6 +127,9 @@ func (s *Server) OpenIDConfiguration() OpenIDConfiguration {
 		// RFC 9449 §5.1: the algorithms accepted for DPoP proofs.
 		DPoPSigningAlgValuesSupported: append([]string(nil), dpopproof.Algorithms...),
 	}
+	if s.jwtBearerEnabled() {
+		config.GrantTypesSupported = append(config.GrantTypesSupported, GrantTypeJWTBearer)
+	}
 
 	return config
 }
