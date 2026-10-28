@@ -158,6 +158,7 @@ Run without a subcommand it serves (same as "systemauth serve").
 			},
 		},
 		newKeysCmd(opts),
+		newServiceAccountCmd(opts),
 		newInviteCmd(opts),
 		newCodeCmd(opts),
 		newAllowanceCmd(opts),
