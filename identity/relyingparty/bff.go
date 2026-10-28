@@ -699,28 +699,40 @@ func (b *BFF) establishSession(ctx context.Context, w http.ResponseWriter, r *ht
 // and clears the cookie. The SystemAuth login session itself is left alone;
 // send the browser to SystemAuth's /logout to end it too.
 func (b *BFF) handleLogout(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	if !b.sameOriginRequest(r) {
 		writeAuthError(w, http.StatusForbidden, "CSRF_REJECTED", "cross-origin request rejected")
 		return
 	}
+	if err := b.SignOut(w, r); err != nil {
+		b.internalError(w, r, "signing out", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// SignOut ends r's browser session: it deletes the session, revokes its
+// SystemAuth refresh token, and clears the session cookie on w. A request
+// without a session only has its cookie cleared. It writes no response, so
+// a handler that serves its own sign-out, such as an embedded organization
+// console, can call it after its own checks; /bff/auth/logout uses it after
+// the cross-origin check.
+func (b *BFF) SignOut(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 	if token := cookieValue(r, b.cookies.sessionName); token != "" {
 		sess, err := b.cfg.Sessions.Get(ctx, token)
 		switch {
 		case err == nil:
 			if err := b.cfg.Sessions.Delete(ctx, token); err != nil {
-				b.internalError(w, r, "deleting session", err)
-				return
+				return fmt.Errorf("relyingparty: deleting the session: %w", err)
 			}
 			b.revokeTokens(ctx, sess)
 		case errors.Is(err, ErrSessionNotFound):
 		default:
-			b.internalError(w, r, "reading session", err)
-			return
+			return fmt.Errorf("relyingparty: reading the session: %w", err)
 		}
 	}
 	b.cookies.clear(w, b.cookies.sessionName)
-	w.WriteHeader(http.StatusNoContent)
+	return nil
 }
 
 // revokeTokens revokes the session's SystemAuth tokens. Failure is logged,
