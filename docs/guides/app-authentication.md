@@ -50,6 +50,8 @@ The application proves possession of a P-256 key to SystemAuth, which binds
 every session's tokens to it. The key must survive restarts and be the same
 on every instance. Otherwise a session signed in on one instance cannot
 refresh on another, and every deploy signs everyone out.
+SystemAuth needs the same of its token HMAC secret, which signs the
+refresh tokens ([Deploying SystemAuth](../systemauth/deployment.md#token-hmac-secret)).
 
 Generate it once per deployment and keep it:
 
