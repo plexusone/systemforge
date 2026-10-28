@@ -14,6 +14,8 @@ const (
 	SessionsTable = "sf_rp_sessions"
 	// LoginStatesTable holds in-flight logins.
 	LoginStatesTable = "sf_rp_login_states"
+	// PrincipalsTable holds the application's principals.
+	PrincipalsTable = "sf_rp_principals"
 )
 
 // SchemaSQL is the idempotent PostgreSQL schema for the stores. EnsureSchema

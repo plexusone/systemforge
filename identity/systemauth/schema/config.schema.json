@@ -147,6 +147,14 @@
             "168h",
             "720h"
           ]
+        },
+        "hmac_secret": {
+          "type": "string",
+          "description": "Secret signing codes and refresh and opaque tokens (32+ bytes; supports env var expansion)"
+        },
+        "hmac_verification_secret": {
+          "type": "string",
+          "description": "Second HMAC secret accepted but not signed with"
         }
       },
       "additionalProperties": false,
@@ -692,6 +700,45 @@
       "additionalProperties": false,
       "type": "object",
       "description": "DPoP proof checking (RFC 9449)"
+    },
+    "oauth": {
+      "properties": {
+        "jwt_bearer": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Accept the JWT-bearer grant for service accounts",
+              "default": false
+            },
+            "max_assertion_lifetime": {
+              "type": "string",
+              "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+              "description": "Longest assertion lifetime from iat to exp (e.g. 5m)",
+              "default": "5m",
+              "examples": [
+                "1m",
+                "5m"
+              ]
+            },
+            "token_lifetime": {
+              "type": "string",
+              "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+              "description": "Access token lifetime for the grant (e.g. 15m; at most 15m)",
+              "default": "15m",
+              "examples": [
+                "5m",
+                "15m"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "JWT-bearer grant for service accounts (RFC 7523)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Optional OAuth grants"
     }
   },
   "additionalProperties": false,

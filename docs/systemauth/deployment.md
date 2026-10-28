@@ -18,10 +18,14 @@ Unless started with `--dev`, the server refuses to start without:
 and it rejects `social_login.insecure_cookies`. `--dev` relaxes all of these
 (ephemeral key, in-memory storage, `http://localhost` issuer).
 
+Set a [token HMAC secret](#token-hmac-secret) as well. It is not required
+to start, but without it refresh tokens do not survive a restart.
+
 With a database configured, social login sessions, in-flight upstream logins
 and consent grants are stored in it (`sf_login_sessions`, `sf_login_states`,
-`sf_consent_grants`), so restarts keep users signed in and several instances
-can run behind a load balancer on one PostgreSQL database. Statically
+`sf_consent_grants`). With a [token HMAC secret](#token-hmac-secret) as
+well, restarts keep users signed in and several instances can run behind a
+load balancer on one PostgreSQL database. Statically
 configured clients are updated from the configuration on each start. See
 [Production Stores](production-stores.md).
 
@@ -225,6 +229,46 @@ until the longest-lived token it signed has expired: ID tokens (1 hour by
 default) and JWT access tokens (at most 15 minutes); opaque tokens and
 refresh tokens are not signed with it.
 
+## Token HMAC secret
+
+Authorization codes, refresh tokens and opaque access tokens are signed
+with an HMAC secret, not the signing key. Set `tokens.hmac_secret` to at
+least 32 bytes, the same on every instance, and keep it in your secret
+store like the signing key:
+
+```bash
+openssl rand -hex 32
+```
+
+```yaml
+tokens:
+  hmac_secret: ${SYSTEMAUTH_TOKEN_HMAC_SECRET}
+```
+
+Without it, SystemAuth generates a secret at each start and logs a
+warning. Every refresh token then stops working at the next restart, so a
+relying party cannot refresh and sends its users through sign-in again
+after each deploy, and a second instance refuses the first one's codes and
+refresh tokens. The server does not refuse to start without it, so a
+deployment that upgrades keeps running; a host that wants it required can
+check `Tokens.HMACSecret` itself.
+
+### Rotating the HMAC secret
+
+`tokens.hmac_verification_secret` is a second secret whose tokens are
+accepted but never signed with. Rotate in two deploys, as for the signing
+key:
+
+1. **Pre-stage.** Keep N-1 as `hmac_secret` and set N as
+   `hmac_verification_secret`.
+2. **Promote.** Make N the `hmac_secret` and move N-1 to
+   `hmac_verification_secret`. Rolling back to step 1 still accepts the
+   tokens N signed.
+
+Keep N-1 until `tokens.refresh_token_lifetime` (7 days by default) has
+passed since the promotion: a refresh token signed with it and not used
+since is refused once it is dropped, and its user signs in again.
+
 ## Example: systemd + Caddy
 
 `/etc/systemauth/env` (mode `0600`):
@@ -267,6 +311,8 @@ database:
   dsn: ${DATABASE_URL}
 keys:
   private_key_file: ${SYSTEMAUTH_SIGNING_KEY_FILE}
+tokens:
+  hmac_secret: ${SYSTEMAUTH_TOKEN_HMAC_SECRET}
 features:
   require_pkce: true
   enable_jwt_access_tokens: true

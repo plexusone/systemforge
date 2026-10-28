@@ -38,3 +38,27 @@ CREATE TABLE IF NOT EXISTS sf_rp_login_states (
 
 CREATE INDEX IF NOT EXISTS sf_rp_login_states_expires_at_idx
     ON sf_rp_login_states (expires_at);
+
+-- The application's principals (relyingparty.PrincipalStore). id is the
+-- app-local principal ID; sf_principal_id links it to SystemAuth (the OIDC
+-- sub). email is NULL for a principal without one (a managed principal),
+-- so the case-insensitive unique index ignores it.
+CREATE TABLE IF NOT EXISTS sf_rp_principals (
+    id              uuid        PRIMARY KEY,
+    sf_principal_id text        NULL,
+    type            text        NOT NULL DEFAULT 'human',
+    email           text        NULL,
+    email_verified  boolean     NOT NULL DEFAULT false,
+    display_name    text        NOT NULL DEFAULT '',
+    avatar_url      text        NOT NULL DEFAULT '',
+    active          boolean     NOT NULL DEFAULT true,
+    managed         boolean     NOT NULL DEFAULT false,
+    last_login_at   timestamptz NULL,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    updated_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS sf_rp_principals_sf_principal_id_idx
+    ON sf_rp_principals (sf_principal_id) WHERE sf_principal_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS sf_rp_principals_email_idx
+    ON sf_rp_principals (lower(email)) WHERE email IS NOT NULL;

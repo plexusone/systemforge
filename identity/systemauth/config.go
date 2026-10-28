@@ -67,6 +67,75 @@ type Config struct {
 	// gets tokens bound to it, unless its registration sets
 	// allow_bearer_tokens.
 	DPoP DPoPConfig `json:"dpop,omitempty" yaml:"dpop,omitempty" jsonschema:"description=DPoP proof checking (RFC 9449)"`
+
+	// OAuth enables optional OAuth grants.
+	OAuth OAuthConfig `json:"oauth,omitempty" yaml:"oauth,omitempty" jsonschema:"description=Optional OAuth grants"`
+}
+
+// OAuthConfig enables optional OAuth grants.
+type OAuthConfig struct {
+	// JWTBearer configures the JWT-bearer grant for service accounts.
+	JWTBearer JWTBearerConfig `json:"jwt_bearer,omitempty" yaml:"jwt_bearer,omitempty" jsonschema:"description=JWT-bearer grant for service accounts (RFC 7523)"`
+}
+
+// JWTBearerConfig configures the JWT-bearer grant (RFC 7523 section 2.1):
+// a service account exchanges an assertion it signed with its private key
+// for a short-lived DPoP-bound access token, with no refresh token. The
+// assertion's issuer and subject are the account's identifier, its
+// audience the token endpoint or the issuer, and exp, iat and jti are
+// required. Every request must carry a DPoP proof; no client exception
+// applies.
+type JWTBearerConfig struct {
+	// Enabled turns the grant on and advertises it in discovery.
+	// Default: false.
+	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty" jsonschema:"default=false,description=Accept the JWT-bearer grant for service accounts"`
+
+	// MaxAssertionLifetime is the longest an assertion may be valid,
+	// from its iat to its exp. Default: 5 minutes.
+	MaxAssertionLifetime Duration `json:"max_assertion_lifetime,omitempty" yaml:"max_assertion_lifetime,omitempty" jsonschema:"default=5m,description=Longest assertion lifetime from iat to exp (e.g. 5m)"`
+
+	// TokenLifetime is the lifetime of the access tokens the grant
+	// issues, at most accesschange.MaxAccessTokenLifetime (15 minutes).
+	// Default: 15 minutes.
+	TokenLifetime Duration `json:"token_lifetime,omitempty" yaml:"token_lifetime,omitempty" jsonschema:"default=15m,description=Access token lifetime for the grant (e.g. 15m; at most 15m)"`
+}
+
+// JSONSchemaExtend replaces the shared Duration examples, several of which
+// these limits refuse, with values the grant accepts.
+func (JWTBearerConfig) JSONSchemaExtend(s *jsonschema.Schema) {
+	for name, examples := range map[string][]any{
+		"max_assertion_lifetime": {"1m", "5m"},
+		"token_lifetime":         {"5m", "15m"},
+	} {
+		if prop, ok := s.Properties.Get(name); ok && prop != nil {
+			prop.Examples = examples
+		}
+	}
+}
+
+// Defaults of JWTBearerConfig.
+const (
+	DefaultJWTBearerMaxAssertionLifetime = 5 * time.Minute
+	DefaultJWTBearerTokenLifetime        = 15 * time.Minute
+)
+
+func (c *JWTBearerConfig) applyDefaults() {
+	if c.MaxAssertionLifetime == 0 {
+		c.MaxAssertionLifetime = Duration(DefaultJWTBearerMaxAssertionLifetime)
+	}
+	if c.TokenLifetime == 0 {
+		c.TokenLifetime = Duration(DefaultJWTBearerTokenLifetime)
+	}
+}
+
+func (c *JWTBearerConfig) validate() error {
+	if c.MaxAssertionLifetime < 0 {
+		return fmt.Errorf("%w: oauth.jwt_bearer.max_assertion_lifetime must not be negative", ErrInvalidConfig)
+	}
+	if d := c.TokenLifetime.Duration(); d < 0 || d > accesschange.MaxAccessTokenLifetime {
+		return fmt.Errorf("%w: oauth.jwt_bearer.token_lifetime must be between 0 and %s", ErrInvalidConfig, accesschange.MaxAccessTokenLifetime)
+	}
+	return nil
 }
 
 // DPoPConfig tunes how SystemAuth checks DPoP proofs. The replay cache is
@@ -348,6 +417,41 @@ type TokenConfig struct {
 	// AuthCodeLifetime is how long authorization codes are valid.
 	// Default: 10 minutes
 	AuthCodeLifetime Duration `json:"auth_code_lifetime,omitempty" yaml:"auth_code_lifetime,omitempty" jsonschema:"default=10m,description=Authorization code lifetime (e.g. 10m)"`
+
+	// HMACSecret keys the HMAC that signs authorization codes, refresh
+	// tokens and opaque access tokens: at least 32 bytes, the same on every
+	// instance and across restarts. Unset, a random secret is generated at
+	// each start, so those tokens stop validating after a restart and on
+	// other instances. Supports env var expansion.
+	HMACSecret string `json:"hmac_secret,omitempty" yaml:"hmac_secret,omitempty" jsonschema:"description=Secret signing codes and refresh and opaque tokens (32+ bytes; supports env var expansion)"`
+
+	// HMACVerificationSecret is a second secret whose tokens are accepted
+	// but never signed: during a rotation, the next secret while it is
+	// pre-staged, then the previous one once the next is promoted to
+	// HMACSecret, so a rollback never rejects tokens already issued.
+	// Requires HMACSecret.
+	HMACVerificationSecret string `json:"hmac_verification_secret,omitempty" yaml:"hmac_verification_secret,omitempty" jsonschema:"description=Second HMAC secret accepted but not signed with, during a rotation (32+ bytes; supports env var expansion)"`
+}
+
+// MinHMACSecretLength is the shortest TokenConfig.HMACSecret accepted.
+const MinHMACSecretLength = 32
+
+func (c *TokenConfig) validate() error {
+	if c.HMACSecret != "" && len(c.HMACSecret) < MinHMACSecretLength {
+		return fmt.Errorf("%w: tokens.hmac_secret must be at least %d bytes", ErrInvalidConfig, MinHMACSecretLength)
+	}
+	if c.HMACVerificationSecret == "" {
+		return nil
+	}
+	switch {
+	case c.HMACSecret == "":
+		return fmt.Errorf("%w: tokens.hmac_verification_secret requires tokens.hmac_secret", ErrInvalidConfig)
+	case len(c.HMACVerificationSecret) < MinHMACSecretLength:
+		return fmt.Errorf("%w: tokens.hmac_verification_secret must be at least %d bytes", ErrInvalidConfig, MinHMACSecretLength)
+	case c.HMACVerificationSecret == c.HMACSecret:
+		return fmt.Errorf("%w: tokens.hmac_verification_secret must differ from tokens.hmac_secret", ErrInvalidConfig)
+	}
+	return nil
 }
 
 // Duration is a wrapper around time.Duration that supports
@@ -553,6 +657,12 @@ func DefaultConfig(issuer string) *Config {
 			EnableDeviceFlow:         false,
 			EnableJWTAccessTokens:    false,
 		},
+		OAuth: OAuthConfig{
+			JWTBearer: JWTBearerConfig{
+				MaxAssertionLifetime: Duration(DefaultJWTBearerMaxAssertionLifetime),
+				TokenLifetime:        Duration(DefaultJWTBearerTokenLifetime),
+			},
+		},
 	}
 }
 
@@ -567,6 +677,9 @@ func (c *Config) Validate() error {
 	if abs := c.Tokens.RefreshTokenAbsoluteLifetime; abs != 0 && abs < c.Tokens.RefreshTokenLifetime {
 		return fmt.Errorf("%w: tokens.refresh_token_absolute_lifetime must be at least refresh_token_lifetime", ErrInvalidConfig)
 	}
+	if err := c.Tokens.validate(); err != nil {
+		return err
+	}
 	if c.SocialLogin != nil {
 		if err := c.SocialLogin.validate(); err != nil {
 			return err
@@ -579,6 +692,14 @@ func (c *Config) Validate() error {
 	}
 	if err := c.DPoP.validate(); err != nil {
 		return err
+	}
+	if err := c.OAuth.JWTBearer.validate(); err != nil {
+		return err
+	}
+	for _, cl := range c.Clients {
+		if cl.ID == JWTBearerClientID {
+			return fmt.Errorf("%w: client ID %q is reserved", ErrInvalidConfig, JWTBearerClientID)
+		}
 	}
 	if c.Console != nil && c.SocialLogin == nil {
 		return fmt.Errorf("%w: the console signs in with social login, which is not configured", ErrInvalidConsoleConfig)
@@ -651,6 +772,7 @@ func (c *Config) ApplyDefaults() {
 	}
 
 	c.Authz.ApplyDefaults()
+	c.OAuth.JWTBearer.applyDefaults()
 
 	if mp := c.ManagedPrincipals; mp != nil {
 		if mp.LoginTokenTTL == 0 {

@@ -24,6 +24,7 @@ a rollback would then reject everything the new value produced.
 | What | Where it is set | Pre-staged? | Reference |
 |---|---|---|---|
 | SystemAuth signing key | `keys.key_id`, `keys.verification_keys` | Yes | [Deploying SystemAuth](../systemauth/deployment.md#rotating-the-signing-key) |
+| SystemAuth token HMAC secret | `tokens.hmac_secret`, `tokens.hmac_verification_secret` | Yes | [Deploying SystemAuth](../systemauth/deployment.md#rotating-the-hmac-secret) |
 | `identity/oauth` signing key | `Config.KeyID`, `Config.VerificationKeys` | Yes | [DPoP Enforcement](../session/dpop.md#the-identityoauth-provider) |
 | `session/jwt` keys | `jwt.Config.KeyID`, `VerificationKeys` | Yes | [JWT Audience](../bff/audience.md#key-rotation) |
 | OAuth client secrets | `EntStorage.RotateClientSecret` | No: N and N-1 both authenticate | [OAuth Apps](../oauth/apps.md#rotate-secret) |
@@ -61,6 +62,18 @@ The `identity/oauth` provider and `session/jwt` follow the same steps with
 their own `KeyID` and `VerificationKeys`. For `session/jwt`, give the
 current key a `KeyID` first and wait until tokens issued without one have
 expired before the first rotation.
+
+## SystemAuth token HMAC secret
+
+Authorization codes, refresh tokens and opaque access tokens are signed
+with `tokens.hmac_secret`. `tokens.hmac_verification_secret` holds a second
+secret that is accepted but never signs.
+
+1. Pre-stage N as `hmac_verification_secret` while N-1 is `hmac_secret`.
+2. Promote N to `hmac_secret` and move N-1 to `hmac_verification_secret`.
+3. Check that relying parties still refresh their sessions.
+4. Keep N-1 until `tokens.refresh_token_lifetime` (7 days by default) has
+   passed: an unused refresh token signed with it lives that long.
 
 ## OAuth client secrets
 

@@ -45,6 +45,16 @@ func (a *RequestAuthenticator) Authenticate(r *http.Request) (*requestprincipal.
 		if !errors.As(err, &authErr) {
 			return nil, err
 		}
+		if authErr.status == http.StatusForbidden {
+			// A session cookie on a cross-origin state-changing request:
+			// the credential is valid, the request is not, so no challenge.
+			return nil, &requestprincipal.Error{
+				Status:  http.StatusForbidden,
+				Code:    "CSRF_REJECTED",
+				Message: authErr.message,
+				Err:     err,
+			}
+		}
 		challenges := authErr.challenges(a.dpop != nil)
 		return nil, &requestprincipal.Error{
 			Status:  http.StatusUnauthorized,

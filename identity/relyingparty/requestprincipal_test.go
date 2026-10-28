@@ -82,3 +82,28 @@ func TestRequestAuthenticator(t *testing.T) {
 		t.Errorf("challenge: %v", h)
 	}
 }
+
+// A session cookie on a cross-origin write is a valid credential on an
+// invalid request: a 403 without a challenge, not a 401 that would make
+// the client sign in again.
+func TestRequestAuthenticatorCrossOriginSession(t *testing.T) {
+	h := newHarness(t)
+	cookie := h.sessionCookie()
+	auth := NewRequestAuthenticator(BearerConfig{Principals: h.store, Sessions: h.bff})
+
+	same := jsonPost("/api/v1/things", cookie)
+	if p, err := auth.Authenticate(same); err != nil || p.Protocol != requestprincipal.ProtocolSession {
+		t.Fatalf("same-origin write: %+v %v", p, err)
+	}
+
+	cross := jsonPost("/api/v1/things", cookie)
+	cross.Header.Set("Origin", "https://evil.example")
+	_, err := auth.Authenticate(cross)
+	var authErr *requestprincipal.Error
+	if !errors.As(err, &authErr) || authErr.Status != http.StatusForbidden || authErr.Code != "CSRF_REJECTED" {
+		t.Fatalf("cross-origin write: %v", err)
+	}
+	if authErr.Header.Get("WWW-Authenticate") != "" {
+		t.Errorf("cross-origin write challenged: %v", authErr.Header)
+	}
+}

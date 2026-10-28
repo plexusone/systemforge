@@ -44,6 +44,10 @@ tokens, and serves `/oauth/userinfo`. Every JWT carries the `kid` published in
 
 ## Application setup
 
+Most applications use [`identity/appauth`](../guides/app-authentication.md),
+which assembles everything below with the defaults every SystemForge
+application shares. This section shows the parts it is built from.
+
 ```go
 import "github.com/plexusone/systemforge/identity/relyingparty"
 
@@ -52,6 +56,9 @@ client, err := relyingparty.NewClient(ctx, relyingparty.Config{
     ClientID:    "my-app",
     RedirectURL: "https://app.example.com/bff/auth/callback",
     // ClientSecret: os.Getenv("SYSTEMAUTH_CLIENT_SECRET"), // confidential clients
+    // The key sessions' tokens are bound to. Without it a key is generated
+    // per process, and every restart signs everyone out.
+    DPoPKey: dpopKey, // appauth.ParseDPoPKey or appauth.ReadDPoPKeyFile
 })
 if err != nil {
     return err

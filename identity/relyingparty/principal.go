@@ -29,6 +29,10 @@ type VerifiedIdentity struct {
 	// without an email whose managers control the account (ADR-005).
 	// Managed identities have no email.
 	Managed bool
+	// Service reports a service account (a principal_type of "service" in
+	// an access token): created with type service and no email, never by
+	// signing in. See BearerConfig.ServicePrincipals.
+	Service bool
 }
 
 // Principal is the application's local principal, as the relying-party
@@ -94,8 +98,12 @@ type PrincipalStore interface {
 
 	// CreatePrincipal creates an active human principal linked to
 	// identity.Subject, with a verified email or, when identity.Managed,
-	// with or without an email. It returns ErrSubjectLinked if the subject was
-	// linked concurrently and ErrEmailConflict if the email is taken.
+	// with or without an email. When identity.Service is set it creates a
+	// principal of type service without an email instead; a store that
+	// cannot returns an error, and an application must not enable
+	// BearerConfig.ServicePrincipals with it. It returns ErrSubjectLinked if
+	// the subject was linked concurrently and ErrEmailConflict if the email
+	// is taken.
 	CreatePrincipal(ctx context.Context, identity VerifiedIdentity) (*Principal, error)
 
 	// RecordLogin refreshes profile fields from identity after a sign-in.
@@ -250,6 +258,19 @@ func (s *MemoryPrincipalStore) AddPrincipal(p Principal) (*Principal, error) {
 	return &cp, nil
 }
 
+// SetActive enables or disables a principal.
+func (s *MemoryPrincipalStore) SetActive(principalID string, active bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	p, ok := s.principals[principalID]
+	if !ok {
+		return ErrPrincipalNotFound
+	}
+	p.Active = active
+	p.UpdatedAt = s.now()
+	return nil
+}
+
 // AddMembership adds an organization membership for a principal.
 func (s *MemoryPrincipalStore) AddMembership(principalID string, m Membership) error {
 	s.mu.Lock()
@@ -330,9 +351,13 @@ func (s *MemoryPrincipalStore) CreatePrincipal(_ context.Context, id VerifiedIde
 	if name == "" {
 		name = id.Email
 	}
+	typ := "human"
+	if id.Service {
+		typ = "service"
+	}
 	p := &Principal{
 		ID:            uuid.NewString(),
-		Type:          "human",
+		Type:          typ,
 		SFPrincipalID: id.Subject,
 		Email:         id.Email,
 		EmailVerified: id.Email != "" && (id.EmailVerified || !id.Managed),

@@ -2,6 +2,12 @@
 
 The `session/bff` package implements the Backend for Frontend pattern for secure session management in web applications. It stores OAuth tokens server-side and uses HTTP-only cookies to identify browser sessions.
 
+!!! note "Signing in through SystemAuth"
+    `session/bff` suits an application that issues its own tokens. An
+    application that signs people in through SystemAuth uses
+    [`identity/appauth`](../guides/app-authentication.md), whose `/bff/*`
+    sessions hold SystemAuth's DPoP-bound tokens and its `orgs` claim.
+
 ## Why BFF?
 
 Traditional SPAs store JWT tokens in localStorage or sessionStorage, which exposes them to XSS attacks. The BFF pattern solves this by:

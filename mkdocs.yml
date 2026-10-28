@@ -51,6 +51,7 @@ nav:
     - Quick Start: getting-started/quickstart.md
     - Configuration: getting-started/configuration.md
   - Guides:
+    - Authenticating an Application: guides/app-authentication.md
     - Invites: guides/invites.md
     - Application Roles and Entitlements: guides/application-roles.md
     - Collaborators and Resource Grants: guides/collaborators.md
@@ -157,6 +158,7 @@ nav:
   - Releases:
     - Overview: releases/index.md
     - Changelog: releases/changelog.md
+    - v0.26.0: releases/v0.26.0.md
     - v0.25.0: releases/v0.25.0.md
     - v0.24.0: releases/v0.24.0.md
     - v0.23.0: releases/v0.23.0.md

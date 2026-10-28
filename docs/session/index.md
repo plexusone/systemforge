@@ -2,6 +2,13 @@
 
 SystemForge provides a comprehensive session management system for BFF (Backend for Frontend) architectures. It supports server-side sessions with HTTP-only cookies, OAuth token storage, and distributed storage backends.
 
+!!! note "Signing in through SystemAuth"
+    The `session/bff` and `session/jwt` packages suit an application that
+    issues its own tokens. An application that signs people in through
+    SystemAuth uses [`identity/appauth`](../guides/app-authentication.md)
+    instead, so its sessions carry SystemAuth's tokens, DPoP binding,
+    access-change revocation and the `orgs` claim.
+
 ## Overview
 
 ```

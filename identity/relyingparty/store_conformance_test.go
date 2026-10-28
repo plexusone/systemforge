@@ -18,3 +18,7 @@ func TestMemoryLoginStateStoreConformance(t *testing.T) {
 		return relyingparty.NewMemoryLoginStateStore()
 	})
 }
+
+func TestMemoryPrincipalStoreConformance(t *testing.T) {
+	storetest.PrincipalStore(t, func(*testing.T) relyingparty.PrincipalStore { return relyingparty.NewMemoryPrincipalStore() })
+}

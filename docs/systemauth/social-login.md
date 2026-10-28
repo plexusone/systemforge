@@ -69,7 +69,8 @@ SystemAuth issues refresh tokens to clients granted `offline_access` (and the
   sign in again. It must be at least `tokens.refresh_token_lifetime`.
 
 Persistent storage (`EntStorage`) keeps the full Fosite session with each code
-and token, so subjects, granted scopes and token families survive restarts.
+and token, so subjects, granted scopes and token families survive restarts
+when `tokens.hmac_secret` is set ([Deploying SystemAuth](deployment.md#token-hmac-secret)).
 
 ## Configuration
 

@@ -13,8 +13,8 @@
 //     entitlement source (WithEntitlementGrants, normally built from the
 //     marketplace by marketplace.ApproleOptions). A seat-licensed
 //     application caps how many principals may hold a role in it.
-//   - Only active owners, admins and members can hold a role;
-//     collaborators and non-members cannot.
+//   - Only active owners, admins, members and service accounts can hold
+//     a role; collaborators and non-members cannot.
 //   - Removing a member deletes their roles (organization.Service
 //     RemoveMember does this in its transaction), and so does demoting
 //     them to collaborator (UpdateMember). Deactivating a
@@ -53,8 +53,8 @@ var (
 	// ErrNotEntitled means the organization is not entitled to the
 	// application.
 	ErrNotEntitled = errors.New("approle: organization is not entitled to the application")
-	// ErrNotMember means the principal has no active owner, admin or
-	// member membership in the organization.
+	// ErrNotMember means the principal has no active owner, admin, member
+	// or service_account membership in the organization.
 	ErrNotMember = errors.New("approle: principal is not an active owner, admin or member")
 	// ErrNoSeats means every seat licensed for the application is already
 	// held by a principal with a role in it.
@@ -67,8 +67,10 @@ var (
 	ErrNotAssigned = errors.New("approle: role not assigned")
 )
 
-// Membership roles that may hold application roles.
-var eligibleMembershipRoles = []string{"owner", "admin", "member"}
+// Membership roles that may hold application roles. service_account is
+// the membership of a service account in its organization
+// (identity/serviceaccount).
+var eligibleMembershipRoles = []string{"owner", "admin", "member", "service_account"}
 
 // AppRole is a principal's stored role in one application of an
 // organization.

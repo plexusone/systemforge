@@ -545,73 +545,109 @@ func (s *DefaultService) CreateService(ctx context.Context, input CreateServiceI
 		}
 	}()
 
-	// Set default capabilities for service
-	caps := DefaultCapabilitiesForType(TypeService)
-	capsMap := capabilitiesToMap(caps)
+	result, err := s.insertService(ctx, tx, input)
+	if err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	// A separate variable: the deferred rollback must not run for a sync
+	// failure after the transaction committed.
+	if serr := s.registerPrincipal(ctx, result.ID); serr != nil {
+		return nil, serr
+	}
+	return result, nil
+}
 
-	// Create principal
+// ServiceTxCreator is implemented by services that can create a service
+// principal inside a caller's transaction, so a larger operation such as
+// creating a service account with its membership is atomic.
+type ServiceTxCreator interface {
+	// CreateServiceInTx writes the principal and its service row in tx and
+	// leaves committing to the caller. The returned AfterCommit registers
+	// the principal with the authorization syncer; call it after a
+	// successful commit. Nothing is synced if it is never called.
+	CreateServiceInTx(ctx context.Context, tx *ent.Tx, input CreateServiceInput) (*Principal, AfterCommit, error)
+}
+
+var _ ServiceTxCreator = (*DefaultService)(nil)
+
+// CreateServiceInTx implements ServiceTxCreator.
+func (s *DefaultService) CreateServiceInTx(ctx context.Context, tx *ent.Tx, input CreateServiceInput) (*Principal, AfterCommit, error) {
+	result, err := s.insertService(ctx, tx, input)
+	if err != nil {
+		return nil, nil, err
+	}
+	return result, func(ctx context.Context) error {
+		return s.registerPrincipal(ctx, result.ID)
+	}, nil
+}
+
+// insertService writes the principal and service rows in tx.
+func (s *DefaultService) insertService(ctx context.Context, tx *ent.Tx, input CreateServiceInput) (*Principal, error) {
+	caps := DefaultCapabilitiesForType(TypeService)
 	principalCreate := tx.Principal.Create().
 		SetType(principal.TypeService).
 		SetIdentifier(input.Identifier).
 		SetDisplayName(input.DisplayName).
 		SetActive(true).
-		SetCapabilities(capsMap).
+		SetCapabilities(capabilitiesToMap(caps)).
 		SetAllowedScopes(input.AllowedScopes)
-
 	if input.OrganizationID != nil {
 		principalCreate.SetOrganizationID(*input.OrganizationID)
 	}
 	if input.Metadata != nil {
 		principalCreate.SetMetadata(input.Metadata)
 	}
-
 	p, err := principalCreate.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create principal: %w", err)
 	}
 
-	// Create service extension
 	svcCreate := tx.ServicePrincipal.Create().
 		SetPrincipalID(p.ID).
 		SetServiceType(input.ServiceType).
 		SetAllowedIps(input.AllowedIPs)
-
 	if input.Description != nil {
 		svcCreate.SetDescription(*input.Description)
 	}
 	if input.CreatedBy != nil {
 		svcCreate.SetCreatedBy(*input.CreatedBy)
 	}
-
 	svc, err := svcCreate.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create service extension: %w", err)
 	}
+	return serviceResult(p, svc, caps), nil
+}
 
-	if err = tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	// Sync to authorization backend
-	if syncErr := s.syncer.RegisterPrincipal(ctx, p.ID); syncErr != nil {
+// registerPrincipal registers a committed principal with the authorization
+// syncer, honoring the sync mode.
+func (s *DefaultService) registerPrincipal(ctx context.Context, id uuid.UUID) error {
+	if syncErr := s.syncer.RegisterPrincipal(ctx, id); syncErr != nil {
 		if s.syncMode == authz.SyncModeStrict {
-			return nil, fmt.Errorf("failed to sync principal to authz: %w", syncErr)
+			return fmt.Errorf("failed to sync principal to authz: %w", syncErr)
 		}
-		s.logger.Warn("failed to sync principal to authz", "principal_id", p.ID, "error", syncErr)
+		s.logger.Warn("failed to sync principal to authz", "principal_id", id, "error", syncErr)
 	}
+	return nil
+}
 
-	// Build result
-	result := &Principal{
-		ID:            p.ID,
-		Type:          TypeService,
-		Identifier:    p.Identifier,
-		DisplayName:   p.DisplayName,
-		Active:        p.Active,
-		Capabilities:  caps,
-		AllowedScopes: p.AllowedScopes,
-		Metadata:      p.Metadata,
-		CreatedAt:     p.CreatedAt,
-		UpdatedAt:     p.UpdatedAt,
+// serviceResult builds the Principal returned for a created service.
+func serviceResult(p *ent.Principal, svc *ent.ServicePrincipal, caps Capabilities) *Principal {
+	return &Principal{
+		ID:             p.ID,
+		Type:           TypeService,
+		Identifier:     p.Identifier,
+		DisplayName:    p.DisplayName,
+		Active:         p.Active,
+		Capabilities:   caps,
+		AllowedScopes:  p.AllowedScopes,
+		Metadata:       p.Metadata,
+		OrganizationID: p.OrganizationID,
+		CreatedAt:      p.CreatedAt,
+		UpdatedAt:      p.UpdatedAt,
 		Service: &ServiceData{
 			ServiceType: svc.ServiceType,
 			Description: strPtr(svc.Description),
@@ -620,11 +656,6 @@ func (s *DefaultService) CreateService(ctx context.Context, input CreateServiceI
 			AllowedIPs:  svc.AllowedIps,
 		},
 	}
-	if p.OrganizationID != nil {
-		result.OrganizationID = p.OrganizationID
-	}
-
-	return result, nil
 }
 
 // Update updates an existing principal. A change of Active deactivates or

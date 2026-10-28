@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -50,6 +51,7 @@ type Server struct {
 	appCatalog      *appcatalog.Catalog
 	accessChanges   AccessChangeLister
 	accessScope     AccessChangeScope
+	jwtBearerKeys   JWTBearerKeyStorage
 }
 
 // Option configures a Server.
@@ -139,6 +141,12 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 	}
 	s.keys = oauthcore.NewKeyRing(key, s.keyID, verificationKeys(s.config.Keys.VerificationKeys))
 
+	// The JWT-bearer grant's key storage is resolved before Fosite is
+	// composed with it.
+	if err := s.setupJWTBearer(context.Background()); err != nil {
+		return nil, err
+	}
+
 	// Set up Fosite and DPoP proof checking
 	if err := s.setupFosite(); err != nil {
 		return nil, err
@@ -181,11 +189,38 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 	return s, nil
 }
 
+// hmacSecrets returns the secret keying Fosite's HMAC tokens (codes,
+// refresh tokens and opaque access tokens) and the verification secret
+// accepted beside it during a rotation. Fosite keys its HMAC with the first 32 bytes of the secret, so
+// a configured secret is hashed to 32 bytes to keep all of its entropy.
+// Without one, a random secret is generated for this process.
+func (s *Server) hmacSecrets() ([]byte, [][]byte, error) {
+	t := s.config.Tokens
+	if t.HMACSecret == "" {
+		secret := make([]byte, 32)
+		if _, err := rand.Read(secret); err != nil {
+			return nil, nil, fmt.Errorf("systemauth: generating the token HMAC secret: %w", err)
+		}
+		s.logger.Warn("no tokens.hmac_secret configured; generated one for this process (refresh tokens and authorization codes will not validate after a restart or on another instance)")
+		return secret, nil, nil
+	}
+	var rotated [][]byte
+	if t.HMACVerificationSecret != "" {
+		rotated = [][]byte{hmacKey(t.HMACVerificationSecret)}
+	}
+	return hmacKey(t.HMACSecret), rotated, nil
+}
+
+// hmacKey is the 32-byte Fosite key for a configured secret.
+func hmacKey(secret string) []byte {
+	k := sha256.Sum256([]byte(secret))
+	return k[:]
+}
+
 // setupFosite configures the Fosite OAuth2 provider.
 func (s *Server) setupFosite() error {
-	// Generate a hash secret if not provided
-	hashSecret := make([]byte, 32)
-	if _, err := rand.Read(hashSecret); err != nil {
+	hashSecret, rotated, err := s.hmacSecrets()
+	if err != nil {
 		return err
 	}
 
@@ -197,6 +232,7 @@ func (s *Server) setupFosite() error {
 		AuthorizeCodeLifespan:          s.config.Tokens.AuthCodeLifetime.Duration(),
 		IDTokenLifespan:                s.config.Tokens.IDTokenLifetime.Duration(),
 		GlobalSecret:                   hashSecret,
+		RotatedGlobalSecrets:           rotated,
 		SendDebugMessagesToClients:     false,
 		EnforcePKCE:                    s.config.Features.RequirePKCE,
 		EnforcePKCEForPublicClients:    true,
@@ -219,15 +255,7 @@ func (s *Server) setupFosite() error {
 
 	s.codeStrategy = coreStrategy
 
-	// Build OAuth2 provider with all needed components
-	s.oauth2 = compose.Compose(
-		fositeConfig,
-		s.storage,
-		&compose.CommonStrategy{
-			CoreStrategy:               coreStrategy,
-			OpenIDConnectTokenStrategy: &openid.DefaultStrategy{Signer: jwtSigner, Config: fositeConfig},
-			Signer:                     jwtSigner,
-		},
+	factories := []compose.Factory{
 		compose.OAuth2AuthorizeExplicitFactory,
 		compose.OAuth2ClientCredentialsGrantFactory,
 		compose.OAuth2RefreshTokenGrantFactory,
@@ -237,6 +265,21 @@ func (s *Server) setupFosite() error {
 		// OpenID Connect: ID tokens for the code flow and on refresh.
 		compose.OpenIDConnectExplicitFactory,
 		compose.OpenIDConnectRefreshFactory,
+	}
+	if s.jwtBearerEnabled() {
+		factories = append(factories, s.jwtBearerFactory())
+	}
+
+	// Build OAuth2 provider with all needed components
+	s.oauth2 = compose.Compose(
+		fositeConfig,
+		s.storage,
+		&compose.CommonStrategy{
+			CoreStrategy:               coreStrategy,
+			OpenIDConnectTokenStrategy: &openid.DefaultStrategy{Signer: jwtSigner, Config: fositeConfig},
+			Signer:                     jwtSigner,
+		},
+		factories...,
 	)
 
 	return nil

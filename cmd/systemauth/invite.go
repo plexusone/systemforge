@@ -9,6 +9,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/principal/admincmd"
+	"github.com/plexusone/systemforge/identity/serviceaccount/serviceaccountcmd"
 	"github.com/plexusone/systemforge/identity/signupgate/signupcmd"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/identity/systemauthsvc"
@@ -48,6 +49,24 @@ func newAllowanceCmd(opts *options) *cobra.Command {
 // database.
 func newAdminCmd(opts *options) *cobra.Command {
 	return admincmd.Command(admincmd.Open(openDatabase(opts)))
+}
+
+// newServiceAccountCmd builds "systemauth service-account"
+// (serviceaccountcmd) over the configured database. The standalone server
+// hosts no applications, so it registers no role vocabularies: a host that
+// embeds SystemAuth mounts the command with its own to grant roles.
+func newServiceAccountCmd(opts *options) *cobra.Command {
+	return serviceaccountcmd.Command(serviceaccountcmd.Open(openDatabase(opts)), serviceaccountcmd.Options{
+		Issuer: func() string {
+			cfg, err := loadConfig(opts)
+			if err != nil {
+				// The command opened the database with this configuration
+				// already, so it loads; without it, the issuer is left out.
+				return ""
+			}
+			return cfg.Issuer
+		},
+	})
 }
 
 // openDatabase opens the database the flags and configuration file name.

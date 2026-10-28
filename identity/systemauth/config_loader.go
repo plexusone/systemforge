@@ -140,6 +140,8 @@ func (c *Config) expandEnvVars() {
 	c.Keys.KeyID = os.ExpandEnv(c.Keys.KeyID)
 	c.Keys.PrivateKeyFile = os.ExpandEnv(c.Keys.PrivateKeyFile)
 	c.Keys.PrivateKeyPEM = expandWholeEnv(c.Keys.PrivateKeyPEM)
+	c.Tokens.HMACSecret = expandWholeEnv(c.Tokens.HMACSecret)
+	c.Tokens.HMACVerificationSecret = expandWholeEnv(c.Tokens.HMACVerificationSecret)
 	c.DPoP.NonceSecret = os.ExpandEnv(c.DPoP.NonceSecret)
 	c.DPoP.ReplayCacheRedisURL = os.ExpandEnv(c.DPoP.ReplayCacheRedisURL)
 	for i := range c.Keys.VerificationKeys {

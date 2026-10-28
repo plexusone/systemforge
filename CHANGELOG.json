@@ -9,6 +9,143 @@
   ],
   "releases": [
     {
+      "version": "v0.26.0",
+      "date": "2026-10-28",
+      "highlights": [
+        {
+          "description": "`identity/appauth` assembles the relying party for an application in a few lines, with the same defaults everywhere: a required DPoP key, labelled configuration errors, memberships filtered to the application's roles, one request-authentication chain, and calls to SystemAuth for the signed-in person"
+        },
+        {
+          "description": "Service accounts: automation that belongs to an organization, holds application roles there, and calls APIs with short-lived DPoP-bound tokens it gets by signing an assertion with a private key (the RFC 7523 JWT-bearer grant), managed with the `service-account` command and used from Go with `identity/serviceclient`"
+        },
+        {
+          "description": "Refresh tokens survive a SystemAuth restart and work on every instance with `tokens.hmac_secret`, which rotates with `tokens.hmac_verification_secret`"
+        }
+      ],
+      "added": [
+        {
+          "description": "`identity/appauth`: `Config` with `Validate` and labels a host can relabel, `ConfigFromEnv`, `ParseDPoPKey`, `ReadDPoPKeyFile` and `DPoPKeyCommand`",
+          "commit": "d4f1f61"
+        },
+        {
+          "description": "`appauth.New`: the relying-party client from metadata or discovery, the `/bff/*` handler, an application membership filter, `Middleware` and `Authenticate` returning a `requestprincipal.RequestPrincipal`, extra authenticators, `SessionToken` and `Transport` for calls to SystemAuth, and RFC 9728 resource metadata",
+          "commit": "abd85d8"
+        },
+        {
+          "description": "`pgstore.PrincipalStore` on a new `sf_rp_principals` table created by `EnsureSchema`, with `SetActive` and `Delete`; `NewStores` returns it",
+          "commit": "6708140"
+        },
+        {
+          "description": "`storetest.PrincipalStore`, a conformance suite for principal stores",
+          "commit": "e79798a"
+        },
+        {
+          "description": "`identity/serviceaccount`: service accounts in an organization with a `service_account` membership, keys generated as P-256 or supplied as ES256, RS256 or EdDSA, application roles, and disable, enable, delete and key revocation recorded as access changes; revoking a usable key ends the account's current tokens",
+          "commit": "3f236a1"
+        },
+        {
+          "description": "The JWT-bearer grant behind `oauth.jwt_bearer` (enabled, maximum assertion lifetime, token lifetime): self-issued assertions verified against a service account's keys, a DPoP proof required, replayed `jti` refused, tokens with the account as subject, the `orgs` and `principal_type` claims and no refresh token, under the reserved client `systemauth-jwt-bearer`",
+          "commit": "78fc8ac"
+        },
+        {
+          "description": "`identity/serviceclient`: signs assertions, requests DPoP-bound tokens with nonce retries, renews them before expiry, and adds proofs to API requests",
+          "commit": "425235d"
+        },
+        {
+          "description": "`relyingparty.BearerConfig.ServicePrincipals` and `VerifiedIdentity.Service`: an application creates a service account's local principal on its first request, and refuses a service-account token whose local principal is not of type service; `appauth.Options.ServiceAccounts` turns it on and accepts `relyingparty.ServiceAccountClientID`",
+          "commit": "6a466d9"
+        },
+        {
+          "description": "`serviceaccountcmd`, the `service-account` command (`create`, `list`, `show`, `disable`, `enable`, `delete`, `key add|list|revoke`, `role grant|remove`) that `systemauth` registers and a host mounts",
+          "commit": "6168a12"
+        },
+        {
+          "description": "`principal.Service.CreateServiceInTx` creates a service principal inside a caller's transaction",
+          "commit": "aca6b61"
+        },
+        {
+          "description": "`MemoryPrincipalStore.SetActive`",
+          "commit": "6a466d9"
+        },
+        {
+          "description": "`tokens.hmac_secret` and `tokens.hmac_verification_secret` (`TokenConfig.HMACSecret`, `HMACVerificationSecret`, `MinHMACSecretLength`): the secret signing authorization codes, refresh tokens and opaque access tokens, at least 32 bytes and expanded from the environment, and a second secret accepted but not signed with during a rotation",
+          "commit": "54f81f9"
+        }
+      ],
+      "changed": [
+        {
+          "description": "`approle` accepts `service_account` memberships, so service accounts hold application roles",
+          "commit": "7e1535f"
+        },
+        {
+          "description": "Token introspection includes the `orgs`, `orgs_truncated` and `principal_type` values the access token was issued with, for every principal",
+          "commit": "7b154a2"
+        }
+      ],
+      "deprecated": [
+        {
+          "description": "`appauth.Options.APIKeys`: command-line tools sign in with `identity/publicclient`, and automation uses service accounts (ADR-016)"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "`relyingparty.RequestAuthenticator` answers a cookie-authenticated cross-origin write with `403 CSRF_REJECTED` and no challenge, instead of a `401` that tells the client to sign in again",
+          "commit": "662ffaa"
+        },
+        {
+          "description": "Refresh tokens and authorization codes no longer stop working at every SystemAuth restart and on other instances when `tokens.hmac_secret` is set; without it SystemAuth warns that they will",
+          "commit": "54f81f9"
+        }
+      ],
+      "tests": [
+        {
+          "description": "`appauth` against an embedded SystemAuth requiring DPoP nonces: browser sign-in, cross-origin writes, a restart with the same key and stores, command-line tokens, another client's tokens, a bound token refused as Bearer, and calls to SystemAuth with `Transport`",
+          "commit": "51647ea"
+        },
+        {
+          "description": "The JWT-bearer grant end to end with P-256 and RSA keys: issuance, introspection, DPoP binding, and refusals for replay, expiry, overlong lifetime, missing `jti`, wrong audience, missing proof, revoked keys and disabled accounts",
+          "commit": "9df9951"
+        },
+        {
+          "description": "From command to application: an account created, granted a role and given a key calls an `appauth` API through `serviceclient`, loses the role's organization after the role is removed, gets no token once disabled, and is deleted with its issued tokens in place",
+          "commit": "633812d"
+        },
+        {
+          "description": "Codes and refresh tokens across a restart with and without `tokens.hmac_secret`, and a secret rotation through pre-staging, promotion, rollback and retirement",
+          "commit": "8f67e3d"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Authenticating an Application guide, including moving an existing principals table into `sf_rp_principals`",
+          "commit": "86cfadf"
+        },
+        {
+          "description": "Service Accounts walkthrough, and ADR-016 records the service account's JWT-bearer grant",
+          "commit": "4aa14ce"
+        },
+        {
+          "description": "The relying-party setup example sets the DPoP key; the `session/bff` and session pages point to `identity/appauth`",
+          "commit": "86cfadf"
+        },
+        {
+          "description": "Specs for application authentication and service accounts",
+          "commit": "8fe4bc5"
+        },
+        {
+          "description": "The API keys page shows a truncated sample key, and the API key, marketplace and Ent store examples use the `sf` prefix",
+          "commit": "60e437f"
+        },
+        {
+          "description": "The token HMAC secret and its rotation in Deploying SystemAuth and Rotating Keys and Secrets",
+          "commit": "ea624df"
+        },
+        {
+          "description": "v0.26.0 release notes"
+        }
+      ]
+    },
+    {
       "version": "v0.25.0",
       "date": "2026-10-27",
       "highlights": [
