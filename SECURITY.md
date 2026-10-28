@@ -71,3 +71,8 @@ published.
 
 We credit reporters in the advisory and the release notes, by the name or
 handle they choose. Tell us in your report if you prefer to remain anonymous.
+
+## Operating SystemForge securely
+
+Before going live with an application that embeds SystemAuth, walk the
+[production checklist](docs/security/production-checklist.md).
