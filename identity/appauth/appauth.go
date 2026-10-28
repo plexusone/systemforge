@@ -70,8 +70,13 @@ type Options struct {
 	// tokens at once (ADR-010).
 	Revocation *relyingparty.RevocationCache
 	// ReplayCache rejects reused DPoP proofs. Default: in memory, per
-	// instance; instances that share an API need a shared cache.
+	// instance; instances that share an API need a shared cache. Unless
+	// the public URL is a loopback host or SingleInstance is set, New
+	// logs a warning when it uses the default.
 	ReplayCache relyingparty.DPoPReplayCache
+	// SingleInstance declares that one instance serves the API, so the
+	// default in-memory replay cache sees every proof.
+	SingleInstance bool
 	// Authenticators are tried after the session and token, for requests
 	// they do not recognize, such as AAuth-signed agent requests.
 	Authenticators []requestprincipal.Authenticator
@@ -184,6 +189,9 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 	}
 	replay := opts.ReplayCache
 	if replay == nil {
+		if !opts.SingleInstance && !cfg.loopback() {
+			logger.Warn("appauth: DPoP proofs are checked against an in-memory replay cache; pass Options.ReplayCache shared by every instance, or set Options.SingleInstance when one instance serves the API")
+		}
 		replay = middleware.NewMemoryReplayCache()
 	}
 	a := &Authenticator{
