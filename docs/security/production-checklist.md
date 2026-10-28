@@ -33,22 +33,26 @@ number of instances.
 
 ## Production checks
 
-<!-- TODO(RMI-SYSTEMFORGE-203): exact keys -->
-
 - [ ] **The server starts without dev mode.** `--dev` replaces the signing
   key, storage and issuer with development values
   ([Production requirements](../systemauth/deployment.md#production-requirements)).
-- [ ] **The fail-closed checks pass without opt-outs, or each opt-out is
-  deliberate.** From v0.27.0, startup refuses, unless explicitly opted out:
+- [ ] **The fail-closed checks pass without waivers, or each waiver is
+  deliberate.** Outside dev mode, startup refuses:
 
-    - a missing token HMAC secret;
-    - the client-credentials grant with a shared client secret;
-    - clients exempt from DPoP;
-    - a per-instance replay cache, unless a shared (Redis) replay cache or
-      an explicit single-instance setting is configured.
-- [ ] **Every opt-out logged at startup has been reviewed.** Each one is
+    - a missing `tokens.hmac_secret` (waiver: `ephemeral_hmac_secret`);
+    - a static client with `allow_bearer_tokens` (waiver:
+      `bearer_token_clients`);
+    - a per-instance DPoP replay cache, unless `dpop.replay_cache_redis_url`
+      is set or `dpop.single_instance: true` declares one instance.
+
+    The token endpoint also refuses, with `unauthorized_client`, the
+    `client_credentials` grant from a client using a shared secret (waiver:
+    `client_secret_client_credentials`) and every request from a client
+    registered with `allow_bearer_tokens`. Waivers are names listed under
+    `production.allow`.
+- [ ] **Every waiver logged at startup has been reviewed.** Each one is
   logged when the server starts; read the startup log of a production
-  instance and confirm each opt-out is still intended.
+  instance and confirm each waiver is still intended.
 - [ ] **`systemauth validate` passes on the production configuration.**
   ([Flags and environment](../systemauth/deployment.md#flags-and-environment)).
 
