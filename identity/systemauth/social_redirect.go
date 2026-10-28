@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -37,6 +38,16 @@ func newRedirectPolicy(issuer string, cfg *SocialLoginConfig) (*redirectPolicy, 
 		return nil, fmt.Errorf("default_redirect: %w", err)
 	}
 	return p, nil
+}
+
+// originList returns the allowed origins, the issuer's included, sorted.
+func (p *redirectPolicy) originList() []string {
+	out := make([]string, 0, len(p.origins))
+	for o := range p.origins {
+		out = append(out, o)
+	}
+	slices.Sort(out)
+	return out
 }
 
 // resolve returns the validated target, or the default when raw is empty.

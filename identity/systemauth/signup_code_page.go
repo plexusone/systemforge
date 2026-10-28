@@ -155,7 +155,6 @@ type signupView struct {
 func (sl *socialLogin) handleSignupPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	noStore(w)
-	frameDeny(w)
 	address := sl.waitlistClientIP(r)
 	if address == "" {
 		address = "unknown"

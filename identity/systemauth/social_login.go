@@ -333,9 +333,10 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 	}
 }
 
+// noStore keeps a response out of caches. The referrer policy and the
+// other security headers are set on every response (securityHeaders).
 func noStore(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Referrer-Policy", "no-referrer")
 }
 
 var chooserTemplate = template.Must(template.New("login").Parse(`<!doctype html>
