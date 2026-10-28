@@ -32,7 +32,7 @@ require (
 	github.com/plexusone/omniobserve v0.12.1
 	github.com/plexusone/omnistorage-core v0.6.0
 	github.com/plexusone/omnivault v0.6.0
-	github.com/plexusone/payforge v0.0.0-00010101000000-000000000000
+	github.com/plexusone/payforge v0.1.0
 	github.com/plexusone/systemspec-pricingpackaging v0.1.0
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/spf13/cobra v1.10.2
@@ -287,5 +287,3 @@ require (
 	modernc.org/sqlite v1.61.0 // indirect
 	resenje.org/singleflight v0.4.3 // indirect
 )
-
-replace github.com/plexusone/payforge => ../payforge
