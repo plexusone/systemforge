@@ -253,8 +253,9 @@ func (s *PrincipalStore) Delete(ctx context.Context, id string) error
 ```
 
 - **Columns:**
-  - `id uuid` (the primary key, set to the SystemAuth subject when the
-    principal is created)
+  - `id uuid` (the primary key: a new UUID when the principal is created,
+    as the in-memory store does, so an application's own IDs survive a
+    move into the table)
   - `sf_principal_id`, `type`, `email`, `email_verified`
   - `display_name`, `avatar_url`
   - `active`, `managed`

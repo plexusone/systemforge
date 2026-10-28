@@ -51,6 +51,7 @@ nav:
     - Quick Start: getting-started/quickstart.md
     - Configuration: getting-started/configuration.md
   - Guides:
+    - Authenticating an Application: guides/app-authentication.md
     - Invites: guides/invites.md
     - Application Roles and Entitlements: guides/application-roles.md
     - Collaborators and Resource Grants: guides/collaborators.md
