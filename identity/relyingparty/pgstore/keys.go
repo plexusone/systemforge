@@ -90,11 +90,13 @@ func (k Keys) Options() ([]Option, error) {
 	return append(opts, WithDecryptionKey(k.PreviousKeyID, prev)), nil
 }
 
-// Stores bundles the durable session and login-state stores a relying
-// party passes to relyingparty.BFFConfig (Sessions, LoginStates).
+// Stores bundles the durable stores a relying party passes to
+// relyingparty.BFFConfig (Sessions, LoginStates) and, for an application
+// that keeps its principals in sf_rp_principals, Principals.
 type Stores struct {
 	Sessions    *SessionStore
 	LoginStates *LoginStateStore
+	Principals  *PrincipalStore
 }
 
 // NewStores validates keys and builds both stores over db. Extra options
@@ -116,5 +118,9 @@ func NewStores(db *sql.DB, keys Keys, opts ...Option) (*Stores, error) {
 	if err != nil {
 		return nil, fmt.Errorf("login state store: %w", err)
 	}
-	return &Stores{Sessions: sessions, LoginStates: loginStates}, nil
+	principals, err := NewPrincipalStore(db)
+	if err != nil {
+		return nil, fmt.Errorf("principal store: %w", err)
+	}
+	return &Stores{Sessions: sessions, LoginStates: loginStates, Principals: principals}, nil
 }
