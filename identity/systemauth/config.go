@@ -100,6 +100,19 @@ type JWTBearerConfig struct {
 	TokenLifetime Duration `json:"token_lifetime,omitempty" yaml:"token_lifetime,omitempty" jsonschema:"default=15m,description=Access token lifetime for the grant (e.g. 15m; at most 15m)"`
 }
 
+// JSONSchemaExtend replaces the shared Duration examples, several of which
+// these limits refuse, with values the grant accepts.
+func (JWTBearerConfig) JSONSchemaExtend(s *jsonschema.Schema) {
+	for name, examples := range map[string][]any{
+		"max_assertion_lifetime": {"1m", "5m"},
+		"token_lifetime":         {"5m", "15m"},
+	} {
+		if prop, ok := s.Properties.Get(name); ok && prop != nil {
+			prop.Examples = examples
+		}
+	}
+}
+
 // Defaults of JWTBearerConfig.
 const (
 	DefaultJWTBearerMaxAssertionLifetime = 5 * time.Minute

@@ -716,10 +716,8 @@
               "description": "Longest assertion lifetime from iat to exp (e.g. 5m)",
               "default": "5m",
               "examples": [
-                "15m",
-                "1h",
-                "168h",
-                "720h"
+                "1m",
+                "5m"
               ]
             },
             "token_lifetime": {
@@ -728,10 +726,8 @@
               "description": "Access token lifetime for the grant (e.g. 15m; at most 15m)",
               "default": "15m",
               "examples": [
-                "15m",
-                "1h",
-                "168h",
-                "720h"
+                "5m",
+                "15m"
               ]
             }
           },
