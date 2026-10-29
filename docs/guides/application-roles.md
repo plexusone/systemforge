@@ -46,6 +46,20 @@ valid seat-based licenses; there is none when any entitlement is not
 seat-limited. Roles are counted against it under an advisory lock, and
 owners' implicit roles hold no seat.
 
+### Entitlements in tokens
+
+Entitlements reach relying parties through the `apps` map of each
+organization in the `orgs` claim, in the ID token, the JWT access token,
+`/oauth/userinfo` and `/oauth/userinfo/memberships`. `apps` lists only the
+applications the organization is entitled to now, each with the principal's
+role there (an owner's implicit top role included); an application absent
+from it is one the principal may not open, whether because the
+organization is not entitled or because the principal holds no role. A
+stored role in an application the organization has lost drops out of the
+claim at the next token or userinfo call, without being deleted. The claim
+does not carry subscription tiers, seat counts or validity dates; read
+those from the organization API's `entitlements`.
+
 ## Rules
 
 - Roles come from the application's vocabulary (`AppVocabulary.Roles()`);
