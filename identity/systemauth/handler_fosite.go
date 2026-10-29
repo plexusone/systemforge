@@ -54,6 +54,11 @@ func (s *Server) fositeInterceptor(next http.Handler) http.Handler {
 				s.membershipsEndpoint(w, r)
 				return
 			}
+		case ResolveMembershipPath:
+			if r.Method == http.MethodGet {
+				s.resolveMembershipEndpoint(w, r)
+				return
+			}
 		}
 		next.ServeHTTP(w, r)
 	})

@@ -51,6 +51,34 @@ is written to `sf_slug_reservations` and held for the cooling-off period,
 `GetBySlug` stays an exact match. Update your own URLs to the current slug
 from the response.
 
+### Resolving slugs in a relying party
+
+A relying party that puts slugs in its own URLs resolves them to the
+SystemAuth organization ID, which it keys its data by, with the signed-in
+person's access token (granted `openid`):
+
+```go
+m, alias, err := rp.ResolveOrganization(ctx, accessToken, slug)
+switch {
+case errors.Is(err, relyingparty.ErrOrganizationNotResolved):
+    // 404: no such organization, or the person is not a member
+case err != nil:
+    return err
+case alias:
+    // the organization was renamed: redirect to m.OrganizationSlug
+}
+orgID := m.OrganizationID
+```
+
+It calls `GET /oauth/userinfo/memberships/resolve?slug=`, which answers
+`{"org": {...}, "alias": bool}` with the organization in the full form of the
+`orgs` claim and its current slug. It resolves only among the principal's
+active memberships, so an unknown slug and someone else's organization both
+answer 404, and an old slug stops resolving when its cooling-off period ends.
+The organization API's `GET /organizations/{slug}` also follows the alias,
+but it is served by a host that mounts that API for signed-in people, not by
+SystemAuth to relying parties.
+
 ## Errors
 
 | Error | HTTP | Meaning |

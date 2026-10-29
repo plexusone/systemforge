@@ -79,6 +79,7 @@ serves:
 | `/oauth/revoke` | POST | Token revocation (RFC 7009) |
 | `/oauth/userinfo` | GET/POST | OpenID Connect UserInfo |
 | `/oauth/userinfo/memberships` | GET | Paginated organization memberships of the token's principal (needs an `OrgsSource`) |
+| `/oauth/userinfo/memberships/resolve?slug=` | GET | The token principal's membership in the organization a slug names, including a slug given up by renaming within its cooling-off period (`alias: true`); 404 for an unknown slug or an organization the principal is not in |
 
 With `social_login` configured, `/login*`, `/logout` and `/consent` are added
 (see [Social Login](social-login.md)). `/oauth/authorize` honours the OIDC

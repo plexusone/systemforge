@@ -202,6 +202,12 @@ other means supplies a source for them.
 `Membership.Applications` carries the principal's role in each application;
 an application absent from it is one the principal may not open.
 
+An application with organization slugs in its URLs resolves one to its
+organization ID with `client.ResolveOrganization(ctx, accessToken, slug)`,
+which also follows a renamed organization's old slug during its cooling-off
+period and reports it as an alias; see
+[Resolving slugs in a relying party](../guides/organization-slugs.md#resolving-slugs-in-a-relying-party).
+
 An application provisions itself for an organization on first use, keyed by
 the SystemAuth organization ID, with `ProvisioningMemberships(source,
 application, hook)`: the hook runs once per organization per process for a
