@@ -9,9 +9,10 @@ import (
 // grantTypeClientCredentials is the OAuth 2.0 client credentials grant.
 const grantTypeClientCredentials = "client_credentials"
 
-// ProductionPolicy refuses, at the token endpoint, what a production
-// deployment must not serve. The checks run at request time, so they also
-// cover clients registered after startup. The packaged service
+// ProductionPolicy refuses what a production deployment must not serve.
+// The client checks run at the token endpoint at request time, so they also
+// cover clients registered after startup; the mail check runs when the
+// server is built. The packaged service
 // (systemauthsvc) sets both outside development mode unless
 // production.allow waives them.
 type ProductionPolicy struct {
@@ -27,6 +28,12 @@ type ProductionPolicy struct {
 	// registered with AllowBearerTokens, with unauthorized_client, so no
 	// token is issued that is not bound to a DPoP key.
 	RefuseBearerTokenClients bool
+
+	// RefuseLogMailSender refuses to start with mail delivered by the log
+	// sender (mail.provider log, or an omnimail logsender.Sender passed to
+	// WithMailSender): it writes verification links, which complete
+	// sign-ins and email changes, to the server log. There is no waiver.
+	RefuseLogMailSender bool
 }
 
 // WithProductionPolicy sets the checks the token endpoint applies to

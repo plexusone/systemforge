@@ -182,6 +182,12 @@ func (c *Config) resolveSecrets(ctx context.Context, r *secrets.Resolver) (err e
 		}
 	}
 
+	// Mail credentials
+	if c.Mail != nil && c.Mail.SMTP != nil {
+		e.expand(&c.Mail.SMTP.Username)
+		e.expandWhole(&c.Mail.SMTP.Password)
+	}
+
 	// Signing and verification keys, token and DPoP secrets
 	e.expand(&c.Keys.KeyID)
 	e.expand(&c.Keys.PrivateKeyFile)

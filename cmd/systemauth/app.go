@@ -65,7 +65,11 @@ func newApp(ctx context.Context, opts *options, logger *slog.Logger) (*systemaut
 	if err != nil {
 		return nil, err
 	}
-	svc, err := systemauthsvc.New(ctx, cfg, serviceOptions(opts, logger))
+	so := serviceOptions(opts, logger)
+	if so.MailSender, err = sesMailSender(ctx, cfg); err != nil {
+		return nil, err
+	}
+	svc, err := systemauthsvc.New(ctx, cfg, so)
 	if err != nil {
 		return nil, withFlagHint(err)
 	}

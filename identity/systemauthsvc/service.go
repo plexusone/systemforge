@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/plexusone/connectforge/provider"
+	"github.com/plexusone/omnimail"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/plexusone/systemforge/authz"
@@ -157,6 +158,13 @@ type Options struct {
 	// docs/security/security-events.md. audit.NewLogEmitter writes them to
 	// a log. Optional: without it they are not recorded.
 	AuditEmitter audit.Emitter
+
+	// MailSender delivers the configuration's mail (mail.provider) instead
+	// of a sender built from it. It is required for provider ses, whose
+	// vendor SDK this package does not import: the systemauth binary builds
+	// it with omni-aws. For log and smtp, New builds the sender when this is
+	// nil.
+	MailSender omnimail.Sender
 
 	// AuditStore records key lifecycle and connection events when the
 	// configuration enables connections. When nil they are logged. Optional.
@@ -417,6 +425,12 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		return nil, err
 	}
 	serverOpts = append(serverOpts, rateOpts...)
+	mailOpts, err := mailOptions(&c, opts, logger)
+	if err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
+	serverOpts = append(serverOpts, mailOpts...)
 	serverOpts = append(serverOpts, productionPolicy(ctx, &c, opts, logger)...)
 	serverOpts = append(serverOpts, opts.ServerOptions...)
 

@@ -19,8 +19,9 @@ Unless started with `--dev`, the server refuses to start without:
   (`dpop.replay_cache_redis_url`), or `dpop.single_instance: true` when one
   instance serves SystemAuth (see [DPoP](#dpop)),
 
-and it rejects `social_login.insecure_cookies` and statically configured
-clients that set `allow_bearer_tokens`. `--dev` relaxes all of these
+and it rejects `social_login.insecure_cookies`, statically configured
+clients that set `allow_bearer_tokens`, and `mail.provider: log` (see
+[Verified Email](verified-email.md)). `--dev` relaxes all of these
 (ephemeral key, in-memory storage, `http://localhost` issuer).
 
 It also warns, without refusing, when the [rate limit](#rate-limits)
@@ -53,7 +54,8 @@ production:
     - bearer_token_clients              # serve clients with allow_bearer_tokens
 ```
 
-The replay cache has no waiver: `dpop.single_instance: true` is the
+The log mail provider has no waiver: it writes verification links to the
+server log. The replay cache has no waiver either: `dpop.single_instance: true` is the
 statement that one instance serves SystemAuth, and is also logged as a
 warning.
 

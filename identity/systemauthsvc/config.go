@@ -187,9 +187,10 @@ func finishConfig(cfg *Config, overrides []Override) (*Config, error) {
 // signing key, a public https issuer, a persistent database, secure login
 // cookies, a token HMAC secret (unless production.allow names
 // ephemeral_hmac_secret), no static client registered with
-// allow_bearer_tokens (unless it names bearer_token_clients), and a DPoP
-// replay cache shared by every instance or dpop.single_instance. It returns
-// nil when opts.Dev is set.
+// allow_bearer_tokens (unless it names bearer_token_clients), mail not
+// delivered by the log provider (no waiver), and a DPoP replay cache shared
+// by every instance or dpop.single_instance. It returns nil when opts.Dev
+// is set.
 //
 // The client_credentials grant with a shared secret, and clients with
 // allow_bearer_tokens registered at runtime, are refused per request
@@ -231,6 +232,11 @@ func CheckProduction(cfg *Config, opts Options) error {
 			problems = append(problems, fmt.Sprintf("clients %s set allow_bearer_tokens (or production.allow: %s)",
 				strings.Join(bearer, ", "), systemauth.AllowBearerTokenClients))
 		}
+	}
+	if cfg.Mail != nil && cfg.Mail.Provider == systemauth.MailProviderLog {
+		// No waiver: the log sender writes verification links, which
+		// complete sign-ins and email changes, to the server log.
+		problems = append(problems, "mail.provider log is for development only; use ses or smtp")
 	}
 	if cfg.DPoP.ReplayCacheRedisURL == "" && opts.DPoPReplayCache == nil && !cfg.DPoP.SingleInstance {
 		problems = append(problems, "the DPoP replay cache must be shared (dpop.replay_cache_redis_url) or one instance declared (dpop.single_instance: true)")

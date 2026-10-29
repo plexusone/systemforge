@@ -965,6 +965,162 @@
       "type": "object",
       "description": "Vault the secret references in this configuration are read from (default: the environment)"
     },
+    "mail": {
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": [
+            "ses",
+            "smtp",
+            "log"
+          ],
+          "description": "Mail delivery provider (log is development only)"
+        },
+        "from": {
+          "type": "string",
+          "description": "Sender address with optional display name"
+        },
+        "reply_to": {
+          "type": "string",
+          "description": "Optional Reply-To address"
+        },
+        "product_name": {
+          "type": "string",
+          "description": "Product name used in messages (default: the issuer host)"
+        },
+        "support_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional https URL for help"
+        },
+        "token_lifetime": {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+          "description": "How long a verification link works (5m to 24h)",
+          "default": "30m",
+          "examples": [
+            "15m",
+            "1h",
+            "168h",
+            "720h"
+          ]
+        },
+        "per_address": {
+          "properties": {
+            "requests": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Requests allowed in each period"
+            },
+            "period": {
+              "type": "string",
+              "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+              "description": "Length of the period (e.g. 1m)",
+              "examples": [
+                "15m",
+                "1h",
+                "168h",
+                "720h"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "requests",
+            "period"
+          ],
+          "description": "Limit on messages sent to one address (default 5 per hour)"
+        },
+        "per_client": {
+          "properties": {
+            "requests": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Requests allowed in each period"
+            },
+            "period": {
+              "type": "string",
+              "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+              "description": "Length of the period (e.g. 1m)",
+              "examples": [
+                "15m",
+                "1h",
+                "168h",
+                "720h"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "requests",
+            "period"
+          ],
+          "description": "Limit on messages one client address may cause (default 20 per hour)"
+        },
+        "smtp": {
+          "properties": {
+            "host": {
+              "type": "string",
+              "description": "SMTP server host name"
+            },
+            "port": {
+              "type": "integer",
+              "maximum": 65535,
+              "minimum": 1,
+              "description": "SMTP port (default by security mode)"
+            },
+            "security": {
+              "type": "string",
+              "enum": [
+                "starttls",
+                "tls",
+                "none"
+              ],
+              "description": "Connection security",
+              "default": "starttls"
+            },
+            "username": {
+              "type": "string",
+              "description": "SMTP AUTH username (supports env var expansion)"
+            },
+            "password": {
+              "type": "string",
+              "description": "SMTP AUTH password (use env var expansion)"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "host"
+          ],
+          "description": "SMTP server (provider smtp)"
+        },
+        "ses": {
+          "properties": {
+            "region": {
+              "type": "string",
+              "description": "AWS region of the SES identity"
+            },
+            "configuration_set": {
+              "type": "string",
+              "description": "SES configuration set for event publishing"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Amazon SES settings (provider ses)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "provider",
+        "from"
+      ],
+      "description": "Verification mail: provider"
+    },
     "production": {
       "properties": {
         "allow": {

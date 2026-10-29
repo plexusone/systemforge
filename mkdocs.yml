@@ -90,6 +90,7 @@ nav:
     - Overview: systemauth/overview.md
     - Providers: systemauth/providers.md
     - Social Login: systemauth/social-login.md
+    - Verified Email: systemauth/verified-email.md
     - Relying Parties: systemauth/relying-party.md
     - Deployment: systemauth/deployment.md
     - Embedding: systemauth/embedding.md

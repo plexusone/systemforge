@@ -110,6 +110,30 @@ clients:
 #   signup_minimum_age: 0    # ask birth month and year before creating an account; 0 asks nothing
 #   insecure_cookies: false  # true only for local development over plain HTTP
 
+# Verification mail (optional, needs social_login). With it, a sign-in whose
+# provider email is unverified gets a verification link instead of being
+# refused, and signed-in people can change their email at /account/email.
+# Links are single use, work only in the browser (or account) that asked
+# for them, and expire after token_lifetime. Production refuses provider log.
+# mail:
+#   provider: ses                 # ses | smtp | log (log: development only)
+#   from: "Example <no-reply@example.com>"
+#   reply_to: support@example.com
+#   product_name: Example         # default: the issuer host
+#   support_url: https://example.com/help
+#   token_lifetime: 30m
+#   per_address: {requests: 5, period: 1h}   # messages to one address
+#   per_client: {requests: 20, period: 1h}   # messages one client address may cause
+#   ses:
+#     region: us-east-1           # credentials from the AWS default chain
+#     configuration_set: systemauth-transactional
+#   smtp:                         # provider smtp
+#     host: smtp.example.com
+#     port: 587
+#     security: starttls          # starttls | tls | none
+#     username: ${SYSTEMAUTH_SMTP_USERNAME}
+#     password: ${SYSTEMAUTH_SMTP_PASSWORD}
+
 # Database configuration (optional - uses in-memory storage if not specified)
 # Uncomment and configure for persistent storage.
 

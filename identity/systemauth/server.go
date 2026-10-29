@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/plexusone/omnimail"
+
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/internal/oauthcore"
@@ -61,6 +63,10 @@ type Server struct {
 	ratePolicy      *ratelimit.Policy
 	signedIn        *ratelimit.Limiter
 	audit           audit.Emitter
+
+	mailSender         omnimail.Sender
+	mail               *mailer
+	verificationTokens VerificationTokenStore
 }
 
 // Option configures a Server.
@@ -192,6 +198,12 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Verification mail (ADR-003), used by social login's verify-email
+	// step and email change.
+	if err := s.setupMail(); err != nil {
+		return nil, err
 	}
 
 	// Set up browser login: GitHub/Google social login if configured, and

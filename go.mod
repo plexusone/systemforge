@@ -29,6 +29,8 @@ require (
 	github.com/ory/fosite v0.49.0
 	github.com/plexusone/connectforge v0.6.0
 	github.com/plexusone/keyforge v0.2.0
+	github.com/plexusone/omni-aws v0.11.0
+	github.com/plexusone/omnimail v0.1.0
 	github.com/plexusone/omniobserve v0.12.1
 	github.com/plexusone/omnistorage-core v0.6.0
 	github.com/plexusone/omnivault v0.6.0
@@ -86,6 +88,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.23 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sesv2 v1.78.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/signin v1.12.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.39.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.0 // indirect

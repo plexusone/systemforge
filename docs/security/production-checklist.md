@@ -47,7 +47,9 @@ before deciding which waivers to accept.
     - a static client with `allow_bearer_tokens` (waiver:
       `bearer_token_clients`);
     - a per-instance DPoP replay cache, unless `dpop.replay_cache_redis_url`
-      is set or `dpop.single_instance: true` declares one instance.
+      is set or `dpop.single_instance: true` declares one instance;
+    - `mail.provider: log`, which writes verification links to the log (no
+      waiver; see [Verified Email](../systemauth/verified-email.md)).
 
     The token endpoint also refuses, with `unauthorized_client`, the
     `client_credentials` grant from a client using a shared secret (waiver:

@@ -89,6 +89,11 @@ type Config struct {
 	// from; nil reads them from the environment.
 	Secrets *SecretsConfig `json:"secrets,omitempty" yaml:"secrets,omitempty" jsonschema:"description=Vault the secret references in this configuration are read from (default: the environment)"`
 
+	// Mail configures the mail SystemAuth sends to verify email addresses
+	// (ADR-003); nil sends none. It needs social login and a sender
+	// (WithMailSender).
+	Mail *MailConfig `json:"mail,omitempty" yaml:"mail,omitempty" jsonschema:"description=Verification mail: provider, sender, branding and send limits"`
+
 	// Production waives, by name, production checks that otherwise refuse
 	// to start the packaged service (systemauthsvc) or refuse requests.
 	Production ProductionConfig `json:"production,omitempty" yaml:"production,omitempty" jsonschema:"description=Named waivers of production checks"`
@@ -812,6 +817,14 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("%w: %v", ErrInvalidConfig, err)
 		}
 	}
+	if c.Mail != nil {
+		if err := c.Mail.validate(); err != nil {
+			return err
+		}
+		if c.SocialLogin == nil {
+			return fmt.Errorf("%w: mail verifies addresses for social login, which is not configured", ErrInvalidConfig)
+		}
+	}
 	if c.Console != nil && c.SocialLogin == nil {
 		return fmt.Errorf("%w: the console signs in with social login, which is not configured", ErrInvalidConsoleConfig)
 	}
@@ -895,6 +908,10 @@ func (c *Config) ApplyDefaults() {
 		if mp.SingleUseTokenTTL == 0 {
 			mp.SingleUseTokenTTL = Duration(credential.DefaultSingleUseLoginTokenTTL)
 		}
+	}
+
+	if c.Mail != nil {
+		c.Mail.applyDefaults(c.Issuer)
 	}
 
 	if c.SocialLogin != nil {
