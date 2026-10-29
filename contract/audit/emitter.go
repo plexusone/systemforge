@@ -2,6 +2,7 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -111,8 +112,36 @@ func contextAttrs(c Context) []slog.Attr {
 	if c.ClientIP != "" {
 		out = append(out, slog.String("client_ip", c.ClientIP))
 	}
-	if c.UserAgent != "" {
-		out = append(out, slog.String("user_agent", c.UserAgent))
+	if ua := SanitizeUserAgent(c.UserAgent); ua != "" {
+		out = append(out, slog.String("user_agent", ua))
 	}
 	return out
+}
+
+// MultiEmitter hands every event to each of its emitters in order, for a
+// deployment that records security events in more than one place, such as
+// a log (LogEmitter) and a file of OCSF events (package ocsfaudit).
+type MultiEmitter []Emitter
+
+// NewMultiEmitter returns a MultiEmitter of the non-nil emitters.
+func NewMultiEmitter(emitters ...Emitter) MultiEmitter {
+	out := make(MultiEmitter, 0, len(emitters))
+	for _, e := range emitters {
+		if e != nil {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// Emit hands ev to every emitter, also after one of them fails, and
+// returns their errors joined.
+func (m MultiEmitter) Emit(ctx context.Context, ev *Event) error {
+	var errs []error
+	for _, e := range m {
+		if err := e.Emit(ctx, ev); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }

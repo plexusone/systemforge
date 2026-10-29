@@ -28,6 +28,10 @@ warning level when its outcome is `failure` and info level otherwise. The
 `systemauth` command uses it, so its log carries the security events.
 An application with an audit store wraps the store's `Record` in an
 `Emitter`.
+`ocsfaudit.New(w, opts)` (package `contract/audit/ocsfaudit`) writes each
+event as one line of OCSF JSON for a security data lake; see
+[OCSF Security Events](ocsf-events.md). `audit.NewMultiEmitter` hands
+every event to several emitters, such as both of these.
 
 ## Common fields
 
@@ -40,7 +44,7 @@ An application with an audit store wraps the store's `Record` in an
 | `resource` | What the action applied to |
 | `context.request_id` | The ID of the HTTP request (chi's `middleware.RequestID`) |
 | `context.client_ip` | The client address (SystemAuth's events) |
-| `context.user_agent` | The client's `User-Agent` (SystemAuth's events) |
+| `context.user_agent` | The client's `User-Agent` (SystemAuth's events), left out when it holds an email address or a credential-like value (`audit.SanitizeUserAgent`) |
 | `context.tenant_id` | The organization (membership events) |
 | `details` | Event-specific fields below |
 

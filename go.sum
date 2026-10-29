@@ -323,6 +323,8 @@ github.com/grokify/goauth v0.25.0 h1:YzkzfSoBPPDc3fVwldngHehhc8ZqQWrv/PyR7xMPZys
 github.com/grokify/goauth v0.25.0/go.mod h1:9dwrmlIm92sgoE/0hnOrnhu9E0D2l701K5SLCXsj2HE=
 github.com/grokify/guardsql v0.4.0 h1:jjOSY4oCGLMQn5r3KKV95NONl5rfjV8khCScZ8ya4LQ=
 github.com/grokify/guardsql v0.4.0/go.mod h1:lA42KNXkMJyy3XX5oOV2wtKIIF9q9aDhGnorGaJnxSM=
+github.com/grokify/ocsf-schema-go v0.2.0 h1:2BG4lH8RcNHxz4CCzlw9wAL40OXmr/r0wIdnRVUYc2c=
+github.com/grokify/ocsf-schema-go v0.2.0/go.mod h1:cqeYF9vUXf+3XzF0vTIBCgWLri/Es0X5M9bKrqFRIsQ=
 github.com/grokify/oscompat v0.9.0 h1:9IqHoh+YTM+v4Fw/40vT60HyZ756pqOe7v1DT9XBVfc=
 github.com/grokify/oscompat v0.9.0/go.mod h1:Ekex/WzHaA39LNt5xbeQRASo74NEXAIqBlqdvNF2oUM=
 github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 h1:UH//fgunKIs4JdUbpDl1VZCDaL56wXCB/5+wF6uHfaI=

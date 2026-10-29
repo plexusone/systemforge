@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -64,5 +65,32 @@ func TestNopEmitterAndRequestID(t *testing.T) {
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 	if got == "" {
 		t.Error("RequestID inside a request is empty")
+	}
+}
+
+type failingEmitter struct{ err error }
+
+func (f failingEmitter) Emit(context.Context, *Event) error { return f.err }
+
+type countingEmitter struct{ n int }
+
+func (c *countingEmitter) Emit(context.Context, *Event) error { c.n++; return nil }
+
+func TestMultiEmitter(t *testing.T) {
+	first, last := &countingEmitter{}, &countingEmitter{}
+	boom := errors.New("boom")
+	m := NewMultiEmitter(first, nil, failingEmitter{boom}, last)
+	if len(m) != 3 {
+		t.Fatalf("nil emitter kept: %d emitters", len(m))
+	}
+	err := m.Emit(context.Background(), &Event{EventType: "test.event"})
+	if !errors.Is(err, boom) {
+		t.Errorf("error = %v, want %v", err, boom)
+	}
+	if first.n != 1 || last.n != 1 {
+		t.Errorf("emitters called %d and %d times, want 1 each", first.n, last.n)
+	}
+	if err := NewMultiEmitter().Emit(context.Background(), &Event{}); err != nil {
+		t.Errorf("empty MultiEmitter: %v", err)
 	}
 }

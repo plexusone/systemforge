@@ -13,6 +13,7 @@ SystemForge provides reusable identity, session, RBAC, and OAuth 2.0 functionali
 - **Relying Parties**: `identity/relyingparty` lets applications federate to SystemAuth (OIDC client, `/bff/*` cookie sessions, bearer middleware), with durable encrypted PostgreSQL session stores
 - **API Key Authentication**: Secure server-to-server access
 - **Service Accounts**: JWT Bearer authentication for automation
+- **Security Events**: Sign-ins, token replay, revocations, membership, role and key changes recorded through `contract/audit`, as structured logs or as [OCSF](security/ocsf-events.md) JSON lines for a security data lake or SIEM
 - **Multi-Tenant Ready**: Organization-scoped resources with RLS support
 - **Ent ORM**: Type-safe database schemas with migrations
 

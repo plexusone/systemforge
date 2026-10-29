@@ -16,6 +16,7 @@ import (
 	"github.com/go-jose/go-jose/v3"
 
 	"github.com/plexusone/systemforge/contract/audit"
+	"github.com/plexusone/systemforge/contract/audit/ocsfaudit"
 	"github.com/plexusone/systemforge/identity/serviceaccount"
 )
 
@@ -122,6 +123,31 @@ func (e *eventCapture) find(eventType, outcome string) []audit.Event {
 	return out
 }
 
+// ocsf returns the events as the OCSF emitter writes them.
+func (e *eventCapture) ocsf(t *testing.T) string {
+	t.Helper()
+	var buf bytes.Buffer
+	em := ocsfaudit.New(&buf, ocsfaudit.Options{Deployment: "test"})
+	e.mu.Lock()
+	evs := append([]audit.Event(nil), e.events...)
+	e.mu.Unlock()
+	for i := range evs {
+		if err := em.Emit(context.Background(), &evs[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := em.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if em.Dropped() != 0 {
+		t.Fatalf("OCSF emitter dropped %d events", em.Dropped())
+	}
+	if got := strings.Count(buf.String(), "\n"); got != len(evs) {
+		t.Fatalf("OCSF emitter wrote %d events, want %d", got, len(evs))
+	}
+	return buf.String()
+}
+
 // secretSet collects the secrets a test flow handles.
 type secretSet map[string]string
 
@@ -156,8 +182,9 @@ func assertNoSecrets(t *testing.T, logs *logCapture, events *eventCapture, secre
 	if err != nil {
 		t.Fatal(err)
 	}
+	ocsf := events.ocsf(t)
 	for secret, what := range secrets {
-		for name, out := range map[string]string{"text log": text, "JSON log": js, "log attributes": values, "security events": string(evJSON)} {
+		for name, out := range map[string]string{"text log": text, "JSON log": js, "log attributes": values, "security events": string(evJSON), "OCSF events": ocsf} {
 			if strings.Contains(out, secret) {
 				t.Errorf("%s leaks the %s", name, what)
 			}
@@ -402,5 +429,78 @@ func TestLogsCarryNoSecretsJWTBearer(t *testing.T) {
 	assertNoSecrets(t, logs, events, secrets)
 	if len(events.find(EventTokenRefused, audit.OutcomeFailure)) == 0 {
 		t.Error("no token refusal event for the replayed assertion")
+	}
+}
+
+// TestEmailEventsCarryNoSecrets runs a sign-in that verifies its email
+// address, then an email change and a cancelled one, and checks that no
+// link token or session cookie reaches a log record or a security event,
+// and that neither address reaches a security event, as recorded or as
+// the OCSF emitter writes it.
+func TestEmailEventsCarryNoSecrets(t *testing.T) {
+	logs := newLogCapture()
+	events := &eventCapture{}
+	f := unverifiedGitHub(t)
+	dir := NewMemoryPrincipalDirectory()
+	s, sender := newMailSocialTestServer(t, f, dir, nil, WithLogger(slog.New(logs)), WithAuditEmitter(events))
+	secrets := secretSet{}
+
+	pending := startPendingSignIn(t, s, "https://app.example.com/home")
+	secrets.add("pending sign-in cookie", pending.Value)
+	token := mailedToken(t, sender)
+	secrets.add("verification link token", token)
+	w := confirmVerify(s, token, pending)
+	if w.Code != http.StatusFound {
+		t.Fatalf("confirm: %d %s", w.Code, w.Body.String())
+	}
+	session := findCookie(t, w.Result(), LoginCookieName)
+	if session == nil {
+		t.Fatal("no session after verification")
+	}
+	secrets.add("session cookie", session.Value)
+
+	const newAddress, thirdAddress = "new.address@example.com", "third.address@example.com"
+	if code := requestChange(s, session, newAddress); code != http.StatusSeeOther {
+		t.Fatalf("request: %d", code)
+	}
+	change := linkToken.FindStringSubmatch(sender.Messages()[1].Text)
+	if change == nil {
+		t.Fatalf("no confirmation link: %s", sender.Messages()[1].Text)
+	}
+	secrets.add("email change link token", change[1])
+	if code, _ := confirmChange(s, session, change[1]); code != http.StatusSeeOther {
+		t.Fatalf("confirm change: %d", code)
+	}
+	if code := requestChange(s, session, thirdAddress); code != http.StatusSeeOther {
+		t.Fatalf("second request: %d", code)
+	}
+	if w := postIssuerForm(s, AccountEmailCancelPath, url.Values{"csrf_token": {emailChangeCSRF(session.Value)}}, session); w.Code != http.StatusSeeOther {
+		t.Fatalf("cancel: %d", w.Code)
+	}
+
+	assertNoSecrets(t, logs, events, secrets)
+
+	events.mu.Lock()
+	evJSON, err := json.Marshal(events.events)
+	events.mu.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ocsf := events.ocsf(t)
+	for _, addr := range []string{f.email, newAddress, thirdAddress} {
+		if strings.Contains(string(evJSON), addr) {
+			t.Errorf("security events carry the address %s", addr)
+		}
+		if strings.Contains(ocsf, addr) {
+			t.Errorf("OCSF events carry the address %s", addr)
+		}
+	}
+	for _, eventType := range []string{EventEmailVerificationSent, EventEmailVerified, EventEmailChangeRequested, EventEmailChanged, EventEmailChangeCancelled, EventSignIn} {
+		if len(events.find(eventType, audit.OutcomeSuccess)) == 0 {
+			t.Errorf("no %s event", eventType)
+		}
+		if !strings.Contains(ocsf, `"event_code":"`+eventType+`"`) {
+			t.Errorf("no OCSF event for %s", eventType)
+		}
 	}
 }
