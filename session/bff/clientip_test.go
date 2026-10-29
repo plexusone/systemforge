@@ -3,7 +3,36 @@ package bff
 import (
 	"net/http/httptest"
 	"testing"
+
+	"github.com/plexusone/systemforge/session/clientaddr"
 )
+
+func TestClientIPExtractorResolver(t *testing.T) {
+	res := clientaddr.MustNew(clientaddr.LoopbackProxy())
+	e := NewClientIPExtractor(ClientIPConfig{Resolver: res})
+	req := httptest.NewRequest("GET", "/", nil)
+	req.RemoteAddr = "127.0.0.1:1"
+	req.Header.Set("X-Forwarded-For", "192.0.2.77, 203.0.113.9")
+	req.Header.Set("CF-Connecting-IP", "192.0.2.78")
+	if got := e.GetClientIP(req); got != "203.0.113.9" {
+		t.Errorf("GetClientIP = %q", got)
+	}
+	if e.IsCloudflareRequest(req) {
+		t.Error("an X-Forwarded-For resolver counted the request as Cloudflare's")
+	}
+	req.RemoteAddr = "198.51.100.1:1"
+	if got := e.GetClientIP(req); got != "198.51.100.1" {
+		t.Errorf("untrusted peer: %q", got)
+	}
+
+	cf := NewClientIPExtractor(ClientIPConfig{Resolver: clientaddr.MustNew(clientaddr.Config{
+		TrustedProxies: []string{"172.16.0.0/12"}, Header: clientaddr.HeaderCFConnectingIP,
+	})})
+	req.RemoteAddr = "172.16.0.1:1"
+	if got := cf.GetClientIP(req); got != "192.0.2.78" || !cf.IsCloudflareRequest(req) {
+		t.Errorf("CF resolver: %q %v", got, cf.IsCloudflareRequest(req))
+	}
+}
 
 func TestClientIPExtractor_GetClientIP(t *testing.T) {
 	tests := []struct {

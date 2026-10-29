@@ -16,6 +16,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/session/clientaddr"
 	"github.com/plexusone/systemforge/session/ratelimit"
 )
 
@@ -455,11 +456,11 @@ func TestLoginTokenRateLimitIgnoresForwardingHeaders(t *testing.T) {
 	}
 
 	// Behind a configured proxy the forwarded address is believed.
-	clientIP, err := ratelimit.ForwardedClientIP("203.0.113.0/24")
+	clientAddr, err := clientaddr.New(clientaddr.Config{TrustedProxies: []string{"203.0.113.0/24"}})
 	if err != nil {
-		t.Fatalf("ForwardedClientIP: %v", err)
+		t.Fatalf("clientaddr.New: %v", err)
 	}
-	p := newLoginTokenFixture(t, WithLoginTokenClientIP(clientIP),
+	p := newLoginTokenFixture(t, WithClientAddressResolver(clientAddr),
 		WithLoginTokenRateLimit(ratelimit.NewMemoryStorage(), ratelimit.PerMinute(1), ratelimit.PerMinute(1000)))
 	for _, c := range []struct {
 		ip   string
