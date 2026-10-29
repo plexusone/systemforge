@@ -21,13 +21,19 @@ endpoints:
 | `GET /login/{provider}/callback` | Upstream callback. Resolves the principal, sets the `__Host-sf_login` session, and redirects to `return_to`. |
 | `GET /logout?return_to=...` | Renders a sign-out confirmation form (never signs out by itself). |
 | `POST /logout` | Deletes the login session, clears the cookie, revokes all of the principal's access and refresh tokens, and redirects (`303`) to the validated `return_to` (default `default_redirect`). |
-| `GET /consent?return_to=<authorize URL>` | Consent page naming the client and the requested scopes (only when `skip_consent` is off). |
+| `GET /consent?return_to=<authorize URL>` | Consent page naming the client and the requested scopes (for second- and third-party clients, or when the request sets `prompt=consent`). |
+| `/login/verify-email...` | With [verification mail](verified-email.md): the pages that hold a sign-in whose provider email is unverified until a mailed link is opened in the same browser. |
+| `/account/email...` | With [verification mail](verified-email.md): the signed-in person's email, and changing it after the new address is verified. |
 | `POST /consent` | Records the decision. `allow` saves the grant and resumes `/oauth/authorize`; `deny` returns `error=access_denied` to the client's redirect URI. |
 
 `/oauth/authorize` sends unauthenticated users to `/login?return_to=<authorize URL>`,
 so after login the authorization request resumes and the relying party receives
 an authorization code. No token ever appears in a redirect URL. An
-`idp_hint=github|google` authorization parameter skips the chooser.
+`idp_hint=github|google` authorization parameter skips the chooser. When the
+login was started by an authorization request, the chooser names the client
+("to continue to ...") and shows its `logo_url`, an https URL, when it has
+one. The authorization endpoint also honours the OIDC `prompt` parameter; see
+[Silent sign-in and prompt](#silent-sign-in-and-prompt).
 
 Applications consume this through the `identity/relyingparty` package; see
 [Relying Parties](relying-party.md).
@@ -44,15 +50,52 @@ support (implemented by `MemoryStorage` and `EntStorage`).
 
 ### Consent
 
-With `skip_consent: false`, `/oauth/authorize` sends a signed-in user to
-`/consent` the first time a client asks for a set of scopes. The page is
+Whether a user is asked for consent depends on the client's **party**, who
+owns the application (the customer owns the data in every case):
+
+| Party | Who owns the app | Consent |
+|-------|------------------|---------|
+| `first_party` | The service provider running SystemAuth | Skipped |
+| `second_party` | The customer | Asked and recorded |
+| `third_party` | A partner | Asked and recorded |
+
+A client declared in the configuration file is `first_party` unless it sets
+`party`; a client registered at runtime (`RegisterClient`, storage, the
+OAuth client store) without a party is `third_party`. Unknown values are
+refused. See [SystemAuth](overview.md#client-party).
+
+For a second- or third-party client, `/oauth/authorize` sends a signed-in user
+to `/consent` the first time the client asks for a set of scopes. The page is
 deliberately minimal (client name, scope descriptions, Allow/Deny). Decisions
 are kept in a `ConsentStore`; with `EntStorage` the default is the database
 (`sf_consent_grants`), otherwise in-memory (users are asked again after a
 restart). See [Production Stores](production-stores.md). The consent form is protected by a CSRF token derived from the login
 session, a same-origin check, and the
-[security headers](deployment.md#security-headers) every page carries. Deployments whose
-clients are all first-party should set `skip_consent: true` instead.
+[security headers](deployment.md#security-headers) every page carries.
+
+`skip_consent` is deprecated and ignored: it used to grant consent to every
+client, including ones the operator does not own. SystemAuth logs a warning at
+startup when it is set. First-party clients need no setting to skip consent.
+
+### Silent sign-in and prompt
+
+`/oauth/authorize` honours the OIDC `prompt` parameter
+([OIDC Core 3.1.2.1](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)):
+
+| Value | Behaviour |
+|-------|-----------|
+| `none` | Shows no page. Without a login session the client gets `error=login_required`; when consent is needed (a second- or third-party client without recorded consent) `error=consent_required`; otherwise the request completes silently. Errors go to the client's redirect URI with its `state`. |
+| `login` | Sends the user to the login page even with a login session. |
+| `consent` | Shows the consent page even when consent is recorded, for first-party clients too: the client asked for it. |
+| `select_account` | Accepted; it has no effect, since a browser has one login session. |
+
+`none` combined with any other value, or an unknown value, answers
+`error=invalid_request`. After the login or consent page, the authorization
+request resumes without the prompt value that page satisfied. A first-party
+application can therefore check for an existing SystemAuth session with
+`prompt=none` (for example in a hidden redirect) and fall back to an
+interactive sign-in on `login_required`. A relying party that needs a recent
+login should also check the ID token's `auth_time`.
 
 ## Refresh tokens
 
@@ -89,7 +132,6 @@ social_login:
     - https://app.example.com
   default_redirect: /
   session_lifetime: 12h
-  skip_consent: false
   signup_minimum_age: 0
   insecure_cookies: false
 ```
@@ -100,7 +142,7 @@ social_login:
 | `allowed_redirect_origins` | none | Absolute origins a `return_to` may target in addition to the issuer origin. Relative same-origin paths are always allowed. |
 | `default_redirect` | `/` | Used when no `return_to` is given. Must itself pass the allowlist. |
 | `session_lifetime` | `12h` | Absolute lifetime of the login session. |
-| `skip_consent` | `false` | Auto-grant consent for users signed in via social login. Only for deployments where every client is first-party; otherwise users see the `/consent` page. |
+| `skip_consent` | `false` | Deprecated and ignored; logs a warning at startup when set. First-party clients skip consent and other clients always ask (see [Consent](#consent)). |
 | `signup_minimum_age` | `0` | Asks a person's birth month and year before their first login creates an account, and refuses anyone younger, keeping nothing. See [Deploying SystemAuth](deployment.md#minimum-sign-up-age). |
 | `insecure_cookies` | `false` | Drops the `__Host-` prefix and `Secure` flag for local HTTP development, and logs a warning at startup. Never enable in production. See [Browser Cookies](../guides/cookies.md). |
 
@@ -136,7 +178,11 @@ never a legacy `User` row — using one model:
 3. **Create.** Otherwise a new principal is created, which requires a verified
    upstream email.
 
-An unverified upstream email never links to, or creates, an account. A
+An unverified upstream email never links to, or creates, an account. With
+[verification mail](verified-email.md) configured, the sign-in is held
+instead while SystemAuth mails a link to the address; a link opened in the
+same browser proves the address, which then counts as verified and
+authoritative. A
 verified but not authoritative email never links either: a provider can keep
 an address marked verified after its owner loses the mailbox. When such an
 email already belongs to an account, the sign-in is refused as a conflict

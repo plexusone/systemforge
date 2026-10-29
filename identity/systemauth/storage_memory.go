@@ -100,6 +100,9 @@ func (s *MemoryStorage) GetClient(ctx context.Context, id string) (fosite.Client
 
 // CreateClient creates a new OAuth client.
 func (s *MemoryStorage) CreateClient(ctx context.Context, client *Client) error {
+	if err := validateClientMetadata(client); err != nil {
+		return err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -125,6 +128,9 @@ func (s *MemoryStorage) GetClientByID(ctx context.Context, id string) (*Client, 
 
 // UpdateClient updates an existing client.
 func (s *MemoryStorage) UpdateClient(ctx context.Context, client *Client) error {
+	if err := validateClientMetadata(client); err != nil {
+		return err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

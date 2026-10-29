@@ -407,7 +407,6 @@ func newSocialTestServer(t *testing.T, f *fakeGitHub, dir PrincipalDirectory) *S
 		}},
 		SocialLogin: &SocialLoginConfig{
 			AllowedRedirectOrigins: []string{"https://app.example.com"},
-			SkipConsent:            true,
 		},
 	}, WithSocialConnector(f.connector()), WithPrincipalDirectory(dir))
 	if err != nil {

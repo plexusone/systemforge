@@ -19,8 +19,9 @@ Unless started with `--dev`, the server refuses to start without:
   (`dpop.replay_cache_redis_url`), or `dpop.single_instance: true` when one
   instance serves SystemAuth (see [DPoP](#dpop)),
 
-and it rejects `social_login.insecure_cookies` and statically configured
-clients that set `allow_bearer_tokens`. `--dev` relaxes all of these
+and it rejects `social_login.insecure_cookies`, statically configured
+clients that set `allow_bearer_tokens`, and `mail.provider: log` (see
+[Verified Email](verified-email.md)). `--dev` relaxes all of these
 (ephemeral key, in-memory storage, `http://localhost` issuer).
 
 It also warns, without refusing, when the [rate limit](#rate-limits)
@@ -53,7 +54,8 @@ production:
     - bearer_token_clients              # serve clients with allow_bearer_tokens
 ```
 
-The replay cache has no waiver: `dpop.single_instance: true` is the
+The log mail provider has no waiver: it writes verification links to the
+server log. The replay cache has no waiver either: `dpop.single_instance: true` is the
 statement that one instance serves SystemAuth, and is also logged as a
 warning.
 
@@ -73,7 +75,7 @@ when it is not on the command line:
 
 | Flag | Environment | Default | Notes |
 |------|-------------|---------|-------|
-| `--config`, `-c` | `SYSTEMAUTH_CONFIG` | — | YAML/JSON config; `${ENV}` references are expanded |
+| `--config`, `-c` | `SYSTEMAUTH_CONFIG` | — | YAML/JSON config; `${ENV}` references are expanded (see [Secrets](#secrets)) |
 | `--addr` | `SYSTEMAUTH_ADDR` | `:8080` | e.g. `127.0.0.1:8081` behind a proxy (`--listen` is a deprecated alias) |
 | `--issuer` | `SYSTEMAUTH_ISSUER` | config | Public URL, e.g. `https://auth.example.com` |
 | `--signing-key-file` | `SYSTEMAUTH_SIGNING_KEY_FILE` | config | PEM RSA key (PKCS#1 or PKCS#8, ≥ 2048 bits) |
@@ -88,6 +90,54 @@ when it is not on the command line:
 
 `systemauth validate` checks a configuration, including the production
 requirements; `systemauth migrate` runs migrations only.
+
+## Secrets
+
+`${NAME}` and `$NAME` references in the secret fields of the configuration
+(client secrets, `keys.*`, `tokens.hmac_secret` and
+`tokens.hmac_verification_secret`, `database.dsn`, `dpop.nonce_secret`,
+`dpop.replay_cache_redis_url`, `rate_limit.redis_url`, social login and
+federation credentials, and the SpiceDB token and URIs) are resolved by the
+`secrets` package through an [omnivault](https://github.com/plexusone/omnivault)
+vault. By default that vault is the process environment, and expansion works
+exactly like `os.ExpandEnv`: a missing variable becomes the empty string. A
+value that is entirely one `${NAME}` reference, such as
+`private_key_pem: ${SYSTEMAUTH_SIGNING_KEY}`, is substituted without being
+scanned again, so a `$` inside the secret is kept.
+
+To read the references from another vault, name it in `secrets.vault`; each
+`NAME` is then the secret's path in that vault:
+
+```yaml
+secrets:
+  vault: file:///etc/systemauth/secrets   # or env://PREFIX_, or ${SECRETS_VAULT}
+tokens:
+  hmac_secret: ${systemauth/hmac}
+```
+
+The built-in schemes are `env://`, `file://` and `memory://`. SystemForge
+imports no cloud SDK: to use a cloud secret manager, build your own binary
+whose `main` package imports that omnivault provider's registration package
+(which calls `omnivault.RegisterProvider` for its scheme), or pass a resolver
+to `systemauthsvc.LoadConfigWithResolver` (or
+`systemauth.LoadConfigWithResolver`):
+
+```go
+v, err := newCloudVault(ctx) // any omnivault.Vault, e.g. from a cloud provider package
+if err != nil {
+    return err
+}
+r, err := secrets.New(v)
+if err != nil {
+    return err
+}
+defer r.Close()
+cfg, err := systemauthsvc.LoadConfigWithResolver(ctx, path, r)
+```
+
+A resolver passed this way takes precedence over `secrets.vault`. Errors
+other than a missing secret, such as an unreachable vault or a denied read,
+fail the load rather than leaving the field empty.
 
 ## Invite-only sign-up
 
@@ -521,3 +571,17 @@ Startup migrations (`--migrate`, default on) add new columns automatically —
 for example the `subject` columns on `sf_oauth_auth_codes` / `sf_oauth_tokens`
 and the now-nullable `sf_oauth_auth_codes.user_id`. Run `systemauth migrate`
 first if the service user lacks DDL privileges.
+
+### Client party column
+
+Each OAuth application records its party in `sf_oauth_apps.party`
+(`first_party`, `second_party` or `third_party`; see
+[Client party](overview.md#client-party)). Startup migration adds the column
+empty; an application without a party is read by its older `first_party` flag
+(set means `first_party`, otherwise `third_party`), and clients from the
+configuration file are rewritten with their party at startup. Without startup
+migration, run `migrations/0012_oauth_app_party.sql`, which also fills the
+column from `first_party`. Then set `party` on any runtime-registered client
+the operator owns (`first_party`) or a customer owns (`second_party`):
+otherwise its users are asked for consent. `social_login.skip_consent` no
+longer skips consent and can be removed.

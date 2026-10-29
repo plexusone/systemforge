@@ -90,6 +90,8 @@ nav:
     - Overview: systemauth/overview.md
     - Providers: systemauth/providers.md
     - Social Login: systemauth/social-login.md
+    - Verified Email: systemauth/verified-email.md
+    - Sending Mail with Amazon SES: systemauth/ses-deployment.md
     - Relying Parties: systemauth/relying-party.md
     - Deployment: systemauth/deployment.md
     - Embedding: systemauth/embedding.md
@@ -166,6 +168,7 @@ nav:
   - Releases:
     - Overview: releases/index.md
     - Changelog: releases/changelog.md
+    - v0.29.0: releases/v0.29.0.md
     - v0.28.0: releases/v0.28.0.md
     - v0.27.0: releases/v0.27.0.md
     - v0.26.0: releases/v0.26.0.md

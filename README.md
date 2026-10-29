@@ -31,7 +31,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 
 > Moved from `github.com/grokify/systemforge` to `github.com/plexusone/systemforge` in v0.10.0 — the old path still resolves via GitHub's repository-transfer redirect for existing pins, but won't receive new tags. See the [v0.10.0 release notes](docs/releases/v0.10.0.md) for the full migration.
 
-> **v0.11.0 renamed `coreauth` → `systemauth`, `cf_` tables/API-keys → `sf_`, and unified the principal-link field to `sf_principal_id`** — a hard cutover with no dual-name compatibility. See the [v0.11.0 release notes](docs/releases/v0.11.0.md) for the full migration.
+> **v0.11.0 renamed the Core-era auth service to `systemauth`, moved every table and API-key prefix to `sf_`, and unified the principal-link field to `sf_principal_id`** — a hard cutover with no dual-name compatibility. See the [v0.11.0 release notes](docs/releases/v0.11.0.md) for the full migration.
 
 ## Features
 

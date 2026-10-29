@@ -463,6 +463,11 @@ type OAuthClient struct {
 	// Public indicates if this is a public client (no secret).
 	Public bool `json:"public"`
 
+	// Party says who owns the client: "first_party", "second_party" or
+	// "third_party". Only first-party clients skip the consent screen.
+	// Empty on create means third_party, and on update keeps the party.
+	Party string `json:"party,omitempty"`
+
 	// Metadata holds custom client metadata.
 	Metadata map[string]any `json:"metadata,omitempty"`
 

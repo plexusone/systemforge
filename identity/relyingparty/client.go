@@ -250,9 +250,13 @@ type IDTokenClaims struct {
 	AuthTime        int64  `json:"auth_time,omitempty"`
 	Email           string `json:"email,omitempty"`
 	EmailVerified   bool   `json:"email_verified,omitempty"`
-	Name            string `json:"name,omitempty"`
-	Picture         string `json:"picture,omitempty"`
-	SID             string `json:"sid,omitempty"`
+	// EmailVerifiedAt is SystemForge's email_verified_at extension: when
+	// the email was verified, as a NumericDate (seconds since the epoch,
+	// which may arrive in floating-point form); nil when absent.
+	EmailVerifiedAt *gojwt.NumericDate `json:"email_verified_at,omitempty"`
+	Name            string             `json:"name,omitempty"`
+	Picture         string             `json:"picture,omitempty"`
+	SID             string             `json:"sid,omitempty"`
 
 	// Raw holds every claim of the verified token.
 	Raw map[string]any `json:"-"`
@@ -406,8 +410,12 @@ type UserInfo struct {
 	Subject       string `json:"sub"`
 	Email         string `json:"email,omitempty"`
 	EmailVerified bool   `json:"email_verified,omitempty"`
-	Name          string `json:"name,omitempty"`
-	Picture       string `json:"picture,omitempty"`
+	// EmailVerifiedAt is SystemForge's email_verified_at extension: when
+	// the email was verified, as a NumericDate (seconds since the epoch,
+	// which may arrive in floating-point form); nil when absent.
+	EmailVerifiedAt *gojwt.NumericDate `json:"email_verified_at,omitempty"`
+	Name            string             `json:"name,omitempty"`
+	Picture         string             `json:"picture,omitempty"`
 
 	// Raw holds every returned claim.
 	Raw map[string]any `json:"-"`
@@ -454,12 +462,13 @@ func (c *Client) UserInfo(ctx context.Context, accessToken string) (info *UserIn
 // OIDC Core §5.3.2). UserInfo values take precedence as the fresher ones.
 func IdentityFromClaims(idt *IDTokenClaims, info *UserInfo) (VerifiedIdentity, error) {
 	id := VerifiedIdentity{
-		Subject:       idt.Subject,
-		Email:         idt.Email,
-		EmailVerified: idt.EmailVerified,
-		Name:          idt.Name,
-		Picture:       idt.Picture,
-		Managed:       managedClaim(idt.Raw),
+		Subject:         idt.Subject,
+		Email:           idt.Email,
+		EmailVerified:   idt.EmailVerified,
+		EmailVerifiedAt: verifiedAt(idt.EmailVerified, idt.EmailVerifiedAt),
+		Name:            idt.Name,
+		Picture:         idt.Picture,
+		Managed:         managedClaim(idt.Raw),
 	}
 	if info == nil {
 		return id, nil
@@ -470,6 +479,7 @@ func IdentityFromClaims(idt *IDTokenClaims, info *UserInfo) (VerifiedIdentity, e
 	if info.Email != "" {
 		id.Email = info.Email
 		id.EmailVerified = info.EmailVerified
+		id.EmailVerifiedAt = verifiedAt(info.EmailVerified, info.EmailVerifiedAt)
 	}
 	if info.Name != "" {
 		id.Name = info.Name
@@ -503,4 +513,13 @@ func sessionClaims(idt *IDTokenClaims, info *UserInfo) map[string]any {
 		}
 	}
 	return out
+}
+
+// verifiedAt converts an email_verified_at NumericDate, which counts only
+// with email_verified, to a time; zero when absent.
+func verifiedAt(verified bool, at *gojwt.NumericDate) time.Time {
+	if !verified || at == nil || at.Unix() <= 0 {
+		return time.Time{}
+	}
+	return at.UTC().Truncate(time.Second)
 }

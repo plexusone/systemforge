@@ -134,3 +134,6 @@ type SlugReservation func(*sql.Selector)
 
 // Subscription is the predicate function for subscription builders.
 type Subscription func(*sql.Selector)
+
+// VerificationToken is the predicate function for verificationtoken builders.
+type VerificationToken func(*sql.Selector)

@@ -214,6 +214,63 @@ func (c *Client) membershipsPage(ctx context.Context, endpoint, accessToken, cur
 	return decodeOrgs(doc.Orgs), doc.NextCursor, nil
 }
 
+// ErrOrganizationNotResolved is returned by ResolveOrganization when the
+// slug names no organization the token's principal is an active member of.
+var ErrOrganizationNotResolved = errors.New("relyingparty: organization not resolved")
+
+// ResolveOrganization resolves an organization slug from a URL to the
+// membership it names, with the SystemAuth organization ID to key data
+// by, through SystemAuth's resolve endpoint (GET <userinfo
+// endpoint>/memberships/resolve). A slug the organization gave up by
+// renaming keeps resolving during its cooling-off period, with alias true
+// and OrganizationSlug the current slug, so the application can redirect
+// to it. accessToken must be granted openid. It returns
+// ErrOrganizationNotResolved when the slug names no organization the
+// principal belongs to.
+func (c *Client) ResolveOrganization(ctx context.Context, accessToken, slug string) (m *Membership, alias bool, err error) {
+	ep, err := c.membershipsEndpoint()
+	if err != nil {
+		return nil, false, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ep+"/resolve?"+url.Values{"slug": {slug}}.Encode(), http.NoBody)
+	if err != nil {
+		return nil, false, err
+	}
+	req.Header.Set("Accept", "application/json")
+	resp, err := c.doWithToken(req, accessToken)
+	if err != nil {
+		return nil, false, fmt.Errorf("relyingparty: resolving organization: %w", err)
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusNotFound:
+		return nil, false, ErrOrganizationNotResolved
+	default:
+		return nil, false, fmt.Errorf("relyingparty: resolving organization: status %d (%s)", resp.StatusCode, resp.Header.Get("WWW-Authenticate"))
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxDocumentSize))
+	if err != nil {
+		return nil, false, fmt.Errorf("relyingparty: resolving organization: reading: %w", err)
+	}
+	var doc struct {
+		Org   any  `json:"org"`
+		Alias bool `json:"alias"`
+	}
+	if err := json.Unmarshal(body, &doc); err != nil {
+		return nil, false, fmt.Errorf("relyingparty: resolving organization: decoding: %w", err)
+	}
+	ms := decodeOrgs([]any{doc.Org})
+	if len(ms) != 1 {
+		return nil, false, errors.New("relyingparty: resolving organization: response has no organization")
+	}
+	return &ms[0], doc.Alias, nil
+}
+
 // ProvisioningMemberships wraps src so that the first time a principal
 // holding a role in application is seen in an organization, provision runs
 // for that organization (ADR-007 decision 10): the application creates its

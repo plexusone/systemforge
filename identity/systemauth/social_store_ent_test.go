@@ -102,6 +102,22 @@ func TestConsentStoreConformance(t *testing.T) {
 	}
 }
 
+func TestVerificationTokenStoreConformance(t *testing.T) {
+	t.Run("memory", func(t *testing.T) {
+		storetest.VerificationTokenStore(t, func(*testing.T) systemauth.VerificationTokenStore {
+			return systemauth.NewMemoryVerificationTokenStore()
+		})
+	})
+	for _, b := range entBackends {
+		t.Run("ent-"+b.name, func(t *testing.T) {
+			client := b.open(t)
+			storetest.VerificationTokenStore(t, func(*testing.T) systemauth.VerificationTokenStore {
+				return systemauth.NewEntVerificationTokenStore(client)
+			})
+		})
+	}
+}
+
 // TestEntStoresSurviveRestart checks that a second store instance on the
 // same database (a restarted or sibling replica) sees the first's state.
 func TestEntStoresSurviveRestart(t *testing.T) {

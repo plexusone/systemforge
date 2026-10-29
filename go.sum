@@ -100,6 +100,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.23 h1:MCIR6i
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.23/go.mod h1:pphWFS+z0MmIPivj8c/6bATd1Z+Av7Ust75DPdEFsPA=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.8 h1:+PMpWlJYOn2tm7sm6OZ/ZLd4jStl17T7wjNapd1Rczs=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.8/go.mod h1:cnG3xZLGQL4c/bt8pjdzlFtZsW7epBBuNS04a5xMjdo=
+github.com/aws/aws-sdk-go-v2/service/sesv2 v1.78.0 h1:dZN4Ltin9CgZ2svdXC1m0nhpXRy7J11CKr12w/erYLM=
+github.com/aws/aws-sdk-go-v2/service/sesv2 v1.78.0/go.mod h1:BD8BTTPSiyOP++OliGXivxk+nHvQ+2XL16N1ziph+Fk=
 github.com/aws/aws-sdk-go-v2/service/signin v1.12.0 h1:3vu/eUqh0rjh7Zy4N4YKcpZX4Aud+zinB3VsLhhlQFw=
 github.com/aws/aws-sdk-go-v2/service/signin v1.12.0/go.mod h1:wxAk0D2oVBSjuXEIzvcKxTZfM90zticdAbh/VD42L0Y=
 github.com/aws/aws-sdk-go-v2/service/sso v1.39.0 h1:kIEpD5dUry7VET3Ybl7zj7PPHRB4lb52G9iTz+a1Tqk=
@@ -531,6 +533,10 @@ github.com/plexusone/connectforge v0.6.0 h1:s/1upvVidylAd9cbafnxoAX+rVrhSIgtnjpg
 github.com/plexusone/connectforge v0.6.0/go.mod h1:QJKDTQYcfAiguR9PIRcugR7aNnA6wnxGhCcT5CGUigg=
 github.com/plexusone/keyforge v0.2.0 h1:Dr/KfFuQBAi2hW/fZkqe5u/QLQ43is4oWOFvUhandFQ=
 github.com/plexusone/keyforge v0.2.0/go.mod h1:LXDweBp3uodk4iYWmxyqvFptjgEwFpWzzhdB86BQl4U=
+github.com/plexusone/omni-aws v0.11.0 h1:hQM8wadLpy55K/Q30ci1wcRZ/MHOmHOlYi4ooW7ZFyE=
+github.com/plexusone/omni-aws v0.11.0/go.mod h1:/QGrWmCW4AdFTUdmkmwV9RXabP7Q2KIhWxvOvp1tvr8=
+github.com/plexusone/omnimail v0.1.0 h1:bn52OyI74DKD5M8HnKbin4VWNIL900pjfUCypv7lep4=
+github.com/plexusone/omnimail v0.1.0/go.mod h1:twUkwsmlWGTwEaBEwN1jYnyZCn+feAzKfbhCmw3v8H4=
 github.com/plexusone/omniobserve v0.12.1 h1:zos/i/yMlqFHFydTeu7P5WmT4vcs7bnOMFwo4MOTeac=
 github.com/plexusone/omniobserve v0.12.1/go.mod h1:kzFAvfLRk4uVSSkTAiN3Qu54kzKMdL5oz3ryWkMX800=
 github.com/plexusone/omnistorage-core v0.6.0 h1:6afcMOCllJ/7Bh9LB9y5EpClecbIohjERbTmJufR4k0=

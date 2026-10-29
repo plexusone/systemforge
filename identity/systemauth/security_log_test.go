@@ -219,7 +219,6 @@ func TestLogsCarryNoSecrets(t *testing.T) {
 		}},
 		SocialLogin: &SocialLoginConfig{
 			AllowedRedirectOrigins: []string{"https://app.example.com"},
-			SkipConsent:            true,
 		},
 	}, WithSocialConnector(f.connector()), WithLogger(slog.New(logs)), WithAuditEmitter(events))
 	if err != nil {

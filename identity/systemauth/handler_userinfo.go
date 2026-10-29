@@ -22,7 +22,7 @@ var scopeClaims = map[string][]string{
 		"preferred_username", "profile", "picture", "website", "gender",
 		"birthdate", "zoneinfo", "locale", "updated_at",
 	},
-	"email":   {"email", "email_verified"},
+	"email":   {"email", "email_verified", EmailVerifiedAtClaim},
 	"address": {"address"},
 	"phone":   {"phone_number", "phone_number_verified"},
 }
@@ -130,7 +130,7 @@ func (s *Server) registerUserInfoOperation() {
 		Method:      http.MethodGet,
 		Path:        UserInfoPath,
 		Summary:     "OpenID Connect UserInfo",
-		Description: "Returns claims about the authenticated end-user for an access token granted the openid scope (OIDC Core 5.3); a DPoP-bound token needs the DPoP scheme and a DPoP proof (RFC 9449). Standard claims are released per granted scope: email (email, email_verified), profile (name, picture, ...). Invalid tokens get 401 with a WWW-Authenticate challenge.",
+		Description: "Returns claims about the authenticated end-user for an access token granted the openid scope (OIDC Core 5.3); a DPoP-bound token needs the DPoP scheme and a DPoP proof (RFC 9449). Standard claims are released per granted scope: email (email, email_verified, and the SystemForge extension email_verified_at), profile (name, picture, ...). Invalid tokens get 401 with a WWW-Authenticate challenge.",
 		Tags:        []string{"OpenID Connect"},
 	}, func(_ context.Context, _ *UserInfoInput) (*UserInfoOutput, error) {
 		return &UserInfoOutput{}, nil

@@ -2,6 +2,7 @@ package systemauthsvc
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/plexusone/systemforge/identity/systemauth"
+	"github.com/plexusone/systemforge/secrets"
 )
 
 // Config is the SystemAuth server configuration.
@@ -101,10 +103,21 @@ func WithKeyID(kid string) Override {
 // applies defaults and validates the result. Validation runs after the
 // overrides, so an override can supply a value the file omits (e.g.
 // WithDefaultIssuer).
+//
+// Secret references in the file are read from the vault its secrets.vault
+// names, or the environment; LoadConfigWithResolver supplies the vault.
 func LoadConfig(path string, overrides ...Override) (*Config, error) {
+	return LoadConfigWithResolver(context.Background(), path, nil, overrides...)
+}
+
+// LoadConfigWithResolver is LoadConfig reading secret references through
+// r, e.g. a resolver over a cloud secret manager the deployment built
+// (secrets.New) or registered (omnivault.RegisterProvider, then
+// secrets.FromURI). A nil r uses secrets.vault, or the environment.
+func LoadConfigWithResolver(ctx context.Context, path string, r *secrets.Resolver, overrides ...Override) (*Config, error) {
 	cfg := &Config{}
 	if path != "" {
-		c, err := systemauth.DecodeConfigFile(path)
+		c, err := systemauth.DecodeConfigFileWithResolver(ctx, path, r)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config: %w", err)
 		}
@@ -119,13 +132,19 @@ func LoadConfig(path string, overrides ...Override) (*Config, error) {
 // non-space byte is '{' and YAML otherwise. Empty data starts from an
 // empty configuration.
 func LoadConfigBytes(data []byte, format string, overrides ...Override) (*Config, error) {
+	return LoadConfigBytesWithResolver(context.Background(), data, format, nil, overrides...)
+}
+
+// LoadConfigBytesWithResolver is LoadConfigBytes reading secret
+// references through r (nil: secrets.vault, or the environment).
+func LoadConfigBytesWithResolver(ctx context.Context, data []byte, format string, r *secrets.Resolver, overrides ...Override) (*Config, error) {
 	f, err := configFormat(data, format)
 	if err != nil {
 		return nil, err
 	}
 	cfg := &Config{}
 	if len(bytes.TrimSpace(data)) > 0 {
-		c, err := systemauth.DecodeConfig(data, f)
+		c, err := systemauth.DecodeConfigWithResolver(ctx, data, f, r)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config: %w", err)
 		}
@@ -168,9 +187,10 @@ func finishConfig(cfg *Config, overrides []Override) (*Config, error) {
 // signing key, a public https issuer, a persistent database, secure login
 // cookies, a token HMAC secret (unless production.allow names
 // ephemeral_hmac_secret), no static client registered with
-// allow_bearer_tokens (unless it names bearer_token_clients), and a DPoP
-// replay cache shared by every instance or dpop.single_instance. It returns
-// nil when opts.Dev is set.
+// allow_bearer_tokens (unless it names bearer_token_clients), mail not
+// delivered by the log provider (no waiver), and a DPoP replay cache shared
+// by every instance or dpop.single_instance. It returns nil when opts.Dev
+// is set.
 //
 // The client_credentials grant with a shared secret, and clients with
 // allow_bearer_tokens registered at runtime, are refused per request
@@ -212,6 +232,11 @@ func CheckProduction(cfg *Config, opts Options) error {
 			problems = append(problems, fmt.Sprintf("clients %s set allow_bearer_tokens (or production.allow: %s)",
 				strings.Join(bearer, ", "), systemauth.AllowBearerTokenClients))
 		}
+	}
+	if cfg.Mail != nil && cfg.Mail.Provider == systemauth.MailProviderLog {
+		// No waiver: the log sender writes verification links, which
+		// complete sign-ins and email changes, to the server log.
+		problems = append(problems, "mail.provider log is for development only; use ses or smtp")
 	}
 	if cfg.DPoP.ReplayCacheRedisURL == "" && opts.DPoPReplayCache == nil && !cfg.DPoP.SingleInstance {
 		problems = append(problems, "the DPoP replay cache must be shared (dpop.replay_cache_redis_url) or one instance declared (dpop.single_instance: true)")

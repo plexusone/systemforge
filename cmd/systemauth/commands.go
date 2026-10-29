@@ -76,7 +76,7 @@ When social_login is configured, GitHub/Google login is also served:
   - GET  /login/{provider}                  Start upstream login
   - GET  /login/{provider}/callback         Upstream callback; sets __Host-sf_login
   - GET  /logout, POST /logout              Sign out; revokes the principal's tokens
-  - GET  /consent, POST /consent            Consent page (when skip_consent is false)
+  - GET  /consent, POST /consent            Consent page (second- and third-party clients)
 
 Unless --dev is set, the server refuses to start without a persistent
 database, an https issuer, and a signing key (keys.private_key_file,
@@ -164,6 +164,7 @@ Run without a subcommand it serves (same as "systemauth serve").
 		newAllowanceCmd(opts),
 		newWaitlistCmd(opts),
 		newAdminCmd(opts),
+		newOrgCmd(opts),
 		&cobra.Command{
 			Use:   "version",
 			Short: "Print version information",

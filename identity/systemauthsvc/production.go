@@ -49,6 +49,7 @@ func productionPolicy(ctx context.Context, c *Config, opts Options, logger *slog
 	return []systemauth.Option{systemauth.WithProductionPolicy(systemauth.ProductionPolicy{
 		RefuseClientSecretClientCredentials: !c.Production.Allows(systemauth.AllowClientSecretClientCredentials),
 		RefuseBearerTokenClients:            !c.Production.Allows(systemauth.AllowBearerTokenClients),
+		RefuseLogMailSender:                 true,
 	})}
 }
 

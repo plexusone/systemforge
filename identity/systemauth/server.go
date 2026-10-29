@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/plexusone/omnimail"
+
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/internal/oauthcore"
@@ -61,6 +63,10 @@ type Server struct {
 	ratePolicy      *ratelimit.Policy
 	signedIn        *ratelimit.Limiter
 	audit           audit.Emitter
+
+	mailSender         omnimail.Sender
+	mail               *mailer
+	verificationTokens VerificationTokenStore
 }
 
 // Option configures a Server.
@@ -125,6 +131,10 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 	if err := s.setupClientAddress(); err != nil {
 		return nil, err
 	}
+	if cfg.SocialLogin != nil && cfg.SocialLogin.SkipConsent {
+		s.logger.Warn("social_login.skip_consent is deprecated and ignored: first-party clients skip the consent screen automatically " +
+			"(clients in the configuration file are first_party unless they set party), and second- and third-party clients always ask for consent")
+	}
 	if err := s.setupRateLimits(); err != nil {
 		return nil, err
 	}
@@ -188,6 +198,12 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Verification mail (ADR-003), used by social login's verify-email
+	// step and email change.
+	if err := s.setupMail(); err != nil {
+		return nil, err
 	}
 
 	// Set up browser login: GitHub/Google social login if configured, and
@@ -460,10 +476,14 @@ func (s *Server) accessTokenHeaders() *jwt.Headers {
 	return h
 }
 
-// RegisterClient registers a new OAuth client.
+// RegisterClient registers a new OAuth client. A client registered without
+// a Party is third-party: its users are asked for consent.
 func (s *Server) RegisterClient(client *Client) error {
 	if err := ValidateBackchannelLogoutURI(client.BackchannelLogoutURI); err != nil {
 		return fmt.Errorf("client %q: %w", client.ID, err)
+	}
+	if err := validateClientMetadata(client); err != nil {
+		return err
 	}
 	return s.storage.CreateClient(context.Background(), client)
 }

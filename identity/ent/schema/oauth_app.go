@@ -115,9 +115,17 @@ func (OAuthApp) Fields() []ent.Field {
 			Default(false).
 			Comment("Legacy exception: the client may get unbound bearer tokens without a DPoP proof; by default every token request needs one (RFC 9449 dpop_bound_access_tokens)"),
 
+		field.Enum("party").
+			Values("first_party", "second_party", "third_party").
+			Optional().
+			Nillable().
+			Comment("Who owns the app: first_party (the service provider; skips the consent screen), second_party (the customer) or third_party (a partner); the customer owns the data in every case. Null on rows written before the column existed, which first_party then classifies"),
+
+		// Superseded by party. Writers keep it equal to party ==
+		// first_party; readers use it only for rows whose party is null.
 		field.Bool("first_party").
 			Default(false).
-			Comment("First-party apps skip consent screen"),
+			Comment("Superseded by party: true exactly when party is first_party; classifies rows whose party is null"),
 
 		field.Bool("public").
 			Default(false).

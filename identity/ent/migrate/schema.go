@@ -954,6 +954,7 @@ var (
 		{Name: "refresh_token_rotation", Type: field.TypeBool, Default: true},
 		{Name: "managed_principals_enabled", Type: field.TypeBool, Default: false},
 		{Name: "allow_bearer_tokens", Type: field.TypeBool, Default: false},
+		{Name: "party", Type: field.TypeEnum, Nullable: true, Enums: []string{"first_party", "second_party", "third_party"}},
 		{Name: "first_party", Type: field.TypeBool, Default: false},
 		{Name: "public", Type: field.TypeBool, Default: false},
 		{Name: "active", Type: field.TypeBool, Default: true},
@@ -972,13 +973,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_oauth_apps_sf_organizations_oauth_apps",
-				Columns:    []*schema.Column{SfOauthAppsColumns[24]},
+				Columns:    []*schema.Column{SfOauthAppsColumns[25]},
 				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "sf_oauth_apps_sf_principals_owned_oauth_apps",
-				Columns:    []*schema.Column{SfOauthAppsColumns[25]},
+				Columns:    []*schema.Column{SfOauthAppsColumns[26]},
 				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -992,17 +993,17 @@ var (
 			{
 				Name:    "oauthapp_owner_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[25]},
+				Columns: []*schema.Column{SfOauthAppsColumns[26]},
 			},
 			{
 				Name:    "oauthapp_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[24]},
+				Columns: []*schema.Column{SfOauthAppsColumns[25]},
 			},
 			{
 				Name:    "oauthapp_active",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[19]},
+				Columns: []*schema.Column{SfOauthAppsColumns[20]},
 			},
 		},
 	}
@@ -1981,6 +1982,37 @@ var (
 			},
 		},
 	}
+	// SfVerificationTokensColumns holds the columns for the "sf_verification_tokens" table.
+	SfVerificationTokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "token_hash", Type: field.TypeString, Unique: true},
+		{Name: "purpose", Type: field.TypeEnum, Enums: []string{"verify_email", "email_change"}},
+		{Name: "email", Type: field.TypeString},
+		{Name: "principal_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "binding", Type: field.TypeString},
+		{Name: "data", Type: field.TypeBytes, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "consumed_at", Type: field.TypeTime, Nullable: true},
+	}
+	// SfVerificationTokensTable holds the schema information for the "sf_verification_tokens" table.
+	SfVerificationTokensTable = &schema.Table{
+		Name:       "sf_verification_tokens",
+		Columns:    SfVerificationTokensColumns,
+		PrimaryKey: []*schema.Column{SfVerificationTokensColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "verificationtoken_purpose_binding",
+				Unique:  false,
+				Columns: []*schema.Column{SfVerificationTokensColumns[2], SfVerificationTokensColumns[5]},
+			},
+			{
+				Name:    "verificationtoken_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfVerificationTokensColumns[8]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		SfAccessChangesTable,
@@ -2026,6 +2058,7 @@ var (
 		SfSignupWaitlistTable,
 		SfSlugReservationsTable,
 		SfSubscriptionsTable,
+		SfVerificationTokensTable,
 	}
 )
 
@@ -2203,5 +2236,8 @@ func init() {
 	SfSubscriptionsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
 	SfSubscriptionsTable.Annotation = &entsql.Annotation{
 		Table: "sf_subscriptions",
+	}
+	SfVerificationTokensTable.Annotation = &entsql.Annotation{
+		Table: "sf_verification_tokens",
 	}
 }

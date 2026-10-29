@@ -704,8 +704,7 @@ func TestSignupInvitesStoreIsBackedByTheDatabase(t *testing.T) {
 		DPoP:     prodDPoP,
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 		SocialLogin: &systemauth.SocialLoginConfig{
-			SkipConsent: true,
-			GitHub:      &systemauth.SocialProviderConfig{ClientID: "gh", ClientSecret: "gh-secret"},
+			GitHub: &systemauth.SocialProviderConfig{ClientID: "gh", ClientSecret: "gh-secret"},
 		},
 	}
 	s, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{

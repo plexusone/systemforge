@@ -52,14 +52,15 @@ func (d memoryStorageDirectory) CreateFromExternal(_ context.Context, login Exte
 	}
 	now := time.Now()
 	h := &HumanPrincipal{
-		ID:            uuid.New(),
-		Email:         login.Email,
-		EmailVerified: true,
-		DisplayName:   displayNameFor(login),
-		AvatarURL:     login.AvatarURL,
-		Active:        true,
-		CreatedAt:     now,
-		UpdatedAt:     now,
+		ID:              uuid.New(),
+		Email:           login.Email,
+		EmailVerified:   true,
+		EmailVerifiedAt: now,
+		DisplayName:     displayNameFor(login),
+		AvatarURL:       login.AvatarURL,
+		Active:          true,
+		CreatedAt:       now,
+		UpdatedAt:       now,
 	}
 	d.s.humans[h.ID] = h
 	d.s.external[key] = h.ID

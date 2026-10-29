@@ -16,6 +16,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
+	orgsvc "github.com/plexusone/systemforge/identity/organization"
 )
 
 // The organization claims of ADR-007.
@@ -31,6 +32,10 @@ const (
 	MaxOrgsInToken = 50
 	// MembershipsPath is the paginated memberships endpoint.
 	MembershipsPath = UserInfoPath + "/memberships"
+	// ResolveMembershipPath resolves an organization slug, current or
+	// given up within the cooling-off period, among the token principal's
+	// memberships.
+	ResolveMembershipPath = MembershipsPath + "/resolve"
 
 	// DefaultMembershipsPageSize and MaxMembershipsPageSize bound the
 	// memberships endpoint's page.
@@ -81,6 +86,23 @@ type OrgsSource interface {
 type AppRoleResolver interface {
 	EffectiveRoles(ctx context.Context, principalID, organizationID uuid.UUID) (map[string]string, error)
 }
+
+// MembershipResolver is implemented by an OrgsSource that can resolve an
+// organization slug among a principal's memberships. EntOrgsSource
+// implements it; without it, ResolveMembershipPath answers 501.
+type MembershipResolver interface {
+	// ResolveMembership returns, in the full form, the organization slug
+	// names, when principalID is an active member of it. alias is true
+	// when slug is one the organization gave up within the cooling-off
+	// period (Slug is then the current slug). It returns
+	// ErrMembershipNotResolved when no such organization exists or the
+	// principal is not a member, without saying which.
+	ResolveMembership(ctx context.Context, principalID uuid.UUID, slug string) (org OrgClaim, alias bool, err error)
+}
+
+// ErrMembershipNotResolved means a slug names no organization the
+// principal is an active member of.
+var ErrMembershipNotResolved = errors.New("systemauth: no membership in an organization with that slug")
 
 // ErrInvalidCursor means a memberships cursor does not name a membership
 // of the principal.
@@ -228,6 +250,44 @@ func (s *EntOrgsSource) Memberships(ctx context.Context, principalID uuid.UUID, 
 	return page, next, nil
 }
 
+// ResolveMembership implements MembershipResolver: slug resolves as
+// organization.Service ResolveSlug does (a renamed organization's old slug
+// keeps working during its cooling-off period).
+func (s *EntOrgsSource) ResolveMembership(ctx context.Context, principalID uuid.UUID, slug string) (OrgClaim, bool, error) {
+	if slug == "" || len(slug) > maxSlugLength {
+		return OrgClaim{}, false, ErrMembershipNotResolved
+	}
+	org, alias, err := orgsvc.NewService(s.client).ResolveSlug(ctx, slug)
+	if errors.Is(err, orgsvc.ErrOrganizationNotFound) {
+		return OrgClaim{}, false, ErrMembershipNotResolved
+	}
+	if err != nil {
+		return OrgClaim{}, false, fmt.Errorf("systemauth: resolving slug: %w", err)
+	}
+	m, err := s.client.PrincipalMembership.Query().
+		Where(
+			principalmembership.PrincipalID(principalID),
+			principalmembership.OrganizationID(org.ID),
+			principalmembership.Active(true),
+		).
+		WithOrganization().
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return OrgClaim{}, false, ErrMembershipNotResolved
+	}
+	if err != nil {
+		return OrgClaim{}, false, fmt.Errorf("systemauth: reading membership: %w", err)
+	}
+	if m.Edges.Organization == nil {
+		return OrgClaim{}, false, ErrMembershipNotResolved
+	}
+	c, err := s.claim(ctx, principalID, orgEntry{membershipID: m.ID, createdAt: m.CreatedAt, org: m.Edges.Organization, role: m.Role}, false)
+	if err != nil {
+		return OrgClaim{}, false, err
+	}
+	return c, alias, nil
+}
+
 // WithOrgsSource makes the server emit the orgs claim (ADR-007) in ID
 // tokens, at the userinfo endpoint and, in compact form, in JWT access
 // tokens, and serve GET /oauth/userinfo/memberships. Without it no
@@ -283,21 +343,35 @@ type MembershipsResponse struct {
 	NextCursor string     `json:"next_cursor,omitempty"`
 }
 
-// membershipsEndpoint serves GET /oauth/userinfo/memberships?limit=&cursor=.
-func (s *Server) membershipsEndpoint(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	logger := LoggerFromContext(ctx)
+// maxSlugLength bounds the slug a resolve request may name.
+const maxSlugLength = 255
 
-	ar, authErr := s.authenticateAccessToken(r, s.endpointURL(MembershipsPath))
+// membershipsCaller authenticates a memberships request: an access token
+// granted openid, naming a principal. It writes the error response and
+// returns false when the request is refused.
+func (s *Server) membershipsCaller(w http.ResponseWriter, r *http.Request, path string) (uuid.UUID, bool) {
+	ar, authErr := s.authenticateAccessToken(r, s.endpointURL(path))
 	if authErr != nil {
-		logger.Debug("memberships: access token refused", "error", authErr)
+		LoggerFromContext(r.Context()).Debug("memberships: access token refused", "error", authErr)
 		s.writeTokenAuthError(w, authErr)
-		return
+		return uuid.Nil, false
 	}
 	subject := sessionSubject(ar.GetSession())
 	principalID, isPrincipal := principalSubject(subject)
 	if !ar.GetGrantedScopes().Has("openid") || !isPrincipal {
 		writeScopeError(w, ar, "The access token was not granted the openid scope.", "openid")
+		return uuid.Nil, false
+	}
+	return principalID, true
+}
+
+// membershipsEndpoint serves GET /oauth/userinfo/memberships?limit=&cursor=.
+func (s *Server) membershipsEndpoint(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := LoggerFromContext(ctx)
+
+	principalID, ok := s.membershipsCaller(w, r, MembershipsPath)
+	if !ok {
 		return
 	}
 	if s.orgs == nil {
@@ -330,6 +404,67 @@ func (s *Server) membershipsEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ResolveMembershipResponse is the body of GET
+// /oauth/userinfo/memberships/resolve.
+type ResolveMembershipResponse struct {
+	// Org is the organization in the full form of the orgs claim, with its
+	// current slug.
+	Org OrgClaim `json:"org"`
+	// Alias is true when the requested slug is one the organization gave
+	// up within the cooling-off period; update stored links to Org.Slug.
+	Alias bool `json:"alias"`
+}
+
+// resolveMembershipEndpoint serves GET
+// /oauth/userinfo/memberships/resolve?slug=. A slug that names no
+// organization and one the principal is not a member of both answer 404,
+// so the endpoint does not reveal other organizations.
+func (s *Server) resolveMembershipEndpoint(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := LoggerFromContext(ctx)
+
+	principalID, ok := s.membershipsCaller(w, r, ResolveMembershipPath)
+	if !ok {
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	resolver, ok := s.orgs.(MembershipResolver)
+	if !ok {
+		http.Error(w, "membership resolution is not configured", http.StatusNotImplemented)
+		return
+	}
+	slug := r.URL.Query().Get("slug")
+	if slug == "" {
+		http.Error(w, "slug is required", http.StatusBadRequest)
+		return
+	}
+	org, alias, err := resolver.ResolveMembership(ctx, principalID, slug)
+	if errors.Is(err, ErrMembershipNotResolved) {
+		http.Error(w, "organization not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		logger.Error("memberships: resolving slug", "error", err)
+		http.Error(w, "could not resolve the organization", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(ResolveMembershipResponse{Org: org, Alias: alias}); err != nil {
+		logger.Error("writing membership resolution", "error", err)
+	}
+}
+
+// ResolveMembershipInput documents the resolve request for OpenAPI.
+type ResolveMembershipInput struct {
+	Authorization string `header:"Authorization" doc:"Bearer access token granted the openid scope"`
+	Slug          string `query:"slug" required:"true" doc:"Organization slug, current or given up within the cooling-off period"`
+}
+
+// ResolveMembershipOutput documents the resolve response for OpenAPI.
+type ResolveMembershipOutput struct {
+	Body ResolveMembershipResponse
+}
+
 // MembershipsInput documents the memberships request for OpenAPI.
 type MembershipsInput struct {
 	Authorization string `header:"Authorization" doc:"Bearer access token granted the openid scope"`
@@ -354,5 +489,15 @@ func (s *Server) registerMembershipsOperation() {
 		Tags:        []string{"OpenID Connect"},
 	}, func(_ context.Context, _ *MembershipsInput) (*MembershipsOutput, error) {
 		return &MembershipsOutput{}, nil
+	})
+	huma.Register(s.huma, huma.Operation{
+		OperationID: "userinfo-memberships-resolve",
+		Method:      http.MethodGet,
+		Path:        ResolveMembershipPath,
+		Summary:     "Resolve an organization slug among the token principal's memberships",
+		Description: "Returns the organization a slug names, in the full form of the orgs claim with its current slug, when the token's principal is an active member of it. A slug the organization gave up by renaming keeps resolving during its cooling-off period, with alias true. An unknown slug and an organization the principal does not belong to both answer 404.",
+		Tags:        []string{"OpenID Connect"},
+	}, func(_ context.Context, _ *ResolveMembershipInput) (*ResolveMembershipOutput, error) {
+		return &ResolveMembershipOutput{}, nil
 	})
 }

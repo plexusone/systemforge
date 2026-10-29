@@ -248,6 +248,7 @@ func (s *EmbeddedOAuthClientStore) CreateClient(ctx context.Context, client *OAu
 		ResponseTypes: client.ResponseTypes,
 		Scopes:        strings.Split(client.Scope, " "),
 		Audience:      client.Audience,
+		Party:         ClientParty(client.Party).Effective(),
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
@@ -298,8 +299,13 @@ func (s *EmbeddedOAuthClientStore) UpdateClient(ctx context.Context, client *OAu
 		ResponseTypes: client.ResponseTypes,
 		Scopes:        strings.Split(client.Scope, " "),
 		Audience:      client.Audience,
+		Party:         existing.Party,
+		LogoURL:       existing.LogoURL,
 		CreatedAt:     existing.CreatedAt,
 		UpdatedAt:     time.Now(),
+	}
+	if client.Party != "" {
+		internalClient.Party = ClientParty(client.Party)
 	}
 
 	// Update secret if a new one is provided
@@ -345,6 +351,7 @@ func internalClientToOAuthClient(c *Client) *OAuthClient {
 		Scope:         strings.Join(c.Scopes, " "),
 		Audience:      c.Audience,
 		Public:        c.Type == ClientTypePublic,
+		Party:         string(c.EffectiveParty()),
 		CreatedAt:     c.CreatedAt,
 		UpdatedAt:     c.UpdatedAt,
 	}

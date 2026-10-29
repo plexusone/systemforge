@@ -167,6 +167,14 @@ type socialLogin struct {
 
 	// emit records security events (Server.emitEvent).
 	emit func(context.Context, *audit.Event)
+
+	// mail sends verification links and verifyTokens keeps their tokens;
+	// both are nil when mail is not configured (ADR-003).
+	mail         *mailer
+	verifyTokens VerificationTokenStore
+	// emailChanger changes a principal's email after the new address is
+	// proven; nil when the directory cannot, or mail is not configured.
+	emailChanger PrincipalEmailChanger
 }
 
 func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
@@ -228,6 +236,9 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 		clients:    s.storage,
 		oauth2:     s.oauth2,
 		limit:      s.limitRequest,
+
+		mail:         s.mail,
+		verifyTokens: s.verificationTokens,
 	}
 	if cfg.InsecureCookies {
 		s.logger.Warn("systemauth: InsecureCookies is set; login, state and sign-up cookies are not Secure. Use it for local development over plain HTTP only")
@@ -279,6 +290,11 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 			sl.directory = NewMemoryPrincipalDirectory()
 		}
 	}
+	// The sign-up wrappers below hide the directory's other methods, so
+	// the email changer is taken from the directory itself.
+	if c, ok := sl.directory.(PrincipalEmailChanger); ok && sl.mail != nil {
+		sl.emailChanger = c
+	}
 	denied, err := parseSignupDeniedURL(s.socialOpts.signupDeniedURL)
 	if err != nil {
 		return nil, err
@@ -326,6 +342,19 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 		if sl.signupCodes != nil {
 			r.Get(SignupPath, sl.handleSignupPage)
 		}
+		if sl.mail != nil {
+			r.Get(VerifyEmailPath, sl.handleVerifyEmailPage)
+			r.Post(VerifyEmailResendPath, sl.handleVerifyEmailResend)
+			r.Get(VerifyEmailConfirmPath, sl.handleVerifyEmailConfirmPage)
+			r.Post(VerifyEmailConfirmPath, sl.handleVerifyEmailConfirm)
+		}
+	}
+	if sl.emailChanger != nil {
+		r.Get(AccountEmailPath, sl.handleAccountEmailPage)
+		r.Post(AccountEmailPath, sl.handleAccountEmailRequest)
+		r.Post(AccountEmailCancelPath, sl.handleAccountEmailCancel)
+		r.Get(AccountEmailConfirmPath, sl.handleAccountEmailConfirmPage)
+		r.Post(AccountEmailConfirmPath, sl.handleAccountEmailConfirm)
 	}
 	r.Get(LogoutPath, sl.handleLogoutPage)
 	r.Post(LogoutPath, sl.handleLogout)
@@ -348,11 +377,47 @@ func noStore(w http.ResponseWriter) {
 
 var chooserTemplate = template.Must(template.New("login").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in</title></head>
-<body><main><h1>Sign in</h1><ul>
-{{range .}}<li><a href="{{.URL}}">Continue with {{.Name}}</a></li>
+<title>Sign in{{with .ClientName}} to {{.}}{{end}}</title></head>
+<body><main>{{if .LogoURL}}<img src="{{.LogoURL}}" alt="" width="64" height="64">
+{{end}}<h1>Sign in</h1>{{with .ClientName}}<p>to continue to {{.}}</p>{{end}}<ul>
+{{range .Links}}<li><a href="{{.URL}}">Continue with {{.Name}}</a></li>
 {{end}}</ul></main></body></html>
 `))
+
+// chooserBranding returns the name and logo of the client whose
+// authorization request returnTo is, for the login page; empty when
+// returnTo is not an authorization request of a known client. The logo is
+// kept only when it is an https URL whose origin can be named in the
+// page's content security policy.
+func (sl *socialLogin) chooserBranding(r *http.Request, returnTo string) (name, logoURL, logoOrigin string) {
+	target, err := parseConsentTarget(returnTo)
+	if err != nil {
+		return "", "", ""
+	}
+	client, err := sl.clients.GetClientByID(r.Context(), target.clientID)
+	if err != nil {
+		if !errors.Is(err, ErrClientNotFound) {
+			LoggerFromContext(r.Context()).Error("loading client for the login page", "client_id", target.clientID, "error", err)
+		}
+		return "", "", ""
+	}
+	name = client.Name
+	if name == "" {
+		name = client.ID
+	}
+	if client.LogoURL == "" || ValidateClientLogoURL(client.LogoURL) != nil {
+		return name, "", ""
+	}
+	u, err := url.Parse(client.LogoURL)
+	if err != nil {
+		return name, "", ""
+	}
+	host := strings.ToLower(u.Host)
+	if !cspHost.MatchString(host) {
+		return name, "", ""
+	}
+	return name, client.LogoURL, "https://" + host
+}
 
 var providerDisplayNames = map[string]string{
 	oauthclient.ProviderGitHub: "GitHub",
@@ -392,8 +457,16 @@ func (sl *socialLogin) handleChooser(w http.ResponseWriter, r *http.Request) {
 		}
 		links = append(links, link{Name: name, URL: startURL(p, returnTo)})
 	}
+	// A login started by an authorization request names the client.
+	clientName, logoURL, logoOrigin := sl.chooserBranding(r, returnTo)
+	if logoOrigin != "" {
+		allowImageSource(w, logoOrigin)
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := chooserTemplate.Execute(w, links); err != nil {
+	if err := chooserTemplate.Execute(w, struct {
+		ClientName, LogoURL string
+		Links               []link
+	}{clientName, logoURL, links}); err != nil {
 		LoggerFromContext(r.Context()).Error("rendering login page", "error", err)
 	}
 }
@@ -528,7 +601,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		ctx = sl.takeAgeConfirmation(ctx, w, r, provider)
 	}
 	ctx = sl.withSignupCode(ctx, r)
-	p, err := ResolveExternalLogin(ctx, sl.directory, ExternalLogin{
+	login := ExternalLogin{
 		Provider:           provider,
 		Subject:            user.ProviderID,
 		Email:              user.Email,
@@ -537,7 +610,22 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		Name:               user.Name,
 		Username:           user.Username,
 		AvatarURL:          user.AvatarURL,
-	}, sl.now())
+	}
+	p, err := ResolveExternalLogin(ctx, sl.directory, login, sl.now())
+	// With mail configured, an unverified provider email is held for
+	// verification instead of refused (ADR-003).
+	if errors.Is(err, ErrEmailNotVerified) && sl.canVerifyEmail(login) {
+		sl.startEmailVerification(ctx, w, r, login, data.RedirectURL)
+		return
+	}
+	sl.completeSignIn(ctx, w, r, provider, data.RedirectURL, p, err)
+}
+
+// completeSignIn finishes a sign-in that ResolveExternalLogin resolved to
+// p, or answers its error: it establishes the login session and redirects
+// to redirectURL, re-validated in case the policy changed mid-flow.
+func (sl *socialLogin) completeSignIn(ctx context.Context, w http.ResponseWriter, r *http.Request, provider, redirectURL string, p *HumanPrincipal, err error) {
+	logger := LoggerFromContext(ctx)
 	if err != nil {
 		status, msg := http.StatusInternalServerError, "login failed"
 		if reason := signInRefusalReason(err); reason != "" {
@@ -551,7 +639,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, ErrPrincipalInactive):
 			status, msg = http.StatusForbidden, "account is disabled"
 		case errors.Is(err, errSignupAgeRequired):
-			target, rErr := sl.redirects.resolve(data.RedirectURL)
+			target, rErr := sl.redirects.resolve(redirectURL)
 			if rErr != nil {
 				target = sl.redirects.defaultTarget
 			}
@@ -584,7 +672,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	sl.clearSignupCode(w, r)
 
 	// Re-validate the stored target in case the policy changed mid-flow.
-	target, err := sl.redirects.resolve(data.RedirectURL)
+	target, err := sl.redirects.resolve(redirectURL)
 	if err != nil {
 		target = sl.redirects.defaultTarget
 	}
@@ -740,14 +828,11 @@ func (p *socialSessionProvider) socialPrincipal(ctx context.Context, userID stri
 }
 
 // HasConsent implements SessionProvider. Social-login principals are
-// auto-consented when skip_consent is set, and otherwise checked against
-// the consent store filled by the /consent page.
+// checked against the consent store filled by the /consent page. The
+// authorization endpoint asks only about clients that are not first-party.
 func (p *socialSessionProvider) HasConsent(ctx context.Context, userID, clientID string, scopes []string) bool {
 	if _, ok := p.socialPrincipal(ctx, userID); !ok {
 		return p.inner.HasConsent(ctx, userID, clientID, scopes)
-	}
-	if p.social.cfg.SkipConsent {
-		return true
 	}
 	ok, err := p.social.consents.HasConsent(ctx, userID, clientID, scopes)
 	if err != nil {
@@ -790,6 +875,9 @@ func (p *socialSessionProvider) GetUserClaims(ctx context.Context, userID string
 			}
 			claims["email"] = lp.Email
 			claims["email_verified"] = lp.EmailVerified
+			if lp.EmailVerified && !lp.EmailVerifiedAt.IsZero() {
+				claims[EmailVerifiedAtClaim] = lp.EmailVerifiedAt.Unix()
+			}
 		case "profile":
 			claims["name"] = lp.DisplayName
 			if lp.AvatarURL != "" {

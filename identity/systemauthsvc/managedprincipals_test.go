@@ -63,7 +63,7 @@ func newManagedPrincipalsService(t *testing.T, enabled bool, dpopCfg systemauth.
 		cfg.ManagedPrincipals = &systemauth.ManagedPrincipalsConfig{Enabled: true}
 		// Login is the test header session; consent is not under test.
 		// Browser login, here for login tokens, takes the setting.
-		cfg.SocialLogin = &systemauth.SocialLoginConfig{SkipConsent: true}
+		cfg.SocialLogin = &systemauth.SocialLoginConfig{}
 	}
 	svc, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{
 		Dev:           true,

@@ -92,6 +92,16 @@ type Client struct {
 	// every token is bound to the proof's key (DPoPBoundAccessTokens).
 	AllowBearerTokens bool `json:"allow_bearer_tokens,omitempty"`
 
+	// Party says who owns the client: PartyFirst, PartySecond or
+	// PartyThird. Only first-party clients skip the consent screen. Empty
+	// means PartyThird; NewClientFromConfig sets PartyFirst for a client
+	// declared in the configuration file without one.
+	Party ClientParty `json:"party,omitempty"`
+
+	// LogoURL is an optional https URL of the client's logo, shown on the
+	// login page when the client started the sign-in.
+	LogoURL string `json:"logo_url,omitempty"`
+
 	// CreatedAt is when the client was created.
 	CreatedAt time.Time `json:"created_at"`
 
@@ -164,7 +174,9 @@ func (c *Client) DPoPBoundAccessTokens() bool {
 	return !c.AllowBearerTokens
 }
 
-// NewClientFromConfig creates a Client from a ClientConfig.
+// NewClientFromConfig creates a Client from a ClientConfig. A client
+// without a party is first-party: the configuration file declares the
+// operator's own applications.
 func NewClientFromConfig(cfg ClientConfig) (*Client, error) {
 	clientType := ClientTypeConfidential
 	if cfg.Type == "public" {
@@ -186,10 +198,20 @@ func NewClientFromConfig(cfg ClientConfig) (*Client, error) {
 		ManagedPrincipalsEnabled: cfg.ManagedPrincipals,
 		BackchannelLogoutURI:     cfg.BackchannelLogoutURI,
 		AllowBearerTokens:        cfg.AllowBearerTokens,
+		Party:                    ClientParty(cfg.Party),
+		LogoURL:                  cfg.LogoURL,
 		UpdatedAt:                time.Now(),
+	}
+	// Clients in the configuration file are the operator's own
+	// applications unless they say otherwise.
+	if client.Party == "" {
+		client.Party = PartyFirst
 	}
 	if err := ValidateBackchannelLogoutURI(client.BackchannelLogoutURI); err != nil {
 		return nil, fmt.Errorf("client %q: %w", cfg.ID, err)
+	}
+	if err := validateClientMetadata(client); err != nil {
+		return nil, err
 	}
 
 	// Convert Duration pointers to time.Duration pointers

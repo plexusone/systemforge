@@ -85,6 +85,15 @@ type Config struct {
 	// signed-in caller, and the storage they share.
 	RateLimit RateLimitConfig `json:"rate_limit,omitempty" yaml:"rate_limit,omitempty" jsonschema:"description=Rate limits and their shared storage"`
 
+	// Secrets selects where ${NAME} references in secret fields are read
+	// from; nil reads them from the environment.
+	Secrets *SecretsConfig `json:"secrets,omitempty" yaml:"secrets,omitempty" jsonschema:"description=Vault the secret references in this configuration are read from (default: the environment)"`
+
+	// Mail configures the mail SystemAuth sends to verify email addresses
+	// (ADR-003); nil sends none. It needs social login and a sender
+	// (WithMailSender).
+	Mail *MailConfig `json:"mail,omitempty" yaml:"mail,omitempty" jsonschema:"description=Verification mail: provider, sender, branding and send limits"`
+
 	// Production waives, by name, production checks that otherwise refuse
 	// to start the packaged service (systemauthsvc) or refuse requests.
 	Production ProductionConfig `json:"production,omitempty" yaml:"production,omitempty" jsonschema:"description=Named waivers of production checks"`
@@ -259,6 +268,17 @@ type ConsoleConfig struct {
 // ErrInvalidConsoleConfig is returned for a console that cannot work.
 var ErrInvalidConsoleConfig = errors.New("systemauth: invalid console configuration")
 
+// SecretsConfig selects the vault that ${NAME} references in secret fields
+// (client secrets, keys, DSNs, Redis URLs, ...) are read from. NAME is the
+// secret's path in the vault.
+type SecretsConfig struct {
+	// Vault is an omnivault URI: env:// (the default), env://PREFIX_,
+	// file:///dir, or a scheme a provider package registered with
+	// omnivault.RegisterProvider in the deployment's main package. It may
+	// itself reference an environment variable, e.g. ${SECRETS_VAULT}.
+	Vault string `json:"vault,omitempty" yaml:"vault,omitempty" jsonschema:"description=omnivault URI of the vault secret references are read from such as env:// or file:///dir (supports env var expansion)"`
+}
+
 // ConnectionsConfig configures connections to external services. Their
 // credentials are sealed under keys kept in KeysDir, whose root key and the
 // deployment's own secrets (such as OAuth client secrets) are read from the
@@ -339,10 +359,14 @@ type SocialLoginConfig struct {
 	// Default: 12h.
 	SessionLifetime Duration `json:"session_lifetime,omitempty" yaml:"session_lifetime,omitempty" jsonschema:"default=12h,description=Absolute login session lifetime"`
 
-	// SkipConsent auto-grants consent for authorization requests from users
-	// signed in through social login. Use only when every registered client
-	// is first-party.
-	SkipConsent bool `json:"skip_consent,omitempty" yaml:"skip_consent,omitempty" jsonschema:"default=false,description=Auto-grant consent for first-party clients"`
+	// SkipConsent is read for compatibility and ignored.
+	//
+	// Deprecated: first-party clients (ClientConfig.Party, first_party by
+	// default for clients in the configuration file) skip the consent
+	// screen without it, and second- and third-party clients always ask for
+	// consent. It used to grant consent to every client, including ones the
+	// operator does not own. A startup warning is logged when it is set.
+	SkipConsent bool `json:"skip_consent,omitempty" yaml:"skip_consent,omitempty" jsonschema:"default=false,description=Deprecated and ignored: first-party clients skip consent and other clients always ask"`
 
 	// SignupMinimumAge, when set, asks a person their birth month and year
 	// before an upstream login creates their account, and refuses anyone
@@ -646,6 +670,18 @@ type ClientConfig struct {
 	// bound tokens. Use it only for a client that cannot do DPoP yet:
 	// bearer tokens work for whoever holds them.
 	AllowBearerTokens bool `json:"allow_bearer_tokens,omitempty" yaml:"allow_bearer_tokens,omitempty" jsonschema:"default=false,description=Legacy exception: allow unbound bearer tokens for this client"`
+
+	// Party says who owns the client: first_party (the service provider),
+	// second_party (the customer) or third_party (a partner). The customer
+	// owns the data in every case. First-party clients skip the consent
+	// screen; the others always ask for consent and record it. Default:
+	// first_party, since the configuration file declares the operator's
+	// own applications.
+	Party string `json:"party,omitempty" yaml:"party,omitempty" jsonschema:"enum=first_party,enum=second_party,enum=third_party,default=first_party,description=Who owns the client; only first-party clients skip the consent screen"`
+
+	// LogoURL is an optional https URL of the client's logo, shown on the
+	// login page when the client started the sign-in.
+	LogoURL string `json:"logo_url,omitempty" yaml:"logo_url,omitempty" jsonschema:"description=https URL of the client's logo shown on the login page"`
 }
 
 // ManagedPrincipalsConfig configures managed principals: humans without an
@@ -777,6 +813,17 @@ func (c *Config) Validate() error {
 		if cl.ID == JWTBearerClientID {
 			return fmt.Errorf("%w: client ID %q is reserved", ErrInvalidConfig, JWTBearerClientID)
 		}
+		if err := validateClientMetadata(&Client{ID: cl.ID, Party: ClientParty(cl.Party), LogoURL: cl.LogoURL}); err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalidConfig, err)
+		}
+	}
+	if c.Mail != nil {
+		if err := c.Mail.validate(); err != nil {
+			return err
+		}
+		if c.SocialLogin == nil {
+			return fmt.Errorf("%w: mail verifies addresses for social login, which is not configured", ErrInvalidConfig)
+		}
 	}
 	if c.Console != nil && c.SocialLogin == nil {
 		return fmt.Errorf("%w: the console signs in with social login, which is not configured", ErrInvalidConsoleConfig)
@@ -861,6 +908,10 @@ func (c *Config) ApplyDefaults() {
 		if mp.SingleUseTokenTTL == 0 {
 			mp.SingleUseTokenTTL = Duration(credential.DefaultSingleUseLoginTokenTTL)
 		}
+	}
+
+	if c.Mail != nil {
+		c.Mail.applyDefaults(c.Issuer)
 	}
 
 	if c.SocialLogin != nil {

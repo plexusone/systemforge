@@ -226,6 +226,20 @@ func (_c *OAuthAppCreate) SetNillableAllowBearerTokens(v *bool) *OAuthAppCreate 
 	return _c
 }
 
+// SetParty sets the "party" field.
+func (_c *OAuthAppCreate) SetParty(v oauthapp.Party) *OAuthAppCreate {
+	_c.mutation.SetParty(v)
+	return _c
+}
+
+// SetNillableParty sets the "party" field if the given value is not nil.
+func (_c *OAuthAppCreate) SetNillableParty(v *oauthapp.Party) *OAuthAppCreate {
+	if v != nil {
+		_c.SetParty(*v)
+	}
+	return _c
+}
+
 // SetFirstParty sets the "first_party" field.
 func (_c *OAuthAppCreate) SetFirstParty(v bool) *OAuthAppCreate {
 	_c.mutation.SetFirstParty(v)
@@ -567,6 +581,11 @@ func (_c *OAuthAppCreate) check() error {
 	if _, ok := _c.mutation.AllowBearerTokens(); !ok {
 		return &ValidationError{Name: "allow_bearer_tokens", err: errors.New(`ent: missing required field "OAuthApp.allow_bearer_tokens"`)}
 	}
+	if v, ok := _c.mutation.Party(); ok {
+		if err := oauthapp.PartyValidator(v); err != nil {
+			return &ValidationError{Name: "party", err: fmt.Errorf(`ent: validator failed for field "OAuthApp.party": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.FirstParty(); !ok {
 		return &ValidationError{Name: "first_party", err: errors.New(`ent: missing required field "OAuthApp.first_party"`)}
 	}
@@ -684,6 +703,10 @@ func (_c *OAuthAppCreate) createSpec() (*OAuthApp, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.AllowBearerTokens(); ok {
 		_spec.SetField(oauthapp.FieldAllowBearerTokens, field.TypeBool, value)
 		_node.AllowBearerTokens = value
+	}
+	if value, ok := _c.mutation.Party(); ok {
+		_spec.SetField(oauthapp.FieldParty, field.TypeEnum, value)
+		_node.Party = &value
 	}
 	if value, ok := _c.mutation.FirstParty(); ok {
 		_spec.SetField(oauthapp.FieldFirstParty, field.TypeBool, value)
@@ -1112,6 +1135,24 @@ func (u *OAuthAppUpsert) SetAllowBearerTokens(v bool) *OAuthAppUpsert {
 // UpdateAllowBearerTokens sets the "allow_bearer_tokens" field to the value that was provided on create.
 func (u *OAuthAppUpsert) UpdateAllowBearerTokens() *OAuthAppUpsert {
 	u.SetExcluded(oauthapp.FieldAllowBearerTokens)
+	return u
+}
+
+// SetParty sets the "party" field.
+func (u *OAuthAppUpsert) SetParty(v oauthapp.Party) *OAuthAppUpsert {
+	u.Set(oauthapp.FieldParty, v)
+	return u
+}
+
+// UpdateParty sets the "party" field to the value that was provided on create.
+func (u *OAuthAppUpsert) UpdateParty() *OAuthAppUpsert {
+	u.SetExcluded(oauthapp.FieldParty)
+	return u
+}
+
+// ClearParty clears the value of the "party" field.
+func (u *OAuthAppUpsert) ClearParty() *OAuthAppUpsert {
+	u.SetNull(oauthapp.FieldParty)
 	return u
 }
 
@@ -1544,6 +1585,27 @@ func (u *OAuthAppUpsertOne) SetAllowBearerTokens(v bool) *OAuthAppUpsertOne {
 func (u *OAuthAppUpsertOne) UpdateAllowBearerTokens() *OAuthAppUpsertOne {
 	return u.Update(func(s *OAuthAppUpsert) {
 		s.UpdateAllowBearerTokens()
+	})
+}
+
+// SetParty sets the "party" field.
+func (u *OAuthAppUpsertOne) SetParty(v oauthapp.Party) *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.SetParty(v)
+	})
+}
+
+// UpdateParty sets the "party" field to the value that was provided on create.
+func (u *OAuthAppUpsertOne) UpdateParty() *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.UpdateParty()
+	})
+}
+
+// ClearParty clears the value of the "party" field.
+func (u *OAuthAppUpsertOne) ClearParty() *OAuthAppUpsertOne {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.ClearParty()
 	})
 }
 
@@ -2157,6 +2219,27 @@ func (u *OAuthAppUpsertBulk) SetAllowBearerTokens(v bool) *OAuthAppUpsertBulk {
 func (u *OAuthAppUpsertBulk) UpdateAllowBearerTokens() *OAuthAppUpsertBulk {
 	return u.Update(func(s *OAuthAppUpsert) {
 		s.UpdateAllowBearerTokens()
+	})
+}
+
+// SetParty sets the "party" field.
+func (u *OAuthAppUpsertBulk) SetParty(v oauthapp.Party) *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.SetParty(v)
+	})
+}
+
+// UpdateParty sets the "party" field to the value that was provided on create.
+func (u *OAuthAppUpsertBulk) UpdateParty() *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.UpdateParty()
+	})
+}
+
+// ClearParty clears the value of the "party" field.
+func (u *OAuthAppUpsertBulk) ClearParty() *OAuthAppUpsertBulk {
+	return u.Update(func(s *OAuthAppUpsert) {
+		s.ClearParty()
 	})
 }
 

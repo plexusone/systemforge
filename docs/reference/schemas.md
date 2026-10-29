@@ -446,7 +446,8 @@ OAuth 2.0 applications/clients.
 | `access_token_ttl` | int | default: 900 | Access token TTL in seconds (default 15 min) |
 | `refresh_token_ttl` | int | default: 604800 | Refresh token TTL in seconds (default 7 days) |
 | `refresh_token_rotation` | bool | default: true | Rotate refresh tokens on use |
-| `first_party` | bool | default: false | First-party apps skip consent screen |
+| `party` | enum | nullable | Who owns the app: first_party (skips the consent screen), second_party or third_party; null on rows written before the column existed, which first_party then classifies |
+| `first_party` | bool | default: false | Superseded by party: true exactly when party is first_party; classifies rows whose party is null |
 | `public` | bool | default: false | Public clients cannot keep secrets |
 | `active` | bool | default: true |  |
 | `revoked_at` | time | nullable |  |

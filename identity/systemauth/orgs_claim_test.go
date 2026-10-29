@@ -43,12 +43,21 @@ type orgsFixture struct {
 
 func newOrgsFixture(t *testing.T) *orgsFixture {
 	t.Helper()
+	return newOrgsFixtureWith(t, approle.EntitleAll, notesVocab{})
+}
+
+// newOrgsFixtureWith registers vocabs and entitles organizations to them
+// with the option entitle builds.
+func newOrgsFixtureWith(t *testing.T, entitle func(*authz.VocabularyRegistry) approle.Option, vocabs ...authz.AppVocabulary) *orgsFixture {
+	t.Helper()
 	db := openTestEnt(t)
 	reg := authz.NewVocabularyRegistry()
-	if err := reg.Register(notesVocab{}); err != nil {
-		t.Fatal(err)
+	for _, v := range vocabs {
+		if err := reg.Register(v); err != nil {
+			t.Fatal(err)
+		}
 	}
-	roles := approle.NewService(db, reg, approle.EntitleAll(reg))
+	roles := approle.NewService(db, reg, entitle(reg))
 	f := newFakeGitHub(t)
 	s, err := NewEmbedded(Config{
 		Issuer: testIssuer,
@@ -60,7 +69,7 @@ func newOrgsFixture(t *testing.T) *orgsFixture {
 			Scopes:        []string{"openid", "profile", "email", "offline_access"},
 		}},
 		Features:    FeatureConfig{EnableJWTAccessTokens: true, RequirePKCE: true},
-		SocialLogin: &SocialLoginConfig{SkipConsent: true},
+		SocialLogin: &SocialLoginConfig{},
 	}, WithSocialConnector(f.connector()), WithPrincipalDirectory(NewEntPrincipalDirectory(db)),
 		WithStorage(NewEntStorage(db, WithDefaultOwner(createTestOwner(t, db)))),
 		WithOrgsSource(NewEntOrgsSource(db, roles)))
@@ -307,7 +316,7 @@ func TestOrgsClaimRefreshCarriesCurrentRoles(t *testing.T) {
 }
 
 func TestNoOrgsClaimWithoutSource(t *testing.T) {
-	s := newSocialFlowServer(t, true)
+	s := newSocialFlowServer(t, PartyFirst)
 	sess := socialSession(t, s)
 	tokens := exchangeCode(t, s, authorizeCode(t, s, "openid", withCookie(sess)))
 	if got := verifyJWTOrOpaque(t, s, tokens); got != nil {

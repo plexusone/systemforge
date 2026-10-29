@@ -22,8 +22,7 @@ func consoleConfig(t *testing.T, webDir string) *systemauthsvc.Config {
 		DPoP:     prodDPoP,
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 		SocialLogin: &systemauth.SocialLoginConfig{
-			SkipConsent: true,
-			GitHub:      &systemauth.SocialProviderConfig{ClientID: "gh", ClientSecret: "gh-secret"},
+			GitHub: &systemauth.SocialProviderConfig{ClientID: "gh", ClientSecret: "gh-secret"},
 		},
 		Console: &systemauth.ConsoleConfig{WebDir: webDir},
 	}

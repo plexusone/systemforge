@@ -187,10 +187,11 @@ clients:
     scopes: [openid, profile, email, offline_access]
 ```
 
-An OAuth application marked `first_party` (see
-[OAuth Applications](../oauth/apps.md)) skips the consent screen, which
-suits a tool you ship to your own users; any other client asks the person
-to consent. Never give a client you distribute `allow_bearer_tokens`: the
+A client whose `party` is `first_party` (the default for a client in the
+SystemAuth configuration file; see
+[Client party](../systemauth/overview.md#client-party)) skips the consent
+screen, which suits a tool you ship to your own users; a second- or
+third-party client asks the person to consent. Never give a client you distribute `allow_bearer_tokens`: the
 binding is what makes a leaked token useless.
 
 ```go

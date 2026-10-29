@@ -93,10 +93,6 @@ type DefaultSessionProvider struct {
 
 	// gate admits the requests whose trustedHeader is believed.
 	gate RequestGate
-
-	// skipConsent when true, automatically grants all requested scopes.
-	// Useful for first-party applications.
-	skipConsent bool
 }
 
 // DefaultSessionProviderOption configures a DefaultSessionProvider.
@@ -130,19 +126,21 @@ func WithTrustedUserIDHeader(header string, gate RequestGate) DefaultSessionProv
 	}
 }
 
-// WithSkipConsent enables automatic consent for all requests.
-func WithSkipConsent(skip bool) DefaultSessionProviderOption {
-	return func(p *DefaultSessionProvider) {
-		p.skipConsent = skip
-	}
+// WithSkipConsent is kept for compatibility and does nothing.
+//
+// Deprecated: the authorization endpoint skips consent for first-party
+// clients (Client.Party) whatever the SessionProvider, and asks every
+// other client's users for consent. This option used to grant consent to
+// every client, including ones the operator does not own.
+func WithSkipConsent(bool) DefaultSessionProviderOption {
+	return func(*DefaultSessionProvider) {}
 }
 
 // NewDefaultSessionProvider creates a default session provider.
 func NewDefaultSessionProvider(opts ...DefaultSessionProviderOption) *DefaultSessionProvider {
 	p := &DefaultSessionProvider{
-		loginURL:    "/login",
-		consentURL:  "/consent",
-		skipConsent: false,
+		loginURL:   "/login",
+		consentURL: "/consent",
 	}
 	for _, opt := range opts {
 		opt(p)
@@ -180,10 +178,12 @@ func appendQueryParam(base, key, value string) string {
 	return base + sep + url.QueryEscape(key) + "=" + url.QueryEscape(value)
 }
 
-// HasConsent always returns the value of skipConsent.
-// Override this in production to check actual consent records.
+// HasConsent always returns false: the default provider records no
+// consent. The authorization endpoint does not ask it about first-party
+// clients; a deployment with second- or third-party clients needs a
+// SessionProvider that records consent, such as social login's.
 func (p *DefaultSessionProvider) HasConsent(_ context.Context, _, _ string, _ []string) bool {
-	return p.skipConsent
+	return false
 }
 
 // RedirectToConsent returns the consent URL with return URL parameter.

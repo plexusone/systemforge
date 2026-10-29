@@ -317,6 +317,26 @@ func (_u *OAuthAppUpdate) SetNillableAllowBearerTokens(v *bool) *OAuthAppUpdate 
 	return _u
 }
 
+// SetParty sets the "party" field.
+func (_u *OAuthAppUpdate) SetParty(v oauthapp.Party) *OAuthAppUpdate {
+	_u.mutation.SetParty(v)
+	return _u
+}
+
+// SetNillableParty sets the "party" field if the given value is not nil.
+func (_u *OAuthAppUpdate) SetNillableParty(v *oauthapp.Party) *OAuthAppUpdate {
+	if v != nil {
+		_u.SetParty(*v)
+	}
+	return _u
+}
+
+// ClearParty clears the value of the "party" field.
+func (_u *OAuthAppUpdate) ClearParty() *OAuthAppUpdate {
+	_u.mutation.ClearParty()
+	return _u
+}
+
 // SetFirstParty sets the "first_party" field.
 func (_u *OAuthAppUpdate) SetFirstParty(v bool) *OAuthAppUpdate {
 	_u.mutation.SetFirstParty(v)
@@ -626,6 +646,11 @@ func (_u *OAuthAppUpdate) check() error {
 			return &ValidationError{Name: "login_token_ttl", err: fmt.Errorf(`ent: validator failed for field "OAuthApp.login_token_ttl": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Party(); ok {
+		if err := oauthapp.PartyValidator(v); err != nil {
+			return &ValidationError{Name: "party", err: fmt.Errorf(`ent: validator failed for field "OAuthApp.party": %w`, err)}
+		}
+	}
 	if _u.mutation.OwnerCleared() && len(_u.mutation.OwnerIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "OAuthApp.owner"`)
 	}
@@ -729,6 +754,12 @@ func (_u *OAuthAppUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AllowBearerTokens(); ok {
 		_spec.SetField(oauthapp.FieldAllowBearerTokens, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Party(); ok {
+		_spec.SetField(oauthapp.FieldParty, field.TypeEnum, value)
+	}
+	if _u.mutation.PartyCleared() {
+		_spec.ClearField(oauthapp.FieldParty, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.FirstParty(); ok {
 		_spec.SetField(oauthapp.FieldFirstParty, field.TypeBool, value)
@@ -1293,6 +1324,26 @@ func (_u *OAuthAppUpdateOne) SetNillableAllowBearerTokens(v *bool) *OAuthAppUpda
 	return _u
 }
 
+// SetParty sets the "party" field.
+func (_u *OAuthAppUpdateOne) SetParty(v oauthapp.Party) *OAuthAppUpdateOne {
+	_u.mutation.SetParty(v)
+	return _u
+}
+
+// SetNillableParty sets the "party" field if the given value is not nil.
+func (_u *OAuthAppUpdateOne) SetNillableParty(v *oauthapp.Party) *OAuthAppUpdateOne {
+	if v != nil {
+		_u.SetParty(*v)
+	}
+	return _u
+}
+
+// ClearParty clears the value of the "party" field.
+func (_u *OAuthAppUpdateOne) ClearParty() *OAuthAppUpdateOne {
+	_u.mutation.ClearParty()
+	return _u
+}
+
 // SetFirstParty sets the "first_party" field.
 func (_u *OAuthAppUpdateOne) SetFirstParty(v bool) *OAuthAppUpdateOne {
 	_u.mutation.SetFirstParty(v)
@@ -1615,6 +1666,11 @@ func (_u *OAuthAppUpdateOne) check() error {
 			return &ValidationError{Name: "login_token_ttl", err: fmt.Errorf(`ent: validator failed for field "OAuthApp.login_token_ttl": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Party(); ok {
+		if err := oauthapp.PartyValidator(v); err != nil {
+			return &ValidationError{Name: "party", err: fmt.Errorf(`ent: validator failed for field "OAuthApp.party": %w`, err)}
+		}
+	}
 	if _u.mutation.OwnerCleared() && len(_u.mutation.OwnerIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "OAuthApp.owner"`)
 	}
@@ -1735,6 +1791,12 @@ func (_u *OAuthAppUpdateOne) sqlSave(ctx context.Context) (_node *OAuthApp, err 
 	}
 	if value, ok := _u.mutation.AllowBearerTokens(); ok {
 		_spec.SetField(oauthapp.FieldAllowBearerTokens, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Party(); ok {
+		_spec.SetField(oauthapp.FieldParty, field.TypeEnum, value)
+	}
+	if _u.mutation.PartyCleared() {
+		_spec.ClearField(oauthapp.FieldParty, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.FirstParty(); ok {
 		_spec.SetField(oauthapp.FieldFirstParty, field.TypeBool, value)

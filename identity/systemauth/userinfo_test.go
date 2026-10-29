@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func userinfo(t *testing.T, s *Server, decorate func(*http.Request), method string, body url.Values) (*httptest.ResponseRecorder, map[string]any) {
@@ -39,7 +40,7 @@ func bearer(token string) func(*http.Request) {
 }
 
 func TestUserInfoScopes(t *testing.T) {
-	s := newSocialFlowServer(t, true)
+	s := newSocialFlowServer(t, PartyFirst)
 	sess := socialSession(t, s)
 	loginReq := httptest.NewRequest(http.MethodGet, "/", nil)
 	loginReq.AddCookie(sess)
@@ -70,6 +71,10 @@ func TestUserInfoScopes(t *testing.T) {
 	if _, ok := claims["name"]; ok {
 		t.Errorf("profile claim released without profile scope: %v", claims)
 	}
+	// The verification time is a NumericDate, released with the email scope.
+	if at, ok := claims[EmailVerifiedAtClaim].(float64); !ok || at <= 0 || at > float64(time.Now().Unix()) {
+		t.Errorf("email_verified_at = %v", claims[EmailVerifiedAtClaim])
+	}
 
 	// A DPoP-bound token cannot travel in a POST body, which carries only
 	// Bearer tokens.
@@ -87,6 +92,9 @@ func TestUserInfoScopes(t *testing.T) {
 	if _, ok := claims["email"]; ok {
 		t.Errorf("email released without email scope: %v", claims)
 	}
+	if _, ok := claims[EmailVerifiedAtClaim]; ok {
+		t.Errorf("email_verified_at released without email scope: %v", claims)
+	}
 
 	// No openid scope: 403 insufficient_scope.
 	w, claims = userinfo(t, s, dpopAuth(t, tokenFor("email")), http.MethodGet, nil)
@@ -97,7 +105,7 @@ func TestUserInfoScopes(t *testing.T) {
 }
 
 func TestUserInfoInvalidToken(t *testing.T) {
-	s := newSocialFlowServer(t, true)
+	s := newSocialFlowServer(t, PartyFirst)
 
 	// Missing token: 401 with a bare challenge.
 	w, _ := userinfo(t, s, nil, http.MethodGet, nil)
@@ -150,7 +158,7 @@ func TestUserInfoClaimsFiltering(t *testing.T) {
 }
 
 func TestDiscoveryAdvertisesUserInfo(t *testing.T) {
-	s := newSocialFlowServer(t, true)
+	s := newSocialFlowServer(t, PartyFirst)
 	out, err := s.openIDConfigHandler(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)

@@ -52,7 +52,6 @@ func newAgeServer(t *testing.T, f *fakeGitHub, dir PrincipalDirectory, opts ...O
 		}},
 		SocialLogin: &SocialLoginConfig{
 			AllowedRedirectOrigins: []string{"https://app.example.com"},
-			SkipConsent:            true,
 			SignupMinimumAge:       18,
 		},
 	}, append([]Option{WithSocialConnector(f.connector()), WithPrincipalDirectory(dir)}, opts...)...)

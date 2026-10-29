@@ -25,7 +25,7 @@ default repository, cross-repo RMIs are corrected after import).
 
 **Theme:** AWS-IAM-style administration over registered vocabularies
 
-- [ ] `RMI-SYSTEMFORGE-005` Admin APIs: role-assignment CRUD, vocabulary introspection, scope-bounded token issuance
+- [x] `RMI-SYSTEMFORGE-005` Admin APIs: role-assignment CRUD, vocabulary introspection, scope-bounded token issuance
   - Depends on: `RMI-SYSTEMFORGE-003`
 - [ ] `RMI-SYSTEMFORGEWEB-001` IAM pages: members and role assignment, roles-permissions matrix, API keys and tokens with scope picker
   - Depends on: `RMI-SYSTEMFORGE-005`

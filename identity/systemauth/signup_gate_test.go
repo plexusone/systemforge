@@ -45,7 +45,7 @@ func newGatedServer(t *testing.T, f *fakeGitHub, dir PrincipalDirectory, opts ..
 			ResponseTypes: []string{"code"},
 			Scopes:        []string{"openid", "profile", "email"},
 		}},
-		SocialLogin: &SocialLoginConfig{AllowedRedirectOrigins: []string{"https://app.example.com"}, SkipConsent: true},
+		SocialLogin: &SocialLoginConfig{AllowedRedirectOrigins: []string{"https://app.example.com"}},
 	}, append([]Option{WithSocialConnector(f.connector()), WithPrincipalDirectory(dir)}, opts...)...)
 }
 

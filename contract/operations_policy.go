@@ -2,6 +2,7 @@ package contract
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -39,6 +40,19 @@ func (a *API) registerPolicyEndpoints() {
 			{"bearer": {"policy:read"}},
 		},
 	}, a.listPermissions)
+
+	// List application vocabularies
+	huma.Register(a.huma, huma.Operation{
+		OperationID: "listVocabularies",
+		Method:      "GET",
+		Path:        base + "/policy/vocabularies",
+		Summary:     "List application vocabularies",
+		Description: "Returns each registered application's roles with their hierarchy levels and permissions, and its OAuth scopes (read-only).",
+		Tags:        []string{"Policy"},
+		Security: []map[string][]string{
+			{"bearer": {"policy:read"}},
+		},
+	}, a.listVocabularies)
 
 	// Evaluate policy
 	huma.Register(a.huma, huma.Operation{
@@ -93,6 +107,56 @@ func (a *API) listRoles(ctx context.Context, input *struct{}) (*RolesListOutput,
 			Roles: roles,
 		},
 	}, nil
+}
+
+func (a *API) listVocabularies(ctx context.Context, _ *struct{}) (*VocabulariesListOutput, error) {
+	if err := a.checkPermission(ctx, PermissionPolicyRead); err != nil {
+		return nil, err
+	}
+	out := &VocabulariesListOutput{}
+	out.Body.Vocabularies = describeVocabularies(a.provider.Vocabularies())
+	return out, nil
+}
+
+// describeVocabularies lists the registry's vocabularies in registration
+// order, each with its roles lowest level first.
+func describeVocabularies(reg *authz.VocabularyRegistry) []Vocabulary {
+	out := []Vocabulary{}
+	if reg == nil {
+		return out
+	}
+	for _, app := range reg.Apps() {
+		v, ok := reg.Get(app)
+		if !ok {
+			continue
+		}
+		levels := v.Hierarchy()
+		all := map[string]bool{}
+		roles := make([]VocabularyRole, 0, len(v.Roles()))
+		for id, perms := range v.Roles() {
+			p := append([]string(nil), perms...)
+			sort.Strings(p)
+			for _, perm := range p {
+				all[perm] = true
+			}
+			roles = append(roles, VocabularyRole{ID: id, Level: levels[id], Permissions: p})
+		}
+		sort.Slice(roles, func(i, j int) bool {
+			if roles[i].Level != roles[j].Level {
+				return roles[i].Level < roles[j].Level
+			}
+			return roles[i].ID < roles[j].ID
+		})
+		perms := make([]string, 0, len(all))
+		for perm := range all {
+			perms = append(perms, perm)
+		}
+		sort.Strings(perms)
+		scopes := append([]string{}, v.Scopes()...)
+		sort.Strings(scopes)
+		out = append(out, Vocabulary{App: app, Roles: roles, Permissions: perms, Scopes: scopes})
+	}
+	return out
 }
 
 func (a *API) listPermissions(ctx context.Context, input *struct{}) (*PermissionsListOutput, error) {

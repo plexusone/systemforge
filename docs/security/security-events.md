@@ -62,6 +62,11 @@ names; the client may not have been authenticated.
 | `systemauth.authorization_code.reuse` | `redeem_authorization_code` | `failure` | `grant_type`, `client_id`, `family_revoked` |
 | `systemauth.token.revoked` | `revoke` | `success` or `failure` | `client_id`, `token_type_hint`, `error` |
 | `systemauth.token_family.revoked` | `revoke` | `success` | `reason`, `subject`, `client_id`; `resource.identifier` is the family's request ID |
+| `systemauth.email_verification.sent` | `send_verification` | `success` | `purpose` (`verify_email` or `email_change`), `sent` (false when a send limit suppressed the message or delivery failed); the address is never recorded |
+| `systemauth.email.verified` | `verify_email` | `success` | `purpose`, `method` (the pending sign-in's provider, for `verify_email`) |
+| `systemauth.email_change.requested` | `request_email_change` | `success` | none; `resource.id` is the principal |
+| `systemauth.email_change.cancelled` | `cancel_email_change` | `success` | none; `resource.id` is the principal |
+| `systemauth.email.changed` | `change_email` | `success` | none; `resource.id` is the principal. Neither address is recorded |
 | `systemauth.signing_key.loaded` | `load` | `success` | `key_id`, `verification_key_ids`, `ephemeral` |
 | `systemauth.production.waiver` | `waive` | `success` | `check`, `setting`, `risk` (from `systemauthsvc`, at startup) |
 
@@ -79,6 +84,7 @@ previous key among the `verification_key_ids`.
 | `email_not_verified`, `email_conflict` | The account's email is not verified, or belongs to another account |
 | `principal_inactive` | The account is disabled |
 | `not_invited` | Sign-up is by invitation and there was none |
+| `verification_invalid` | An email verification link was invalid, expired, replaced, already used or opened without the browser that asked for it |
 | `login_token_rejected` | A managed principal's login token was refused |
 | `server_error` | SystemAuth failed |
 

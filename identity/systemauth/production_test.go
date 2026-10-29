@@ -26,7 +26,7 @@ func newProductionTestServer(t *testing.T, policy ProductionPolicy) *Server {
 				GrantTypes: []string{"client_credentials"}, Scopes: []string{"read"}, AllowBearerTokens: true},
 		},
 	},
-		WithSessionProvider(NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", TrustAllRequests), WithSkipConsent(true))),
+		WithSessionProvider(NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", TrustAllRequests))),
 		WithProductionPolicy(policy),
 	)
 	if err != nil {

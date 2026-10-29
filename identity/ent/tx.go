@@ -100,6 +100,8 @@ type Tx struct {
 	SlugReservation *SlugReservationClient
 	// Subscription is the client for interacting with the Subscription builders.
 	Subscription *SubscriptionClient
+	// VerificationToken is the client for interacting with the VerificationToken builders.
+	VerificationToken *VerificationTokenClient
 
 	// lazily loaded.
 	client     *Client
@@ -274,6 +276,7 @@ func (tx *Tx) init() {
 	tx.SignupWaitlistEntry = NewSignupWaitlistEntryClient(tx.config)
 	tx.SlugReservation = NewSlugReservationClient(tx.config)
 	tx.Subscription = NewSubscriptionClient(tx.config)
+	tx.VerificationToken = NewVerificationTokenClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

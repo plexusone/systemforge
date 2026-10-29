@@ -50,6 +50,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
+	"github.com/plexusone/systemforge/identity/ent/verificationtoken"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -880,23 +881,23 @@ func init() {
 	// oauthapp.DefaultAllowBearerTokens holds the default value on creation for the allow_bearer_tokens field.
 	oauthapp.DefaultAllowBearerTokens = oauthappDescAllowBearerTokens.Default.(bool)
 	// oauthappDescFirstParty is the schema descriptor for first_party field.
-	oauthappDescFirstParty := oauthappFields[19].Descriptor()
+	oauthappDescFirstParty := oauthappFields[20].Descriptor()
 	// oauthapp.DefaultFirstParty holds the default value on creation for the first_party field.
 	oauthapp.DefaultFirstParty = oauthappDescFirstParty.Default.(bool)
 	// oauthappDescPublic is the schema descriptor for public field.
-	oauthappDescPublic := oauthappFields[20].Descriptor()
+	oauthappDescPublic := oauthappFields[21].Descriptor()
 	// oauthapp.DefaultPublic holds the default value on creation for the public field.
 	oauthapp.DefaultPublic = oauthappDescPublic.Default.(bool)
 	// oauthappDescActive is the schema descriptor for active field.
-	oauthappDescActive := oauthappFields[21].Descriptor()
+	oauthappDescActive := oauthappFields[22].Descriptor()
 	// oauthapp.DefaultActive holds the default value on creation for the active field.
 	oauthapp.DefaultActive = oauthappDescActive.Default.(bool)
 	// oauthappDescCreatedAt is the schema descriptor for created_at field.
-	oauthappDescCreatedAt := oauthappFields[24].Descriptor()
+	oauthappDescCreatedAt := oauthappFields[25].Descriptor()
 	// oauthapp.DefaultCreatedAt holds the default value on creation for the created_at field.
 	oauthapp.DefaultCreatedAt = oauthappDescCreatedAt.Default.(func() time.Time)
 	// oauthappDescUpdatedAt is the schema descriptor for updated_at field.
-	oauthappDescUpdatedAt := oauthappFields[25].Descriptor()
+	oauthappDescUpdatedAt := oauthappFields[26].Descriptor()
 	// oauthapp.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	oauthapp.DefaultUpdatedAt = oauthappDescUpdatedAt.Default.(func() time.Time)
 	// oauthapp.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1515,4 +1516,18 @@ func init() {
 	subscriptionDescID := subscriptionMixinFields0[0].Descriptor()
 	// subscription.DefaultID holds the default value on creation for the id field.
 	subscription.DefaultID = subscriptionDescID.Default.(func() uuid.UUID)
+	verificationtokenFields := schema.VerificationToken{}.Fields()
+	_ = verificationtokenFields
+	// verificationtokenDescEmail is the schema descriptor for email field.
+	verificationtokenDescEmail := verificationtokenFields[3].Descriptor()
+	// verificationtoken.EmailValidator is a validator for the "email" field. It is called by the builders before save.
+	verificationtoken.EmailValidator = verificationtokenDescEmail.Validators[0].(func(string) error)
+	// verificationtokenDescBinding is the schema descriptor for binding field.
+	verificationtokenDescBinding := verificationtokenFields[5].Descriptor()
+	// verificationtoken.BindingValidator is a validator for the "binding" field. It is called by the builders before save.
+	verificationtoken.BindingValidator = verificationtokenDescBinding.Validators[0].(func(string) error)
+	// verificationtokenDescID is the schema descriptor for id field.
+	verificationtokenDescID := verificationtokenFields[0].Descriptor()
+	// verificationtoken.DefaultID holds the default value on creation for the id field.
+	verificationtoken.DefaultID = verificationtokenDescID.Default.(func() uuid.UUID)
 }

@@ -203,10 +203,10 @@ func TestInvalidClient(t *testing.T) {
 }
 
 func TestAuthorizationCodeFlow(t *testing.T) {
-	// Create a session provider that auto-authenticates and auto-consents
+	// A session provider that trusts a header; the configured client is
+	// first-party, so it needs no consent.
 	sessionProvider := systemauth.NewDefaultSessionProvider(
 		systemauth.WithTrustedUserIDHeader("X-Test-User", systemauth.TrustAllRequests),
-		systemauth.WithSkipConsent(true),
 	)
 
 	server, err := systemauth.NewEmbedded(systemauth.Config{
@@ -294,7 +294,6 @@ func TestAuthorizationCodeFlowConsentRequired(t *testing.T) {
 	// Create a session provider that requires consent
 	sessionProvider := systemauth.NewDefaultSessionProvider(
 		systemauth.WithTrustedUserIDHeader("X-Test-User", systemauth.TrustAllRequests),
-		systemauth.WithSkipConsent(false),
 		systemauth.WithConsentURL("/custom-consent"),
 	)
 
@@ -305,6 +304,7 @@ func TestAuthorizationCodeFlowConsentRequired(t *testing.T) {
 				ID:            "web-client",
 				Type:          "public",
 				Name:          "Web Client",
+				Party:         "third_party",
 				RedirectURIs:  []string{"https://web.example.com/callback"},
 				GrantTypes:    []string{"authorization_code"},
 				ResponseTypes: []string{"code"},

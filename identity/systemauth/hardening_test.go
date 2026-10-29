@@ -122,7 +122,7 @@ func newPrincipal(t *testing.T, s *Server) string {
 
 func newRefreshTestServer(t *testing.T, opts ...Option) *Server {
 	t.Helper()
-	opts = append([]Option{WithSessionProvider(NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", TrustAllRequests), WithSkipConsent(true)))}, opts...)
+	opts = append([]Option{WithSessionProvider(NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", TrustAllRequests)))}, opts...)
 	s, err := NewEmbedded(Config{
 		Issuer: testIssuer,
 		Clients: []ClientConfig{{
@@ -305,7 +305,7 @@ func TestDefaultSessionProviderEscapesReturnURL(t *testing.T) {
 
 // --- logout and consent (social login) ---
 
-func newSocialFlowServer(t *testing.T, skipConsent bool) *Server {
+func newSocialFlowServer(t *testing.T, party ClientParty) *Server {
 	t.Helper()
 	f := newFakeGitHub(t)
 	s, err := NewEmbedded(Config{
@@ -314,6 +314,7 @@ func newSocialFlowServer(t *testing.T, skipConsent bool) *Server {
 			ID:            "spa",
 			Type:          "public",
 			Name:          "Example App",
+			Party:         string(party),
 			RedirectURIs:  []string{testRPCB},
 			GrantTypes:    []string{"authorization_code", "refresh_token"},
 			ResponseTypes: []string{"code"},
@@ -321,7 +322,6 @@ func newSocialFlowServer(t *testing.T, skipConsent bool) *Server {
 		}},
 		SocialLogin: &SocialLoginConfig{
 			AllowedRedirectOrigins: []string{"https://app.example.com"},
-			SkipConsent:            skipConsent,
 		},
 	}, WithSocialConnector(f.connector()))
 	if err != nil {
@@ -363,7 +363,7 @@ func postForm(s *Server, path, origin string, form url.Values, cookies ...*http.
 }
 
 func TestLogoutRevokesSessionAndTokens(t *testing.T) {
-	s := newSocialFlowServer(t, true)
+	s := newSocialFlowServer(t, PartyFirst)
 	sess := socialSession(t, s)
 	tokens := exchangeCode(t, s, authorizeCode(t, s, "openid offline_access", withCookie(sess)))
 	at, _ := tokens["access_token"].(string)
@@ -422,7 +422,7 @@ func TestLogoutRevokesSessionAndTokens(t *testing.T) {
 }
 
 func TestConsentPage(t *testing.T) {
-	s := newSocialFlowServer(t, false)
+	s := newSocialFlowServer(t, PartyThird)
 	sess := socialSession(t, s)
 	authorize := authorizeURL("openid email")
 
@@ -589,7 +589,7 @@ func TestTrustedHeaderIsGated(t *testing.T) {
 // TestUnauthenticatedAuthorizeGoesToLogin verifies that, by default, a
 // client-supplied header cannot obtain an authorization code.
 func TestUnauthenticatedAuthorizeGoesToLogin(t *testing.T) {
-	s := newRefreshTestServer(t, WithSessionProvider(NewDefaultSessionProvider(WithSkipConsent(true))))
+	s := newRefreshTestServer(t, WithSessionProvider(NewDefaultSessionProvider()))
 	req := httptest.NewRequest(http.MethodGet, authorizeURL("openid"), nil)
 	headerUser(uuid.NewString())(req)
 	w := httptest.NewRecorder()
