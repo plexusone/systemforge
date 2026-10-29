@@ -20962,6 +20962,7 @@ type OAuthAppMutation struct {
 	refresh_token_rotation       *bool
 	managed_principals_enabled   *bool
 	allow_bearer_tokens          *bool
+	party                        *oauthapp.Party
 	first_party                  *bool
 	public                       *bool
 	active                       *bool
@@ -21929,6 +21930,55 @@ func (m *OAuthAppMutation) ResetAllowBearerTokens() {
 	m.allow_bearer_tokens = nil
 }
 
+// SetParty sets the "party" field.
+func (m *OAuthAppMutation) SetParty(o oauthapp.Party) {
+	m.party = &o
+}
+
+// Party returns the value of the "party" field in the mutation.
+func (m *OAuthAppMutation) Party() (r oauthapp.Party, exists bool) {
+	v := m.party
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParty returns the old "party" field's value of the OAuthApp entity.
+// If the OAuthApp object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OAuthAppMutation) OldParty(ctx context.Context) (v *oauthapp.Party, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParty is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParty requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParty: %w", err)
+	}
+	return oldValue.Party, nil
+}
+
+// ClearParty clears the value of the "party" field.
+func (m *OAuthAppMutation) ClearParty() {
+	m.party = nil
+	m.clearedFields[oauthapp.FieldParty] = struct{}{}
+}
+
+// PartyCleared returns if the "party" field was cleared in this mutation.
+func (m *OAuthAppMutation) PartyCleared() bool {
+	_, ok := m.clearedFields[oauthapp.FieldParty]
+	return ok
+}
+
+// ResetParty resets all changes to the "party" field.
+func (m *OAuthAppMutation) ResetParty() {
+	m.party = nil
+	delete(m.clearedFields, oauthapp.FieldParty)
+}
+
 // SetFirstParty sets the "first_party" field.
 func (m *OAuthAppMutation) SetFirstParty(b bool) {
 	m.first_party = &b
@@ -22511,7 +22561,7 @@ func (m *OAuthAppMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OAuthAppMutation) Fields() []string {
-	fields := make([]string, 0, 25)
+	fields := make([]string, 0, 26)
 	if m.client_id != nil {
 		fields = append(fields, oauthapp.FieldClientID)
 	}
@@ -22565,6 +22615,9 @@ func (m *OAuthAppMutation) Fields() []string {
 	}
 	if m.allow_bearer_tokens != nil {
 		fields = append(fields, oauthapp.FieldAllowBearerTokens)
+	}
+	if m.party != nil {
+		fields = append(fields, oauthapp.FieldParty)
 	}
 	if m.first_party != nil {
 		fields = append(fields, oauthapp.FieldFirstParty)
@@ -22631,6 +22684,8 @@ func (m *OAuthAppMutation) Field(name string) (ent.Value, bool) {
 		return m.ManagedPrincipalsEnabled()
 	case oauthapp.FieldAllowBearerTokens:
 		return m.AllowBearerTokens()
+	case oauthapp.FieldParty:
+		return m.Party()
 	case oauthapp.FieldFirstParty:
 		return m.FirstParty()
 	case oauthapp.FieldPublic:
@@ -22690,6 +22745,8 @@ func (m *OAuthAppMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldManagedPrincipalsEnabled(ctx)
 	case oauthapp.FieldAllowBearerTokens:
 		return m.OldAllowBearerTokens(ctx)
+	case oauthapp.FieldParty:
+		return m.OldParty(ctx)
 	case oauthapp.FieldFirstParty:
 		return m.OldFirstParty(ctx)
 	case oauthapp.FieldPublic:
@@ -22839,6 +22896,13 @@ func (m *OAuthAppMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAllowBearerTokens(v)
 		return nil
+	case oauthapp.FieldParty:
+		v, ok := value.(oauthapp.Party)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParty(v)
+		return nil
 	case oauthapp.FieldFirstParty:
 		v, ok := value.(bool)
 		if !ok {
@@ -22972,6 +23036,9 @@ func (m *OAuthAppMutation) ClearedFields() []string {
 	if m.FieldCleared(oauthapp.FieldBackchannelLogoutURI) {
 		fields = append(fields, oauthapp.FieldBackchannelLogoutURI)
 	}
+	if m.FieldCleared(oauthapp.FieldParty) {
+		fields = append(fields, oauthapp.FieldParty)
+	}
 	if m.FieldCleared(oauthapp.FieldRevokedAt) {
 		fields = append(fields, oauthapp.FieldRevokedAt)
 	}
@@ -23006,6 +23073,9 @@ func (m *OAuthAppMutation) ClearField(name string) error {
 		return nil
 	case oauthapp.FieldBackchannelLogoutURI:
 		m.ClearBackchannelLogoutURI()
+		return nil
+	case oauthapp.FieldParty:
+		m.ClearParty()
 		return nil
 	case oauthapp.FieldRevokedAt:
 		m.ClearRevokedAt()
@@ -23074,6 +23144,9 @@ func (m *OAuthAppMutation) ResetField(name string) error {
 		return nil
 	case oauthapp.FieldAllowBearerTokens:
 		m.ResetAllowBearerTokens()
+		return nil
+	case oauthapp.FieldParty:
+		m.ResetParty()
 		return nil
 	case oauthapp.FieldFirstParty:
 		m.ResetFirstParty()

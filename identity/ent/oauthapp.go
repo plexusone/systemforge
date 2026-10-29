@@ -57,7 +57,9 @@ type OAuthApp struct {
 	ManagedPrincipalsEnabled bool `json:"managed_principals_enabled,omitempty"`
 	// Legacy exception: the client may get unbound bearer tokens without a DPoP proof; by default every token request needs one (RFC 9449 dpop_bound_access_tokens)
 	AllowBearerTokens bool `json:"allow_bearer_tokens,omitempty"`
-	// First-party apps skip consent screen
+	// Who owns the app: first_party (the service provider; skips the consent screen), second_party (the customer) or third_party (a partner); the customer owns the data in every case. Null on rows written before the column existed, which first_party then classifies
+	Party *oauthapp.Party `json:"party,omitempty"`
+	// Superseded by party: true exactly when party is first_party; classifies rows whose party is null
 	FirstParty bool `json:"first_party,omitempty"`
 	// Public clients cannot keep secrets
 	Public bool `json:"public,omitempty"`
@@ -167,7 +169,7 @@ func (*OAuthApp) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case oauthapp.FieldAccessTokenTTL, oauthapp.FieldRefreshTokenTTL, oauthapp.FieldLoginTokenTTL:
 			values[i] = new(sql.NullInt64)
-		case oauthapp.FieldClientID, oauthapp.FieldName, oauthapp.FieldDescription, oauthapp.FieldLogoURL, oauthapp.FieldAppType, oauthapp.FieldBackchannelLogoutURI:
+		case oauthapp.FieldClientID, oauthapp.FieldName, oauthapp.FieldDescription, oauthapp.FieldLogoURL, oauthapp.FieldAppType, oauthapp.FieldBackchannelLogoutURI, oauthapp.FieldParty:
 			values[i] = new(sql.NullString)
 		case oauthapp.FieldRevokedAt, oauthapp.FieldCreatedAt, oauthapp.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -312,6 +314,13 @@ func (_m *OAuthApp) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field allow_bearer_tokens", values[i])
 			} else if value.Valid {
 				_m.AllowBearerTokens = value.Bool
+			}
+		case oauthapp.FieldParty:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field party", values[i])
+			} else if value.Valid {
+				_m.Party = new(oauthapp.Party)
+				*_m.Party = oauthapp.Party(value.String)
 			}
 		case oauthapp.FieldFirstParty:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -483,6 +492,11 @@ func (_m *OAuthApp) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("allow_bearer_tokens=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AllowBearerTokens))
+	builder.WriteString(", ")
+	if v := _m.Party; v != nil {
+		builder.WriteString("party=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("first_party=")
 	builder.WriteString(fmt.Sprintf("%v", _m.FirstParty))

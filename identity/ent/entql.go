@@ -595,6 +595,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			oauthapp.FieldRefreshTokenRotation:     {Type: field.TypeBool, Column: oauthapp.FieldRefreshTokenRotation},
 			oauthapp.FieldManagedPrincipalsEnabled: {Type: field.TypeBool, Column: oauthapp.FieldManagedPrincipalsEnabled},
 			oauthapp.FieldAllowBearerTokens:        {Type: field.TypeBool, Column: oauthapp.FieldAllowBearerTokens},
+			oauthapp.FieldParty:                    {Type: field.TypeEnum, Column: oauthapp.FieldParty},
 			oauthapp.FieldFirstParty:               {Type: field.TypeBool, Column: oauthapp.FieldFirstParty},
 			oauthapp.FieldPublic:                   {Type: field.TypeBool, Column: oauthapp.FieldPublic},
 			oauthapp.FieldActive:                   {Type: field.TypeBool, Column: oauthapp.FieldActive},
@@ -4417,6 +4418,11 @@ func (f *OAuthAppFilter) WhereManagedPrincipalsEnabled(p entql.BoolP) {
 // WhereAllowBearerTokens applies the entql bool predicate on the allow_bearer_tokens field.
 func (f *OAuthAppFilter) WhereAllowBearerTokens(p entql.BoolP) {
 	f.Where(p.Field(oauthapp.FieldAllowBearerTokens))
+}
+
+// WhereParty applies the entql string predicate on the party field.
+func (f *OAuthAppFilter) WhereParty(p entql.StringP) {
+	f.Where(p.Field(oauthapp.FieldParty))
 }
 
 // WhereFirstParty applies the entql bool predicate on the first_party field.

@@ -52,6 +52,8 @@ const (
 	FieldManagedPrincipalsEnabled = "managed_principals_enabled"
 	// FieldAllowBearerTokens holds the string denoting the allow_bearer_tokens field in the database.
 	FieldAllowBearerTokens = "allow_bearer_tokens"
+	// FieldParty holds the string denoting the party field in the database.
+	FieldParty = "party"
 	// FieldFirstParty holds the string denoting the first_party field in the database.
 	FieldFirstParty = "first_party"
 	// FieldPublic holds the string denoting the public field in the database.
@@ -145,6 +147,7 @@ var Columns = []string{
 	FieldRefreshTokenRotation,
 	FieldManagedPrincipalsEnabled,
 	FieldAllowBearerTokens,
+	FieldParty,
 	FieldFirstParty,
 	FieldPublic,
 	FieldActive,
@@ -236,6 +239,30 @@ func AppTypeValidator(at AppType) error {
 	}
 }
 
+// Party defines the type for the "party" enum field.
+type Party string
+
+// Party values.
+const (
+	PartyFirstParty  Party = "first_party"
+	PartySecondParty Party = "second_party"
+	PartyThirdParty  Party = "third_party"
+)
+
+func (pa Party) String() string {
+	return string(pa)
+}
+
+// PartyValidator is a validator for the "party" field enum values. It is called by the builders before save.
+func PartyValidator(pa Party) error {
+	switch pa {
+	case PartyFirstParty, PartySecondParty, PartyThirdParty:
+		return nil
+	default:
+		return fmt.Errorf("oauthapp: invalid enum value for party field: %q", pa)
+	}
+}
+
 // OrderOption defines the ordering options for the OAuthApp queries.
 type OrderOption func(*sql.Selector)
 
@@ -312,6 +339,11 @@ func ByManagedPrincipalsEnabled(opts ...sql.OrderTermOption) OrderOption {
 // ByAllowBearerTokens orders the results by the allow_bearer_tokens field.
 func ByAllowBearerTokens(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAllowBearerTokens, opts...).ToFunc()
+}
+
+// ByParty orders the results by the party field.
+func ByParty(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldParty, opts...).ToFunc()
 }
 
 // ByFirstParty orders the results by the first_party field.

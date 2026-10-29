@@ -954,6 +954,7 @@ var (
 		{Name: "refresh_token_rotation", Type: field.TypeBool, Default: true},
 		{Name: "managed_principals_enabled", Type: field.TypeBool, Default: false},
 		{Name: "allow_bearer_tokens", Type: field.TypeBool, Default: false},
+		{Name: "party", Type: field.TypeEnum, Nullable: true, Enums: []string{"first_party", "second_party", "third_party"}},
 		{Name: "first_party", Type: field.TypeBool, Default: false},
 		{Name: "public", Type: field.TypeBool, Default: false},
 		{Name: "active", Type: field.TypeBool, Default: true},
@@ -972,13 +973,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_oauth_apps_sf_organizations_oauth_apps",
-				Columns:    []*schema.Column{SfOauthAppsColumns[24]},
+				Columns:    []*schema.Column{SfOauthAppsColumns[25]},
 				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "sf_oauth_apps_sf_principals_owned_oauth_apps",
-				Columns:    []*schema.Column{SfOauthAppsColumns[25]},
+				Columns:    []*schema.Column{SfOauthAppsColumns[26]},
 				RefColumns: []*schema.Column{SfPrincipalsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -992,17 +993,17 @@ var (
 			{
 				Name:    "oauthapp_owner_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[25]},
+				Columns: []*schema.Column{SfOauthAppsColumns[26]},
 			},
 			{
 				Name:    "oauthapp_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[24]},
+				Columns: []*schema.Column{SfOauthAppsColumns[25]},
 			},
 			{
 				Name:    "oauthapp_active",
 				Unique:  false,
-				Columns: []*schema.Column{SfOauthAppsColumns[19]},
+				Columns: []*schema.Column{SfOauthAppsColumns[20]},
 			},
 		},
 	}

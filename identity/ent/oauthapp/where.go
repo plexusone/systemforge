@@ -736,6 +736,36 @@ func AllowBearerTokensNEQ(v bool) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldNEQ(FieldAllowBearerTokens, v))
 }
 
+// PartyEQ applies the EQ predicate on the "party" field.
+func PartyEQ(v Party) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldEQ(FieldParty, v))
+}
+
+// PartyNEQ applies the NEQ predicate on the "party" field.
+func PartyNEQ(v Party) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldNEQ(FieldParty, v))
+}
+
+// PartyIn applies the In predicate on the "party" field.
+func PartyIn(vs ...Party) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldIn(FieldParty, vs...))
+}
+
+// PartyNotIn applies the NotIn predicate on the "party" field.
+func PartyNotIn(vs ...Party) predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldNotIn(FieldParty, vs...))
+}
+
+// PartyIsNil applies the IsNil predicate on the "party" field.
+func PartyIsNil() predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldIsNull(FieldParty))
+}
+
+// PartyNotNil applies the NotNil predicate on the "party" field.
+func PartyNotNil() predicate.OAuthApp {
+	return predicate.OAuthApp(sql.FieldNotNull(FieldParty))
+}
+
 // FirstPartyEQ applies the EQ predicate on the "first_party" field.
 func FirstPartyEQ(v bool) predicate.OAuthApp {
 	return predicate.OAuthApp(sql.FieldEQ(FieldFirstParty, v))
