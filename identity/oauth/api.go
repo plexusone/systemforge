@@ -260,12 +260,12 @@ func (a *API) acceptToken(ctx context.Context, ar fosite.AccessRequester) error 
 		if errors.Is(err, fosite.ErrNotFound) {
 			return fmt.Errorf("%w: client %q is not active", errTokenRefused, clientID)
 		}
-		LoggerFromContext(ctx).Error("checking client", "client_id", clientID, "error", err)
+		LoggerFromContext(ctx).Error("checking client", "client_id", clientID, oauthcore.ErrorAttr(ctx, LoggerFromContext(ctx), err))
 		return err
 	}
 	active, err := a.provider.storage.grants.PrincipalActive(ctx, ar.GetSession().GetSubject())
 	if err != nil {
-		LoggerFromContext(ctx).Error("checking principal", "error", err)
+		LoggerFromContext(ctx).Error("checking principal", oauthcore.ErrorAttr(ctx, LoggerFromContext(ctx), err))
 		return err
 	}
 	if !active {

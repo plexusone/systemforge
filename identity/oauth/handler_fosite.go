@@ -149,7 +149,7 @@ func (a *API) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Parse the authorization request
 	ar, err := oauth2.NewAuthorizeRequest(ctx, r)
 	if err != nil {
-		logger.Warn("authorize request failed", "error", err)
+		logger.Warn("authorize request failed", oauthcore.ErrorAttr(ctx, logger, err))
 		oauth2.WriteAuthorizeError(ctx, w, ar, err)
 		return
 	}
@@ -236,7 +236,7 @@ func (a *API) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// The body is limited before anything reads it.
 	if err := oauthcore.ParseTokenRequest(w, r); err != nil {
-		logger.Info("token request rejected: unreadable body", "error", err)
+		logger.Info("token request rejected: unreadable body", oauthcore.ErrorAttr(ctx, logger, err))
 		oauth2.WriteAccessError(ctx, w, nil, err)
 		return
 	}
@@ -262,7 +262,7 @@ func (a *API) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 		err = oauthcore.CheckCodeDPoPBinding(ctx, a.provider.storage, a.provider.codeStrategy, r, proof, &systemauth.Session{}, sessionDPoPJKT)
 	}
 	if err != nil {
-		logger.Info("token request rejected: DPoP", "grant_type", grantType, "error", err)
+		logger.Info("token request rejected: DPoP", "grant_type", grantType, oauthcore.ErrorAttr(ctx, logger, err))
 		oauth2.WriteAccessError(ctx, w, nil, err)
 		return
 	}
@@ -270,7 +270,7 @@ func (a *API) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Process the token request
 	ar, err := oauth2.NewAccessRequest(ctx, r, session)
 	if err != nil {
-		logger.Warn("token request failed", "grant_type", grantType, "error", err)
+		logger.Warn("token request failed", "grant_type", grantType, oauthcore.ErrorAttr(ctx, logger, err))
 		oauth2.WriteAccessError(ctx, w, ar, err)
 		return
 	}
@@ -281,7 +281,7 @@ func (a *API) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	// unless it is registered with the bearer-token exception; a grant
 	// already bound to a key needs a proof by it.
 	if err := bindDPoP(ar, proof); err != nil {
-		logger.Info("token request rejected: DPoP", "grant_type", grantType, "client_id", clientID, "error", err)
+		logger.Info("token request rejected: DPoP", "grant_type", grantType, "client_id", clientID, oauthcore.ErrorAttr(ctx, logger, err))
 		oauth2.WriteAccessError(ctx, w, ar, err)
 		return
 	}
@@ -298,7 +298,7 @@ func (a *API) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Create the token response
 	response, err := oauth2.NewAccessResponse(ctx, ar)
 	if err != nil {
-		logger.Warn("token response failed", "grant_type", grantType, "client_id", clientID, "error", err)
+		logger.Warn("token response failed", "grant_type", grantType, "client_id", clientID, oauthcore.ErrorAttr(ctx, logger, err))
 		oauth2.WriteAccessError(ctx, w, ar, err)
 		return
 	}

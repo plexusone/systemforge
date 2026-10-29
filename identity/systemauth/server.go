@@ -546,7 +546,7 @@ func (s *Server) Middleware() func(http.Handler) http.Handler {
 			// a proof by its key for this request.
 			ar, authErr := s.authenticateAccessToken(r, s.requestURL(r))
 			if authErr != nil {
-				logger.Debug("access token refused", "path", r.URL.Path, "error", authErr)
+				logger.Debug("access token refused", "path", r.URL.Path, oauthcore.ErrorAttr(ctx, logger, authErr))
 				s.writeTokenAuthError(w, authErr)
 				return
 			}
