@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/google/uuid"
 
@@ -58,9 +57,9 @@ func WithCredentialService(svc credential.Service) Option {
 
 // WithLoginTokenRateLimit sets the rate limit storage and the limits per
 // source address and per client for the login token endpoint. Defaults to
-// in-memory storage with DefaultLoginTokenAddressLimit and
-// DefaultLoginTokenClientLimit; use shared storage, such as Redis, when
-// several instances serve the endpoint.
+// the server's rate limit storage (WithRateLimitStorage) with
+// DefaultLoginTokenAddressLimit and DefaultLoginTokenClientLimit. A nil
+// storage keeps the server's.
 func WithLoginTokenRateLimit(storage ratelimit.Storage, perAddress, perClient ratelimit.Limit) Option {
 	return func(s *Server) {
 		s.socialOpts.loginTokenRate = storage
@@ -112,8 +111,7 @@ func (sl *socialLogin) setupLoginTokens(s *Server) {
 	}
 
 	if x.rates == nil {
-		s.logger.Warn("login token endpoint using in-memory rate limits; limits are not shared between instances")
-		x.rates = ratelimit.NewMemoryStorage()
+		x.rates = s.rates
 	}
 	if x.addressLimit.Rate <= 0 {
 		x.addressLimit = DefaultLoginTokenAddressLimit
@@ -169,23 +167,10 @@ func (sl *socialLogin) handleLoginToken(w http.ResponseWriter, r *http.Request) 
 		key   string
 		limit ratelimit.Limit
 	}{
-		{"login_token:ip:" + address, x.addressLimit},
-		{"login_token:client:" + clientBucket, x.clientLimit},
+		{"ip:" + address, x.addressLimit},
+		{"client:" + clientBucket, x.clientLimit},
 	} {
-		res, err := x.rates.Allow(ctx, check.key, check.limit)
-		if errors.Is(err, ratelimit.ErrTooManyKeys) {
-			w.Header().Set("Retry-After", "60")
-			http.Error(w, "too many requests", http.StatusTooManyRequests)
-			return
-		}
-		if err != nil {
-			logger.Error("login token rate limit", "error", err)
-			http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
-			return
-		}
-		if !res.Allowed {
-			w.Header().Set("Retry-After", strconv.Itoa(int(res.RetryAfter.Seconds())+1))
-			http.Error(w, "too many requests", http.StatusTooManyRequests)
+		if ratelimit.Check(w, r, x.rates, "login_token", check.key, check.limit, false, logger) != ratelimit.Allowed {
 			return
 		}
 	}

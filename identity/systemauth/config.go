@@ -80,6 +80,11 @@ type Config struct {
 	// peer, which behind a proxy is the proxy itself.
 	ClientAddress clientaddr.Config `json:"client_address,omitempty" yaml:"client_address,omitempty" jsonschema:"description=Trusted reverse proxies and the header they write the client address to"`
 
+	// RateLimit configures the rate limits: a default per client address,
+	// route policies for the token, login and sign-up paths, a limit per
+	// signed-in caller, and the storage they share.
+	RateLimit RateLimitConfig `json:"rate_limit,omitempty" yaml:"rate_limit,omitempty" jsonschema:"description=Rate limits and their shared storage"`
+
 	// Production waives, by name, production checks that otherwise refuse
 	// to start the packaged service (systemauthsvc) or refuse requests.
 	Production ProductionConfig `json:"production,omitempty" yaml:"production,omitempty" jsonschema:"description=Named waivers of production checks"`
@@ -764,6 +769,9 @@ func (c *Config) Validate() error {
 	}
 	if err := c.ClientAddress.Validate(); err != nil {
 		return fmt.Errorf("%w: client_address: %v", ErrInvalidConfig, err)
+	}
+	if err := c.RateLimit.validate(); err != nil {
+		return err
 	}
 	for _, cl := range c.Clients {
 		if cl.ID == JWTBearerClientID {

@@ -27,6 +27,9 @@ func productionPolicy(c *Config, opts Options, logger *slog.Logger) []systemauth
 	if c.DPoP.SingleInstance && c.DPoP.ReplayCacheRedisURL == "" && opts.DPoPReplayCache == nil {
 		logger.Warn("DPoP replay cache is per instance (dpop.single_instance); run exactly one instance, or a proof replayed to another instance is accepted")
 	}
+	if !rateLimitsShared(c, opts) {
+		logger.Warn("rate limit counters are kept per instance; set rate_limit.redis_url when several instances serve SystemAuth, or declare one instance (rate_limit.single_instance or dpop.single_instance)")
+	}
 	return []systemauth.Option{systemauth.WithProductionPolicy(systemauth.ProductionPolicy{
 		RefuseClientSecretClientCredentials: !c.Production.Allows(systemauth.AllowClientSecretClientCredentials),
 		RefuseBearerTokenClients:            !c.Production.Allows(systemauth.AllowBearerTokenClients),

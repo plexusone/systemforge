@@ -27,6 +27,7 @@ import (
 	"github.com/plexusone/systemforge/identity/dpopproof"
 	"github.com/plexusone/systemforge/observability"
 	"github.com/plexusone/systemforge/session/clientaddr"
+	"github.com/plexusone/systemforge/session/ratelimit"
 )
 
 // Server is the SystemAuth OAuth 2.0 / OpenID Connect server.
@@ -55,6 +56,9 @@ type Server struct {
 	jwtBearerKeys   JWTBearerKeyStorage
 	production      ProductionPolicy
 	clientAddr      *clientaddr.Resolver
+	rates           ratelimit.Storage
+	ratePolicy      *ratelimit.Policy
+	signedIn        *ratelimit.Limiter
 }
 
 // Option configures a Server.
@@ -116,6 +120,9 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		opt(s)
 	}
 	if err := s.setupClientAddress(); err != nil {
+		return nil, err
+	}
+	if err := s.setupRateLimits(); err != nil {
 		return nil, err
 	}
 
@@ -298,9 +305,12 @@ func (s *Server) setupRouter() {
 	// Add standard middleware (must be before routes). Security headers
 	// come first, so every response carries them, error pages included.
 	router.Use(s.securityHeaders)
+	// Rate limits come next, before anything authenticates a request.
+	router.Use(s.rateLimitLayers)
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Recoverer)
 	router.Use(s.loggerMiddleware)
+	router.Use(s.tokenOutcomeLimits)
 	router.Use(s.fositeInterceptor) // Intercept OAuth paths before Huma
 
 	// Create Huma API with OpenAPI configuration

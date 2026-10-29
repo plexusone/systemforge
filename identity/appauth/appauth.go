@@ -31,7 +31,9 @@ import (
 	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
+	"github.com/plexusone/systemforge/session/clientaddr"
 	"github.com/plexusone/systemforge/session/middleware"
+	"github.com/plexusone/systemforge/session/ratelimit"
 )
 
 // Options are the storage ports and choices of an Authenticator. Every option
@@ -109,6 +111,16 @@ type Options struct {
 	// Logger receives warnings and operational errors. Default:
 	// slog.Default().
 	Logger *slog.Logger
+
+	// ClientAddress finds the client address behind the application's
+	// reverse proxies (see clientaddr), for the application's rate limits
+	// (ClientAddress returns it). Default: the direct peer.
+	ClientAddress *clientaddr.Resolver
+	// SignedInRateLimit, when set, limits each signed-in principal or
+	// service account after Middleware authenticates it, such as
+	// ratelimit.NewSignedInLimiter. Anonymous requests are not limited by
+	// it.
+	SignedInRateLimit *ratelimit.Limiter
 }
 
 // Authenticator authenticates an application's requests and serves its
@@ -122,6 +134,8 @@ type Authenticator struct {
 	resource string
 	name     string
 	logger   *slog.Logger
+	addr     *clientaddr.Resolver
+	signedIn *ratelimit.Limiter
 }
 
 // New builds the Authenticator: the relying-party client, from
@@ -198,6 +212,8 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 		resource: strings.TrimRight(cfg.PublicURL, "/"),
 		name:     opts.ResourceName,
 		logger:   logger,
+		addr:     opts.ClientAddress,
+		signedIn: opts.SignedInRateLimit,
 	}
 	own := &ownAuthenticator{
 		inner: relyingparty.NewRequestAuthenticator(relyingparty.BearerConfig{
@@ -334,8 +350,26 @@ func (a *Authenticator) RequestAuthenticator() requestprincipal.Authenticator { 
 // the challenges; without it, it passes with no principal. Invalid
 // credentials are refused either way, and a cross-origin cookie write gets a
 // 403.
+//
+// With Options.SignedInRateLimit, signed-in callers are then limited per
+// principal or service account.
 func (a *Authenticator) Middleware(required bool) func(http.Handler) http.Handler {
-	return requestprincipal.Middleware(requestprincipal.Options{Optional: !required, Logger: a.logger}, a.chain)
+	auth := requestprincipal.Middleware(requestprincipal.Options{Optional: !required, Logger: a.logger}, a.chain)
+	if a.signedIn == nil {
+		return auth
+	}
+	limit := a.signedIn.Middleware()
+	return func(next http.Handler) http.Handler { return auth(limit(next)) }
+}
+
+// ClientAddress returns the client-address resolver (Options.ClientAddress),
+// to key the application's rate limits (ratelimit.PolicyConfig.Address).
+// It is never nil: without the option it uses the direct peer.
+func (a *Authenticator) ClientAddress() *clientaddr.Resolver {
+	if a.addr == nil {
+		return clientaddr.Peer()
+	}
+	return a.addr
 }
 
 // Authenticate resolves a request to its principal, for applications that

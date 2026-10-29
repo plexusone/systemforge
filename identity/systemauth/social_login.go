@@ -146,6 +146,10 @@ type socialLogin struct {
 	signupCodes SignupCodeLookup
 	signupPage  SignupPage
 
+	// limit checks a handler limit per client address on the server's
+	// rate limit storage; false means it answered the request.
+	limit func(w http.ResponseWriter, r *http.Request, name string, limit ratelimit.Limit) bool
+
 	// loginTokens exchanges managed principals' login tokens for
 	// sessions; nil when managed principals are off.
 	loginTokens *loginTokenExchange
@@ -218,6 +222,7 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 		now:        time.Now,
 		clients:    s.storage,
 		oauth2:     s.oauth2,
+		limit:      s.limitRequest,
 	}
 	if cfg.InsecureCookies {
 		s.logger.Warn("systemauth: InsecureCookies is set; login, state and sign-up cookies are not Secure. Use it for local development over plain HTTP only")
@@ -286,7 +291,7 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 		sl.waitlist, sl.waitlistPage = s.socialOpts.waitlist, s.socialOpts.waitlistPage
 		sl.waitlistRates, sl.waitlistClientIP = s.socialOpts.loginTokenRate, s.clientIP
 		if sl.waitlistRates == nil {
-			sl.waitlistRates = ratelimit.NewMemoryStorage()
+			sl.waitlistRates = s.rates
 		}
 	}
 	if err := validateSignupMinimumAge(cfg.SignupMinimumAge); err != nil {
@@ -396,6 +401,9 @@ func (sl *socialLogin) handleStart(w http.ResponseWriter, r *http.Request) {
 	logger := LoggerFromContext(ctx)
 	noStore(w)
 
+	if !sl.limit(w, r, "social_login_start", DefaultSocialLoginLimit) {
+		return
+	}
 	provider := chi.URLParam(r, "provider")
 	conn, ok := sl.connectors[provider]
 	if !ok {
@@ -443,6 +451,9 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	logger := LoggerFromContext(ctx)
 	noStore(w)
 
+	if !sl.limit(w, r, "social_login_callback", DefaultSocialLoginLimit) {
+		return
+	}
 	provider := chi.URLParam(r, "provider")
 	conn, ok := sl.connectors[provider]
 	if !ok {

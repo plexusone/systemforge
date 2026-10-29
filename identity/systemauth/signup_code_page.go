@@ -2,11 +2,9 @@ package systemauth
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -159,19 +157,7 @@ func (sl *socialLogin) handleSignupPage(w http.ResponseWriter, r *http.Request) 
 	if address == "" {
 		address = "unknown"
 	}
-	res, err := sl.waitlistRates.Allow(ctx, "signup:ip:"+address, DefaultSignupPageLimit)
-	if errors.Is(err, ratelimit.ErrTooManyKeys) || (err == nil && !res.Allowed) {
-		retry := 60
-		if err == nil {
-			retry = int(res.RetryAfter.Seconds()) + 1
-		}
-		w.Header().Set("Retry-After", strconv.Itoa(retry))
-		http.Error(w, "too many requests", http.StatusTooManyRequests)
-		return
-	}
-	if err != nil {
-		LoggerFromContext(ctx).Error("sign-up page rate limit", "error", err)
-		http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
+	if ratelimit.Check(w, r, sl.waitlistRates, "signup", "ip:"+address, DefaultSignupPageLimit, false, LoggerFromContext(ctx)) != ratelimit.Allowed {
 		return
 	}
 

@@ -175,6 +175,12 @@ func finishConfig(cfg *Config, overrides []Override) (*Config, error) {
 // The client_credentials grant with a shared secret, and clients with
 // allow_bearer_tokens registered at runtime, are refused per request
 // instead (see systemauth.ProductionPolicy).
+//
+// Rate limit counters kept in memory without a declared single instance
+// (rate_limit.single_instance or dpop.single_instance) are warned about at
+// startup, not refused: with several instances each one enforces the full
+// limit, which loosens the limits but leaves no check bypassed, unlike a
+// replay cache that is not shared.
 func CheckProduction(cfg *Config, opts Options) error {
 	if opts.Dev {
 		return nil

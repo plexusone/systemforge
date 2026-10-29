@@ -2,11 +2,9 @@ package systemauth
 
 import (
 	"context"
-	"errors"
 	"html/template"
 	"net/http"
 	"net/mail"
-	"strconv"
 	"strings"
 
 	"github.com/plexusone/systemforge/session/ratelimit"
@@ -157,22 +155,10 @@ func (sl *socialLogin) handleWaitlistJoin(w http.ResponseWriter, r *http.Request
 		key   string
 		limit ratelimit.Limit
 	}{
-		{"waitlist:ip:" + address, DefaultWaitlistAddressLimit},
-		{"waitlist:email:" + strings.ToLower(email), DefaultWaitlistEmailLimit},
+		{"ip:" + address, DefaultWaitlistAddressLimit},
+		{"email:" + strings.ToLower(email), DefaultWaitlistEmailLimit},
 	} {
-		res, err := sl.waitlistRates.Allow(ctx, check.key, check.limit)
-		if errors.Is(err, ratelimit.ErrTooManyKeys) || (err == nil && !res.Allowed) {
-			retry := 60
-			if err == nil {
-				retry = int(res.RetryAfter.Seconds()) + 1
-			}
-			w.Header().Set("Retry-After", strconv.Itoa(retry))
-			http.Error(w, "too many requests", http.StatusTooManyRequests)
-			return
-		}
-		if err != nil {
-			logger.Error("waitlist rate limit", "error", err)
-			http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
+		if ratelimit.Check(w, r, sl.waitlistRates, "waitlist", check.key, check.limit, false, logger) != ratelimit.Allowed {
 			return
 		}
 	}
