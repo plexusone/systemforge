@@ -9,6 +9,234 @@
   ],
   "releases": [
     {
+      "version": "v0.29.0",
+      "date": "2026-10-29",
+      "highlights": [
+        {
+          "description": "SystemAuth asks for consent by the client's party: clients get `party` (`first_party`, `second_party` or `third_party`) and an optional `logo_url`, only first-party clients skip the consent screen, and `social_login.skip_consent` no longer auto-consents every client"
+        },
+        {
+          "description": "The authorization endpoint honours the OIDC `prompt` parameter, so a first-party application can sign a user in silently, and the login chooser names the requesting client and shows its logo"
+        },
+        {
+          "description": "Verified email: with a new `mail` section, SystemAuth verifies an unverified provider email at sign-in, lets a signed-in person change their email at `/account/email`, and carries `email_verified_at` in ID tokens and UserInfo"
+        },
+        {
+          "description": "Configuration secrets resolve through an omnivault vault named in `secrets.vault`, with the environment as the default, and no cloud SDK in the library packages"
+        },
+        {
+          "description": "`systemauth org member add|remove|list`, organization slug resolution for relying parties, and read-only application vocabularies in the product contract API"
+        }
+      ],
+      "security": [
+        {
+          "description": "`social_login.skip_consent` granted consent for every client to users signed in through social login, and `DefaultSessionProvider`'s `WithSkipConsent` did the same, so once a client the operator does not own was registered its users were never asked; the authorization endpoint now decides by the client's party, and a second- or third-party client needs the user's recorded consent to every requested scope",
+          "commit": "6f0803a"
+        },
+        {
+          "description": "A client from a custom `Storage` that does not report its party is treated as third-party, and a client registered at runtime without a party is `third_party`",
+          "commit": "5ad47a0"
+        },
+        {
+          "description": "Email verification links are single-use, purpose-scoped and stored as SHA-256 hashes; a `verify_email` link completes only in the browser that started the sign-in and an `email_change` link only from a session of the principal that asked, each behind an origin-checked CSRF form, so a forwarded or scanned link cannot complete it",
+          "commit": "54303df"
+        },
+        {
+          "description": "Verification mail is limited per recipient address and per client address on the shared rate limit storage, and requests answer the same whether or not a message was sent or the address belongs to an account",
+          "commit": "17fee3f"
+        },
+        {
+          "description": "Production mode refuses `mail.provider: log`, with no waiver, because it writes verification links to the server log",
+          "commit": "17fee3f"
+        },
+        {
+          "description": "The client logo on the login chooser must be an https URL, is rendered by `html/template`, and only that page allows images from its origin in the content security policy",
+          "commit": "aa33316"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "Run `migrations/0012_oauth_app_party.sql` on an existing database without startup migration; it adds `sf_oauth_apps.party` and fills it from `first_party`. Without the column, reading or writing an OAuth application fails",
+          "commit": "7004ac7"
+        },
+        {
+          "description": "`social_login.skip_consent` and `WithSkipConsent` no longer grant consent; users of a second- or third-party client, including any client registered at runtime without a party, are asked for consent",
+          "commit": "6f0803a"
+        },
+        {
+          "description": "`DefaultSessionProvider` records no consent and now reports none; a deployment using it with second- or third-party clients needs a `SessionProvider` that records consent",
+          "commit": "6f0803a"
+        },
+        {
+          "description": "`rate_limit.redis_url` is now expanded like the other secret fields, so a literal `$` in it is expanded",
+          "commit": "4a4470a"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "Run `systemauth migrate` (or start with `--migrate`), or apply `migrations/0012_oauth_app_party.sql`; the schema migration also creates `sf_verification_tokens`"
+        },
+        {
+          "description": "Set `party: first_party` or `second_party` on runtime-registered clients the operator or a customer owns; otherwise their users are now asked for consent. Clients in the configuration file are rewritten as `first_party` at startup unless they set `party`"
+        },
+        {
+          "description": "Remove `social_login.skip_consent` and `WithSkipConsent`; they are ignored, and SystemAuth logs a warning at startup when `skip_consent` is set"
+        },
+        {
+          "description": "To verify unverified provider emails, add a `mail` section; `ses` needs a sender (`systemauthsvc.Options.MailSender` or `systemauth.WithMailSender`; the `systemauth` binary builds it from `mail.ses`), and production refuses `log`. Without `mail`, sign-ins with an unverified provider email are refused as before"
+        },
+        {
+          "description": "To read secret references from a vault other than the environment, set `secrets.vault` to an omnivault URI, register cloud schemes with `omnivault.RegisterProvider` in your binary, or pass a resolver to `LoadConfigWithResolver`"
+        },
+        {
+          "description": "Escape any literal `$` in `rate_limit.redis_url`"
+        }
+      ],
+      "added": [
+        {
+          "description": "Client `party` (`first_party`, `second_party`, `third_party`) and `logo_url` on `Client`, static clients, `OAuthClient` and Ent storage (`sf_oauth_apps.party`, `sf_oauth_apps.logo_url`); unknown parties are refused by `Config.Validate`, `NewClientFromConfig`, `RegisterClient` and both storages",
+          "commit": "5ad47a0"
+        },
+        {
+          "description": "`sf_oauth_apps.party` in the identity schema and `migrations/0012_oauth_app_party.sql`",
+          "commit": "7004ac7"
+        },
+        {
+          "description": "OIDC `prompt` at the authorization endpoint: `none` answers `login_required` or `consent_required` instead of showing a page, `login` re-authenticates, `consent` always shows the consent page, `select_account` is accepted with no effect, and `none` with another value or an unknown value is `invalid_request`",
+          "commit": "fdbd39e"
+        },
+        {
+          "description": "The login chooser names the requesting client and shows its `logo_url`",
+          "commit": "aa33316"
+        },
+        {
+          "description": "`VerificationTokenStore` with memory and Ent implementations (`sf_verification_tokens`) and the `storetest.VerificationTokenStore` conformance suite",
+          "commit": "3df8231"
+        },
+        {
+          "description": "Ent schema `VerificationToken` (`sf_verification_tokens`)",
+          "commit": "e870e8a"
+        },
+        {
+          "description": "SystemAuth configuration `mail` (`provider` `ses`, `smtp` or `log`, `from`, `reply_to`, `product_name`, `support_url`, `token_lifetime` from 5m to 24h with a default of 30m, `per_address` default 5 an hour, `per_client` default 20 an hour, `smtp.*`, `ses.region`, `ses.configuration_set`); `systemauth.WithMailSender` and `systemauthsvc.Options.MailSender`; the `systemauth` binary builds the Amazon SES sender",
+          "commit": "17fee3f"
+        },
+        {
+          "description": "A verify-email step at social sign-in for an unverified provider email, with a rate-limited resend; a confirmed address counts as proven (`ExternalLogin.EmailProven`)",
+          "commit": "54303df"
+        },
+        {
+          "description": "Email change at `/account/email` with a notice to the current address; `PrincipalEmailChanger`, implemented by the Ent and memory directories",
+          "commit": "67aa733"
+        },
+        {
+          "description": "Security events `systemauth.email_verification.sent`, `systemauth.email.verified`, `systemauth.email_change.requested`, `systemauth.email_change.cancelled` and `systemauth.email.changed`, and the sign-in refusal reason `verification_invalid`",
+          "commit": "54303df"
+        },
+        {
+          "description": "`email_verified_at` claim (a NumericDate, with the `email` scope) in ID tokens, UserInfo and discovery's `claims_supported`; `HumanPrincipal.EmailVerifiedAt`, and `relyingparty.IDTokenClaims.EmailVerifiedAt`, `UserInfo.EmailVerifiedAt` (`*jwt.NumericDate`, accepting integer and floating-point values) and `VerifiedIdentity.EmailVerifiedAt`",
+          "commit": "396032e"
+        },
+        {
+          "description": "`secrets` package: `Resolver`, `New` and `Env`; SystemAuth configuration `secrets.vault`; `systemauth.LoadConfigWithResolver`, `ParseConfigWithResolver`, `DecodeConfigWithResolver` and `DecodeConfigFileWithResolver`; `systemauthsvc.LoadConfigWithResolver` and `LoadConfigBytesWithResolver`",
+          "commit": "4a4470a"
+        },
+        {
+          "description": "`systemauth org member add`, `remove` and `list` (`identity/organization/membercmd`) for managing members and application roles without the HTTP API",
+          "commit": "66a30b1"
+        },
+        {
+          "description": "`GET /oauth/userinfo/memberships/resolve?slug=`, the optional `MembershipResolver` interface implemented by `EntOrgsSource`, `relyingparty.Client.ResolveOrganization` and `relyingparty.ErrOrganizationNotResolved`",
+          "commit": "2b666ca"
+        },
+        {
+          "description": "`GET {base}/policy/vocabularies` in the product contract API and `contract.WithVocabularies`",
+          "commit": "08a28f4"
+        },
+        {
+          "description": "Dependencies `github.com/plexusone/omnimail` v0.1.0 and `github.com/plexusone/omni-aws` v0.11.0",
+          "commit": "17fee3f"
+        }
+      ],
+      "changed": [
+        {
+          "description": "Clients declared in the configuration file default to `first_party` and are rewritten from it at startup; clients registered at runtime default to `third_party`",
+          "commit": "5ad47a0"
+        },
+        {
+          "description": "With mail configured, a social sign-in whose provider email is not verified is held for verification instead of refused",
+          "commit": "54303df"
+        },
+        {
+          "description": "`rate_limit.redis_url` is expanded like the other secret fields; every secret field is resolved through the `secrets` resolver",
+          "commit": "4a4470a"
+        },
+        {
+          "description": "The example configuration and the CLI help no longer mention `skip_consent`",
+          "commit": "9496517"
+        }
+      ],
+      "deprecated": [
+        {
+          "description": "`social_login.skip_consent`: ignored, with a warning at startup",
+          "commit": "6f0803a"
+        },
+        {
+          "description": "`DefaultSessionProvider` option `WithSkipConsent`: a no-op",
+          "commit": "6f0803a"
+        },
+        {
+          "description": "`sf_oauth_apps.first_party`: use `party`; it is kept equal to `party == first_party`",
+          "commit": "7004ac7"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Product entitlements in the `orgs` claim across the ID token, JWT access tokens, UserInfo and the memberships endpoint",
+          "commit": "2c6605a"
+        },
+        {
+          "description": "A managed principal created through `appauth` `Transport` against a packaged SystemAuth, and refused without DPoP proofs",
+          "commit": "bbf8362"
+        },
+        {
+          "description": "Configuration clients stored before parties existed stay first-party after an upgrade",
+          "commit": "2b5d5b9"
+        },
+        {
+          "description": "The legacy-name gate blocks Core-era names, the `cf_` prefix and upstream GitHub and Google OAuth wiring outside `identity/oauthclient`, and skips `.claude`",
+          "commit": "49f8029"
+        },
+        {
+          "description": "Verification token store conformance, verify-email and email-change flows, mail limits and the `prompt` values"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Verified email guide: configuration, messages, abuse controls, the sign-in step, email change and what relying parties receive",
+          "commit": "396032e"
+        },
+        {
+          "description": "Sending Mail with Amazon SES: domain identity, Easy DKIM, SPF through a custom MAIL FROM domain, DMARC, a configuration set, leaving the sandbox and a least-privilege policy",
+          "commit": "396032e"
+        },
+        {
+          "description": "Client parties, consent, `prompt`, the client name and logo, and the `sf_oauth_apps.party` upgrade",
+          "commit": "9496517"
+        },
+        {
+          "description": "Secrets and `secrets.vault` in Deploying SystemAuth",
+          "commit": "4a4470a"
+        },
+        {
+          "description": "Organization slug resolution for relying parties, application vocabularies, entitlements in the `orgs` claim and `systemauth org member`"
+        },
+        {
+          "description": "v0.29.0 release notes"
+        }
+      ]
+    },
+    {
       "version": "v0.28.0",
       "date": "2026-10-29",
       "highlights": [

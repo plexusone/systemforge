@@ -4,7 +4,15 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.28.0](v0.28.0.md), is a security release:
+The latest release, [v0.29.0](v0.29.0.md), asks for consent by the
+client's party, so only first-party clients skip the consent screen and
+`social_login.skip_consent` no longer grants consent for every client. It
+adds OIDC `prompt`, verified email through a new `mail` section, secrets
+read through an omnivault vault, `systemauth org member`, and organization
+slug resolution for relying parties. It is breaking; read its upgrade notes
+first.
+
+Before it, [v0.28.0](v0.28.0.md) was a security release:
 SystemAuth applies layered rate limits by default, finds client addresses
 with one rule that believes forwarding headers only from trusted proxies,
 records structured security events, keeps stack traces, secrets and
