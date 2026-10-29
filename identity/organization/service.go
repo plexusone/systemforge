@@ -185,7 +185,7 @@ func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInp
 func (s *DefaultService) validateCreate(ctx context.Context, c *ent.Client, input CreateOrganizationInput) error {
 	// Validate slug
 	if !isValidSlug(input.Slug) {
-		return fmt.Errorf("invalid slug format: must be lowercase alphanumeric with hyphens")
+		return ErrInvalidSlug
 	}
 
 	// Check slug availability
@@ -196,7 +196,7 @@ func (s *DefaultService) validateCreate(ctx context.Context, c *ent.Client, inpu
 
 	// Validate personal org has owner
 	if input.OrgType == OrgTypePersonal && input.OwnerPrincipalID == nil {
-		return fmt.Errorf("personal organizations require an owner principal ID")
+		return ErrOwnerRequired
 	}
 	return nil
 }
@@ -340,7 +340,7 @@ func (s *DefaultService) GetBySlug(ctx context.Context, slug string) (*Organizat
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("organization not found: %s", slug)
+			return nil, fmt.Errorf("%w: %s", ErrOrganizationNotFound, slug)
 		}
 		return nil, fmt.Errorf("failed to get organization: %w", err)
 	}
@@ -387,7 +387,7 @@ func (s *DefaultService) Update(ctx context.Context, id uuid.UUID, input UpdateO
 	org, err := update.Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("organization not found: %s", id)
+			return nil, fmt.Errorf("%w: %s", ErrOrganizationNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to update organization: %w", err)
 	}
@@ -407,7 +407,7 @@ func (s *DefaultService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 	if _, err = tx.Organization.UpdateOneID(id).SetActive(false).Save(ctx); err != nil {
 		if ent.IsNotFound(err) {
-			return errors.Join(fmt.Errorf("organization not found: %s", id), tx.Rollback())
+			return errors.Join(fmt.Errorf("%w: %s", ErrOrganizationNotFound, id), tx.Rollback())
 		}
 		return errors.Join(fmt.Errorf("failed to delete organization: %w", err), tx.Rollback())
 	}
@@ -508,7 +508,7 @@ func (s *DefaultService) AddMember(ctx context.Context, input AddMemberInput) (*
 	// Check if membership already exists
 	existing, err := s.GetMembership(ctx, input.OrganizationID, input.PrincipalID)
 	if err == nil && existing != nil {
-		return nil, fmt.Errorf("principal is already a member of this organization")
+		return nil, ErrAlreadyMember
 	}
 
 	membership, err := s.client.PrincipalMembership.Create().
@@ -548,7 +548,7 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 	current, err := s.client.PrincipalMembership.Get(ctx, membershipID)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("membership not found: %s", membershipID)
+			return nil, fmt.Errorf("%w: %s", ErrMembershipNotFound, membershipID)
 		}
 		return nil, fmt.Errorf("failed to get membership: %w", err)
 	}
@@ -583,7 +583,7 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 			err = errors.Join(err, rerr)
 		}
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("membership not found: %s", membershipID)
+			return nil, fmt.Errorf("%w: %s", ErrMembershipNotFound, membershipID)
 		}
 		return nil, fmt.Errorf("failed to update membership: %w", err)
 	}
@@ -959,13 +959,16 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 		return fmt.Errorf("current owner membership not found: %w", err)
 	}
 	if currentMembership.Role != RoleOwner {
-		return fmt.Errorf("principal is not the current owner")
+		return fmt.Errorf("%w: it is not the current owner", ErrNotOwner)
 	}
 
 	// Validate the new owner is a member
 	newMembership, err := s.GetMembership(ctx, input.OrganizationID, input.ToPrincipal)
 	if err != nil {
-		return fmt.Errorf("new owner must be an existing member: %w", err)
+		if errors.Is(err, ErrMembershipNotFound) {
+			return ErrNewOwnerNotMember
+		}
+		return fmt.Errorf("failed to read the new owner's membership: %w", err)
 	}
 
 	// Default new role for old owner is admin
@@ -974,7 +977,7 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 		newRoleForOld = RoleAdmin
 	}
 	if newRoleForOld != RoleAdmin && newRoleForOld != RoleMember {
-		return fmt.Errorf("new role for previous owner must be 'admin' or 'member'")
+		return ErrInvalidOwnerRole
 	}
 
 	// Start transaction

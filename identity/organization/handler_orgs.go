@@ -231,12 +231,12 @@ func (a *API) createOrg(ctx context.Context, input *CreateOrgInput) (*CreateOrgO
 		Settings:         input.Body.Settings,
 	})
 	if err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, a.serviceError(ctx, "creating organization", err)
 	}
 
 	resp, err := a.orgResponse(ctx, org)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, a.serviceError(ctx, "reading entitlements", err)
 	}
 	return &CreateOrgOutput{Body: resp}, nil
 }
@@ -249,7 +249,7 @@ func (a *API) getOrg(ctx context.Context, input *GetOrgInput) (*GetOrgOutput, er
 
 	resp, err := a.orgResponse(ctx, org)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, a.serviceError(ctx, "reading entitlements", err)
 	}
 	return &GetOrgOutput{Body: resp}, nil
 }
@@ -268,12 +268,12 @@ func (a *API) updateOrg(ctx context.Context, input *UpdateOrgInput) (*UpdateOrgO
 		Settings:    input.Body.Settings,
 	})
 	if err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, a.serviceError(ctx, "updating organization", err)
 	}
 
 	resp, err := a.orgResponse(ctx, updated)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, a.serviceError(ctx, "reading entitlements", err)
 	}
 	return &UpdateOrgOutput{Body: resp}, nil
 }
@@ -285,7 +285,7 @@ func (a *API) deleteOrg(ctx context.Context, input *DeleteOrgInput) (*struct{}, 
 	}
 
 	if err := a.service.Delete(ctx, org.ID); err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, a.serviceError(ctx, "deleting organization", err)
 	}
 
 	return nil, nil
@@ -330,14 +330,14 @@ func (a *API) listOrgs(ctx context.Context, input *ListOrgsInput) (*ListOrgsOutp
 		Offset:            input.Offset,
 	})
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, a.serviceError(ctx, "listing organizations", err)
 	}
 
 	responses := make([]*OrgResponse, len(orgs))
 	for i, org := range orgs {
 		resp, err := a.orgResponse(ctx, org)
 		if err != nil {
-			return nil, huma.Error500InternalServerError(err.Error())
+			return nil, a.serviceError(ctx, "reading entitlements", err)
 		}
 		responses[i] = resp
 	}
@@ -355,7 +355,7 @@ func (a *API) checkSlug(ctx context.Context, input *CheckSlugInput) (*CheckSlugO
 	}
 	available, err := a.service.SlugAvailable(ctx, input.Slug)
 	if err != nil && !errors.Is(err, ErrSlugReserved) && !errors.Is(err, ErrSlugCoolingOff) {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, a.serviceError(ctx, "checking slug", err)
 	}
 
 	output := &CheckSlugOutput{}
