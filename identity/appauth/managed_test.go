@@ -56,8 +56,6 @@ func newManagedEnv(t *testing.T) *env {
 		Features:          systemauth.FeatureConfig{RequirePKCE: true, EnableJWTAccessTokens: true},
 		DPoP:              systemauth.DPoPConfig{RequireNonce: true, NonceSecret: strings.Repeat("s", 32)},
 		ManagedPrincipals: &systemauth.ManagedPrincipalsConfig{Enabled: true},
-		// Login is the test header session; consent is not under test.
-		SocialLogin: &systemauth.SocialLoginConfig{SkipConsent: true},
 	}, systemauthsvc.Options{
 		Dev: true, SigningKey: key, Migrate: true,
 		Logger:        slog.New(slog.NewTextHandler(io.Discard, nil)),

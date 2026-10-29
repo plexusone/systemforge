@@ -158,7 +158,9 @@ func TestNoLegacyReferences(t *testing.T) {
 		rel = filepath.ToSlash(rel)
 		if d.IsDir() {
 			switch d.Name() {
-			case ".git", "node_modules", "site", "vendor":
+			// .claude holds local agent settings and worktrees, never
+			// committed code.
+			case ".git", ".claude", "node_modules", "site", "vendor":
 				return filepath.SkipDir
 			}
 			if isNestedCheckout(root, path) {
