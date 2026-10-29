@@ -7,12 +7,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/grokify/ocsf-schema-go/ocsf/objects"
 
@@ -149,12 +153,182 @@ func TestEmitDropsWhenBufferFull(t *testing.T) {
 	if w.n != 3 {
 		t.Errorf("%d events written, want 3", w.n)
 	}
+	// Emit logged nothing; Close's final report counts every drop.
 	recs := logs.lines(t)
 	if len(recs) != 1 {
-		t.Fatalf("drops logged %d times, want once (rate limited): %v", len(recs), recs)
+		t.Fatalf("drops logged %d times, want once, by the report on Close: %v", len(recs), recs)
 	}
-	if recs[0]["level"] != "WARN" || recs[0]["dropped"] != float64(1) || recs[0]["dropped_total"] != float64(1) {
+	if recs[0]["level"] != "WARN" || recs[0]["dropped"] != float64(3) || recs[0]["dropped_total"] != float64(3) {
 		t.Errorf("drop log: %v", recs[0])
+	}
+}
+
+// blockingHandler is a slog handler whose Handle blocks until release is
+// closed, standing in for a stuck log destination.
+type blockingHandler struct {
+	release chan struct{}
+	handled atomic.Int64
+}
+
+func (h *blockingHandler) Enabled(context.Context, slog.Level) bool { return true }
+func (h *blockingHandler) Handle(context.Context, slog.Record) error {
+	<-h.release
+	h.handled.Add(1)
+	return nil
+}
+func (h *blockingHandler) WithAttrs([]slog.Attr) slog.Handler { return h }
+func (h *blockingHandler) WithGroup(string) slog.Handler      { return h }
+
+// TestEmitDoesNotLog checks that Emit never calls the logger, so a stuck
+// log destination cannot block the request: drops are only counted, and
+// the reporter logs them later.
+func TestEmitDoesNotLog(t *testing.T) {
+	w := newBlockingWriter()
+	h := &blockingHandler{release: make(chan struct{})}
+	e := New(w, Options{BufferSize: 1, Logger: slog.New(h)})
+	if err := e.Emit(context.Background(), signIn()); err != nil {
+		t.Fatal(err)
+	}
+	<-w.started
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range 10 {
+			if err := e.Emit(context.Background(), signIn()); err != nil {
+				t.Error(err)
+			}
+		}
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Emit blocked on the logger")
+	}
+	if e.Dropped() != 9 {
+		t.Errorf("Dropped = %d, want 9", e.Dropped())
+	}
+	close(h.release)
+	close(w.release)
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if h.handled.Load() == 0 {
+		t.Error("drops never reported")
+	}
+}
+
+// TestReportLogsPeriodically checks that the reporter logs drops while the
+// emitter runs, not only on Close.
+func TestReportLogsPeriodically(t *testing.T) {
+	logger, logs := logCapture()
+	w := newBlockingWriter()
+	e := newEmitter(w, Options{BufferSize: 1, Logger: logger}, 10*time.Millisecond)
+	for range 3 {
+		if err := e.Emit(context.Background(), signIn()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for len(logs.lines(t)) == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	recs := logs.lines(t)
+	if len(recs) == 0 || recs[0]["level"] != "WARN" || recs[0]["dropped_total"] == nil {
+		t.Fatalf("no drop report while running: %v", recs)
+	}
+	close(w.release)
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// tearingWriter fails its first Write after writing part of the line, as
+// a full disk can, and writes whole lines after that.
+type tearingWriter struct {
+	mu   sync.Mutex
+	buf  bytes.Buffer
+	tore bool
+}
+
+func (w *tearingWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if !w.tore {
+		w.tore = true
+		w.buf.Write(p[:len(p)/2])
+		return len(p) / 2, errors.New("no space left on device")
+	}
+	return w.buf.Write(p)
+}
+
+// TestTornLineDoesNotCorruptTheNext checks that after a Write leaves a
+// partial line, the next event still lands on a line of its own.
+func TestTornLineDoesNotCorruptTheNext(t *testing.T) {
+	logger, _ := logCapture()
+	w := &tearingWriter{}
+	e := New(w, Options{Logger: logger})
+	for range 3 {
+		if err := e.Emit(context.Background(), signIn()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSuffix(w.buf.String(), "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("%d lines, want the torn one and two whole ones: %q", len(lines), w.buf.String())
+	}
+	if json.Valid([]byte(lines[0])) {
+		t.Error("the torn line parses as JSON")
+	}
+	for _, line := range lines[1:] {
+		if !json.Valid([]byte(line)) {
+			t.Errorf("line after the torn one is not JSON: %q", line)
+		}
+	}
+	if e.WriteFailures() != 1 {
+		t.Errorf("WriteFailures = %d, want 1", e.WriteFailures())
+	}
+}
+
+// shortWriter reports writing one byte less than asked, without an error.
+type shortWriter struct{}
+
+func (shortWriter) Write(p []byte) (int, error) { return len(p) - 1, nil }
+
+// TestShortWriteIsAFailure checks that a Write reporting fewer bytes than
+// the line without an error counts as a failure.
+func TestShortWriteIsAFailure(t *testing.T) {
+	logger, logs := logCapture()
+	e := New(shortWriter{}, Options{Logger: logger})
+	if err := e.Emit(context.Background(), signIn()); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if e.WriteFailures() != 1 {
+		t.Errorf("WriteFailures = %d, want 1", e.WriteFailures())
+	}
+	recs := logs.lines(t)
+	if len(recs) != 1 || recs[0]["error"] != io.ErrShortWrite.Error() {
+		t.Errorf("short write log: %v", recs)
+	}
+}
+
+// TestSyncUnsupported checks which Sync errors mean the file cannot be
+// synced rather than a failure.
+func TestSyncUnsupported(t *testing.T) {
+	for _, err := range []error{syscall.EINVAL, syscall.ENOTSUP, syscall.ENOTTY, &os.PathError{Op: "sync", Path: "/dev/stdout", Err: syscall.ENOTTY}} {
+		if !syncUnsupported(err) {
+			t.Errorf("%v: want unsupported", err)
+		}
+	}
+	for _, err := range []error{syscall.EBADF, syscall.EIO, errors.New("other")} {
+		if syncUnsupported(err) {
+			t.Errorf("%v: want a failure", err)
+		}
 	}
 }
 
@@ -226,24 +400,18 @@ func TestWriteErrorIsLogged(t *testing.T) {
 	}
 }
 
-func TestEmitNeverFailsOnEncodingAndUsesContextLogger(t *testing.T) {
-	ctxLogger, ctxLogs := logCapture()
+func TestEmitNilEvent(t *testing.T) {
+	logger, logs := logCapture()
 	out := &syncBuffer{}
-	e := New(out, Options{LoggerFromContext: func(context.Context) *slog.Logger { return ctxLogger }})
-	defer func() {
-		if err := e.Close(); err != nil {
-			t.Error(err)
-		}
-	}()
-	// Every value an event can carry encodes; a nil event is ignored.
+	e := New(out, Options{Logger: logger})
 	if err := e.Emit(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.ctxLogger(context.Background()); got != ctxLogger {
-		t.Error("context logger not used")
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
 	}
-	if len(ctxLogs.lines(t)) != 0 {
-		t.Error("unexpected log")
+	if len(out.lines(t)) != 0 || len(logs.lines(t)) != 0 || e.Dropped() != 0 || e.EncodeFailures() != 0 {
+		t.Error("a nil event was written, logged or counted")
 	}
 }
 

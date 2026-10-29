@@ -25,10 +25,10 @@ const (
 	DefaultBufferSize  = 1024
 )
 
-// logInterval is how often at most a repeated problem (dropped events,
-// failing writes) is logged; the record says how many occurred since the
-// last one.
-const logInterval = time.Minute
+// reportInterval is how often the reporter logs the events dropped or
+// left unencoded since its last report, and how often at most failing
+// writes are logged; each record says how many occurred.
+const reportInterval = time.Minute
 
 // modulePath is SystemForge's module, whose version is the default
 // product version.
@@ -57,39 +57,38 @@ type Options struct {
 	// new ones. Default DefaultBufferSize.
 	BufferSize int
 
-	// Logger receives write failures and the count of dropped events.
-	// Default slog.Default().
+	// Logger receives write failures and the counts of dropped and
+	// unencodable events. It is called from the emitter's own goroutines,
+	// never from Emit. Default slog.Default().
 	Logger *slog.Logger
-
-	// LoggerFromContext, when set, returns the logger of the request an
-	// event is emitted in, for failures found while emitting it, such as
-	// systemauth.LoggerFromContext. Failures found later, while writing,
-	// go to Logger.
-	LoggerFromContext func(context.Context) *slog.Logger
 }
 
 // Emitter is an audit.Emitter writing every event as one line of OCSF
-// JSON. Emit never blocks: it maps the event and queues the line; a
-// single goroutine writes the queue in order. When the queue is full the
-// event is dropped and counted (Dropped). Close drains the queue.
+// JSON. Emit never blocks and never logs: it maps the event and queues
+// the line; a single goroutine writes the queue in order. When the queue
+// is full the event is dropped and counted (Dropped), and a reporter
+// goroutine logs the count once a minute. Close drains the queue.
 type Emitter struct {
-	w          io.Writer
-	logger     *slog.Logger
-	loggerFrom func(context.Context) *slog.Logger
-	mapper     mapper
+	w      io.Writer
+	logger *slog.Logger
+	mapper mapper
 
 	mu     sync.RWMutex // guards closed and sends on queue
 	closed bool
 	queue  chan []byte
 	done   chan struct{}
 
+	stopReport chan struct{}
+	reported   chan struct{}
+	interval   time.Duration
+
 	closeOnce sync.Once
 	closeErr  error
 
-	dropped    atomic.Uint64
-	dropLog    rateLog
-	writeLog   rateLog
-	writeFails atomic.Uint64
+	dropped     atomic.Uint64
+	encodeFails atomic.Uint64
+	writeLog    rateLog
+	writeFails  atomic.Uint64
 }
 
 var _ audit.Emitter = (*Emitter)(nil)
@@ -99,6 +98,11 @@ var _ audit.Emitter = (*Emitter)(nil)
 // w stays the caller's. Each event is one Write of one line, so an
 // *os.File opened with os.O_APPEND gets whole lines.
 func New(w io.Writer, opts Options) *Emitter {
+	return newEmitter(w, opts, reportInterval)
+}
+
+// newEmitter is New with the reporter's interval, which tests shorten.
+func newEmitter(w io.Writer, opts Options, interval time.Duration) *Emitter {
 	if w == nil {
 		panic("ocsfaudit: New with a nil writer")
 	}
@@ -118,21 +122,24 @@ func New(w io.Writer, opts Options) *Emitter {
 		opts.Logger = slog.Default()
 	}
 	e := &Emitter{
-		w:          w,
-		logger:     opts.Logger,
-		loggerFrom: opts.LoggerFromContext,
+		w:      w,
+		logger: opts.Logger,
 		mapper: mapper{
 			product: objects.Product{Name: opts.ProductName, VendorName: opts.VendorName, Version: opts.ProductVersion},
 			now:     time.Now,
 			newUID:  func() string { return uuid.NewString() },
 		},
-		queue: make(chan []byte, opts.BufferSize),
-		done:  make(chan struct{}),
+		queue:      make(chan []byte, opts.BufferSize),
+		done:       make(chan struct{}),
+		stopReport: make(chan struct{}),
+		reported:   make(chan struct{}),
+		interval:   interval,
 	}
 	if opts.Deployment != "" {
 		e.mapper.reporter = &objects.Reporter{Name: opts.Deployment}
 	}
 	go e.run()
+	go e.report()
 	return e
 }
 
@@ -155,16 +162,17 @@ func moduleVersion() string {
 }
 
 // Emit maps ev to OCSF and queues it for writing. It does not keep ev. It
-// returns nil whatever happens: an event that cannot be queued is
-// dropped and counted, and a failure is logged, so recording an event
-// never fails the request that caused it.
-func (e *Emitter) Emit(ctx context.Context, ev *audit.Event) error {
+// returns nil whatever happens, and it neither blocks nor logs: an event
+// that cannot be encoded or queued is counted, and the reporter
+// goroutine logs the counts, so recording an event never fails or delays
+// the request that caused it.
+func (e *Emitter) Emit(_ context.Context, ev *audit.Event) error {
 	if ev == nil {
 		return nil
 	}
 	line, err := json.Marshal(e.mapper.toOCSF(ev))
 	if err != nil {
-		e.ctxLogger(ctx).ErrorContext(ctx, "ocsfaudit: encoding event", "event_type", ev.EventType, "error", err.Error())
+		e.encodeFails.Add(1)
 		return nil
 	}
 	line = append(line, '\n')
@@ -180,22 +188,9 @@ func (e *Emitter) Emit(ctx context.Context, ev *audit.Event) error {
 	}
 	e.mu.RUnlock()
 	if !queued {
-		total := e.dropped.Add(1)
-		if n, ok := e.dropLog.due(); ok {
-			e.logger.Warn("ocsfaudit: dropped security events: the buffer is full or the emitter is closed",
-				"dropped", n, "dropped_total", total)
-		}
+		e.dropped.Add(1)
 	}
 	return nil
-}
-
-func (e *Emitter) ctxLogger(ctx context.Context) *slog.Logger {
-	if e.loggerFrom != nil && ctx != nil {
-		if l := e.loggerFrom(ctx); l != nil {
-			return l
-		}
-	}
-	return e.logger
 }
 
 // Dropped returns how many events were dropped because the buffer was
@@ -205,12 +200,57 @@ func (e *Emitter) Dropped() uint64 { return e.dropped.Load() }
 // WriteFailures returns how many events failed to be written.
 func (e *Emitter) WriteFailures() uint64 { return e.writeFails.Load() }
 
+// EncodeFailures returns how many events could not be encoded as JSON.
+func (e *Emitter) EncodeFailures() uint64 { return e.encodeFails.Load() }
+
+// report logs, every interval and once more when Close stops it, how many
+// events were dropped or could not be encoded since its last record.
+func (e *Emitter) report() {
+	defer close(e.reported)
+	t := time.NewTicker(e.interval)
+	defer t.Stop()
+	var dropped, encodeFails uint64
+	flush := func() {
+		d, f := e.dropped.Load(), e.encodeFails.Load()
+		if d > dropped {
+			e.logger.Warn("ocsfaudit: dropped security events: the buffer is full or the emitter is closed",
+				"dropped", d-dropped, "dropped_total", d)
+		}
+		if f > encodeFails {
+			e.logger.Error("ocsfaudit: security events could not be encoded",
+				"failures", f-encodeFails, "failures_total", f)
+		}
+		dropped, encodeFails = d, f
+	}
+	for {
+		select {
+		case <-t.C:
+			flush()
+		case <-e.stopReport:
+			flush()
+			return
+		}
+	}
+}
+
 // run writes the queue until Close closes it, flushing the writer
-// whenever the queue is empty.
+// whenever the queue is empty. A Write that fails part-way, or reports
+// writing less than the line without an error, may leave a partial line
+// behind; the next line then starts with a newline, so the damage stays
+// on that one line and every following line is whole JSON.
 func (e *Emitter) run() {
 	defer close(e.done)
+	torn := false
 	for line := range e.queue {
-		if _, err := e.w.Write(line); err != nil {
+		if torn {
+			line = append([]byte{'\n'}, line...)
+		}
+		n, err := e.w.Write(line)
+		if err == nil && n < len(line) {
+			err = io.ErrShortWrite
+		}
+		torn = err != nil && n > 0 && n < len(line)
+		if err != nil {
 			e.writeFailed(err)
 		}
 		if len(e.queue) == 0 {
@@ -253,6 +293,8 @@ func (e *Emitter) Close() error {
 		close(e.queue)
 		e.mu.Unlock()
 		<-e.done
+		close(e.stopReport)
+		<-e.reported
 		var errs []error
 		if err := flush(e.w); err != nil {
 			errs = append(errs, err)
@@ -268,14 +310,15 @@ func (e *Emitter) Close() error {
 }
 
 // syncUnsupported reports whether err is a Sync refused because the file
-// cannot be synced, such as standard output on a terminal or a pipe:
-// there is nothing to commit, so it is not a failure.
+// cannot be synced, such as standard output on a pipe (EINVAL on Linux)
+// or a terminal (ENOTTY on macOS): there is nothing to commit, so it is
+// not a failure. Other errors, such as EBADF, are failures.
 func syncUnsupported(err error) bool {
-	return errors.Is(err, syscall.EINVAL) || errors.Is(err, syscall.ENOTSUP)
+	return errors.Is(err, syscall.EINVAL) || errors.Is(err, syscall.ENOTSUP) || errors.Is(err, syscall.ENOTTY)
 }
 
 // rateLog decides when a repeated problem is logged: at most once per
-// logInterval, reporting how many occurred since.
+// reportInterval, reporting how many occurred since.
 type rateLog struct {
 	mu      sync.Mutex
 	last    time.Time
@@ -289,7 +332,7 @@ func (r *rateLog) due() (uint64, bool) {
 	defer r.mu.Unlock()
 	r.pending++
 	now := time.Now()
-	if !r.last.IsZero() && now.Sub(r.last) < logInterval {
+	if !r.last.IsZero() && now.Sub(r.last) < reportInterval {
 		return 0, false
 	}
 	n := r.pending
