@@ -245,17 +245,27 @@ func (h *handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, ErrInvalidClaim), errors.Is(err, ErrInvalidInvite):
 		// One answer for every reason a code cannot be used.
 		writeError(w, http.StatusBadRequest, "invalid code")
-	case errors.Is(err, ErrDisplayNameRequired), errors.Is(err, ErrNoManagers), errors.Is(err, ErrInvalidManager),
-		errors.Is(err, ErrInvalidRole), errors.Is(err, ErrEmailRequired), errors.Is(err, ErrInviteEmailRequired),
-		errors.Is(err, credential.ErrInvalidExpiry):
-		writeError(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), "managedprincipal: "))
-	case errors.Is(err, ErrLastManager), errors.Is(err, ErrEmailInUse), errors.Is(err, ErrHasEmail),
-		errors.Is(err, ErrEmailNotVerified), errors.Is(err, ErrAlreadyManaged), errors.Is(err, ErrManagesOthers):
-		writeError(w, http.StatusConflict, strings.TrimPrefix(err.Error(), "managedprincipal: "))
 	default:
-		h.svc.logger.ErrorContext(r.Context(), "managedprincipal: request failed", "path", r.URL.Path, "error", err)
-		writeError(w, http.StatusInternalServerError, "internal error")
+		h.failUnmapped(w, r, err)
 	}
+}
+
+// failUnmapped answers an error fail does not map to a fixed response.
+func (h *handler) failUnmapped(w http.ResponseWriter, r *http.Request, err error) {
+	// The fixed text of the matched sentinel is sent, never err's whole
+	// chain, so detail a wrapper adds stays out of the response.
+	if msg, ok := sentinelMessage(err, ErrDisplayNameRequired, ErrNoManagers, ErrInvalidManager,
+		ErrInvalidRole, ErrEmailRequired, ErrInviteEmailRequired, credential.ErrInvalidExpiry); ok {
+		writeError(w, http.StatusBadRequest, msg)
+		return
+	}
+	if msg, ok := sentinelMessage(err, ErrLastManager, ErrEmailInUse, ErrHasEmail,
+		ErrEmailNotVerified, ErrAlreadyManaged, ErrManagesOthers); ok {
+		writeError(w, http.StatusConflict, msg)
+		return
+	}
+	h.svc.logger.ErrorContext(r.Context(), "managedprincipal: request failed", "path", r.URL.Path, "error", err)
+	writeError(w, http.StatusInternalServerError, "internal error")
 }
 
 func (h *handler) writeJSON(w http.ResponseWriter, r *http.Request, v any) {
@@ -265,6 +275,18 @@ func (h *handler) writeJSON(w http.ResponseWriter, r *http.Request, v any) {
 		// The status is already sent; the client sees a truncated body.
 		h.svc.logger.ErrorContext(r.Context(), "managedprincipal: write response", "error", err)
 	}
+}
+
+// sentinelMessage returns the text of the first of sentinels that err
+// wraps, without its package prefix.
+func sentinelMessage(err error, sentinels ...error) (string, bool) {
+	for _, s := range sentinels {
+		if errors.Is(err, s) {
+			msg := strings.TrimPrefix(s.Error(), "managedprincipal: ")
+			return strings.TrimPrefix(msg, "credential: "), true
+		}
+	}
+	return "", false
 }
 
 func writeError(w http.ResponseWriter, status int, msg string) {
