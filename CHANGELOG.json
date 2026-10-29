@@ -21,8 +21,12 @@
       ],
       "security": [
         {
-          "description": "OCSF events identify people only by principal ID and client address: names, email addresses, session IDs, tokens, token and code prefixes, codes and free-text reasons are left out of every field, and event details reach the output only through a per-event-type allowlist of codes, UUIDs, booleans, integers and times",
+          "description": "OCSF events identify people only by principal ID and client address: names, email addresses, session tokens, tokens, token and code prefixes, codes and free-text reasons are left out of every field (a revoked managed-principal session is named by its record UUID), and event details reach the output only through a per-event-type allowlist of codes, UUIDs, booleans, integers and times",
           "commit": "f8f5d44"
+        },
+        {
+          "description": "The client sends the `User-Agent`, so it can carry an email address or a token; both the log emitter and the OCSF emitter now record it only through `audit.SanitizeUserAgent`",
+          "commit": "8eaa650"
         },
         {
           "description": "Token and authorization code replay events are High severity with `is_alert`, a platform-admin grant is High, and a production waiver at startup is Medium",
@@ -31,20 +35,30 @@
       ],
       "added": [
         {
-          "description": "`ocsfaudit.New(w, Options)`: an `audit.Emitter` that maps each event to an OCSF class (Authentication, User Management, Group Management, Entity Management, Application Lifecycle, or Base Event for an unknown type), with product, vendor and deployment metadata (`metadata.reporter.name`), the organization in `metadata.tenant_uid` and the request ID in `metadata.correlation_uid`",
+          "description": "`ocsfaudit.New(w, Options)`: an `audit.Emitter` that maps each event to an OCSF class (Authentication, User Management, Group Management, Entity Management, Application Lifecycle, or Base Event for an unknown type), entities OCSF has no type for as `type_id` Other with the type named,, with product, vendor and deployment metadata (`metadata.reporter.name`), the organization in `metadata.tenant_uid` and the request ID in `metadata.correlation_uid`",
           "commit": "f8f5d44"
         },
         {
-          "description": "`Emit` never blocks or fails the request: it queues each line in a bounded buffer written by one goroutine, drops and counts events when the buffer is full (`Dropped`), counts write failures (`WriteFailures`), and logs both at most once a minute; `Close` drains, flushes and syncs",
-          "commit": "f8f5d44"
+          "description": "`Emit` never blocks, logs or fails the request: it queues each line in a bounded buffer written by one goroutine, and drops and counts events when the buffer is full (`Dropped`) or cannot encode them (`EncodeFailures`); a reporter goroutine logs the counts once a minute and on `Close`, write failures and short writes are counted (`WriteFailures`) and logged at most once a minute, a line torn by a failed write is the only one lost, and `Close` drains, flushes and syncs",
+          "commit": "423324d"
         },
         {
           "description": "`audit.MultiEmitter` and `audit.NewMultiEmitter`",
           "commit": "76693ba"
         },
         {
-          "description": "Dependency `github.com/grokify/ocsf-schema-go` v0.1.0",
-          "commit": "a52af4c"
+          "description": "Dependency `github.com/grokify/ocsf-schema-go` v0.2.0",
+          "commit": "d9c1761"
+        },
+        {
+          "description": "`audit.SanitizeUserAgent`: leaves out a `User-Agent` holding an email address or a credential-like value, and cuts any other to 512 bytes of valid UTF-8 without control characters",
+          "commit": "8eaa650"
+        }
+      ],
+      "changed": [
+        {
+          "description": "`audit.LogEmitter` leaves out a `User-Agent` that holds an email address or a credential-like value",
+          "commit": "8eaa650"
         }
       ],
       "tests": [
@@ -55,6 +69,10 @@
         {
           "description": "The tests proving no token or secret reaches a log or event also run the OCSF emitter, and email verification and change events carry no address",
           "commit": "b0e01a3"
+        },
+        {
+          "description": "Every event, Base Event included, validates through `ValidateEvent` with no skipped issues; torn lines, short writes, Emit with a stuck logger, periodic drop reports, unsyncable files and User-Agent sanitizing are tested",
+          "commit": "423324d"
         }
       ],
       "documentation": [
@@ -65,6 +83,10 @@
         {
           "description": "The README and the documentation home feature security events and OCSF output",
           "commit": "bbece5fa"
+        },
+        {
+          "description": "The OCSF page states the schema version `1.10.0-dev`, recommends rotating by renaming over `copytruncate`, and describes delivery, session IDs and the `User-Agent` exactly",
+          "commit": "cabf495"
         }
       ]
     },
