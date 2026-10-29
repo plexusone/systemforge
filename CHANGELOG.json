@@ -61,6 +61,10 @@
         {
           "description": "`docs/security/ocsf-events.md`: wiring with an append-mode file, the event mapping, fields, privacy rules and buffering",
           "commit": "66895d1"
+        },
+        {
+          "description": "The README and the documentation home feature security events and OCSF output",
+          "commit": "bbece5fa"
         }
       ]
     },
