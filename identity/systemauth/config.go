@@ -15,6 +15,7 @@ import (
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/credential"
+	"github.com/plexusone/systemforge/session/clientaddr"
 )
 
 // Config holds SystemAuth server configuration.
@@ -72,6 +73,12 @@ type Config struct {
 
 	// OAuth enables optional OAuth grants.
 	OAuth OAuthConfig `json:"oauth,omitempty" yaml:"oauth,omitempty" jsonschema:"description=Optional OAuth grants"`
+
+	// ClientAddress says which reverse proxies to believe about the
+	// client's address, and which header they write it to (see
+	// clientaddr). The zero value believes no proxy and uses the direct
+	// peer, which behind a proxy is the proxy itself.
+	ClientAddress clientaddr.Config `json:"client_address,omitempty" yaml:"client_address,omitempty" jsonschema:"description=Trusted reverse proxies and the header they write the client address to"`
 
 	// Production waives, by name, production checks that otherwise refuse
 	// to start the packaged service (systemauthsvc) or refuse requests.
@@ -754,6 +761,9 @@ func (c *Config) Validate() error {
 	}
 	if err := c.Production.validate(); err != nil {
 		return err
+	}
+	if err := c.ClientAddress.Validate(); err != nil {
+		return fmt.Errorf("%w: client_address: %v", ErrInvalidConfig, err)
 	}
 	for _, cl := range c.Clients {
 		if cl.ID == JWTBearerClientID {

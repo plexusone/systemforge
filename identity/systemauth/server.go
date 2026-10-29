@@ -26,6 +26,7 @@ import (
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/dpopproof"
 	"github.com/plexusone/systemforge/observability"
+	"github.com/plexusone/systemforge/session/clientaddr"
 )
 
 // Server is the SystemAuth OAuth 2.0 / OpenID Connect server.
@@ -53,6 +54,7 @@ type Server struct {
 	accessScope     AccessChangeScope
 	jwtBearerKeys   JWTBearerKeyStorage
 	production      ProductionPolicy
+	clientAddr      *clientaddr.Resolver
 }
 
 // Option configures a Server.
@@ -112,6 +114,9 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 	// Apply options
 	for _, opt := range opts {
 		opt(s)
+	}
+	if err := s.setupClientAddress(); err != nil {
+		return nil, err
 	}
 
 	// Load the configured signing key, or generate an ephemeral one

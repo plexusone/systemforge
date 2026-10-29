@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
-	"net/netip"
 	"net/url"
 	"strings"
 	"time"
@@ -14,6 +12,7 @@ import (
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
+	"github.com/plexusone/systemforge/session/clientaddr"
 )
 
 // SessionProvider handles user authentication and consent for the authorization flow.
@@ -63,36 +62,17 @@ func TrustAllRequests(*http.Request) bool { return true }
 
 // TrustedProxyNetworks returns a RequestGate that admits requests whose
 // direct peer address (r.RemoteAddr, never a forwarded-for header) is in
-// one of the CIDR ranges, such as the load balancer's.
+// one of the networks, such as the load balancer's, given in CIDR
+// notation or as single addresses. It matches peers as clientaddr does.
 func TrustedProxyNetworks(cidrs ...string) (RequestGate, error) {
-	prefixes := make([]netip.Prefix, 0, len(cidrs))
-	for _, c := range cidrs {
-		p, err := netip.ParsePrefix(c)
-		if err != nil {
-			return nil, fmt.Errorf("systemauth: trusted proxy network %q: %w", c, err)
-		}
-		prefixes = append(prefixes, p)
-	}
-	if len(prefixes) == 0 {
+	if len(cidrs) == 0 {
 		return nil, errors.New("systemauth: no trusted proxy networks given")
 	}
-	return func(r *http.Request) bool {
-		host, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			return false
-		}
-		addr, err := netip.ParseAddr(host)
-		if err != nil {
-			return false
-		}
-		addr = addr.Unmap()
-		for _, p := range prefixes {
-			if p.Contains(addr) {
-				return true
-			}
-		}
-		return false
-	}, nil
+	res, err := clientaddr.New(clientaddr.Config{TrustedProxies: cidrs})
+	if err != nil {
+		return nil, fmt.Errorf("systemauth: %w", err)
+	}
+	return res.TrustsPeer, nil
 }
 
 // DefaultSessionProvider is a minimal session provider. It authenticates

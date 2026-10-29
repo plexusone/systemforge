@@ -745,6 +745,25 @@
       "type": "object",
       "description": "Optional OAuth grants"
     },
+    "client_address": {
+      "properties": {
+        "trusted_proxies": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Networks (CIDR or single addresses) of the reverse proxies whose client-address header is believed; empty trusts no proxy and uses the direct peer"
+        },
+        "header": {
+          "type": "string",
+          "description": "Header the trusted proxies write the client address to: X-Forwarded-For (read from the right) or a single-value header such as CF-Connecting-IP",
+          "default": "X-Forwarded-For"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Trusted reverse proxies and the header they write the client address to"
+    },
     "production": {
       "properties": {
         "allow": {

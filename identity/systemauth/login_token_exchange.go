@@ -72,11 +72,12 @@ func WithLoginTokenRateLimit(storage ratelimit.Storage, perAddress, perClient ra
 // WithLoginTokenClientIP sets how the login token endpoint finds the
 // client's address, for its per-address rate limit and the last-used
 // address recorded on the token. The JWT-bearer grant records the same
-// address as a service account key's last use. The default is the direct
-// peer, which
-// behind a reverse proxy is the proxy: pass
-// ratelimit.ForwardedClientIP(proxyNetworks...) there. Never read
-// forwarding headers without naming the proxies that set them.
+// address as a service account key's last use. It takes precedence over
+// the server's client-address resolver.
+//
+// Deprecated: configure client_address, or pass
+// WithClientAddressResolver, so that every part of the server finds the
+// client address the same way.
 func WithLoginTokenClientIP(clientIP func(r *http.Request) string) Option {
 	return func(s *Server) { s.socialOpts.loginTokenClientIP = clientIP }
 }
@@ -100,7 +101,7 @@ func (sl *socialLogin) setupLoginTokens(s *Server) {
 	x := &loginTokenExchange{
 		credentials: creds,
 		allowed:     s.ManagedPrincipalsAllowed,
-		clientIP:    s.socialOpts.loginTokenClientIP,
+		clientIP:    s.clientIP,
 		knownClient: func(ctx context.Context, clientID string) bool {
 			_, err := s.storage.GetClientByID(ctx, clientID)
 			return err == nil
@@ -109,9 +110,7 @@ func (sl *socialLogin) setupLoginTokens(s *Server) {
 		addressLimit: s.socialOpts.loginTokenIP,
 		clientLimit:  s.socialOpts.loginTokenCli,
 	}
-	if x.clientIP == nil {
-		x.clientIP = ratelimit.PeerIP
-	}
+
 	if x.rates == nil {
 		s.logger.Warn("login token endpoint using in-memory rate limits; limits are not shared between instances")
 		x.rates = ratelimit.NewMemoryStorage()

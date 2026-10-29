@@ -3,7 +3,6 @@ package scimtoken
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http"
 	"strings"
 
@@ -56,7 +55,7 @@ func (s *Service) CredentialFunc(opts CredentialOptions) func(r *http.Request) (
 			}
 			return cred, nil
 		}
-		t, err := s.Authenticate(withRequestInfo(r.Context(), r), token)
+		t, err := s.Authenticate(s.withRequestInfo(r.Context(), r), token)
 		if errors.Is(err, ErrInvalidToken) {
 			return scim.Credential{}, scim.ErrUnauthorized("invalid SCIM credential")
 		}
@@ -91,10 +90,6 @@ type requestInfo struct {
 
 // withRequestInfo carries the client's address and user agent to the
 // audit events Authenticate records.
-func withRequestInfo(ctx context.Context, r *http.Request) context.Context {
-	ip := r.RemoteAddr
-	if host, _, err := net.SplitHostPort(ip); err == nil {
-		ip = host
-	}
-	return context.WithValue(ctx, requestInfoKey{}, requestInfo{clientIP: ip, userAgent: r.UserAgent()})
+func (s *Service) withRequestInfo(ctx context.Context, r *http.Request) context.Context {
+	return context.WithValue(ctx, requestInfoKey{}, requestInfo{clientIP: s.clientAddr.ClientIP(r), userAgent: r.UserAgent()})
 }

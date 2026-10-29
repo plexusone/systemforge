@@ -82,7 +82,7 @@ func (s *Service) openSCIM(opts Options) error {
 		authorizer = res.Provider
 	}
 
-	tokOpts := []scimtoken.Option{scimtoken.WithLogger(s.logger), scimtoken.WithAuthorizer(authorizer)}
+	tokOpts := []scimtoken.Option{scimtoken.WithLogger(s.logger), scimtoken.WithAuthorizer(authorizer), scimtoken.WithClientAddress(s.server.ClientAddress())}
 	if opts.AuditEmitter != nil {
 		tokOpts = append(tokOpts, scimtoken.WithAuditEmitter(opts.AuditEmitter))
 	}

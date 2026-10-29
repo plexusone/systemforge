@@ -284,12 +284,9 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 	}
 	if s.socialOpts.waitlist != nil || s.socialOpts.signupCodes != nil {
 		sl.waitlist, sl.waitlistPage = s.socialOpts.waitlist, s.socialOpts.waitlistPage
-		sl.waitlistRates, sl.waitlistClientIP = s.socialOpts.loginTokenRate, s.socialOpts.loginTokenClientIP
+		sl.waitlistRates, sl.waitlistClientIP = s.socialOpts.loginTokenRate, s.clientIP
 		if sl.waitlistRates == nil {
 			sl.waitlistRates = ratelimit.NewMemoryStorage()
-		}
-		if sl.waitlistClientIP == nil {
-			sl.waitlistClientIP = ratelimit.PeerIP
 		}
 	}
 	if err := validateSignupMinimumAge(cfg.SignupMinimumAge); err != nil {
