@@ -40,7 +40,7 @@ type accessFixture struct {
 	who    map[string]uuid.UUID
 }
 
-func newAccessFixture(t *testing.T, opts ...APIOption) *accessFixture {
+func newAccessFixture(t *testing.T) *accessFixture {
 	t.Helper()
 	ctx := context.Background()
 	db := enttest.Open(t, "sqlite3", "file:"+uuid.NewString()+"?mode=memory&cache=shared&_fk=1")
@@ -90,7 +90,7 @@ func newAccessFixture(t *testing.T, opts ...APIOption) *accessFixture {
 		next(ctx)
 	})
 	svc := entService{listings: NewEntListingService(db, nil), licenses: NewEntLicenseService(db, nil)}
-	NewAPI(api, APIConfig{}, svc, append([]APIOption{WithAuthorizer(authorizer)}, opts...)...)
+	NewAPI(api, APIConfig{}, svc, WithAuthorizer(authorizer))
 	f.api = api
 	return f
 }
