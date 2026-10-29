@@ -646,6 +646,18 @@ type ClientConfig struct {
 	// bound tokens. Use it only for a client that cannot do DPoP yet:
 	// bearer tokens work for whoever holds them.
 	AllowBearerTokens bool `json:"allow_bearer_tokens,omitempty" yaml:"allow_bearer_tokens,omitempty" jsonschema:"default=false,description=Legacy exception: allow unbound bearer tokens for this client"`
+
+	// Party says who owns the client: first_party (the service provider),
+	// second_party (the customer) or third_party (a partner). The customer
+	// owns the data in every case. First-party clients skip the consent
+	// screen; the others always ask for consent and record it. Default:
+	// first_party, since the configuration file declares the operator's
+	// own applications.
+	Party string `json:"party,omitempty" yaml:"party,omitempty" jsonschema:"enum=first_party,enum=second_party,enum=third_party,default=first_party,description=Who owns the client; only first-party clients skip the consent screen"`
+
+	// LogoURL is an optional https URL of the client's logo, shown on the
+	// login page when the client started the sign-in.
+	LogoURL string `json:"logo_url,omitempty" yaml:"logo_url,omitempty" jsonschema:"description=https URL of the client's logo shown on the login page"`
 }
 
 // ManagedPrincipalsConfig configures managed principals: humans without an
@@ -776,6 +788,9 @@ func (c *Config) Validate() error {
 	for _, cl := range c.Clients {
 		if cl.ID == JWTBearerClientID {
 			return fmt.Errorf("%w: client ID %q is reserved", ErrInvalidConfig, JWTBearerClientID)
+		}
+		if err := validateClientMetadata(&Client{ID: cl.ID, Party: ClientParty(cl.Party), LogoURL: cl.LogoURL}); err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalidConfig, err)
 		}
 	}
 	if c.Console != nil && c.SocialLogin == nil {

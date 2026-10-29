@@ -148,6 +148,11 @@ func (s *EntStorage) loadSecrets(ctx context.Context, app *ent.OAuthApp, client 
 
 // CreateClient creates a new OAuth client.
 func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
+	if err := validateClientMetadata(client); err != nil {
+		return err
+	}
+	party := client.EffectiveParty()
+
 	// Determine app type from client type
 	appType := oauthapp.AppTypeWeb
 	if client.IsPublic() {
@@ -165,10 +170,15 @@ func (s *EntStorage) CreateClient(ctx context.Context, client *Client) error {
 		SetAllowedResponseTypes(client.ResponseTypes).
 		SetPublic(client.IsPublic()).
 		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled).
-		SetAllowBearerTokens(client.AllowBearerTokens)
+		SetAllowBearerTokens(client.AllowBearerTokens).
+		SetParty(oauthapp.Party(party)).
+		SetFirstParty(party == PartyFirst)
 
 	if client.Description != "" {
 		builder.SetDescription(client.Description)
+	}
+	if client.LogoURL != "" {
+		builder.SetLogoURL(client.LogoURL)
 	}
 	if client.BackchannelLogoutURI != "" {
 		builder.SetBackchannelLogoutURI(client.BackchannelLogoutURI)
@@ -251,6 +261,10 @@ func (s *EntStorage) GetClientByID(ctx context.Context, id string) (*Client, err
 
 // UpdateClient updates an existing client.
 func (s *EntStorage) UpdateClient(ctx context.Context, client *Client) error {
+	if err := validateClientMetadata(client); err != nil {
+		return err
+	}
+	party := client.EffectiveParty()
 	app, err := s.db.OAuthApp.Query().
 		Where(oauthapp.ClientIDEQ(client.ID)).
 		First(ctx)
@@ -268,10 +282,17 @@ func (s *EntStorage) UpdateClient(ctx context.Context, client *Client) error {
 		SetAllowedGrants(client.GrantTypes).
 		SetAllowedResponseTypes(client.ResponseTypes).
 		SetManagedPrincipalsEnabled(client.ManagedPrincipalsEnabled).
-		SetAllowBearerTokens(client.AllowBearerTokens)
+		SetAllowBearerTokens(client.AllowBearerTokens).
+		SetParty(oauthapp.Party(party)).
+		SetFirstParty(party == PartyFirst)
 
 	if client.Description != "" {
 		builder.SetDescription(client.Description)
+	}
+	if client.LogoURL != "" {
+		builder.SetLogoURL(client.LogoURL)
+	} else {
+		builder.ClearLogoURL()
 	}
 	if client.BackchannelLogoutURI != "" {
 		builder.SetBackchannelLogoutURI(client.BackchannelLogoutURI)
@@ -917,6 +938,18 @@ func (s *EntStorage) SetClientAssertionJWT(ctx context.Context, jti string, exp 
 
 // --- Helper Functions ---
 
+// entAppParty returns an application's party. A row written before the
+// party column existed has none; its deprecated first_party flag decides.
+func entAppParty(app *ent.OAuthApp) ClientParty {
+	if app.Party != nil {
+		return ClientParty(*app.Party)
+	}
+	if app.FirstParty {
+		return PartyFirst
+	}
+	return PartyThird
+}
+
 // entAppToClient converts an Ent OAuthApp to a systemauth Client.
 func (s *EntStorage) entAppToClient(app *ent.OAuthApp) *Client {
 	clientType := ClientTypeConfidential
@@ -937,6 +970,8 @@ func (s *EntStorage) entAppToClient(app *ent.OAuthApp) *Client {
 		// Managed principals are opt-in per client.
 		ManagedPrincipalsEnabled: app.ManagedPrincipalsEnabled,
 		AllowBearerTokens:        app.AllowBearerTokens,
+		Party:                    entAppParty(app),
+		LogoURL:                  app.LogoURL,
 		UpdatedAt:                app.UpdatedAt,
 	}
 

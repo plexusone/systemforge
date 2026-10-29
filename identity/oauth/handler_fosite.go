@@ -12,6 +12,7 @@ import (
 	"github.com/ory/fosite"
 
 	"github.com/plexusone/systemforge/identity/dpopproof"
+	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 	"github.com/plexusone/systemforge/identity/systemauth"
 )
@@ -424,10 +425,18 @@ func (a *API) revocationEndpoint(w http.ResponseWriter, r *http.Request) {
 	oauth2.WriteRevocationResponse(ctx, w, nil)
 }
 
-// isFirstParty reports whether the client is one the operator runs.
+// isFirstParty reports whether the client is one the operator runs: its
+// party is first_party, or, for a row written before the party column
+// existed, its first_party flag is set.
 func isFirstParty(c fosite.Client) bool {
 	client, ok := c.(*Client)
-	return ok && client.app.FirstParty
+	if !ok {
+		return false
+	}
+	if client.app.Party != nil {
+		return *client.app.Party == oauthapp.PartyFirstParty
+	}
+	return client.app.FirstParty
 }
 
 // appendQueryParam appends key=value, query-escaped, to base, which may

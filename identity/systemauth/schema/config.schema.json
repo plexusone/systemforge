@@ -268,6 +268,20 @@
             "type": "boolean",
             "description": "Legacy exception: allow unbound bearer tokens for this client",
             "default": false
+          },
+          "party": {
+            "type": "string",
+            "enum": [
+              "first_party",
+              "second_party",
+              "third_party"
+            ],
+            "description": "Who owns the client; only first-party clients skip the consent screen",
+            "default": "first_party"
+          },
+          "logo_url": {
+            "type": "string",
+            "description": "https URL of the client's logo shown on the login page"
           }
         },
         "additionalProperties": false,

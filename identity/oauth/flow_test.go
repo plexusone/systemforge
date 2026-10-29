@@ -16,6 +16,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
+	"github.com/plexusone/systemforge/identity/ent/oauthapp"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/systemauth"
 )
@@ -354,5 +355,20 @@ func TestAuthorizeConsent(t *testing.T) {
 	}
 	if w := f.authorizeHTTP(t, []Option{signedIn}, ""); redirectParam(t, w, "code") == "" {
 		t.Errorf("first-party client: %q", w.Header().Get("Location"))
+	}
+
+	// The party decides when it is set: a third-party client asks for
+	// consent whatever its first_party flag.
+	if err := f.db.OAuthApp.Update().SetParty(oauthapp.PartyThirdParty).Exec(ctx); err != nil {
+		t.Fatalf("mark third-party: %v", err)
+	}
+	if w := f.authorizeHTTP(t, []Option{signedIn}, ""); redirectParam(t, w, "code") != "" {
+		t.Errorf("third-party client got a code without consent: %q", w.Header().Get("Location"))
+	}
+	if err := f.db.OAuthApp.Update().SetParty(oauthapp.PartyFirstParty).SetFirstParty(false).Exec(ctx); err != nil {
+		t.Fatalf("mark first-party by party: %v", err)
+	}
+	if w := f.authorizeHTTP(t, []Option{signedIn}, ""); redirectParam(t, w, "code") == "" {
+		t.Errorf("party first_party client: %q", w.Header().Get("Location"))
 	}
 }

@@ -460,10 +460,14 @@ func (s *Server) accessTokenHeaders() *jwt.Headers {
 	return h
 }
 
-// RegisterClient registers a new OAuth client.
+// RegisterClient registers a new OAuth client. A client registered without
+// a Party is third-party: its users are asked for consent.
 func (s *Server) RegisterClient(client *Client) error {
 	if err := ValidateBackchannelLogoutURI(client.BackchannelLogoutURI); err != nil {
 		return fmt.Errorf("client %q: %w", client.ID, err)
+	}
+	if err := validateClientMetadata(client); err != nil {
+		return err
 	}
 	return s.storage.CreateClient(context.Background(), client)
 }
