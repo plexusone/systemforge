@@ -279,11 +279,13 @@ func (c *common) connections() any {
 }
 
 // entity is the event's resource as a managed entity of the given type,
-// by its ID. A key is named by its key identifier, which names no secret.
-// Other resource identifiers, which may be email addresses or token
-// prefixes, are left out; an entity with neither is named by its type.
+// by its ID. Its type_id is Other, the type naming it, since OCSF has no
+// type for keys, connections, tokens or codes. A key is named by its key
+// identifier, which names no secret. Other resource identifiers, which may
+// be email addresses or token prefixes, are left out; an entity with
+// neither is named by its type.
 func (c *common) entity(typ string) *objects.ManagedEntity {
-	e := &objects.ManagedEntity{Type: typ}
+	e := &objects.ManagedEntity{TypeID: objects.ManagedEntityTypeIDOther, Type: typ}
 	if c.ev.Resource.ID != uuid.Nil {
 		e.UID = c.ev.Resource.ID.String()
 	} else if typ == "key" {
@@ -347,12 +349,12 @@ func (c *common) signup() any {
 	var e *objects.ManagedEntity
 	switch c.ev.EventType {
 	case "signup_allowance.set":
-		e = &objects.ManagedEntity{Type: "signup_allowance", User: user(c.ev.Resource.ID, "principal")}
+		e = &objects.ManagedEntity{TypeID: objects.ManagedEntityTypeIDOther, Type: "signup_allowance", User: user(c.ev.Resource.ID, "principal")}
 		if e.User == nil {
 			e.Name = "signup_allowance"
 		}
 	case "signup_invite.created", "signup_invite.revoked", "signup_waitlist.invited":
-		e = &objects.ManagedEntity{Type: "signup_invite", Name: "signup_invite"}
+		e = &objects.ManagedEntity{TypeID: objects.ManagedEntityTypeIDOther, Type: "signup_invite", Name: "signup_invite"}
 	default:
 		e = c.entity("signup_code")
 	}
@@ -398,7 +400,7 @@ func (c *common) managedPrincipal() any {
 		return a
 	}
 	if activity, ok := managerInviteActivities[c.ev.EventType]; ok {
-		e := &objects.ManagedEntity{Type: "manager_invite", UID: c.d.take("invite_id"), User: subject}
+		e := &objects.ManagedEntity{TypeID: objects.ManagedEntityTypeIDOther, Type: "manager_invite", UID: c.d.take("invite_id"), User: subject}
 		if e.UID == "" && e.User == nil {
 			e.Name = "manager_invite"
 		}

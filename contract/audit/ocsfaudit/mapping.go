@@ -12,49 +12,20 @@ import (
 	"github.com/plexusone/systemforge/contract/audit"
 )
 
-// The event classes are the generated ones with cloud and osint made
-// optional: both are required only by the cloud and osint profiles, which
-// these events do not declare, and the generated structs would otherwise
-// write them as null. The outer field shadows the embedded one in JSON.
+// The event classes wrap the generated ones so that this package can add
+// methods to them; they marshal exactly as the generated structs.
 type (
-	authentication struct {
-		events.Authentication
-		Cloud *objects.Cloud  `json:"cloud,omitempty"`
-		OSINT []objects.OSINT `json:"osint,omitempty"`
-	}
-	userManagement struct {
-		events.UserManagement
-		Cloud *objects.Cloud  `json:"cloud,omitempty"`
-		OSINT []objects.OSINT `json:"osint,omitempty"`
-	}
-	groupManagement struct {
-		events.GroupManagement
-		Cloud *objects.Cloud  `json:"cloud,omitempty"`
-		OSINT []objects.OSINT `json:"osint,omitempty"`
-	}
-	entityManagement struct {
-		events.EntityManagement
-		Cloud *objects.Cloud  `json:"cloud,omitempty"`
-		OSINT []objects.OSINT `json:"osint,omitempty"`
-	}
-	applicationLifecycle struct {
-		events.ApplicationLifecycle
-		Cloud *objects.Cloud  `json:"cloud,omitempty"`
-		OSINT []objects.OSINT `json:"osint,omitempty"`
-	}
-	baseEvent struct {
-		events.BaseEvent
-		Cloud *objects.Cloud  `json:"cloud,omitempty"`
-		OSINT []objects.OSINT `json:"osint,omitempty"`
-	}
+	authentication       struct{ events.Authentication }
+	userManagement       struct{ events.UserManagement }
+	groupManagement      struct{ events.GroupManagement }
+	entityManagement     struct{ events.EntityManagement }
+	applicationLifecycle struct{ events.ApplicationLifecycle }
+	baseEvent            struct{ events.BaseEvent }
 )
 
-// Base Event's classification captions; the generated caption maps cover
-// concrete classes and categories only.
-const (
-	baseEventClassName    = "Base Event"
-	baseEventCategoryName = "Uncategorized"
-)
+// baseEventCategoryName is the caption of category_uid 0, Base Event's
+// category; the generated category captions cover named categories only.
+const baseEventCategoryName = "Uncategorized"
 
 // maxUserAgent bounds the User-Agent copied into an event.
 const maxUserAgent = 512
@@ -466,10 +437,10 @@ func (c *common) base() *baseEvent {
 		ActivityName: activityName,
 		CategoryUID:  0,
 		CategoryName: baseEventCategoryName,
-		ClassUID:     0,
-		ClassName:    baseEventClassName,
+		ClassUID:     events.ClassUIDBaseEvent,
+		ClassName:    events.ClassCaptions[events.ClassUIDBaseEvent],
 		TypeUID:      events.BaseEventActivityIDOther,
-		TypeName:     baseEventClassName + ": " + activityName,
+		TypeName:     events.ClassCaptions[events.ClassUIDBaseEvent] + ": " + activityName,
 		Metadata:     c.metadata,
 		Time:         c.time,
 		SeverityID:   c.severityID,

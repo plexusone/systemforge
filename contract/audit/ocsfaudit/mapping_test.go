@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/grokify/ocsf-schema-go/ocsf/events"
+	"github.com/grokify/ocsf-schema-go/ocsf/objects"
 	"github.com/grokify/ocsf-schema-go/ocsf/ocsfdata"
 	"github.com/grokify/ocsf-schema-go/validate"
 
@@ -165,33 +166,12 @@ func strictValidator() *validate.Validator {
 	return validate.New(ocsfdata.MustSchema(), validate.WithUnknownAttributes(validate.UnknownError), validate.WithDeprecatedWarnings(true))
 }
 
-// validateOCSF checks data against the embedded schema, strictly: any
-// issue, warning or error, fails. Base Event is abstract in the schema, so
-// it is validated by class name.
+// validateOCSF validates one event against the embedded schema, strictly:
+// every issue, warnings included, fails the test.
 func validateOCSF(t *testing.T, v *validate.Validator, data []byte) {
 	t.Helper()
-	var head struct {
-		ClassUID int `json:"class_uid"`
-	}
-	if err := json.Unmarshal(data, &head); err != nil {
-		t.Fatalf("not JSON: %v: %s", err, data)
-	}
-	var res *validate.Result
-	if head.ClassUID == 0 {
-		var err error
-		if res, err = v.ValidateEventClass("base_event", data); err != nil {
-			t.Fatal(err)
-		}
-	} else {
-		res = v.ValidateEvent(data)
-	}
+	res := v.ValidateEvent(data)
 	for _, issue := range res.Issues {
-		// The validator checks unmapped, whose type is the generic
-		// object, as an object without attributes and reports every key
-		// in it; OCSF leaves its content to the producer.
-		if issue.Code == validate.CodeUnknownAttribute && strings.HasPrefix(issue.Path, "unmapped.") {
-			continue
-		}
 		t.Errorf("%s", issue)
 	}
 	if t.Failed() {
@@ -372,5 +352,36 @@ func TestDetailsShapes(t *testing.T) {
 	l, ok := normalize(kindUUIDList, []any{principalID.String(), "x", otherID})
 	if !ok || len(l.([]string)) != 2 { //nolint:forcetypeassert // the test asserts the shape
 		t.Errorf("uuid list: %v", l)
+	}
+}
+
+// TestManagedEntityTypeIsOther checks that entities OCSF has no type for
+// (keys, connections, SCIM tokens, sign-up codes and invites) carry
+// type_id Other with their type named in type.
+func TestManagedEntityTypeIsOther(t *testing.T) {
+	m := newTestMapper()
+	for _, tc := range []struct {
+		ev   audit.Event
+		want string
+	}{
+		{withResource(evt("keys", "key.created", audit.OutcomeSuccess, nil), audit.Resource{Type: "key", Identifier: "kek-1/v1"}), "key"},
+		{evt("signup_invite.created", "created", audit.OutcomeSuccess, nil), "signup_invite"},
+	} {
+		data, err := json.Marshal(m.toOCSF(&tc.ev))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got struct {
+			Entity struct {
+				TypeID int    `json:"type_id"`
+				Type   string `json:"type"`
+			} `json:"entity"`
+		}
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatal(err)
+		}
+		if got.Entity.TypeID != objects.ManagedEntityTypeIDOther || got.Entity.Type != tc.want {
+			t.Errorf("%s: entity type_id %d, type %q; want %d, %q", tc.ev.EventType, got.Entity.TypeID, got.Entity.Type, objects.ManagedEntityTypeIDOther, tc.want)
+		}
 	}
 }
