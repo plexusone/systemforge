@@ -228,7 +228,7 @@ func (c *Checkout) serve(fn func(ctx context.Context, r *http.Request, caller, o
 				ae = &apiError{status: http.StatusInternalServerError, msg: "billing is unavailable", cause: err}
 			}
 			if ae.cause != nil {
-				c.cfg.Logger.ErrorContext(ctx, "billing: request failed", "path", r.URL.Path, "status", ae.status, "error", ae.cause)
+				c.cfg.Logger.ErrorContext(ctx, "billing: request failed", "route", r.Pattern, "status", ae.status, "error", ae.cause)
 			}
 			c.writeJSON(ctx, w, ae.status, map[string]string{"error": ae.msg})
 			return
