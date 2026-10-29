@@ -521,3 +521,17 @@ Startup migrations (`--migrate`, default on) add new columns automatically —
 for example the `subject` columns on `sf_oauth_auth_codes` / `sf_oauth_tokens`
 and the now-nullable `sf_oauth_auth_codes.user_id`. Run `systemauth migrate`
 first if the service user lacks DDL privileges.
+
+### Client party column
+
+Each OAuth application records its party in `sf_oauth_apps.party`
+(`first_party`, `second_party` or `third_party`; see
+[Client party](overview.md#client-party)). Startup migration adds the column
+empty; an application without a party is read by its older `first_party` flag
+(set means `first_party`, otherwise `third_party`), and clients from the
+configuration file are rewritten with their party at startup. Without startup
+migration, run `migrations/0012_oauth_app_party.sql`, which also fills the
+column from `first_party`. Then set `party` on any runtime-registered client
+the operator owns (`first_party`) or a customer owns (`second_party`):
+otherwise its users are asked for consent. `social_login.skip_consent` no
+longer skips consent and can be removed.

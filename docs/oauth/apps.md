@@ -21,7 +21,8 @@ The `sf_oauth_apps` table contains:
 | `allowed_grants` | []string | Allowed grant types |
 | `access_token_ttl` | int | Token lifetime (seconds) |
 | `refresh_token_ttl` | int | Refresh lifetime (seconds) |
-| `first_party` | bool | Skip consent screen |
+| `party` | enum | `first_party`, `second_party` or `third_party`; only first-party apps skip the consent screen |
+| `first_party` | bool | Superseded by `party`; kept equal to `party == first_party`, and read only when `party` is null |
 | `public` | bool | No client secret |
 | `active` | bool | App status |
 
@@ -35,6 +36,20 @@ The `sf_oauth_apps` table contains:
 | `service` | Backend services | Required | No |
 | `machine` | Automated systems/CI | Required | No |
 
+## Parties
+
+The party says who owns the app; the customer owns the data in every case.
+
+| Party | Who owns the app | Consent screen |
+|-------|------------------|----------------|
+| `first_party` | The service provider | Skipped |
+| `second_party` | The customer | Shown, and the consent recorded |
+| `third_party` | A partner | Shown, and the consent recorded |
+
+An app whose `party` is null (a row written before the column existed) is
+`first_party` when its `first_party` flag is set and `third_party` otherwise.
+SystemAuth writes both columns.
+
 ## Creating Apps
 
 ### First-Party SPA
@@ -45,6 +60,7 @@ app, err := client.OAuthApp.Create().
     SetName("My Frontend App").
     SetAppType("spa").
     SetPublic(true).
+    SetParty(oauthapp.PartyFirstParty).
     SetFirstParty(true).
     SetRedirectUris([]string{
         "http://localhost:3000/callback",
@@ -66,7 +82,7 @@ app, err := client.OAuthApp.Create().
     SetDescription("Integration by Acme Corp").
     SetAppType("web").
     SetPublic(false). // Requires secret
-    SetFirstParty(false). // Shows consent screen
+    SetParty(oauthapp.PartyThirdParty). // Shows consent screen
     SetRedirectUris([]string{"https://partner.com/oauth/callback"}).
     SetAllowedScopes([]string{"read:data"}).
     SetAllowedGrants([]string{"authorization_code", "refresh_token"}).

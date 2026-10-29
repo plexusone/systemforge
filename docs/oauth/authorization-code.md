@@ -81,6 +81,10 @@ GET /oauth/authorize?
 | `state` | Recommended | CSRF protection |
 | `code_challenge` | Public clients | PKCE challenge |
 | `code_challenge_method` | With challenge | Must be `S256` |
+| `prompt` | No | SystemAuth: `none` (no page; `login_required` or `consent_required` instead), `login` (log in again), `consent` (ask for consent again) or `select_account` (no effect). See [Silent sign-in and prompt](../systemauth/social-login.md#silent-sign-in-and-prompt) |
+
+SystemAuth asks for consent only for second- and third-party clients; see
+[Client party](../systemauth/overview.md#client-party).
 
 ## Step 2: User Authentication
 

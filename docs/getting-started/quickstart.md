@@ -14,6 +14,7 @@ import (
     "net/http"
 
     "github.com/plexusone/systemforge/identity/ent"
+    "github.com/plexusone/systemforge/identity/ent/oauthapp"
     "github.com/plexusone/systemforge/identity/oauth"
     _ "github.com/lib/pq"
 )
@@ -79,6 +80,7 @@ app, err := client.OAuthApp.Create().
     SetName("My Frontend App").
     SetAppType("spa").
     SetPublic(true).
+    SetParty(oauthapp.PartyFirstParty).
     SetFirstParty(true).
     SetRedirectUris([]string{"http://localhost:3000/callback"}).
     SetAllowedScopes([]string{"openid", "profile", "email"}).

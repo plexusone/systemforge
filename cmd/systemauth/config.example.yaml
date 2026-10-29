@@ -54,6 +54,11 @@ clients:
     type: public
     name: My SPA Application
     description: Single-page application with PKCE
+    # Who owns the app: first_party (default for clients in this file; no
+    # consent screen), second_party (the customer) or third_party (a
+    # partner); the last two ask users for consent and record it.
+    party: first_party
+    # logo_url: https://myapp.example.com/logo.png   # shown on the login page
     redirect_uris:
       - https://myapp.example.com/callback
       - http://localhost:3000/callback  # Development
@@ -102,7 +107,6 @@ clients:
 #     - https://myapp.example.com
 #   default_redirect: /
 #   session_lifetime: 12h
-#   skip_consent: false      # true only if every client is first-party; otherwise /consent is shown
 #   signup_minimum_age: 0    # ask birth month and year before creating an account; 0 asks nothing
 #   insecure_cookies: false  # true only for local development over plain HTTP
 

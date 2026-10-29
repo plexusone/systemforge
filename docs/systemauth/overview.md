@@ -81,7 +81,43 @@ serves:
 | `/oauth/userinfo/memberships` | GET | Paginated organization memberships of the token's principal (needs an `OrgsSource`) |
 
 With `social_login` configured, `/login*`, `/logout` and `/consent` are added
-(see [Social Login](social-login.md)).
+(see [Social Login](social-login.md)). `/oauth/authorize` honours the OIDC
+`prompt` parameter (`none`, `login`, `consent`, `select_account`); see
+[Silent sign-in and prompt](social-login.md#silent-sign-in-and-prompt).
+
+### Client party
+
+Every client has a party, which says who owns the application; the customer
+owns the data in every case. It decides whether users are asked for consent:
+
+| Party | Who owns the app | Consent |
+|-------|------------------|---------|
+| `first_party` | The service provider running SystemAuth | Skipped |
+| `second_party` | The customer | Asked and recorded |
+| `third_party` | A partner | Asked and recorded |
+
+```yaml
+clients:
+  - id: web-app            # the operator's own app: first_party by default
+    type: confidential
+    name: Web Application
+  - id: partner-reports
+    type: confidential
+    name: Partner Reports
+    party: third_party      # users are asked for consent
+    logo_url: https://partner.example.com/logo.png   # shown on the login page
+```
+
+A client in the configuration file is `first_party` unless it sets `party`.
+A client registered at runtime (`Server.RegisterClient`, `Storage`,
+`EmbeddedOAuthClientStore`) without one is `third_party`. Unknown values are
+refused. The decision is made by the authorization endpoint whatever the
+`SessionProvider`: a second- or third-party client always needs the user's
+recorded consent, so a deployment that registers such clients needs a
+`SessionProvider` that records consent (social login does;
+`DefaultSessionProvider` records none). `logo_url`, optional, must be an
+absolute https URL. With `EntStorage` the party is the `sf_oauth_apps.party`
+column; see the [upgrade notes](deployment.md#client-party-column).
 
 ### UserInfo
 
