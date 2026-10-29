@@ -16,7 +16,7 @@ import (
 
 // newMailSocialTestServer is newSocialTestServer with verification mail
 // delivered to a memory sender.
-func newMailSocialTestServer(t *testing.T, f *fakeGitHub, dir PrincipalDirectory, mail *MailConfig) (*Server, *memsender.Sender) {
+func newMailSocialTestServer(t *testing.T, f *fakeGitHub, dir PrincipalDirectory, mail *MailConfig, extra ...Option) (*Server, *memsender.Sender) {
 	t.Helper()
 	if mail == nil {
 		mail = &MailConfig{Provider: MailProviderSES, From: "Example <no-reply@example.com>", ProductName: "Example"}
@@ -29,7 +29,7 @@ func newMailSocialTestServer(t *testing.T, f *fakeGitHub, dir PrincipalDirectory
 			SkipConsent:            true,
 		},
 		Mail: mail,
-	}, WithSocialConnector(f.connector()), WithPrincipalDirectory(dir), WithMailSender(sender))
+	}, append([]Option{WithSocialConnector(f.connector()), WithPrincipalDirectory(dir), WithMailSender(sender)}, extra...)...)
 	if err != nil {
 		t.Fatalf("NewEmbedded: %v", err)
 	}
