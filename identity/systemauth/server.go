@@ -313,7 +313,7 @@ func (s *Server) setupRouter() {
 	// Rate limits come next, before anything authenticates a request.
 	router.Use(s.rateLimitLayers)
 	router.Use(middleware.RequestID)
-	router.Use(eventRequestMiddleware)
+	router.Use(s.eventRequestMiddleware)
 	router.Use(middleware.Recoverer)
 	router.Use(s.loggerMiddleware)
 	router.Use(s.tokenOutcomeLimits)

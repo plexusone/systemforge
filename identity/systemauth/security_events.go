@@ -12,7 +12,6 @@ import (
 
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/internal/oauthcore"
-	"github.com/plexusone/systemforge/session/ratelimit"
 )
 
 // Security event types SystemAuth emits through the audit emitter set with
@@ -51,12 +50,6 @@ func WithAuditEmitter(e audit.Emitter) Option {
 	}
 }
 
-// auditClientAddress is the one place security events take the client's
-// address from: the request's direct peer.
-func auditClientAddress(r *http.Request) string {
-	return ratelimit.PeerIP(r)
-}
-
 // eventRequest is what a security event records of the request that
 // caused it.
 type eventRequest struct {
@@ -69,10 +62,13 @@ type eventRequestKey struct{}
 // eventRequestMiddleware keeps the request's client address and user agent
 // in its context, so code without the request, such as a token-family
 // revocation, can still record them.
-func eventRequestMiddleware(next http.Handler) http.Handler {
+// The address comes from the server's client-address rule, the same one rate
+// limits use, so events behind a reverse proxy record the visitor, not the
+// proxy.
+func (s *Server) eventRequestMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), eventRequestKey{}, eventRequest{
-			clientIP:  auditClientAddress(r),
+			clientIP:  s.clientIP(r),
 			userAgent: r.UserAgent(),
 		})
 		next.ServeHTTP(w, r.WithContext(ctx))
