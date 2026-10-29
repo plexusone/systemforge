@@ -22,6 +22,7 @@ endpoints:
 | `GET /logout?return_to=...` | Renders a sign-out confirmation form (never signs out by itself). |
 | `POST /logout` | Deletes the login session, clears the cookie, revokes all of the principal's access and refresh tokens, and redirects (`303`) to the validated `return_to` (default `default_redirect`). |
 | `GET /consent?return_to=<authorize URL>` | Consent page naming the client and the requested scopes (for second- and third-party clients, or when the request sets `prompt=consent`). |
+| `/login/verify-email...` | With [verification mail](verified-email.md): the pages that hold a sign-in whose provider email is unverified until a mailed link is opened in the same browser. |
 | `POST /consent` | Records the decision. `allow` saves the grant and resumes `/oauth/authorize`; `deny` returns `error=access_denied` to the client's redirect URI. |
 
 `/oauth/authorize` sends unauthenticated users to `/login?return_to=<authorize URL>`,
@@ -176,7 +177,11 @@ never a legacy `User` row — using one model:
 3. **Create.** Otherwise a new principal is created, which requires a verified
    upstream email.
 
-An unverified upstream email never links to, or creates, an account. A
+An unverified upstream email never links to, or creates, an account. With
+[verification mail](verified-email.md) configured, the sign-in is held
+instead while SystemAuth mails a link to the address; a link opened in the
+same browser proves the address, which then counts as verified and
+authoritative. A
 verified but not authoritative email never links either: a provider can keep
 an address marked verified after its owner loses the mailbox. When such an
 email already belongs to an account, the sign-in is refused as a conflict

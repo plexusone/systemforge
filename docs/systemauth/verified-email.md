@@ -91,3 +91,57 @@ context. Messages carry the SES message tag `systemauth` naming the kind
   server does not start with `provider: log`, or with an omnimail log sender
   passed in, and there is no waiver: the log sender writes links that
   complete sign-ins and email changes to the server log.
+
+## Unverified provider email at sign-in
+
+Without mail, a GitHub or Google sign-in whose provider email is not
+verified is refused (`ErrEmailNotVerified`). With mail, it is held instead:
+
+1. The callback stores the pending sign-in (provider identity, email, name,
+   where to return) with a `verify_email` token and sets the
+   `__Host-sf_verify_email` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`,
+   host-only) in the browser that started it. The token's binding is a
+   SHA-256 hash of that cookie. Nothing about the sign-in is kept in the
+   browser.
+2. SystemAuth mails a link to `/login/verify-email/confirm?token=…` and sends
+   the browser to `/login/verify-email`, which names the address and offers
+   **Send another link** (`POST /login/verify-email/resend`). A resend
+   replaces the earlier links.
+3. Opening the link shows a confirmation form. Its `POST` uses the token only
+   together with the pending sign-in's cookie, from the issuer's origin and
+   with a CSRF token derived from the cookie. In another browser the link
+   only explains that it must be opened where the sign-in started.
+4. On confirmation the address counts as proven (`ExternalLogin.EmailProven`)
+   and the sign-in completes through `ResolveExternalLogin`, with the same
+   invite, age and conflict rules as any other sign-in.
+
+| Route | Purpose |
+|-------|---------|
+| `GET /login/verify-email` | The pending sign-in's "check your email" page |
+| `POST /login/verify-email/resend` | Mail a new link, within the send limits |
+| `GET /login/verify-email/confirm?token=` | The mailed link: a confirmation form |
+| `POST /login/verify-email/confirm` | Use the token and complete the sign-in |
+
+### Linking to an existing account
+
+A proven email counts as verified **and** authoritative, so it may create an
+account or link the provider identity to an existing account whose own
+email is verified and equal to it, as an authoritative Google email does.
+This is acceptable only because the person proved control of the mailbox in
+this sign-in, in the browser that started it, within `token_lifetime`; it is
+the same trust a password reset by email places in the mailbox. An account
+whose email is not verified is never linked: the sign-in is refused as a
+conflict, and the person signs in the way they did before.
+
+### Why someone else's link or pending sign-in is useless
+
+- The token is bound to a hash of the pending sign-in's cookie, a 256-bit
+  random value in an `HttpOnly`, `__Host-` cookie. Someone who obtains the
+  link (a forwarded message, a mail scanner, a shared mailbox) cannot use it
+  without that browser's cookie.
+- Someone who starts a sign-in with *their* provider account and *your*
+  address sends the link to your inbox; opening it in your browser does
+  nothing, because your browser does not hold their pending sign-in. Your
+  click cannot complete their sign-in.
+- A confirmation with the wrong cookie does not use the token, so an
+  attacker cannot burn your link either.

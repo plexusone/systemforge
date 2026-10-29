@@ -167,6 +167,11 @@ type socialLogin struct {
 
 	// emit records security events (Server.emitEvent).
 	emit func(context.Context, *audit.Event)
+
+	// mail sends verification links and verifyTokens keeps their tokens;
+	// both are nil when mail is not configured (ADR-003).
+	mail         *mailer
+	verifyTokens VerificationTokenStore
 }
 
 func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
@@ -228,6 +233,9 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 		clients:    s.storage,
 		oauth2:     s.oauth2,
 		limit:      s.limitRequest,
+
+		mail:         s.mail,
+		verifyTokens: s.verificationTokens,
 	}
 	if cfg.InsecureCookies {
 		s.logger.Warn("systemauth: InsecureCookies is set; login, state and sign-up cookies are not Secure. Use it for local development over plain HTTP only")
@@ -325,6 +333,12 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 		}
 		if sl.signupCodes != nil {
 			r.Get(SignupPath, sl.handleSignupPage)
+		}
+		if sl.mail != nil {
+			r.Get(VerifyEmailPath, sl.handleVerifyEmailPage)
+			r.Post(VerifyEmailResendPath, sl.handleVerifyEmailResend)
+			r.Get(VerifyEmailConfirmPath, sl.handleVerifyEmailConfirmPage)
+			r.Post(VerifyEmailConfirmPath, sl.handleVerifyEmailConfirm)
 		}
 	}
 	r.Get(LogoutPath, sl.handleLogoutPage)
@@ -572,7 +586,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		ctx = sl.takeAgeConfirmation(ctx, w, r, provider)
 	}
 	ctx = sl.withSignupCode(ctx, r)
-	p, err := ResolveExternalLogin(ctx, sl.directory, ExternalLogin{
+	login := ExternalLogin{
 		Provider:           provider,
 		Subject:            user.ProviderID,
 		Email:              user.Email,
@@ -581,7 +595,22 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		Name:               user.Name,
 		Username:           user.Username,
 		AvatarURL:          user.AvatarURL,
-	}, sl.now())
+	}
+	p, err := ResolveExternalLogin(ctx, sl.directory, login, sl.now())
+	// With mail configured, an unverified provider email is held for
+	// verification instead of refused (ADR-003).
+	if errors.Is(err, ErrEmailNotVerified) && sl.canVerifyEmail(login) {
+		sl.startEmailVerification(ctx, w, r, login, data.RedirectURL)
+		return
+	}
+	sl.completeSignIn(ctx, w, r, provider, data.RedirectURL, p, err)
+}
+
+// completeSignIn finishes a sign-in that ResolveExternalLogin resolved to
+// p, or answers its error: it establishes the login session and redirects
+// to redirectURL, re-validated in case the policy changed mid-flow.
+func (sl *socialLogin) completeSignIn(ctx context.Context, w http.ResponseWriter, r *http.Request, provider, redirectURL string, p *HumanPrincipal, err error) {
+	logger := LoggerFromContext(ctx)
 	if err != nil {
 		status, msg := http.StatusInternalServerError, "login failed"
 		if reason := signInRefusalReason(err); reason != "" {
@@ -595,7 +624,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, ErrPrincipalInactive):
 			status, msg = http.StatusForbidden, "account is disabled"
 		case errors.Is(err, errSignupAgeRequired):
-			target, rErr := sl.redirects.resolve(data.RedirectURL)
+			target, rErr := sl.redirects.resolve(redirectURL)
 			if rErr != nil {
 				target = sl.redirects.defaultTarget
 			}
@@ -628,7 +657,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	sl.clearSignupCode(w, r)
 
 	// Re-validate the stored target in case the policy changed mid-flow.
-	target, err := sl.redirects.resolve(data.RedirectURL)
+	target, err := sl.redirects.resolve(redirectURL)
 	if err != nil {
 		target = sl.redirects.defaultTarget
 	}

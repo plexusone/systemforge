@@ -33,6 +33,13 @@ type ExternalLogin struct {
 	// Only an authoritative email links a new identity to an existing
 	// account; see AuthoritativeEmail.
 	EmailAuthoritative bool
+	// EmailProven reports that SystemAuth itself verified Email in this
+	// sign-in: the person opened a verification link mailed to it, in the
+	// browser that started the sign-in (ADR-003). Proven control of the
+	// mailbox counts as verified and as authoritative, so the login may
+	// create an account or link to an existing one with that verified
+	// email, as an authoritative provider email does.
+	EmailProven bool
 	// Name is the display name.
 	Name string
 	// Username is the provider's handle for the person (the GitHub login),
@@ -85,8 +92,10 @@ type PrincipalDirectory interface {
 //     an email that already belongs to a principal gives ErrEmailConflict,
 //     and the person signs in with the method they used before.
 //
-// An unverified email never links to or creates an account. A verified but
-// not authoritative email never links: a provider can keep an address marked
+// A proven email (EmailProven) counts as verified and authoritative: the
+// person just showed control of the mailbox. Otherwise an unverified email
+// never links to or creates an account. A verified but not authoritative
+// email never links: a provider can keep an address marked
 // verified after its owner loses the mailbox, so linking on it would hand the
 // existing account to whoever holds the stale verification.
 func ResolveExternalLogin(ctx context.Context, dir PrincipalDirectory, login ExternalLogin, now time.Time) (*HumanPrincipal, error) {
@@ -94,6 +103,9 @@ func ResolveExternalLogin(ctx context.Context, dir PrincipalDirectory, login Ext
 		return nil, errors.New("systemauth: external login requires provider and subject")
 	}
 	login.Email = strings.TrimSpace(login.Email)
+	if login.EmailProven && login.Email != "" {
+		login.EmailVerified, login.EmailAuthoritative = true, true
+	}
 
 	// Two attempts: the second covers a concurrent first login for the same
 	// identity that won the unique (provider, subject) constraint.
