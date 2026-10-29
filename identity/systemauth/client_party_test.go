@@ -174,3 +174,38 @@ func TestEntStoragePartyRoundTrip(t *testing.T) {
 		t.Errorf("CreateClient with unknown party: %v", err)
 	}
 }
+
+// TestUpgradedConfigClientBecomesFirstParty covers an upgrade: a client from
+// the configuration file was stored before parties existed, so the party
+// migration marks it third_party. The next start rewrites it from the
+// configuration as first_party, and its users skip the consent screen
+// again.
+func TestUpgradedConfigClientBecomesFirstParty(t *testing.T) {
+	ctx := context.Background()
+	db := newEntTestClient(t, "party_upgrade")
+	storage := NewEntStorage(db, WithDefaultOwner(createTestOwner(t, db)))
+	cfg := Config{
+		Issuer:  testIssuer,
+		Clients: []ClientConfig{{ID: "suite-app", Type: "public", Name: "Suite app", RedirectURIs: []string{testRPCB}}},
+	}
+
+	if _, err := NewEmbedded(cfg, WithStorage(storage)); err != nil {
+		t.Fatalf("first start: %v", err)
+	}
+	// What the migration leaves for a row whose first_party flag was unset.
+	if _, err := db.OAuthApp.Update().Where(oauthapp.ClientIDEQ("suite-app")).
+		SetParty(oauthapp.PartyThirdParty).SetFirstParty(false).Save(ctx); err != nil {
+		t.Fatalf("simulate migrated row: %v", err)
+	}
+
+	if _, err := NewEmbedded(cfg, WithStorage(storage)); err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+	app, err := db.OAuthApp.Query().Where(oauthapp.ClientIDEQ("suite-app")).Only(ctx)
+	if err != nil {
+		t.Fatalf("query app: %v", err)
+	}
+	if app.Party == nil || *app.Party != oauthapp.PartyFirstParty || !app.FirstParty {
+		t.Errorf("after restart: party %v, first_party %v; want first_party", app.Party, app.FirstParty)
+	}
+}
