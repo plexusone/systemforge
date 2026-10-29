@@ -114,6 +114,14 @@
         {
           "description": "Ent tables `sf_billing_events`, `sf_billing_customers`, `sf_billing_orders`, `sf_billing_refunds`, `sf_billing_disputes` and `sf_billing_sellers`, created by the schema migration",
           "commit": "4f4b6a5"
+        },
+        {
+          "description": "`relyingparty.BFFConfig.LoginErrorPath` and `appauth.Options.LoginErrorPath`: a browser whose sign-in fails at the BFF's login or callback routes is redirected to the app's sign-in page with `?error=<CODE>` instead of shown a JSON error; requests that ask for JSON still get JSON",
+          "commit": "69ce7a4"
+        },
+        {
+          "description": "`relyingparty.BFF.SignOut` ends a browser session (deletes it, revokes its SystemAuth refresh token, clears the cookie) without writing a response, for handlers that serve their own sign-out; `/bff/auth/logout` calls it after its cross-origin check",
+          "commit": "fb08960"
         }
       ],
       "changed": [
@@ -126,6 +134,14 @@
         {
           "description": "A past-due subscription keeps its plan while the provider retries the payment, so the organization's entitlements no longer drop the paid tier during retries",
           "commit": "03abe3b"
+        },
+        {
+          "description": "Cookie-authenticated writes required a JSON body even with an allowed `Origin`, so signed-in browsers could not upload files with `multipart/form-data` or send bodyless writes; with an allowed `Origin` any body is now accepted, and without one the JSON body and an allowed `Referer` are still required",
+          "commit": "f59dd02"
+        },
+        {
+          "description": "`billing.NewCheckout` accepted loopback redirect URLs with any Stripe key; they now pass only with a test-mode key, and a provider that reports no mode counts as live",
+          "commit": "b906d66"
         }
       ],
       "removed": [
