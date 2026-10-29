@@ -1639,6 +1639,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1757,6 +1761,62 @@
     
   
     Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../systemauth/verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../systemauth/ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
   
 
     
@@ -2563,6 +2623,8 @@
       
         
       
+        
+      
     
     
     
@@ -2737,6 +2799,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4441,6 +4531,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4512,6 +4606,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -5549,35 +5699,35 @@ item carry <code>Refs: RMI-&lt;REPOSLUG&gt;-&lt;NNN&gt;</code>.</p>
 <h2 id="phase-1-omnimail-core-and-ses">Phase 1 — omnimail Core and SES<a class="headerlink" href="#phase-1-omnimail-core-and-ses" title="Permanent link">&para;</a></h2>
 <p><strong>Theme:</strong> A vendor-free transactional email library with a first production provider</p>
 <ul>
-<li>[ ] <code>RMI-OMNIMAIL-001</code> Message model and Sender interface</li>
+<li>[x] <code>RMI-OMNIMAIL-001</code> Message model and Sender interface</li>
 <li><code>Message</code> (from, to/cc/bcc, reply-to, subject, text and HTML bodies, headers, tags), address validation, MIME assembly, <code>Sender.Send(ctx, Message) (SendResult, error)</code>, typed errors (invalid address, rejected, throttled, transient)</li>
-<li>[ ] <code>RMI-OMNIMAIL-002</code> Templates and built-in senders</li>
+<li>[x] <code>RMI-OMNIMAIL-002</code> Templates and built-in senders</li>
 <li>text/html template pair rendering with safe defaults; SMTP sender (STARTTLS/TLS, auth); log and memory senders for development and tests</li>
 <li>Depends on: <code>RMI-OMNIMAIL-001</code></li>
-<li>[ ] <code>RMI-OMNIMAIL-003</code> Provider conformance suite</li>
+<li>[x] <code>RMI-OMNIMAIL-003</code> Provider conformance suite</li>
 <li><code>providertest</code> package every adapter runs: addressing, bodies, headers, error classification, context cancellation</li>
 <li>Depends on: <code>RMI-OMNIMAIL-001</code></li>
-<li>[ ] <code>RMI-OMNIAWS-001</code> AWS SES v2 adapter for omnimail</li>
+<li>[x] <code>RMI-OMNIAWS-001</code> AWS SES v2 adapter for omnimail</li>
 <li><code>omni-aws/omnimail</code>: SES v2 SendEmail with configuration set and tags, throttling/transient error mapping, conformance suite against a fake SES endpoint</li>
 <li>Depends on: <code>RMI-OMNIMAIL-003</code></li>
 </ul>
 <h2 id="phase-2-email-verification-in-systemauth">Phase 2 — Email Verification in SystemAuth<a class="headerlink" href="#phase-2-email-verification-in-systemauth" title="Permanent link">&para;</a></h2>
 <p><strong>Theme:</strong> SystemAuth proves address control once, for every application</p>
 <ul>
-<li>[ ] <code>RMI-SYSTEMFORGE-086</code> Verification token store</li>
+<li>[x] <code>RMI-SYSTEMFORGE-086</code> Verification token store</li>
 <li>Single-use, purpose-scoped (<code>verify_email</code>, <code>email_change</code>) tokens stored as hashes with expiry (default 30 minutes); Ent and memory implementations with the shared store conformance suite; expired-row cleanup</li>
 <li>Depends on: <code>RMI-OMNIMAIL-001</code></li>
-<li>[ ] <code>RMI-SYSTEMFORGE-087</code> Verify-email step for social login</li>
+<li>[x] <code>RMI-SYSTEMFORGE-087</code> Verify-email step for social login</li>
 <li>When the provider email is unverified, hold the login as pending, send a verification link, and on confirmation in the same browser session mark the email verified and complete account linking or creation; verify-email page with resend</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-086</code></li>
-<li>[ ] <code>RMI-SYSTEMFORGE-088</code> Email change with verification</li>
+<li>[x] <code>RMI-SYSTEMFORGE-088</code> Email change with verification</li>
 <li>Change the principal's email only after the new address is verified; notify the old address; revoke the pending change on cancel</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-086</code></li>
-<li>[ ] <code>RMI-SYSTEMFORGE-089</code> Mail configuration, templates, and abuse controls</li>
+<li>[x] <code>RMI-SYSTEMFORGE-089</code> Mail configuration, templates, and abuse controls</li>
 <li><code>mail</code> config (provider: ses | smtp | log, from address, branding), branded verification templates, per-address and per-client send limits, responses that do not reveal account existence; production mode refuses the log sender</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-087</code></li>
 <li>Depends on: <code>RMI-OMNIAWS-001</code></li>
-<li>[ ] <code>RMI-SYSTEMFORGE-090</code> Verified-email propagation and documentation</li>
+<li>[x] <code>RMI-SYSTEMFORGE-090</code> Verified-email propagation and documentation</li>
 <li><code>email_verified</code> and verification time in ID tokens and UserInfo; relying-party guide for reading it; deployment guide for SES (domain identity, DKIM, SPF, DMARC)</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-089</code></li>
 </ul>

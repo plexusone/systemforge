@@ -1645,6 +1645,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1761,6 +1765,62 @@
     
   
     Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
   
 
     
@@ -1901,6 +1961,17 @@
     <span class="md-ellipsis">
       
         Flags and environment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secrets
       
     </span>
   </a>
@@ -2081,6 +2152,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Upgrading">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#client-party-column" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client party column
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2830,6 +2918,8 @@
       
         
       
+        
+      
     
     
     
@@ -3004,6 +3094,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4708,6 +4826,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4779,6 +4901,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -5802,6 +5980,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secrets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#invite-only-sign-up" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5976,6 +6165,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Upgrading">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#client-party-column" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client party column
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -6016,8 +6222,9 @@ proxy (Caddy, nginx). To run SystemAuth inside another Go binary instead, see
   (<code>dpop.replay_cache_redis_url</code>), or <code>dpop.single_instance: true</code> when one
   instance serves SystemAuth (see <a href="#dpop">DPoP</a>),</li>
 </ul>
-<p>and it rejects <code>social_login.insecure_cookies</code> and statically configured
-clients that set <code>allow_bearer_tokens</code>. <code>--dev</code> relaxes all of these
+<p>and it rejects <code>social_login.insecure_cookies</code>, statically configured
+clients that set <code>allow_bearer_tokens</code>, and <code>mail.provider: log</code> (see
+<a href="../verified-email/">Verified Email</a>). <code>--dev</code> relaxes all of these
 (ephemeral key, in-memory storage, <code>http://localhost</code> issuer).</p>
 <p>It also warns, without refusing, when the <a href="#rate-limits">rate limit</a>
 counters are kept in memory and neither <code>rate_limit.single_instance</code> nor
@@ -6044,7 +6251,8 @@ waiver is logged as a warning at every start:</p>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">client_secret_client_credentials</span><span class="w">  </span><span class="c1"># serve client_credentials with a shared secret</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bearer_token_clients</span><span class="w">              </span><span class="c1"># serve clients with allow_bearer_tokens</span>
 </code></pre></div>
-<p>The replay cache has no waiver: <code>dpop.single_instance: true</code> is the
+<p>The log mail provider has no waiver: it writes verification links to the
+server log. The replay cache has no waiver either: <code>dpop.single_instance: true</code> is the
 statement that one instance serves SystemAuth, and is also logged as a
 warning.</p>
 <p>With a database configured, social login sessions, in-flight upstream logins
@@ -6072,7 +6280,7 @@ when it is not on the command line:</p>
 <td><code>--config</code>, <code>-c</code></td>
 <td><code>SYSTEMAUTH_CONFIG</code></td>
 <td>—</td>
-<td>YAML/JSON config; <code>${ENV}</code> references are expanded</td>
+<td>YAML/JSON config; <code>${ENV}</code> references are expanded (see <a href="#secrets">Secrets</a>)</td>
 </tr>
 <tr>
 <td><code>--addr</code></td>
@@ -6144,6 +6352,45 @@ when it is not on the command line:</p>
 </table>
 <p><code>systemauth validate</code> checks a configuration, including the production
 requirements; <code>systemauth migrate</code> runs migrations only.</p>
+<h2 id="secrets">Secrets<a class="headerlink" href="#secrets" title="Permanent link">&para;</a></h2>
+<p><code>${NAME}</code> and <code>$NAME</code> references in the secret fields of the configuration
+(client secrets, <code>keys.*</code>, <code>tokens.hmac_secret</code> and
+<code>tokens.hmac_verification_secret</code>, <code>database.dsn</code>, <code>dpop.nonce_secret</code>,
+<code>dpop.replay_cache_redis_url</code>, <code>rate_limit.redis_url</code>, social login and
+federation credentials, and the SpiceDB token and URIs) are resolved by the
+<code>secrets</code> package through an <a href="https://github.com/plexusone/omnivault">omnivault</a>
+vault. By default that vault is the process environment, and expansion works
+exactly like <code>os.ExpandEnv</code>: a missing variable becomes the empty string. A
+value that is entirely one <code>${NAME}</code> reference, such as
+<code>private_key_pem: ${SYSTEMAUTH_SIGNING_KEY}</code>, is substituted without being
+scanned again, so a <code>$</code> inside the secret is kept.</p>
+<p>To read the references from another vault, name it in <code>secrets.vault</code>; each
+<code>NAME</code> is then the secret's path in that vault:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">secrets</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">vault</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">file:///etc/systemauth/secrets</span><span class="w">   </span><span class="c1"># or env://PREFIX_, or ${SECRETS_VAULT}</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">tokens</span><span class="p">:</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">hmac_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${systemauth/hmac}</span>
+</code></pre></div>
+<p>The built-in schemes are <code>env://</code>, <code>file://</code> and <code>memory://</code>. SystemForge
+imports no cloud SDK: to use a cloud secret manager, build your own binary
+whose <code>main</code> package imports that omnivault provider's registration package
+(which calls <code>omnivault.RegisterProvider</code> for its scheme), or pass a resolver
+to <code>systemauthsvc.LoadConfigWithResolver</code> (or
+<code>systemauth.LoadConfigWithResolver</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">v</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">newCloudVault</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="c1">// any omnivault.Vault, e.g. from a cloud provider package</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">}</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nx">r</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">secrets</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">}</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="k">defer</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nx">cfg</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">systemauthsvc</span><span class="p">.</span><span class="nx">LoadConfigWithResolver</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">path</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">)</span>
+</code></pre></div>
+<p>A resolver passed this way takes precedence over <code>secrets.vault</code>. Errors
+other than a missing secret, such as an unreachable vault or a denied read,
+fail the load rather than leaving the field empty.</p>
 <h2 id="invite-only-sign-up">Invite-only sign-up<a class="headerlink" href="#invite-only-sign-up" title="Permanent link">&para;</a></h2>
 <p>Start with <code>--invite-only</code> to let new accounts in only by invitation, for
 example while a deployment is being brought up. An email invite names an
@@ -6153,9 +6400,9 @@ Invite codes, shared as links, are described in
 <a href="../../guides/invite-gated-signup/">Invite-Gated Sign-Up</a>.
 People who already have an account sign in as before, and an unverified
 address never matches.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>systemauth<span class="w"> </span>invite<span class="w"> </span>add<span class="w"> </span>ada@example.com<span class="w"> </span>grace@example.com<span class="w"> </span>--note<span class="w"> </span><span class="s2">&quot;launch cohort&quot;</span><span class="w"> </span>--expires-in<span class="w"> </span>168h
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>systemauth<span class="w"> </span>invite<span class="w"> </span>list<span class="w">          </span><span class="c1"># pending invites; --all includes redeemed ones</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>systemauth<span class="w"> </span>invite<span class="w"> </span>revoke<span class="w"> </span>ada@example.com
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>systemauth<span class="w"> </span>invite<span class="w"> </span>add<span class="w"> </span>ada@example.com<span class="w"> </span>grace@example.com<span class="w"> </span>--note<span class="w"> </span><span class="s2">&quot;launch cohort&quot;</span><span class="w"> </span>--expires-in<span class="w"> </span>168h
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>systemauth<span class="w"> </span>invite<span class="w"> </span>list<span class="w">          </span><span class="c1"># pending invites; --all includes redeemed ones</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>systemauth<span class="w"> </span>invite<span class="w"> </span>revoke<span class="w"> </span>ada@example.com
 </code></pre></div>
 <ul>
 <li><strong>Redeeming:</strong> the first account created with an address consumes its
@@ -6171,8 +6418,8 @@ address never matches.</p>
   address and per submitted address. Nothing is emailed; operators export
   the list:</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>systemauth<span class="w"> </span>waitlist<span class="w"> </span>list<span class="w">          </span><span class="c1"># oldest first; --csv to export</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>systemauth<span class="w"> </span>waitlist<span class="w"> </span>remove<span class="w"> </span>ada@example.com
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>systemauth<span class="w"> </span>waitlist<span class="w"> </span>list<span class="w">          </span><span class="c1"># oldest first; --csv to export</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>systemauth<span class="w"> </span>waitlist<span class="w"> </span>remove<span class="w"> </span>ada@example.com
 </code></pre></div>
 <p>A host binary sets the page's wording with <code>Options.WaitlistPage</code> and
   reads the list with <code>Service.SignupWaitlist()</code>. Behind a proxy, configure
@@ -6189,8 +6436,8 @@ address never matches.</p>
 <h2 id="minimum-sign-up-age">Minimum sign-up age<a class="headerlink" href="#minimum-sign-up-age" title="Permanent link">&para;</a></h2>
 <p>Set <code>social_login.signup_minimum_age</code> to ask a person their birth month and
 year before their first upstream login creates an account:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">social_login</span><span class="p">:</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">signup_minimum_age</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">18</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">social_login</span><span class="p">:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">signup_minimum_age</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">18</span>
 </code></pre></div>
 <ul>
 <li><strong>Nothing is kept before the answer.</strong> The login is parked with only its
@@ -6237,10 +6484,10 @@ never appears.</p>
 accounts at services such as a CDN or analytics product. It needs a database
 and the role-based authorization mode, and it adds a keys directory that must
 be backed up with the database:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">connections</span><span class="p">:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">keys_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/lib/systemauth/keys</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">vault</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">env://</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">root_key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SYSTEMAUTH_KEYS_ROOT</span><span class="w">   </span><span class="c1"># 32 bytes, base64 or hex; keep a copy offline</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">connections</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">keys_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/lib/systemauth/keys</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">vault</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">env://</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">root_key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SYSTEMAUTH_KEYS_ROOT</span><span class="w">   </span><span class="c1"># 32 bytes, base64 or hex; keep a copy offline</span>
 </code></pre></div>
 <p><code>systemauth migrate</code> creates the <code>connectforge_*</code> tables and, on
 PostgreSQL, enables row-level security on them. <code>systemauth serve</code> runs the
@@ -6248,7 +6495,7 @@ key lifecycle jobs. See <a href="../../guides/connections/">Connections</a> and
 <a href="../../guides/key-management/">Key management</a>.</p>
 <h2 id="signing-key">Signing key<a class="headerlink" href="#signing-key" title="Permanent link">&para;</a></h2>
 <p>Generate a key once and keep it in your secret store:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>openssl<span class="w"> </span>genpkey<span class="w"> </span>-algorithm<span class="w"> </span>RSA<span class="w"> </span>-pkeyopt<span class="w"> </span>rsa_keygen_bits:3072<span class="w"> </span>-out<span class="w"> </span>systemauth-signing.pem
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>openssl<span class="w"> </span>genpkey<span class="w"> </span>-algorithm<span class="w"> </span>RSA<span class="w"> </span>-pkeyopt<span class="w"> </span>rsa_keygen_bits:3072<span class="w"> </span>-out<span class="w"> </span>systemauth-signing.pem
 </code></pre></div>
 <p>Provide it as a file readable only by the service user, or as PEM content in
 <code>SYSTEMAUTH_SIGNING_KEY</code>. The JWKS <code>kid</code> defaults to the key's RFC 7638
@@ -6265,12 +6512,12 @@ every live token verifying:</p>
 <p><strong>Pre-stage.</strong> Generate key N and add it as a verification key while
    N-1 still signs. Relying parties see N in the JWKS before any token
    signed with it exists.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">keys</span><span class="p">:</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/systemauth/signing-2.pem</span><span class="w">   </span><span class="c1"># N-1, signing</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">key_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">signing-2</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">verification_keys</span><span class="p">:</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">key_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">signing-3</span><span class="w">                               </span><span class="c1"># N, pre-staged</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="nt">public_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/systemauth/signing-3.pem</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">keys</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/systemauth/signing-2.pem</span><span class="w">   </span><span class="c1"># N-1, signing</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">key_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">signing-2</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">verification_keys</span><span class="p">:</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">key_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">signing-3</span><span class="w">                               </span><span class="c1"># N, pre-staged</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">      </span><span class="nt">public_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/systemauth/signing-3.pem</span>
 </code></pre></div>
 </li>
 <li>
@@ -6278,12 +6525,12 @@ every live token verifying:</p>
    <code>verification_keys</code>. Drop N-2 now, never N-1: tokens N-1 signed are in
    use until they expire. Rolling this deploy back to step 1 still verifies
    the tokens N signed meanwhile, because step 1 publishes N.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">keys</span><span class="p">:</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/systemauth/signing-3.pem</span><span class="w">   </span><span class="c1"># N, signing</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">key_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">signing-3</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">verification_keys</span><span class="p">:</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">key_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">signing-2</span><span class="w">                               </span><span class="c1"># N-1</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">      </span><span class="nt">public_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/systemauth/signing-2.pem</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">keys</span><span class="p">:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/systemauth/signing-3.pem</span><span class="w">   </span><span class="c1"># N, signing</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">key_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">signing-3</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">verification_keys</span><span class="p">:</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">key_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">signing-2</span><span class="w">                               </span><span class="c1"># N-1</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">      </span><span class="nt">public_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/systemauth/signing-2.pem</span>
 </code></pre></div>
 </li>
 </ol>
@@ -6299,10 +6546,10 @@ refresh tokens are not signed with it.</p>
 with an HMAC secret, not the signing key. Set <code>tokens.hmac_secret</code> to at
 least 32 bytes, the same on every instance, and keep it in your secret
 store like the signing key:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">tokens</span><span class="p">:</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">hmac_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_TOKEN_HMAC_SECRET}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">tokens</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">hmac_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_TOKEN_HMAC_SECRET}</span>
 </code></pre></div>
 <p>Outside <code>--dev</code> the server refuses to start without it, unless
 <code>production.allow</code> names <code>ephemeral_hmac_secret</code>. SystemAuth then generates
@@ -6326,62 +6573,62 @@ passed since the promotion: a refresh token signed with it and not used
 since is refused once it is dropped, and its user signs in again.</p>
 <h2 id="example-systemd-caddy">Example: systemd + Caddy<a class="headerlink" href="#example-systemd-caddy" title="Permanent link">&para;</a></h2>
 <p><code>/etc/systemauth/env</code> (mode <code>0600</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nv">SYSTEMAUTH_ARGS</span><span class="o">=</span>-addr<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>-config<span class="w"> </span>/etc/systemauth/config.yaml<span class="w"> </span>-log-format<span class="w"> </span>json
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nv">SYSTEMAUTH_SIGNING_KEY_FILE</span><span class="o">=</span>/etc/systemauth/signing.pem
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://systemauth:secret@127.0.0.1:5432/systemauth?sslmode<span class="o">=</span>disable
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nv">GITHUB_CLIENT_ID</span><span class="o">=</span>...
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="nv">GITHUB_CLIENT_SECRET</span><span class="o">=</span>...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nv">SYSTEMAUTH_ARGS</span><span class="o">=</span>-addr<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>-config<span class="w"> </span>/etc/systemauth/config.yaml<span class="w"> </span>-log-format<span class="w"> </span>json
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nv">SYSTEMAUTH_SIGNING_KEY_FILE</span><span class="o">=</span>/etc/systemauth/signing.pem
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://systemauth:secret@127.0.0.1:5432/systemauth?sslmode<span class="o">=</span>disable
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nv">GITHUB_CLIENT_ID</span><span class="o">=</span>...
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nv">GITHUB_CLIENT_SECRET</span><span class="o">=</span>...
 </code></pre></div>
 <p><code>/etc/systemd/system/systemauth.service</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">[Unit]</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="na">Description</span><span class="o">=</span><span class="s">SystemAuth OAuth 2.0 / OpenID Connect server</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="na">After</span><span class="o">=</span><span class="s">network-online.target postgresql.service</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="na">Wants</span><span class="o">=</span><span class="s">network-online.target</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="k">[Service]</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="na">EnvironmentFile</span><span class="o">=</span><span class="s">/etc/systemauth/env</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/local/bin/systemauth $SYSTEMAUTH_ARGS</span>
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="na">User</span><span class="o">=</span><span class="s">systemauth</span>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span>
-<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="na">NoNewPrivileges</span><span class="o">=</span><span class="s">true</span>
-<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="na">ProtectSystem</span><span class="o">=</span><span class="s">strict</span>
-<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>
-<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="k">[Install]</span>
-<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">[Unit]</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="na">Description</span><span class="o">=</span><span class="s">SystemAuth OAuth 2.0 / OpenID Connect server</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="na">After</span><span class="o">=</span><span class="s">network-online.target postgresql.service</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="na">Wants</span><span class="o">=</span><span class="s">network-online.target</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="k">[Service]</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="na">EnvironmentFile</span><span class="o">=</span><span class="s">/etc/systemauth/env</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/local/bin/systemauth $SYSTEMAUTH_ARGS</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="na">User</span><span class="o">=</span><span class="s">systemauth</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="na">NoNewPrivileges</span><span class="o">=</span><span class="s">true</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="na">ProtectSystem</span><span class="o">=</span><span class="s">strict</span>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="k">[Install]</span>
+<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
 </code></pre></div>
 <p>systemd splits <code>$SYSTEMAUTH_ARGS</code> into words, so the flags can live in the
 environment file. <code>/etc/systemauth/config.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">issuer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://auth.example.com</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nt">database</span><span class="p">:</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">dsn</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${DATABASE_URL}</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nt">keys</span><span class="p">:</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">  </span><span class="nt">private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_SIGNING_KEY_FILE}</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="nt">tokens</span><span class="p">:</span>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">  </span><span class="nt">hmac_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_TOKEN_HMAC_SECRET}</span>
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="nt">dpop</span><span class="p">:</span>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">  </span><span class="nt">single_instance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># or replay_cache_redis_url with several instances</span>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="nt">client_address</span><span class="p">:</span>
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">  </span><span class="nt">trusted_proxies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;127.0.0.1/32&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;::1/128&quot;</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># Caddy on this host</span>
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="nt">rate_limit</span><span class="p">:</span>
-<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">  </span><span class="nt">single_instance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># or redis_url with several instances</span>
-<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="nt">features</span><span class="p">:</span>
-<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">  </span><span class="nt">require_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">  </span><span class="nt">enable_jwt_access_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="nt">social_login</span><span class="p">:</span>
-<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="w">  </span><span class="nt">github</span><span class="p">:</span>
-<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">    </span><span class="nt">client_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_ID}</span>
-<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="w">    </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_SECRET}</span>
-<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="w">  </span><span class="nt">allowed_redirect_origins</span><span class="p">:</span>
-<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://app.example.com</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">issuer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://auth.example.com</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nt">database</span><span class="p">:</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="nt">dsn</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${DATABASE_URL}</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="nt">keys</span><span class="p">:</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span><span class="nt">private_key_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_SIGNING_KEY_FILE}</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="nt">tokens</span><span class="p">:</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">  </span><span class="nt">hmac_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_TOKEN_HMAC_SECRET}</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="nt">dpop</span><span class="p">:</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">  </span><span class="nt">single_instance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># or replay_cache_redis_url with several instances</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="nt">client_address</span><span class="p">:</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">  </span><span class="nt">trusted_proxies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;127.0.0.1/32&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;::1/128&quot;</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># Caddy on this host</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="nt">rate_limit</span><span class="p">:</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">  </span><span class="nt">single_instance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># or redis_url with several instances</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="nt">features</span><span class="p">:</span>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a><span class="w">  </span><span class="nt">require_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="w">  </span><span class="nt">enable_jwt_access_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a><span class="nt">social_login</span><span class="p">:</span>
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a><span class="w">  </span><span class="nt">github</span><span class="p">:</span>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a><span class="w">    </span><span class="nt">client_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_ID}</span>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a><span class="w">    </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_SECRET}</span>
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a><span class="w">  </span><span class="nt">allowed_redirect_origins</span><span class="p">:</span>
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://app.example.com</span>
 </code></pre></div>
 <p>Caddy terminates TLS and proxies to the loopback listener, replacing
 <code>X-Forwarded-For</code> with the client's address:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>auth.example.com {
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    reverse_proxy 127.0.0.1:8081 {
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>        header_up X-Forwarded-For {client_ip}
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    }
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>auth.example.com {
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    reverse_proxy 127.0.0.1:8081 {
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>        header_up X-Forwarded-For {client_ip}
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    }
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>}
 </code></pre></div>
 <p>Behind a CDN or edge proxy, give Caddy the edge's networks
 (<code>trusted_proxies</code>) and the header it writes (<code>client_ip_headers</code>) in its
@@ -6391,9 +6638,9 @@ edge.</p>
 <p>SystemAuth finds a request's client address for its rate limits, the
 addresses it records and audit events. It believes a forwarding header only
 from the networks in <code>client_address.trusted_proxies</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">client_address</span><span class="p">:</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">trusted_proxies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;127.0.0.1/32&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;::1/128&quot;</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">header</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">X-Forwarded-For</span><span class="w">   </span><span class="c1"># the default; or a single-value header such as CF-Connecting-IP</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">client_address</span><span class="p">:</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">trusted_proxies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;127.0.0.1/32&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;::1/128&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">header</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">X-Forwarded-For</span><span class="w">   </span><span class="c1"># the default; or a single-value header such as CF-Connecting-IP</span>
 </code></pre></div>
 <p><code>X-Forwarded-For</code> is read from the right, skipping trusted proxies; a
 single-value header must hold exactly one address. Without
@@ -6418,16 +6665,16 @@ behind a proxy is the proxy itself, so all clients would share one limit. See
 <code>RateLimit-Policy</code> and <code>RateLimit</code> headers. When the storage fails, the
 default layer lets requests through and logs; the token, login and sign-up
 limits refuse with <code>503</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">rate_limit</span><span class="p">:</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">redis_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_RATE_LIMIT_REDIS_URL}</span><span class="w">   </span><span class="c1"># shared by several instances</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="c1"># single_instance: true                        # or one instance, in memory</span>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">requests</span><span class="p">:</span><span class="w"> </span><span class="nv">300</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">1m</span><span class="p p-Indicator">}</span>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span><span class="nt">exempt_networks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;10.20.0.0/16&quot;</span><span class="p p-Indicator">]</span><span class="w">              </span><span class="c1"># relying parties&#39; servers</span>
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span><span class="nt">routes</span><span class="p">:</span>
-<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">token</span>
-<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">      </span><span class="nt">paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;/oauth/token&quot;</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">      </span><span class="nt">per_address</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">requests</span><span class="p">:</span><span class="w"> </span><span class="nv">60</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">1m</span><span class="p p-Indicator">}</span>
-<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">      </span><span class="nt">per_client</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">requests</span><span class="p">:</span><span class="w"> </span><span class="nv">600</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">1m</span><span class="p p-Indicator">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">rate_limit</span><span class="p">:</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">redis_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_RATE_LIMIT_REDIS_URL}</span><span class="w">   </span><span class="c1"># shared by several instances</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="c1"># single_instance: true                        # or one instance, in memory</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">requests</span><span class="p">:</span><span class="w"> </span><span class="nv">300</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">1m</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">  </span><span class="nt">exempt_networks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;10.20.0.0/16&quot;</span><span class="p p-Indicator">]</span><span class="w">              </span><span class="c1"># relying parties&#39; servers</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">  </span><span class="nt">routes</span><span class="p">:</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">token</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">      </span><span class="nt">paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;/oauth/token&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="w">      </span><span class="nt">per_address</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">requests</span><span class="p">:</span><span class="w"> </span><span class="nv">60</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">1m</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="w">      </span><span class="nt">per_client</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">requests</span><span class="p">:</span><span class="w"> </span><span class="nv">600</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">1m</span><span class="p p-Indicator">}</span>
 </code></pre></div>
 <p>Counters in memory suit one instance. With several instances set
 <code>rate_limit.redis_url</code> (or pass <code>Options.RateLimitStorage</code>): otherwise each
@@ -6513,18 +6760,18 @@ proof with its token requests unless its registration sets the legacy
 Outside <code>--dev</code> the server refuses to start unless the replay cache that
 rejects reused proofs is shared by every instance, or one instance is
 declared. With one instance:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">dpop</span><span class="p">:</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">single_instance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">dpop</span><span class="p">:</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">single_instance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
 <p>When several instances serve SystemAuth, share the cache:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">dpop</span><span class="p">:</span>
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">replay_cache_redis_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_DPOP_REDIS_URL}</span><span class="w">   </span><span class="c1"># redis://host:6379/0</span>
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="c1"># Optional server nonces (RFC 9449 §8):</span>
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="c1"># require_nonce: true</span>
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">  </span><span class="c1"># nonce_secret: ${SYSTEMAUTH_DPOP_NONCE_SECRET}         # 32+ bytes, same on every instance</span>
-<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">  </span><span class="c1"># External base URL of the APIs SystemAuth protects (Middleware,</span>
-<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">  </span><span class="c1"># BearerAccess), when a proxy strips a path prefix:</span>
-<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">  </span><span class="c1"># resource_base_url: https://example.com/api</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nt">dpop</span><span class="p">:</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">replay_cache_redis_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_DPOP_REDIS_URL}</span><span class="w">   </span><span class="c1"># redis://host:6379/0</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="c1"># Optional server nonces (RFC 9449 §8):</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span><span class="c1"># require_nonce: true</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span><span class="c1"># nonce_secret: ${SYSTEMAUTH_DPOP_NONCE_SECRET}         # 32+ bytes, same on every instance</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">  </span><span class="c1"># External base URL of the APIs SystemAuth protects (Middleware,</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">  </span><span class="c1"># BearerAccess), when a proxy strips a path prefix:</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">  </span><span class="c1"># resource_base_url: https://example.com/api</span>
 </code></pre></div>
 <p>Without <code>replay_cache_redis_url</code> the cache is in memory, which suits a single
 instance only: with per-instance caches, a proof replayed to another
@@ -6537,6 +6784,18 @@ every existing application then requires DPoP until the column is set for it.</p
 for example the <code>subject</code> columns on <code>sf_oauth_auth_codes</code> / <code>sf_oauth_tokens</code>
 and the now-nullable <code>sf_oauth_auth_codes.user_id</code>. Run <code>systemauth migrate</code>
 first if the service user lacks DDL privileges.</p>
+<h3 id="client-party-column">Client party column<a class="headerlink" href="#client-party-column" title="Permanent link">&para;</a></h3>
+<p>Each OAuth application records its party in <code>sf_oauth_apps.party</code>
+(<code>first_party</code>, <code>second_party</code> or <code>third_party</code>; see
+<a href="../overview/#client-party">Client party</a>). Startup migration adds the column
+empty; an application without a party is read by its older <code>first_party</code> flag
+(set means <code>first_party</code>, otherwise <code>third_party</code>), and clients from the
+configuration file are rewritten with their party at startup. Without startup
+migration, run <code>migrations/0012_oauth_app_party.sql</code>, which also fills the
+column from <code>first_party</code>. Then set <code>party</code> on any runtime-registered client
+the operator owns (<code>first_party</code>) or a customer owns (<code>second_party</code>):
+otherwise its users are asked for consent. <code>social_login.skip_consent</code> no
+longer skips consent and can be removed.</p>
 
 
 

@@ -1868,6 +1868,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1986,6 +1990,62 @@
     
   
     Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
   
 
     
@@ -2792,6 +2852,8 @@
       
         
       
+        
+      
     
     
     
@@ -2966,6 +3028,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4670,6 +4760,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4741,6 +4835,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -6022,8 +6172,15 @@
 <td>With challenge</td>
 <td>Must be <code>S256</code></td>
 </tr>
+<tr>
+<td><code>prompt</code></td>
+<td>No</td>
+<td>SystemAuth: <code>none</code> (no page; <code>login_required</code> or <code>consent_required</code> instead), <code>login</code> (log in again), <code>consent</code> (ask for consent again) or <code>select_account</code> (no effect). See <a href="../../systemauth/social-login/#silent-sign-in-and-prompt">Silent sign-in and prompt</a></td>
+</tr>
 </tbody>
 </table>
+<p>SystemAuth asks for consent only for second- and third-party clients; see
+<a href="../../systemauth/overview/#client-party">Client party</a>.</p>
 <h2 id="step-2-user-authentication">Step 2: User Authentication<a class="headerlink" href="#step-2-user-authentication" title="Permanent link">&para;</a></h2>
 <p>SystemForge redirects to your login page if the user isn't authenticated:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// In AuthorizeEndpoint</span>

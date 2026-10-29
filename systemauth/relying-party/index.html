@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://plexusone.github.io/systemforge/systemauth/relying-party/">
       
       
-        <link rel="prev" href="../social-login/">
+        <link rel="prev" href="../ses-deployment/">
       
       
         <link rel="next" href="../deployment/">
@@ -1645,6 +1645,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1778,6 +1782,62 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1878,6 +1938,17 @@
     <span class="md-ellipsis">
       
         Account linking
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-email-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading email verification
       
     </span>
   </a>
@@ -2780,6 +2851,8 @@
       
         
       
+        
+      
     
     
     
@@ -2954,6 +3027,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4658,6 +4759,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4729,6 +4834,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -5757,6 +5918,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#reading-email-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading email verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#memberships" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -6098,6 +6270,66 @@ after <code>POST /bff/auth/logout</code>.</p>
 <p>An unverified email never links to or creates a principal; an email held by an
 unverified (or differently linked) local principal is a conflict (<code>409
 ACCOUNT_CONFLICT</code>).</p>
+<h2 id="reading-email-verification">Reading email verification<a class="headerlink" href="#reading-email-verification" title="Permanent link">&para;</a></h2>
+<p>SystemAuth proves address control for every application
+(<a href="../verified-email/">Verified Email</a>); a relying party sends no mail of its
+own. With the <code>email</code> scope, the ID token and UserInfo carry:</p>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>email</code></td>
+<td>string</td>
+<td>The principal's current address</td>
+</tr>
+<tr>
+<td><code>email_verified</code></td>
+<td>boolean</td>
+<td><code>true</code> when SystemAuth considers the address verified: asserted by the provider at sign-up, proven with a verification link, or confirmed by an email change</td>
+</tr>
+<tr>
+<td><code>email_verified_at</code></td>
+<td>NumericDate (seconds since the epoch)</td>
+<td>When the current address was verified. <strong>SystemForge extension</strong>, not part of OpenID Connect Core; present only with <code>email_verified: true</code> and a known time, and listed in discovery's <code>claims_supported</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>relyingparty</code> decodes them into <code>VerifiedIdentity.Email</code>, <code>EmailVerified</code>
+and <code>EmailVerifiedAt</code> (a <code>time.Time</code>, zero when absent), preferring UserInfo
+as the fresher source:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">IdentityFromClaims</span><span class="p">(</span><span class="nx">idToken</span><span class="p">,</span><span class="w"> </span><span class="nx">userInfo</span><span class="p">)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">}</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">switch</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="k">case</span><span class="w"> </span><span class="p">!</span><span class="nx">id</span><span class="p">.</span><span class="nx">EmailVerified</span><span class="p">:</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="c1">// Do not trust the address: no linking by email, no mail to it</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="c1">// that grants anything.</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="k">case</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Since</span><span class="p">(</span><span class="nx">id</span><span class="p">.</span><span class="nx">EmailVerifiedAt</span><span class="p">)</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">365</span><span class="o">*</span><span class="mi">24</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">:</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="c1">// Verified long ago: a policy may ask for a recent change or</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="c1">// re-verification before a sensitive action.</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="p">}</span>
+</code></pre></div>
+<p>Rules for relying parties:</p>
+<ul>
+<li><strong>Key accounts by <code>sub</code>, never by email.</strong> A person can change their
+  email; the <code>sub</code> stays.</li>
+<li><strong>Treat <code>email_verified: false</code> or an absent claim as unverified</strong>, and do
+  not link accounts on such an address (<code>ResolvePrincipal</code> already does not).</li>
+<li><strong>Ignore <code>email_verified_at</code> without <code>email_verified: true</code>.</strong> A time that
+  is absent means only that it is not known (for example a principal created
+  before SystemAuth recorded it), not that the address is unverified.</li>
+<li><strong>Expect the address and its time to change.</strong> After an email change, the
+  next ID token or UserInfo response carries the new address and a new
+  <code>email_verified_at</code>; tokens issued before keep the old values until they
+  expire.</li>
+</ul>
 <h2 id="memberships">Memberships<a class="headerlink" href="#memberships" title="Permanent link">&para;</a></h2>
 <p>Organization memberships (in <code>/bff/session</code>, <code>/bff/api/v1/users/me</code> and
 <code>AuthenticatedPrincipal.Memberships</code>) come from a <code>MembershipSource</code>, which
@@ -6137,17 +6369,22 @@ relying parties do not keep tables of their own. The sources:</p>
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">bff</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewBFF</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BFFConfig</span><span class="p">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">Client</span><span class="p">:</span><span class="w">      </span><span class="nx">client</span><span class="p">,</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">Principals</span><span class="p">:</span><span class="w">  </span><span class="nx">principals</span><span class="p">,</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nx">Memberships</span><span class="p">:</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">ClaimsOrRemoteMemberships</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">RemoteMemberships</span><span class="p">(</span><span class="nx">client</span><span class="p">),</span><span class="w"> </span><span class="nx">logger</span><span class="p">),</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">bff</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewBFF</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BFFConfig</span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">Client</span><span class="p">:</span><span class="w">      </span><span class="nx">client</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">Principals</span><span class="p">:</span><span class="w">  </span><span class="nx">principals</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">Memberships</span><span class="p">:</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">ClaimsOrRemoteMemberships</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">RemoteMemberships</span><span class="p">(</span><span class="nx">client</span><span class="p">),</span><span class="w"> </span><span class="nx">logger</span><span class="p">),</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">})</span>
 </code></pre></div>
 <p>When <code>Memberships</code> is unset, <code>ClaimsMemberships</code> is used. A request without
 claims then has no memberships; an application whose principals sign in by
 other means supplies a source for them.
 <code>Membership.Applications</code> carries the principal's role in each application;
 an application absent from it is one the principal may not open.</p>
+<p>An application with organization slugs in its URLs resolves one to its
+organization ID with <code>client.ResolveOrganization(ctx, accessToken, slug)</code>,
+which also follows a renamed organization's old slug during its cooling-off
+period and reports it as an alias; see
+<a href="../../guides/organization-slugs/#resolving-slugs-in-a-relying-party">Resolving slugs in a relying party</a>.</p>
 <p>An application provisions itself for an organization on first use, keyed by
 the SystemAuth organization ID, with <code>ProvisioningMemberships(source,
 application, hook)</code>: the hook runs once per organization per process for a
@@ -6157,18 +6394,18 @@ principal who holds a role in <code>application</code> and must be idempotent.</
 person from an organization does not reach a token already issued until it
 expires. SystemAuth records each access change (ADR-010) and a
 <code>RevocationCache</code> remembers the recent ones:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">cache</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewRevocationCache</span><span class="p">()</span><span class="w"> </span><span class="c1">// margin 30 s (floor 15 s), covers 15 min tokens</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1">// In a modular monolith, hand the same cache to SystemAuth&#39;s services:</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nx">orgs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">WithAccessChangeSink</span><span class="p">(</span><span class="nx">accesschange</span><span class="p">.</span><span class="nx">ToSink</span><span class="p">(</span><span class="nx">cache</span><span class="p">)))</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nx">mw</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BearerMiddleware</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BearerConfig</span><span class="p">{</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nx">Tokens</span><span class="p">:</span><span class="w"> </span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">Principals</span><span class="p">:</span><span class="w"> </span><span class="nx">principals</span><span class="p">,</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nx">DPoP</span><span class="p">:</span><span class="w">         </span><span class="o">&amp;</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">DPoPConfig</span><span class="p">{</span><span class="nx">ReplayCache</span><span class="p">:</span><span class="w"> </span><span class="nx">replayCache</span><span class="p">,</span><span class="w"> </span><span class="nx">BaseURL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.example.com&quot;</span><span class="p">},</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nx">Revocation</span><span class="p">:</span><span class="w">   </span><span class="nx">cache</span><span class="p">,</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="nx">Organization</span><span class="p">:</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">PathValue</span><span class="p">(</span><span class="s">&quot;org&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="c1">// optional</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">})</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="nx">bff</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewBFF</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BFFConfig</span><span class="p">{</span><span class="nx">Client</span><span class="p">:</span><span class="w"> </span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">Principals</span><span class="p">:</span><span class="w"> </span><span class="nx">principals</span><span class="p">,</span><span class="w"> </span><span class="nx">Revocation</span><span class="p">:</span><span class="w"> </span><span class="nx">cache</span><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">cache</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewRevocationCache</span><span class="p">()</span><span class="w"> </span><span class="c1">// margin 30 s (floor 15 s), covers 15 min tokens</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1">// In a modular monolith, hand the same cache to SystemAuth&#39;s services:</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nx">orgs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">WithAccessChangeSink</span><span class="p">(</span><span class="nx">accesschange</span><span class="p">.</span><span class="nx">ToSink</span><span class="p">(</span><span class="nx">cache</span><span class="p">)))</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nx">mw</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BearerMiddleware</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BearerConfig</span><span class="p">{</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nx">Tokens</span><span class="p">:</span><span class="w"> </span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">Principals</span><span class="p">:</span><span class="w"> </span><span class="nx">principals</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nx">DPoP</span><span class="p">:</span><span class="w">         </span><span class="o">&amp;</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">DPoPConfig</span><span class="p">{</span><span class="nx">ReplayCache</span><span class="p">:</span><span class="w"> </span><span class="nx">replayCache</span><span class="p">,</span><span class="w"> </span><span class="nx">BaseURL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.example.com&quot;</span><span class="p">},</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nx">Revocation</span><span class="p">:</span><span class="w">   </span><span class="nx">cache</span><span class="p">,</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="nx">Organization</span><span class="p">:</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">PathValue</span><span class="p">(</span><span class="s">&quot;org&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="c1">// optional</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="p">})</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="nx">bff</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewBFF</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">BFFConfig</span><span class="p">{</span><span class="nx">Client</span><span class="p">:</span><span class="w"> </span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">Principals</span><span class="p">:</span><span class="w"> </span><span class="nx">principals</span><span class="p">,</span><span class="w"> </span><span class="nx">Revocation</span><span class="p">:</span><span class="w"> </span><span class="nx">cache</span><span class="p">})</span>
 </code></pre></div>
 <p>A JWT is accepted only if its <code>iat</code> is at or after the change plus the
 clock-skew margin (<code>WithSkewMargin</code>, default 30 s, never below 15 s); a token
@@ -6194,14 +6431,14 @@ the sealed secrets document.</p>
 <code>sf_access_changes</code> once every second or two, independent of request volume,
 and a restarted relying party replays the last token lifetime before it
 trusts its cache:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Replicas sharing SystemAuth&#39;s database (PostgreSQL):</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">cache</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewRevocationCache</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">WithSuspectStart</span><span class="p">())</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nx">poller</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewAccessChangePoller</span><span class="p">(</span><span class="nx">pgstore</span><span class="p">.</span><span class="nx">NewAccessChangeSource</span><span class="p">(</span><span class="nx">db</span><span class="p">),</span><span class="w"> </span><span class="nx">cache</span><span class="p">)</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">go</span><span class="w"> </span><span class="nx">poller</span><span class="p">.</span><span class="nx">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="c1">// the first successful poll also ends suspect mode</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1">// A relying party in another process, replaying through SystemAuth:</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="nx">src</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">AccessChangesSource</span><span class="p">(</span><span class="nx">client</span><span class="p">.</span><span class="nx">ClientCredentialsToken</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">secret</span><span class="p">))</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="k">go</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">ReplayWithRetry</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">src</span><span class="p">,</span><span class="w"> </span><span class="nx">cache</span><span class="p">,</span><span class="w"> </span><span class="nx">logger</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Replicas sharing SystemAuth&#39;s database (PostgreSQL):</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">cache</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewRevocationCache</span><span class="p">(</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">WithSuspectStart</span><span class="p">())</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nx">poller</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewAccessChangePoller</span><span class="p">(</span><span class="nx">pgstore</span><span class="p">.</span><span class="nx">NewAccessChangeSource</span><span class="p">(</span><span class="nx">db</span><span class="p">),</span><span class="w"> </span><span class="nx">cache</span><span class="p">)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="k">go</span><span class="w"> </span><span class="nx">poller</span><span class="p">.</span><span class="nx">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="c1">// the first successful poll also ends suspect mode</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1">// A relying party in another process, replaying through SystemAuth:</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nx">src</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">AccessChangesSource</span><span class="p">(</span><span class="nx">client</span><span class="p">.</span><span class="nx">ClientCredentialsToken</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">secret</span><span class="p">))</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="k">go</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">ReplayWithRetry</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">src</span><span class="p">,</span><span class="w"> </span><span class="nx">cache</span><span class="p">,</span><span class="w"> </span><span class="nx">logger</span><span class="p">)</span>
 </code></pre></div>
 <p><code>WithSuspectStart</code> (or <code>MarkSuspect</code>) puts the cache in suspect mode: changes
 made while it was not listening are unknown, so only tokens issued at least
@@ -6230,9 +6467,9 @@ Register an endpoint as the client's <code>backchannel_logout_uri</code> (an <co
 or <code>http</code> for a loopback host; <code>ClientConfig.BackchannelLogoutURI</code>, stored on
 <code>sf_oauth_apps</code>) and run SystemAuth's sender, passing it to the services that
 record changes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">bc</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">auth</span><span class="p">.</span><span class="nx">NewBackchannel</span><span class="p">()</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">orgs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">WithAccessChangeSink</span><span class="p">(</span><span class="nx">bc</span><span class="p">))</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">go</span><span class="w"> </span><span class="nx">bc</span><span class="p">.</span><span class="nx">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">bc</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">auth</span><span class="p">.</span><span class="nx">NewBackchannel</span><span class="p">()</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nx">orgs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">WithAccessChangeSink</span><span class="p">(</span><span class="nx">bc</span><span class="p">))</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="k">go</span><span class="w"> </span><span class="nx">bc</span><span class="p">.</span><span class="nx">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 <p>For each change SystemAuth POSTs <code>logout_token=&lt;jwt&gt;</code> to every registered
 client: an OpenID Connect Back-Channel Logout token (<code>typ</code> <code>logout+jwt</code>, signed
@@ -6267,27 +6504,27 @@ logout receiver needs.</p>
 implements <code>PrincipalStore</code> over it; a principal entity using
 <code>identity/ent/mixin.PrincipalMixin</code> already has the unique, indexed
 <code>sf_principal_id</code> field:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">entPrincipals</span><span class="w"> </span><span class="kd">struct</span><span class="p">{</span><span class="w"> </span><span class="nx">db</span><span class="w"> </span><span class="o">*</span><span class="nx">ent</span><span class="p">.</span><span class="nx">Client</span><span class="w"> </span><span class="p">}</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="nx">entPrincipals</span><span class="p">)</span><span class="w"> </span><span class="nx">FindBySubject</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">sub</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">Principal</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">Parse</span><span class="p">(</span><span class="nx">sub</span><span class="p">)</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">ErrPrincipalNotFound</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nx">p</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nx">Principal</span><span class="p">.</span><span class="nx">Query</span><span class="p">().</span><span class="nx">Where</span><span class="p">(</span><span class="nx">principal</span><span class="p">.</span><span class="nx">SfPrincipalIDEQ</span><span class="p">(</span><span class="nx">id</span><span class="p">)).</span><span class="nx">Only</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">ent</span><span class="p">.</span><span class="nx">IsNotFound</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">ErrPrincipalNotFound</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">toRP</span><span class="p">(</span><span class="nx">p</span><span class="p">),</span><span class="w"> </span><span class="kc">nil</span>
-<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="p">}</span>
-<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>
-<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="c1">// LinkSubject: UPDATE ... SET sf_principal_id = ? WHERE id = ?; map the unique</span>
-<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="c1">// violation to relyingparty.ErrSubjectLinked. CreatePrincipal: insert with</span>
-<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="c1">// sf_principal_id and a verified email; map unique violations to</span>
-<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="c1">// ErrSubjectLinked / ErrEmailConflict.</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">entPrincipals</span><span class="w"> </span><span class="kd">struct</span><span class="p">{</span><span class="w"> </span><span class="nx">db</span><span class="w"> </span><span class="o">*</span><span class="nx">ent</span><span class="p">.</span><span class="nx">Client</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="nx">entPrincipals</span><span class="p">)</span><span class="w"> </span><span class="nx">FindBySubject</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">sub</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">Principal</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">Parse</span><span class="p">(</span><span class="nx">sub</span><span class="p">)</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">ErrPrincipalNotFound</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nx">p</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">s</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nx">Principal</span><span class="p">.</span><span class="nx">Query</span><span class="p">().</span><span class="nx">Where</span><span class="p">(</span><span class="nx">principal</span><span class="p">.</span><span class="nx">SfPrincipalIDEQ</span><span class="p">(</span><span class="nx">id</span><span class="p">)).</span><span class="nx">Only</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">ent</span><span class="p">.</span><span class="nx">IsNotFound</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">ErrPrincipalNotFound</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">toRP</span><span class="p">(</span><span class="nx">p</span><span class="p">),</span><span class="w"> </span><span class="kc">nil</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="p">}</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c1">// LinkSubject: UPDATE ... SET sf_principal_id = ? WHERE id = ?; map the unique</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="c1">// violation to relyingparty.ErrSubjectLinked. CreatePrincipal: insert with</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="c1">// sf_principal_id and a verified email; map unique violations to</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="c1">// ErrSubjectLinked / ErrEmailConflict.</span>
 </code></pre></div>
 <p><code>MemoryPrincipalStore</code> is provided for development and tests.</p>
 <h2 id="programmatic-clients">Programmatic clients<a class="headerlink" href="#programmatic-clients" title="Permanent link">&para;</a></h2>
@@ -6350,12 +6587,12 @@ claim):</p>
 </table>
 <p>A service client that calls the API with client-credentials tokens must be
 listed in <code>AcceptedClientIDs</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewClient</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">Issuer</span><span class="p">:</span><span class="w">            </span><span class="s">&quot;https://auth.example.com&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">          </span><span class="s">&quot;my-app&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">RedirectURL</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;https://app.example.com/bff/auth/callback&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nx">AcceptedClientIDs</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;my-app&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;reporting-service&quot;</span><span class="p">},</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">NewClient</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">relyingparty</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nx">Issuer</span><span class="p">:</span><span class="w">            </span><span class="s">&quot;https://auth.example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">          </span><span class="s">&quot;my-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nx">RedirectURL</span><span class="p">:</span><span class="w">       </span><span class="s">&quot;https://app.example.com/bff/auth/callback&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nx">AcceptedClientIDs</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;my-app&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;reporting-service&quot;</span><span class="p">},</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="p">})</span>
 </code></pre></div>
 <h2 id="managed-principals">Managed principals<a class="headerlink" href="#managed-principals" title="Permanent link">&para;</a></h2>
 <p>A relying party can create and manage managed principals, people without an
@@ -6363,14 +6600,14 @@ email whose accounts are controlled by managers, without holding SystemAuth's
 database. SystemAuth serves the manager API at <code>/managed-principals</code> when
 managed principals are enabled, and the application calls it with the
 signed-in manager's access token through <code>managedprincipal/mpclient</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/managedprincipal/mpclient&quot;</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1">// rp.Transport presents the manager&#39;s DPoP-bound token with a proof.</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nx">mp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">issuer</span><span class="o">+</span><span class="s">&quot;/managed-principals&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span><span class="p">{</span><span class="nx">Transport</span><span class="p">:</span><span class="w"> </span><span class="nx">rp</span><span class="p">.</span><span class="nx">Transport</span><span class="p">(</span><span class="kc">nil</span><span class="p">)})</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mp</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managerToken</span><span class="p">,</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">CreateInput</span><span class="p">{</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Robin&quot;</span><span class="p">,</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nx">Role</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;educator&quot;</span><span class="p">,</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/plexusone/systemforge/identity/managedprincipal/mpclient&quot;</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1">// rp.Transport presents the manager&#39;s DPoP-bound token with a proof.</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nx">mp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">issuer</span><span class="o">+</span><span class="s">&quot;/managed-principals&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span><span class="p">{</span><span class="nx">Transport</span><span class="p">:</span><span class="w"> </span><span class="nx">rp</span><span class="p">.</span><span class="nx">Transport</span><span class="p">(</span><span class="kc">nil</span><span class="p">)})</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mp</span><span class="p">.</span><span class="nx">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managerToken</span><span class="p">,</span><span class="w"> </span><span class="nx">mpclient</span><span class="p">.</span><span class="nx">CreateInput</span><span class="p">{</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Robin&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nx">Role</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;educator&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="p">})</span>
 </code></pre></div>
 <p>The client must have <code>managed_principals: true</code> and the
 <code>systemforge:managed_principals</code> scope, and the manager's token must be

@@ -1639,6 +1639,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1757,6 +1761,62 @@
     
   
     Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../systemauth/verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../systemauth/ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
   
 
     
@@ -2563,6 +2623,8 @@
       
         
       
+        
+      
     
     
     
@@ -2737,6 +2799,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4441,6 +4531,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4512,6 +4606,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -5589,7 +5739,7 @@ implementing an item carry <code>Refs: RMI-SYSTEMFORGE-&lt;NNN&gt;</code>.</p>
 <li>[x] <code>RMI-SYSTEMFORGE-100</code> Documentation: rewrite <code>docs/identity/{users,memberships,api-keys}.md</code>, <code>docs/oauth/service-accounts.md</code>, and README identity bullets around the principal model; fix the stale <code>cf_memberships</code> reference in <code>rls/testing.go</code></li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-099</code></li>
 <li>Delivered: sixteen pages described the removed model, not four, several still with the Core-era <code>cf_</code> prefix. The schema reference is now generated from the Ent schema. Corrections to prior claims: the JWT-bearer grant is not implemented, and imported password hashes must be Argon2id (bcrypt was never accepted). The <code>rls</code> test helpers inserted into tables that no longer existed and are fixed and tested against PostgreSQL.</li>
-<li>[ ] <code>RMI-SYSTEMFORGE-101</code> CI grep gate for <code>sf_users</code>, <code>ent.User</code>, and removed Ent packages; changelog entry and breaking tag v0.14.0; record the release</li>
+<li>[x] <code>RMI-SYSTEMFORGE-101</code> CI grep gate for <code>sf_users</code>, <code>ent.User</code>, and removed Ent packages; changelog entry and breaking tag v0.14.0; record the release</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-100</code></li>
 <li>Progress: the gate is a repository-wide test (<code>internal/legacyguard</code>) that runs with the suite in CI; on its first run it found <code>rls.SystemForgeTables</code> naming a removed table, now fixed. Changelog entries are recorded as unreleased. Remaining: roll them into v0.14.0, which also ships INIT-SYSTEMFORGE-007 and the authorization fixes made since, tag after CI passes, and record the release; tagging waits on removing the local <code>auth-go</code> replace directive.</li>
 </ul>

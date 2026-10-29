@@ -16,7 +16,7 @@
         <link rel="prev" href="../providers/">
       
       
-        <link rel="next" href="../relying-party/">
+        <link rel="next" href="../verified-email/">
       
       
         
@@ -1645,6 +1645,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1846,6 +1850,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#silent-sign-in-and-prompt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Silent sign-in and prompt
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1910,6 +1925,62 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2708,6 +2779,8 @@
       
         
       
+        
+      
     
     
     
@@ -2882,6 +2955,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4586,6 +4687,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4657,6 +4762,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -5674,6 +5835,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#silent-sign-in-and-prompt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Silent sign-in and prompt
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -5795,7 +5967,15 @@ endpoints:</p>
 </tr>
 <tr>
 <td><code>GET /consent?return_to=&lt;authorize URL&gt;</code></td>
-<td>Consent page naming the client and the requested scopes (only when <code>skip_consent</code> is off).</td>
+<td>Consent page naming the client and the requested scopes (for second- and third-party clients, or when the request sets <code>prompt=consent</code>).</td>
+</tr>
+<tr>
+<td><code>/login/verify-email...</code></td>
+<td>With <a href="../verified-email/">verification mail</a>: the pages that hold a sign-in whose provider email is unverified until a mailed link is opened in the same browser.</td>
+</tr>
+<tr>
+<td><code>/account/email...</code></td>
+<td>With <a href="../verified-email/">verification mail</a>: the signed-in person's email, and changing it after the new address is verified.</td>
 </tr>
 <tr>
 <td><code>POST /consent</code></td>
@@ -5806,7 +5986,11 @@ endpoints:</p>
 <p><code>/oauth/authorize</code> sends unauthenticated users to <code>/login?return_to=&lt;authorize URL&gt;</code>,
 so after login the authorization request resumes and the relying party receives
 an authorization code. No token ever appears in a redirect URL. An
-<code>idp_hint=github|google</code> authorization parameter skips the chooser.</p>
+<code>idp_hint=github|google</code> authorization parameter skips the chooser. When the
+login was started by an authorization request, the chooser names the client
+("to continue to ...") and shows its <code>logo_url</code>, an https URL, when it has
+one. The authorization endpoint also honours the OIDC <code>prompt</code> parameter; see
+<a href="#silent-sign-in-and-prompt">Silent sign-in and prompt</a>.</p>
 <p>Applications consume this through the <code>identity/relyingparty</code> package; see
 <a href="../relying-party/">Relying Parties</a>.</p>
 <h3 id="logout">Logout<a class="headerlink" href="#logout" title="Permanent link">&para;</a></h3>
@@ -5818,15 +6002,85 @@ anything else is rejected with <code>403</code>. Logout revokes every token issu
 principal, for every client, through the storage's <code>SubjectTokenRevoker</code>
 support (implemented by <code>MemoryStorage</code> and <code>EntStorage</code>).</p>
 <h3 id="consent">Consent<a class="headerlink" href="#consent" title="Permanent link">&para;</a></h3>
-<p>With <code>skip_consent: false</code>, <code>/oauth/authorize</code> sends a signed-in user to
-<code>/consent</code> the first time a client asks for a set of scopes. The page is
+<p>Whether a user is asked for consent depends on the client's <strong>party</strong>, who
+owns the application (the customer owns the data in every case):</p>
+<table>
+<thead>
+<tr>
+<th>Party</th>
+<th>Who owns the app</th>
+<th>Consent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>first_party</code></td>
+<td>The service provider running SystemAuth</td>
+<td>Skipped</td>
+</tr>
+<tr>
+<td><code>second_party</code></td>
+<td>The customer</td>
+<td>Asked and recorded</td>
+</tr>
+<tr>
+<td><code>third_party</code></td>
+<td>A partner</td>
+<td>Asked and recorded</td>
+</tr>
+</tbody>
+</table>
+<p>A client declared in the configuration file is <code>first_party</code> unless it sets
+<code>party</code>; a client registered at runtime (<code>RegisterClient</code>, storage, the
+OAuth client store) without a party is <code>third_party</code>. Unknown values are
+refused. See <a href="../overview/#client-party">SystemAuth</a>.</p>
+<p>For a second- or third-party client, <code>/oauth/authorize</code> sends a signed-in user
+to <code>/consent</code> the first time the client asks for a set of scopes. The page is
 deliberately minimal (client name, scope descriptions, Allow/Deny). Decisions
 are kept in a <code>ConsentStore</code>; with <code>EntStorage</code> the default is the database
 (<code>sf_consent_grants</code>), otherwise in-memory (users are asked again after a
 restart). See <a href="../production-stores/">Production Stores</a>. The consent form is protected by a CSRF token derived from the login
 session, a same-origin check, and the
-<a href="../deployment/#security-headers">security headers</a> every page carries. Deployments whose
-clients are all first-party should set <code>skip_consent: true</code> instead.</p>
+<a href="../deployment/#security-headers">security headers</a> every page carries.</p>
+<p><code>skip_consent</code> is deprecated and ignored: it used to grant consent to every
+client, including ones the operator does not own. SystemAuth logs a warning at
+startup when it is set. First-party clients need no setting to skip consent.</p>
+<h3 id="silent-sign-in-and-prompt">Silent sign-in and prompt<a class="headerlink" href="#silent-sign-in-and-prompt" title="Permanent link">&para;</a></h3>
+<p><code>/oauth/authorize</code> honours the OIDC <code>prompt</code> parameter
+(<a href="https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest">OIDC Core 3.1.2.1</a>):</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>none</code></td>
+<td>Shows no page. Without a login session the client gets <code>error=login_required</code>; when consent is needed (a second- or third-party client without recorded consent) <code>error=consent_required</code>; otherwise the request completes silently. Errors go to the client's redirect URI with its <code>state</code>.</td>
+</tr>
+<tr>
+<td><code>login</code></td>
+<td>Sends the user to the login page even with a login session.</td>
+</tr>
+<tr>
+<td><code>consent</code></td>
+<td>Shows the consent page even when consent is recorded, for first-party clients too: the client asked for it.</td>
+</tr>
+<tr>
+<td><code>select_account</code></td>
+<td>Accepted; it has no effect, since a browser has one login session.</td>
+</tr>
+</tbody>
+</table>
+<p><code>none</code> combined with any other value, or an unknown value, answers
+<code>error=invalid_request</code>. After the login or consent page, the authorization
+request resumes without the prompt value that page satisfied. A first-party
+application can therefore check for an existing SystemAuth session with
+<code>prompt=none</code> (for example in a hidden redirect) and fall back to an
+interactive sign-in on <code>login_required</code>. A relying party that needs a recent
+login should also check the ID token's <code>auth_time</code>.</p>
 <h2 id="refresh-tokens">Refresh tokens<a class="headerlink" href="#refresh-tokens" title="Permanent link">&para;</a></h2>
 <p>SystemAuth issues refresh tokens to clients granted <code>offline_access</code> (and the
 <code>refresh_token</code> grant). They are rotated on every use:</p>
@@ -5858,9 +6112,8 @@ when <code>tokens.hmac_secret</code> is set (<a href="../deployment/#token-hmac-
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://app.example.com</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="nt">default_redirect</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="nt">session_lifetime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">12h</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="nt">skip_consent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span><span class="nt">signup_minimum_age</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">  </span><span class="nt">insecure_cookies</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="nt">signup_minimum_age</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span><span class="nt">insecure_cookies</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 </code></pre></div>
 <table>
 <thead>
@@ -5894,7 +6147,7 @@ when <code>tokens.hmac_secret</code> is set (<a href="../deployment/#token-hmac-
 <tr>
 <td><code>skip_consent</code></td>
 <td><code>false</code></td>
-<td>Auto-grant consent for users signed in via social login. Only for deployments where every client is first-party; otherwise users see the <code>/consent</code> page.</td>
+<td>Deprecated and ignored; logs a warning at startup when set. First-party clients skip consent and other clients always ask (see <a href="#consent">Consent</a>).</td>
 </tr>
 <tr>
 <td><code>signup_minimum_age</code></td>
@@ -5935,7 +6188,11 @@ never a legacy <code>User</code> row — using one model:</p>
 <li><strong>Create.</strong> Otherwise a new principal is created, which requires a verified
    upstream email.</li>
 </ol>
-<p>An unverified upstream email never links to, or creates, an account. A
+<p>An unverified upstream email never links to, or creates, an account. With
+<a href="../verified-email/">verification mail</a> configured, the sign-in is held
+instead while SystemAuth mails a link to the address; a link opened in the
+same browser proves the address, which then counts as verified and
+authoritative. A
 verified but not authoritative email never links either: a provider can keep
 an address marked verified after its owner loses the mailbox. When such an
 email already belongs to an account, the sign-in is refused as a conflict

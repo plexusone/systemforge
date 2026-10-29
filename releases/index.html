@@ -1643,6 +1643,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1761,6 +1765,62 @@
     
   
     Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../systemauth/verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../systemauth/ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
   
 
     
@@ -2567,6 +2627,8 @@
       
         
       
+        
+      
     
     
     
@@ -2741,6 +2803,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4447,6 +4537,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4516,6 +4610,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -5515,7 +5665,17 @@
 <p>Release notes, one file per version, newest first. The
 <a href="changelog/">changelog</a> is generated from <code>CHANGELOG.json</code> and lists every
 change with its commit.</p>
-<p>The latest release, <a href="v0.28.0/">v0.28.0</a>, is a security release:
+<p>The latest release, <a href="v0.30.0/">v0.30.0</a>, writes security events as
+OCSF, one JSON object per line, through <code>contract/audit/ocsfaudit</code>, for a
+security data lake or SIEM that ingests OCSF. It adds no breaking change.</p>
+<p>Before it, <a href="v0.29.0/">v0.29.0</a> asked for consent by the
+client's party, so only first-party clients skip the consent screen and
+<code>social_login.skip_consent</code> no longer grants consent for every client. It
+adds OIDC <code>prompt</code>, verified email through a new <code>mail</code> section, secrets
+read through an omnivault vault, <code>systemauth org member</code>, and organization
+slug resolution for relying parties. It is breaking; read its upgrade notes
+first.</p>
+<p>Before it, <a href="v0.28.0/">v0.28.0</a> was a security release:
 SystemAuth applies layered rate limits by default, finds client addresses
 with one rule that believes forwarding headers only from trusted proxies,
 records structured security events, keeps stack traces, secrets and

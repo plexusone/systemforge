@@ -1639,6 +1639,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1757,6 +1761,62 @@
     
   
     Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../systemauth/verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../systemauth/ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
   
 
     
@@ -2563,6 +2623,8 @@
       
         
       
+        
+      
     
     
     
@@ -2737,6 +2799,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4441,6 +4531,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4512,6 +4606,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -5571,18 +5721,18 @@ single sanctioned place to build it.</p>
 <h2 id="phase-1-systemauth-social-login-core">Phase 1 — SystemAuth Social Login (core)<a class="headerlink" href="#phase-1-systemauth-social-login-core" title="Permanent link">&para;</a></h2>
 <p><strong>Theme:</strong> One place speaks to GitHub/Google; SystemAuth owns the login</p>
 <ul>
-<li>[ ] <code>RMI-SYSTEMFORGE-075</code> Consolidate the two duplicate social-login primitive packages (<code>session/oauth</code>, <code>identity/oauthclient</code>) into one sanctioned package; retire the dead one</li>
-<li>[ ] <code>RMI-SYSTEMFORGE-001</code> Mount GitHub/Google login on the SystemAuth server: login-start + callback routes, <code>Principal</code> upsert keyed by provider subject with verified-email linking fallback, <code>__Host-sf_login</code> session establishment</li>
+<li>[x] <code>RMI-SYSTEMFORGE-075</code> Consolidate the two duplicate social-login primitive packages (<code>session/oauth</code>, <code>identity/oauthclient</code>) into one sanctioned package; retire the dead one</li>
+<li>[x] <code>RMI-SYSTEMFORGE-001</code> Mount GitHub/Google login on the SystemAuth server: login-start + callback routes, <code>Principal</code> upsert keyed by provider subject with verified-email linking fallback, <code>__Host-sf_login</code> session establishment</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-075</code></li>
-<li>[ ] <code>RMI-SYSTEMFORGE-076</code> Harden the login flow: allowlist-validated post-login redirect with no token in the URL, real refresh-token rotation (reuse detection, absolute expiry), real logout with session + token revocation</li>
+<li>[x] <code>RMI-SYSTEMFORGE-076</code> Harden the login flow: allowlist-validated post-login redirect with no token in the URL, real refresh-token rotation (reuse detection, absolute expiry), real logout with session + token revocation</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-001</code></li>
 </ul>
 <h2 id="phase-2-relying-party-federation-contract">Phase 2 — Relying-Party Federation Contract<a class="headerlink" href="#phase-2-relying-party-federation-contract" title="Permanent link">&para;</a></h2>
 <p><strong>Theme:</strong> Consumers federate; nobody reimplements the callback</p>
 <ul>
-<li>[ ] <code>RMI-SYSTEMFORGE-077</code> Serve <code>/oauth/userinfo</code> (advertised in discovery but unmounted) so the relying-party callback has a stable profile endpoint</li>
+<li>[x] <code>RMI-SYSTEMFORGE-077</code> Serve <code>/oauth/userinfo</code> (advertised in discovery but unmounted) so the relying-party callback has a stable profile endpoint</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-001</code></li>
-<li>[ ] <code>RMI-SYSTEMFORGE-081</code> Reusable relying-party OIDC-client callback + middleware (sub → <code>sf_principal_id</code> find-or-create, verified-email linking) and the <code>/bff/*</code> cookie-session surface the shared frontend expects; programmatic clients keep bearer/API-key access</li>
+<li>[x] <code>RMI-SYSTEMFORGE-081</code> Reusable relying-party OIDC-client callback + middleware (sub → <code>sf_principal_id</code> find-or-create, verified-email linking) and the <code>/bff/*</code> cookie-session surface the shared frontend expects; programmatic clients keep bearer/API-key access</li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-001</code></li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-077</code></li>
 </ul>
@@ -5593,7 +5743,7 @@ relying-party federation contract (<code>RMI-SYSTEMFORGE-081</code>), linking by
 <code>sf_principal_id</code>. These per-consumer items are tracked in the initiative and
 intentionally not enumerated here, matching INIT-SYSTEMFORGE-004.</p>
 <ul>
-<li>[ ] <code>RMI-SYSTEMFORGE-078</code> CI gate + conformance: block new direct github.com/google.com OAuth wiring outside the sanctioned package; conformance check that relying parties key by <code>sf_principal_id</code></li>
+<li>[x] <code>RMI-SYSTEMFORGE-078</code> CI gate + conformance: block new direct github.com/google.com OAuth wiring outside the sanctioned package; conformance check that relying parties key by <code>sf_principal_id</code></li>
 <li>Depends on: <code>RMI-SYSTEMFORGE-081</code></li>
 </ul>
 

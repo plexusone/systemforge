@@ -1811,6 +1811,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1929,6 +1933,62 @@
     
   
     Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
   
 
     
@@ -2735,6 +2795,8 @@
       
         
       
+        
+      
     
     
     
@@ -2909,6 +2971,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4613,6 +4703,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4684,6 +4778,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -6026,10 +6176,11 @@ new key; there is no key list to manage, unlike SSH keys.</p>
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nt">response_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">code</span><span class="p p-Indicator">]</span>
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nt">scopes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openid</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">profile</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">email</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">offline_access</span><span class="p p-Indicator">]</span>
 </code></pre></div>
-<p>An OAuth application marked <code>first_party</code> (see
-<a href="../../oauth/apps/">OAuth Applications</a>) skips the consent screen, which
-suits a tool you ship to your own users; any other client asks the person
-to consent. Never give a client you distribute <code>allow_bearer_tokens</code>: the
+<p>A client whose <code>party</code> is <code>first_party</code> (the default for a client in the
+SystemAuth configuration file; see
+<a href="../../systemauth/overview/#client-party">Client party</a>) skips the consent
+screen, which suits a tool you ship to your own users; a second- or
+third-party client asks the person to consent. Never give a client you distribute <code>allow_bearer_tokens</code>: the
 binding is what makes a leaked token useless.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">cfg</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">publicclient</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">Issuer</span><span class="p">:</span><span class="w">   </span><span class="s">&quot;https://auth.example.com&quot;</span><span class="p">,</span>

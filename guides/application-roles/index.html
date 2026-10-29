@@ -673,6 +673,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Where entitlements come from">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#entitlements-in-tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entitlements in tokens
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -702,6 +719,17 @@
     <span class="md-ellipsis">
       
         Errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operator-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operator commands
       
     </span>
   </a>
@@ -1745,6 +1773,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1863,6 +1895,62 @@
     
   
     Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
   
 
     
@@ -2669,6 +2757,8 @@
       
         
       
+        
+      
     
     
     
@@ -2843,6 +2933,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4547,6 +4665,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4618,6 +4740,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -5621,6 +5799,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Where entitlements come from">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#entitlements-in-tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entitlements in tokens
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -5650,6 +5845,17 @@
     <span class="md-ellipsis">
       
         Errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operator-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operator commands
       
     </span>
   </a>
@@ -5715,6 +5921,18 @@ application they do not control. Each <code>OrgResponse</code> carries the resul
 valid seat-based licenses; there is none when any entitlement is not
 seat-limited. Roles are counted against it under an advisory lock, and
 owners' implicit roles hold no seat.</p>
+<h3 id="entitlements-in-tokens">Entitlements in tokens<a class="headerlink" href="#entitlements-in-tokens" title="Permanent link">&para;</a></h3>
+<p>Entitlements reach relying parties through the <code>apps</code> map of each
+organization in the <code>orgs</code> claim, in the ID token, the JWT access token,
+<code>/oauth/userinfo</code> and <code>/oauth/userinfo/memberships</code>. <code>apps</code> lists only the
+applications the organization is entitled to now, each with the principal's
+role there (an owner's implicit top role included); an application absent
+from it is one the principal may not open, whether because the
+organization is not entitled or because the principal holds no role. A
+stored role in an application the organization has lost drops out of the
+claim at the next token or userinfo call, without being deleted. The claim
+does not carry subscription tiers, seat counts or validity dates; read
+those from the organization API's <code>entitlements</code>.</p>
 <h2 id="rules">Rules<a class="headerlink" href="#rules" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Roles come from the application's vocabulary (<code>AppVocabulary.Roles()</code>);
@@ -5802,6 +6020,33 @@ return <code>already assigned</code>.</p>
 <p>Reducing or removing a role records an access change, so tokens issued
 before it are refused by relying parties that run a revocation cache; see
 <a href="../access-change-invalidation/">Access-change invalidation</a>.</p>
+<h2 id="operator-commands">Operator commands<a class="headerlink" href="#operator-commands" title="Permanent link">&para;</a></h2>
+<p>For recovery and bootstrap (restoring an owner who lost access, or granting
+the first role in a product before the product can grant one itself), an
+operator manages memberships and application roles from the command line,
+without the API's authorization checks. The commands open the database
+directly and go through the same services as the API, so removals record
+access changes the same way:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>systemauth<span class="w"> </span>org<span class="w"> </span>member<span class="w"> </span>add<span class="w"> </span>acme<span class="w"> </span>ada@example.com<span class="w"> </span>--org-role<span class="w"> </span>admin<span class="w"> </span>--role<span class="w"> </span>billing:admin
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>systemauth<span class="w"> </span>org<span class="w"> </span>member<span class="w"> </span>list<span class="w"> </span>acme<span class="w">            </span><span class="c1"># --json, --include-inactive</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>systemauth<span class="w"> </span>org<span class="w"> </span>member<span class="w"> </span>remove<span class="w"> </span>acme<span class="w"> </span>ada@example.com<span class="w"> </span>--app<span class="w"> </span>billing<span class="w">   </span><span class="c1"># only the role</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>systemauth<span class="w"> </span>org<span class="w"> </span>member<span class="w"> </span>remove<span class="w"> </span>acme<span class="w"> </span>ada@example.com<span class="w">                 </span><span class="c1"># the membership</span>
+</code></pre></div>
+<p>An organization is named by its slug (a slug it gave up within the
+cooling-off period also works) and a person by their email or principal ID;
+the person signs in once first. Adding an existing member changes their
+organization role only when <code>--org-role</code> is given, and each <code>--role</code> is
+assigned or changed. <code>--by</code> records the operator's principal ID as the
+assigner.</p>
+<p>The standalone <code>systemauth</code> binary registers no vocabularies, so it manages
+memberships but refuses <code>--role</code>. A host that embeds SystemAuth mounts
+<code>membercmd.Command</code> with its vocabularies and entitlements:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">root</span><span class="p">.</span><span class="nx">AddCommand</span><span class="p">(</span><span class="nx">membercmd</span><span class="p">.</span><span class="nx">Command</span><span class="p">(</span><span class="nx">open</span><span class="p">,</span><span class="w"> </span><span class="nx">membercmd</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">Roles</span><span class="p">:</span><span class="w"> </span><span class="nx">membercmd</span><span class="p">.</span><span class="nx">DefaultRoles</span><span class="p">(</span><span class="nx">registry</span><span class="p">,</span><span class="w"> </span><span class="nx">marketplace</span><span class="p">.</span><span class="nx">ApproleOptions</span><span class="p">(</span><span class="nx">entitlements</span><span class="p">)</span><span class="o">...</span><span class="p">),</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}))</span>
+</code></pre></div>
+<p>Under authorization mode <code>rebac</code> the commands do not write the graph; the
+running server's reconciler applies the change at its next run.</p>
 
 
 

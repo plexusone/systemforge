@@ -1639,6 +1639,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1757,6 +1761,62 @@
     
   
     Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
   
 
     
@@ -2563,6 +2623,8 @@
       
         
       
+        
+      
     
     
     
@@ -2737,6 +2799,34 @@
     
   
     Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
   
 
     
@@ -4441,6 +4531,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4512,6 +4606,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -5714,6 +5864,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#list-application-vocabularies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        List Application Vocabularies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#sync-policies-federation-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -6339,157 +6500,182 @@
 <a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    ]
 <a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>}
 </code></pre></div>
-<h4 id="sync-policies-federation-mode">Sync Policies (Federation Mode)<a class="headerlink" href="#sync-policies-federation-mode" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>POST /systemforge/policy/sync
+<h4 id="list-application-vocabularies">List Application Vocabularies<a class="headerlink" href="#list-application-vocabularies" title="Permanent link">&para;</a></h4>
+<p>Read-only introspection of the application role vocabularies the provider
+was given with <code>contract.WithVocabularies(registry)</code> (ADR-007): each
+application's roles, lowest hierarchy level first, the permissions they
+grant, and the OAuth scopes it defines. Without a registry the list is
+empty. Like the other policy reads it needs <code>policy:read</code>. Assigning roles
+is done through the organization API's app-role routes (see
+<a href="../../guides/application-roles/">Application roles</a>).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>GET /systemforge/policy/vocabularies
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>Request:
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>Response:
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>{
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    &quot;federation_id&quot;: &quot;uuid&quot;,
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    &quot;sync_token&quot;: &quot;string&quot;,
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    &quot;policies&quot;: [
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        {
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>            &quot;id&quot;: &quot;uuid&quot;,
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>            &quot;name&quot;: &quot;Global Admin Policy&quot;,
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>            &quot;rules&quot;: [...],
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>            &quot;priority&quot;: 100
-<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>        }
-<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    ],
-<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    &quot;removed_ids&quot;: [&quot;uuid&quot;]
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    &quot;vocabularies&quot;: [
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>        {
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>            &quot;app&quot;: &quot;notes&quot;,
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>            &quot;roles&quot;: [
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>                {&quot;id&quot;: &quot;viewer&quot;, &quot;level&quot;: 10, &quot;permissions&quot;: [&quot;note.read&quot;]},
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>                {&quot;id&quot;: &quot;admin&quot;, &quot;level&quot;: 40, &quot;permissions&quot;: [&quot;note.admin&quot;, &quot;note.read&quot;]}
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>            ],
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>            &quot;permissions&quot;: [&quot;note.admin&quot;, &quot;note.read&quot;],
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>            &quot;scopes&quot;: [&quot;notes:admin&quot;, &quot;notes:note:read&quot;]
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>        }
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    ]
 <a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>}
-<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>
-<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>Response:
-<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>{
-<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>    &quot;applied&quot;: [&quot;uuid&quot;],
-<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    &quot;failed&quot;: [
-<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>        {
-<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>            &quot;id&quot;: &quot;uuid&quot;,
-<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>            &quot;error&quot;: &quot;invalid_rule&quot;
-<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>        }
-<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>    ],
-<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>    &quot;sync_token&quot;: &quot;string&quot;
-<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>}
 </code></pre></div>
-<h4 id="evaluate-policy">Evaluate Policy<a class="headerlink" href="#evaluate-policy" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>POST /systemforge/policy/evaluate
+<h4 id="sync-policies-federation-mode">Sync Policies (Federation Mode)<a class="headerlink" href="#sync-policies-federation-mode" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>POST /systemforge/policy/sync
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>Request:
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>{
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    &quot;principal_id&quot;: &quot;uuid&quot;,
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    &quot;action&quot;: &quot;users:read&quot;,
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    &quot;resource&quot;: {
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>        &quot;type&quot;: &quot;user&quot;,
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>        &quot;id&quot;: &quot;uuid&quot;
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    },
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    &quot;context&quot;: {
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>        &quot;tenant_id&quot;: &quot;uuid&quot;,
-<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>        &quot;ip_address&quot;: &quot;192.168.1.1&quot;
-<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>    }
-<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>}
-<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>
-<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>Response:
-<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>{
-<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>    &quot;allowed&quot;: true,
-<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>    &quot;reason&quot;: &quot;role:admin grants users:*&quot;,
-<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>    &quot;policies&quot;: [&quot;local:admin-policy&quot;],
-<a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>    &quot;evaluated_at&quot;: &quot;2024-01-01T00:00:00Z&quot;
-<a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a>}
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    &quot;federation_id&quot;: &quot;uuid&quot;,
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    &quot;sync_token&quot;: &quot;string&quot;,
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    &quot;policies&quot;: [
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>        {
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>            &quot;id&quot;: &quot;uuid&quot;,
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>            &quot;name&quot;: &quot;Global Admin Policy&quot;,
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>            &quot;rules&quot;: [...],
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>            &quot;priority&quot;: 100
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>        }
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>    ],
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>    &quot;removed_ids&quot;: [&quot;uuid&quot;]
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>}
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>Response:
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>{
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>    &quot;applied&quot;: [&quot;uuid&quot;],
+<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>    &quot;failed&quot;: [
+<a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>        {
+<a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a>            &quot;id&quot;: &quot;uuid&quot;,
+<a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a>            &quot;error&quot;: &quot;invalid_rule&quot;
+<a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a>        }
+<a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a>    ],
+<a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a>    &quot;sync_token&quot;: &quot;string&quot;
+<a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a>}
+</code></pre></div>
+<h4 id="evaluate-policy">Evaluate Policy<a class="headerlink" href="#evaluate-policy" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>POST /systemforge/policy/evaluate
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>Request:
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>{
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    &quot;principal_id&quot;: &quot;uuid&quot;,
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    &quot;action&quot;: &quot;users:read&quot;,
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    &quot;resource&quot;: {
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>        &quot;type&quot;: &quot;user&quot;,
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>        &quot;id&quot;: &quot;uuid&quot;
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    },
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>    &quot;context&quot;: {
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>        &quot;tenant_id&quot;: &quot;uuid&quot;,
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>        &quot;ip_address&quot;: &quot;192.168.1.1&quot;
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>    }
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>}
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>Response:
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>{
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>    &quot;allowed&quot;: true,
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>    &quot;reason&quot;: &quot;role:admin grants users:*&quot;,
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>    &quot;policies&quot;: [&quot;local:admin-policy&quot;],
+<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>    &quot;evaluated_at&quot;: &quot;2024-01-01T00:00:00Z&quot;
+<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>}
 </code></pre></div>
 <h3 id="audit-interface">Audit Interface<a class="headerlink" href="#audit-interface" title="Permanent link">&para;</a></h3>
 <p><strong>Purpose</strong>: Configure audit event streaming.</p>
 <h4 id="get-stream-configuration">Get Stream Configuration<a class="headerlink" href="#get-stream-configuration" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>GET /systemforge/audit/stream/config
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>Response:
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>{
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    &quot;enabled&quot;: true,
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    &quot;endpoint&quot;: &quot;https://systemauth.example.com/audit/ingest&quot;,
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    &quot;batch_size&quot;: 100,
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    &quot;flush_interval_ms&quot;: 5000,
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    &quot;auth_method&quot;: &quot;bearer&quot;,
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    &quot;last_sequence&quot;: 12345
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>}
-</code></pre></div>
-<h4 id="update-stream-configuration">Update Stream Configuration<a class="headerlink" href="#update-stream-configuration" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>PUT /systemforge/audit/stream/config
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>GET /systemforge/audit/stream/config
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Request:
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Response:
 <a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>{
 <a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    &quot;enabled&quot;: true,
 <a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    &quot;endpoint&quot;: &quot;https://systemauth.example.com/audit/ingest&quot;,
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    &quot;auth_token&quot;: &quot;bearer-token&quot;,
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    &quot;batch_size&quot;: 100,
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    &quot;flush_interval_ms&quot;: 5000
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>}
-<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>
-<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>Response:
-<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>{
-<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>    &quot;status&quot;: &quot;configured&quot;,
-<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>    &quot;test_result&quot;: &quot;success&quot;
-<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>}
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    &quot;batch_size&quot;: 100,
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    &quot;flush_interval_ms&quot;: 5000,
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    &quot;auth_method&quot;: &quot;bearer&quot;,
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>    &quot;last_sequence&quot;: 12345
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>}
 </code></pre></div>
-<h4 id="acknowledge-events">Acknowledge Events<a class="headerlink" href="#acknowledge-events" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>POST /systemforge/audit/stream/ack
+<h4 id="update-stream-configuration">Update Stream Configuration<a class="headerlink" href="#update-stream-configuration" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>PUT /systemforge/audit/stream/config
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Request:
 <a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>{
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    &quot;sequence&quot;: 12345,
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    &quot;timestamp&quot;: &quot;2024-01-01T00:00:00Z&quot;
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>}
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>Response:
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>{
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    &quot;acknowledged&quot;: true,
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    &quot;next_sequence&quot;: 12346
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>}
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    &quot;enabled&quot;: true,
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    &quot;endpoint&quot;: &quot;https://systemauth.example.com/audit/ingest&quot;,
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    &quot;auth_token&quot;: &quot;bearer-token&quot;,
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    &quot;batch_size&quot;: 100,
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    &quot;flush_interval_ms&quot;: 5000
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>}
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>Response:
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>{
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>    &quot;status&quot;: &quot;configured&quot;,
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>    &quot;test_result&quot;: &quot;success&quot;
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>}
+</code></pre></div>
+<h4 id="acknowledge-events">Acknowledge Events<a class="headerlink" href="#acknowledge-events" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>POST /systemforge/audit/stream/ack
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>Request:
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>{
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    &quot;sequence&quot;: 12345,
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    &quot;timestamp&quot;: &quot;2024-01-01T00:00:00Z&quot;
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>}
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>Response:
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>{
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>    &quot;acknowledged&quot;: true,
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>    &quot;next_sequence&quot;: 12346
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>}
 </code></pre></div>
 <h3 id="health-interface">Health Interface<a class="headerlink" href="#health-interface" title="Permanent link">&para;</a></h3>
 <p><strong>Purpose</strong>: Monitor application and federation health.</p>
 <h4 id="application-health">Application Health<a class="headerlink" href="#application-health" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>GET /systemforge/health
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>Response:
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>{
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    &quot;status&quot;: &quot;healthy&quot;,
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    &quot;version&quot;: &quot;1.2.0&quot;,
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    &quot;uptime_seconds&quot;: 86400,
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    &quot;checks&quot;: {
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>        &quot;database&quot;: &quot;healthy&quot;,
-<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>        &quot;cache&quot;: &quot;healthy&quot;,
-<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>        &quot;identity&quot;: &quot;healthy&quot;
-<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>    }
-<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>}
-</code></pre></div>
-<h4 id="federation-health">Federation Health<a class="headerlink" href="#federation-health" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>GET /systemforge/health/federation
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>GET /systemforge/health
 <a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
 <a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>Response:
 <a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>{
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    &quot;federation_status&quot;: &quot;connected&quot;,
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    &quot;federation_id&quot;: &quot;uuid&quot;,
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>    &quot;last_sync&quot;: &quot;2024-01-01T00:00:00Z&quot;,
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>    &quot;sync_lag_seconds&quot;: 5,
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>    &quot;checks&quot;: {
-<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>        &quot;identity_sync&quot;: &quot;healthy&quot;,
-<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>        &quot;policy_sync&quot;: &quot;healthy&quot;,
-<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>        &quot;audit_stream&quot;: &quot;healthy&quot;
-<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>    }
-<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>}
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    &quot;status&quot;: &quot;healthy&quot;,
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    &quot;version&quot;: &quot;1.2.0&quot;,
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>    &quot;uptime_seconds&quot;: 86400,
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>    &quot;checks&quot;: {
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>        &quot;database&quot;: &quot;healthy&quot;,
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>        &quot;cache&quot;: &quot;healthy&quot;,
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>        &quot;identity&quot;: &quot;healthy&quot;
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>    }
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>}
+</code></pre></div>
+<h4 id="federation-health">Federation Health<a class="headerlink" href="#federation-health" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>GET /systemforge/health/federation
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>Response:
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>{
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>    &quot;federation_status&quot;: &quot;connected&quot;,
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    &quot;federation_id&quot;: &quot;uuid&quot;,
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>    &quot;last_sync&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    &quot;sync_lag_seconds&quot;: 5,
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    &quot;checks&quot;: {
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>        &quot;identity_sync&quot;: &quot;healthy&quot;,
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>        &quot;policy_sync&quot;: &quot;healthy&quot;,
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>        &quot;audit_stream&quot;: &quot;healthy&quot;
+<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a>    }
+<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>}
 </code></pre></div>
 <h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
 <h3 id="service-to-service-authentication">Service-to-Service Authentication<a class="headerlink" href="#service-to-service-authentication" title="Permanent link">&para;</a></h3>
 <p>SystemAuth authenticates to applications using signed JWTs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">SystemAuthServiceToken</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="c1">// Standard JWT claims</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="nx">Issuer</span><span class="w">    </span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;iss&quot;`</span><span class="w"> </span><span class="c1">// &quot;systemauth.example.com&quot;</span>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="nx">Subject</span><span class="w">   </span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;sub&quot;`</span><span class="w"> </span><span class="c1">// &quot;federation:{federation_id}&quot;</span>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span><span class="nx">Audience</span><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;aud&quot;`</span><span class="w"> </span><span class="c1">// &quot;{app_id}&quot;</span>
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">    </span><span class="nx">IssuedAt</span><span class="w">  </span><span class="kt">int64</span><span class="w">  </span><span class="s">`json:&quot;iat&quot;`</span>
-<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="nx">ExpiresAt</span><span class="w"> </span><span class="kt">int64</span><span class="w">  </span><span class="s">`json:&quot;exp&quot;`</span>
-<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>
-<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">    </span><span class="c1">// SystemAuth claims</span>
-<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">    </span><span class="nx">FederationID</span><span class="w"> </span><span class="kt">string</span><span class="w">   </span><span class="s">`json:&quot;federation_id&quot;`</span>
-<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="w">    </span><span class="nx">Permissions</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;permissions&quot;`</span>
-<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">SystemAuthServiceToken</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">    </span><span class="c1">// Standard JWT claims</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nx">Issuer</span><span class="w">    </span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;iss&quot;`</span><span class="w"> </span><span class="c1">// &quot;systemauth.example.com&quot;</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nx">Subject</span><span class="w">   </span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;sub&quot;`</span><span class="w"> </span><span class="c1">// &quot;federation:{federation_id}&quot;</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nx">Audience</span><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;aud&quot;`</span><span class="w"> </span><span class="c1">// &quot;{app_id}&quot;</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">    </span><span class="nx">IssuedAt</span><span class="w">  </span><span class="kt">int64</span><span class="w">  </span><span class="s">`json:&quot;iat&quot;`</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span><span class="nx">ExpiresAt</span><span class="w"> </span><span class="kt">int64</span><span class="w">  </span><span class="s">`json:&quot;exp&quot;`</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">    </span><span class="c1">// SystemAuth claims</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">    </span><span class="nx">FederationID</span><span class="w"> </span><span class="kt">string</span><span class="w">   </span><span class="s">`json:&quot;federation_id&quot;`</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">    </span><span class="nx">Permissions</span><span class="w">  </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="s">`json:&quot;permissions&quot;`</span>
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="p">}</span>
 </code></pre></div>
 <p>Applications MUST validate:</p>
 <ol>
@@ -6536,39 +6722,39 @@
 </table>
 <h2 id="audit-event-schema">Audit Event Schema<a class="headerlink" href="#audit-event-schema" title="Permanent link">&para;</a></h2>
 <p>Applications must emit audit events in this standardized format:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p">{</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">    </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nt">&quot;event_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user.created&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;create&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
-<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span><span class="nt">&quot;actor&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">        </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;human&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">        </span><span class="nt">&quot;identifier&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;admin@example.com&quot;</span>
-<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>
-<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="w">    </span><span class="nt">&quot;resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="w">        </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="w">        </span><span class="nt">&quot;identifier&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;newuser@example.com&quot;</span>
-<a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a>
-<a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="w">    </span><span class="nt">&quot;context&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a><span class="w">        </span><span class="nt">&quot;tenant_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a><span class="w">        </span><span class="nt">&quot;session_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-22" name="__codelineno-16-22" href="#__codelineno-16-22"></a><span class="w">        </span><span class="nt">&quot;client_ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.1.1&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-23" name="__codelineno-16-23" href="#__codelineno-16-23"></a><span class="w">        </span><span class="nt">&quot;user_agent&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Mozilla/5.0...&quot;</span>
-<a id="__codelineno-16-24" name="__codelineno-16-24" href="#__codelineno-16-24"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-16-25" name="__codelineno-16-25" href="#__codelineno-16-25"></a>
-<a id="__codelineno-16-26" name="__codelineno-16-26" href="#__codelineno-16-26"></a><span class="w">    </span><span class="nt">&quot;outcome&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;success&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-27" name="__codelineno-16-27" href="#__codelineno-16-27"></a><span class="w">    </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-16-28" name="__codelineno-16-28" href="#__codelineno-16-28"></a><span class="w">        </span><span class="nt">&quot;changes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-16-29" name="__codelineno-16-29" href="#__codelineno-16-29"></a><span class="w">            </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;newuser@example.com&quot;</span><span class="p">,</span>
-<a id="__codelineno-16-30" name="__codelineno-16-30" href="#__codelineno-16-30"></a><span class="w">            </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;member&quot;</span>
-<a id="__codelineno-16-31" name="__codelineno-16-31" href="#__codelineno-16-31"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-16-32" name="__codelineno-16-32" href="#__codelineno-16-32"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-16-33" name="__codelineno-16-33" href="#__codelineno-16-33"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="p">{</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">&quot;event_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user.created&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;create&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">    </span><span class="nt">&quot;actor&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">        </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;human&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="w">        </span><span class="nt">&quot;identifier&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;admin@example.com&quot;</span>
+<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a>
+<a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a><span class="w">    </span><span class="nt">&quot;resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-14" name="__codelineno-17-14" href="#__codelineno-17-14"></a><span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-15" name="__codelineno-17-15" href="#__codelineno-17-15"></a><span class="w">        </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-16" name="__codelineno-17-16" href="#__codelineno-17-16"></a><span class="w">        </span><span class="nt">&quot;identifier&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;newuser@example.com&quot;</span>
+<a id="__codelineno-17-17" name="__codelineno-17-17" href="#__codelineno-17-17"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-17-18" name="__codelineno-17-18" href="#__codelineno-17-18"></a>
+<a id="__codelineno-17-19" name="__codelineno-17-19" href="#__codelineno-17-19"></a><span class="w">    </span><span class="nt">&quot;context&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-20" name="__codelineno-17-20" href="#__codelineno-17-20"></a><span class="w">        </span><span class="nt">&quot;tenant_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-21" name="__codelineno-17-21" href="#__codelineno-17-21"></a><span class="w">        </span><span class="nt">&quot;session_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-22" name="__codelineno-17-22" href="#__codelineno-17-22"></a><span class="w">        </span><span class="nt">&quot;client_ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.1.1&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-23" name="__codelineno-17-23" href="#__codelineno-17-23"></a><span class="w">        </span><span class="nt">&quot;user_agent&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Mozilla/5.0...&quot;</span>
+<a id="__codelineno-17-24" name="__codelineno-17-24" href="#__codelineno-17-24"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-17-25" name="__codelineno-17-25" href="#__codelineno-17-25"></a>
+<a id="__codelineno-17-26" name="__codelineno-17-26" href="#__codelineno-17-26"></a><span class="w">    </span><span class="nt">&quot;outcome&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;success&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-27" name="__codelineno-17-27" href="#__codelineno-17-27"></a><span class="w">    </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-28" name="__codelineno-17-28" href="#__codelineno-17-28"></a><span class="w">        </span><span class="nt">&quot;changes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-29" name="__codelineno-17-29" href="#__codelineno-17-29"></a><span class="w">            </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;newuser@example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-30" name="__codelineno-17-30" href="#__codelineno-17-30"></a><span class="w">            </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;member&quot;</span>
+<a id="__codelineno-17-31" name="__codelineno-17-31" href="#__codelineno-17-31"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-17-32" name="__codelineno-17-32" href="#__codelineno-17-32"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-17-33" name="__codelineno-17-33" href="#__codelineno-17-33"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="required-event-types">Required Event Types<a class="headerlink" href="#required-event-types" title="Permanent link">&para;</a></h3>
 <table>
@@ -6631,12 +6817,12 @@
 </ol>
 <p>This holds whenever the application has no federation ID: before it first joins, and after it leaves or is detached.</p>
 <p>To serve the operations without credentials while standalone, set <code>Config.AllowUnauthenticatedStandalone</code>. It is off by default. Enable it only where untrusted callers cannot reach the endpoints, such as local development and tests.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">contract</span><span class="p">.</span><span class="nx">NewProvider</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">contract</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span><span class="nx">AppID</span><span class="p">:</span><span class="w">                          </span><span class="s">&quot;my-app&quot;</span><span class="p">,</span>
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w">                    </span><span class="s">&quot;My App&quot;</span><span class="p">,</span>
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nx">Version</span><span class="p">:</span><span class="w">                        </span><span class="s">&quot;1.0.0&quot;</span><span class="p">,</span>
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="nx">AllowUnauthenticatedStandalone</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="c1">// local development only</span>
-<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="p">},</span><span class="w"> </span><span class="kc">nil</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nx">provider</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">contract</span><span class="p">.</span><span class="nx">NewProvider</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">contract</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="nx">AppID</span><span class="p">:</span><span class="w">                          </span><span class="s">&quot;my-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nx">DisplayName</span><span class="p">:</span><span class="w">                    </span><span class="s">&quot;My App&quot;</span><span class="p">,</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="nx">Version</span><span class="p">:</span><span class="w">                        </span><span class="s">&quot;1.0.0&quot;</span><span class="p">,</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="nx">AllowUnauthenticatedStandalone</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="c1">// local development only</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="p">},</span><span class="w"> </span><span class="kc">nil</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="federation-attachment">Federation Attachment<a class="headerlink" href="#federation-attachment" title="Permanent link">&para;</a></h3>
 <p>When joining a federation:</p>
@@ -6657,16 +6843,16 @@
 </ol>
 <h3 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h3>
 <p>Standard error response format:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="p">{</span>
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">        </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;IDENTITY_SYNC_CONFLICT&quot;</span><span class="p">,</span>
-<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">        </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Principal with identifier already exists&quot;</span><span class="p">,</span>
-<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">        </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">            </span><span class="nt">&quot;identifier&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span><span class="p">,</span>
-<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">            </span><span class="nt">&quot;existing_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span>
-<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">{</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">    </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">        </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;IDENTITY_SYNC_CONFLICT&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">        </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Principal with identifier already exists&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">        </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">            </span><span class="nt">&quot;identifier&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">            </span><span class="nt">&quot;existing_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uuid&quot;</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="error-codes">Error Codes<a class="headerlink" href="#error-codes" title="Permanent link">&para;</a></h3>
 <table>

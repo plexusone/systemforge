@@ -16,7 +16,7 @@
         <link rel="prev" href="../threat-model/">
       
       
-        <link rel="next" href="../../architecture/systemforge-application-architecture/">
+        <link rel="next" href="../ocsf-events/">
       
       
         
@@ -1643,6 +1643,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1761,6 +1765,62 @@
     
   
     Social Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/verified-email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/ses-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Amazon SES
   
 
     
@@ -2569,6 +2629,8 @@
       
         
       
+        
+      
     
     
     
@@ -2890,6 +2952,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ocsf-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OCSF Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -4586,6 +4676,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4657,6 +4751,62 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.29.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.29.0
   
 
     
@@ -5801,7 +5951,11 @@ writes each event as one log record with the message <code>security event</code>
 warning level when its outcome is <code>failure</code> and info level otherwise. The
 <code>systemauth</code> command uses it, so its log carries the security events.
 An application with an audit store wraps the store's <code>Record</code> in an
-<code>Emitter</code>.</p>
+<code>Emitter</code>.
+<code>ocsfaudit.New(w, opts)</code> (package <code>contract/audit/ocsfaudit</code>) writes each
+event as one line of OCSF JSON for a security data lake; see
+<a href="../ocsf-events/">OCSF Security Events</a>. <code>audit.NewMultiEmitter</code> hands
+every event to several emitters, such as both of these.</p>
 <h2 id="common-fields">Common fields<a class="headerlink" href="#common-fields" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -5841,7 +5995,7 @@ An application with an audit store wraps the store's <code>Record</code> in an
 </tr>
 <tr>
 <td><code>context.user_agent</code></td>
-<td>The client's <code>User-Agent</code> (SystemAuth's events)</td>
+<td>The client's <code>User-Agent</code> (SystemAuth's events), left out when it holds an email address or a credential-like value (<code>audit.SanitizeUserAgent</code>)</td>
 </tr>
 <tr>
 <td><code>context.tenant_id</code></td>
@@ -5918,6 +6072,36 @@ names; the client may not have been authenticated.</p>
 <td><code>reason</code>, <code>subject</code>, <code>client_id</code>; <code>resource.identifier</code> is the family's request ID</td>
 </tr>
 <tr>
+<td><code>systemauth.email_verification.sent</code></td>
+<td><code>send_verification</code></td>
+<td><code>success</code></td>
+<td><code>purpose</code> (<code>verify_email</code> or <code>email_change</code>), <code>sent</code> (false when a send limit suppressed the message or delivery failed); the address is never recorded</td>
+</tr>
+<tr>
+<td><code>systemauth.email.verified</code></td>
+<td><code>verify_email</code></td>
+<td><code>success</code></td>
+<td><code>purpose</code>, <code>method</code> (the pending sign-in's provider, for <code>verify_email</code>)</td>
+</tr>
+<tr>
+<td><code>systemauth.email_change.requested</code></td>
+<td><code>request_email_change</code></td>
+<td><code>success</code></td>
+<td>none; <code>resource.id</code> is the principal</td>
+</tr>
+<tr>
+<td><code>systemauth.email_change.cancelled</code></td>
+<td><code>cancel_email_change</code></td>
+<td><code>success</code></td>
+<td>none; <code>resource.id</code> is the principal</td>
+</tr>
+<tr>
+<td><code>systemauth.email.changed</code></td>
+<td><code>change_email</code></td>
+<td><code>success</code></td>
+<td>none; <code>resource.id</code> is the principal. Neither address is recorded</td>
+</tr>
+<tr>
 <td><code>systemauth.signing_key.loaded</code></td>
 <td><code>load</code></td>
 <td><code>success</code></td>
@@ -5969,6 +6153,10 @@ previous key among the <code>verification_key_ids</code>.</p>
 <tr>
 <td><code>not_invited</code></td>
 <td>Sign-up is by invitation and there was none</td>
+</tr>
+<tr>
+<td><code>verification_invalid</code></td>
+<td>An email verification link was invalid, expired, replaced, already used or opened without the browser that asked for it</td>
 </tr>
 <tr>
 <td><code>login_token_rejected</code></td>
