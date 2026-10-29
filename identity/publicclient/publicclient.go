@@ -165,7 +165,7 @@ func Login(ctx context.Context, cfg Config, open func(authURL string) error) (s 
 	verifier := oauth2.GenerateVerifier()
 
 	codes := make(chan callbackResult, 1)
-	srv := &http.Server{ReadHeaderTimeout: 10 * time.Second, Handler: callbackHandler(state, codes)}
+	srv := newCallbackServer(callbackHandler(state, codes))
 	served := make(chan error, 1)
 	go func() { served <- srv.Serve(ln) }()
 	defer func() {
@@ -406,4 +406,17 @@ func (s *Session) Logout(ctx context.Context) (err error) {
 	}
 	s.creds = Credentials{}
 	return errors.Join(errs...)
+}
+
+// newCallbackServer builds the loopback server that receives the
+// authorization redirect, with timeouts so a stalled local client cannot
+// hold the login open.
+func newCallbackServer(h http.Handler) *http.Server {
+	return &http.Server{
+		Handler:           h,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       30 * time.Second,
+	}
 }
