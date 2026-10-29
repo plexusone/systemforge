@@ -19,6 +19,10 @@ func TestPostgresRestartKeepsSocialLoginState(t *testing.T) {
 	t.Setenv(signingKeyEnv, testKeyPEM(t))
 	cfgPath := filepath.Join(t.TempDir(), "systemauth.yaml")
 	cfg := `issuer: https://auth.example.com
+tokens:
+  hmac_secret: test-hmac-secret-of-at-least-32-bytes-0123456789
+dpop:
+  single_instance: true
 clients:
   - id: web
     type: public
