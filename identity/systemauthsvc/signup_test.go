@@ -122,7 +122,6 @@ func TestInviteCodeAdmitsUpToItsLimitAndTheAPIServes(t *testing.T) {
 		DPoP:     prodDPoP,
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 		SocialLogin: &systemauth.SocialLoginConfig{
-			SkipConsent:            true,
 			AllowedRedirectOrigins: []string{"https://app.example.com"},
 		},
 	}

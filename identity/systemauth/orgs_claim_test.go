@@ -60,7 +60,7 @@ func newOrgsFixture(t *testing.T) *orgsFixture {
 			Scopes:        []string{"openid", "profile", "email", "offline_access"},
 		}},
 		Features:    FeatureConfig{EnableJWTAccessTokens: true, RequirePKCE: true},
-		SocialLogin: &SocialLoginConfig{SkipConsent: true},
+		SocialLogin: &SocialLoginConfig{},
 	}, WithSocialConnector(f.connector()), WithPrincipalDirectory(NewEntPrincipalDirectory(db)),
 		WithStorage(NewEntStorage(db, WithDefaultOwner(createTestOwner(t, db)))),
 		WithOrgsSource(NewEntOrgsSource(db, roles)))
@@ -307,7 +307,7 @@ func TestOrgsClaimRefreshCarriesCurrentRoles(t *testing.T) {
 }
 
 func TestNoOrgsClaimWithoutSource(t *testing.T) {
-	s := newSocialFlowServer(t, true)
+	s := newSocialFlowServer(t, PartyFirst)
 	sess := socialSession(t, s)
 	tokens := exchangeCode(t, s, authorizeCode(t, s, "openid", withCookie(sess)))
 	if got := verifyJWTOrOpaque(t, s, tokens); got != nil {

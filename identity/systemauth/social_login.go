@@ -740,14 +740,11 @@ func (p *socialSessionProvider) socialPrincipal(ctx context.Context, userID stri
 }
 
 // HasConsent implements SessionProvider. Social-login principals are
-// auto-consented when skip_consent is set, and otherwise checked against
-// the consent store filled by the /consent page.
+// checked against the consent store filled by the /consent page. The
+// authorization endpoint asks only about clients that are not first-party.
 func (p *socialSessionProvider) HasConsent(ctx context.Context, userID, clientID string, scopes []string) bool {
 	if _, ok := p.socialPrincipal(ctx, userID); !ok {
 		return p.inner.HasConsent(ctx, userID, clientID, scopes)
-	}
-	if p.social.cfg.SkipConsent {
-		return true
 	}
 	ok, err := p.social.consents.HasConsent(ctx, userID, clientID, scopes)
 	if err != nil {

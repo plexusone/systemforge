@@ -98,7 +98,6 @@ func newEntSocialServer(t *testing.T, client *ent.Client, owner uuid.UUID, f *fa
 		}},
 		SocialLogin: &SocialLoginConfig{
 			AllowedRedirectOrigins: []string{"https://app.example.com"},
-			SkipConsent:            true,
 		},
 	}, WithStorage(NewEntStorage(client, WithDefaultOwner(owner))), WithSocialConnector(f.connector()))
 	if err != nil {

@@ -79,7 +79,7 @@ func checkIDTokenFlow(t *testing.T, s *Server) {
 }
 
 func TestIDTokenIssuedAndVerifiable(t *testing.T) {
-	checkIDTokenFlow(t, newSocialFlowServer(t, true))
+	checkIDTokenFlow(t, newSocialFlowServer(t, PartyFirst))
 }
 
 func TestIDTokenIssuedEnt(t *testing.T) {
@@ -100,7 +100,7 @@ func TestIDTokenIssuedEnt(t *testing.T) {
 			ResponseTypes: []string{"code"},
 			Scopes:        []string{"openid", "profile", "email", "offline_access"},
 		}},
-		SocialLogin: &SocialLoginConfig{SkipConsent: true},
+		SocialLogin: &SocialLoginConfig{},
 	}, WithStorage(NewEntStorage(client, WithDefaultOwner(owner))), WithSocialConnector(f.connector()))
 	if err != nil {
 		t.Fatal(err)
@@ -120,7 +120,7 @@ func TestJWTAccessTokens(t *testing.T) {
 			Scopes:        []string{"openid", "email", "offline_access"},
 		}},
 		Features:    FeatureConfig{EnableJWTAccessTokens: true, RequirePKCE: true},
-		SocialLogin: &SocialLoginConfig{SkipConsent: true},
+		SocialLogin: &SocialLoginConfig{},
 	}, WithSocialConnector(f.connector()))
 	if err != nil {
 		t.Fatal(err)
@@ -161,7 +161,7 @@ func TestJWTAccessTokens(t *testing.T) {
 }
 
 func TestIDPHintSkipsChooser(t *testing.T) {
-	s := newSocialFlowServer(t, true)
+	s := newSocialFlowServer(t, PartyFirst)
 	u := authorizeURL("openid") + "&" + IDPHintParam + "=github"
 	w := httptestRecorder(s, u)
 	loc, err := url.Parse(w.Header().Get("Location"))

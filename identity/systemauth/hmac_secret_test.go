@@ -34,7 +34,7 @@ func newHMACTestServer(t *testing.T, st Storage, secret, verification string) *S
 			Scopes:        []string{"openid", "profile", "email", "offline_access"},
 		}},
 	},
-		WithSessionProvider(NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", TrustAllRequests), WithSkipConsent(true))),
+		WithSessionProvider(NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", TrustAllRequests))),
 		WithStorage(st),
 	)
 	if err != nil {

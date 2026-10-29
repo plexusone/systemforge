@@ -51,7 +51,7 @@ func newConfidentialEntServer(t *testing.T, db *ent.Client) *Server {
 			Scopes:        []string{"openid", "profile", "email", "offline_access"},
 		}},
 	},
-		WithSessionProvider(NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", TrustAllRequests), WithSkipConsent(true))),
+		WithSessionProvider(NewDefaultSessionProvider(WithTrustedUserIDHeader("X-User-ID", TrustAllRequests))),
 		WithStorage(NewEntStorage(db, WithDefaultOwner(createTestOwner(t, db)))),
 	)
 	if err != nil {

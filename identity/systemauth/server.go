@@ -125,6 +125,10 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 	if err := s.setupClientAddress(); err != nil {
 		return nil, err
 	}
+	if cfg.SocialLogin != nil && cfg.SocialLogin.SkipConsent {
+		s.logger.Warn("social_login.skip_consent is deprecated and ignored: first-party clients skip the consent screen automatically " +
+			"(clients in the configuration file are first_party unless they set party), and second- and third-party clients always ask for consent")
+	}
 	if err := s.setupRateLimits(); err != nil {
 		return nil, err
 	}

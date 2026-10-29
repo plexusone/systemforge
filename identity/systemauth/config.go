@@ -339,10 +339,14 @@ type SocialLoginConfig struct {
 	// Default: 12h.
 	SessionLifetime Duration `json:"session_lifetime,omitempty" yaml:"session_lifetime,omitempty" jsonschema:"default=12h,description=Absolute login session lifetime"`
 
-	// SkipConsent auto-grants consent for authorization requests from users
-	// signed in through social login. Use only when every registered client
-	// is first-party.
-	SkipConsent bool `json:"skip_consent,omitempty" yaml:"skip_consent,omitempty" jsonschema:"default=false,description=Auto-grant consent for first-party clients"`
+	// SkipConsent is read for compatibility and ignored.
+	//
+	// Deprecated: first-party clients (ClientConfig.Party, first_party by
+	// default for clients in the configuration file) skip the consent
+	// screen without it, and second- and third-party clients always ask for
+	// consent. It used to grant consent to every client, including ones the
+	// operator does not own. A startup warning is logged when it is set.
+	SkipConsent bool `json:"skip_consent,omitempty" yaml:"skip_consent,omitempty" jsonschema:"default=false,description=Deprecated and ignored: first-party clients skip consent and other clients always ask"`
 
 	// SignupMinimumAge, when set, asks a person their birth month and year
 	// before an upstream login creates their account, and refuses anyone

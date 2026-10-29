@@ -68,7 +68,7 @@ func serve(s *Server, r *http.Request, cookies ...*http.Cookie) *httptest.Respon
 // pages, whose forms redirect to another origin, and the redirects and
 // errors around them.
 func TestSecurityHeadersOnLogoutAndConsent(t *testing.T) {
-	s := newSocialFlowServer(t, false)
+	s := newSocialFlowServer(t, PartyThird)
 	sess := socialSession(t, s)
 
 	logout := serve(s, httptest.NewRequest(http.MethodGet, LogoutPath, nil), sess)

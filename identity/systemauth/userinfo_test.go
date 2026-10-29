@@ -39,7 +39,7 @@ func bearer(token string) func(*http.Request) {
 }
 
 func TestUserInfoScopes(t *testing.T) {
-	s := newSocialFlowServer(t, true)
+	s := newSocialFlowServer(t, PartyFirst)
 	sess := socialSession(t, s)
 	loginReq := httptest.NewRequest(http.MethodGet, "/", nil)
 	loginReq.AddCookie(sess)
@@ -97,7 +97,7 @@ func TestUserInfoScopes(t *testing.T) {
 }
 
 func TestUserInfoInvalidToken(t *testing.T) {
-	s := newSocialFlowServer(t, true)
+	s := newSocialFlowServer(t, PartyFirst)
 
 	// Missing token: 401 with a bare challenge.
 	w, _ := userinfo(t, s, nil, http.MethodGet, nil)
@@ -150,7 +150,7 @@ func TestUserInfoClaimsFiltering(t *testing.T) {
 }
 
 func TestDiscoveryAdvertisesUserInfo(t *testing.T) {
-	s := newSocialFlowServer(t, true)
+	s := newSocialFlowServer(t, PartyFirst)
 	out, err := s.openIDConfigHandler(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)

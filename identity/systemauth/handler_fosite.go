@@ -201,8 +201,9 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Step 2: Check if user has already consented to these scopes
-	if !s.sessionProvider.HasConsent(ctx, userID, clientID, requestedScopes) {
+	// Step 2: First-party clients need no consent; any other client needs
+	// the user's recorded consent to these scopes.
+	if !s.hasConsent(ctx, ar.GetClient(), userID, requestedScopes) {
 		// Redirect to consent
 		returnURL := r.URL.String()
 		consentURL := s.sessionProvider.RedirectToConsent(returnURL)
@@ -261,6 +262,24 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// Write the response (redirect with code)
 	s.oauth2.WriteAuthorizeResponse(ctx, w, ar, response)
+}
+
+// firstPartyClient is implemented by clients that know their party. A
+// fosite.Client from a custom Storage that does not is not first-party.
+type firstPartyClient interface {
+	IsFirstParty() bool
+}
+
+// hasConsent reports whether an authorization request may proceed without
+// the consent screen. A first-party client needs no consent: the service
+// provider owns it. A second- or third-party client, or a client that does
+// not say what it is, needs the user's recorded consent to every scope,
+// whatever the SessionProvider's configuration.
+func (s *Server) hasConsent(ctx context.Context, client fosite.Client, userID string, scopes []string) bool {
+	if fp, ok := client.(firstPartyClient); ok && fp.IsFirstParty() {
+		return true
+	}
+	return s.sessionProvider.HasConsent(ctx, userID, client.GetID(), scopes)
 }
 
 // tokenEndpoint handles POST /oauth/token.
