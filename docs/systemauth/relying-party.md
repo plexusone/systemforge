@@ -117,6 +117,16 @@ The routes match the shared frontend auth package (`BFFClient`):
 organization_name, organization_slug, role, joined_at}], created_at,
 updated_at?}`. Errors are `{code, message}`.
 
+A failed sign-in at `GET /bff/auth/login`, `/bff/auth/{provider}` or the
+callback answers JSON by default. Set `BFFConfig.LoginErrorPath` (or
+`appauth.Options.LoginErrorPath`) to the app's sign-in page, such as `/login`,
+and the browser is redirected there with `?error=<CODE>` instead (`303`). The
+codes are `LOGIN_FAILED`, `INVALID_STATE`, `EMAIL_NOT_VERIFIED`,
+`ACCOUNT_CONFLICT`, `ACCOUNT_DISABLED`, `INVALID_RETURN_TO`, `UNKNOWN_PROVIDER`
+and `INTERNAL_ERROR`; the upstream's error text is never copied into the URL.
+A request with `Accept: application/json` (and not `text/html`) still gets
+JSON. The path must pass the same checks as a `return_to`.
+
 Security properties:
 
 - The session cookie (`__Host-sf_rp_session`) is an opaque 256-bit token,
@@ -133,8 +143,10 @@ Security properties:
   match it.
 - `return_to` must be a same-origin path or an absolute URL on the app origin
   or `AllowedOrigins`.
-- `POST /bff/auth/logout` and unsafe methods behind `RequireSession` require a
-  JSON body and, when the browser sends one, an allowed `Origin`.
+- `POST /bff/auth/logout` and unsafe methods behind `RequireSession` require
+  an allowed `Origin`, which browsers send on such requests; any body is then
+  accepted, so file uploads work. A request without an `Origin` must have a
+  JSON body, and an allowed `Referer` when it sends one.
 
 `BFF.AccessToken(r)` returns a SystemAuth access token for the session,
 refreshing it when it is about to expire and storing the rotated refresh

@@ -69,9 +69,18 @@ type Options struct {
 	// Revocation, when set, applies recorded access changes to sessions and
 	// tokens at once (ADR-010).
 	Revocation *relyingparty.RevocationCache
+	// LoginErrorPath, when set, is the app's sign-in page: a browser whose
+	// sign-in fails is redirected there with ?error=<CODE> instead of shown
+	// a JSON error. See relyingparty.BFFConfig.LoginErrorPath.
+	LoginErrorPath string
 	// ReplayCache rejects reused DPoP proofs. Default: in memory, per
-	// instance; instances that share an API need a shared cache.
+	// instance; instances that share an API need a shared cache. Unless
+	// the public URL is a loopback host or SingleInstance is set, New
+	// logs a warning when it uses the default.
 	ReplayCache relyingparty.DPoPReplayCache
+	// SingleInstance declares that one instance serves the API, so the
+	// default in-memory replay cache sees every proof.
+	SingleInstance bool
 	// Authenticators are tried after the session and token, for requests
 	// they do not recognize, such as AAuth-signed agent requests.
 	Authenticators []requestprincipal.Authenticator
@@ -172,6 +181,7 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 		Memberships:     memberships,
 		Apps:            opts.Apps,
 		Revocation:      opts.Revocation,
+		LoginErrorPath:  opts.LoginErrorPath,
 		Sessions:        opts.Sessions,
 		LoginStates:     opts.LoginStates,
 		BasePath:        cfg.basePath(),
@@ -184,6 +194,9 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 	}
 	replay := opts.ReplayCache
 	if replay == nil {
+		if !opts.SingleInstance && !cfg.loopback() {
+			logger.Warn("appauth: DPoP proofs are checked against an in-memory replay cache; pass Options.ReplayCache shared by every instance, or set Options.SingleInstance when one instance serves the API")
+		}
 		replay = middleware.NewMemoryReplayCache()
 	}
 	a := &Authenticator{

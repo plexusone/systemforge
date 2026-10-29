@@ -145,50 +145,18 @@ type SubscriptionLister interface {
 	ListByOrg(ctx context.Context, orgID uuid.UUID) ([]*Subscription, error)
 }
 
-// CheckoutService provides operations for purchasing licenses.
-type CheckoutService interface {
-	// CreateCheckoutSession creates a Stripe checkout session for a listing.
-	CreateCheckoutSession(ctx context.Context, req CheckoutRequest) (*CheckoutSession, error)
-
-	// ProcessWebhook handles Stripe webhook events.
-	ProcessWebhook(ctx context.Context, payload []byte, signature string) error
-}
-
-// CheckoutRequest contains parameters for creating a checkout session.
-type CheckoutRequest struct {
-	// ListingID is the listing to purchase.
-	ListingID uuid.UUID
-
-	// OrganizationID is the purchasing organization.
-	OrganizationID uuid.UUID
-
-	// PurchaserID is the principal making the purchase.
-	PurchaserID uuid.UUID
-
-	// Seats is the number of seats (for per-seat pricing).
-	Seats *int
-
-	// SuccessURL is the redirect URL on success.
-	SuccessURL string
-
-	// CancelURL is the redirect URL on cancel.
-	CancelURL string
-}
-
-// CheckoutSession contains the result of creating a checkout session.
-type CheckoutSession struct {
-	// SessionID is the Stripe checkout session ID.
-	SessionID string
-
-	// URL is the checkout URL to redirect the user to.
-	URL string
-}
-
 // PurchaserChecker reports whether a principal is managed: a human
 // without an email whose managers control the account. Managed principals
 // cannot purchase. identity/managedprincipal.Service implements it.
 type PurchaserChecker interface {
 	IsManaged(ctx context.Context, principalID uuid.UUID) (bool, error)
+}
+
+// PublishGate decides whether a creator organization may publish a paid
+// listing: whether it can take payments. billing.SellerGate implements it
+// from the seller's connected payment account.
+type PublishGate interface {
+	CanPublish(ctx context.Context, creatorOrgID uuid.UUID) (bool, error)
 }
 
 // AuthzSyncer syncs marketplace entities to the authorization system.
@@ -214,5 +182,4 @@ type Service interface {
 	Listings() ListingService
 	Licenses() LicenseService
 	Subscriptions() SubscriptionService
-	Checkout() CheckoutService
 }

@@ -122,7 +122,6 @@ func (sl *socialLogin) renderWaitlist(w http.ResponseWriter, r *http.Request, st
 // handleWaitlistPage serves GET SignupWaitlistPath.
 func (sl *socialLogin) handleWaitlistPage(w http.ResponseWriter, r *http.Request) {
 	noStore(w)
-	frameDeny(w)
 	sl.renderWaitlist(w, r, http.StatusOK, waitlistView{Refused: r.URL.Query().Get("error") == "invite_required"})
 }
 
@@ -132,7 +131,6 @@ func (sl *socialLogin) handleWaitlistJoin(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	logger := LoggerFromContext(ctx)
 	noStore(w)
-	frameDeny(w)
 	if !sl.redirects.fromTrustedOrigin(r) {
 		http.Error(w, "cross-origin request rejected", http.StatusForbidden)
 		return

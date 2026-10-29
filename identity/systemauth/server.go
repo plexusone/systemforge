@@ -52,6 +52,7 @@ type Server struct {
 	accessChanges   AccessChangeLister
 	accessScope     AccessChangeScope
 	jwtBearerKeys   JWTBearerKeyStorage
+	production      ProductionPolicy
 }
 
 // Option configures a Server.
@@ -289,7 +290,9 @@ func (s *Server) setupFosite() error {
 func (s *Server) setupRouter() {
 	router := chi.NewRouter()
 
-	// Add standard middleware (must be before routes)
+	// Add standard middleware (must be before routes). Security headers
+	// come first, so every response carries them, error pages included.
+	router.Use(s.securityHeaders)
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Recoverer)
 	router.Use(s.loggerMiddleware)

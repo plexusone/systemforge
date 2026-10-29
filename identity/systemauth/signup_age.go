@@ -259,6 +259,15 @@ func (sl *socialLogin) renderAge(w http.ResponseWriter, r *http.Request, status 
 	for y := this; y >= this-maxAgeAnswer; y-- {
 		v.Years = append(v.Years, y)
 	}
+	// The answer restarts the upstream login: the submission may redirect
+	// through the provider and back to wherever the sign-in returns, which
+	// is not known here, so form-action allows any https target (and http
+	// when the issuer itself is http, in development).
+	targets := []string{"https:"}
+	if strings.HasPrefix(sl.redirects.issuerOrigin, "http://") {
+		targets = append(targets, "http:")
+	}
+	allowFormTargets(w, targets)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	if err := signupAgeTemplate.Execute(w, v); err != nil {
@@ -274,7 +283,6 @@ func formatAge(text string, minimum int) string {
 // handleAgePage serves GET SignupAgePath.
 func (sl *socialLogin) handleAgePage(w http.ResponseWriter, r *http.Request) {
 	noStore(w)
-	frameDeny(w)
 	switch {
 	case cookieValue(r, sl.ageCookie(signupAgeRefusedCookie)) != "":
 		sl.renderAge(w, r, http.StatusForbidden, signupAgeView{Refused: true})
@@ -293,7 +301,6 @@ func (sl *socialLogin) handleAgeAnswer(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := LoggerFromContext(ctx)
 	noStore(w)
-	frameDeny(w)
 	if !sl.redirects.fromTrustedOrigin(r) {
 		http.Error(w, "cross-origin request rejected", http.StatusForbidden)
 		return

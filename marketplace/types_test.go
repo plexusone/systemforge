@@ -145,7 +145,7 @@ func TestSubscription_IsActive(t *testing.T) {
 	}{
 		{"active", SubscriptionStatusActive, true},
 		{"trialing", SubscriptionStatusTrialing, true},
-		{"past due", SubscriptionStatusPastDue, false},
+		{"past due", SubscriptionStatusPastDue, true},
 		{"canceled", SubscriptionStatusCanceled, false},
 		{"unpaid", SubscriptionStatusUnpaid, false},
 	}

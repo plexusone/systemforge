@@ -54,6 +54,10 @@ var (
 	// ErrCannotPurchaseOwnListing is returned when a creator tries to purchase their own listing.
 	ErrCannotPurchaseOwnListing = errors.New("cannot purchase your own listing")
 
+	// ErrSellerNotReady is returned when a paid listing is published by an
+	// organization that cannot take payments yet.
+	ErrSellerNotReady = errors.New("seller cannot take payments")
+
 	// ErrPaymentRequired is returned when payment is required but not provided.
 	ErrPaymentRequired = errors.New("payment required")
 

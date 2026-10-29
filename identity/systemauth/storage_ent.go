@@ -441,16 +441,34 @@ func (s *EntStorage) GetAuthorizeCodeSession(ctx context.Context, code string, s
 }
 
 // InvalidateAuthorizeCodeSession marks an authorization code as used.
+//
+// The update only matches an unused code, so it is the single point where
+// one exchange wins. Fosite reads the code before invalidating it, and this
+// storage does not run the two in one transaction, so two concurrent
+// exchanges can both read it as unused; the one that does not win here gets
+// fosite.ErrInvalidatedAuthorizeCode and issues no tokens.
 func (s *EntStorage) InvalidateAuthorizeCodeSession(ctx context.Context, code string) error {
 	signature := hashToken(code)
 
-	_, err := s.db.OAuthAuthCode.Update().
-		Where(oauthauthcode.CodeSignatureEQ(signature)).
+	n, err := s.db.OAuthAuthCode.Update().
+		Where(oauthauthcode.CodeSignatureEQ(signature), oauthauthcode.UsedEQ(false)).
 		SetUsed(true).
 		SetUsedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
 		return fosite.ErrServerError.WithWrap(err)
+	}
+	if n == 0 {
+		exists, err := s.db.OAuthAuthCode.Query().
+			Where(oauthauthcode.CodeSignatureEQ(signature)).
+			Exist(ctx)
+		if err != nil {
+			return fosite.ErrServerError.WithWrap(err)
+		}
+		if !exists {
+			return fosite.ErrNotFound
+		}
+		return fosite.ErrInvalidatedAuthorizeCode
 	}
 
 	return nil
@@ -676,7 +694,28 @@ func (s *EntStorage) RevokeAccessToken(ctx context.Context, requestID string) er
 // RotateRefreshToken retires the current tokens of the family before Fosite
 // stores their replacements. Retired rows stay (revoked) so that reuse of
 // an old refresh token is detected.
+//
+// The refresh token being presented is retired first, by an update that only
+// matches it while it is active, so of two concurrent refreshes with the same
+// token only one rotates; the other gets fosite.ErrInactiveToken and issues
+// no tokens. A later use of the retired token is caught by
+// GetRefreshTokenSession, and Fosite then revokes the family.
 func (s *EntStorage) RotateRefreshToken(ctx context.Context, requestID string, refreshTokenSignature string) error {
+	n, err := s.db.OAuthToken.Update().
+		Where(
+			oauthtoken.RefreshTokenSignatureEQ(hashToken(refreshTokenSignature)),
+			oauthtoken.RevokedEQ(false),
+		).
+		SetRevoked(true).
+		SetRevokedAt(time.Now()).
+		SetRevokedReason("rotated").
+		Save(ctx)
+	if err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	}
+	if n == 0 {
+		return fosite.ErrInactiveToken
+	}
 	return s.revokeFamily(ctx, requestID, "rotated")
 }
 

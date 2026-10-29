@@ -14,12 +14,44 @@ Unless started with `--dev`, the server refuses to start without:
 - a public **https issuer** (cookies are `Secure`/`__Host-`, and the issuer is
   what relying parties verify tokens against),
 - a persistent **database** (PostgreSQL or SQLite),
+- a [**token HMAC secret**](#token-hmac-secret) (`tokens.hmac_secret`),
+- a DPoP **replay cache** every instance shares
+  (`dpop.replay_cache_redis_url`), or `dpop.single_instance: true` when one
+  instance serves SystemAuth (see [DPoP](#dpop)),
 
-and it rejects `social_login.insecure_cookies`. `--dev` relaxes all of these
+and it rejects `social_login.insecure_cookies` and statically configured
+clients that set `allow_bearer_tokens`. `--dev` relaxes all of these
 (ephemeral key, in-memory storage, `http://localhost` issuer).
 
-Set a [token HMAC secret](#token-hmac-secret) as well. It is not required
-to start, but without it refresh tokens do not survive a restart.
+Outside `--dev` the token endpoint also refuses, per request, so that
+clients registered at runtime are covered:
+
+- the `client_credentials` grant from a client that authenticates with a
+  shared client secret, with `unauthorized_client`. Use
+  [service accounts](../oauth/service-accounts.md) with the JWT-bearer grant
+  instead. Confidential clients keep using their secret for the
+  `authorization_code` and `refresh_token` grants, and discovery no longer
+  lists `client_credentials`;
+- every request from a client registered with `allow_bearer_tokens`, with
+  `unauthorized_client`, so no token is issued without a DPoP binding.
+
+### Waiving a production check
+
+A deployment that must run without one of these checks names it in
+`production.allow`; anything else there is a configuration error. Each
+waiver is logged as a warning at every start:
+
+```yaml
+production:
+  allow:
+    - ephemeral_hmac_secret             # start without tokens.hmac_secret
+    - client_secret_client_credentials  # serve client_credentials with a shared secret
+    - bearer_token_clients              # serve clients with allow_bearer_tokens
+```
+
+The replay cache has no waiver: `dpop.single_instance: true` is the
+statement that one instance serves SystemAuth, and is also logged as a
+warning.
 
 With a database configured, social login sessions, in-flight upstream logins
 and consent grants are stored in it (`sf_login_sessions`, `sf_login_states`,
@@ -245,13 +277,12 @@ tokens:
   hmac_secret: ${SYSTEMAUTH_TOKEN_HMAC_SECRET}
 ```
 
-Without it, SystemAuth generates a secret at each start and logs a
-warning. Every refresh token then stops working at the next restart, so a
-relying party cannot refresh and sends its users through sign-in again
-after each deploy, and a second instance refuses the first one's codes and
-refresh tokens. The server does not refuse to start without it, so a
-deployment that upgrades keeps running; a host that wants it required can
-check `Tokens.HMACSecret` itself.
+Outside `--dev` the server refuses to start without it, unless
+`production.allow` names `ephemeral_hmac_secret`. SystemAuth then generates
+a secret at each start and logs a warning. Every refresh token stops
+working at the next restart, so a relying party cannot refresh and sends
+its users through sign-in again after each deploy, and a second instance
+refuses the first one's codes and refresh tokens.
 
 ### Rotating the HMAC secret
 
@@ -313,6 +344,8 @@ keys:
   private_key_file: ${SYSTEMAUTH_SIGNING_KEY_FILE}
 tokens:
   hmac_secret: ${SYSTEMAUTH_TOKEN_HMAC_SECRET}
+dpop:
+  single_instance: true   # or replay_cache_redis_url with several instances
 features:
   require_pkce: true
   enable_jwt_access_tokens: true
@@ -332,6 +365,33 @@ auth.example.com {
 }
 ```
 
+## Security headers
+
+Every SystemAuth response, including the login, consent, sign-up,
+sign-up code, waitlist, age question and logout pages and their error
+pages, carries:
+
+| Header | Value |
+|--------|-------|
+| `Content-Security-Policy` | `default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; form-action 'self'` |
+| `X-Frame-Options` | `DENY` |
+| `X-Content-Type-Options` | `nosniff` |
+| `Referrer-Policy` | `same-origin` |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains`, when the issuer is https |
+
+The pages run no script and no inline style. Browsers check `form-action`
+on every redirect that follows a form submission, so a page whose form
+ends at another origin adds it: the consent page adds the origins of the
+client's redirect URIs, the logout page the `allowed_redirect_origins`,
+and the age question, whose answer continues through the upstream
+provider, `https:`. `same-origin` keeps page URLs, such as one carrying an
+invite code, from reaching a provider or an application as a referrer,
+while a same-origin form post keeps the `Origin` header the form handlers
+check. The organization console sets its own policy.
+
+A proxy in front of SystemAuth should pass these headers through rather
+than replace them.
+
 ## Health checks
 
 | Endpoint | Meaning |
@@ -347,8 +407,16 @@ Embedding applications add their own checks with
 SystemAuth issues DPoP-bound tokens (RFC 9449): every client must send a DPoP
 proof with its token requests unless its registration sets the legacy
 `allow_bearer_tokens` exception. See [DPoP Enforcement](../session/dpop.md).
-When several instances serve SystemAuth, share the replay cache that rejects
-reused proofs:
+Outside `--dev` the server refuses to start unless the replay cache that
+rejects reused proofs is shared by every instance, or one instance is
+declared. With one instance:
+
+```yaml
+dpop:
+  single_instance: true
+```
+
+When several instances serve SystemAuth, share the cache:
 
 ```yaml
 dpop:
@@ -362,7 +430,9 @@ dpop:
 ```
 
 Without `replay_cache_redis_url` the cache is in memory, which suits a single
-instance. An existing database gains the `sf_oauth_apps.allow_bearer_tokens`
+instance only: with per-instance caches, a proof replayed to another
+instance is accepted. An embedding host may instead pass
+`systemauthsvc.Options.DPoPReplayCache`. An existing database gains the `sf_oauth_apps.allow_bearer_tokens`
 column on startup migration (or with `migrations/0010_oauth_app_allow_bearer_tokens.sql`);
 every existing application then requires DPoP until the column is set for it.
 

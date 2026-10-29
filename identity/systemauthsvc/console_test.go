@@ -18,6 +18,8 @@ func consoleConfig(t *testing.T, webDir string) *systemauthsvc.Config {
 	t.Helper()
 	return &systemauthsvc.Config{
 		Issuer:   "https://auth.example.com",
+		Tokens:   prodTokens,
+		DPoP:     prodDPoP,
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 		SocialLogin: &systemauth.SocialLoginConfig{
 			SkipConsent: true,

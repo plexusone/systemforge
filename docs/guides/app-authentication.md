@@ -99,6 +99,12 @@ mux.Handle("/api/", auth.Middleware(true)(api))
 public URL is a loopback host. A host that embeds SystemAuth passes its
 metadata as `Options.Metadata`, so no discovery request is made.
 
+DPoP proofs are checked against `Options.ReplayCache`, by default an
+in-memory cache that sees only its own instance's proofs. For a public URL
+`New` logs a warning about it unless `Options.SingleInstance` declares that
+one instance serves the API; with several instances pass a shared cache
+such as `middleware.NewRedisReplayCache`.
+
 ### Memberships
 
 With `Application` set, a person's memberships are the organizations where
@@ -127,8 +133,9 @@ The order is: the `Authorization` header, then the session cookie, then
 `relyingparty` makes two further checks, so applications don't repeat them:
 
 - **Cookie writes.** A cookie-authenticated request that changes state must
-  come from the public URL or an allowed origin, with a JSON body. Otherwise
-  it gets a `403`.
+  carry an `Origin` of the public URL or an allowed origin, which browsers
+  send, and may then have any body, including a file upload. A request
+  without an `Origin` must have a JSON body. Otherwise it gets a `403`.
 - **Inactive principals.** An inactive principal is refused at sign-in and
   on every request.
 

@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -39,7 +40,9 @@ func emailVerified(t *testing.T, db *ent.Client, email string) bool {
 }
 
 // TestTrustProvisionedEmailLinksSocialLogin verifies that with the option
-// on, a social login for a provisioned email links to the same principal.
+// on, a social login authoritative for a provisioned email (such as the
+// organization's Google Workspace) links to the same principal, and a login
+// that is only verified, such as GitHub, does not.
 func TestTrustProvisionedEmailLinksSocialLogin(t *testing.T) {
 	ctx := scim.WithPlatformScope(context.Background())
 	s, db := newTrustingStore(t, true)
@@ -52,7 +55,7 @@ func TestTrustProvisionedEmailLinksSocialLogin(t *testing.T) {
 	}
 
 	p, err := systemauth.ResolveExternalLogin(ctx, systemauth.NewEntPrincipalDirectory(db), systemauth.ExternalLogin{
-		Provider: "google", Subject: "g-lin", Email: "lin@example.com", EmailVerified: true,
+		Provider: "google", Subject: "g-lin", Email: "lin@example.com", EmailVerified: true, EmailAuthoritative: true,
 	}, time.Now())
 	if err != nil {
 		t.Fatalf("social login: %v", err)
@@ -62,6 +65,13 @@ func TestTrustProvisionedEmailLinksSocialLogin(t *testing.T) {
 	}
 	if n, err := db.Principal.Query().Where(principal.TypeEQ(principal.TypeHuman)).Count(ctx); err != nil || n != 1 {
 		t.Errorf("human principals = %d, %v; want 1", n, err)
+	}
+
+	_, err = systemauth.ResolveExternalLogin(ctx, systemauth.NewEntPrincipalDirectory(db), systemauth.ExternalLogin{
+		Provider: "github", Subject: "gh-lin", Email: "lin@example.com", EmailVerified: true,
+	}, time.Now())
+	if !errors.Is(err, systemauth.ErrEmailConflict) {
+		t.Errorf("verified, non-authoritative login: err = %v, want ErrEmailConflict", err)
 	}
 }
 

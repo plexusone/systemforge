@@ -57,6 +57,11 @@ type User struct {
 	// Username is the user's username (primarily for GitHub).
 	Username string `json:"username,omitempty"`
 
+	// HostedDomain is the Google Workspace domain the account belongs to
+	// (the `hd` claim), empty for consumer accounts and other providers.
+	// Google is authoritative for an address in this domain.
+	HostedDomain string `json:"hd,omitempty"`
+
 	// AccessToken is the OAuth access token.
 	AccessToken string `json:"-"`
 

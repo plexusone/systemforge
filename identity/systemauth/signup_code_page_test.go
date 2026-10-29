@@ -52,7 +52,9 @@ func TestSignupPageAndCodeCarriedToTheGate(t *testing.T) {
 	if findCookie(t, bad.Result(), signupCodeCookie) != nil {
 		t.Error("an invalid code set the cookie")
 	}
-	if bad.Header().Get("Referrer-Policy") != "no-referrer" || bad.Header().Get("Cache-Control") != "no-store" {
+	// The referrer goes only to the issuer's own origin, so the code in the
+	// URL does not leak to the provider.
+	if bad.Header().Get("Referrer-Policy") != "same-origin" || bad.Header().Get("Cache-Control") != "no-store" {
 		t.Errorf("headers = %v", bad.Header())
 	}
 

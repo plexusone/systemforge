@@ -100,7 +100,7 @@ func TestSocialSignupSameEmailOtherProviderLinks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := ResolveExternalLogin(ctx, dir, ExternalLogin{Provider: "google", Subject: "g-1", Email: "Kim@example.com", EmailVerified: true}, now)
+	second, err := ResolveExternalLogin(ctx, dir, ExternalLogin{Provider: "google", Subject: "g-1", Email: "Kim@example.com", EmailVerified: true, EmailAuthoritative: true}, now)
 	if err != nil {
 		t.Fatal(err)
 	}

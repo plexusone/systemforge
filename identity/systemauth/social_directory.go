@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/plexusone/systemforge/identity/oauthclient"
 )
 
 // ErrExternalIdentityExists is returned by PrincipalDirectory implementations
@@ -26,6 +28,11 @@ type ExternalLogin struct {
 	Email string
 	// EmailVerified reports whether the provider asserts Email is verified.
 	EmailVerified bool
+	// EmailAuthoritative reports whether the provider is authoritative for
+	// Email: it controls the address now, not only when it was verified.
+	// Only an authoritative email links a new identity to an existing
+	// account; see AuthoritativeEmail.
+	EmailAuthoritative bool
 	// Name is the display name.
 	Name string
 	// Username is the provider's handle for the person (the GitHub login),
@@ -72,11 +79,16 @@ type PrincipalDirectory interface {
 //
 //  1. The (provider, subject) link is the primary key: if it exists, that
 //     principal signs in, regardless of the current email.
-//  2. Otherwise a verified upstream email may link to an existing principal
-//     whose own email is verified.
-//  3. Otherwise a new principal is created, which requires a verified email.
+//  2. Otherwise an authoritative upstream email (EmailAuthoritative) may
+//     link to an existing principal whose own email is verified.
+//  3. Otherwise a new principal is created, which requires a verified email;
+//     an email that already belongs to a principal gives ErrEmailConflict,
+//     and the person signs in with the method they used before.
 //
-// An unverified email never links to or creates an account.
+// An unverified email never links to or creates an account. A verified but
+// not authoritative email never links: a provider can keep an address marked
+// verified after its owner loses the mailbox, so linking on it would hand the
+// existing account to whoever holds the stale verification.
 func ResolveExternalLogin(ctx context.Context, dir PrincipalDirectory, login ExternalLogin, now time.Time) (*HumanPrincipal, error) {
 	if login.Provider == "" || login.Subject == "" {
 		return nil, errors.New("systemauth: external login requires provider and subject")
@@ -96,6 +108,16 @@ func ResolveExternalLogin(ctx context.Context, dir PrincipalDirectory, login Ext
 
 		if login.Email == "" || !login.EmailVerified {
 			return nil, ErrEmailNotVerified
+		}
+		if !login.EmailAuthoritative {
+			p, err = dir.CreateFromExternal(ctx, login)
+			if errors.Is(err, ErrExternalIdentityExists) {
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+			return finishLogin(ctx, dir, p, login, now)
 		}
 
 		p, err = dir.FindByVerifiedEmail(ctx, login.Email)
@@ -305,4 +327,28 @@ func displayNameFor(login ExternalLogin) string {
 		return login.Email
 	}
 	return login.Provider + ":" + login.Subject
+}
+
+// consumerGoogleDomains are the domains whose addresses only Google issues.
+var consumerGoogleDomains = map[string]bool{"gmail.com": true, "googlemail.com": true}
+
+// AuthoritativeEmail reports whether an upstream user's provider is
+// authoritative for its verified email: it controls the address now, so the
+// address identifies the person. Google is authoritative for its consumer
+// domains and for a Workspace account's own domain (the `hd` claim). GitHub
+// and other providers are not: they keep an address marked verified after
+// the person loses the mailbox.
+func AuthoritativeEmail(user *oauthclient.User) bool {
+	if user == nil || !user.EmailVerified || user.Provider != oauthclient.ProviderGoogle {
+		return false
+	}
+	at := strings.LastIndexByte(user.Email, '@')
+	if at < 0 || at == len(user.Email)-1 {
+		return false
+	}
+	domain := strings.ToLower(user.Email[at+1:])
+	if consumerGoogleDomains[domain] {
+		return true
+	}
+	return user.HostedDomain != "" && strings.EqualFold(user.HostedDomain, domain)
 }

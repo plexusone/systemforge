@@ -118,6 +118,8 @@ func TestInviteCodeAdmitsUpToItsLimitAndTheAPIServes(t *testing.T) {
 	f := newFakeUpstream(t)
 	cfg := &systemauthsvc.Config{
 		Issuer:   issuer,
+		Tokens:   prodTokens,
+		DPoP:     prodDPoP,
 		Database: &systemauth.DatabaseConfig{Driver: "sqlite", DSN: sqliteDSN(t)},
 		SocialLogin: &systemauth.SocialLoginConfig{
 			SkipConsent:            true,

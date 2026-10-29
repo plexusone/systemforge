@@ -50,7 +50,8 @@ deliberately minimal (client name, scope descriptions, Allow/Deny). Decisions
 are kept in a `ConsentStore`; with `EntStorage` the default is the database
 (`sf_consent_grants`), otherwise in-memory (users are asked again after a
 restart). See [Production Stores](production-stores.md). The consent form is protected by a CSRF token derived from the login
-session, a same-origin check, and `frame-ancestors 'none'`. Deployments whose
+session, a same-origin check, and the
+[security headers](deployment.md#security-headers) every page carries. Deployments whose
 clients are all first-party should set `skip_consent: true` instead.
 
 ## Refresh tokens
@@ -127,15 +128,20 @@ never a legacy `User` row — using one model:
 1. **Provider identity first.** The `(provider, subject)` pair (GitHub numeric
    user ID, Google `sub`) is stored in `sf_external_identities` and is the
    primary key. A returning user is matched by it even if their email changed.
-2. **Verified-email linking fallback.** If the identity is not linked yet, a
-   *verified* upstream email links it to an existing principal whose own email
-   is verified.
+2. **Authoritative-email linking fallback.** If the identity is not linked
+   yet, an upstream email the provider is *authoritative* for links it to an
+   existing principal whose own email is verified. Google is authoritative for
+   `gmail.com` and `googlemail.com` addresses, and for a Workspace account's own
+   domain (the `hd` claim). GitHub is never authoritative.
 3. **Create.** Otherwise a new principal is created, which requires a verified
    upstream email.
 
-An unverified upstream email never links to, or creates, an account. An email
-already held by an unverified local account is reported as a conflict instead
-of being linked.
+An unverified upstream email never links to, or creates, an account. A
+verified but not authoritative email never links either: a provider can keep
+an address marked verified after its owner loses the mailbox. When such an
+email already belongs to an account, the sign-in is refused as a conflict
+(`ErrEmailConflict`), and the person signs in the way they signed in before.
+GitHub sign-in uses the account's primary email only.
 
 ## Security properties
 

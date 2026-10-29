@@ -38,17 +38,47 @@ func TestBearerMiddlewareChecksOriginForCookieSessions(t *testing.T) {
 	if code := send(http.MethodPost, fromApp); code != http.StatusNoContent {
 		t.Errorf("same-origin POST: %d", code)
 	}
-	before := reached
+	// With an allowed Origin any body is accepted, such as a file upload.
 	for name, mod := range map[string]func(*http.Request){
-		"foreign origin": func(r *http.Request) {
-			r.Header.Set("Origin", "https://evil.example")
-			r.Header.Set("Content-Type", "application/json")
+		"multipart upload": func(r *http.Request) {
+			r.Header.Set("Origin", testAppURL)
+			r.Header.Set("Content-Type", "multipart/form-data; boundary=x")
 		},
 		"form content type": func(r *http.Request) {
 			r.Header.Set("Origin", testAppURL)
 			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		},
 		"no content type": func(r *http.Request) { r.Header.Set("Origin", testAppURL) },
+		"JSON with only a Referer": func(r *http.Request) {
+			r.Header.Set("Referer", testAppURL+"/page")
+			r.Header.Set("Content-Type", "application/json")
+		},
+	} {
+		if code := send(http.MethodPost, mod); code != http.StatusNoContent {
+			t.Errorf("%s with the cookie: %d, want 204", name, code)
+		}
+	}
+	before := reached
+	for name, mod := range map[string]func(*http.Request){
+		"foreign origin": func(r *http.Request) {
+			r.Header.Set("Origin", "https://evil.example")
+			r.Header.Set("Content-Type", "application/json")
+		},
+		"foreign origin upload": func(r *http.Request) {
+			r.Header.Set("Origin", "https://evil.example")
+			r.Header.Set("Content-Type", "multipart/form-data; boundary=x")
+		},
+		"form with only a Referer": func(r *http.Request) {
+			r.Header.Set("Referer", testAppURL+"/page")
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		},
+		"form with no Origin or Referer": func(r *http.Request) {
+			r.Header.Set("Content-Type", "multipart/form-data; boundary=x")
+		},
+		"foreign Referer": func(r *http.Request) {
+			r.Header.Set("Referer", "https://evil.example/page")
+			r.Header.Set("Content-Type", "application/json")
+		},
 	} {
 		for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodDelete} {
 			if code := send(method, mod); code != http.StatusForbidden {

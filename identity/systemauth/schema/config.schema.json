@@ -692,6 +692,11 @@
           "type": "string",
           "description": "Redis URL of the shared DPoP replay cache (supports env var expansion)"
         },
+        "single_instance": {
+          "type": "boolean",
+          "description": "One instance serves SystemAuth",
+          "default": false
+        },
         "resource_base_url": {
           "type": "string",
           "description": "External base URL of protected routes for DPoP htu (default: the issuer origin)"
@@ -739,6 +744,25 @@
       "additionalProperties": false,
       "type": "object",
       "description": "Optional OAuth grants"
+    },
+    "production": {
+      "properties": {
+        "allow": {
+          "items": {
+            "type": "string",
+            "enum": [
+              "ephemeral_hmac_secret",
+              "client_secret_client_credentials",
+              "bearer_token_clients"
+            ]
+          },
+          "type": "array",
+          "description": "Production checks to waive (each is logged at startup)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Named waivers of production checks"
     }
   },
   "additionalProperties": false,

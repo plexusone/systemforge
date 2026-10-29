@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"net/http"
+	"slices"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-jose/go-jose/v3"
@@ -126,6 +127,9 @@ func (s *Server) OpenIDConfiguration() OpenIDConfiguration {
 		},
 		// RFC 9449 §5.1: the algorithms accepted for DPoP proofs.
 		DPoPSigningAlgValuesSupported: append([]string(nil), dpopproof.Algorithms...),
+	}
+	if !s.clientCredentialsServed() {
+		config.GrantTypesSupported = slices.DeleteFunc(config.GrantTypesSupported, func(g string) bool { return g == grantTypeClientCredentials })
 	}
 	if s.jwtBearerEnabled() {
 		config.GrantTypesSupported = append(config.GrantTypesSupported, GrantTypeJWTBearer)

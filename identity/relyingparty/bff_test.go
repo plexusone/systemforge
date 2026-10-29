@@ -425,3 +425,32 @@ func TestNewBFFWarnsForInsecureCookies(t *testing.T) {
 		}
 	}
 }
+
+// SignOut ends the session and clears its cookie without writing a
+// response, for handlers that serve their own sign-out.
+func TestBFFSignOut(t *testing.T) {
+	h := newHarness(t)
+	cookie := h.sessionCookie()
+	req := httptest.NewRequest(http.MethodPost, "/console/api/sign-out", nil)
+	req.AddCookie(cookie)
+	w := httptest.NewRecorder()
+	if err := h.bff.SignOut(w, req); err != nil {
+		t.Fatal(err)
+	}
+	if w.Code != http.StatusOK || w.Body.Len() != 0 {
+		t.Errorf("SignOut wrote a response: %d %q", w.Code, w.Body.String())
+	}
+	cleared := cookieNamed(w.Result(), cookie.Name)
+	if cleared == nil || cleared.MaxAge >= 0 {
+		t.Errorf("session cookie not cleared: %+v", cleared)
+	}
+	again := httptest.NewRequest(http.MethodGet, "/bff/session", nil)
+	again.AddCookie(cookie)
+	if _, _, _, err := h.bff.CurrentSession(again); err == nil {
+		t.Error("the session survived SignOut")
+	}
+	// Without a session it only clears the cookie.
+	if err := h.bff.SignOut(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/", nil)); err != nil {
+		t.Errorf("SignOut without a session: %v", err)
+	}
+}

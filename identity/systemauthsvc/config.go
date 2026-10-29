@@ -165,8 +165,16 @@ func finishConfig(cfg *Config, overrides []Override) (*Config, error) {
 
 // CheckProduction reports, as an error wrapping ErrNotProductionReady,
 // every production requirement the configuration and options miss: a
-// signing key, a public https issuer, a persistent database and secure
-// login cookies. It returns nil when opts.Dev is set.
+// signing key, a public https issuer, a persistent database, secure login
+// cookies, a token HMAC secret (unless production.allow names
+// ephemeral_hmac_secret), no static client registered with
+// allow_bearer_tokens (unless it names bearer_token_clients), and a DPoP
+// replay cache shared by every instance or dpop.single_instance. It returns
+// nil when opts.Dev is set.
+//
+// The client_credentials grant with a shared secret, and clients with
+// allow_bearer_tokens registered at runtime, are refused per request
+// instead (see systemauth.ProductionPolicy).
 func CheckProduction(cfg *Config, opts Options) error {
 	if opts.Dev {
 		return nil
@@ -183,6 +191,24 @@ func CheckProduction(cfg *Config, opts Options) error {
 	}
 	if cfg.SocialLogin != nil && cfg.SocialLogin.InsecureCookies {
 		problems = append(problems, "social_login.insecure_cookies is not allowed")
+	}
+	if cfg.Tokens.HMACSecret == "" && !cfg.Production.Allows(systemauth.AllowEphemeralHMACSecret) {
+		problems = append(problems, "tokens.hmac_secret is required (or production.allow: "+systemauth.AllowEphemeralHMACSecret+")")
+	}
+	if !cfg.Production.Allows(systemauth.AllowBearerTokenClients) {
+		var bearer []string
+		for _, c := range cfg.Clients {
+			if c.AllowBearerTokens {
+				bearer = append(bearer, c.ID)
+			}
+		}
+		if len(bearer) > 0 {
+			problems = append(problems, fmt.Sprintf("clients %s set allow_bearer_tokens (or production.allow: %s)",
+				strings.Join(bearer, ", "), systemauth.AllowBearerTokenClients))
+		}
+	}
+	if cfg.DPoP.ReplayCacheRedisURL == "" && opts.DPoPReplayCache == nil && !cfg.DPoP.SingleInstance {
+		problems = append(problems, "the DPoP replay cache must be shared (dpop.replay_cache_redis_url) or one instance declared (dpop.single_instance: true)")
 	}
 	if len(problems) > 0 {
 		return fmt.Errorf("%w: %s", ErrNotProductionReady, strings.Join(problems, "; "))

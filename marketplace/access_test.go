@@ -17,27 +17,27 @@ import (
 	"github.com/plexusone/systemforge/identity/requestprincipal"
 )
 
+// principalHeader names the principal a test request authenticates as.
+const principalHeader = "X-Test-Principal"
+
 type entService struct {
 	listings *EntListingService
 	licenses *EntLicenseService
-	checkout CheckoutService
 }
 
 func (s entService) Listings() ListingService           { return s.listings }
 func (s entService) Licenses() LicenseService           { return s.licenses }
 func (s entService) Subscriptions() SubscriptionService { return nil }
-func (s entService) Checkout() CheckoutService          { return s.checkout }
 
 // accessFixture is a seller organization with an owner, admin, and
 // member; a buyer organization with an admin and member; and an outsider.
 type accessFixture struct {
-	t        *testing.T
-	db       *ent.Client
-	api      humatest.TestAPI
-	checkout *fakeCheckout
-	seller   uuid.UUID
-	buyer    uuid.UUID
-	who      map[string]uuid.UUID
+	t      *testing.T
+	db     *ent.Client
+	api    humatest.TestAPI
+	seller uuid.UUID
+	buyer  uuid.UUID
+	who    map[string]uuid.UUID
 }
 
 func newAccessFixture(t *testing.T, opts ...APIOption) *accessFixture {
@@ -49,7 +49,7 @@ func newAccessFixture(t *testing.T, opts ...APIOption) *accessFixture {
 			t.Errorf("close: %v", err)
 		}
 	})
-	f := &accessFixture{t: t, db: db, checkout: &fakeCheckout{}, who: map[string]uuid.UUID{}}
+	f := &accessFixture{t: t, db: db, who: map[string]uuid.UUID{}}
 	for _, org := range []*uuid.UUID{&f.seller, &f.buyer} {
 		o, err := db.Organization.Create().SetName("Org").SetSlug("org-" + uuid.NewString()[:8]).Save(ctx)
 		if err != nil {
@@ -89,7 +89,7 @@ func newAccessFixture(t *testing.T, opts ...APIOption) *accessFixture {
 		}
 		next(ctx)
 	})
-	svc := entService{listings: NewEntListingService(db, nil), licenses: NewEntLicenseService(db, nil), checkout: f.checkout}
+	svc := entService{listings: NewEntListingService(db, nil), licenses: NewEntLicenseService(db, nil)}
 	NewAPI(api, APIConfig{}, svc, append([]APIOption{WithAuthorizer(authorizer)}, opts...)...)
 	f.api = api
 	return f
@@ -279,20 +279,6 @@ func TestLicenseAccess(t *testing.T) {
 	}
 }
 
-func TestCheckoutDefaultsToOrgManage(t *testing.T) {
-	f := newAccessFixture(t)
-	payload := map[string]any{"listing_id": uuid.NewString(), "organization_id": f.buyer.String(),
-		"success_url": "https://app.example.com/ok", "cancel_url": "https://app.example.com/cancel"}
-	for who, want := range map[string]int{"buyer-member": 403, "seller-owner": 403, "buyer-admin": 200} {
-		if r := f.do(http.MethodPost, "/checkout", who, payload); r.code != want {
-			t.Errorf("checkout as %q: %d, want %d", who, r.code, want)
-		}
-	}
-	if f.checkout.got == nil || f.checkout.got.PurchaserID != f.who["buyer-admin"] {
-		t.Errorf("checkout request = %+v", f.checkout.got)
-	}
-}
-
 // TestOrgScopedOperationsFailClosed verifies that without an authorizer
 // only published listings can be read.
 func TestOrgScopedOperationsFailClosed(t *testing.T) {
@@ -303,7 +289,7 @@ func TestOrgScopedOperationsFailClosed(t *testing.T) {
 			t.Errorf("close: %v", err)
 		}
 	})
-	NewAPI(api, APIConfig{}, entService{listings: NewEntListingService(db, nil), licenses: NewEntLicenseService(db, nil), checkout: &fakeCheckout{}})
+	NewAPI(api, APIConfig{}, entService{listings: NewEntListingService(db, nil), licenses: NewEntLicenseService(db, nil)})
 	if resp := api.Post("/listings", map[string]any{"creator_org_id": uuid.NewString(), "product_type": "x", "title": "t", "pricing_model": "free", "price_cents": 0, "currency": "USD"}); resp.Code != http.StatusNotImplemented {
 		t.Errorf("create listing: %d", resp.Code)
 	}

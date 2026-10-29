@@ -23,16 +23,9 @@ var logoutTemplate = template.Must(template.New("logout").Parse(`<!doctype html>
 </form></main></body></html>
 `))
 
-// frameDeny forbids rendering a page inside a frame (clickjacking).
-func frameDeny(w http.ResponseWriter) {
-	w.Header().Set("X-Frame-Options", "DENY")
-	w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
-}
-
 // handleLogoutPage serves GET /logout.
 func (sl *socialLogin) handleLogoutPage(w http.ResponseWriter, r *http.Request) {
 	noStore(w)
-	frameDeny(w)
 	returnTo := r.URL.Query().Get("return_to")
 	if returnTo != "" {
 		if _, err := sl.redirects.validate(returnTo); err != nil {
@@ -40,6 +33,8 @@ func (sl *socialLogin) handleLogoutPage(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
+	// Signing out redirects to return_to, an allowed origin.
+	allowFormTargets(w, formSources(sl.redirects.originList()...))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := logoutTemplate.Execute(w, struct{ ReturnTo string }{returnTo}); err != nil {
 		LoggerFromContext(r.Context()).Error("rendering logout page", "error", err)

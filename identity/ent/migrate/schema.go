@@ -199,6 +199,129 @@ var (
 			},
 		},
 	}
+	// SfBillingCustomersColumns holds the columns for the "sf_billing_customers" table.
+	SfBillingCustomersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "customer_id", Type: field.TypeString, Unique: true, Size: 255},
+		{Name: "organization_id", Type: field.TypeUUID, Unique: true},
+	}
+	// SfBillingCustomersTable holds the schema information for the "sf_billing_customers" table.
+	SfBillingCustomersTable = &schema.Table{
+		Name:       "sf_billing_customers",
+		Columns:    SfBillingCustomersColumns,
+		PrimaryKey: []*schema.Column{SfBillingCustomersColumns[0]},
+	}
+	// SfBillingDisputesColumns holds the columns for the "sf_billing_disputes" table.
+	SfBillingDisputesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "dispute_id", Type: field.TypeString, Unique: true, Size: 255},
+		{Name: "charge_id", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "payment_intent", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "closed", Type: field.TypeBool, Default: false},
+		{Name: "lost", Type: field.TypeBool, Default: false},
+	}
+	// SfBillingDisputesTable holds the schema information for the "sf_billing_disputes" table.
+	SfBillingDisputesTable = &schema.Table{
+		Name:       "sf_billing_disputes",
+		Columns:    SfBillingDisputesColumns,
+		PrimaryKey: []*schema.Column{SfBillingDisputesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "billingdispute_payment_intent",
+				Unique:  false,
+				Columns: []*schema.Column{SfBillingDisputesColumns[5]},
+			},
+		},
+	}
+	// SfBillingEventsColumns holds the columns for the "sf_billing_events" table.
+	SfBillingEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "event_id", Type: field.TypeString, Unique: true, Size: 255},
+	}
+	// SfBillingEventsTable holds the schema information for the "sf_billing_events" table.
+	SfBillingEventsTable = &schema.Table{
+		Name:       "sf_billing_events",
+		Columns:    SfBillingEventsColumns,
+		PrimaryKey: []*schema.Column{SfBillingEventsColumns[0]},
+	}
+	// SfBillingOrdersColumns holds the columns for the "sf_billing_orders" table.
+	SfBillingOrdersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "session_id", Type: field.TypeString, Unique: true, Size: 255},
+		{Name: "listing_id", Type: field.TypeUUID},
+		{Name: "organization_id", Type: field.TypeUUID},
+		{Name: "purchaser_id", Type: field.TypeUUID},
+		{Name: "amount_cents", Type: field.TypeInt64},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "paid", "refunded"}, Default: "pending"},
+		{Name: "payment_intent", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "license_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// SfBillingOrdersTable holds the schema information for the "sf_billing_orders" table.
+	SfBillingOrdersTable = &schema.Table{
+		Name:       "sf_billing_orders",
+		Columns:    SfBillingOrdersColumns,
+		PrimaryKey: []*schema.Column{SfBillingOrdersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "billingorder_payment_intent",
+				Unique:  false,
+				Columns: []*schema.Column{SfBillingOrdersColumns[9]},
+			},
+			{
+				Name:    "billingorder_listing_id_organization_id",
+				Unique:  false,
+				Columns: []*schema.Column{SfBillingOrdersColumns[4], SfBillingOrdersColumns[5]},
+			},
+		},
+	}
+	// SfBillingRefundsColumns holds the columns for the "sf_billing_refunds" table.
+	SfBillingRefundsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "charge_id", Type: field.TypeString, Unique: true, Size: 255},
+		{Name: "payment_intent", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "refunded_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "full", Type: field.TypeBool, Default: false},
+	}
+	// SfBillingRefundsTable holds the schema information for the "sf_billing_refunds" table.
+	SfBillingRefundsTable = &schema.Table{
+		Name:       "sf_billing_refunds",
+		Columns:    SfBillingRefundsColumns,
+		PrimaryKey: []*schema.Column{SfBillingRefundsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "billingrefund_payment_intent",
+				Unique:  false,
+				Columns: []*schema.Column{SfBillingRefundsColumns[4]},
+			},
+		},
+	}
+	// SfBillingSellersColumns holds the columns for the "sf_billing_sellers" table.
+	SfBillingSellersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "organization_id", Type: field.TypeUUID, Unique: true},
+		{Name: "account_id", Type: field.TypeString, Unique: true, Size: 255},
+		{Name: "charges_enabled", Type: field.TypeBool, Default: false},
+		{Name: "payouts_enabled", Type: field.TypeBool, Default: false},
+		{Name: "details_submitted", Type: field.TypeBool, Default: false},
+	}
+	// SfBillingSellersTable holds the schema information for the "sf_billing_sellers" table.
+	SfBillingSellersTable = &schema.Table{
+		Name:       "sf_billing_sellers",
+		Columns:    SfBillingSellersColumns,
+		PrimaryKey: []*schema.Column{SfBillingSellersColumns[0]},
+	}
 	// SfClientAssertionJtisColumns holds the columns for the "sf_client_assertion_jtis" table.
 	SfClientAssertionJtisColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1864,6 +1987,12 @@ var (
 		SfAgentsTable,
 		SfAppRolesTable,
 		SfApplicationsTable,
+		SfBillingCustomersTable,
+		SfBillingDisputesTable,
+		SfBillingEventsTable,
+		SfBillingOrdersTable,
+		SfBillingRefundsTable,
+		SfBillingSellersTable,
 		SfClientAssertionJtisTable,
 		SfConsentGrantsTable,
 		SfCredentialsTable,
@@ -1918,6 +2047,24 @@ func init() {
 	SfApplicationsTable.ForeignKeys[0].RefTable = SfPrincipalsTable
 	SfApplicationsTable.Annotation = &entsql.Annotation{
 		Table: "sf_applications",
+	}
+	SfBillingCustomersTable.Annotation = &entsql.Annotation{
+		Table: "sf_billing_customers",
+	}
+	SfBillingDisputesTable.Annotation = &entsql.Annotation{
+		Table: "sf_billing_disputes",
+	}
+	SfBillingEventsTable.Annotation = &entsql.Annotation{
+		Table: "sf_billing_events",
+	}
+	SfBillingOrdersTable.Annotation = &entsql.Annotation{
+		Table: "sf_billing_orders",
+	}
+	SfBillingRefundsTable.Annotation = &entsql.Annotation{
+		Table: "sf_billing_refunds",
+	}
+	SfBillingSellersTable.Annotation = &entsql.Annotation{
+		Table: "sf_billing_sellers",
 	}
 	SfClientAssertionJtisTable.Annotation = &entsql.Annotation{
 		Table: "sf_client_assertion_jtis",

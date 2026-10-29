@@ -92,7 +92,6 @@ func (sl *socialLogin) handleConsentPage(w http.ResponseWriter, r *http.Request)
 	ctx := r.Context()
 	logger := LoggerFromContext(ctx)
 	noStore(w)
-	frameDeny(w)
 
 	target, err := parseConsentTarget(r.URL.Query().Get("return_to"))
 	if err != nil {
@@ -130,6 +129,9 @@ func (sl *socialLogin) handleConsentPage(w http.ResponseWriter, r *http.Request)
 			scopes = append(scopes, s)
 		}
 	}
+	// Either decision ends at one of the client's redirect URIs, through
+	// /oauth/authorize.
+	allowFormTargets(w, formSources(client.RedirectURIs...))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := consentTemplate.Execute(w, struct {
 		ClientName, ReturnTo, CSRF string

@@ -194,21 +194,15 @@ func fetchGitHubUser(ctx context.Context, client *http.Client, apiURL string, to
 	}, nil
 }
 
-// selectGitHubEmail prefers the primary verified email, then any verified
-// email, then the first listed email (reported as unverified).
+// selectGitHubEmail returns the primary email and whether GitHub reports it
+// verified. Other verified addresses are never used: an account keeps an
+// address marked verified after its owner loses the mailbox, and the primary
+// address is the one the person chose to be reached at.
 func selectGitHubEmail(emails []githubEmail) (string, bool) {
 	for _, e := range emails {
-		if e.Primary && e.Verified {
-			return e.Email, true
+		if e.Primary {
+			return e.Email, e.Verified
 		}
-	}
-	for _, e := range emails {
-		if e.Verified {
-			return e.Email, true
-		}
-	}
-	if len(emails) > 0 {
-		return emails[0].Email, false
 	}
 	return "", false
 }
@@ -222,6 +216,7 @@ func fetchGoogleUser(ctx context.Context, client *http.Client, userInfoURL strin
 		Picture       string `json:"picture"`
 		GivenName     string `json:"given_name"`
 		FamilyName    string `json:"family_name"`
+		HostedDomain  string `json:"hd"`
 	}
 	if err := getJSON(ctx, client, userInfoURL, "application/json", &userInfo); err != nil {
 		return nil, fmt.Errorf("fetching userinfo: %w", err)
@@ -232,6 +227,7 @@ func fetchGoogleUser(ctx context.Context, client *http.Client, userInfoURL strin
 		Provider:      ProviderGoogle,
 		Email:         userInfo.Email,
 		EmailVerified: userInfo.EmailVerified,
+		HostedDomain:  userInfo.HostedDomain,
 		Name:          userInfo.Name,
 		AvatarURL:     userInfo.Picture,
 		AccessToken:   token.AccessToken,

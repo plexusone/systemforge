@@ -1,0 +1,32 @@
+{
+  "formatVersion": "1",
+  "app": "demoapp",
+  "currency": "usd",
+  "defaultPlan": "free",
+  "applications": [
+    { "id": "boards", "name": "Boards" }
+  ],
+  "tiers": [
+    { "id": "free", "name": "Free", "rank": 1 },
+    { "id": "pro", "name": "Pro", "rank": 2 },
+    { "id": "enterprise", "name": "Enterprise", "rank": 3 }
+  ],
+  "plans": [
+    { "id": "free", "name": "Free", "tier": "free", "selfServe": true },
+    {
+      "id": "pro", "name": "Pro", "tier": "pro", "selfServe": true,
+      "prices": [ { "interval": "month", "amountCents": 1500 }, { "interval": "year", "amountCents": 15000 } ],
+      "platformFeeBps": 500
+    },
+    { "id": "enterprise", "name": "Enterprise", "tier": "enterprise", "selfServe": false }
+  ],
+  "products": [
+    { "id": "listing", "name": "A marketplace listing", "sellerSet": true, "minAmountCents": 100 }
+  ],
+  "marketplace": { "platformFeeBps": 1000 },
+  "entitlements": [
+    { "tier": "free", "application": "boards", "seats": 3 },
+    { "tier": "pro", "application": "boards", "seats": 25 },
+    { "tier": "enterprise", "application": "boards", "unlimitedSeats": true }
+  ]
+}

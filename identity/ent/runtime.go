@@ -10,6 +10,12 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/agent"
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/approle"
+	"github.com/plexusone/systemforge/identity/ent/billingcustomer"
+	"github.com/plexusone/systemforge/identity/ent/billingdispute"
+	"github.com/plexusone/systemforge/identity/ent/billingevent"
+	"github.com/plexusone/systemforge/identity/ent/billingorder"
+	"github.com/plexusone/systemforge/identity/ent/billingrefund"
+	"github.com/plexusone/systemforge/identity/ent/billingseller"
 	"github.com/plexusone/systemforge/identity/ent/clientassertionjti"
 	"github.com/plexusone/systemforge/identity/ent/consentgrant"
 	"github.com/plexusone/systemforge/identity/ent/credential"
@@ -214,6 +220,272 @@ func init() {
 	applicationDescID := applicationMixinFields0[0].Descriptor()
 	// application.DefaultID holds the default value on creation for the id field.
 	application.DefaultID = applicationDescID.Default.(func() uuid.UUID)
+	billingcustomerMixin := schema.BillingCustomer{}.Mixin()
+	billingcustomerMixinFields0 := billingcustomerMixin[0].Fields()
+	_ = billingcustomerMixinFields0
+	billingcustomerFields := schema.BillingCustomer{}.Fields()
+	_ = billingcustomerFields
+	// billingcustomerDescCreatedAt is the schema descriptor for created_at field.
+	billingcustomerDescCreatedAt := billingcustomerMixinFields0[1].Descriptor()
+	// billingcustomer.DefaultCreatedAt holds the default value on creation for the created_at field.
+	billingcustomer.DefaultCreatedAt = billingcustomerDescCreatedAt.Default.(func() time.Time)
+	// billingcustomerDescUpdatedAt is the schema descriptor for updated_at field.
+	billingcustomerDescUpdatedAt := billingcustomerMixinFields0[2].Descriptor()
+	// billingcustomer.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	billingcustomer.DefaultUpdatedAt = billingcustomerDescUpdatedAt.Default.(func() time.Time)
+	// billingcustomer.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	billingcustomer.UpdateDefaultUpdatedAt = billingcustomerDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// billingcustomerDescCustomerID is the schema descriptor for customer_id field.
+	billingcustomerDescCustomerID := billingcustomerFields[0].Descriptor()
+	// billingcustomer.CustomerIDValidator is a validator for the "customer_id" field. It is called by the builders before save.
+	billingcustomer.CustomerIDValidator = func() func(string) error {
+		validators := billingcustomerDescCustomerID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(customer_id string) error {
+			for _, fn := range fns {
+				if err := fn(customer_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// billingcustomerDescID is the schema descriptor for id field.
+	billingcustomerDescID := billingcustomerMixinFields0[0].Descriptor()
+	// billingcustomer.DefaultID holds the default value on creation for the id field.
+	billingcustomer.DefaultID = billingcustomerDescID.Default.(func() uuid.UUID)
+	billingdisputeMixin := schema.BillingDispute{}.Mixin()
+	billingdisputeMixinFields0 := billingdisputeMixin[0].Fields()
+	_ = billingdisputeMixinFields0
+	billingdisputeFields := schema.BillingDispute{}.Fields()
+	_ = billingdisputeFields
+	// billingdisputeDescCreatedAt is the schema descriptor for created_at field.
+	billingdisputeDescCreatedAt := billingdisputeMixinFields0[1].Descriptor()
+	// billingdispute.DefaultCreatedAt holds the default value on creation for the created_at field.
+	billingdispute.DefaultCreatedAt = billingdisputeDescCreatedAt.Default.(func() time.Time)
+	// billingdisputeDescUpdatedAt is the schema descriptor for updated_at field.
+	billingdisputeDescUpdatedAt := billingdisputeMixinFields0[2].Descriptor()
+	// billingdispute.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	billingdispute.DefaultUpdatedAt = billingdisputeDescUpdatedAt.Default.(func() time.Time)
+	// billingdispute.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	billingdispute.UpdateDefaultUpdatedAt = billingdisputeDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// billingdisputeDescDisputeID is the schema descriptor for dispute_id field.
+	billingdisputeDescDisputeID := billingdisputeFields[0].Descriptor()
+	// billingdispute.DisputeIDValidator is a validator for the "dispute_id" field. It is called by the builders before save.
+	billingdispute.DisputeIDValidator = func() func(string) error {
+		validators := billingdisputeDescDisputeID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(dispute_id string) error {
+			for _, fn := range fns {
+				if err := fn(dispute_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// billingdisputeDescChargeID is the schema descriptor for charge_id field.
+	billingdisputeDescChargeID := billingdisputeFields[1].Descriptor()
+	// billingdispute.ChargeIDValidator is a validator for the "charge_id" field. It is called by the builders before save.
+	billingdispute.ChargeIDValidator = billingdisputeDescChargeID.Validators[0].(func(string) error)
+	// billingdisputeDescPaymentIntent is the schema descriptor for payment_intent field.
+	billingdisputeDescPaymentIntent := billingdisputeFields[2].Descriptor()
+	// billingdispute.PaymentIntentValidator is a validator for the "payment_intent" field. It is called by the builders before save.
+	billingdispute.PaymentIntentValidator = billingdisputeDescPaymentIntent.Validators[0].(func(string) error)
+	// billingdisputeDescClosed is the schema descriptor for closed field.
+	billingdisputeDescClosed := billingdisputeFields[3].Descriptor()
+	// billingdispute.DefaultClosed holds the default value on creation for the closed field.
+	billingdispute.DefaultClosed = billingdisputeDescClosed.Default.(bool)
+	// billingdisputeDescLost is the schema descriptor for lost field.
+	billingdisputeDescLost := billingdisputeFields[4].Descriptor()
+	// billingdispute.DefaultLost holds the default value on creation for the lost field.
+	billingdispute.DefaultLost = billingdisputeDescLost.Default.(bool)
+	// billingdisputeDescID is the schema descriptor for id field.
+	billingdisputeDescID := billingdisputeMixinFields0[0].Descriptor()
+	// billingdispute.DefaultID holds the default value on creation for the id field.
+	billingdispute.DefaultID = billingdisputeDescID.Default.(func() uuid.UUID)
+	billingeventMixin := schema.BillingEvent{}.Mixin()
+	billingeventMixinFields0 := billingeventMixin[0].Fields()
+	_ = billingeventMixinFields0
+	billingeventFields := schema.BillingEvent{}.Fields()
+	_ = billingeventFields
+	// billingeventDescCreatedAt is the schema descriptor for created_at field.
+	billingeventDescCreatedAt := billingeventMixinFields0[1].Descriptor()
+	// billingevent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	billingevent.DefaultCreatedAt = billingeventDescCreatedAt.Default.(func() time.Time)
+	// billingeventDescUpdatedAt is the schema descriptor for updated_at field.
+	billingeventDescUpdatedAt := billingeventMixinFields0[2].Descriptor()
+	// billingevent.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	billingevent.DefaultUpdatedAt = billingeventDescUpdatedAt.Default.(func() time.Time)
+	// billingevent.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	billingevent.UpdateDefaultUpdatedAt = billingeventDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// billingeventDescEventID is the schema descriptor for event_id field.
+	billingeventDescEventID := billingeventFields[0].Descriptor()
+	// billingevent.EventIDValidator is a validator for the "event_id" field. It is called by the builders before save.
+	billingevent.EventIDValidator = func() func(string) error {
+		validators := billingeventDescEventID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(event_id string) error {
+			for _, fn := range fns {
+				if err := fn(event_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// billingeventDescID is the schema descriptor for id field.
+	billingeventDescID := billingeventMixinFields0[0].Descriptor()
+	// billingevent.DefaultID holds the default value on creation for the id field.
+	billingevent.DefaultID = billingeventDescID.Default.(func() uuid.UUID)
+	billingorderMixin := schema.BillingOrder{}.Mixin()
+	billingorderMixinFields0 := billingorderMixin[0].Fields()
+	_ = billingorderMixinFields0
+	billingorderFields := schema.BillingOrder{}.Fields()
+	_ = billingorderFields
+	// billingorderDescCreatedAt is the schema descriptor for created_at field.
+	billingorderDescCreatedAt := billingorderMixinFields0[1].Descriptor()
+	// billingorder.DefaultCreatedAt holds the default value on creation for the created_at field.
+	billingorder.DefaultCreatedAt = billingorderDescCreatedAt.Default.(func() time.Time)
+	// billingorderDescUpdatedAt is the schema descriptor for updated_at field.
+	billingorderDescUpdatedAt := billingorderMixinFields0[2].Descriptor()
+	// billingorder.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	billingorder.DefaultUpdatedAt = billingorderDescUpdatedAt.Default.(func() time.Time)
+	// billingorder.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	billingorder.UpdateDefaultUpdatedAt = billingorderDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// billingorderDescSessionID is the schema descriptor for session_id field.
+	billingorderDescSessionID := billingorderFields[0].Descriptor()
+	// billingorder.SessionIDValidator is a validator for the "session_id" field. It is called by the builders before save.
+	billingorder.SessionIDValidator = func() func(string) error {
+		validators := billingorderDescSessionID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(session_id string) error {
+			for _, fn := range fns {
+				if err := fn(session_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// billingorderDescPaymentIntent is the schema descriptor for payment_intent field.
+	billingorderDescPaymentIntent := billingorderFields[6].Descriptor()
+	// billingorder.PaymentIntentValidator is a validator for the "payment_intent" field. It is called by the builders before save.
+	billingorder.PaymentIntentValidator = billingorderDescPaymentIntent.Validators[0].(func(string) error)
+	// billingorderDescID is the schema descriptor for id field.
+	billingorderDescID := billingorderMixinFields0[0].Descriptor()
+	// billingorder.DefaultID holds the default value on creation for the id field.
+	billingorder.DefaultID = billingorderDescID.Default.(func() uuid.UUID)
+	billingrefundMixin := schema.BillingRefund{}.Mixin()
+	billingrefundMixinFields0 := billingrefundMixin[0].Fields()
+	_ = billingrefundMixinFields0
+	billingrefundFields := schema.BillingRefund{}.Fields()
+	_ = billingrefundFields
+	// billingrefundDescCreatedAt is the schema descriptor for created_at field.
+	billingrefundDescCreatedAt := billingrefundMixinFields0[1].Descriptor()
+	// billingrefund.DefaultCreatedAt holds the default value on creation for the created_at field.
+	billingrefund.DefaultCreatedAt = billingrefundDescCreatedAt.Default.(func() time.Time)
+	// billingrefundDescUpdatedAt is the schema descriptor for updated_at field.
+	billingrefundDescUpdatedAt := billingrefundMixinFields0[2].Descriptor()
+	// billingrefund.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	billingrefund.DefaultUpdatedAt = billingrefundDescUpdatedAt.Default.(func() time.Time)
+	// billingrefund.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	billingrefund.UpdateDefaultUpdatedAt = billingrefundDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// billingrefundDescChargeID is the schema descriptor for charge_id field.
+	billingrefundDescChargeID := billingrefundFields[0].Descriptor()
+	// billingrefund.ChargeIDValidator is a validator for the "charge_id" field. It is called by the builders before save.
+	billingrefund.ChargeIDValidator = func() func(string) error {
+		validators := billingrefundDescChargeID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(charge_id string) error {
+			for _, fn := range fns {
+				if err := fn(charge_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// billingrefundDescPaymentIntent is the schema descriptor for payment_intent field.
+	billingrefundDescPaymentIntent := billingrefundFields[1].Descriptor()
+	// billingrefund.PaymentIntentValidator is a validator for the "payment_intent" field. It is called by the builders before save.
+	billingrefund.PaymentIntentValidator = billingrefundDescPaymentIntent.Validators[0].(func(string) error)
+	// billingrefundDescRefundedCents is the schema descriptor for refunded_cents field.
+	billingrefundDescRefundedCents := billingrefundFields[2].Descriptor()
+	// billingrefund.DefaultRefundedCents holds the default value on creation for the refunded_cents field.
+	billingrefund.DefaultRefundedCents = billingrefundDescRefundedCents.Default.(int64)
+	// billingrefundDescFull is the schema descriptor for full field.
+	billingrefundDescFull := billingrefundFields[3].Descriptor()
+	// billingrefund.DefaultFull holds the default value on creation for the full field.
+	billingrefund.DefaultFull = billingrefundDescFull.Default.(bool)
+	// billingrefundDescID is the schema descriptor for id field.
+	billingrefundDescID := billingrefundMixinFields0[0].Descriptor()
+	// billingrefund.DefaultID holds the default value on creation for the id field.
+	billingrefund.DefaultID = billingrefundDescID.Default.(func() uuid.UUID)
+	billingsellerMixin := schema.BillingSeller{}.Mixin()
+	billingsellerMixinFields0 := billingsellerMixin[0].Fields()
+	_ = billingsellerMixinFields0
+	billingsellerFields := schema.BillingSeller{}.Fields()
+	_ = billingsellerFields
+	// billingsellerDescCreatedAt is the schema descriptor for created_at field.
+	billingsellerDescCreatedAt := billingsellerMixinFields0[1].Descriptor()
+	// billingseller.DefaultCreatedAt holds the default value on creation for the created_at field.
+	billingseller.DefaultCreatedAt = billingsellerDescCreatedAt.Default.(func() time.Time)
+	// billingsellerDescUpdatedAt is the schema descriptor for updated_at field.
+	billingsellerDescUpdatedAt := billingsellerMixinFields0[2].Descriptor()
+	// billingseller.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	billingseller.DefaultUpdatedAt = billingsellerDescUpdatedAt.Default.(func() time.Time)
+	// billingseller.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	billingseller.UpdateDefaultUpdatedAt = billingsellerDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// billingsellerDescAccountID is the schema descriptor for account_id field.
+	billingsellerDescAccountID := billingsellerFields[1].Descriptor()
+	// billingseller.AccountIDValidator is a validator for the "account_id" field. It is called by the builders before save.
+	billingseller.AccountIDValidator = func() func(string) error {
+		validators := billingsellerDescAccountID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(account_id string) error {
+			for _, fn := range fns {
+				if err := fn(account_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// billingsellerDescChargesEnabled is the schema descriptor for charges_enabled field.
+	billingsellerDescChargesEnabled := billingsellerFields[2].Descriptor()
+	// billingseller.DefaultChargesEnabled holds the default value on creation for the charges_enabled field.
+	billingseller.DefaultChargesEnabled = billingsellerDescChargesEnabled.Default.(bool)
+	// billingsellerDescPayoutsEnabled is the schema descriptor for payouts_enabled field.
+	billingsellerDescPayoutsEnabled := billingsellerFields[3].Descriptor()
+	// billingseller.DefaultPayoutsEnabled holds the default value on creation for the payouts_enabled field.
+	billingseller.DefaultPayoutsEnabled = billingsellerDescPayoutsEnabled.Default.(bool)
+	// billingsellerDescDetailsSubmitted is the schema descriptor for details_submitted field.
+	billingsellerDescDetailsSubmitted := billingsellerFields[4].Descriptor()
+	// billingseller.DefaultDetailsSubmitted holds the default value on creation for the details_submitted field.
+	billingseller.DefaultDetailsSubmitted = billingsellerDescDetailsSubmitted.Default.(bool)
+	// billingsellerDescID is the schema descriptor for id field.
+	billingsellerDescID := billingsellerMixinFields0[0].Descriptor()
+	// billingseller.DefaultID holds the default value on creation for the id field.
+	billingseller.DefaultID = billingsellerDescID.Default.(func() uuid.UUID)
 	clientassertionjtiMixin := schema.ClientAssertionJTI{}.Mixin()
 	clientassertionjtiMixinFields0 := clientassertionjtiMixin[0].Fields()
 	_ = clientassertionjtiMixinFields0
