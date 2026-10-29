@@ -25,19 +25,19 @@ single sanctioned place to build it.
 
 **Theme:** One place speaks to GitHub/Google; SystemAuth owns the login
 
-- [ ] `RMI-SYSTEMFORGE-075` Consolidate the two duplicate social-login primitive packages (`session/oauth`, `identity/oauthclient`) into one sanctioned package; retire the dead one
-- [ ] `RMI-SYSTEMFORGE-001` Mount GitHub/Google login on the SystemAuth server: login-start + callback routes, `Principal` upsert keyed by provider subject with verified-email linking fallback, `__Host-sf_login` session establishment
+- [x] `RMI-SYSTEMFORGE-075` Consolidate the two duplicate social-login primitive packages (`session/oauth`, `identity/oauthclient`) into one sanctioned package; retire the dead one
+- [x] `RMI-SYSTEMFORGE-001` Mount GitHub/Google login on the SystemAuth server: login-start + callback routes, `Principal` upsert keyed by provider subject with verified-email linking fallback, `__Host-sf_login` session establishment
   - Depends on: `RMI-SYSTEMFORGE-075`
-- [ ] `RMI-SYSTEMFORGE-076` Harden the login flow: allowlist-validated post-login redirect with no token in the URL, real refresh-token rotation (reuse detection, absolute expiry), real logout with session + token revocation
+- [x] `RMI-SYSTEMFORGE-076` Harden the login flow: allowlist-validated post-login redirect with no token in the URL, real refresh-token rotation (reuse detection, absolute expiry), real logout with session + token revocation
   - Depends on: `RMI-SYSTEMFORGE-001`
 
 ## Phase 2 — Relying-Party Federation Contract
 
 **Theme:** Consumers federate; nobody reimplements the callback
 
-- [ ] `RMI-SYSTEMFORGE-077` Serve `/oauth/userinfo` (advertised in discovery but unmounted) so the relying-party callback has a stable profile endpoint
+- [x] `RMI-SYSTEMFORGE-077` Serve `/oauth/userinfo` (advertised in discovery but unmounted) so the relying-party callback has a stable profile endpoint
   - Depends on: `RMI-SYSTEMFORGE-001`
-- [ ] `RMI-SYSTEMFORGE-081` Reusable relying-party OIDC-client callback + middleware (sub → `sf_principal_id` find-or-create, verified-email linking) and the `/bff/*` cookie-session surface the shared frontend expects; programmatic clients keep bearer/API-key access
+- [x] `RMI-SYSTEMFORGE-081` Reusable relying-party OIDC-client callback + middleware (sub → `sf_principal_id` find-or-create, verified-email linking) and the `/bff/*` cookie-session surface the shared frontend expects; programmatic clients keep bearer/API-key access
   - Depends on: `RMI-SYSTEMFORGE-001`
   - Depends on: `RMI-SYSTEMFORGE-077`
 
@@ -50,5 +50,5 @@ relying-party federation contract (`RMI-SYSTEMFORGE-081`), linking by
 `sf_principal_id`. These per-consumer items are tracked in the initiative and
 intentionally not enumerated here, matching INIT-SYSTEMFORGE-004.
 
-- [ ] `RMI-SYSTEMFORGE-078` CI gate + conformance: block new direct github.com/google.com OAuth wiring outside the sanctioned package; conformance check that relying parties key by `sf_principal_id`
+- [x] `RMI-SYSTEMFORGE-078` CI gate + conformance: block new direct github.com/google.com OAuth wiring outside the sanctioned package; conformance check that relying parties key by `sf_principal_id`
   - Depends on: `RMI-SYSTEMFORGE-081`

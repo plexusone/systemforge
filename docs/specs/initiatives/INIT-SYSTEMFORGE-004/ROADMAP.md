@@ -23,7 +23,7 @@ enumerated in this repo.
   - Depends on: `RMI-SYSTEMFORGE-069`
 - [ ] `RMI-SYSTEMFORGE-071` Rename API-key visible prefix cf_live_/cf_test_→sf_live_/sf_test_; update parsing and examples
   - Depends on: `RMI-SYSTEMFORGE-070`
-- [ ] `RMI-SYSTEMFORGE-072` Unify cross-app principal-link field as sf_principal_id in the shared mixin/contract (replaces core_control/core_auth)
+- [x] `RMI-SYSTEMFORGE-072` Unify cross-app principal-link field as sf_principal_id in the shared mixin/contract (replaces core_control/core_auth)
   - Depends on: `RMI-SYSTEMFORGE-069`
 - [ ] `RMI-SYSTEMFORGE-073` Tag breaking release v0.11.0 with BREAKING CHANGE note; update README migration note and config examples
   - Depends on: `RMI-SYSTEMFORGE-070`
@@ -42,5 +42,5 @@ tracked in the initiative and intentionally not enumerated here.
 
 **Theme:** Prove convergence; prevent regression
 
-- [ ] `RMI-SYSTEMFORGE-074` CI grep gate blocking cf_/coreauth/corecontrol/core_control/core_auth; cross-consumer sf_principal_id conformance check
+- [x] `RMI-SYSTEMFORGE-074` CI grep gate blocking cf_/coreauth/corecontrol/core_control/core_auth; cross-consumer sf_principal_id conformance check
   - Depends on: `RMI-SYSTEMFORGE-073`
