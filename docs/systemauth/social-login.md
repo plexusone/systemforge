@@ -23,6 +23,7 @@ endpoints:
 | `POST /logout` | Deletes the login session, clears the cookie, revokes all of the principal's access and refresh tokens, and redirects (`303`) to the validated `return_to` (default `default_redirect`). |
 | `GET /consent?return_to=<authorize URL>` | Consent page naming the client and the requested scopes (for second- and third-party clients, or when the request sets `prompt=consent`). |
 | `/login/verify-email...` | With [verification mail](verified-email.md): the pages that hold a sign-in whose provider email is unverified until a mailed link is opened in the same browser. |
+| `/account/email...` | With [verification mail](verified-email.md): the signed-in person's email, and changing it after the new address is verified. |
 | `POST /consent` | Records the decision. `allow` saves the grant and resumes `/oauth/authorize`; `deny` returns `error=access_denied` to the client's redirect URI. |
 
 `/oauth/authorize` sends unauthenticated users to `/login?return_to=<authorize URL>`,

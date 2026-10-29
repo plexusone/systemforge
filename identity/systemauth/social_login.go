@@ -172,6 +172,9 @@ type socialLogin struct {
 	// both are nil when mail is not configured (ADR-003).
 	mail         *mailer
 	verifyTokens VerificationTokenStore
+	// emailChanger changes a principal's email after the new address is
+	// proven; nil when the directory cannot, or mail is not configured.
+	emailChanger PrincipalEmailChanger
 }
 
 func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
@@ -287,6 +290,11 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 			sl.directory = NewMemoryPrincipalDirectory()
 		}
 	}
+	// The sign-up wrappers below hide the directory's other methods, so
+	// the email changer is taken from the directory itself.
+	if c, ok := sl.directory.(PrincipalEmailChanger); ok && sl.mail != nil {
+		sl.emailChanger = c
+	}
 	denied, err := parseSignupDeniedURL(s.socialOpts.signupDeniedURL)
 	if err != nil {
 		return nil, err
@@ -340,6 +348,13 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 			r.Get(VerifyEmailConfirmPath, sl.handleVerifyEmailConfirmPage)
 			r.Post(VerifyEmailConfirmPath, sl.handleVerifyEmailConfirm)
 		}
+	}
+	if sl.emailChanger != nil {
+		r.Get(AccountEmailPath, sl.handleAccountEmailPage)
+		r.Post(AccountEmailPath, sl.handleAccountEmailRequest)
+		r.Post(AccountEmailCancelPath, sl.handleAccountEmailCancel)
+		r.Get(AccountEmailConfirmPath, sl.handleAccountEmailConfirmPage)
+		r.Post(AccountEmailConfirmPath, sl.handleAccountEmailConfirm)
 	}
 	r.Get(LogoutPath, sl.handleLogoutPage)
 	r.Post(LogoutPath, sl.handleLogout)

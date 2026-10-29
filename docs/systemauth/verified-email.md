@@ -145,3 +145,46 @@ conflict, and the person signs in the way they did before.
   click cannot complete their sign-in.
 - A confirmation with the wrong cookie does not use the token, so an
   attacker cannot burn your link either.
+
+## Changing an email address
+
+With mail configured and a principal directory that implements
+`PrincipalEmailChanger` (the Ent and memory directories do), a signed-in
+person manages their email at `/account/email`:
+
+1. **Request.** `POST /account/email` with the new address mails an
+   `email_change` link to the **new** address and a notice to the **current**
+   one, naming the new address masked (`n***@example.com`) and pointing at
+   the page where the change can be cancelled. A new request replaces the
+   pending one. The answer is the same whether or not the new address belongs
+   to another account, could be sent to, or was within its send limit.
+2. **Confirm.** The link opens a confirmation form; its `POST` uses the token
+   only from a session of the principal that asked, so a link opened while
+   signed in as someone else, or signed out, does nothing (signed out, the
+   page asks the person to sign in and open the link again). The email
+   changes, marked verified at that moment (`email_verified_at`), only if it
+   is still the address the change was requested from and no other account
+   has the new one; otherwise nothing changes and the page says the address
+   cannot be used. A notice that the email was changed goes to the old
+   address.
+3. **Cancel.** `POST /account/email/cancel` revokes the pending change; its
+   link stops working.
+
+| Route | Purpose |
+|-------|---------|
+| `GET /account/email` | The current email, a pending change, and the change form |
+| `POST /account/email` | Request a change |
+| `POST /account/email/cancel` | Cancel the pending change |
+| `GET /account/email/confirm?token=` | The link mailed to the new address: a confirmation form |
+| `POST /account/email/confirm` | Use the token and change the email |
+
+All `POST`s are origin-checked and carry a CSRF token derived from the login
+session. Managed principals (ADR-009) cannot change their email here; their
+managers do. The change records `systemauth.email_change.requested`,
+`systemauth.email_change.cancelled`, `systemauth.email.verified` and
+`systemauth.email.changed` [security events](../security/security-events.md),
+none of which records an address.
+
+The principal's identifier, which is its email for a person, changes with
+it. Relying parties see the new address in the next ID token or UserInfo
+response; one that keys accounts by email should key them by `sub` instead.
