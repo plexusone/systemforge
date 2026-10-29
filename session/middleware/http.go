@@ -2,11 +2,13 @@ package middleware
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/plexusone/systemforge/internal/apierror"
 	"github.com/plexusone/systemforge/observability"
 	"github.com/plexusone/systemforge/session/jwt"
 )
@@ -44,7 +46,7 @@ func HTTPAuthBearerForAudience(jwtService *jwt.Service, audiences ...string) fun
 			}
 			claims, err := jwtService.ValidateAccessTokenForAudience(token, audiences...)
 			if err != nil {
-				writeUnauthorized(w, err.Error())
+				writeUnauthorized(w, unauthorizedMessage(r, err))
 				return
 			}
 			if claims.IsDPoPBound() {
@@ -82,7 +84,7 @@ func HTTPAuthBearerWithObservability(jwtService *jwt.Service, obs *observability
 					obs.RecordJWTValidation(ctx, observability.ResultInvalid)
 					obs.RecordJWTLatency(ctx, float64(time.Since(start).Milliseconds()))
 				}
-				writeUnauthorized(w, err.Error())
+				writeUnauthorized(w, unauthorizedMessage(r, err))
 				return
 			}
 
@@ -238,6 +240,34 @@ func extractBearerToken(r *http.Request) string {
 type ErrorResponse struct {
 	Error   string `json:"error"`
 	Message string `json:"message,omitempty"`
+}
+
+// unauthorizedMessage is the response message for an authentication
+// failure. Token and proof errors map to their fixed sentinel text, so
+// parser, key and replay-cache details never reach the client; an
+// unexpected error is logged and answered generically.
+func unauthorizedMessage(r *http.Request, err error) string {
+	for _, known := range []error{
+		ErrMissingAuthorization,
+		ErrDPoPProofRequired,
+		ErrDPoPTokenNotBound,
+		ErrDPoPProofReplayed,
+		ErrBearerTokenRefused,
+		jwt.ErrTokenExpired,
+	} {
+		if errors.Is(err, known) {
+			return known.Error()
+		}
+	}
+	switch {
+	case errors.Is(err, jwt.ErrInvalidToken),
+		errors.Is(err, jwt.ErrWrongTokenType),
+		errors.Is(err, jwt.ErrAudienceMismatch),
+		errors.Is(err, jwt.ErrInvalidAlgorithm):
+		return jwt.ErrInvalidToken.Error()
+	}
+	apierror.Log(r.Context(), nil, "authenticating request", err)
+	return "authentication failed"
 }
 
 func writeUnauthorized(w http.ResponseWriter, message string) {
