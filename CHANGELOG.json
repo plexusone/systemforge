@@ -25,7 +25,7 @@
           "commit": "f8f5d44"
         },
         {
-          "description": "The client sends the `User-Agent`, so it can carry an email address or a token; both the log emitter and the OCSF emitter now record it only through `audit.SanitizeUserAgent`",
+          "description": "The client sends the `User-Agent`, so it can carry an email address or a token; both the log emitter and the OCSF emitter now record it only through `audit.SanitizeUserAgent`, which removes control characters and then leaves out a value that looks like it holds an email address or a credential (a heuristic for the common shapes)",
           "commit": "8eaa650"
         },
         {
@@ -51,7 +51,7 @@
           "commit": "d9c1761"
         },
         {
-          "description": "`audit.SanitizeUserAgent`: leaves out a `User-Agent` holding an email address or a credential-like value, and cuts any other to 512 bytes of valid UTF-8 without control characters",
+          "description": "`audit.SanitizeUserAgent`: removes control characters and invalid UTF-8, then leaves out a `User-Agent` that looks like it holds an email address or a credential, and cuts any other to 512 bytes",
           "commit": "8eaa650"
         }
       ],
@@ -73,6 +73,10 @@
         {
           "description": "Every event, Base Event included, validates through `ValidateEvent` with no skipped issues; torn lines, short writes, Emit with a stuck logger, periodic drop reports, unsyncable files and User-Agent sanitizing are tested",
           "commit": "423324d"
+        },
+        {
+          "description": "A torn line stays marked through a failed Write that wrote nothing, and control characters cannot hide an email address from the User-Agent check",
+          "commit": "0300d41"
         }
       ],
       "documentation": [
@@ -87,6 +91,10 @@
         {
           "description": "The OCSF page states the schema version `1.10.0-dev`, recommends rotating by renaming over `copytruncate`, and describes delivery, session IDs and the `User-Agent` exactly",
           "commit": "cabf495"
+        },
+        {
+          "description": "The README's privacy claim covers the OCSF emitter and says what the log emitter records; rotation by renaming waits for the reopen and uses `delaycompress` with compression",
+          "commit": "23c5e87"
         }
       ]
     },
