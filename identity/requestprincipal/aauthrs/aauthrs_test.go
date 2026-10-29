@@ -21,7 +21,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
-	"github.com/plexusone/systemforge/identity/apikey"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
 	"github.com/plexusone/systemforge/identity/requestprincipal/aauthrs"
@@ -122,20 +121,27 @@ func (rs *resourceServer) principal() *requestprincipal.RequestPrincipal {
 	return rs.last
 }
 
-type fakeAPIKeys map[string]*apikey.APIKey
+// humanToken is the access token fakeTokens accepts, for the subject of
+// the resource server's human principal.
+const humanToken = "human.access.token"
 
-func (f fakeAPIKeys) Validate(_ context.Context, key string) (*apikey.APIKey, error) {
-	k, ok := f[key]
-	if !ok {
-		return nil, apikey.ErrKeyNotFound
+// fakeTokens is a SystemAuth access token verifier that accepts only
+// humanToken.
+type fakeTokens struct{}
+
+func (fakeTokens) VerifyAccessToken(_ context.Context, raw string) (*relyingparty.AccessTokenClaims, error) {
+	if raw != humanToken {
+		return nil, relyingparty.ErrInvalidToken
 	}
-	return k, nil
+	claims := &relyingparty.AccessTokenClaims{Scopes: []string{"things:read"}, Raw: map[string]any{}}
+	claims.Subject = "human-subject"
+	return claims, nil
 }
 
 // newResourceServer starts a product API protected by the AAuth
-// authenticator and, after it, the relying-party authenticator with one
-// human API key ("sf_live_human"). /things requires things:read and
-// /admin also things:admin.
+// authenticator and, after it, the relying-party authenticator, which
+// accepts one human's unbound access token (humanToken). /things requires
+// things:read and /admin also things:admin.
 func newResourceServer(t *testing.T, mode string, trusted ...string) *resourceServer {
 	t.Helper()
 	return newResourceServerWith(t, mode, nil, trusted...)
@@ -180,12 +186,10 @@ func newResourceServerWith(t *testing.T, mode string, adjust func(*aauthrs.Confi
 	auth.Register(mux)
 
 	store := relyingparty.NewMemoryPrincipalStore()
-	human, err := store.AddPrincipal(relyingparty.Principal{Email: "human@example.com", Active: true})
-	if err != nil {
+	if _, err := store.AddPrincipal(relyingparty.Principal{Email: "human@example.com", Active: true, SFPrincipalID: "human-subject"}); err != nil {
 		t.Fatal(err)
 	}
-	keys := fakeAPIKeys{"sf_live_human": {ID: uuid.New(), OwnerID: uuid.MustParse(human.ID), Scopes: []string{"things:read"}}}
-	rp := relyingparty.NewRequestAuthenticator(relyingparty.BearerConfig{APIKeys: keys, Principals: store})
+	rp := relyingparty.NewRequestAuthenticator(relyingparty.BearerConfig{Tokens: fakeTokens{}, Principals: store, AllowBearerTokens: true})
 
 	rs := &resourceServer{url: srv.URL, auth: auth}
 	protected := requestprincipal.Middleware(requestprincipal.Options{}, auth, rp)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -555,26 +559,26 @@ func TestRejectedAuthTokens(t *testing.T) {
 func TestHumanRequestInChain(t *testing.T) {
 	rs := newResourceServer(t, aauth.AccessModeAuthToken, newFakeIssuer(t).url)
 	req := get(t, rs.url+"/things")
-	req.Header.Set("X-API-Key", "sf_live_human")
+	req.Header.Set("Authorization", "Bearer "+humanToken)
 	res, body := do(t, http.DefaultClient, req)
 	if res.StatusCode != http.StatusOK {
-		t.Fatalf("API key: %d %s", res.StatusCode, body)
+		t.Fatalf("access token: %d %s", res.StatusCode, body)
 	}
 	p := rs.principal()
-	if p.Type != requestprincipal.TypeHuman || p.Protocol != requestprincipal.ProtocolAPIKey || !p.HasScope("things:read") {
+	if p.Type != requestprincipal.TypeHuman || p.Protocol != requestprincipal.ProtocolOIDC || !p.HasScope("things:read") {
 		t.Errorf("human principal: %+v", p)
 	}
 	if _, ok := p.Native.(*relyingparty.AuthenticatedPrincipal); !ok {
 		t.Errorf("native: %T", p.Native)
 	}
 
-	// An invalid key gets the bearer challenge, not an AAuth one.
+	// An invalid token gets the bearer challenge, not an AAuth one.
 	req = get(t, rs.url+"/things")
 	req.Header.Set("Authorization", "Bearer sf_live_unknown")
 	res, _ = do(t, http.DefaultClient, req)
 	if res.StatusCode != http.StatusUnauthorized || !strings.Contains(res.Header.Get("WWW-Authenticate"), `error="invalid_token"`) ||
 		res.Header.Get(aauth.HeaderRequirement) != "" {
-		t.Errorf("invalid key: %d %v", res.StatusCode, res.Header)
+		t.Errorf("invalid token: %d %v", res.StatusCode, res.Header)
 	}
 }
 

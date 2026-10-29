@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/plexusone/systemforge/identity/apikey"
 )
 
 // AuthMethod is how a request was authenticated.
@@ -20,8 +18,6 @@ const (
 	AuthMethodSession AuthMethod = "session"
 	// AuthMethodAccessToken is a SystemAuth JWT access token.
 	AuthMethodAccessToken AuthMethod = "access_token"
-	// AuthMethodAPIKey is an API key.
-	AuthMethodAPIKey AuthMethod = "api_key"
 )
 
 // AuthenticatedPrincipal is the principal of an authenticated request.
@@ -36,14 +32,11 @@ type AuthenticatedPrincipal struct {
 	Subject string
 	// Method is how the request authenticated.
 	Method AuthMethod
-	// Scopes are the token or API key scopes (empty for sessions, which
+	// Scopes are the access token's scopes (empty for sessions, which
 	// carry the principal's full access).
 	Scopes []string
-	// Memberships are the principal's organization memberships. For an
-	// organization-scoped API key, only that organization's membership.
+	// Memberships are the principal's organization memberships.
 	Memberships []Membership
-	// APIKeyID is the API key ID for AuthMethodAPIKey.
-	APIKeyID string
 }
 
 // HasScope reports whether the principal's credential carries scope.
@@ -75,27 +68,17 @@ type AccessTokenVerifier interface {
 	VerifyAccessToken(ctx context.Context, raw string) (*AccessTokenClaims, error)
 }
 
-// APIKeyValidator validates API keys. *apikey.Service implements it.
-type APIKeyValidator interface {
-	Validate(ctx context.Context, key string) (*apikey.APIKey, error)
-}
-
 // BearerConfig configures BearerMiddleware.
 type BearerConfig struct {
 	// Tokens verifies SystemAuth JWT access tokens. Nil disables them.
 	Tokens AccessTokenVerifier
 
-	// APIKeys validates API keys (Authorization: Bearer <key> or
-	// X-API-Key). Nil disables them.
-	APIKeys APIKeyValidator
-
-	// Principals resolves token subjects and API key owners to app-local
-	// principals (required).
+	// Principals resolves token subjects to app-local principals
+	// (required).
 	Principals PrincipalStore
 
 	// Memberships supplies organization memberships. Default:
-	// ClaimsMemberships, which reads a JWT access token's claims and finds
-	// none for an API key.
+	// ClaimsMemberships, which reads a JWT access token's claims.
 	Memberships MembershipSource
 
 	// Sessions, when set, also accepts a BFF cookie session for requests
@@ -140,7 +123,7 @@ type BearerConfig struct {
 	// Bearer scheme, as SystemAuth issues to clients registered with its
 	// allow_bearer_tokens exception. It is an explicit opt-in: by default
 	// an access token without cnf.jkt is refused, since whoever holds a
-	// bearer token can use it. API keys are not affected.
+	// bearer token can use it.
 	AllowBearerTokens bool
 
 	// Logger receives storage errors. Default: slog.Default().
@@ -157,12 +140,12 @@ type BearerConfig struct {
 //     the app once.
 //   - Authorization: Bearer <JWT>, only with AllowBearerTokens — an unbound
 //     SystemAuth JWT access token, checked the same way.
-//   - Authorization: Bearer <api key> or X-API-Key: <api key> — validated
-//     by APIKeys; the key's owner is the principal.
 //   - a BFF session cookie, when Sessions is set.
 //
 // Anything else gets 401 with WWW-Authenticate challenges for the DPoP
-// scheme and, for API keys and legacy tokens, the Bearer scheme.
+// scheme and, for legacy tokens, the Bearer scheme. Static API keys are
+// not accepted (ADR-016): command-line tools sign people in with
+// identity/publicclient, and automation uses service accounts.
 //
 // It panics without Principals, and when Tokens is set without DPoP or
 // AllowBearerTokens, since it could then accept no access token.
@@ -280,8 +263,6 @@ func (cfg BearerConfig) authenticate(r *http.Request, dv *dpopVerifier) (*Authen
 			return nil, errUnauthenticated("invalid_request", "unsupported authorization scheme")
 		}
 		token = strings.TrimSpace(value)
-	} else if key := r.Header.Get("X-API-Key"); key != "" {
-		return cfg.authenticateAPIKey(ctx, key)
 	}
 	org := ""
 	if cfg.Organization != nil {
@@ -307,20 +288,20 @@ func (cfg BearerConfig) authenticate(r *http.Request, dv *dpopVerifier) (*Authen
 		return nil, errNoCredentials
 	}
 
-	if strings.Count(token, ".") == 2 {
-		claims, err := cfg.verifyJWT(ctx, token)
-		if err != nil {
-			return nil, err
-		}
-		if claims.DPoPThumbprint() != "" {
-			return nil, errUnauthenticated("invalid_token", "DPoP-bound token requires the DPoP scheme and a DPoP proof")
-		}
-		if !cfg.AllowBearerTokens {
-			return nil, errUnauthenticated("invalid_token", "access token is not DPoP-bound; bearer tokens are not accepted")
-		}
-		return cfg.principalForJWT(ctx, token, claims, org)
+	if strings.Count(token, ".") != 2 {
+		return nil, errUnauthenticated("invalid_token", "invalid access token")
 	}
-	return cfg.authenticateAPIKey(ctx, token)
+	claims, err := cfg.verifyJWT(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	if claims.DPoPThumbprint() != "" {
+		return nil, errUnauthenticated("invalid_token", "DPoP-bound token requires the DPoP scheme and a DPoP proof")
+	}
+	if !cfg.AllowBearerTokens {
+		return nil, errUnauthenticated("invalid_token", "access token is not DPoP-bound; bearer tokens are not accepted")
+	}
+	return cfg.principalForJWT(ctx, token, claims, org)
 }
 
 // authenticateDPoP authenticates "Authorization: DPoP <token>": the token
@@ -411,54 +392,6 @@ func (cfg BearerConfig) principalForJWT(ctx context.Context, token string, claim
 		Method:      AuthMethodAccessToken,
 		Scopes:      claims.Scopes,
 		Memberships: memberships,
-	}, nil
-}
-
-func (cfg BearerConfig) authenticateAPIKey(ctx context.Context, key string) (*AuthenticatedPrincipal, error) {
-	if cfg.APIKeys == nil {
-		return nil, errUnauthenticated("invalid_token", "API keys are not accepted")
-	}
-	k, err := cfg.APIKeys.Validate(ctx, key)
-	if err != nil {
-		switch {
-		case errors.Is(err, apikey.ErrInvalidKey), errors.Is(err, apikey.ErrKeyNotFound),
-			errors.Is(err, apikey.ErrKeyExpired), errors.Is(err, apikey.ErrKeyRevoked):
-			return nil, errUnauthenticated("invalid_token", "invalid API key")
-		}
-		return nil, err
-	}
-	p, err := cfg.Principals.GetPrincipal(ctx, k.OwnerID.String())
-	if errors.Is(err, ErrPrincipalNotFound) {
-		return nil, errUnauthenticated("invalid_token", "API key owner not found")
-	}
-	if err != nil {
-		return nil, err
-	}
-	if !p.Active {
-		return nil, errUnauthenticated("invalid_token", "principal is inactive")
-	}
-	memberships, err := cfg.Memberships.Memberships(ctx, MembershipQuery{Principal: p, Subject: p.SFPrincipalID})
-	if err != nil {
-		return nil, err
-	}
-	if k.OrganizationID != nil {
-		orgID := k.OrganizationID.String()
-		scoped := memberships[:0:0]
-		for _, m := range memberships {
-			if m.OrganizationID == orgID {
-				scoped = append(scoped, m)
-			}
-		}
-		memberships = scoped
-	}
-	return &AuthenticatedPrincipal{
-		ID:          p.ID,
-		Type:        principalType(p),
-		Subject:     p.SFPrincipalID,
-		Method:      AuthMethodAPIKey,
-		Scopes:      k.Scopes,
-		Memberships: memberships,
-		APIKeyID:    k.ID.String(),
 	}, nil
 }
 

@@ -91,9 +91,6 @@ func ToRequestPrincipal(p *AuthenticatedPrincipal) *requestprincipal.RequestPrin
 		rp.Protocol = requestprincipal.ProtocolSession
 	case AuthMethodAccessToken:
 		rp.Protocol = requestprincipal.ProtocolOIDC
-	case AuthMethodAPIKey:
-		rp.Protocol = requestprincipal.ProtocolAPIKey
-		rp.Proof.TokenID = p.APIKeyID
 	}
 	return rp
 }

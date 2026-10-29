@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/plexusone/systemforge/identity/requestprincipal"
 )
 
@@ -20,15 +18,10 @@ func TestRequestAuthenticator(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc, err := store.AddPrincipal(Principal{Email: "svc@example.com", Active: true, Type: "service"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	keyID := uuid.New()
-	keys := fakeAPIKeys{"sf_live_svc": {ID: keyID, OwnerID: uuid.MustParse(svc.ID), Scopes: []string{"things:write"}}}
-	auth := NewRequestAuthenticator(BearerConfig{Tokens: fake.clientWith(t, func(c *Config) {
+	tokens := fake.clientWith(t, func(c *Config) {
 		c.AcceptedClientIDs = []string{testClientID, "svc-client"}
-	}), APIKeys: keys, Principals: store, AllowClientTokens: true, AllowBearerTokens: true})
+	})
+	auth := NewRequestAuthenticator(BearerConfig{Tokens: tokens, Principals: store, AllowClientTokens: true, AllowBearerTokens: true})
 
 	authenticate := func(decorate func(*http.Request)) (*requestprincipal.RequestPrincipal, error) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/things", nil)
@@ -45,19 +38,18 @@ func TestRequestAuthenticator(t *testing.T) {
 		t.Errorf("native: %T", p.Native)
 	}
 
-	p, err = authenticate(func(r *http.Request) { r.Header.Set("X-API-Key", "sf_live_svc") })
-	if err != nil || p.Type != requestprincipal.TypeService || p.Protocol != requestprincipal.ProtocolAPIKey || p.Proof.TokenID != keyID.String() {
-		t.Fatalf("API key: %+v %v", p, err)
-	}
-
 	p, err = authenticate(withBearer(fake.accessJWT("svc-client", "svc-client", nil, time.Minute)))
 	if err != nil || p.Type != requestprincipal.TypeApplication {
 		t.Fatalf("client token: %+v %v", p, err)
 	}
 
-	// No credentials: left to the next authenticator.
+	// No credentials: left to the next authenticator. An API key header is
+	// not a credential.
 	if _, err := authenticate(func(*http.Request) {}); !errors.Is(err, requestprincipal.ErrNoCredentials) {
 		t.Errorf("anonymous: %v", err)
+	}
+	if _, err := authenticate(func(r *http.Request) { r.Header.Set("X-API-Key", "sf_live_svc") }); !errors.Is(err, requestprincipal.ErrNoCredentials) {
+		t.Errorf("X-API-Key: %v", err)
 	}
 
 	// Invalid credentials: a bearer challenge.
@@ -65,13 +57,13 @@ func TestRequestAuthenticator(t *testing.T) {
 	var authErr *requestprincipal.Error
 	if !errors.As(err, &authErr) || authErr.Status != http.StatusUnauthorized ||
 		!strings.Contains(authErr.Header.Get("WWW-Authenticate"), `error="invalid_token"`) {
-		t.Errorf("invalid key: %v", err)
+		t.Errorf("API key as bearer token: %v", err)
 	}
 
 	// Storage failures stay internal errors.
-	broken := NewRequestAuthenticator(BearerConfig{APIKeys: failingAPIKeys{}, Principals: store})
+	broken := NewRequestAuthenticator(BearerConfig{Tokens: tokens, Principals: store, Memberships: failingMemberships{}, AllowBearerTokens: true})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("X-API-Key", "sf_live_x")
+	req.Header.Set("Authorization", "Bearer "+fake.accessJWT(fake.subject, testClientID, nil, time.Minute))
 	if _, err := broken.Authenticate(req); err == nil || errors.As(err, &authErr) {
 		t.Errorf("storage failure: %v", err)
 	}

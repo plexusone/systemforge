@@ -99,14 +99,6 @@ type Options struct {
 	// AllowBearerTokens also accepts unbound access tokens with the Bearer
 	// scheme, from clients SystemAuth exempts from DPoP.
 	AllowBearerTokens bool
-	// APIKeys validates static API keys (Authorization: Bearer <key> or
-	// X-API-Key).
-	//
-	// Deprecated: API keys are a second, weaker way in (ADR-016).
-	// Command-line tools sign people in with identity/publicclient, and
-	// automation uses service accounts. The option is kept so an
-	// application can adopt this package before replacing its keys.
-	APIKeys relyingparty.APIKeyValidator
 
 	// ResourceName names the application in its protected resource
 	// metadata (RFC 9728).
@@ -126,7 +118,6 @@ type Authenticator struct {
 	client   *relyingparty.Client
 	bff      *relyingparty.BFF
 	chain    requestprincipal.Chain
-	bearer   bool
 	unbound  bool
 	resource string
 	name     string
@@ -203,7 +194,6 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 		cfg:      cfg,
 		client:   client,
 		bff:      bff,
-		bearer:   opts.AllowBearerTokens || opts.APIKeys != nil,
 		unbound:  opts.AllowBearerTokens,
 		resource: strings.TrimRight(cfg.PublicURL, "/"),
 		name:     opts.ResourceName,
@@ -212,7 +202,6 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 	own := &ownAuthenticator{
 		inner: relyingparty.NewRequestAuthenticator(relyingparty.BearerConfig{
 			Tokens:            client,
-			APIKeys:           opts.APIKeys,
 			Principals:        opts.Principals,
 			Memberships:       memberships,
 			Sessions:          bff,
@@ -222,7 +211,7 @@ func New(ctx context.Context, cfg Config, opts Options) (*Authenticator, error) 
 			ServicePrincipals: opts.ServiceAccounts,
 			Logger:            logger,
 		}),
-		bearer: a.bearer,
+		bearer: opts.AllowBearerTokens,
 	}
 	a.chain = append(requestprincipal.Chain{own}, opts.Authenticators...)
 	return a, nil
@@ -255,9 +244,6 @@ func warn(opts Options, l Labels, hasKey bool, logger *slog.Logger) {
 	}
 	if opts.AllowBearerTokens {
 		logger.Warn("appauth: unbound bearer access tokens are accepted; a copied token works for whoever holds it")
-	}
-	if opts.APIKeys != nil {
-		logger.Warn("appauth: API keys are accepted; they are deprecated in favor of publicclient sign-in and service accounts")
 	}
 	if opts.Memberships != nil && opts.Application != "" {
 		logger.Warn("appauth: Options.Memberships is set, so Options.Application does not filter memberships",
@@ -373,7 +359,7 @@ func (a *Authenticator) Authenticate(r *http.Request) (*requestprincipal.Request
 }
 
 // Challenge adds the WWW-Authenticate challenges for a request without
-// credentials: DPoP, Bearer when API keys or unbound tokens are accepted, and
+// credentials: DPoP, Bearer when unbound tokens are accepted, and
 // those of Options.Authenticators.
 func (a *Authenticator) Challenge(h http.Header) { a.chain.Challenge(h) }
 
