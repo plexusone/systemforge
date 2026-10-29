@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/approle"
@@ -106,6 +107,8 @@ type DefaultService struct {
 	coolingOff time.Duration // slug cooling-off period (default SlugCoolingOff)
 
 	accessSink accesschange.Sink // announces access changes after commit
+
+	audit audit.Emitter // records membership changes; nil records none
 }
 
 // ServiceOption configures a DefaultService.
@@ -528,6 +531,7 @@ func (s *DefaultService) AddMember(ctx context.Context, input AddMemberInput) (*
 	}); err != nil {
 		return nil, err
 	}
+	s.emitMembership(ctx, "added", input.OrganizationID, input.PrincipalID, map[string]any{"role": input.Role})
 
 	return entMembershipToModel(membership), nil
 }
@@ -667,6 +671,9 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 			return nil, err
 		}
 	}
+	s.emitMembership(ctx, "updated", orgID, membership.PrincipalID, map[string]any{
+		"old_role": oldRole, "role": membership.Role, "was_active": current.Active, "active": membership.Active,
+	})
 	return entMembershipToModel(membership), nil
 }
 
@@ -736,6 +743,7 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 		return fmt.Errorf("failed to remove membership: %w", err)
 	}
 	accesschange.Publish(s.accessSink, changes...)
+	s.emitMembership(ctx, "removed", organizationID, principalID, map[string]any{"role": membership.Role})
 	return nil
 }
 
@@ -1030,6 +1038,9 @@ func (s *DefaultService) TransferOwnership(ctx context.Context, input TransferOw
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	accesschange.Publish(s.accessSink, changes...)
+	s.emitMembership(ctx, "ownership_transferred", input.OrganizationID, input.ToPrincipal, map[string]any{
+		"role": RoleOwner, "previous_owner_id": input.FromPrincipal.String(), "previous_owner_role": newRoleForOld,
+	})
 
 	// The roles the transfer grants are written after it commits.
 	if err := s.grantMembership(ctx, "old owner role change", input.OrganizationID, input.FromPrincipal, newRoleForOld, func(ctx context.Context) error {

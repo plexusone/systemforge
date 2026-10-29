@@ -107,6 +107,7 @@ func (s *Service) AddKey(ctx context.Context, id uuid.UUID, in KeyInput) (*Key, 
 	}
 	s.logger.InfoContext(ctx, "service account key added", "principal_id", id, "key_id", kp.KeyID, "algorithm", alg)
 	k := fromKeypair(kp)
+	s.emit(ctx, "key_added", uuid.Nil, id, keyDetails(k))
 	k.PrivateKeyPEM = privatePEM
 	return k, nil
 }
@@ -247,6 +248,7 @@ func (s *Service) RevokeKey(ctx context.Context, id uuid.UUID, keyID, reason str
 		accesschange.Publish(s.accessSink, *change)
 	}
 	s.logger.InfoContext(ctx, "service account key revoked", "principal_id", id, "key_id", keyID, "reason", reason)
+	s.emit(ctx, "key_revoked", uuid.Nil, id, map[string]any{"key_id": keyID, "reason": reason})
 	return nil
 }
 

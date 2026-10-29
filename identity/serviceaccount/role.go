@@ -27,7 +27,11 @@ func (s *Service) GrantRole(ctx context.Context, id uuid.UUID, application, role
 	if errors.Is(err, approle.ErrAlreadyAssigned) {
 		_, err = s.roles.Change(ctx, in)
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	s.emit(ctx, "role_granted", by, id, map[string]any{"application": application, "role": role, "organization_id": acct.OrganizationID.String()})
+	return nil
 }
 
 // RemoveRole removes the account's role in an application, which records
@@ -37,7 +41,11 @@ func (s *Service) RemoveRole(ctx context.Context, id uuid.UUID, application stri
 	if err != nil {
 		return err
 	}
-	return s.roles.Remove(ctx, acct.OrganizationID, id, application, by)
+	if err := s.roles.Remove(ctx, acct.OrganizationID, id, application, by); err != nil {
+		return err
+	}
+	s.emit(ctx, "role_removed", by, id, map[string]any{"application": application, "organization_id": acct.OrganizationID.String()})
+	return nil
 }
 
 // requireRoles returns the account, or an error when it does not exist or
