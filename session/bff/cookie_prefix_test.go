@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -40,9 +41,10 @@ func TestInsecureDevCookieDropsHostPrefix(t *testing.T) {
 
 func TestCookieConfigValidate(t *testing.T) {
 	bad := []CookieConfig{
-		{Name: "__Host-x", Path: "/app", Secure: true},
-		{Name: "__Host-x", Path: "/", Secure: false},
-		{Name: "__Secure-x", Path: "/", Secure: false},
+		{Name: "__Host-x", Path: "/app", Secure: true, SameSite: http.SameSiteStrictMode},
+		{Name: "__Host-x", Path: "/", Secure: false, SameSite: http.SameSiteStrictMode},
+		{Name: "__Secure-x", Path: "/", Secure: false, SameSite: http.SameSiteStrictMode},
+		{Name: "__Host-x", Path: "/", Secure: true, SameSite: http.SameSiteNoneMode},
 	}
 	for _, c := range bad {
 		if err := c.Validate(); !errors.Is(err, ErrInvalidCookieConfig) {
@@ -59,6 +61,40 @@ func TestNewHandler_RejectsHostCookieWithPath(t *testing.T) {
 	})
 	if !errors.Is(err, ErrInvalidCookieConfig) {
 		t.Fatalf("NewHandler() error = %v, want ErrInvalidCookieConfig", err)
+	}
+}
+
+// TestNewHandler_RejectsSameSiteNone expects a session cookie configured
+// with SameSite=None to be refused, since it would be sent on cross-site
+// subrequests and weaken the origin check.
+func TestNewHandler_RejectsSameSiteNone(t *testing.T) {
+	_, err := NewHandler(HandlerConfig{
+		Store:          NewMemoryStore(DefaultStoreConfig()),
+		AllowedOrigins: []string{"https://example.com"},
+		CookieConfig:   CookieConfig{SameSite: http.SameSiteNoneMode},
+	})
+	if !errors.Is(err, ErrInvalidCookieConfig) {
+		t.Fatalf("NewHandler() error = %v, want ErrInvalidCookieConfig", err)
+	}
+}
+
+// TestCookieSameSiteAcceptsStrictAndLax expects Strict and Lax to be
+// accepted, and an unset or default SameSite to become Strict.
+func TestCookieSameSiteAcceptsStrictAndLax(t *testing.T) {
+	cases := map[http.SameSite]http.SameSite{
+		0:                        http.SameSiteStrictMode,
+		http.SameSiteDefaultMode: http.SameSiteStrictMode,
+		http.SameSiteStrictMode:  http.SameSiteStrictMode,
+		http.SameSiteLaxMode:     http.SameSiteLaxMode,
+	}
+	for in, want := range cases {
+		cfg := NewCookieManager(CookieConfig{SameSite: in}).Config()
+		if cfg.SameSite != want {
+			t.Errorf("SameSite %v became %v, want %v", in, cfg.SameSite, want)
+		}
+		if err := cfg.Validate(); err != nil {
+			t.Errorf("SameSite %v: Validate() = %v, want nil", in, err)
+		}
 	}
 }
 
