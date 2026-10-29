@@ -63,6 +63,13 @@ func allowFormTargets(w http.ResponseWriter, sources []string) {
 	w.Header().Set("Content-Security-Policy", contentSecurityPolicy(sources...))
 }
 
+// allowImageSource lets the page load images from its own origin and from
+// origin, an https origin whose host matches cspHost (the login page shows
+// the requesting client's logo).
+func allowImageSource(w http.ResponseWriter, origin string) {
+	w.Header().Set("Content-Security-Policy", cspBase+"; img-src 'self' "+origin+"; form-action 'self'")
+}
+
 // cspScheme matches a URI scheme usable as a CSP scheme source.
 var cspScheme = regexp.MustCompile(`^[a-z][a-z0-9+.-]*$`)
 

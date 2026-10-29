@@ -348,11 +348,47 @@ func noStore(w http.ResponseWriter) {
 
 var chooserTemplate = template.Must(template.New("login").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in</title></head>
-<body><main><h1>Sign in</h1><ul>
-{{range .}}<li><a href="{{.URL}}">Continue with {{.Name}}</a></li>
+<title>Sign in{{with .ClientName}} to {{.}}{{end}}</title></head>
+<body><main>{{if .LogoURL}}<img src="{{.LogoURL}}" alt="" width="64" height="64">
+{{end}}<h1>Sign in</h1>{{with .ClientName}}<p>to continue to {{.}}</p>{{end}}<ul>
+{{range .Links}}<li><a href="{{.URL}}">Continue with {{.Name}}</a></li>
 {{end}}</ul></main></body></html>
 `))
+
+// chooserBranding returns the name and logo of the client whose
+// authorization request returnTo is, for the login page; empty when
+// returnTo is not an authorization request of a known client. The logo is
+// kept only when it is an https URL whose origin can be named in the
+// page's content security policy.
+func (sl *socialLogin) chooserBranding(r *http.Request, returnTo string) (name, logoURL, logoOrigin string) {
+	target, err := parseConsentTarget(returnTo)
+	if err != nil {
+		return "", "", ""
+	}
+	client, err := sl.clients.GetClientByID(r.Context(), target.clientID)
+	if err != nil {
+		if !errors.Is(err, ErrClientNotFound) {
+			LoggerFromContext(r.Context()).Error("loading client for the login page", "client_id", target.clientID, "error", err)
+		}
+		return "", "", ""
+	}
+	name = client.Name
+	if name == "" {
+		name = client.ID
+	}
+	if client.LogoURL == "" || ValidateClientLogoURL(client.LogoURL) != nil {
+		return name, "", ""
+	}
+	u, err := url.Parse(client.LogoURL)
+	if err != nil {
+		return name, "", ""
+	}
+	host := strings.ToLower(u.Host)
+	if !cspHost.MatchString(host) {
+		return name, "", ""
+	}
+	return name, client.LogoURL, "https://" + host
+}
 
 var providerDisplayNames = map[string]string{
 	oauthclient.ProviderGitHub: "GitHub",
@@ -392,8 +428,16 @@ func (sl *socialLogin) handleChooser(w http.ResponseWriter, r *http.Request) {
 		}
 		links = append(links, link{Name: name, URL: startURL(p, returnTo)})
 	}
+	// A login started by an authorization request names the client.
+	clientName, logoURL, logoOrigin := sl.chooserBranding(r, returnTo)
+	if logoOrigin != "" {
+		allowImageSource(w, logoOrigin)
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := chooserTemplate.Execute(w, links); err != nil {
+	if err := chooserTemplate.Execute(w, struct {
+		ClientName, LogoURL string
+		Links               []link
+	}{clientName, logoURL, links}); err != nil {
 		LoggerFromContext(r.Context()).Error("rendering login page", "error", err)
 	}
 }
