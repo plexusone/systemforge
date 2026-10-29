@@ -10,6 +10,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/principal"
+	"github.com/plexusone/systemforge/internal/apierror"
 )
 
 // registerIdentityEndpoints registers identity endpoints.
@@ -117,7 +118,7 @@ func (a *API) listPrincipals(ctx context.Context, input *PrincipalsListInput) (*
 
 	principals, err := q.All(ctx)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("failed to query principals", err)
+		return nil, apierror.Internal(ctx, LoggerFromContext(ctx), "contract: failed to query principals", err)
 	}
 
 	result := make([]ContractPrincipal, len(principals))
@@ -154,7 +155,7 @@ func (a *API) getPrincipal(ctx context.Context, input *PrincipalGetInput) (*Prin
 			if strings.Contains(err.Error(), "not found") {
 				return nil, huma.Error404NotFound("principal not found")
 			}
-			return nil, huma.Error500InternalServerError("failed to get principal", err)
+			return nil, apierror.Internal(ctx, LoggerFromContext(ctx), "contract: failed to get principal", err)
 		}
 		return &PrincipalGetOutput{Body: principalToContract(p)}, nil
 	}
@@ -172,7 +173,7 @@ func (a *API) getPrincipal(ctx context.Context, input *PrincipalGetInput) (*Prin
 		if strings.Contains(err.Error(), "not found") {
 			return nil, huma.Error404NotFound("principal not found")
 		}
-		return nil, huma.Error500InternalServerError("failed to get principal", err)
+		return nil, apierror.Internal(ctx, LoggerFromContext(ctx), "contract: failed to get principal", err)
 	}
 
 	return &PrincipalGetOutput{Body: entPrincipalToContract(p)}, nil
@@ -196,7 +197,7 @@ func (a *API) lookupPrincipal(ctx context.Context, input *LookupInput) (*LookupO
 					Principal *ContractPrincipal `json:"principal" doc:"Found principal, or null if not found"`
 				}{Principal: nil}}, nil
 			}
-			return nil, huma.Error500InternalServerError("failed to lookup principal", err)
+			return nil, apierror.Internal(ctx, LoggerFromContext(ctx), "contract: failed to lookup principal", err)
 		}
 		cp := principalToContract(p)
 		return &LookupOutput{Body: struct {
@@ -219,7 +220,7 @@ func (a *API) lookupPrincipal(ctx context.Context, input *LookupInput) (*LookupO
 				Principal *ContractPrincipal `json:"principal" doc:"Found principal, or null if not found"`
 			}{Principal: nil}}, nil
 		}
-		return nil, huma.Error500InternalServerError("failed to lookup principal", err)
+		return nil, apierror.Internal(ctx, LoggerFromContext(ctx), "contract: failed to lookup principal", err)
 	}
 
 	cp := entPrincipalToContract(p)
@@ -279,7 +280,7 @@ func (a *API) listTenants(ctx context.Context, input *struct{}) (*TenantsListOut
 	entClient := a.provider.EntClient()
 	orgs, err := entClient.Organization.Query().All(ctx)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("failed to query tenants", err)
+		return nil, apierror.Internal(ctx, LoggerFromContext(ctx), "contract: failed to query tenants", err)
 	}
 
 	tenants := make([]Tenant, len(orgs))

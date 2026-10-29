@@ -7,6 +7,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/internal/apierror"
 )
 
 // registerPolicyEndpoints registers policy endpoints.
@@ -163,7 +164,7 @@ func (a *API) evaluatePolicy(ctx context.Context, input *EvaluateInput) (*Evalua
 	// Evaluate
 	decision, err := policySvc.Decide(ctx, principal, authz.Action(input.Body.Action), resource)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("policy evaluation failed", err)
+		return nil, apierror.Internal(ctx, LoggerFromContext(ctx), "contract: policy evaluation failed", err)
 	}
 
 	policies := []string{}
