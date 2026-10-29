@@ -385,3 +385,20 @@ func TestManagedEntityTypeIsOther(t *testing.T) {
 		}
 	}
 }
+
+// TestUserAgentWithPersonalDataIsDropped checks that a client-sent
+// User-Agent carrying an email address or a token is left out.
+func TestUserAgentWithPersonalDataIsDropped(t *testing.T) {
+	m := newTestMapper()
+	for _, ua := range []string{"curl/8 alice@example.com", "app/1 eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.e30.sig"} {
+		ev := evt("systemauth.sign_in", "sign_in", audit.OutcomeSuccess, map[string]any{"method": "github"})
+		ev.Context.UserAgent = ua
+		data, err := json.Marshal(m.toOCSF(&ev))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(data), "user_agent") || strings.Contains(string(data), "alice@") || strings.Contains(string(data), "eyJ") {
+			t.Errorf("User-Agent %q reached the event: %s", ua, data)
+		}
+	}
+}

@@ -112,8 +112,8 @@ func contextAttrs(c Context) []slog.Attr {
 	if c.ClientIP != "" {
 		out = append(out, slog.String("client_ip", c.ClientIP))
 	}
-	if c.UserAgent != "" {
-		out = append(out, slog.String("user_agent", c.UserAgent))
+	if ua := SanitizeUserAgent(c.UserAgent); ua != "" {
+		out = append(out, slog.String("user_agent", ua))
 	}
 	return out
 }

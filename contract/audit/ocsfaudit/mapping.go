@@ -27,9 +27,6 @@ type (
 // category; the generated category captions cover named categories only.
 const baseEventCategoryName = "Uncategorized"
 
-// maxUserAgent bounds the User-Agent copied into an event.
-const maxUserAgent = 512
-
 // unknownUser stands for the user of an authentication or account event
 // whose principal is not known, such as a refused sign-in: those classes
 // require a user, and a user needs a name or an ID.
@@ -176,11 +173,8 @@ func (m *mapper) common(ev *audit.Event) *common {
 	if addr, err := netip.ParseAddr(ev.Context.ClientIP); err == nil {
 		c.src = &objects.NetworkEndpoint{IP: addr.Unmap().String()}
 	}
-	if ua := ev.Context.UserAgent; ua != "" {
-		if len(ua) > maxUserAgent {
-			ua = ua[:maxUserAgent]
-		}
-		c.http = &objects.HTTPRequest{UserAgent: strings.ToValidUTF8(ua, "")}
+	if ua := audit.SanitizeUserAgent(ev.Context.UserAgent); ua != "" {
+		c.http = &objects.HTTPRequest{UserAgent: ua}
 	}
 	c.message = message(ev)
 	return c
