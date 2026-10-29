@@ -482,6 +482,8 @@
       
         
       
+        
+      
     
     
     
@@ -964,6 +966,34 @@
     
   
     Rotating Keys and Secrets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rate-limiting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Addresses and Rate Limiting
   
 
     
@@ -1989,6 +2019,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client address
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rate-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#security-headers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2772,6 +2824,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2862,6 +2918,62 @@
     
   
     Production Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/security-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Events
   
 
     
@@ -4564,6 +4676,8 @@
       
         
       
+        
+      
     
     
     
@@ -4635,6 +4749,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.28.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.28.0
   
 
     
@@ -5741,6 +5883,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client address
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rate-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#security-headers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5825,6 +5989,9 @@ proxy (Caddy, nginx). To run SystemAuth inside another Go binary instead, see
 <p>and it rejects <code>social_login.insecure_cookies</code> and statically configured
 clients that set <code>allow_bearer_tokens</code>. <code>--dev</code> relaxes all of these
 (ephemeral key, in-memory storage, <code>http://localhost</code> issuer).</p>
+<p>It also warns, without refusing, when the <a href="#rate-limits">rate limit</a>
+counters are kept in memory and neither <code>rate_limit.single_instance</code> nor
+<code>dpop.single_instance</code> declares one instance.</p>
 <p>Outside <code>--dev</code> the token endpoint also refuses, per request, so that
 clients registered at runtime are covered:</p>
 <ul>
@@ -5978,9 +6145,9 @@ address never matches.</p>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>systemauth<span class="w"> </span>waitlist<span class="w"> </span>remove<span class="w"> </span>ada@example.com
 </code></pre></div>
 <p>A host binary sets the page's wording with <code>Options.WaitlistPage</code> and
-  reads the list with <code>Service.SignupWaitlist()</code>. Behind a proxy, pass the
-  client-address function (<code>WithLoginTokenClientIP</code>) so the per-address
-  limit sees real clients.
+  reads the list with <code>Service.SignupWaitlist()</code>. Behind a proxy, configure
+  <a href="#client-address"><code>client_address</code></a> so the per-address limit sees real
+  clients.
 - <strong>Database:</strong> the commands read the configured database directly, so they
   work with the server running. The table is created by the schema migration.
 - <strong>In a host binary,</strong> set <code>Options.InviteOnly</code> and <code>Options.SignupDeniedURL</code>
@@ -6164,21 +6331,85 @@ environment file. <code>/etc/systemauth/config.yaml</code>:</p>
 <a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">  </span><span class="nt">hmac_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_TOKEN_HMAC_SECRET}</span>
 <a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="nt">dpop</span><span class="p">:</span>
 <a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">  </span><span class="nt">single_instance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># or replay_cache_redis_url with several instances</span>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="nt">features</span><span class="p">:</span>
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">  </span><span class="nt">require_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">  </span><span class="nt">enable_jwt_access_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="nt">social_login</span><span class="p">:</span>
-<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">  </span><span class="nt">github</span><span class="p">:</span>
-<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">    </span><span class="nt">client_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_ID}</span>
-<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">    </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_SECRET}</span>
-<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="w">  </span><span class="nt">allowed_redirect_origins</span><span class="p">:</span>
-<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://app.example.com</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="nt">client_address</span><span class="p">:</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">  </span><span class="nt">trusted_proxies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;127.0.0.1/32&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;::1/128&quot;</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># Caddy on this host</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="nt">rate_limit</span><span class="p">:</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">  </span><span class="nt">single_instance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># or redis_url with several instances</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="nt">features</span><span class="p">:</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">  </span><span class="nt">require_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">  </span><span class="nt">enable_jwt_access_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="nt">social_login</span><span class="p">:</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="w">  </span><span class="nt">github</span><span class="p">:</span>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">    </span><span class="nt">client_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_ID}</span>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="w">    </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_CLIENT_SECRET}</span>
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="w">  </span><span class="nt">allowed_redirect_origins</span><span class="p">:</span>
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://app.example.com</span>
 </code></pre></div>
-<p>Caddy terminates TLS and proxies to the loopback listener:</p>
+<p>Caddy terminates TLS and proxies to the loopback listener, replacing
+<code>X-Forwarded-For</code> with the client's address:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>auth.example.com {
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    reverse_proxy 127.0.0.1:8081
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>}
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    reverse_proxy 127.0.0.1:8081 {
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>        header_up X-Forwarded-For {client_ip}
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    }
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>}
 </code></pre></div>
+<p>Behind a CDN or edge proxy, give Caddy the edge's networks
+(<code>trusted_proxies</code>) and the header it writes (<code>client_ip_headers</code>) in its
+global <code>servers</code> options, so <code>{client_ip}</code> is the visitor rather than the
+edge.</p>
+<h2 id="client-address">Client address<a class="headerlink" href="#client-address" title="Permanent link">&para;</a></h2>
+<p>SystemAuth finds a request's client address for its rate limits, the
+addresses it records and audit events. It believes a forwarding header only
+from the networks in <code>client_address.trusted_proxies</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">client_address</span><span class="p">:</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">trusted_proxies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;127.0.0.1/32&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;::1/128&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">header</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">X-Forwarded-For</span><span class="w">   </span><span class="c1"># the default; or a single-value header such as CF-Connecting-IP</span>
+</code></pre></div>
+<p><code>X-Forwarded-For</code> is read from the right, skipping trusted proxies; a
+single-value header must hold exactly one address. Without
+<code>client_address</code>, every request is attributed to its direct peer, which
+behind a proxy is the proxy itself, so all clients would share one limit. See
+<a href="../../guides/rate-limiting/">Client Addresses and Rate Limiting</a>.</p>
+<h2 id="rate-limits">Rate limits<a class="headerlink" href="#rate-limits" title="Permanent link">&para;</a></h2>
+<p>SystemAuth limits requests in layers, all on one storage:</p>
+<ul>
+<li>a <strong>default</strong> limit per client address on every route, before anything
+  authenticates (300 a minute);</li>
+<li><strong>route policies</strong> for <code>/oauth/token</code> (per address and per client),
+  <code>/login*</code>, <code>/signup*</code> and <code>/bff/auth/*</code> (per address, lower), with health
+  checks, static assets and the payment webhook exempt;</li>
+<li>a limit per <strong>signed-in</strong> principal or service account after
+  authentication (1200 a minute), on the managed-principal API;</li>
+<li><strong>handler limits</strong> that need the outcome: failed client authentication,
+  JWT-bearer tokens per service account, social login start and callback,
+  login-token exchange, the waitlist and the sign-up page.</li>
+</ul>
+<p>Refusals are <code>429</code> with <code>Retry-After</code> (at least one second) and the
+<code>RateLimit-Policy</code> and <code>RateLimit</code> headers. When the storage fails, the
+default layer lets requests through and logs; the token, login and sign-up
+limits refuse with <code>503</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">rate_limit</span><span class="p">:</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">redis_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_RATE_LIMIT_REDIS_URL}</span><span class="w">   </span><span class="c1"># shared by several instances</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="c1"># single_instance: true                        # or one instance, in memory</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">requests</span><span class="p">:</span><span class="w"> </span><span class="nv">300</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">1m</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span><span class="nt">exempt_networks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;10.20.0.0/16&quot;</span><span class="p p-Indicator">]</span><span class="w">              </span><span class="c1"># relying parties&#39; servers</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span><span class="nt">routes</span><span class="p">:</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">token</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">      </span><span class="nt">paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;/oauth/token&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">      </span><span class="nt">per_address</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">requests</span><span class="p">:</span><span class="w"> </span><span class="nv">60</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">1m</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">      </span><span class="nt">per_client</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">requests</span><span class="p">:</span><span class="w"> </span><span class="nv">600</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">1m</span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<p>Counters in memory suit one instance. With several instances set
+<code>rate_limit.redis_url</code> (or pass <code>Options.RateLimitStorage</code>): otherwise each
+instance allows the full limit. Outside <code>--dev</code> the server warns at startup
+when the counters are in memory and no single instance is declared
+(<code>rate_limit.single_instance</code>, or <code>dpop.single_instance</code>, which declares the
+same deployment). It warns rather than refuses because per-instance counters
+loosen the limits without bypassing a check, unlike an unshared DPoP replay
+cache. A relying party's server that calls the token endpoint for many users
+from one address belongs in <code>exempt_networks</code>, or needs a higher <code>token</code>
+limit. The full reference is in
+<a href="../../guides/rate-limiting/">Client Addresses and Rate Limiting</a>.</p>
 <h2 id="security-headers">Security headers<a class="headerlink" href="#security-headers" title="Permanent link">&para;</a></h2>
 <p>Every SystemAuth response, including the login, consent, sign-up,
 sign-up code, waitlist, age question and logout pages and their error
@@ -6252,18 +6483,18 @@ proof with its token requests unless its registration sets the legacy
 Outside <code>--dev</code> the server refuses to start unless the replay cache that
 rejects reused proofs is shared by every instance, or one instance is
 declared. With one instance:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">dpop</span><span class="p">:</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">single_instance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">dpop</span><span class="p">:</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">single_instance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
 <p>When several instances serve SystemAuth, share the cache:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">dpop</span><span class="p">:</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">replay_cache_redis_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_DPOP_REDIS_URL}</span><span class="w">   </span><span class="c1"># redis://host:6379/0</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="c1"># Optional server nonces (RFC 9449 §8):</span>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="c1"># require_nonce: true</span>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span><span class="c1"># nonce_secret: ${SYSTEMAUTH_DPOP_NONCE_SECRET}         # 32+ bytes, same on every instance</span>
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span><span class="c1"># External base URL of the APIs SystemAuth protects (Middleware,</span>
-<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">  </span><span class="c1"># BearerAccess), when a proxy strips a path prefix:</span>
-<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">  </span><span class="c1"># resource_base_url: https://example.com/api</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">dpop</span><span class="p">:</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">replay_cache_redis_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SYSTEMAUTH_DPOP_REDIS_URL}</span><span class="w">   </span><span class="c1"># redis://host:6379/0</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="c1"># Optional server nonces (RFC 9449 §8):</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="c1"># require_nonce: true</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">  </span><span class="c1"># nonce_secret: ${SYSTEMAUTH_DPOP_NONCE_SECRET}         # 32+ bytes, same on every instance</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">  </span><span class="c1"># External base URL of the APIs SystemAuth protects (Middleware,</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">  </span><span class="c1"># BearerAccess), when a proxy strips a path prefix:</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">  </span><span class="c1"># resource_base_url: https://example.com/api</span>
 </code></pre></div>
 <p>Without <code>replay_cache_redis_url</code> the cache is in memory, which suits a single
 instance only: with per-instance caches, a proof replayed to another

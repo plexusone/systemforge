@@ -269,6 +269,10 @@
          <lastmod>2026-10-29</lastmod>
     </url>
     <url>
+         <loc>https://plexusone.github.io/systemforge/guides/rate-limiting/</loc>
+         <lastmod>2026-10-29</lastmod>
+    </url>
+    <url>
          <loc>https://plexusone.github.io/systemforge/guides/rotation/</loc>
          <lastmod>2026-10-29</lastmod>
     </url>
@@ -473,6 +477,10 @@
          <lastmod>2026-10-29</lastmod>
     </url>
     <url>
+         <loc>https://plexusone.github.io/systemforge/releases/v0.28.0/</loc>
+         <lastmod>2026-10-29</lastmod>
+    </url>
+    <url>
          <loc>https://plexusone.github.io/systemforge/releases/v0.3.0/</loc>
          <lastmod>2026-10-29</lastmod>
     </url>
@@ -502,6 +510,14 @@
     </url>
     <url>
          <loc>https://plexusone.github.io/systemforge/security/production-checklist/</loc>
+         <lastmod>2026-10-29</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/security/security-events/</loc>
+         <lastmod>2026-10-29</lastmod>
+    </url>
+    <url>
+         <loc>https://plexusone.github.io/systemforge/security/threat-model/</loc>
          <lastmod>2026-10-29</lastmod>
     </url>
     <url>

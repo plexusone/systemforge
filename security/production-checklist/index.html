@@ -16,7 +16,7 @@
         <link rel="prev" href="../../session/dpop/">
       
       
-        <link rel="next" href="../../architecture/systemforge-application-architecture/">
+        <link rel="next" href="../threat-model/">
       
       
         
@@ -449,6 +449,8 @@
   
     
     
+      
+        
       
         
       
@@ -964,6 +966,34 @@
     
   
     Rotating Keys and Secrets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rate-limiting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Addresses and Rate Limiting
   
 
     
@@ -2533,6 +2563,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2775,6 +2809,62 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -4469,6 +4559,8 @@
       
         
       
+        
+      
     
     
     
@@ -4540,6 +4632,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.28.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.28.0
   
 
     
@@ -5620,6 +5740,9 @@
 setting; the links lead to the full reference. Re-walk it after an upgrade
 that adds a production check, and after any change to the edge or the
 number of instances.</p>
+<p>The checklist puts the operator-side assumptions of the
+<a href="../threat-model/">threat model</a> into practice; read its residual risks
+before deciding which waivers to accept.</p>
 <h2 id="keys-and-secrets">Keys and secrets<a class="headerlink" href="#keys-and-secrets" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] <strong>The signing key comes from a secret store.</strong> Load it through
@@ -5681,8 +5804,10 @@ registered with <code>allow_bearer_tokens</code>. Waivers are names listed under
   cache lets a proof replayed against another instance through
   (<a href="../../session/dpop/#systemauth-issues-dpop-bound-tokens">DPoP Enforcement</a>).</li>
 <li>[ ] <strong>Rate-limit counters are shared by every instance.</strong> In-memory
-  counters multiply the effective limit by the number of instances
-  (<a href="../../coreapi/ratelimit/#redis-storage">Rate Limiting</a>).</li>
+  counters multiply the effective limit by the number of instances: set
+  <code>rate_limit.redis_url</code>, or declare one instance with
+  <code>rate_limit.single_instance</code>
+  (<a href="../../systemauth/deployment/#rate-limits">Rate limits</a>).</li>
 </ul>
 <h2 id="edge-and-origin">Edge and origin<a class="headerlink" href="#edge-and-origin" title="Permanent link">&para;</a></h2>
 <ul>
@@ -5696,20 +5821,34 @@ registered with <code>allow_bearer_tokens</code>. Waivers are names listed under
 <li>[ ] <strong>Trusted proxy networks are configured.</strong> Client addresses come from
   the header your proxy sets (for example <code>CF-Connecting-IP</code>, or
   <code>X-Forwarded-For</code> written by your own proxy), and only when the request
-  comes from a trusted proxy network, never from the open internet
-  (<a href="../../bff/overview/#clientipconfig-cloudflare-support">ClientIPConfig</a>).</li>
+  comes from a trusted proxy network, never from the open internet. Set
+  <code>client_address</code> in SystemAuth and share the same <code>clientaddr.Resolver</code>
+  with the BFF, <code>appauth</code> and the application's rate limits
+  (<a href="../../guides/rate-limiting/#the-client-address">Client Addresses and Rate Limiting</a>).</li>
+<li>[ ] <strong>The reverse proxy replaces <code>X-Forwarded-For</code></strong> with the one client
+  address it trusts, rather than appending to a value the client sent.</li>
 <li>[ ] <strong>The DPoP base URL matches the external URL</strong> when the proxy rewrites
   paths (<a href="../../session/dpop/#the-proofs-url-behind-a-proxy">The proof's URL behind a proxy</a>).</li>
-<li>[ ] <strong>An edge rate-limit rule covers the token, login and sign-up paths.</strong>
-  Keep it until in-app layered limits ship.</li>
+<li>[ ] <strong>In-app rate limits are on, with the route policies reviewed.</strong> The
+  default per-address limit covers every route; the token, login and sign-up
+  paths have their own lower limits, and back-channel callers that share an
+  address are in <code>rate_limit.exempt_networks</code>
+  (<a href="../../systemauth/deployment/#rate-limits">Rate limits</a>). An edge
+  rate-limit rule is optional extra protection against floods that should
+  not reach the origin at all.</li>
 <li>[ ] <strong>WAF managed rules are on.</strong></li>
 <li>[ ] <strong>The payment-provider webhook path is exempt from WAF and bot
   challenges.</strong> A challenge there makes the provider's deliveries fail.</li>
 </ul>
 <h2 id="logging">Logging<a class="headerlink" href="#logging" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] <strong>Logs are JSON in production.</strong> The text format prints error stack
-  traces (<a href="../../systemauth/deployment/#flags-and-environment">Flags and environment</a>).</li>
+<li>[ ] <strong>Logs are JSON in production</strong> (<a href="../../systemauth/deployment/#flags-and-environment">Flags and environment</a>).
+  SystemAuth logs OAuth errors as a code-and-hint summary in either format;
+  the host application's own error values may still print stack traces in
+  the text format.</li>
+<li>[ ] <strong>Security events are recorded</strong> through <code>Options.AuditEmitter</code>, to an
+  audit store or the log, and someone watches the refusal and replay events
+  (<a href="../security-events/">Security Events</a>).</li>
 <li>[ ] <strong>No tokens, secrets or authorization headers reach the logs</strong>,
   including from the host application, proxies and request logging.</li>
 <li>[ ] <strong>Logs are shipped off the host</strong> to a collector with retention and

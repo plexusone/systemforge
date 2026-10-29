@@ -484,6 +484,8 @@
       
         
       
+        
+      
     
     
     
@@ -689,6 +691,17 @@
     <span class="md-ellipsis">
       
         Options That Loosen the Defaults
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-static-api-keys-removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading: Static API Keys Removed
       
     </span>
   </a>
@@ -1133,6 +1146,34 @@
     
   
     Rotating Keys and Secrets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rate-limiting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Addresses and Rate Limiting
   
 
     
@@ -2700,6 +2741,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2790,6 +2835,62 @@
     
   
     Production Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/security-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Events
   
 
     
@@ -4492,6 +4593,8 @@
       
         
       
+        
+      
     
     
     
@@ -4563,6 +4666,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.28.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.28.0
   
 
     
@@ -5619,6 +5750,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#upgrading-static-api-keys-removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading: Static API Keys Removed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#moving-to-sf_rp_principals" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5845,12 +5987,37 @@ key and the application cannot make proofs for it.</p>
 <td><code>AllowBearerTokens</code></td>
 <td>Accept unbound tokens with the Bearer scheme, from clients SystemAuth exempts from DPoP</td>
 </tr>
-<tr>
-<td><code>APIKeys</code></td>
-<td>Accept static API keys. <strong>Deprecated:</strong> use <code>publicclient</code> sign-in for command-line tools and service accounts for automation</td>
-</tr>
 </tbody>
 </table>
+<h2 id="upgrading-static-api-keys-removed">Upgrading: Static API Keys Removed<a class="headerlink" href="#upgrading-static-api-keys-removed" title="Permanent link">&para;</a></h2>
+<p><code>Options.APIKeys</code> (deprecated since v0.26.0) and
+<code>relyingparty.BearerConfig.APIKeys</code> are removed, together with
+<code>relyingparty.APIKeyValidator</code>, <code>relyingparty.AuthMethodAPIKey</code> and
+<code>AuthenticatedPrincipal.APIKeyID</code>. A static key was a second, weaker way into
+an application: a long-lived bearer secret whose authorization was either
+frozen when it was created or needed a lookup of its own on every request,
+outside the short-lived, revocable access tokens every application already
+verifies (ADR-016).</p>
+<p>An application that passed <code>APIKeys</code> stops compiling until the field is
+removed. After that, a request with <code>Authorization: Bearer &lt;api key&gt;</code> gets
+<code>401</code> with <code>error="invalid_token"</code>, and the <code>X-API-Key</code> header is ignored.
+Move each kind of caller to the credential made for it:</p>
+<ul>
+<li><strong>Command-line tools and local scripts</strong> sign the person in with
+  <code>identity/publicclient</code> (authorization code with PKCE, or the device
+  flow) and present DPoP-bound access tokens.</li>
+<li><strong>Automation and server-to-server calls</strong> use SystemAuth
+  <a href="../../oauth/service-accounts/">service accounts</a>: set
+  <code>Options.ServiceAccounts</code>, create the account in SystemAuth, and have the
+  job exchange a signed assertion for a DPoP-bound token with the
+  JWT-bearer grant.</li>
+<li><strong>Agents</strong> that act for a person use AAuth through
+  <code>identity/requestprincipal/aauthrs</code>.</li>
+</ul>
+<p>Revoke the keys the application issued once their callers have moved. The
+<code>identity/apikey</code> package and the <code>session/middleware</code> API key middleware
+(<code>RequireAPIKey</code>) are unchanged, for services outside the relying-party
+stack that manage keys of their own.</p>
 <h2 id="moving-to-sf_rp_principals">Moving to <code>sf_rp_principals</code><a class="headerlink" href="#moving-to-sf_rp_principals" title="Permanent link">&para;</a></h2>
 <p><code>pgstore.PrincipalStore</code> keeps principals in <code>sf_rp_principals</code>, which
 <code>EnsureSchema</code> creates. An application with its own principals table moves

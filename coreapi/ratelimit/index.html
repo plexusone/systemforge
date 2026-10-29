@@ -482,6 +482,8 @@
       
         
       
+        
+      
     
     
     
@@ -964,6 +966,34 @@
     
   
     Rotating Keys and Secrets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rate-limiting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Addresses and Rate Limiting
   
 
     
@@ -2794,6 +2824,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2884,6 +2918,62 @@
     
   
     Production Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/security-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Events
   
 
     
@@ -4586,6 +4676,8 @@
       
         
       
+        
+      
     
     
     
@@ -4657,6 +4749,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.28.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.28.0
   
 
     
@@ -5949,6 +6069,14 @@
 </thead>
 <tbody>
 <tr>
+<td><code>RateLimit-Policy</code></td>
+<td>IETF draft: <code>"&lt;name&gt;";q=&lt;quota&gt;;w=&lt;window seconds&gt;</code> per checked limit</td>
+</tr>
+<tr>
+<td><code>RateLimit</code></td>
+<td>IETF draft: <code>"&lt;name&gt;";r=&lt;remaining&gt;;t=&lt;seconds to reset&gt;</code> per checked limit</td>
+</tr>
+<tr>
 <td><code>X-RateLimit-Limit</code></td>
 <td>Maximum requests allowed</td>
 </tr>
@@ -5962,10 +6090,13 @@
 </tr>
 <tr>
 <td><code>Retry-After</code></td>
-<td>Seconds to wait (only on 429)</td>
+<td>Seconds to wait, rounded up and at least 1 (only on 429)</td>
 </tr>
 </tbody>
 </table>
+<p>Name a limiter's policy with <code>WithName</code>. For the layered limits (a default
+per client address, route policies, signed-in callers) see
+<a href="../../guides/rate-limiting/">Client Addresses and Rate Limiting</a>.</p>
 <h2 id="handling-rate-limit-exceeded">Handling Rate Limit Exceeded<a class="headerlink" href="#handling-rate-limit-exceeded" title="Permanent link">&para;</a></h2>
 <p>When limits are exceeded, the middleware returns:</p>
 <ul>

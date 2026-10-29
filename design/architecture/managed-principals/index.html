@@ -482,6 +482,8 @@
       
         
       
+        
+      
     
     
     
@@ -964,6 +966,34 @@
     
   
     Rotating Keys and Secrets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/rate-limiting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Addresses and Rate Limiting
   
 
     
@@ -2531,6 +2561,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2621,6 +2655,62 @@
     
   
     Production Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../security/threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../security/security-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Events
   
 
     
@@ -4608,6 +4698,8 @@
       
         
       
+        
+      
     
     
     
@@ -4679,6 +4771,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.28.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.28.0
   
 
     
@@ -6342,8 +6462,8 @@ fields <code>token</code>, <code>client_id</code> and optional <code>return_to</
 <li>rate-limits per source address (<code>DefaultLoginTokenAddressLimit</code>, 60 per
    minute) and per registered client (<code>DefaultLoginTokenClientLimit</code>, 600
    per minute; unregistered client IDs share one bucket), with
-   <code>WithLoginTokenRateLimit</code> and <code>WithLoginTokenClientIP</code> for shared
-   storage and proxy-aware addressing;</li>
+   <code>WithLoginTokenRateLimit</code> (or the server's shared rate limit storage)
+   and the server's <code>client_address</code> for proxy-aware addressing;</li>
 <li>resolves <code>return_to</code> against the redirect allowlist;</li>
 <li>requires the client to allow managed principals, verifies the token, and
    requires the principal to be active and managed (an email does not
