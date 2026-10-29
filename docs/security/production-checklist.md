@@ -6,6 +6,10 @@ setting; the links lead to the full reference. Re-walk it after an upgrade
 that adds a production check, and after any change to the edge or the
 number of instances.
 
+The checklist puts the operator-side assumptions of the
+[threat model](threat-model.md) into practice; read its residual risks
+before deciding which waivers to accept.
+
 ## Keys and secrets
 
 - [ ] **The signing key comes from a secret store.** Load it through

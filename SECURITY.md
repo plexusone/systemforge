@@ -76,3 +76,9 @@ handle they choose. Tell us in your report if you prefer to remain anonymous.
 
 Before going live with an application that embeds SystemAuth, walk the
 [production checklist](docs/security/production-checklist.md).
+
+The [threat model](docs/security/threat-model.md) describes the assets,
+actors and trust boundaries SystemForge is designed around, the controls
+that address each threat, and the residual risks an operator accepts. A
+report that shows a gap between the model and the code is a valid
+vulnerability report.
