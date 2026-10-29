@@ -116,6 +116,7 @@ nav:
     - Security Policy: https://github.com/plexusone/systemforge/blob/main/SECURITY.md
     - Production Checklist: security/production-checklist.md
     - Threat Model: security/threat-model.md
+    - Security Events: security/security-events.md
   - Architecture:
     - Application Architecture: architecture/systemforge-application-architecture.md
   - Multi-App:

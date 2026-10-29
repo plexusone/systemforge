@@ -107,8 +107,13 @@ before deciding which waivers to accept.
 
 ## Logging
 
-- [ ] **Logs are JSON in production.** The text format prints error stack
-  traces ([Flags and environment](../systemauth/deployment.md#flags-and-environment)).
+- [ ] **Logs are JSON in production** ([Flags and environment](../systemauth/deployment.md#flags-and-environment)).
+  SystemAuth logs OAuth errors as a code-and-hint summary in either format;
+  the host application's own error values may still print stack traces in
+  the text format.
+- [ ] **Security events are recorded** through `Options.AuditEmitter`, to an
+  audit store or the log, and someone watches the refusal and replay events
+  ([Security Events](security-events.md)).
 - [ ] **No tokens, secrets or authorization headers reach the logs**,
   including from the host application, proxies and request logging.
 - [ ] **Logs are shipped off the host** to a collector with retention and
