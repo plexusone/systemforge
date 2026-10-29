@@ -23,6 +23,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/grokify/goauth v0.25.0
 	github.com/grokify/guardsql v0.4.0
+	github.com/grokify/ocsf-schema-go v0.1.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/mattn/go-sqlite3 v1.14.52
