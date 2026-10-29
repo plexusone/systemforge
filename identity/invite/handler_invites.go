@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/organization"
+	"github.com/plexusone/systemforge/internal/apierror"
 )
 
 // InviteResponse is the API representation of an invite.
@@ -312,7 +313,7 @@ func (a *API) createInvite(ctx context.Context, input *CreateInviteRequest) (*Cr
 		ExpiresIn:          expiresIn,
 	})
 	if err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, a.badRequest(ctx, "creating invite", err)
 	}
 
 	return &CreateInviteResponse{Body: inviteResultToResponse(result)}, nil
@@ -337,7 +338,7 @@ func (a *API) listInvites(ctx context.Context, input *ListInvitesRequest) (*List
 		Offset:         input.Offset,
 	})
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, apierror.Internal(ctx, a.config.Logger, "invite: listing invites", err)
 	}
 
 	responses := make([]*InviteResponse, len(invites))
@@ -362,7 +363,7 @@ func (a *API) revokeInvite(ctx context.Context, input *RevokeInviteRequest) (*st
 	}
 
 	if err := a.service.Revoke(ctx, inviteID); err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, a.badRequest(ctx, "revoking invite", err)
 	}
 
 	return nil, nil
@@ -380,7 +381,7 @@ func (a *API) resendInvite(ctx context.Context, input *ResendInviteRequest) (*Re
 
 	result, err := a.service.Resend(ctx, inviteID)
 	if err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, a.badRequest(ctx, "resending invite", err)
 	}
 
 	return &ResendInviteResponse{Body: inviteResultToResponse(result)}, nil
@@ -389,7 +390,7 @@ func (a *API) resendInvite(ctx context.Context, input *ResendInviteRequest) (*Re
 func (a *API) getInviteByToken(ctx context.Context, input *GetInviteByTokenRequest) (*GetInviteByTokenResponse, error) {
 	invite, err := a.service.GetByToken(ctx, input.Token)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, a.serviceError(ctx, "reading invite", err, http.StatusNotFound)
 	}
 
 	return &GetInviteByTokenResponse{Body: inviteToResponse(invite)}, nil
@@ -416,7 +417,7 @@ func (a *API) acceptInvite(ctx context.Context, input *AcceptInviteRequest) (*Ac
 		PrincipalID: principalID,
 	})
 	if err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, a.badRequest(ctx, "accepting invite", err)
 	}
 
 	return &AcceptInviteResponse{Body: inviteToResponse(invite)}, nil
@@ -428,7 +429,7 @@ func (a *API) declineInvite(ctx context.Context, input *DeclineInviteRequest) (*
 	}
 	invite, err := a.service.Decline(ctx, input.Token)
 	if err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, a.badRequest(ctx, "declining invite", err)
 	}
 
 	return &DeclineInviteResponse{Body: inviteToResponse(invite)}, nil
@@ -444,7 +445,7 @@ func (a *API) listPendingInvitesForEmail(ctx context.Context, input *ListPending
 	}
 	invites, err := a.service.ListPendingForEmail(ctx, email)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, apierror.Internal(ctx, a.config.Logger, "invite: listing pending invites", err)
 	}
 
 	responses := make([]*InviteResponse, len(invites))

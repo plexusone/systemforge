@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -157,7 +156,7 @@ func (s *DefaultService) Create(ctx context.Context, input CreateInviteInput) (*
 		return nil, fmt.Errorf("failed to check existing invites: %w", err)
 	}
 	if hasPending {
-		return nil, fmt.Errorf("pending invite already exists for this email")
+		return nil, ErrPendingInviteExists
 	}
 
 	// Check if user is already a member
@@ -264,10 +263,10 @@ func (s *DefaultService) hasPendingFor(ctx context.Context, input CreateInviteIn
 func (s *DefaultService) validateAppRoles(ctx context.Context, input CreateInviteInput) error {
 	if len(input.AppRoles) > 0 {
 		if s.appRoles == nil {
-			return errors.New("invite: application roles are not configured")
+			return ErrAppRolesNotConfigured
 		}
 		if input.Role == organization.RoleCollaborator {
-			return errors.New("invite: collaborators hold no application roles")
+			return ErrCollaboratorAppRoles
 		}
 		return s.appRoles.ValidateRoles(ctx, input.OrganizationID, input.AppRoles)
 	}
@@ -291,7 +290,7 @@ func (s *DefaultService) GetByToken(ctx context.Context, token string) (*Invite,
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("invite not found")
+			return nil, ErrInviteNotFound
 		}
 		return nil, fmt.Errorf("failed to get invite: %w", err)
 	}
@@ -303,7 +302,7 @@ func (s *DefaultService) GetByID(ctx context.Context, id uuid.UUID) (*Invite, er
 	inv, err := s.client.Invite.Get(ctx, id)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("invite not found: %s", id)
+			return nil, fmt.Errorf("%w: %s", ErrInviteNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get invite: %w", err)
 	}
@@ -325,7 +324,7 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("invite not found")
+			return nil, ErrInviteNotFound
 		}
 		return nil, fmt.Errorf("failed to get invite: %w", err)
 	}
@@ -407,7 +406,7 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 		afterCommit = append(afterCommit, after)
 	} else {
 		if exists {
-			err = fmt.Errorf("principal is already a member of this organization")
+			err = ErrAlreadyMember
 			return nil, err
 		}
 
@@ -428,7 +427,7 @@ func (s *DefaultService) Accept(ctx context.Context, input AcceptInviteInput) (*
 	// entitlement gone) is not accepted.
 	if len(inv.AppRoles) > 0 {
 		if s.appRoles == nil {
-			err = errors.New("invite: application roles are not configured")
+			err = ErrAppRolesNotConfigured
 			return nil, err
 		}
 		for _, app := range sortedApps(inv.AppRoles) {
@@ -517,7 +516,7 @@ func (s *DefaultService) Decline(ctx context.Context, token string) (*Invite, er
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("invite not found")
+			return nil, ErrInviteNotFound
 		}
 		return nil, fmt.Errorf("failed to get invite: %w", err)
 	}
@@ -552,7 +551,7 @@ func (s *DefaultService) transition(ctx context.Context, id uuid.UUID, status in
 		return fmt.Errorf("failed to get invite: %w", err)
 	}
 	if !exists {
-		return fmt.Errorf("invite not found: %s", id)
+		return fmt.Errorf("%w: %s", ErrInviteNotFound, id)
 	}
 	return ErrNotPending
 }
@@ -573,13 +572,13 @@ func (s *DefaultService) Resend(ctx context.Context, id uuid.UUID) (*InviteResul
 	inv, err := s.client.Invite.Get(ctx, id)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("invite not found: %s", id)
+			return nil, fmt.Errorf("%w: %s", ErrInviteNotFound, id)
 		}
 		return nil, fmt.Errorf("failed to get invite: %w", err)
 	}
 
 	if inv.Status != invite.StatusPending {
-		return nil, fmt.Errorf("can only resend pending invites")
+		return nil, fmt.Errorf("%w: can only resend pending invites", ErrNotPending)
 	}
 
 	// Generate new token
