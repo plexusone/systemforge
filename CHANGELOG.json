@@ -9,6 +9,62 @@
   ],
   "releases": [
     {
+      "version": "v0.30.0",
+      "date": "2026-10-29",
+      "highlights": [
+        {
+          "description": "`contract/audit/ocsfaudit` writes SystemForge's security events as OCSF 1.10 events, one JSON object per line, to an `io.Writer` the host names, for a security data lake or SIEM that ingests OCSF"
+        },
+        {
+          "description": "`audit.NewMultiEmitter` hands every security event to several emitters, such as the log emitter and the OCSF emitter"
+        }
+      ],
+      "security": [
+        {
+          "description": "OCSF events identify people only by principal ID and client address: names, email addresses, session IDs, tokens, token and code prefixes, codes and free-text reasons are left out of every field, and event details reach the output only through a per-event-type allowlist of codes, UUIDs, booleans, integers and times",
+          "commit": "f8f5d44"
+        },
+        {
+          "description": "Token and authorization code replay events are High severity with `is_alert`, a platform-admin grant is High, and a production waiver at startup is Medium",
+          "commit": "f8f5d44"
+        }
+      ],
+      "added": [
+        {
+          "description": "`ocsfaudit.New(w, Options)`: an `audit.Emitter` that maps each event to an OCSF class (Authentication, User Management, Group Management, Entity Management, Application Lifecycle, or Base Event for an unknown type), with product, vendor and deployment metadata (`metadata.reporter.name`), the organization in `metadata.tenant_uid` and the request ID in `metadata.correlation_uid`",
+          "commit": "f8f5d44"
+        },
+        {
+          "description": "`Emit` never blocks or fails the request: it queues each line in a bounded buffer written by one goroutine, drops and counts events when the buffer is full (`Dropped`), counts write failures (`WriteFailures`), and logs both at most once a minute; `Close` drains, flushes and syncs",
+          "commit": "f8f5d44"
+        },
+        {
+          "description": "`audit.MultiEmitter` and `audit.NewMultiEmitter`",
+          "commit": "76693ba"
+        },
+        {
+          "description": "Dependency `github.com/grokify/ocsf-schema-go` v0.1.0",
+          "commit": "a52af4c"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The OCSF output of every security event type, with success and failure variants, validates against the schema embedded in `ocsf-schema-go`",
+          "commit": "7b8d38e"
+        },
+        {
+          "description": "The tests proving no token or secret reaches a log or event also run the OCSF emitter, and email verification and change events carry no address",
+          "commit": "b0e01a3"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "`docs/security/ocsf-events.md`: wiring with an append-mode file, the event mapping, fields, privacy rules and buffering",
+          "commit": "66895d1"
+        }
+      ]
+    },
+    {
       "version": "v0.29.0",
       "date": "2026-10-29",
       "highlights": [

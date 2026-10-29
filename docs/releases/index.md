@@ -4,7 +4,11 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.29.0](v0.29.0.md), asks for consent by the
+The latest release, [v0.30.0](v0.30.0.md), writes security events as
+OCSF, one JSON object per line, through `contract/audit/ocsfaudit`, for a
+security data lake or SIEM that ingests OCSF. It adds no breaking change.
+
+Before it, [v0.29.0](v0.29.0.md) asked for consent by the
 client's party, so only first-party clients skip the consent screen and
 `social_login.skip_consent` no longer grants consent for every client. It
 adds OIDC `prompt`, verified email through a new `mail` section, secrets
