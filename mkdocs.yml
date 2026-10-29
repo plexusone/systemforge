@@ -120,6 +120,7 @@ nav:
     - Production Checklist: security/production-checklist.md
     - Threat Model: security/threat-model.md
     - Security Events: security/security-events.md
+    - OCSF Security Events: security/ocsf-events.md
   - Architecture:
     - Application Architecture: architecture/systemforge-application-architecture.md
   - Multi-App:
