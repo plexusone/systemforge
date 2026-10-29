@@ -9,6 +9,272 @@
   ],
   "releases": [
     {
+      "version": "v0.28.0",
+      "date": "2026-10-29",
+      "highlights": [
+        {
+          "description": "Layered rate limits are on by default in SystemAuth: a limit per client address on every route, route policies for the token, login, sign-up and BFF sign-in paths, limits on failed client authentication, the JWT-bearer grant and social login, and a signed-in limit, all on one shared storage and answered with IETF `RateLimit-Policy` and `RateLimit` headers"
+        },
+        {
+          "description": "One client-address rule (`session/clientaddr`), configured with trusted proxy networks and the header they write, used by SystemAuth, the BFF, `appauth`, rate limits and security events"
+        },
+        {
+          "description": "Structured security events through `contract/audit`, logs without stack traces or secrets, and no internal error text in about 60 API responses"
+        },
+        {
+          "description": "Static API key authentication is removed from relying parties; a threat model documents the trust boundaries and their mitigations"
+        }
+      ],
+      "security": [
+        {
+          "description": "SystemAuth had no limit on most routes, so credential endpoints could be guessed at and any route flooded; layered rate limits now apply by default: 300 requests a minute per client address on every route, route policies for `/oauth/token` (per address and per OAuth client), `/login*`, `/signup*` and `/bff/auth/*`, and exemptions for health checks, static assets and the billing webhook",
+          "commit": "50704e6"
+        },
+        {
+          "description": "Handler limits cover failed client authentication at the token endpoint (per address and client, then per address), tokens issued per service account by the JWT-bearer grant, and social login start and callback; the login-token, waitlist, sign-up code and managed-principal code limits move onto the shared storage",
+          "commit": "50704e6"
+        },
+        {
+          "description": "On a storage outage the default layer and the signed-in limit let requests through and log the failure, while the route policies and credential handler limits refuse with `503`; a full `MemoryStorage` is always a `429`, so a flood of new addresses cannot switch limits off",
+          "commit": "395e6ee"
+        },
+        {
+          "description": "Client addresses were found in several ways, some of which believed forwarding headers from any peer; `session/clientaddr` believes `X-Forwarded-For` (read from the right) or a single-value header only from trusted proxy networks and falls back to the direct peer",
+          "commit": "2687031"
+        },
+        {
+          "description": "Token, authorize and access-token log records carried the error value, which slog's text handler formats with its stack trace; they now carry the RFC 6749 error code, description, hint and status, adding the cause by message only at debug level or for server errors",
+          "commit": "f82ee42"
+        },
+        {
+          "description": "Tests run sign-in, the authorization code flow with PKCE, refresh, code and refresh-token replay, client credentials, JWT bearer, revocation, logout and BFF sign-in and sign-out at debug level and fail if any token, code, verifier, secret, DPoP proof, assertion, key or session cookie appears in a log record or security event",
+          "commit": "72be528"
+        },
+        {
+          "description": "SystemAuth, organizations, platform administration and service accounts record security events through an `audit.Emitter`, each with the request ID and the visitor's address, and never a token, code or secret",
+          "commit": "b764542"
+        },
+        {
+          "description": "Security events recorded the direct peer as the client address, so behind a reverse proxy every event named the proxy; they now use the client-address rule",
+          "commit": "c21a796"
+        },
+        {
+          "description": "About 60 API responses across organization, marketplace, contract, invite, connections, `session/middleware`, managed principals, SystemAuth identity sync and the sign-up API copied internal error text, such as database errors, into the response body; known errors now map to fixed messages and anything else is logged and answered with a generic `500`",
+          "commit": "511701e"
+        },
+        {
+          "description": "`bff.CookieConfig` accepted `SameSite=None`, which lets the browser send the session cookie on cross-site subrequests that the origin check relies on it withholding; `Validate` and `NewHandler` now refuse it",
+          "commit": "107bf57"
+        },
+        {
+          "description": "`EmbeddedOAuthProvider.Revoke` passed the raw token where storage expects a request ID, so it reported success without revoking anything; it now revokes the access and refresh tokens of the token's family",
+          "commit": "3c9390d"
+        },
+        {
+          "description": "The `multiapp` server and the `publicclient` loopback callback server set no `ReadHeaderTimeout`, so a client could hold a connection open by sending headers slowly; every server systemforge builds now sets it",
+          "commit": "b390161"
+        },
+        {
+          "description": "Static API keys were a second, weaker way into a relying party: long-lived bearer secrets outside the short-lived, revocable access tokens; they are removed",
+          "commit": "bc9558e"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "`appauth.Options.APIKeys`, `relyingparty.BearerConfig.APIKeys`, `relyingparty.APIKeyValidator`, `relyingparty.AuthMethodAPIKey` and `relyingparty.AuthenticatedPrincipal.APIKeyID` are removed; a non-JWT `Bearer` value is answered `401` with `invalid_token`, and `X-API-Key` is ignored",
+          "commit": "bc9558e"
+        },
+        {
+          "description": "Rate limits are on by default in SystemAuth; set `rate_limit.disabled: true` to turn off the default layer and route policies when the host applies its own (handler limits stay on)",
+          "commit": "50704e6"
+        },
+        {
+          "description": "Organization API status codes: the personal-organization conflict is `409` on every path, a storage error while reading a member is `500` instead of `404`, and an unexpected error on create or remove is `500` instead of `400`",
+          "commit": "511701e"
+        },
+        {
+          "description": "Error responses of the organization, marketplace, contract, invite, connections, managed-principal, identity sync and sign-up APIs and the bearer and DPoP middlewares carry fixed messages instead of the underlying error text",
+          "commit": "511701e"
+        },
+        {
+          "description": "`contract.ToContractError` no longer copies a non-contract error's text into its message",
+          "commit": "13364ef"
+        },
+        {
+          "description": "`ratelimit.Limiter.Middleware` answers `429` instead of `503` when a `MemoryStorage` is full",
+          "commit": "395e6ee"
+        },
+        {
+          "description": "`bff.CookieConfig.Validate` rejects `SameSite=None`",
+          "commit": "107bf57"
+        },
+        {
+          "description": "`EmbeddedOAuthProvider.Revoke` returns an error wrapping `ErrInvalidToken` for an unknown, expired or already revoked token",
+          "commit": "3c9390d"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "Behind a reverse proxy, set `client_address` (for example `trusted_proxies: [\"127.0.0.1/32\", \"::1/128\"]` with `header: X-Forwarded-For`); otherwise every visitor has the proxy's address and the per-address limits apply to all of them together"
+        },
+        {
+          "description": "With several SystemAuth instances, set `rate_limit.redis_url`; with one, set `rate_limit.single_instance: true`"
+        },
+        {
+          "description": "A relying party that calls `/oauth/token` from one server address should add that network to `rate_limit.exempt_networks`, or raise the `token` route's limits under `rate_limit.routes`"
+        },
+        {
+          "description": "Move API key callers to `identity/publicclient` sign-in (command-line tools) or service accounts (automation), and remove `APIKeys` from `appauth.Options` and `relyingparty.BearerConfig`"
+        },
+        {
+          "description": "Wire an audit emitter (`systemauthsvc.Options.AuditEmitter`, or `systemauth.WithAuditEmitter`, `organization.WithAuditEmitter`, `principal.WithAuditEmitter` and `serviceaccount.Config.Audit`) and ship the events off the host"
+        },
+        {
+          "description": "Expect `429` responses with `Retry-After` and `RateLimit` headers, and check clients that rely on the old organization status codes or on error text in responses"
+        }
+      ],
+      "added": [
+        {
+          "description": "`session/clientaddr`: `Resolver`, `Config` (`TrustedProxies`, `Header`), `New`, `MustNew`, `LoopbackProxy`, `Peer`, `PeerAddr`, `PeerIP` and `ParseNetworks`",
+          "commit": "2687031"
+        },
+        {
+          "description": "SystemAuth configuration `client_address.trusted_proxies` and `client_address.header`, and `systemauth.WithClientAddressResolver`; `scimtoken.WithClientAddress`, `bff.ClientIPConfig.Resolver`, `appauth.Options.ClientAddress` and `Authenticator.ClientAddress`",
+          "commit": "2687031"
+        },
+        {
+          "description": "`ratelimit.Policy`, `PolicyConfig`, `NewPolicy`, `Route`, `RouteLimit`, `DefaultRoutes`, `MergeRoutes`, the route names (`RouteToken`, `RouteLogin`, `RouteSignup`, `RouteBFFAuth`, `RouteHealth`, `RouteStatic`, `RoutePaymentWebhook`), `KeyAddress`, `KeyClient` and `AddressKey`",
+          "commit": "395e6ee"
+        },
+        {
+          "description": "`ratelimit.NewSignedInLimiter`, `SignedInKey`, `Check`, `Exhausted`, `Record`, `WriteHeaders`, `WriteTooManyRequests`, `RetryAfterSeconds`, `WithName`, `WithSkip`, and `Peek` on `MemoryStorage` and `RedisStorage`",
+          "commit": "395e6ee"
+        },
+        {
+          "description": "SystemAuth configuration `rate_limit.disabled`, `redis_url`, `single_instance`, `default`, `signed_in`, `exempt_networks` and `routes` (`name`, `paths`, `methods`, `per_address`, `per_client`, `exempt`, `fail_open`)",
+          "commit": "50704e6"
+        },
+        {
+          "description": "`systemauth.WithRateLimitStorage`, `Server.RateLimitStorage`, `Server.RateLimitPolicy`, `Server.SignedInRateLimit` and `Server.ClientAddress`; `systemauthsvc.Options.RateLimitStorage`; `appauth.Options.SignedInRateLimit`",
+          "commit": "50704e6"
+        },
+        {
+          "description": "`audit.Context.RequestID`, `audit.RequestID`, `audit.NopEmitter`, `audit.NewLogEmitter` and `requestprincipal.AuditActor`",
+          "commit": "8f4422e"
+        },
+        {
+          "description": "`systemauth.WithAuditEmitter`: sign-ins and their refusals, sign-outs, refused token requests, refresh-token reuse, authorization-code replay, token and token-family revocations, and the signing key in use at startup",
+          "commit": "b764542"
+        },
+        {
+          "description": "`organization.WithAuditEmitter`, `principal.WithAuditEmitter` and `serviceaccount.Config.Audit`: membership, ownership, platform administration and service account changes",
+          "commit": "0c33a0b"
+        },
+        {
+          "description": "`systemauthsvc.Options.AuditEmitter` reaches SystemAuth and the organization and principal services, and each production check waived at startup is recorded as a `systemauth.production.waiver` event; the `systemauth` command writes its security events to its log",
+          "commit": "a82d77e"
+        },
+        {
+          "description": "Sentinel errors `organization.ErrOwnerRequired`, `ErrAlreadyMember`, `ErrNewOwnerNotMember` and `ErrInvalidOwnerRole`",
+          "commit": "511701e"
+        },
+        {
+          "description": "Sentinel errors `marketplace.ErrInvalidListing` and `ErrListingNotDeletable`",
+          "commit": "1d36333"
+        },
+        {
+          "description": "Sentinel errors `invite.ErrInviteNotFound`, `ErrPendingInviteExists`, `ErrAlreadyMember`, `ErrAppRolesNotConfigured` and `ErrCollaboratorAppRoles`",
+          "commit": "f5df37b"
+        }
+      ],
+      "changed": [
+        {
+          "description": "Responses carry the IETF `RateLimit-Policy` and `RateLimit` headers beside `X-RateLimit-*`, and `Retry-After` is rounded up to at least one second",
+          "commit": "395e6ee"
+        },
+        {
+          "description": "`systemauthsvc` warns in production when rate limit counters are per instance and no single instance is declared",
+          "commit": "50704e6"
+        },
+        {
+          "description": "The bearer and DPoP middlewares answer the matching sentinel's text, or `authentication failed`, instead of the full error chain",
+          "commit": "f2ce11d"
+        }
+      ],
+      "deprecated": [
+        {
+          "description": "`ratelimit.ForwardedClientIP` and `ratelimit.ForwardedIPKey`; use a `clientaddr.Resolver` with `ratelimit.AddressKey`",
+          "commit": "2687031"
+        },
+        {
+          "description": "`systemauth.WithLoginTokenClientIP`; configure `client_address` or use `WithClientAddressResolver`",
+          "commit": "2687031"
+        },
+        {
+          "description": "`bff.CloudflareClientIPConfig` and the `ClientIPConfig` fields `TrustCloudflare`, `TrustProxy`, `TrustedProxies` and `CloudflareIPRanges`; set `ClientIPConfig.Resolver`",
+          "commit": "2687031"
+        }
+      ],
+      "removed": [
+        {
+          "description": "`appauth.Options.APIKeys`, `relyingparty.BearerConfig.APIKeys`, `relyingparty.APIKeyValidator`, `relyingparty.AuthMethodAPIKey` and `relyingparty.AuthenticatedPrincipal.APIKeyID`",
+          "commit": "bc9558e"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "Security events behind a reverse proxy recorded the proxy's address instead of the visitor's",
+          "commit": "c21a796"
+        },
+        {
+          "description": "`EmbeddedOAuthProvider.Revoke` reported success without revoking the token",
+          "commit": "3c9390d"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Client addresses: spoofed headers, proxy chains, IPv6 and ports",
+          "commit": "59e4812"
+        },
+        {
+          "description": "Rate limits: each layer, headers, storage outages and exemptions",
+          "commit": "33fa3c0"
+        },
+        {
+          "description": "Logs and security events carry no tokens or secrets, and each security event is recorded",
+          "commit": "72be528"
+        },
+        {
+          "description": "No internal error text in the responses of each API changed"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Threat model: scope and assumptions, assets, actors, trust boundaries, threats and mitigations per boundary, and residual risks",
+          "commit": "5cee54e"
+        },
+        {
+          "description": "Security events: how to record them, their common fields and each event type",
+          "commit": "0af03b0"
+        },
+        {
+          "description": "Client addresses and rate limiting guide, with the `client_address` and `rate_limit` settings in Deploying SystemAuth and the production checklist",
+          "commit": "b202382"
+        },
+        {
+          "description": "Upgrade section for the removal of static API keys in the application authentication guide",
+          "commit": "1c4e6db"
+        },
+        {
+          "description": "Rate limiting described as shipped in the threat model",
+          "commit": "3bde6b3"
+        },
+        {
+          "description": "v0.28.0 release notes"
+        }
+      ]
+    },
+    {
       "version": "v0.27.0",
       "date": "2026-10-28",
       "highlights": [

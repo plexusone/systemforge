@@ -4,7 +4,15 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.27.0](v0.27.0.md), is a security release:
+The latest release, [v0.28.0](v0.28.0.md), is a security release:
+SystemAuth applies layered rate limits by default, finds client addresses
+with one rule that believes forwarding headers only from trusted proxies,
+records structured security events, keeps stack traces, secrets and
+internal error text out of logs and responses, and relying parties no
+longer accept static API keys. It adds a threat model. It is breaking;
+read its upgrade notes first.
+
+Before it, [v0.27.0](v0.27.0.md) was a security release:
 SystemAuth uses codes and refresh tokens once under concurrency, links
 social sign-ins by email only when the provider owns the address, fails
 closed on unsafe production configuration, and sets security headers on
