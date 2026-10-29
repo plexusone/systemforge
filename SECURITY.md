@@ -38,27 +38,30 @@ concept needs credentials, use throwaway test values.
 | Initial assessment (validity and severity) | Within 7 days |
 | Fix, critical severity | Within 14 days |
 | Fix, high severity | Within 30 days |
-| Fix, medium or low severity | The next minor release |
+| Fix, medium or low severity | The next planned release |
 
 Severity follows CVSS. We keep you informed while we work on the fix and
 tell you if a target will be missed and why.
 
 ## Supported versions
 
+Security fixes move forward. Every fix lands on `main` and ships in the next
+release. We do not keep release branches or backport fixes to older
+releases. To get a fix, upgrade to the release that contains it.
+
 | Version | Security fixes |
 |---------|----------------|
-| Latest minor release | Yes |
-| Previous minor release | For 60 days after the latest minor is released |
-| Older releases | No |
+| Latest release | Yes |
+| Older releases | No: upgrade to the latest release |
 
-SystemForge is pre-1.0: a minor release may include breaking changes. Each
-release that breaks an API or a configuration ships with an upgrade guide in
-its [release notes](docs/releases/index.md), so moving to a supported
-version is a documented step rather than a guess.
+A security release includes a breaking change only when the fix requires
+one, and every change ships with an upgrade guide. The
+[security support policy](docs/security/support-policy.md) explains what a
+security release contains and how upgrades are kept easy.
 
 ## Disclosure
 
-1. The fix ships in a release (a patch release of each supported minor).
+1. The fix ships in the next release from `main`.
 2. We then publish a GitHub security advisory that names the affected
    module, packages and versions, so `govulncheck` reports it to anyone
    still calling the affected code.

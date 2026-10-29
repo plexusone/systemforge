@@ -114,6 +114,7 @@ nav:
     - DPoP Enforcement: session/dpop.md
   - Security:
     - Security Policy: https://github.com/plexusone/systemforge/blob/main/SECURITY.md
+    - Support Policy: security/support-policy.md
     - Production Checklist: security/production-checklist.md
     - Threat Model: security/threat-model.md
     - Security Events: security/security-events.md
