@@ -279,18 +279,19 @@ privilege. "Where" names the package that holds the control.
   unless `dpop.single_instance` declares it; rate-limit counters and other
   stores rely on the operator following the
   [production checklist](production-checklist.md#shared-stores).
-- **Rate limiting depends on the edge and on the client-address rule.**
-  In-app limits exist for password attempts, BFF endpoints, managed-principal
-  code routes and SCIM bulk operations, but the default per-address and
-  per-route policies, and the single client-address rule shared by
-  SystemAuth, the BFF and `appauth`, are being completed in the current
-  hardening phase. Until an application runs a release with them, the edge
-  rate-limit rule on the token, login and sign-up paths is the primary
-  control, and per-address limits are only as good as the trusted-proxy
-  configuration.
+- **Rate limiting depends on the client-address rule.** SystemAuth applies
+  a default per-address limit to every route, tighter policies on the
+  token, login, sign-up and BFF sign-in paths, outcome limits on failed
+  client authentication and social login, and a limit for signed-in
+  callers (`session/ratelimit`, `session/clientaddr`). Per-address limits
+  are only as good as the trusted-proxy configuration: behind a reverse
+  proxy that is not declared in `client_address`, every visitor shares the
+  proxy's address. With several instances the counters must be shared
+  (`rate_limit.redis_url`); per-instance counters only loosen the limits.
+  Edge rate-limit rules remain a useful first layer.
 - **No external penetration test has been done yet.** The controls above
   come from internal review and the security fixes recorded in the
-  changelog. An independent test is planned before wide production use.
+  changelog. An independent test is a recommended next step.
 - **Unbound bearer tokens remain possible by waiver.** Clients registered
   with `allow_bearer_tokens`, and applications that set `AllowBearerTokens`,
   accept tokens that work for whoever holds a copy. Production refuses them
