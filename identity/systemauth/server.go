@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 
@@ -26,6 +27,8 @@ import (
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/dpopproof"
 	"github.com/plexusone/systemforge/observability"
+	"github.com/plexusone/systemforge/session/clientaddr"
+	"github.com/plexusone/systemforge/session/ratelimit"
 )
 
 // Server is the SystemAuth OAuth 2.0 / OpenID Connect server.
@@ -53,6 +56,11 @@ type Server struct {
 	accessScope     AccessChangeScope
 	jwtBearerKeys   JWTBearerKeyStorage
 	production      ProductionPolicy
+	clientAddr      *clientaddr.Resolver
+	rates           ratelimit.Storage
+	ratePolicy      *ratelimit.Policy
+	signedIn        *ratelimit.Limiter
+	audit           audit.Emitter
 }
 
 // Option configures a Server.
@@ -107,11 +115,18 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		storage:         NewMemoryStorage(),
 		sessionProvider: NewDefaultSessionProvider(),
 		logger:          slog.Default(),
+		audit:           audit.NopEmitter{},
 	}
 
 	// Apply options
 	for _, opt := range opts {
 		opt(s)
+	}
+	if err := s.setupClientAddress(); err != nil {
+		return nil, err
+	}
+	if err := s.setupRateLimits(); err != nil {
+		return nil, err
 	}
 
 	// Load the configured signing key, or generate an ephemeral one
@@ -120,6 +135,7 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		return nil, err
 	}
 	key := cfg.Keys.PrivateKey
+	ephemeralKey := key == nil
 	if key == nil {
 		var err error
 		key, err = rsa.GenerateKey(rand.Reader, 2048)
@@ -141,6 +157,7 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		return nil, err
 	}
 	s.keys = oauthcore.NewKeyRing(key, s.keyID, verificationKeys(s.config.Keys.VerificationKeys))
+	s.signingKeyLoaded(ephemeralKey)
 
 	// The JWT-bearer grant's key storage is resolved before Fosite is
 	// composed with it.
@@ -293,9 +310,13 @@ func (s *Server) setupRouter() {
 	// Add standard middleware (must be before routes). Security headers
 	// come first, so every response carries them, error pages included.
 	router.Use(s.securityHeaders)
+	// Rate limits come next, before anything authenticates a request.
+	router.Use(s.rateLimitLayers)
 	router.Use(middleware.RequestID)
+	router.Use(s.eventRequestMiddleware)
 	router.Use(middleware.Recoverer)
 	router.Use(s.loggerMiddleware)
+	router.Use(s.tokenOutcomeLimits)
 	router.Use(s.fositeInterceptor) // Intercept OAuth paths before Huma
 
 	// Create Huma API with OpenAPI configuration
@@ -531,7 +552,7 @@ func (s *Server) Middleware() func(http.Handler) http.Handler {
 			// a proof by its key for this request.
 			ar, authErr := s.authenticateAccessToken(r, s.requestURL(r))
 			if authErr != nil {
-				logger.Debug("access token refused", "path", r.URL.Path, "error", authErr)
+				logger.Debug("access token refused", "route", routePattern(r), oauthcore.ErrorAttr(ctx, logger, authErr))
 				s.writeTokenAuthError(w, authErr)
 				return
 			}
@@ -586,4 +607,16 @@ func AccessRequestFromContext(ctx context.Context) fosite.AccessRequester {
 		return ar
 	}
 	return nil
+}
+
+// routePattern is the route r matched, for logs: chi's pattern when chi
+// routed it, otherwise the net/http pattern. Logs record it rather than the
+// request path, which the client chooses.
+func routePattern(r *http.Request) string {
+	if rc := chi.RouteContext(r.Context()); rc != nil {
+		if p := rc.RoutePattern(); p != "" {
+			return p
+		}
+	}
+	return r.Pattern
 }

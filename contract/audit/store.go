@@ -42,6 +42,9 @@ type Context struct {
 	SessionID string     `json:"session_id,omitempty"`
 	ClientIP  string     `json:"client_ip,omitempty"`
 	UserAgent string     `json:"user_agent,omitempty"`
+	// RequestID is the ID of the HTTP request that caused the event, as
+	// the router's request-ID middleware assigned it.
+	RequestID string `json:"request_id,omitempty"`
 }
 
 // Store defines the interface for audit event storage.

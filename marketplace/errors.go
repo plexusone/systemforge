@@ -7,6 +7,14 @@ var (
 	// ErrListingNotFound is returned when a listing cannot be found.
 	ErrListingNotFound = errors.New("listing not found")
 
+	// ErrInvalidListing is returned when a listing's fields fail
+	// validation.
+	ErrInvalidListing = errors.New("invalid listing")
+
+	// ErrListingNotDeletable is returned when deleting a listing that is
+	// neither a draft nor archived.
+	ErrListingNotDeletable = errors.New("only a draft or archived listing can be deleted")
+
 	// ErrListingNotPublished is returned when accessing an unpublished listing.
 	ErrListingNotPublished = errors.New("listing not published")
 

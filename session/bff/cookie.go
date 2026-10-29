@@ -62,8 +62,12 @@ type CookieConfig struct {
 	// cookie is always HttpOnly; the field is kept for compatibility.
 	HTTPOnly bool
 
-	// SameSite controls cross-site cookie behavior.
-	// Default: SameSiteStrictMode.
+	// SameSite controls cross-site cookie behavior. It must be
+	// http.SameSiteStrictMode or http.SameSiteLaxMode: the origin check
+	// that protects state-changing requests relies on the browser
+	// withholding the cookie from cross-site subrequests, so
+	// http.SameSiteNoneMode is refused by Validate (and NewHandler).
+	// Default (zero or http.SameSiteDefaultMode): SameSiteStrictMode.
 	SameSite http.SameSite
 }
 
@@ -105,18 +109,22 @@ func NewCookieManager(config CookieConfig) *CookieManager {
 	if config.Path == "" {
 		config.Path = "/"
 	}
-	if config.SameSite == 0 {
+	if config.SameSite == 0 || config.SameSite == http.SameSiteDefaultMode {
 		config.SameSite = http.SameSiteStrictMode
 	}
 
 	return &CookieManager{config: config}
 }
 
-// Validate reports a cookie configuration browsers would reject: a
-// __Host- name with a Path other than "/" or without Secure, or a
-// __Secure- name without Secure. Call it on CookieManager.Config(), after
-// defaults are applied; NewHandler does.
+// Validate reports a cookie configuration browsers would reject or that
+// weakens the session: a SameSite other than Strict or Lax, a __Host- name
+// with a Path other than "/" or without Secure, or a __Secure- name without
+// Secure. Call it on CookieManager.Config(), after defaults are applied;
+// NewHandler does.
 func (c CookieConfig) Validate() error {
+	if c.SameSite != http.SameSiteStrictMode && c.SameSite != http.SameSiteLaxMode {
+		return fmt.Errorf("%w: SameSite must be Strict or Lax; SameSite=None would send the session cookie on cross-site requests", ErrInvalidCookieConfig)
+	}
 	if strings.HasPrefix(c.Name, hostCookiePrefix) {
 		if c.Path != "/" {
 			return fmt.Errorf("%w: a %s cookie must have Path=/", ErrInvalidCookieConfig, hostCookiePrefix)

@@ -2,7 +2,6 @@ package organization
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
 
@@ -199,7 +198,7 @@ func (a *API) listMembers(ctx context.Context, input *ListMembersInput) (*ListMe
 	}
 	members, err := a.service.ListMembers(ctx, org.ID, opts...)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, a.serviceError(ctx, "listing members", err)
 	}
 
 	responses := make([]*MemberResponse, len(members))
@@ -226,7 +225,7 @@ func (a *API) getMember(ctx context.Context, input *GetMemberInput) (*GetMemberO
 
 	member, err := a.service.GetMembership(ctx, org.ID, principalID)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, a.serviceError(ctx, "reading member", err)
 	}
 
 	return &GetMemberOutput{Body: memberToResponse(member)}, nil
@@ -258,7 +257,7 @@ func (a *API) addMember(ctx context.Context, input *AddMemberRequest) (*AddMembe
 		Permissions:    input.Body.Permissions,
 	})
 	if err != nil {
-		return nil, memberError(err)
+		return nil, a.serviceError(ctx, "adding member", err)
 	}
 
 	return &AddMemberResponse{Body: memberToResponse(member)}, nil
@@ -277,7 +276,7 @@ func (a *API) updateMember(ctx context.Context, input *UpdateMemberRequest) (*Up
 
 	membership, err := a.service.GetMembership(ctx, org.ID, principalID)
 	if err != nil {
-		return nil, huma.Error404NotFound(err.Error())
+		return nil, a.serviceError(ctx, "reading member", err)
 	}
 	if membership.Role == RoleOwner || (input.Body.Role != nil && *input.Body.Role == RoleOwner) {
 		if err := a.requireOwnerRights(ctx, caller, org.ID); err != nil {
@@ -300,7 +299,7 @@ func (a *API) updateMember(ctx context.Context, input *UpdateMemberRequest) (*Up
 		Active:      input.Body.Active,
 	})
 	if err != nil {
-		return nil, memberError(err)
+		return nil, a.serviceError(ctx, "updating member", err)
 	}
 
 	return &UpdateMemberResponse{Body: memberToResponse(updated)}, nil
@@ -327,7 +326,7 @@ func (a *API) removeMember(ctx context.Context, input *RemoveMemberInput) (*stru
 		}
 		membership, err := a.service.GetMembership(ctx, org.ID, principalID)
 		if err != nil {
-			return nil, huma.Error404NotFound("member not found")
+			return nil, a.serviceError(ctx, "reading member", err)
 		}
 		if membership.Role == RoleOwner {
 			if err := a.requireOwnerRights(ctx, caller, org.ID); err != nil {
@@ -337,7 +336,7 @@ func (a *API) removeMember(ctx context.Context, input *RemoveMemberInput) (*stru
 	}
 
 	if err := a.service.RemoveMember(ctx, org.ID, principalID); err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, a.serviceError(ctx, "removing member", err)
 	}
 
 	return nil, nil
@@ -370,7 +369,7 @@ func (a *API) transferOwnership(ctx context.Context, input *TransferOwnershipReq
 		ToPrincipal:    newOwnerID,
 		NewRoleForOld:  input.Body.NewRoleForOldOwner,
 	}); err != nil {
-		return nil, memberError(err)
+		return nil, a.serviceError(ctx, "transferring ownership", err)
 	}
 
 	resp := &TransferOwnershipResponse{}
@@ -378,8 +377,6 @@ func (a *API) transferOwnership(ctx context.Context, input *TransferOwnershipReq
 	return resp, nil
 }
 
-// memberError maps a membership service error to an API error: a personal
-// organization's one-member rule is a conflict, anything else a bad request.
 // requireDirectAdd checks that caller may add principalID to the
 // organization without the principal's consent (APIConfig.DirectAdd). The
 // answer does not depend on whether principalID exists, so it reveals
@@ -403,11 +400,4 @@ func (a *API) requireDirectAdd(ctx context.Context, caller, orgID, principalID u
 		return huma.Error403Forbidden("members join by invitation; this principal cannot be added directly")
 	}
 	return nil
-}
-
-func memberError(err error) error {
-	if errors.Is(err, ErrPersonalOrganization) {
-		return huma.Error409Conflict(err.Error())
-	}
-	return huma.Error400BadRequest(err.Error())
 }

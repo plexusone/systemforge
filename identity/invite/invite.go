@@ -131,5 +131,24 @@ var ErrExpired = errors.New("invite has expired")
 // it had when the invite was sent.
 var ErrInviterNotAuthorized = errors.New("invite: the inviter may no longer invite to this organization")
 
+// ErrInviteNotFound means no invite matches the given token or ID.
+var ErrInviteNotFound = errors.New("invite not found")
+
+// ErrPendingInviteExists means the email already has a pending invite to
+// the organization, or to the same resource.
+var ErrPendingInviteExists = errors.New("pending invite already exists for this email")
+
+// ErrAlreadyMember means the accepting principal already belongs to the
+// invite's organization.
+var ErrAlreadyMember = errors.New("principal is already a member of this organization")
+
+// ErrAppRolesNotConfigured means an invite names application roles but
+// the service has no application role service.
+var ErrAppRolesNotConfigured = errors.New("invite: application roles are not configured")
+
+// ErrCollaboratorAppRoles means a collaborator invite names application
+// roles, which collaborators do not hold.
+var ErrCollaboratorAppRoles = errors.New("invite: collaborators hold no application roles")
+
 // Default invite expiration time.
 const DefaultInviteExpiry = 7 * 24 * time.Hour // 7 days

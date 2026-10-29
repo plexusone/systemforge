@@ -183,7 +183,38 @@ Each is off unless set, and logs a warning at startup.
 | --- | --- |
 | `EphemeralDPoPKey` | Start without a DPoP key (local development) |
 | `AllowBearerTokens` | Accept unbound tokens with the Bearer scheme, from clients SystemAuth exempts from DPoP |
-| `APIKeys` | Accept static API keys. **Deprecated:** use `publicclient` sign-in for command-line tools and service accounts for automation |
+
+## Upgrading: Static API Keys Removed
+
+`Options.APIKeys` (deprecated since v0.26.0) and
+`relyingparty.BearerConfig.APIKeys` are removed, together with
+`relyingparty.APIKeyValidator`, `relyingparty.AuthMethodAPIKey` and
+`AuthenticatedPrincipal.APIKeyID`. A static key was a second, weaker way into
+an application: a long-lived bearer secret whose authorization was either
+frozen when it was created or needed a lookup of its own on every request,
+outside the short-lived, revocable access tokens every application already
+verifies (ADR-016).
+
+An application that passed `APIKeys` stops compiling until the field is
+removed. After that, a request with `Authorization: Bearer <api key>` gets
+`401` with `error="invalid_token"`, and the `X-API-Key` header is ignored.
+Move each kind of caller to the credential made for it:
+
+- **Command-line tools and local scripts** sign the person in with
+  `identity/publicclient` (authorization code with PKCE, or the device
+  flow) and present DPoP-bound access tokens.
+- **Automation and server-to-server calls** use SystemAuth
+  [service accounts](../oauth/service-accounts.md): set
+  `Options.ServiceAccounts`, create the account in SystemAuth, and have the
+  job exchange a signed assertion for a DPoP-bound token with the
+  JWT-bearer grant.
+- **Agents** that act for a person use AAuth through
+  `identity/requestprincipal/aauthrs`.
+
+Revoke the keys the application issued once their callers have moved. The
+`identity/apikey` package and the `session/middleware` API key middleware
+(`RequireAPIKey`) are unchanged, for services outside the relying-party
+stack that manage keys of their own.
 
 ## Moving to `sf_rp_principals`
 

@@ -6,6 +6,10 @@ setting; the links lead to the full reference. Re-walk it after an upgrade
 that adds a production check, and after any change to the edge or the
 number of instances.
 
+The checklist puts the operator-side assumptions of the
+[threat model](threat-model.md) into practice; read its residual risks
+before deciding which waivers to accept.
+
 ## Keys and secrets
 
 - [ ] **The signing key comes from a secret store.** Load it through
@@ -65,8 +69,10 @@ number of instances.
   cache lets a proof replayed against another instance through
   ([DPoP Enforcement](../session/dpop.md#systemauth-issues-dpop-bound-tokens)).
 - [ ] **Rate-limit counters are shared by every instance.** In-memory
-  counters multiply the effective limit by the number of instances
-  ([Rate Limiting](../coreapi/ratelimit.md#redis-storage)).
+  counters multiply the effective limit by the number of instances: set
+  `rate_limit.redis_url`, or declare one instance with
+  `rate_limit.single_instance`
+  ([Rate limits](../systemauth/deployment.md#rate-limits)).
 
 ## Edge and origin
 
@@ -80,20 +86,34 @@ number of instances.
 - [ ] **Trusted proxy networks are configured.** Client addresses come from
   the header your proxy sets (for example `CF-Connecting-IP`, or
   `X-Forwarded-For` written by your own proxy), and only when the request
-  comes from a trusted proxy network, never from the open internet
-  ([ClientIPConfig](../bff/overview.md#clientipconfig-cloudflare-support)).
+  comes from a trusted proxy network, never from the open internet. Set
+  `client_address` in SystemAuth and share the same `clientaddr.Resolver`
+  with the BFF, `appauth` and the application's rate limits
+  ([Client Addresses and Rate Limiting](../guides/rate-limiting.md#the-client-address)).
+- [ ] **The reverse proxy replaces `X-Forwarded-For`** with the one client
+  address it trusts, rather than appending to a value the client sent.
 - [ ] **The DPoP base URL matches the external URL** when the proxy rewrites
   paths ([The proof's URL behind a proxy](../session/dpop.md#the-proofs-url-behind-a-proxy)).
-- [ ] **An edge rate-limit rule covers the token, login and sign-up paths.**
-  Keep it until in-app layered limits ship.
+- [ ] **In-app rate limits are on, with the route policies reviewed.** The
+  default per-address limit covers every route; the token, login and sign-up
+  paths have their own lower limits, and back-channel callers that share an
+  address are in `rate_limit.exempt_networks`
+  ([Rate limits](../systemauth/deployment.md#rate-limits)). An edge
+  rate-limit rule is optional extra protection against floods that should
+  not reach the origin at all.
 - [ ] **WAF managed rules are on.**
 - [ ] **The payment-provider webhook path is exempt from WAF and bot
   challenges.** A challenge there makes the provider's deliveries fail.
 
 ## Logging
 
-- [ ] **Logs are JSON in production.** The text format prints error stack
-  traces ([Flags and environment](../systemauth/deployment.md#flags-and-environment)).
+- [ ] **Logs are JSON in production** ([Flags and environment](../systemauth/deployment.md#flags-and-environment)).
+  SystemAuth logs OAuth errors as a code-and-hint summary in either format;
+  the host application's own error values may still print stack traces in
+  the text format.
+- [ ] **Security events are recorded** through `Options.AuditEmitter`, to an
+  audit store or the log, and someone watches the refusal and replay events
+  ([Security Events](security-events.md)).
 - [ ] **No tokens, secrets or authorization headers reach the logs**,
   including from the host application, proxies and request logging.
 - [ ] **Logs are shipped off the host** to a collector with retention and

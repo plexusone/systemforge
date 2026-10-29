@@ -14,8 +14,6 @@ import (
 	"github.com/ory/fosite/compose"
 	"github.com/ory/fosite/handler/oauth2"
 	"github.com/ory/fosite/handler/rfc7523"
-
-	"github.com/plexusone/systemforge/session/ratelimit"
 )
 
 // GrantTypeJWTBearer is the JWT-bearer grant type (RFC 7523 section 2.1).
@@ -281,15 +279,6 @@ func (s *Server) recordJWTBearerUse(ctx context.Context, r *http.Request, sess *
 	if err := s.jwtBearerKeys.RecordKeyUse(ctx, id, sess.jwtBearerKeyID, s.tokenClientIP(r)); err != nil {
 		logger.ErrorContext(ctx, "recording service account key use", "principal_id", id, "key_id", sess.jwtBearerKeyID, "error", err)
 	}
-}
-
-// tokenClientIP is the address of a token request's client: as
-// WithLoginTokenClientIP finds it, or by default the direct peer.
-func (s *Server) tokenClientIP(r *http.Request) string {
-	if f := s.socialOpts.loginTokenClientIP; f != nil {
-		return f(r)
-	}
-	return ratelimit.PeerIP(r)
 }
 
 // requireJWTBearerProof refuses a JWT-bearer token request without a DPoP

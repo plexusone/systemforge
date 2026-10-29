@@ -415,12 +415,25 @@ func (h *api) fail(c call, err error) {
 		writeError(c.w, http.StatusNotFound, "grant not found")
 	case errors.Is(err, cf.ErrAccountMismatch):
 		writeError(c.w, http.StatusUnprocessableEntity, "the credential belongs to a different account; connect it as a new connection")
-	case errors.Is(err, cf.ErrInvalidCredential), errors.Is(err, cf.ErrInsufficientScope):
-		// The message is classified: status and request ID, never a body.
-		writeError(c.w, http.StatusUnprocessableEntity, err.Error())
-	case errors.Is(err, cf.ErrRateLimited), errors.Is(err, cf.ErrTransient):
-		writeError(c.w, http.StatusBadGateway, err.Error())
-	case errors.Is(err, cf.ErrNotUsable), errors.Is(err, cf.ErrConflict), errors.Is(err, cf.ErrInvalidTransition):
+	case errors.Is(err, cf.ErrInvalidCredential):
+		// A provider's error can name hosts or carry its own text: the
+		// client gets a fixed message and the detail is logged.
+		h.log.InfoContext(c.r.Context(), "connections: provider rejected the credential", "error", err)
+		writeError(c.w, http.StatusUnprocessableEntity, "the provider rejected the credential")
+	case errors.Is(err, cf.ErrInsufficientScope):
+		h.log.InfoContext(c.r.Context(), "connections: credential lacks scope", "error", err)
+		writeError(c.w, http.StatusUnprocessableEntity, "the credential lacks a required scope")
+	case errors.Is(err, cf.ErrRateLimited):
+		h.log.WarnContext(c.r.Context(), "connections: provider rate limited", "error", err)
+		writeError(c.w, http.StatusBadGateway, "the provider is limiting requests; try again later")
+	case errors.Is(err, cf.ErrTransient):
+		// A transient error wraps the network or provider failure.
+		h.log.WarnContext(c.r.Context(), "connections: provider unavailable", "error", err)
+		writeError(c.w, http.StatusBadGateway, "the provider could not be reached; try again later")
+	case errors.Is(err, cf.ErrConflict):
+		writeError(c.w, http.StatusConflict, "the connection changed; reload and try again")
+	case errors.Is(err, cf.ErrNotUsable), errors.Is(err, cf.ErrInvalidTransition):
+		// These name only the connection and its lifecycle states.
 		writeError(c.w, http.StatusConflict, err.Error())
 	default:
 		h.log.ErrorContext(c.r.Context(), "connections: request failed", "error", err)

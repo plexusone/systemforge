@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/google/uuid"
 
@@ -58,9 +57,9 @@ func WithCredentialService(svc credential.Service) Option {
 
 // WithLoginTokenRateLimit sets the rate limit storage and the limits per
 // source address and per client for the login token endpoint. Defaults to
-// in-memory storage with DefaultLoginTokenAddressLimit and
-// DefaultLoginTokenClientLimit; use shared storage, such as Redis, when
-// several instances serve the endpoint.
+// the server's rate limit storage (WithRateLimitStorage) with
+// DefaultLoginTokenAddressLimit and DefaultLoginTokenClientLimit. A nil
+// storage keeps the server's.
 func WithLoginTokenRateLimit(storage ratelimit.Storage, perAddress, perClient ratelimit.Limit) Option {
 	return func(s *Server) {
 		s.socialOpts.loginTokenRate = storage
@@ -72,11 +71,12 @@ func WithLoginTokenRateLimit(storage ratelimit.Storage, perAddress, perClient ra
 // WithLoginTokenClientIP sets how the login token endpoint finds the
 // client's address, for its per-address rate limit and the last-used
 // address recorded on the token. The JWT-bearer grant records the same
-// address as a service account key's last use. The default is the direct
-// peer, which
-// behind a reverse proxy is the proxy: pass
-// ratelimit.ForwardedClientIP(proxyNetworks...) there. Never read
-// forwarding headers without naming the proxies that set them.
+// address as a service account key's last use. It takes precedence over
+// the server's client-address resolver.
+//
+// Deprecated: configure client_address, or pass
+// WithClientAddressResolver, so that every part of the server finds the
+// client address the same way.
 func WithLoginTokenClientIP(clientIP func(r *http.Request) string) Option {
 	return func(s *Server) { s.socialOpts.loginTokenClientIP = clientIP }
 }
@@ -100,7 +100,7 @@ func (sl *socialLogin) setupLoginTokens(s *Server) {
 	x := &loginTokenExchange{
 		credentials: creds,
 		allowed:     s.ManagedPrincipalsAllowed,
-		clientIP:    s.socialOpts.loginTokenClientIP,
+		clientIP:    s.clientIP,
 		knownClient: func(ctx context.Context, clientID string) bool {
 			_, err := s.storage.GetClientByID(ctx, clientID)
 			return err == nil
@@ -109,12 +109,9 @@ func (sl *socialLogin) setupLoginTokens(s *Server) {
 		addressLimit: s.socialOpts.loginTokenIP,
 		clientLimit:  s.socialOpts.loginTokenCli,
 	}
-	if x.clientIP == nil {
-		x.clientIP = ratelimit.PeerIP
-	}
+
 	if x.rates == nil {
-		s.logger.Warn("login token endpoint using in-memory rate limits; limits are not shared between instances")
-		x.rates = ratelimit.NewMemoryStorage()
+		x.rates = s.rates
 	}
 	if x.addressLimit.Rate <= 0 {
 		x.addressLimit = DefaultLoginTokenAddressLimit
@@ -170,23 +167,10 @@ func (sl *socialLogin) handleLoginToken(w http.ResponseWriter, r *http.Request) 
 		key   string
 		limit ratelimit.Limit
 	}{
-		{"login_token:ip:" + address, x.addressLimit},
-		{"login_token:client:" + clientBucket, x.clientLimit},
+		{"ip:" + address, x.addressLimit},
+		{"client:" + clientBucket, x.clientLimit},
 	} {
-		res, err := x.rates.Allow(ctx, check.key, check.limit)
-		if errors.Is(err, ratelimit.ErrTooManyKeys) {
-			w.Header().Set("Retry-After", "60")
-			http.Error(w, "too many requests", http.StatusTooManyRequests)
-			return
-		}
-		if err != nil {
-			logger.Error("login token rate limit", "error", err)
-			http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
-			return
-		}
-		if !res.Allowed {
-			w.Header().Set("Retry-After", strconv.Itoa(int(res.RetryAfter.Seconds())+1))
-			http.Error(w, "too many requests", http.StatusTooManyRequests)
+		if ratelimit.Check(w, r, x.rates, "login_token", check.key, check.limit, false, logger) != ratelimit.Allowed {
 			return
 		}
 	}
@@ -204,21 +188,25 @@ func (sl *socialLogin) handleLoginToken(w http.ResponseWriter, r *http.Request) 
 	principalID, err := sl.verifyLoginToken(ctx, x, clientID, plain, address)
 	if errors.Is(err, errLoginTokenRejected) {
 		logger.Info("login token rejected", "client_id", clientID)
+		sl.signInRefused(ctx, loginTokenProvider, clientID, "login_token_rejected")
 		http.Error(w, errLoginTokenRejected.Error(), http.StatusUnauthorized)
 		return
 	}
 	if err != nil {
 		logger.Error("login token exchange", "client_id", clientID, "error", err)
+		sl.signInRefused(ctx, loginTokenProvider, clientID, "server_error")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	if err := sl.establishSession(ctx, w, r, principalID, loginTokenProvider); err != nil {
 		logger.Error("creating login session", "error", err)
+		sl.signInRefused(ctx, loginTokenProvider, clientID, "server_error")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	logger.Info("login token sign-in succeeded", "client_id", clientID, "principal_id", principalID)
+	sl.signedIn(ctx, principalID, loginTokenProvider, clientID)
 	//nolint:gosec // G710: target is the default or a return_to resolved against the redirect allowlist
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }

@@ -745,6 +745,201 @@
       "type": "object",
       "description": "Optional OAuth grants"
     },
+    "client_address": {
+      "properties": {
+        "trusted_proxies": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Networks (CIDR or single addresses) of the reverse proxies whose client-address header is believed; empty trusts no proxy and uses the direct peer"
+        },
+        "header": {
+          "type": "string",
+          "description": "Header the trusted proxies write the client address to: X-Forwarded-For (read from the right) or a single-value header such as CF-Connecting-IP",
+          "default": "X-Forwarded-For"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Trusted reverse proxies and the header they write the client address to"
+    },
+    "rate_limit": {
+      "properties": {
+        "disabled": {
+          "type": "boolean",
+          "description": "Turn off the default and route rate limits (handler limits stay on)",
+          "default": false
+        },
+        "redis_url": {
+          "type": "string",
+          "description": "Redis URL of the rate limit storage shared by every instance (supports env var expansion)"
+        },
+        "single_instance": {
+          "type": "boolean",
+          "description": "One instance serves SystemAuth",
+          "default": false
+        },
+        "default": {
+          "properties": {
+            "requests": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Requests allowed in each period"
+            },
+            "period": {
+              "type": "string",
+              "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+              "description": "Length of the period (e.g. 1m)",
+              "examples": [
+                "15m",
+                "1h",
+                "168h",
+                "720h"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "requests",
+            "period"
+          ],
+          "description": "Limit per client address on every route (default 300 per minute)"
+        },
+        "signed_in": {
+          "properties": {
+            "requests": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Requests allowed in each period"
+            },
+            "period": {
+              "type": "string",
+              "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+              "description": "Length of the period (e.g. 1m)",
+              "examples": [
+                "15m",
+                "1h",
+                "168h",
+                "720h"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "requests",
+            "period"
+          ],
+          "description": "Limit per signed-in principal or service account (default 1200 per minute)"
+        },
+        "exempt_networks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Client networks (CIDR or single addresses) exempt from rate limits"
+        },
+        "routes": {
+          "items": {
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Policy name; a default's name replaces it"
+              },
+              "paths": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "description": "Paths: exact or ending in * for a prefix"
+              },
+              "methods": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "description": "Methods the policy covers (default all)"
+              },
+              "exempt": {
+                "type": "boolean",
+                "description": "Exempt the paths from address limits"
+              },
+              "per_address": {
+                "properties": {
+                  "requests": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Requests allowed in each period"
+                  },
+                  "period": {
+                    "type": "string",
+                    "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+                    "description": "Length of the period (e.g. 1m)",
+                    "examples": [
+                      "15m",
+                      "1h",
+                      "168h",
+                      "720h"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "requests",
+                  "period"
+                ],
+                "description": "Limit per client address"
+              },
+              "per_client": {
+                "properties": {
+                  "requests": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Requests allowed in each period"
+                  },
+                  "period": {
+                    "type": "string",
+                    "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+                    "description": "Length of the period (e.g. 1m)",
+                    "examples": [
+                      "15m",
+                      "1h",
+                      "168h",
+                      "720h"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "requests",
+                  "period"
+                ],
+                "description": "Limit per OAuth client"
+              },
+              "fail_open": {
+                "type": "boolean",
+                "description": "Let requests through when the storage fails (routes refuse by default)"
+              }
+            },
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "name",
+              "paths"
+            ]
+          },
+          "type": "array",
+          "description": "Route policies replacing the defaults of the same name or adding new ones"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Rate limits and their shared storage"
+    },
     "production": {
       "properties": {
         "allow": {

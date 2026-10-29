@@ -528,6 +528,20 @@ func (s *Server) GetApp(slug string) (AppBackend, bool) {
 	return app.backend, true
 }
 
+// httpServer builds the HTTP server Run starts. ReadHeaderTimeout bounds
+// how long a client may take to send its request headers, so slow clients
+// cannot hold connections open (Slowloris).
+func (s *Server) httpServer(addr string) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           s.router,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+}
+
 // Run verifies database isolation, then starts the HTTP server and blocks
 // until shutdown.
 func (s *Server) Run(addr string) error {
@@ -535,13 +549,7 @@ func (s *Server) Run(addr string) error {
 		return err
 	}
 
-	server := &http.Server{
-		Addr:         addr,
-		Handler:      s.router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 60 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
+	server := s.httpServer(addr)
 
 	// Channel to listen for shutdown signals
 	shutdown := make(chan os.Signal, 1)

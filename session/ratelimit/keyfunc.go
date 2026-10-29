@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+
+	"github.com/plexusone/systemforge/session/clientaddr"
 	"github.com/plexusone/systemforge/session/middleware"
 )
 
@@ -94,6 +96,9 @@ func IPKey() KeyFunc {
 // ForwardedIPKey is IPKey for a server behind reverse proxies: it takes the
 // client address from X-Forwarded-For when the request arrives from one
 // of the trusted proxy networks (see ForwardedClientIP).
+//
+// Deprecated: use AddressKey with a clientaddr.Resolver, the client-address
+// rule shared with SystemAuth and the BFF.
 func ForwardedIPKey(trustedProxies ...string) (KeyFunc, error) {
 	clientIP, err := ForwardedClientIP(trustedProxies...)
 	if err != nil {
@@ -102,6 +107,23 @@ func ForwardedIPKey(trustedProxies ...string) (KeyFunc, error) {
 	return func(r *http.Request) string {
 		return "ip:" + clientIP(r)
 	}, nil
+}
+
+// AddressKey returns a KeyFunc that keys on the client address res finds
+// (see clientaddr). A nil res keys on the direct peer, as IPKey does. An
+// unparseable peer address shares one bucket rather than escaping limits.
+func AddressKey(res *clientaddr.Resolver) KeyFunc {
+	return func(r *http.Request) string {
+		return "ip:" + addressOf(res, r)
+	}
+}
+
+// addressOf is the client address res finds, or "unknown".
+func addressOf(res *clientaddr.Resolver, r *http.Request) string {
+	if ip := res.ClientIP(r); ip != "" {
+		return ip
+	}
+	return "unknown"
 }
 
 // extractIP is the address requests are limited by when no trusted proxy

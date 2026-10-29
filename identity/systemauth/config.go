@@ -15,6 +15,7 @@ import (
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/credential"
+	"github.com/plexusone/systemforge/session/clientaddr"
 )
 
 // Config holds SystemAuth server configuration.
@@ -72,6 +73,17 @@ type Config struct {
 
 	// OAuth enables optional OAuth grants.
 	OAuth OAuthConfig `json:"oauth,omitempty" yaml:"oauth,omitempty" jsonschema:"description=Optional OAuth grants"`
+
+	// ClientAddress says which reverse proxies to believe about the
+	// client's address, and which header they write it to (see
+	// clientaddr). The zero value believes no proxy and uses the direct
+	// peer, which behind a proxy is the proxy itself.
+	ClientAddress clientaddr.Config `json:"client_address,omitempty" yaml:"client_address,omitempty" jsonschema:"description=Trusted reverse proxies and the header they write the client address to"`
+
+	// RateLimit configures the rate limits: a default per client address,
+	// route policies for the token, login and sign-up paths, a limit per
+	// signed-in caller, and the storage they share.
+	RateLimit RateLimitConfig `json:"rate_limit,omitempty" yaml:"rate_limit,omitempty" jsonschema:"description=Rate limits and their shared storage"`
 
 	// Production waives, by name, production checks that otherwise refuse
 	// to start the packaged service (systemauthsvc) or refuse requests.
@@ -753,6 +765,12 @@ func (c *Config) Validate() error {
 		return err
 	}
 	if err := c.Production.validate(); err != nil {
+		return err
+	}
+	if err := c.ClientAddress.Validate(); err != nil {
+		return fmt.Errorf("%w: client_address: %v", ErrInvalidConfig, err)
+	}
+	if err := c.RateLimit.validate(); err != nil {
 		return err
 	}
 	for _, cl := range c.Clients {

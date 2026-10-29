@@ -11,6 +11,7 @@ import (
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/application"
@@ -26,6 +27,8 @@ type DefaultService struct {
 	logger   *slog.Logger
 
 	accessSink accesschange.Sink
+
+	audit audit.Emitter // records platform administration changes; nil records none
 }
 
 // ServiceOption configures a DefaultService.
@@ -247,6 +250,7 @@ func (s *DefaultService) syncHuman(ctx context.Context, id uuid.UUID, platformAd
 
 	// Set platform admin if applicable
 	if platformAdmin {
+		s.emitPlatformAdmin(ctx, id, true)
 		return s.grantPlatformAdmin(ctx, id)
 	}
 	return nil
@@ -762,6 +766,9 @@ func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input Up
 	}
 	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to update human extension: %w", err)
+	}
+	if input.IsPlatformAdmin != nil && *input.IsPlatformAdmin != p.Edges.Human.IsPlatformAdmin {
+		s.emitPlatformAdmin(ctx, id, *input.IsPlatformAdmin)
 	}
 
 	// Granted platform administration is written to the authorization

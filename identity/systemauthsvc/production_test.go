@@ -2,6 +2,7 @@ package systemauthsvc_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/grokify/goauth/dpop"
 
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/systemauth"
 	"github.com/plexusone/systemforge/identity/systemauthsvc"
 	"github.com/plexusone/systemforge/session/middleware"
@@ -108,9 +110,11 @@ func TestProductionRefusesAtTheTokenEndpoint(t *testing.T) {
 }
 
 // TestProductionWaivers verifies that each production check is waived by
-// name, and that every waiver is logged at startup as a warning.
+// name, and that every waiver is logged at startup as a warning and
+// recorded as a security event.
 func TestProductionWaivers(t *testing.T) {
 	logs := &syncBuffer{}
+	events := &recordingEmitter{}
 	cfg := &systemauthsvc.Config{
 		Issuer:   "https://auth.example.com",
 		DPoP:     systemauth.DPoPConfig{SingleInstance: true},
@@ -123,11 +127,23 @@ func TestProductionWaivers(t *testing.T) {
 		}},
 	}
 	s, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{
-		SigningKey: testKey(t), Migrate: true,
+		SigningKey: testKey(t), Migrate: true, AuditEmitter: events,
 		Logger: slog.New(slog.NewTextHandler(logs, &slog.HandlerOptions{Level: slog.LevelWarn})),
 	})
 	if err != nil {
 		t.Fatalf("waived checks: %v", err)
+	}
+	waived := map[string]bool{}
+	for _, ev := range events.byType(systemauthsvc.EventProductionWaiver) {
+		waived[ev.Resource.Identifier] = true
+	}
+	for _, check := range []string{systemauth.AllowEphemeralHMACSecret, systemauth.AllowClientSecretClientCredentials, systemauth.AllowBearerTokenClients, "dpop.single_instance"} {
+		if !waived[check] {
+			t.Errorf("no waiver event for %s", check)
+		}
+	}
+	if len(events.byType(systemauth.EventSigningKeyLoaded)) != 1 {
+		t.Error("no signing key event")
 	}
 	closeService(t, s)
 	out := logs.String()
@@ -146,6 +162,13 @@ func TestProductionWaivers(t *testing.T) {
 	}
 	if code, oauthErr := clientCredentials(t, s.Handler(), cfg.Issuer, "legacy", "legacy-secret"); code != http.StatusOK {
 		t.Errorf("waived bearer-token client: %d %q", code, oauthErr)
+	}
+	// The service hands its emitter to SystemAuth: a refusal is recorded.
+	if code, _ := clientCredentials(t, s.Handler(), cfg.Issuer, "svc", "wrong-secret"); code == http.StatusOK {
+		t.Error("wrong client secret accepted")
+	}
+	if len(events.byType(systemauth.EventTokenRefused)) == 0 {
+		t.Error("no token refusal event")
 	}
 
 	// An unknown waiver is a configuration error.
@@ -202,4 +225,29 @@ func TestDevModeServesWaivableGrants(t *testing.T) {
 			t.Errorf("%s: %d %q", id, code, oauthErr)
 		}
 	}
+}
+
+// recordingEmitter keeps every security event.
+type recordingEmitter struct {
+	mu     sync.Mutex
+	events []audit.Event
+}
+
+func (r *recordingEmitter) Emit(_ context.Context, ev *audit.Event) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.events = append(r.events, *ev)
+	return nil
+}
+
+func (r *recordingEmitter) byType(eventType string) []audit.Event {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []audit.Event
+	for _, ev := range r.events {
+		if ev.EventType == eventType {
+			out = append(out, ev)
+		}
+	}
+	return out
 }

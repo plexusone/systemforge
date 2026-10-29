@@ -45,6 +45,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*Account, error) 
 	}
 	s.logger.InfoContext(ctx, "service account created",
 		"principal_id", p.ID, "identifier", p.Identifier, "organization_id", in.OrganizationID, "created_by", in.CreatedBy)
+	s.emit(ctx, "created", in.CreatedBy, p.ID, map[string]any{"identifier": p.Identifier, "organization_id": in.OrganizationID.String()})
 	return s.Get(ctx, p.ID)
 }
 
@@ -147,6 +148,7 @@ func (s *Service) Disable(ctx context.Context, id, by uuid.UUID) error {
 		return err
 	}
 	s.logger.InfoContext(ctx, "service account disabled", "principal_id", id, "by", by)
+	s.emit(ctx, "disabled", by, id, nil)
 	return nil
 }
 
@@ -159,6 +161,7 @@ func (s *Service) Enable(ctx context.Context, id, by uuid.UUID) error {
 		return err
 	}
 	s.logger.InfoContext(ctx, "service account enabled", "principal_id", id, "by", by)
+	s.emit(ctx, "enabled", by, id, nil)
 	return nil
 }
 
@@ -185,6 +188,7 @@ func (s *Service) Delete(ctx context.Context, id, by uuid.UUID) error {
 		return err
 	}
 	s.logger.InfoContext(ctx, "service account deleted", "principal_id", id, "identifier", acct.Identifier, "by", by)
+	s.emit(ctx, "deleted", by, id, map[string]any{"identifier": acct.Identifier})
 	return nil
 }
 

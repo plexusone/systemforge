@@ -23,6 +23,10 @@ and it rejects `social_login.insecure_cookies` and statically configured
 clients that set `allow_bearer_tokens`. `--dev` relaxes all of these
 (ephemeral key, in-memory storage, `http://localhost` issuer).
 
+It also warns, without refusing, when the [rate limit](#rate-limits)
+counters are kept in memory and neither `rate_limit.single_instance` nor
+`dpop.single_instance` declares one instance.
+
 Outside `--dev` the token endpoint also refuses, per request, so that
 clients registered at runtime are covered:
 
@@ -121,9 +125,9 @@ systemauth invite revoke ada@example.com
   ```
 
   A host binary sets the page's wording with `Options.WaitlistPage` and
-  reads the list with `Service.SignupWaitlist()`. Behind a proxy, pass the
-  client-address function (`WithLoginTokenClientIP`) so the per-address
-  limit sees real clients.
+  reads the list with `Service.SignupWaitlist()`. Behind a proxy, configure
+  [`client_address`](#client-address) so the per-address limit sees real
+  clients.
 - **Database:** the commands read the configured database directly, so they
   work with the server running. The table is created by the schema migration.
 - **In a host binary,** set `Options.InviteOnly` and `Options.SignupDeniedURL`
@@ -346,6 +350,10 @@ tokens:
   hmac_secret: ${SYSTEMAUTH_TOKEN_HMAC_SECRET}
 dpop:
   single_instance: true   # or replay_cache_redis_url with several instances
+client_address:
+  trusted_proxies: ["127.0.0.1/32", "::1/128"]   # Caddy on this host
+rate_limit:
+  single_instance: true   # or redis_url with several instances
 features:
   require_pkce: true
   enable_jwt_access_tokens: true
@@ -357,13 +365,84 @@ social_login:
     - https://app.example.com
 ```
 
-Caddy terminates TLS and proxies to the loopback listener:
+Caddy terminates TLS and proxies to the loopback listener, replacing
+`X-Forwarded-For` with the client's address:
 
 ```
 auth.example.com {
-    reverse_proxy 127.0.0.1:8081
+    reverse_proxy 127.0.0.1:8081 {
+        header_up X-Forwarded-For {client_ip}
+    }
 }
 ```
+
+Behind a CDN or edge proxy, give Caddy the edge's networks
+(`trusted_proxies`) and the header it writes (`client_ip_headers`) in its
+global `servers` options, so `{client_ip}` is the visitor rather than the
+edge.
+
+## Client address
+
+SystemAuth finds a request's client address for its rate limits, the
+addresses it records and audit events. It believes a forwarding header only
+from the networks in `client_address.trusted_proxies`:
+
+```yaml
+client_address:
+  trusted_proxies: ["127.0.0.1/32", "::1/128"]
+  header: X-Forwarded-For   # the default; or a single-value header such as CF-Connecting-IP
+```
+
+`X-Forwarded-For` is read from the right, skipping trusted proxies; a
+single-value header must hold exactly one address. Without
+`client_address`, every request is attributed to its direct peer, which
+behind a proxy is the proxy itself, so all clients would share one limit. See
+[Client Addresses and Rate Limiting](../guides/rate-limiting.md).
+
+## Rate limits
+
+SystemAuth limits requests in layers, all on one storage:
+
+- a **default** limit per client address on every route, before anything
+  authenticates (300 a minute);
+- **route policies** for `/oauth/token` (per address and per client),
+  `/login*`, `/signup*` and `/bff/auth/*` (per address, lower), with health
+  checks, static assets and the payment webhook exempt;
+- a limit per **signed-in** principal or service account after
+  authentication (1200 a minute), on the managed-principal API;
+- **handler limits** that need the outcome: failed client authentication,
+  JWT-bearer tokens per service account, social login start and callback,
+  login-token exchange, the waitlist and the sign-up page.
+
+Refusals are `429` with `Retry-After` (at least one second) and the
+`RateLimit-Policy` and `RateLimit` headers. When the storage fails, the
+default layer lets requests through and logs; the token, login and sign-up
+limits refuse with `503`.
+
+```yaml
+rate_limit:
+  redis_url: ${SYSTEMAUTH_RATE_LIMIT_REDIS_URL}   # shared by several instances
+  # single_instance: true                        # or one instance, in memory
+  default: {requests: 300, period: 1m}
+  exempt_networks: ["10.20.0.0/16"]              # relying parties' servers
+  routes:
+    - name: token
+      paths: ["/oauth/token"]
+      per_address: {requests: 60, period: 1m}
+      per_client: {requests: 600, period: 1m}
+```
+
+Counters in memory suit one instance. With several instances set
+`rate_limit.redis_url` (or pass `Options.RateLimitStorage`): otherwise each
+instance allows the full limit. Outside `--dev` the server warns at startup
+when the counters are in memory and no single instance is declared
+(`rate_limit.single_instance`, or `dpop.single_instance`, which declares the
+same deployment). It warns rather than refuses because per-instance counters
+loosen the limits without bypassing a check, unlike an unshared DPoP replay
+cache. A relying party's server that calls the token endpoint for many users
+from one address belongs in `exempt_networks`, or needs a higher `token`
+limit. The full reference is in
+[Client Addresses and Rate Limiting](../guides/rate-limiting.md).
 
 ## Security headers
 

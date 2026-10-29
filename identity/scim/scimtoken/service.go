@@ -29,6 +29,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
 	entscimtoken "github.com/plexusone/systemforge/identity/ent/scimtoken"
+	"github.com/plexusone/systemforge/session/clientaddr"
 )
 
 // MaxValid is the number of tokens an organization may hold valid at once:
@@ -144,6 +145,12 @@ func WithLogger(l *slog.Logger) Option {
 	}
 }
 
+// WithClientAddress sets how the client address recorded in audit events
+// is found (see clientaddr). Default: the direct peer.
+func WithClientAddress(res *clientaddr.Resolver) Option {
+	return func(s *Service) { s.clientAddr = res }
+}
+
 // WithLastUsedInterval sets how often a token's last use is written at
 // most. Default: DefaultLastUsedInterval.
 func WithLastUsedInterval(d time.Duration) Option {
@@ -171,6 +178,7 @@ type Service struct {
 	logger           *slog.Logger
 	lastUsedInterval time.Duration
 	now              func() time.Time
+	clientAddr       *clientaddr.Resolver
 }
 
 // New returns a Service over client.

@@ -159,7 +159,7 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Parse the authorization request
 	ar, err := s.oauth2.NewAuthorizeRequest(ctx, r)
 	if err != nil {
-		logger.Warn("authorize request failed", "error", err)
+		logger.Warn("authorize request failed", oauthcore.ErrorAttr(ctx, logger, err))
 		s.recordAuthMetrics(ctx, "authorize", "", observability.StatusError, start)
 		s.oauth2.WriteAuthorizeError(ctx, w, ar, err)
 		return
@@ -244,7 +244,7 @@ func (s *Server) authorizeEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Create the authorization response
 	response, err := s.oauth2.NewAuthorizeResponse(ctx, ar, session)
 	if err != nil {
-		logger.Warn("authorize response failed", "error", err)
+		logger.Warn("authorize response failed", oauthcore.ErrorAttr(ctx, logger, err))
 		s.recordAuthMetrics(ctx, "authorize", clientID, observability.StatusError, start)
 		s.oauth2.WriteAuthorizeError(ctx, w, ar, err)
 		return
@@ -271,7 +271,8 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// The body is limited before anything reads it.
 	if err := oauthcore.ParseTokenRequest(w, r); err != nil {
-		logger.Info("token request rejected: unreadable body", "error", err)
+		logger.Info("token request rejected: unreadable body", oauthcore.ErrorAttr(ctx, logger, err))
+		s.tokenRefused(ctx, nil, "", "", "unreadable_request", err)
 		s.recordAuthMetrics(ctx, "", "", observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, nil, err)
 		return
@@ -309,7 +310,8 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 		err = s.checkCodeDPoPBinding(ctx, r, proof)
 	}
 	if err != nil {
-		logger.Info("token request rejected: DPoP proof", "grant_type", grantType, "error", err)
+		logger.Info("token request rejected: DPoP proof", "grant_type", grantType, oauthcore.ErrorAttr(ctx, logger, err))
+		s.tokenRefused(ctx, r, grantType, "", "dpop_proof", err)
 		s.recordAuthMetrics(ctx, grantType, "", observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, nil, err)
 		return
@@ -318,7 +320,8 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Process the token request
 	ar, err := s.oauth2.NewAccessRequest(ctx, r, session)
 	if err != nil {
-		logger.Warn("token request failed", "grant_type", grantType, "error", err)
+		logger.Warn("token request failed", "grant_type", grantType, oauthcore.ErrorAttr(ctx, logger, err))
+		s.tokenRequestFailed(ctx, r, grantType, err)
 		s.recordAuthMetrics(ctx, grantType, "", observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, err)
 		return
@@ -330,6 +333,7 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	// refused once the client is authenticated.
 	if reason, err := s.checkProductionPolicy(ar); err != nil {
 		logger.Warn("token request rejected: production policy", "grant_type", grantType, "client_id", clientID, "reason", reason)
+		s.tokenRefused(ctx, r, grantType, clientID, "production_policy", err)
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, err)
 		return
@@ -339,7 +343,8 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	// unless it is registered with the bearer-token exception; a grant
 	// already bound to a key needs a proof by it.
 	if err := s.bindDPoP(ar, proof); err != nil {
-		logger.Info("token request rejected: DPoP", "grant_type", grantType, "client_id", clientID, "error", err)
+		logger.Info("token request rejected: DPoP", "grant_type", grantType, "client_id", clientID, oauthcore.ErrorAttr(ctx, logger, err))
+		s.tokenRefused(ctx, r, grantType, clientID, "dpop_binding", err)
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, err)
 		return
@@ -348,9 +353,11 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Tokens are not issued or refreshed for a principal that is no longer
 	// active, and its token family is revoked.
 	if err := s.requireActiveSubject(ctx, ar); err != nil {
-		logger.Info("token request rejected", "grant_type", grantType, "client_id", clientID, "error", err)
+		logger.Info("token request rejected", "grant_type", grantType, "client_id", clientID, oauthcore.ErrorAttr(ctx, logger, err))
+		refusal := fosite.ErrInvalidGrant.WithHint("The principal is no longer active.")
+		s.tokenRefused(ctx, r, grantType, clientID, "principal_inactive", refusal)
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
-		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrInvalidGrant.WithHint("The principal is no longer active."))
+		s.oauth2.WriteAccessError(ctx, w, ar, refusal)
 		return
 	}
 
@@ -359,20 +366,24 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	allowed, err := s.clientAllowsSubject(ctx, sessionSubject(ar.GetSession()), clientID)
 	if err != nil {
 		logger.Error("checking managed principal client", "grant_type", grantType, "client_id", clientID, "error", err)
+		s.tokenRefused(ctx, r, grantType, clientID, "server_error", fosite.ErrServerError)
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrServerError.WithWrap(err))
 		return
 	}
 	if !allowed {
 		logger.Info("token request rejected: managed principal refused by client", "grant_type", grantType, "client_id", clientID)
+		refusal := fosite.ErrInvalidGrant.WithHint("This application does not allow managed accounts.")
+		s.tokenRefused(ctx, r, grantType, clientID, "managed_principal_refused", refusal)
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
-		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrInvalidGrant.WithHint("This application does not allow managed accounts."))
+		s.oauth2.WriteAccessError(ctx, w, ar, refusal)
 		return
 	}
 
 	// Bound refresh-token rotation by the family's absolute lifetime.
 	if err := s.applyTokenFamilyLifetime(ctx, ar); err != nil {
-		logger.Info("token request rejected", "grant_type", grantType, "client_id", clientID, "error", err)
+		logger.Info("token request rejected", "grant_type", grantType, "client_id", clientID, oauthcore.ErrorAttr(ctx, logger, err))
+		s.tokenRefused(ctx, r, grantType, clientID, "token_family_lifetime", err)
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, err)
 		return
@@ -384,6 +395,7 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.prepareAccessClaims(ctx, ar); err != nil {
 		logger.Error("reading organizations for the access token", "grant_type", grantType, "client_id", clientID, "error", err)
+		s.tokenRefused(ctx, r, grantType, clientID, "server_error", fosite.ErrServerError)
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, fosite.ErrServerError.WithWrap(err))
 		return
@@ -395,14 +407,16 @@ func (s *Server) tokenEndpoint(w http.ResponseWriter, r *http.Request) {
 		// A concurrent exchange of the same code won at the storage's
 		// conditional update. Fosite reports any invalidation failure as a
 		// server error; this one is the client's replayed code.
-		err = fosite.ErrInvalidGrant.WithHint("The authorization code has already been used.")
+		err = fosite.ErrInvalidGrant.WithHint(codeReusedHint)
+		s.codeReused(ctx, grantType, clientID, false)
 	}
 	if err != nil {
 		logger.Warn("token response failed",
 			"grant_type", grantType,
 			"client_id", clientID,
-			"error", err,
+			oauthcore.ErrorAttr(ctx, logger, err),
 		)
+		s.tokenRefused(ctx, r, grantType, clientID, "response_failed", err)
 		s.recordAuthMetrics(ctx, grantType, clientID, observability.StatusError, start)
 		s.oauth2.WriteAccessError(ctx, w, ar, err)
 		return
@@ -453,6 +467,7 @@ func (s *Server) applyTokenFamilyLifetime(ctx context.Context, ar fosite.AccessR
 		if err := s.storage.RevokeAccessToken(ctx, ar.GetID()); err != nil {
 			return fosite.ErrServerError.WithWrap(err)
 		}
+		s.tokenFamilyRevoked(ctx, ar.GetID(), sessionSubject(sess), requesterClientID(ar), "token_family_lifetime")
 		return fosite.ErrInvalidGrant.WithHint("The refresh token family exceeded its absolute lifetime; sign in again.")
 	}
 	if exp := sess.GetExpiresAt(fosite.RefreshToken); exp.IsZero() || exp.After(deadline) {
@@ -624,6 +639,7 @@ func (s *Server) revocationEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := s.oauth2.NewRevocationRequest(ctx, r)
+	s.tokenRevoked(ctx, r, err)
 	if err != nil {
 		s.oauth2.WriteRevocationResponse(ctx, w, err)
 		return

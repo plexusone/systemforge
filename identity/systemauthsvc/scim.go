@@ -82,7 +82,7 @@ func (s *Service) openSCIM(opts Options) error {
 		authorizer = res.Provider
 	}
 
-	tokOpts := []scimtoken.Option{scimtoken.WithLogger(s.logger), scimtoken.WithAuthorizer(authorizer)}
+	tokOpts := []scimtoken.Option{scimtoken.WithLogger(s.logger), scimtoken.WithAuthorizer(authorizer), scimtoken.WithClientAddress(s.server.ClientAddress())}
 	if opts.AuditEmitter != nil {
 		tokOpts = append(tokOpts, scimtoken.WithAuditEmitter(opts.AuditEmitter))
 	}
@@ -101,13 +101,15 @@ func (s *Service) openSCIM(opts Options) error {
 	}
 	storeCfg.BaseURL = SCIMPath
 	orgs := organization.NewService(s.client,
-		organization.WithAuthzSyncer(res.Syncer), organization.WithSyncMode(res.SyncMode), organization.WithLogger(s.logger))
+		organization.WithAuthzSyncer(res.Syncer), organization.WithSyncMode(res.SyncMode), organization.WithLogger(s.logger),
+		organization.WithAuditEmitter(opts.AuditEmitter))
 	if storeCfg.Memberships == nil {
 		storeCfg.Memberships = orgs
 	}
 	if storeCfg.Principals == nil {
 		storeCfg.Principals = principal.NewService(s.client,
-			principal.WithAuthzSyncer(res.Syncer), principal.WithSyncMode(res.SyncMode), principal.WithLogger(s.logger))
+			principal.WithAuthzSyncer(res.Syncer), principal.WithSyncMode(res.SyncMode), principal.WithLogger(s.logger),
+			principal.WithAuditEmitter(opts.AuditEmitter))
 	}
 	if storeCfg.Syncer == nil {
 		storeCfg.Syncer = res.Syncer

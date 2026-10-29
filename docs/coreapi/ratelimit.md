@@ -137,10 +137,16 @@ The middleware adds standard headers to responses:
 
 | Header | Description |
 |--------|-------------|
+| `RateLimit-Policy` | IETF draft: `"<name>";q=<quota>;w=<window seconds>` per checked limit |
+| `RateLimit` | IETF draft: `"<name>";r=<remaining>;t=<seconds to reset>` per checked limit |
 | `X-RateLimit-Limit` | Maximum requests allowed |
 | `X-RateLimit-Remaining` | Requests remaining in window |
 | `X-RateLimit-Reset` | Unix timestamp when limit resets |
-| `Retry-After` | Seconds to wait (only on 429) |
+| `Retry-After` | Seconds to wait, rounded up and at least 1 (only on 429) |
+
+Name a limiter's policy with `WithName`. For the layered limits (a default
+per client address, route policies, signed-in callers) see
+[Client Addresses and Rate Limiting](../guides/rate-limiting.md).
 
 ## Handling Rate Limit Exceeded
 

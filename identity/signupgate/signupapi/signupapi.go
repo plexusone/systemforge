@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -513,9 +514,34 @@ func (a *api) inviteWaitlist(w http.ResponseWriter, r *http.Request, caller uuid
 	if err != nil {
 		// Individual failures (not listed, already redeemed) are reported,
 		// not treated as a server error.
-		resp["error"] = err.Error()
+		resp["error"] = a.waitlistFailures(r, err)
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// waitlistFailures describes the per-address failures of a waitlist
+// invitation. A known failure keeps its text, which names only the
+// failure and the address; any other error is logged and reported as an
+// internal error, since it may carry database details.
+func (a *api) waitlistFailures(r *http.Request, err error) string {
+	errs := []error{err}
+	var joined interface{ Unwrap() []error }
+	if errors.As(err, &joined) {
+		errs = joined.Unwrap()
+	}
+	msgs := make([]string, 0, len(errs))
+	for _, e := range errs {
+		switch {
+		case errors.Is(e, signupgate.ErrNotFound),
+			errors.Is(e, signupgate.ErrInvalidEmail),
+			errors.Is(e, signupgate.ErrAlreadyRedeemed):
+			msgs = append(msgs, e.Error())
+		default:
+			a.o.Logger.ErrorContext(r.Context(), "signupapi: inviting from the waitlist", "error", e)
+			msgs = append(msgs, "internal error")
+		}
+	}
+	return strings.Join(msgs, "\n")
 }
 
 func (a *api) removeWaitlist(w http.ResponseWriter, r *http.Request, _ uuid.UUID) {

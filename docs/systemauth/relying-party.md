@@ -9,7 +9,7 @@ which provides the whole browser and API surface:
 | `Client` | Discovery, authorization URL (state + nonce + S256 PKCE), code exchange, ID-token verification against the SystemAuth JWKS, UserInfo, refresh, revocation |
 | `ResolvePrincipal` + `PrincipalStore` | Find-or-create the app-local principal keyed by the OIDC `sub` → `sf_principal_id`, with a verified-email linking fallback |
 | `BFF` | `http.Handler` for the `/bff/*` cookie-session surface the shared frontend auth package expects |
-| `BearerMiddleware` | Authenticates programmatic clients (CLI, MCP, services) with SystemAuth JWT access tokens or API keys |
+| `BearerMiddleware` | Authenticates programmatic clients (CLI, MCP, services) with SystemAuth JWT access tokens |
 
 See ADR-002 (`docs/design/adrs/ADR-002-centralized-social-login-systemauth.md`)
 for the design.
@@ -86,7 +86,6 @@ r.Route("/api/v1", func(r chi.Router) {
     r.Use(relyingparty.BearerMiddleware(relyingparty.BearerConfig{
         Tokens:     client,         // SystemAuth JWT access tokens (DPoP-bound)
         DPoP:       &relyingparty.DPoPConfig{ReplayCache: replayCache, BaseURL: "https://app.example.com"},
-        APIKeys:    apiKeyService,  // *apikey.Service
         Principals: principals,
         Sessions:   bff,            // also accept the BFF cookie
     }))
@@ -198,8 +197,8 @@ bff, err := relyingparty.NewBFF(relyingparty.BFFConfig{
 ```
 
 When `Memberships` is unset, `ClaimsMemberships` is used. A request without
-claims, such as one authenticated by an API key, then has no memberships;
-an application that accepts API keys supplies a source for them.
+claims then has no memberships; an application whose principals sign in by
+other means supplies a source for them.
 `Membership.Applications` carries the principal's role in each application;
 an application absent from it is one the principal may not open.
 
@@ -389,10 +388,12 @@ func (s entPrincipals) FindBySubject(ctx context.Context, sub string) (*relyingp
   already be linked to a local principal (the user signed in to the app
   once). Client-credentials tokens (`sub` = `client_id`) are accepted as a
   `client` principal only with `AllowClientTokens`.
-- `Authorization: Bearer <api key>` or `X-API-Key` — validated by an
-  `APIKeyValidator` (`*apikey.Service`); the key's owner is the principal and
-  an organization-scoped key only carries that organization's membership.
 - The BFF session cookie, when `Sessions` is set.
+
+Static API keys are not accepted: an opaque `Bearer` value is an invalid
+token and `X-API-Key` is ignored. Command-line tools sign people in with
+`identity/publicclient`, and automation uses service accounts (see
+[Upgrading: Static API Keys Removed](../guides/app-authentication.md#upgrading-static-api-keys-removed)).
 
 A DPoP-bound access token presented as `Bearer` is always refused, so a
 stolen bound token cannot be replayed as a bearer token.

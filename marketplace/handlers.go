@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/internal/apierror"
 )
 
 // API handles marketplace HTTP endpoints.
@@ -313,7 +315,7 @@ func (a *API) createListing(ctx context.Context, input *CreateListingInput) (*Cr
 	}
 
 	if err := a.listings.Create(ctx, listing); err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, listingError(ctx, "marketplace: creating listing", err)
 	}
 
 	return &CreateListingOutput{Body: listingToResponse(listing)}, nil
@@ -327,10 +329,7 @@ func (a *API) getListing(ctx context.Context, input *GetListingInput) (*GetListi
 
 	listing, err := a.listings.Get(ctx, id)
 	if err != nil {
-		if err == ErrListingNotFound {
-			return nil, huma.Error404NotFound("listing not found")
-		}
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, listingError(ctx, "marketplace: loading listing", err)
 	}
 	// Published listings are public; others are visible to their creator
 	// organization only, and do not exist for anyone else.
@@ -381,13 +380,13 @@ func (a *API) updateListing(ctx context.Context, input *UpdateListingInput) (*Up
 	}
 
 	if err := a.listings.Update(ctx, listing); err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, listingError(ctx, "marketplace: updating listing", err)
 	}
 
 	// Fetch updated listing
 	updated, err := a.listings.Get(ctx, id)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, listingError(ctx, "marketplace: loading listing", err)
 	}
 
 	return &UpdateListingOutput{Body: listingToResponse(updated)}, nil
@@ -400,10 +399,7 @@ func (a *API) deleteListing(ctx context.Context, input *DeleteListingInput) (*st
 	}
 
 	if err := a.listings.Delete(ctx, listing.ID); err != nil {
-		if err == ErrListingNotFound {
-			return nil, huma.Error404NotFound("listing not found")
-		}
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, listingError(ctx, "marketplace: deleting listing", err)
 	}
 
 	return nil, nil
@@ -417,18 +413,12 @@ func (a *API) publishListing(ctx context.Context, input *PublishListingInput) (*
 	id := current.ID
 
 	if err := a.listings.Publish(ctx, id); err != nil {
-		if err == ErrListingNotFound {
-			return nil, huma.Error404NotFound("listing not found")
-		}
-		if errors.Is(err, ErrSellerNotReady) {
-			return nil, huma.Error409Conflict("the organization cannot take payments yet")
-		}
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, listingError(ctx, "marketplace: publishing listing", err)
 	}
 
 	listing, err := a.listings.Get(ctx, id)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, listingError(ctx, "marketplace: loading listing", err)
 	}
 
 	return &PublishListingOutput{Body: listingToResponse(listing)}, nil
@@ -442,18 +432,12 @@ func (a *API) archiveListing(ctx context.Context, input *ArchiveListingInput) (*
 	id := current.ID
 
 	if err := a.listings.Archive(ctx, id); err != nil {
-		if err == ErrListingNotFound {
-			return nil, huma.Error404NotFound("listing not found")
-		}
-		if errors.Is(err, ErrSellerNotReady) {
-			return nil, huma.Error409Conflict("the organization cannot take payments yet")
-		}
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, listingError(ctx, "marketplace: archiving listing", err)
 	}
 
 	listing, err := a.listings.Get(ctx, id)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, listingError(ctx, "marketplace: loading listing", err)
 	}
 
 	return &ArchiveListingOutput{Body: listingToResponse(listing)}, nil
@@ -497,7 +481,7 @@ func (a *API) listListings(ctx context.Context, input *ListListingsInput) (*List
 
 	listings, err := a.listings.List(ctx, opts)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, apierror.Internal(ctx, nil, "marketplace: listing listings", err)
 	}
 
 	responses := make([]*ListingResponse, len(listings))
@@ -688,7 +672,7 @@ func (a *API) listLicenses(ctx context.Context, input *ListLicensesInput) (*List
 
 	licenses, err := a.licenses.List(ctx, orgID)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, apierror.Internal(ctx, nil, "marketplace: listing licenses", err)
 	}
 
 	responses := make([]*LicenseResponse, len(licenses))
@@ -756,7 +740,7 @@ func (a *API) assignSeat(ctx context.Context, input *AssignSeatInput) (*AssignSe
 		if err == ErrSeatAlreadyAssigned {
 			return nil, huma.Error400BadRequest("seat already assigned to this user")
 		}
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, apierror.Internal(ctx, nil, "marketplace: assigning seat", err)
 	}
 
 	return &AssignSeatOutput{Body: seatAssignmentToResponse(assignment)}, nil
@@ -780,7 +764,7 @@ func (a *API) unassignSeat(ctx context.Context, input *UnassignSeatInput) (*stru
 		if err == ErrSeatNotAssigned {
 			return nil, huma.Error404NotFound("seat not assigned")
 		}
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, apierror.Internal(ctx, nil, "marketplace: unassigning seat", err)
 	}
 
 	return nil, nil
@@ -795,7 +779,7 @@ func (a *API) listSeats(ctx context.Context, input *ListSeatsInput) (*ListSeatsO
 
 	assignments, err := a.licenses.ListSeatAssignments(ctx, licenseID)
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, apierror.Internal(ctx, nil, "marketplace: listing seats", err)
 	}
 
 	responses := make([]*SeatAssignmentResponse, len(assignments))
@@ -814,4 +798,29 @@ func (a *API) listSeats(ctx context.Context, input *ListSeatsInput) (*ListSeatsO
 	}
 
 	return output, nil
+}
+
+// listingError maps a listing service error to an API error. The errors a
+// client can act on get fixed messages; anything else is logged and
+// answered with a generic 500, so database text never reaches the client.
+func listingError(ctx context.Context, op string, err error) error {
+	switch {
+	case errors.Is(err, ErrListingNotFound):
+		return huma.Error404NotFound("listing not found")
+	case errors.Is(err, ErrSellerNotReady):
+		return huma.Error409Conflict("the organization cannot take payments yet")
+	case errors.Is(err, ErrInvalidListing):
+		// The field name is the client's own input; the validator's
+		// text is not passed on.
+		var ve *ent.ValidationError
+		if errors.As(err, &ve) && ve.Name != "" {
+			return huma.Error400BadRequest(ErrInvalidListing.Error() + ": " + ve.Name)
+		}
+		return huma.Error400BadRequest(ErrInvalidListing.Error())
+	case errors.Is(err, ErrListingNotDeletable):
+		return huma.Error400BadRequest(ErrListingNotDeletable.Error())
+	case errors.Is(err, ErrInvalidPricingModel):
+		return huma.Error400BadRequest(ErrInvalidPricingModel.Error())
+	}
+	return apierror.Internal(ctx, nil, op, err)
 }

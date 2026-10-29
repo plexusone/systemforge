@@ -220,8 +220,8 @@ fields `token`, `client_id` and optional `return_to`, and:
 1. rate-limits per source address (`DefaultLoginTokenAddressLimit`, 60 per
    minute) and per registered client (`DefaultLoginTokenClientLimit`, 600
    per minute; unregistered client IDs share one bucket), with
-   `WithLoginTokenRateLimit` and `WithLoginTokenClientIP` for shared
-   storage and proxy-aware addressing;
+   `WithLoginTokenRateLimit` (or the server's shared rate limit storage)
+   and the server's `client_address` for proxy-aware addressing;
 2. resolves `return_to` against the redirect allowlist;
 3. requires the client to allow managed principals, verifies the token, and
    requires the principal to be active and managed (an email does not

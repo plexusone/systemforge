@@ -155,6 +155,36 @@ func (m *MemoryStorage) Allow(ctx context.Context, key string, limit Limit) (Res
 	}, nil
 }
 
+// Peek implements Peeker: it reports what Allow would, without counting.
+func (m *MemoryStorage) Peek(ctx context.Context, key string, limit Limit) (Result, error) {
+	m.mu.RLock()
+	if m.closed {
+		m.mu.RUnlock()
+		return Result{}, ErrClosed
+	}
+	window, exists := m.windows[key]
+	m.mu.RUnlock()
+
+	burst := limit.Burst
+	if burst == 0 {
+		burst = limit.Rate
+	}
+	now := time.Now()
+	if !exists {
+		return Result{Allowed: true, Remaining: burst, ResetAt: now.Add(limit.Period)}, nil
+	}
+	window.mu.Lock()
+	defer window.mu.Unlock()
+	windowEnd := window.startTime.Add(limit.Period)
+	if now.After(windowEnd) {
+		return Result{Allowed: true, Remaining: burst, ResetAt: now.Add(limit.Period)}, nil
+	}
+	if window.count < burst {
+		return Result{Allowed: true, Remaining: burst - window.count, ResetAt: windowEnd}, nil
+	}
+	return Result{Allowed: false, ResetAt: windowEnd, RetryAfter: max(windowEnd.Sub(now), 0)}, nil
+}
+
 // Reset implements Storage.Reset.
 func (m *MemoryStorage) Reset(ctx context.Context, key string) error {
 	m.mu.Lock()

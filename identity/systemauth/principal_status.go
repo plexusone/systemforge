@@ -9,6 +9,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	entprincipal "github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 )
 
 // PrincipalStatus tells whether a token's subject may still use it. Every
@@ -102,7 +103,9 @@ func (s *Server) requireActiveSubject(ctx context.Context, ar fosite.Requester) 
 		return nil
 	}
 	if err := s.storage.RevokeRefreshToken(ctx, ar.GetID()); err != nil {
-		LoggerFromContext(ctx).ErrorContext(ctx, "revoking tokens of an inactive principal", "request_id", ar.GetID(), "error", err)
+		LoggerFromContext(ctx).ErrorContext(ctx, "revoking tokens of an inactive principal", "request_id", ar.GetID(), oauthcore.ErrorAttr(ctx, LoggerFromContext(ctx), err))
+	} else {
+		s.tokenFamilyRevoked(ctx, ar.GetID(), sessionSubject(ar.GetSession()), requesterClientID(ar), "principal_inactive")
 	}
 	return fosite.ErrInactiveToken.WithHint("The principal is no longer active.")
 }

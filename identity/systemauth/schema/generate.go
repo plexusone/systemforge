@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
+	"reflect"
 
 	"github.com/invopop/jsonschema"
 	"github.com/plexusone/systemforge/identity/systemauth"
@@ -19,6 +21,15 @@ func main() {
 		DoNotReference:             true,
 		ExpandedStruct:             true,
 		RequiredFromJSONSchemaTags: true,
+		// Types from other packages are named with their package, so one
+		// called Config (clientaddr.Config) cannot stand in for
+		// systemauth.Config.
+		Namer: func(t reflect.Type) string {
+			if t.PkgPath() != reflect.TypeFor[systemauth.Config]().PkgPath() {
+				return path.Base(t.PkgPath()) + "." + t.Name()
+			}
+			return t.Name()
+		},
 	}
 
 	// Generate schema from Config struct

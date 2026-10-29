@@ -5,7 +5,6 @@ import (
 
 	"github.com/plexusone/systemforge/identity/managedprincipal"
 	"github.com/plexusone/systemforge/identity/requestprincipal"
-	"github.com/plexusone/systemforge/session/ratelimit"
 )
 
 // ManagedPrincipalsPath is where SystemAuth serves the managed-principal API
@@ -32,9 +31,7 @@ func (s *Service) openManagedPrincipals(c *Config, opts Options) {
 
 	rates := opts.ManagedPrincipalRates
 	if rates == nil {
-		mem := ratelimit.NewMemoryStorage()
-		s.mpRates = mem
-		rates = mem
+		rates = s.server.RateLimitStorage()
 	}
 	h := managedprincipal.NewHandler(s.mp,
 		managedprincipal.WithRequestClient(managedprincipal.RequestClientFromPrincipal),
@@ -42,7 +39,9 @@ func (s *Service) openManagedPrincipals(c *Config, opts Options) {
 	)
 	auth := requestprincipal.Middleware(requestprincipal.Options{Logger: s.logger},
 		s.server.BearerAuthenticator(managedprincipal.Scope))
-	s.server.Router().Mount(ManagedPrincipalsPath, noStore(auth(h)))
+	// Signed-in callers get the higher limit per principal after
+	// authentication.
+	s.server.Router().Mount(ManagedPrincipalsPath, noStore(auth(s.server.SignedInRateLimit()(h))))
 	s.logger.Info("managed principals enabled", "api", ManagedPrincipalsPath)
 }
 
@@ -60,13 +59,3 @@ func noStore(next http.Handler) http.Handler {
 // A host application in the same process may call it directly instead of
 // the HTTP API; it then supplies the acting principal and client itself.
 func (s *Service) ManagedPrincipals() *managedprincipal.Service { return s.mp }
-
-// closeManagedPrincipals releases the rate-limit storage New created.
-func (s *Service) closeManagedPrincipals() error {
-	if s.mpRates == nil {
-		return nil
-	}
-	err := s.mpRates.Close()
-	s.mpRates = nil
-	return err
-}

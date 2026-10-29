@@ -17,7 +17,7 @@ Two packages make this work:
 
 Human credentials keep working through
 `relyingparty.NewRequestAuthenticator`, which wraps the same SystemAuth access
-tokens, API keys and BFF sessions as `BearerMiddleware` (see
+tokens and BFF sessions as `BearerMiddleware` (see
 [Relying Parties](../systemauth/relying-party.md)).
 
 ## The request principal
@@ -39,9 +39,9 @@ p, ok := requestprincipal.FromContext(r.Context())
 | `Delegator` | — | same as `PrincipalID` |
 | `Mission` | — | `mission_s256` |
 | `Session` | — | the auth token's `jti` |
-| `Protocol` | `session`, `oidc`, `apikey` | `aauth` |
-| `Proof` | credential method, API key ID | token type, issuer, audience, `jti`, key thumbprint, `iat`/`exp`, `Signature-Input` |
-| `Scopes` | token or API key scopes | granted `scope` |
+| `Protocol` | `session`, `oidc` | `aauth` |
+| `Proof` | credential method | token type, issuer, audience, `jti`, key thumbprint, `iat`/`exp`, `Signature-Input` |
+| `Scopes` | access token scopes | granted `scope` |
 | `Native` | `*relyingparty.AuthenticatedPrincipal` | `*aauth.AuthClaims` |
 
 A Person Server's `sub` is *directed*: it is different at each resource and
@@ -117,7 +117,6 @@ if err != nil {
 humans := relyingparty.NewRequestAuthenticator(relyingparty.BearerConfig{
     Tokens:     client,   // *relyingparty.Client
     DPoP:       &relyingparty.DPoPConfig{ReplayCache: replayCache}, // SystemAuth tokens are DPoP-bound
-    APIKeys:    apiKeys,  // *apikey.Service
     Principals: principals,
     Sessions:   bff,      // optional: browser sessions too
 })

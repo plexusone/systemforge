@@ -154,27 +154,28 @@ and no sibling subdomain can read or overwrite it.
 
 ### ClientIPConfig (Cloudflare Support)
 
+Set `Resolver` to the `clientaddr.Resolver` SystemAuth and the
+application's rate limits use, so they all agree on the client address
+([Client Addresses and Rate Limiting](../guides/rate-limiting.md)):
+
 ```go
-// For Cloudflare deployments
-clientIPConfig := bff.CloudflareClientIPConfig()
-// Trusts: CF-Connecting-IP, True-Client-IP, X-Forwarded-For
+// A reverse proxy on the same host that sets X-Forwarded-For
+clientIPConfig := bff.ClientIPConfig{Resolver: clientaddr.MustNew(clientaddr.LoopbackProxy())}
 
-// For custom proxy setup
-clientIPConfig := bff.ClientIPConfig{
-    TrustProxy:     true,
-    TrustedProxies: []string{"10.0.0.0/8", "172.16.0.0/12"},
-}
-
-// Validate Cloudflare IPs (optional, more secure)
-clientIPConfig := bff.ClientIPConfig{
-    TrustCloudflare:    true,
-    CloudflareIPRanges: []string{
+// Requests straight from an edge that sets CF-Connecting-IP
+clientIPConfig := bff.ClientIPConfig{Resolver: clientaddr.MustNew(clientaddr.Config{
+    TrustedProxies: []string{
         "173.245.48.0/20",
         "103.21.244.0/22",
-        // ... see https://www.cloudflare.com/ips/
+        // ... the edge's published networks
     },
-}
+    Header: clientaddr.HeaderCFConnectingIP,
+})}
 ```
+
+The older fields (`TrustCloudflare`, `TrustProxy`, `TrustedProxies`,
+`CloudflareIPRanges`) and `CloudflareClientIPConfig` still work and are
+deprecated.
 
 ## Creating Sessions
 
@@ -377,7 +378,7 @@ When deploying behind Cloudflare:
 handler, _ := bff.NewHandler(bff.HandlerConfig{
     // ... other config ...
 
-    ClientIPConfig: bff.CloudflareClientIPConfig(),
+    ClientIPConfig: bff.ClientIPConfig{Resolver: edgeResolver}, // a clientaddr.Resolver reading CF-Connecting-IP
 })
 ```
 

@@ -12,23 +12,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	"github.com/plexusone/systemforge/identity/apikey"
 )
 
-type fakeAPIKeys map[string]*apikey.APIKey
+// failingMemberships is a membership source whose storage is down.
+type failingMemberships struct{}
 
-func (f fakeAPIKeys) Validate(_ context.Context, key string) (*apikey.APIKey, error) {
-	k, ok := f[key]
-	if !ok {
-		return nil, apikey.ErrKeyNotFound
-	}
-	return k, nil
-}
-
-type failingAPIKeys struct{}
-
-func (failingAPIKeys) Validate(context.Context, string) (*apikey.APIKey, error) {
+func (failingMemberships) Memberships(context.Context, MembershipQuery) ([]Membership, error) {
 	return nil, errors.New("database down")
 }
 
@@ -148,50 +137,33 @@ func TestBearerMiddlewareAudience(t *testing.T) {
 	}
 }
 
-func TestBearerMiddlewareAPIKey(t *testing.T) {
+// TestBearerMiddlewareRefusesAPIKeys checks that static API keys are not a
+// way in (ADR-016): an opaque bearer value is an invalid token, and the
+// X-API-Key header is not a credential.
+func TestBearerMiddlewareRefusesAPIKeys(t *testing.T) {
+	fake := newFakeSystemAuth(t)
 	store := NewMemoryPrincipalStore()
-	p, err := store.AddPrincipal(Principal{Email: "octo@example.com", Active: true, Type: "service"})
-	if err != nil {
+	if _, err := store.AddPrincipal(Principal{Email: "octo@example.com", Active: true, SFPrincipalID: fake.subject}); err != nil {
 		t.Fatal(err)
 	}
-	orgA := uuid.New()
-	for _, org := range []string{orgA.String(), uuid.NewString()} {
-		if err := store.AddMembership(p.ID, Membership{OrganizationID: org, Role: "admin"}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	keyID := uuid.New()
-	keys := fakeAPIKeys{
-		"sf_live_scoped": {ID: keyID, OwnerID: uuid.MustParse(p.ID), OrganizationID: &orgA, Scopes: []string{"things:write"}},
-		"sf_live_orphan": {ID: uuid.New(), OwnerID: uuid.New()},
-	}
-	cfg := BearerConfig{APIKeys: keys, Principals: store, Memberships: LocalMemberships(store)}
+	cfg := BearerConfig{Tokens: fake.client(t), Principals: store, AllowBearerTokens: true}
 
-	for name, decorate := range map[string]func(*http.Request){
-		"bearer":    withBearer("sf_live_scoped"),
-		"x-api-key": func(r *http.Request) { r.Header.Set("X-API-Key", "sf_live_scoped") },
-	} {
-		w, got := runBearer(t, cfg, decorate)
-		if w.Code != http.StatusOK || got.Method != AuthMethodAPIKey || got.ID != p.ID || got.Type != "service" ||
-			got.APIKeyID != keyID.String() || !got.HasScope("things:write") {
-			t.Fatalf("%s: %d %+v", name, w.Code, got)
-		}
-		if len(got.Memberships) != 1 || got.Memberships[0].OrganizationID != orgA.String() {
-			t.Errorf("%s: memberships not scoped to the key's organization: %+v", name, got.Memberships)
-		}
+	w, _ := runBearer(t, cfg, withBearer("sf_live_scoped"))
+	if w.Code != http.StatusUnauthorized || !strings.Contains(w.Header().Get("WWW-Authenticate"), `error="invalid_token"`) {
+		t.Errorf("API key as bearer token: %d %q", w.Code, w.Header().Get("WWW-Authenticate"))
 	}
-	for _, key := range []string{"sf_live_unknown", "sf_live_orphan"} {
-		if w, _ := runBearer(t, cfg, withBearer(key)); w.Code != http.StatusUnauthorized {
-			t.Errorf("%s: %d", key, w.Code)
-		}
-	}
-	// Storage failures are 500s, not authentication failures.
-	if w, _ := runBearer(t, BearerConfig{APIKeys: failingAPIKeys{}, Principals: store}, withBearer("sf_live_x")); w.Code != http.StatusInternalServerError {
-		t.Errorf("validator error: %d", w.Code)
+	w, _ = runBearer(t, cfg, func(r *http.Request) { r.Header.Set("X-API-Key", "sf_live_scoped") })
+	if w.Code != http.StatusUnauthorized || w.Header().Get("WWW-Authenticate") != `Bearer realm="api"` {
+		t.Errorf("X-API-Key: %d %q", w.Code, w.Header().Get("WWW-Authenticate"))
 	}
 	// JWTs are rejected when no verifier is configured.
-	if w, _ := runBearer(t, cfg, withBearer("a.b.c")); w.Code != http.StatusUnauthorized {
+	if w, _ := runBearer(t, BearerConfig{Principals: store}, withBearer("a.b.c")); w.Code != http.StatusUnauthorized {
 		t.Errorf("JWT without verifier: %d", w.Code)
+	}
+	// Storage failures are 500s, not authentication failures.
+	cfg.Memberships = failingMemberships{}
+	if w, _ := runBearer(t, cfg, withBearer(fake.accessJWT(fake.subject, testClientID, nil, time.Minute))); w.Code != http.StatusInternalServerError {
+		t.Errorf("membership storage error: %d", w.Code)
 	}
 }
 

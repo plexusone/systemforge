@@ -134,6 +134,48 @@ func (r *RedisStorage) Allow(ctx context.Context, key string, limit Limit) (Resu
 	}, nil
 }
 
+// peekScript counts a key's live entries without adding one.
+// Returns: [count, oldest_score_or_-1]
+var peekScript = redis.NewScript(`
+local key = KEYS[1]
+local window_ms = tonumber(ARGV[1])
+local now_ms = tonumber(ARGV[2])
+redis.call('ZREMRANGEBYSCORE', key, '-inf', now_ms - window_ms)
+local count = redis.call('ZCARD', key)
+local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
+if oldest and #oldest >= 2 then
+    return {count, tonumber(oldest[2])}
+end
+return {count, -1}
+`)
+
+// Peek implements Peeker: it reports what Allow would, without counting.
+func (r *RedisStorage) Peek(ctx context.Context, key string, limit Limit) (Result, error) {
+	burst := limit.Burst
+	if burst == 0 {
+		burst = limit.Rate
+	}
+	now := time.Now()
+	nowMs := now.UnixMilli()
+	windowMs := limit.Period.Milliseconds()
+	out, err := peekScript.Run(ctx, r.client, []string{r.keyPrefix + key}, windowMs, nowMs).Int64Slice()
+	if err != nil {
+		return Result{}, fmt.Errorf("%w: %v", ErrStorageFailure, err)
+	}
+	if len(out) != 2 {
+		return Result{}, fmt.Errorf("%w: unexpected result length", ErrStorageFailure)
+	}
+	count := int(out[0])
+	resetAt := now.Add(limit.Period)
+	if out[1] >= 0 {
+		resetAt = time.UnixMilli(out[1] + windowMs)
+	}
+	if count < burst {
+		return Result{Allowed: true, Remaining: burst - count, ResetAt: resetAt}, nil
+	}
+	return Result{Allowed: false, ResetAt: resetAt, RetryAfter: max(resetAt.Sub(now), 0)}, nil
+}
+
 // newWindowMember returns a sliding-window ZSET member that is unique to
 // one request: the timestamp keeps members readable, and 128 random bits
 // keep concurrent requests in the same millisecond distinct.

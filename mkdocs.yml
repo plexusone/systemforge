@@ -67,6 +67,7 @@ nav:
     - Browser Cookies: guides/cookies.md
     - Calling APIs with DPoP: guides/dpop-clients.md
     - Rotating Keys and Secrets: guides/rotation.md
+    - Client Addresses and Rate Limiting: guides/rate-limiting.md
   - Identity:
     - Overview: identity/overview.md
     - Users: identity/users.md
@@ -114,6 +115,8 @@ nav:
   - Security:
     - Security Policy: https://github.com/plexusone/systemforge/blob/main/SECURITY.md
     - Production Checklist: security/production-checklist.md
+    - Threat Model: security/threat-model.md
+    - Security Events: security/security-events.md
   - Architecture:
     - Application Architecture: architecture/systemforge-application-architecture.md
   - Multi-App:
@@ -162,6 +165,7 @@ nav:
   - Releases:
     - Overview: releases/index.md
     - Changelog: releases/changelog.md
+    - v0.28.0: releases/v0.28.0.md
     - v0.27.0: releases/v0.27.0.md
     - v0.26.0: releases/v0.26.0.md
     - v0.25.0: releases/v0.25.0.md

@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/accesschange"
 	"github.com/plexusone/systemforge/identity/approle"
 	"github.com/plexusone/systemforge/identity/credential"
@@ -121,6 +122,9 @@ type Config struct {
 	AccessChangeSink accesschange.Sink
 	// Logger records operator actions. Default: slog.Default().
 	Logger *slog.Logger
+	// Audit records security events (EventServiceAccount) for account,
+	// key and role changes. Optional.
+	Audit audit.Emitter
 }
 
 // Service manages service accounts.
@@ -131,6 +135,7 @@ type Service struct {
 	roles       *approle.Service
 	accessSink  accesschange.Sink
 	logger      *slog.Logger
+	audit       audit.Emitter
 	now         func() time.Time
 }
 
@@ -151,6 +156,7 @@ func New(cfg Config) (*Service, error) {
 		roles:       cfg.Roles,
 		accessSink:  cfg.AccessChangeSink,
 		logger:      cfg.Logger,
+		audit:       cfg.Audit,
 		now:         time.Now,
 	}
 	if s.credentials == nil {

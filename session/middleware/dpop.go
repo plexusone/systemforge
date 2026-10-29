@@ -130,7 +130,7 @@ func (a *DPoPAuth) Middleware(audiences ...string) func(http.Handler) http.Handl
 				for _, c := range a.challenges() {
 					w.Header().Add("WWW-Authenticate", c)
 				}
-				writeUnauthorized(w, err.Error())
+				writeUnauthorized(w, unauthorizedMessage(r, err))
 				return
 			}
 			next.ServeHTTP(w, r.WithContext(ContextWithClaims(r.Context(), claims)))

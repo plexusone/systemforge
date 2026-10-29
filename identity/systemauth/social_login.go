@@ -18,6 +18,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/oauthclient"
 	"github.com/plexusone/systemforge/session/ratelimit"
@@ -146,6 +147,10 @@ type socialLogin struct {
 	signupCodes SignupCodeLookup
 	signupPage  SignupPage
 
+	// limit checks a handler limit per client address on the server's
+	// rate limit storage; false means it answered the request.
+	limit func(w http.ResponseWriter, r *http.Request, name string, limit ratelimit.Limit) bool
+
 	// loginTokens exchanges managed principals' login tokens for
 	// sessions; nil when managed principals are off.
 	loginTokens *loginTokenExchange
@@ -159,6 +164,9 @@ type socialLogin struct {
 	// revoker revokes a principal's tokens on logout; nil when the storage
 	// does not support it.
 	revoker SubjectTokenRevoker
+
+	// emit records security events (Server.emitEvent).
+	emit func(context.Context, *audit.Event)
 }
 
 func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
@@ -206,6 +214,7 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 	sort.Strings(providers)
 
 	sl := &socialLogin{
+		emit:       s.emitEvent,
 		cfg:        cfg,
 		connectors: connectors,
 		providers:  providers,
@@ -218,6 +227,7 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 		now:        time.Now,
 		clients:    s.storage,
 		oauth2:     s.oauth2,
+		limit:      s.limitRequest,
 	}
 	if cfg.InsecureCookies {
 		s.logger.Warn("systemauth: InsecureCookies is set; login, state and sign-up cookies are not Secure. Use it for local development over plain HTTP only")
@@ -284,12 +294,9 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 	}
 	if s.socialOpts.waitlist != nil || s.socialOpts.signupCodes != nil {
 		sl.waitlist, sl.waitlistPage = s.socialOpts.waitlist, s.socialOpts.waitlistPage
-		sl.waitlistRates, sl.waitlistClientIP = s.socialOpts.loginTokenRate, s.socialOpts.loginTokenClientIP
+		sl.waitlistRates, sl.waitlistClientIP = s.socialOpts.loginTokenRate, s.clientIP
 		if sl.waitlistRates == nil {
-			sl.waitlistRates = ratelimit.NewMemoryStorage()
-		}
-		if sl.waitlistClientIP == nil {
-			sl.waitlistClientIP = ratelimit.PeerIP
+			sl.waitlistRates = s.rates
 		}
 	}
 	if err := validateSignupMinimumAge(cfg.SignupMinimumAge); err != nil {
@@ -399,6 +406,9 @@ func (sl *socialLogin) handleStart(w http.ResponseWriter, r *http.Request) {
 	logger := LoggerFromContext(ctx)
 	noStore(w)
 
+	if !sl.limit(w, r, "social_login_start", DefaultSocialLoginLimit) {
+		return
+	}
 	provider := chi.URLParam(r, "provider")
 	conn, ok := sl.connectors[provider]
 	if !ok {
@@ -446,6 +456,9 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	logger := LoggerFromContext(ctx)
 	noStore(w)
 
+	if !sl.limit(w, r, "social_login_callback", DefaultSocialLoginLimit) {
+		return
+	}
 	provider := chi.URLParam(r, "provider")
 	conn, ok := sl.connectors[provider]
 	if !ok {
@@ -459,6 +472,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	if upstreamErr := q.Get("error"); upstreamErr != "" {
 		logger.Info("upstream login denied", "provider", provider, "error", upstreamErr)
+		sl.signInRefused(ctx, provider, "", "upstream_denied")
 		http.Error(w, "login was cancelled or denied", http.StatusBadRequest)
 		return
 	}
@@ -468,6 +482,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	state := q.Get("state")
 	if state == "" || stateCookie == "" ||
 		subtle.ConstantTimeCompare([]byte(state), []byte(stateCookie)) != 1 {
+		sl.signInRefused(ctx, provider, "", "invalid_state")
 		http.Error(w, "invalid login state", http.StatusBadRequest)
 		return
 	}
@@ -476,17 +491,20 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		if !errors.Is(err, oauthclient.ErrInvalidState) {
 			logger.Error("reading login state", "error", err)
 		}
+		sl.signInRefused(ctx, provider, "", "invalid_state")
 		http.Error(w, "invalid login state", http.StatusBadRequest)
 		return
 	}
 	// Entries the age question keeps share the store; they are never
 	// upstream state.
 	if data.Provider != provider || data.Nonce == signupAgePending || data.Nonce == signupAgeConfirmed {
+		sl.signInRefused(ctx, provider, "", "invalid_state")
 		http.Error(w, "invalid login state", http.StatusBadRequest)
 		return
 	}
 	code := q.Get("code")
 	if code == "" {
+		sl.signInRefused(ctx, provider, "", "missing_code")
 		http.Error(w, "missing authorization code", http.StatusBadRequest)
 		return
 	}
@@ -494,12 +512,14 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	token, err := conn.Exchange(ctx, code, oauth2.VerifierOption(data.PKCEVerifier))
 	if err != nil {
 		logger.Warn("upstream code exchange failed", "provider", provider, "error", err)
+		sl.signInRefused(ctx, provider, "", "upstream_exchange_failed")
 		http.Error(w, "upstream login failed", http.StatusBadGateway)
 		return
 	}
 	user, err := conn.FetchUser(ctx, token)
 	if err != nil {
 		logger.Warn("upstream profile fetch failed", "provider", provider, "error", err)
+		sl.signInRefused(ctx, provider, "", "upstream_profile_failed")
 		http.Error(w, "upstream login failed", http.StatusBadGateway)
 		return
 	}
@@ -520,6 +540,9 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	}, sl.now())
 	if err != nil {
 		status, msg := http.StatusInternalServerError, "login failed"
+		if reason := signInRefusalReason(err); reason != "" {
+			sl.signInRefused(ctx, provider, "", reason)
+		}
 		switch {
 		case errors.Is(err, ErrEmailNotVerified):
 			status, msg = http.StatusForbidden, "a verified email address is required to sign in"
@@ -568,11 +591,13 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	if err := sl.establishSession(ctx, w, r, p.ID, provider); err != nil {
 		logger.Error("creating login session", "error", err)
+		sl.signInRefused(ctx, provider, "", "server_error")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	logger.Info("social login succeeded", "provider", provider, "principal_id", p.ID)
+	sl.signedIn(ctx, p.ID, provider, "")
 	http.Redirect(w, r, target, http.StatusFound)
 }
 

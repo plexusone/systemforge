@@ -35,6 +35,18 @@ var (
 	ErrNotPersonal = errors.New("organization is not a personal organization")
 	// ErrOrganizationNotFound is returned when an organization does not exist.
 	ErrOrganizationNotFound = errors.New("organization not found")
+	// ErrOwnerRequired is returned when a personal organization is created
+	// without an owner.
+	ErrOwnerRequired = errors.New("personal organizations require an owner principal ID")
+	// ErrAlreadyMember is returned when adding a principal that is already
+	// a member of the organization.
+	ErrAlreadyMember = errors.New("principal is already a member of this organization")
+	// ErrNewOwnerNotMember is returned when ownership is transferred to a
+	// principal that is not a member of the organization.
+	ErrNewOwnerNotMember = errors.New("new owner must be an existing member")
+	// ErrInvalidOwnerRole is returned when a transfer of ownership names a
+	// role for the previous owner other than admin or member.
+	ErrInvalidOwnerRole = errors.New("new role for previous owner must be 'admin' or 'member'")
 )
 
 // WithSlugCoolingOff sets how long a released slug stays reserved

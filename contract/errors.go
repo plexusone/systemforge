@@ -2,8 +2,11 @@ package contract
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/plexusone/systemforge/internal/apierror"
 )
 
 // Error codes as defined in the product contract specification.
@@ -125,11 +128,14 @@ func WriteError(w http.ResponseWriter, err *Error) {
 }
 
 // ToContractError converts a standard error to a contract error.
-// If the error is already a contract error, it is returned as-is.
-// Otherwise, a 500 Internal Server Error is returned.
+// If the error is, or wraps, a contract error, that error is returned.
+// Otherwise, a 500 Internal Server Error is returned whose message does not
+// carry the error's text, which may hold database or provider details;
+// log the error before converting it.
 func ToContractError(err error) *Error {
-	if contractErr, ok := err.(*Error); ok {
+	var contractErr *Error
+	if errors.As(err, &contractErr) {
 		return contractErr
 	}
-	return ErrInternal(err.Error())
+	return ErrInternal(apierror.InternalMessage)
 }

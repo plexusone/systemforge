@@ -92,6 +92,7 @@ func (sl *socialLogin) endSession(w http.ResponseWriter, r *http.Request) error 
 				return fmt.Errorf("revoking tokens of %s: %w", sess.PrincipalID, err)
 			}
 			LoggerFromContext(ctx).Info("logout", "principal_id", sess.PrincipalID)
+			sl.signedOut(ctx, sess)
 		case errors.Is(err, ErrLoginSessionNotFound):
 			// Already signed out or expired; still clear the cookie.
 		default:

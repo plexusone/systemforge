@@ -51,7 +51,10 @@ func (a *API) Middleware() func(http.Handler) http.Handler {
 			// Validate token
 			claims, err := a.validateToken(tokenString)
 			if err != nil {
-				WriteError(w, ErrUnauthorized("invalid token: "+err.Error()))
+				// The reason (expired, bad signature, wrong issuer...) is
+				// logged; the client learns only that the token was refused.
+				LoggerFromContext(r.Context()).InfoContext(r.Context(), "contract: token rejected", "error", err)
+				WriteError(w, ErrUnauthorized("invalid token"))
 				return
 			}
 

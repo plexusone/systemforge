@@ -5,14 +5,13 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"net"
 	"net/http"
-	"net/netip"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/identity/apikey"
 	"github.com/plexusone/systemforge/observability"
+	"github.com/plexusone/systemforge/session/clientaddr"
 )
 
 const (
@@ -128,8 +127,9 @@ type APIKeyMiddlewareConfig struct {
 	// OnSuccess is called after successful authentication.
 	OnSuccess func(r *http.Request, key *apikey.APIKey)
 
-	// IPExtractor extracts the client IP from the request.
-	// If nil, uses r.RemoteAddr.
+	// IPExtractor extracts the client IP from the request, such as a
+	// clientaddr.Resolver's ClientIP method behind a reverse proxy.
+	// If nil, uses the direct peer (clientaddr.PeerIP).
 	IPExtractor func(r *http.Request) string
 
 	// Observability is the observability provider for metrics.
@@ -318,20 +318,13 @@ func extractAPIKey(r *http.Request, config APIKeyMiddlewareConfig) string {
 // extractIP returns the address recorded for an API key use: the
 // configured IPExtractor's, or the direct peer's. Forwarding headers are
 // never read here, since any caller can set them and they would otherwise
-// forge the usage record; behind a proxy supply an IPExtractor such as
-// ratelimit.ForwardedClientIP.
+// forge the usage record; behind a proxy supply an IPExtractor such as a
+// clientaddr.Resolver's ClientIP.
 func extractIP(r *http.Request, config APIKeyMiddlewareConfig) string {
 	if config.IPExtractor != nil {
 		return config.IPExtractor(r)
 	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		host = r.RemoteAddr
-	}
-	if addr, err := netip.ParseAddr(strings.TrimSpace(host)); err == nil {
-		return addr.Unmap().String()
-	}
-	return ""
+	return clientaddr.PeerIP(r)
 }
 
 // handleAPIKeyError handles API key authentication errors.

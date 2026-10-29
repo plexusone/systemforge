@@ -149,8 +149,13 @@ type Options struct {
 	// used when the configuration enables connections. Optional.
 	Providers *provider.Registry
 
-	// AuditEmitter records the managed-principal API's actions when the
-	// configuration enables managed principals. Optional.
+	// AuditEmitter records security events: SystemAuth's sign-ins,
+	// sign-outs, refused token requests, token replay and revocations, the
+	// signing key and production waivers in effect at startup, membership
+	// and platform-administration changes made through the service, the
+	// managed-principal API's actions, and SCIM token changes. See
+	// docs/security/security-events.md. audit.NewLogEmitter writes them to
+	// a log. Optional: without it they are not recorded.
 	AuditEmitter audit.Emitter
 
 	// AuditStore records key lifecycle and connection events when the
@@ -158,10 +163,16 @@ type Options struct {
 	AuditStore audit.Store
 
 	// ManagedPrincipalRates stores the per-caller limit on redeeming claim
-	// codes and answering manager invitations. Default: in-memory storage,
-	// which suits one instance; pass shared storage, such as Redis, when
-	// several instances serve SystemAuth.
+	// codes and answering manager invitations. Default: the storage every
+	// SystemAuth rate limit shares (RateLimitStorage).
 	ManagedPrincipalRates ratelimit.Storage
+
+	// RateLimitStorage is the storage every rate limit shares: the
+	// default layer, the route policies, the signed-in limit and the
+	// handler limits. Default: Redis when the configuration sets
+	// rate_limit.redis_url, otherwise in memory, which suits one instance;
+	// when several instances serve SystemAuth they must share it.
+	RateLimitStorage ratelimit.Storage
 
 	// DPoPReplayCache rejects replayed DPoP proofs. Default: a Redis cache
 	// when the configuration sets dpop.replay_cache_redis_url, otherwise
@@ -219,10 +230,8 @@ type Service struct {
 	// console is set when the organization console is enabled.
 	console *console.Console
 
-	// mp is set when managed principals are enabled; mpRates is the
-	// rate-limit storage New created for it, if any.
-	mp      *managedprincipal.Service
-	mpRates ratelimit.Storage
+	// mp is set when managed principals are enabled.
+	mp *managedprincipal.Service
 
 	// member, audit and signupURL configure invite codes and the invite
 	// API (Options.SignupCodes, Options.SignupAPI).
@@ -235,6 +244,9 @@ type Service struct {
 	// dpopRedis is the Redis client of the DPoP replay cache, when New
 	// opened one.
 	dpopRedis *redis.Client
+	// rateRedis is the Redis client of the rate limit storage, when New
+	// opened one.
+	rateRedis *redis.Client
 }
 
 // New builds a SystemAuth server from cfg. Unless opts.Dev is set it
@@ -299,6 +311,9 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 
 	syncer, syncMode := s.authzSyncer()
 	serverOpts := []systemauth.Option{systemauth.WithLogger(logger), systemauth.WithSocialAuthzSyncer(syncer, syncMode)}
+	if opts.AuditEmitter != nil {
+		serverOpts = append(serverOpts, systemauth.WithAuditEmitter(opts.AuditEmitter))
+	}
 	if s.client != nil {
 		if opts.Migrate {
 			logger.Info("running database migrations")
@@ -396,7 +411,13 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		return nil, err
 	}
 	serverOpts = append(serverOpts, dpopOpts...)
-	serverOpts = append(serverOpts, productionPolicy(&c, opts, logger)...)
+	rateOpts, err := s.rateLimitStorage(&c, opts, logger)
+	if err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
+	serverOpts = append(serverOpts, rateOpts...)
+	serverOpts = append(serverOpts, productionPolicy(ctx, &c, opts, logger)...)
 	serverOpts = append(serverOpts, opts.ServerOptions...)
 
 	server, err := systemauth.NewEmbedded(c, serverOpts...)
@@ -589,7 +610,7 @@ func (s *Service) Ready(ctx context.Context) error {
 // Close releases the database New opened. Injected handles (Options.DB,
 // Options.EntClient) are left to their owner.
 func (s *Service) Close() error {
-	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeManagedPrincipals(), s.closeDPoP(), s.closeAuthz())
+	err := errors.Join(s.closeConsole(), s.closeConnections(), s.closeDPoP(), s.closeRateLimits(), s.closeAuthz())
 	if s.owned == nil {
 		return err
 	}
