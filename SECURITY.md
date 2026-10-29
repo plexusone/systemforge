@@ -54,10 +54,10 @@ releases. To get a fix, upgrade to the release that contains it.
 | Latest release | Yes |
 | Older releases | No: upgrade to the latest release |
 
-SystemForge is pre-1.0: a minor release may include breaking changes. Each
-release that breaks an API or a configuration ships with an upgrade guide in
-its [release notes](docs/releases/index.md), so upgrading for a fix is a
-documented step rather than a guess.
+A security release includes a breaking change only when the fix requires
+one, and every change ships with an upgrade guide. The
+[security support policy](docs/security/support-policy.md) explains what a
+security release contains and how upgrades are kept easy.
 
 ## Disclosure
 
