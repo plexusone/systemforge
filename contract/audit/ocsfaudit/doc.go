@@ -29,7 +29,8 @@
 // one with Sync (*os.File); it does not close the writer.
 //
 // The package does not rotate files. Rotate by renaming, with a writer
-// that reopens its file on a signal; copytruncate can lose the events
+// that reopens its file on a signal, and have the rotation wait for the
+// reopen (with delaycompress when compressing); copytruncate can lose the events
 // written between its copy and its truncation.
 //
 // # Event classes

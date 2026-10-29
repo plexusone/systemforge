@@ -71,10 +71,18 @@ stuck log destination cannot hold up a request.
   result; an event emitted after `Close` is dropped and counted.
 
 The package does not rotate files. Rotate by renaming: logrotate's default
-`create` mode, with a writer that reopens its file on `SIGHUP` from
-`postrotate`, loses nothing. Avoid `copytruncate`: an event written after
-logrotate copies the file and before it truncates it is in neither file,
-and the emitter cannot see or count that loss.
+`create` mode, with a writer that reopens its file when signalled from
+`postrotate`. Until the process has reopened the file, events still go to
+the renamed one, so:
+
+- make `postrotate` wait until the process confirms it has reopened the
+  file, not only send the signal; and
+- with `compress`, add `delaycompress`, so the renamed file is compressed
+  at the next rotation, after every late event has reached it.
+
+Avoid `copytruncate`: an event written after logrotate copies the file and
+before it truncates it is in neither file, and the emitter cannot see or
+count that loss.
 
 ## Event classes
 
@@ -146,7 +154,7 @@ Notes on the choices:
 | `actor.application` | The OAuth client (`uid`: client ID), or the SystemForge component (`name`) |
 | `user.uid` | The principal the event is about (Authentication, User Management) |
 | `src_endpoint.ip` | The client address |
-| `http_request.user_agent` | The client's `User-Agent`, sanitized: left out when it holds an email address or a credential-like value, otherwise cut to 512 bytes |
+| `http_request.user_agent` | The client's `User-Agent`, sanitized: control characters removed, left out when it then looks like it holds an email address or a credential, otherwise cut to 512 bytes |
 | `status_id`, `status` | `success` → Success, `failure` → Failure |
 | `status_detail` | SystemForge's reason code (sign-in, token and SCIM refusals, revocations) |
 | `status_code` | The RFC 6749 error code of a refused token request |
@@ -179,10 +187,13 @@ Only IDs and addresses identify people.
   token. A revoked managed-principal session
   (`managed_principal.session_revoked`) is named in `session.uid` by its
   record ID, a UUID that is no credential; no session token appears.
-- The `User-Agent` is sent by the client, so it can carry anything. It is
-  left out when it holds an email address or a credential-like run of
-  token characters (`audit.SanitizeUserAgent`); the log emitter applies
-  the same rule.
+- The `User-Agent` is sent by the client, so it can carry anything. After
+  control characters are removed, it is left out when it looks like it
+  holds an email address or a credential-like run of token characters
+  (`audit.SanitizeUserAgent`); the log emitter applies the same rule. This
+  is a heuristic: it catches the common shapes, not every piece of
+  personal data or every short secret a client could send. A deployment
+  that cannot accept that leaves the `User-Agent` out of its events.
 - Details are copied only from an allowlist per event type, and a value is
   copied only when it has the expected shape: a code (letters, digits and
   `_ . : / + = -`, no spaces, no `@`), a UUID, a boolean, an integer or a

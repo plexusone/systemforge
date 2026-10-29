@@ -89,7 +89,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 
 - 🛡️ **Security Events** - `contract/audit` records sign-ins, refusals, sign-outs, token replay, revocations, membership and role changes, service accounts, key events and production waivers, each with the request ID and client address, through one `audit.Emitter` interface
 - 📤 **OCSF Output** - `contract/audit/ocsfaudit` writes every security event as an [OCSF](https://schema.ocsf.io/) 1.10 event, one JSON line per event, for a security data lake or SIEM that ingests OCSF; the output of every event type is validated against the OCSF schema in tests
-- 🙈 **No Personal Data in Events** - People are identified only by principal ID and client address: no names, email addresses, tokens or codes in any event field, proven by tests over every emitter
+- 🙈 **No Personal Data in OCSF Events** - The OCSF emitter identifies people only by principal ID and client address: no names, email addresses, tokens or codes in any field, proven by tests over every event type. No emitter records a token or secret; the log emitter, meant for operators' own logs, also records actor and resource identifiers such as an invitee's email address
 - 🔀 **Several Destinations** - `audit.NewMultiEmitter` keeps the structured log of security events and writes OCSF at the same time; the OCSF emitter never blocks a request and counts what it drops
 - 🧭 **Threat Model and Checklist** - A [threat model](docs/security/threat-model.md) and a [production checklist](docs/security/production-checklist.md) for operators
 
