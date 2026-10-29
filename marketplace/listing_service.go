@@ -62,6 +62,9 @@ func (s *EntListingService) Create(ctx context.Context, l *Listing) error {
 
 	created, err := builder.Save(ctx)
 	if err != nil {
+		if ent.IsValidationError(err) {
+			return fmt.Errorf("%w: %w", ErrInvalidListing, err)
+		}
 		return fmt.Errorf("failed to create listing: %w", err)
 	}
 
@@ -135,6 +138,9 @@ func (s *EntListingService) Update(ctx context.Context, l *Listing) error {
 		if ent.IsNotFound(err) {
 			return ErrListingNotFound
 		}
+		if ent.IsValidationError(err) {
+			return fmt.Errorf("%w: %w", ErrInvalidListing, err)
+		}
 		return fmt.Errorf("failed to update listing: %w", err)
 	}
 	return nil
@@ -152,7 +158,7 @@ func (s *EntListingService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if l.Status != listing.StatusDraft && l.Status != listing.StatusArchived {
-		return fmt.Errorf("cannot delete listing with status %s", l.Status)
+		return fmt.Errorf("%w: status is %s", ErrListingNotDeletable, l.Status)
 	}
 
 	err = s.client.Listing.DeleteOneID(id).Exec(ctx)

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/internal/apierror"
 )
 
 // WithAuthorizer sets the authorizer the API checks organization
@@ -92,7 +93,7 @@ func (a *API) listingFor(ctx context.Context, rawID string, action authz.Action)
 		return nil, huma.Error404NotFound("listing not found")
 	}
 	if err != nil {
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, apierror.Internal(ctx, nil, "marketplace: loading listing", err)
 	}
 	if _, err := a.requireOrg(ctx, listing.CreatorOrgID, action); err != nil {
 		return nil, err
@@ -113,7 +114,7 @@ func (a *API) licenseFor(ctx context.Context, rawID string, action authz.Action)
 		return nil, uuid.Nil, huma.Error404NotFound("license not found")
 	}
 	if err != nil {
-		return nil, uuid.Nil, huma.Error500InternalServerError(err.Error())
+		return nil, uuid.Nil, apierror.Internal(ctx, nil, "marketplace: loading license", err)
 	}
 	caller, err := a.requireOrg(ctx, license.OrganizationID, action)
 	if err != nil {
