@@ -552,7 +552,7 @@ func (s *Server) Middleware() func(http.Handler) http.Handler {
 			// a proof by its key for this request.
 			ar, authErr := s.authenticateAccessToken(r, s.requestURL(r))
 			if authErr != nil {
-				logger.Debug("access token refused", "path", r.URL.Path, oauthcore.ErrorAttr(ctx, logger, authErr))
+				logger.Debug("access token refused", "route", routePattern(r), oauthcore.ErrorAttr(ctx, logger, authErr))
 				s.writeTokenAuthError(w, authErr)
 				return
 			}
@@ -607,4 +607,16 @@ func AccessRequestFromContext(ctx context.Context) fosite.AccessRequester {
 		return ar
 	}
 	return nil
+}
+
+// routePattern is the route r matched, for logs: chi's pattern when chi
+// routed it, otherwise the net/http pattern. Logs record it rather than the
+// request path, which the client chooses.
+func routePattern(r *http.Request) string {
+	if rc := chi.RouteContext(r.Context()); rc != nil {
+		if p := rc.RoutePattern(); p != "" {
+			return p
+		}
+	}
+	return r.Pattern
 }

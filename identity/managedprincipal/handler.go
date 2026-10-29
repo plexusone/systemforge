@@ -264,7 +264,7 @@ func (h *handler) failUnmapped(w http.ResponseWriter, r *http.Request, err error
 		writeError(w, http.StatusConflict, msg)
 		return
 	}
-	h.svc.logger.ErrorContext(r.Context(), "managedprincipal: request failed", "path", r.URL.Path, "error", err)
+	h.svc.logger.ErrorContext(r.Context(), "managedprincipal: request failed", "route", chi.RouteContext(r.Context()).RoutePattern(), "error", err)
 	writeError(w, http.StatusInternalServerError, "internal error")
 }
 
