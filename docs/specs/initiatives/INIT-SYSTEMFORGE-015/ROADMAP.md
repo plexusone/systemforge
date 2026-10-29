@@ -45,19 +45,19 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 **Theme:** Abuse is slowed, incidents are traceable and the risks are written down
 
-- [ ] `RMI-SYSTEMFORGE-213` One client-address rule, configured with trusted proxy networks and the header to read, used by SystemAuth, the BFF, `appauth` and rate limits
-- [ ] `RMI-SYSTEMFORGE-214` Rate limiting in layers: a default per-IP limit, route policies for the token, login and sign-up paths, limits for signed-in callers, and `RateLimit-*` headers
+- [x] `RMI-SYSTEMFORGE-213` One client-address rule, configured with trusted proxy networks and the header to read, used by SystemAuth, the BFF, `appauth` and rate limits
+- [x] `RMI-SYSTEMFORGE-214` Rate limiting in layers: a default per-IP limit, route policies for the token, login and sign-up paths, limits for signed-in callers, and `RateLimit-*` headers
   - Depends on: `RMI-SYSTEMFORGE-213`
-- [ ] `RMI-SYSTEMFORGE-215` Logs fit for incidents: no stack traces for client errors, no tokens or secrets (with a test), and a structured security-event log through `contract/audit`
-- [ ] `RMI-SYSTEMFORGE-216` No internal error text in API responses: known errors map to fixed messages, the rest are logged
-- [ ] `RMI-SYSTEMFORGE-217` The threat model, and removal of API keys from `appauth` and `relyingparty`
+- [x] `RMI-SYSTEMFORGE-215` Logs fit for incidents: no stack traces for client errors, no tokens or secrets (with a test), and a structured security-event log through `contract/audit`
+- [x] `RMI-SYSTEMFORGE-216` No internal error text in API responses: known errors map to fixed messages, the rest are logged
+- [x] `RMI-SYSTEMFORGE-217` The threat model, and removal of API keys from `appauth` and `relyingparty`
 
 ## Phase 5 — Remaining Review Findings and Release
 
 **Theme:** The smaller findings from the launch review are closed
 
-- [ ] `RMI-SYSTEMFORGE-218` The BFF session cookie refuses `SameSite=None`, so a configuration cannot weaken the origin check
-- [ ] `RMI-SYSTEMFORGE-219` `EmbeddedOAuthProvider.Revoke` revokes the token it is given, or reports why it cannot
-- [ ] `RMI-SYSTEMFORGE-220` Every HTTP server systemforge builds sets `ReadHeaderTimeout`
-- [ ] `RMI-SYSTEMFORGE-221` v0.28.0 release notes, changelog and upgrade guide
+- [x] `RMI-SYSTEMFORGE-218` The BFF session cookie refuses `SameSite=None`, so a configuration cannot weaken the origin check
+- [x] `RMI-SYSTEMFORGE-219` `EmbeddedOAuthProvider.Revoke` revokes the token it is given, or reports why it cannot
+- [x] `RMI-SYSTEMFORGE-220` Every HTTP server systemforge builds sets `ReadHeaderTimeout`
+- [x] `RMI-SYSTEMFORGE-221` v0.28.0 release notes, changelog and upgrade guide
   - Depends on: `RMI-SYSTEMFORGE-213`, `RMI-SYSTEMFORGE-214`, `RMI-SYSTEMFORGE-215`, `RMI-SYSTEMFORGE-216`, `RMI-SYSTEMFORGE-217`, `RMI-SYSTEMFORGE-218`, `RMI-SYSTEMFORGE-219`, `RMI-SYSTEMFORGE-220`
