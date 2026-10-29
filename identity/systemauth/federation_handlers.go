@@ -180,7 +180,7 @@ func (f *FederationEndpoints) identitySyncHandler(w http.ResponseWriter, r *http
 		f.server.logger.Error("identity sync failed", "error", err)
 		errorResp := IdentitySyncResponse{
 			Status: "failed",
-			Error:  err.Error(),
+			Error:  "identity sync failed",
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -260,8 +260,17 @@ func (h *DefaultIdentitySyncHandler) SyncIdentity(ctx context.Context, req *Iden
 	}
 }
 
-func syncFailed(err error) *IdentitySyncResponse {
-	return &IdentitySyncResponse{Status: "failed", Error: err.Error()}
+// syncFailed is the response for a failed sync. A known error is reported
+// by its fixed text; anything else, which may carry storage details, is
+// logged and reported generically.
+func syncFailed(ctx context.Context, err error) *IdentitySyncResponse {
+	for _, known := range []error{ErrEmailRequired, ErrPrincipalNotFound} {
+		if errors.Is(err, known) {
+			return &IdentitySyncResponse{Status: "failed", Error: known.Error()}
+		}
+	}
+	LoggerFromContext(ctx).ErrorContext(ctx, "identity sync failed", "error", err)
+	return &IdentitySyncResponse{Status: "failed", Error: "identity sync failed"}
 }
 
 // syncCreate creates a local human principal for a federated identity, or
@@ -271,7 +280,7 @@ func (h *DefaultIdentitySyncHandler) syncCreate(ctx context.Context, fi *GlobalI
 	if fi.Email == "" {
 		// Federated identities are adopted by email; never adopt a
 		// human without one.
-		return syncFailed(ErrEmailRequired)
+		return syncFailed(ctx, ErrEmailRequired)
 	}
 	hp, err := h.storage.GetHumanByEmail(ctx, fi.Email)
 	switch {
@@ -282,13 +291,13 @@ func (h *DefaultIdentitySyncHandler) syncCreate(ctx context.Context, fi *GlobalI
 			Active:      true,
 		}
 		if err := h.storage.CreateHuman(ctx, hp); err != nil {
-			return syncFailed(err)
+			return syncFailed(ctx, err)
 		}
 	case err != nil:
-		return syncFailed(err)
+		return syncFailed(ctx, err)
 	}
 	if err := h.storage.LinkExternalIdentity(ctx, hp.ID, FederationProvider, fi.ID.String()); err != nil {
-		return syncFailed(err)
+		return syncFailed(ctx, err)
 	}
 	return &IdentitySyncResponse{LocalPrincipalID: hp.ID, Status: "synced"}
 }
@@ -302,11 +311,11 @@ func (h *DefaultIdentitySyncHandler) syncUpdate(ctx context.Context, fi *GlobalI
 		if missingOK && errors.Is(err, ErrPrincipalNotFound) {
 			return &IdentitySyncResponse{Status: "synced"}
 		}
-		return syncFailed(err)
+		return syncFailed(ctx, err)
 	}
 	change(hp)
 	if err := h.storage.UpdateHuman(ctx, hp); err != nil {
-		return syncFailed(err)
+		return syncFailed(ctx, err)
 	}
 	return &IdentitySyncResponse{LocalPrincipalID: hp.ID, Status: "synced"}
 }
