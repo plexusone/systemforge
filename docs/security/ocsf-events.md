@@ -3,9 +3,11 @@
 `contract/audit/ocsfaudit` writes SystemForge's [security events](security-events.md)
 as [OCSF](https://schema.ocsf.io/) events, one JSON object per line, for a
 security data lake or SIEM that ingests OCSF. Events follow OCSF schema
-1.10 (`metadata.version`), using the generated types and embedded schema of
-`github.com/grokify/ocsf-schema-go`; a test validates the output of every
-event type against that schema.
+`1.10.0-dev`, the development version of OCSF 1.10, which they carry in
+`metadata.version`; check that a destination accepts it. They use the
+generated types and embedded schema of `github.com/grokify/ocsf-schema-go`
+v0.2.0, and a test validates the output of every event type against that
+schema.
 
 ## Wiring
 
@@ -23,9 +25,8 @@ if err != nil {
 defer f.Close()
 
 ocsf := ocsfaudit.New(f, ocsfaudit.Options{
-    Deployment:        "prod-eu",
-    Logger:            logger,
-    LoggerFromContext: systemauth.LoggerFromContext,
+    Deployment: "prod-eu",
+    Logger:     logger,
 })
 defer ocsf.Close() // runs before f.Close: drains the queue and syncs the file
 
@@ -39,30 +40,41 @@ opts.AuditEmitter = audit.NewMultiEmitter(audit.NewLogEmitter(logger), ocsf)
 | `VendorName` | `PlexusOne` | `metadata.product.vendor_name` |
 | `Deployment` | none | `metadata.reporter.name`, to tell deployments apart |
 | `BufferSize` | 1024 | Events queued before new ones are dropped |
-| `Logger` | `slog.Default()` | Write failures and dropped events |
-| `LoggerFromContext` | none | The request's logger, for failures while emitting |
+| `Logger` | `slog.Default()` | Write failures and the counts of dropped and unencodable events, logged from the emitter's own goroutines |
 
 ## Delivery
 
-`Emit` never blocks and never fails the request: it maps the event, queues
-the line and returns. One goroutine writes the queue in order, one `Write`
-per line, so an append-mode file gets whole lines.
+`Emit` never blocks, never logs and never fails the request: it maps the
+event, queues the line and returns. One goroutine writes the queue in
+order, one `Write` per line, so an append-mode file gets whole lines. The
+logger is called only from the emitter's own goroutines, so a slow or
+stuck log destination cannot hold up a request.
 
 - **Queue full.** The event is dropped and counted; `Dropped()` returns the
-  count. Drops are logged at warning level at most once a minute, with the
-  number dropped since the last record.
+  count. A reporter goroutine logs the number dropped at warning level
+  once a minute when there were drops, and once more on `Close`. An event
+  that cannot be encoded is counted the same way (`EncodeFailures()`).
 - **Write failure.** Logged at error level at most once a minute, with the
-  number of failures since; `WriteFailures()` counts them.
+  number of failures since; `WriteFailures()` counts them. A `Write` that
+  reports fewer bytes than the line without an error counts as a failure
+  (`io.ErrShortWrite`).
+- **Torn lines.** When a `Write` fails part-way, as on a full disk, it may
+  leave a partial line. The next line then starts with a newline, so the
+  partial line is the only one lost and every following line is whole
+  JSON.
 - **Flushing.** A writer with `Flush` (a `*bufio.Writer`) is flushed
   whenever the queue empties.
 - **Close.** Stops accepting events, writes the queue, flushes, and calls
-  `Sync` on a writer that has it (an `*os.File`). It does not close the
-  writer. A second `Close` returns the first one's result; an event emitted
-  after `Close` is dropped and counted.
+  `Sync` on a writer that has it (an `*os.File`). A `Sync` refused because
+  the file cannot be synced, such as a pipe or a terminal, is not an error.
+  It does not close the writer. A second `Close` returns the first one's
+  result; an event emitted after `Close` is dropped and counted.
 
-The package does not rotate files. A writer that reopens its file on
-`SIGHUP` works with logrotate's `postrotate`; with an `*os.File` in append
-mode, `copytruncate` works too.
+The package does not rotate files. Rotate by renaming: logrotate's default
+`create` mode, with a writer that reopens its file on `SIGHUP` from
+`postrotate`, loses nothing. Avoid `copytruncate`: an event written after
+logrotate copies the file and before it truncates it is in neither file,
+and the emitter cannot see or count that loss.
 
 ## Event classes
 
@@ -134,7 +146,7 @@ Notes on the choices:
 | `actor.application` | The OAuth client (`uid`: client ID), or the SystemForge component (`name`) |
 | `user.uid` | The principal the event is about (Authentication, User Management) |
 | `src_endpoint.ip` | The client address |
-| `http_request.user_agent` | The client's `User-Agent` (at most 512 bytes) |
+| `http_request.user_agent` | The client's `User-Agent`, sanitized: left out when it holds an email address or a credential-like value, otherwise cut to 512 bytes |
 | `status_id`, `status` | `success` → Success, `failure` → Failure |
 | `status_detail` | SystemForge's reason code (sign-in, token and SCIM refusals, revocations) |
 | `status_code` | The RFC 6749 error code of a refused token request |
@@ -163,7 +175,14 @@ Only IDs and addresses identify people.
   hold email addresses (sign-up invites, key operators) or token prefixes
   (SCIM tokens). The exceptions name no person and no secret: an OAuth
   client's ID, a SystemForge component's name and a key's ID.
-- `context.session_id` is left out, as in the log.
+- `context.session_id` is left out, as in the log: it may hold a session
+  token. A revoked managed-principal session
+  (`managed_principal.session_revoked`) is named in `session.uid` by its
+  record ID, a UUID that is no credential; no session token appears.
+- The `User-Agent` is sent by the client, so it can carry anything. It is
+  left out when it holds an email address or a credential-like run of
+  token characters (`audit.SanitizeUserAgent`); the log emitter applies
+  the same rule.
 - Details are copied only from an allowlist per event type, and a value is
   copied only when it has the expected shape: a code (letters, digits and
   `_ . : / + = -`, no spaces, no `@`), a UUID, a boolean, an integer or a

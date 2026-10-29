@@ -17,21 +17,24 @@
 //
 // # Delivery
 //
-// Emit maps the event and queues the line without blocking; one goroutine
-// writes the queue in order, one Write per line. When the queue
-// (Options.BufferSize) is full, the event is dropped and counted: Dropped
-// returns the count, and drops are logged at most once a minute. Write
-// failures are logged the same way and counted by WriteFailures. Close
-// writes what is queued, flushes a writer with Flush (*bufio.Writer) and
-// syncs one with Sync (*os.File); it does not close the writer.
+// Emit maps the event and queues the line without blocking or logging;
+// one goroutine writes the queue in order, one Write per line. When the
+// queue (Options.BufferSize) is full, the event is dropped and counted:
+// Dropped returns the count, and a reporter goroutine logs it once a
+// minute and on Close, so the logger is never called on the request path.
+// Write failures, short writes included, are logged at most once a minute
+// and counted by WriteFailures; after a Write that fails part-way the next
+// line starts with a newline, so only the torn line is lost. Close writes
+// what is queued, flushes a writer with Flush (*bufio.Writer) and syncs
+// one with Sync (*os.File); it does not close the writer.
 //
-// The package does not rotate files. A writer that reopens its file on a
-// signal works with logrotate; with an *os.File opened in append mode,
-// copytruncate works too.
+// The package does not rotate files. Rotate by renaming, with a writer
+// that reopens its file on a signal; copytruncate can lose the events
+// written between its copy and its truncation.
 //
 // # Event classes
 //
-// Every event type SystemForge emits maps to an OCSF 1.10 class and
+// Every event type SystemForge emits maps to an OCSF 1.10.0-dev class and
 // activity; metadata.event_code keeps the SystemForge event type.
 //
 //	Event type                                Class (uid)                 Activity                                  Severity
@@ -85,7 +88,7 @@
 //	metadata.reporter.name     Options.Deployment
 //	actor.user.uid             the acting principal's ID; actor.application names an OAuth client by client ID
 //	src_endpoint.ip            the client address
-//	http_request.user_agent    the client's User-Agent
+//	http_request.user_agent    the client's User-Agent, sanitized (audit.SanitizeUserAgent)
 //	status_id, status_detail   the outcome and SystemForge's reason code; status_code the OAuth error code
 //
 // # What is never written
@@ -95,7 +98,10 @@
 // assertion, a secret or a request body, in any attribute including
 // unmapped and message. Actor and resource identifiers, which may be
 // email addresses, are left out (an OAuth client ID, a SystemForge
-// component name and a key ID excepted), and so is Context.SessionID.
+// component name and a key ID excepted), and so is Context.SessionID,
+// which may hold a session token; a revoked managed-principal session is
+// named by its record UUID in session.uid. A User-Agent holding an email
+// address or a credential-like value is left out.
 // Details are copied only from an allowlist per event type, and only
 // values of the expected shape: a code (no spaces, no @), a UUID, a
 // boolean, a number or a time. A detail of an event type without an
