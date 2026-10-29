@@ -189,8 +189,23 @@ type Provider struct {
 	policyService   PolicyService
 	federationState *FederationState
 	healthCheckers  map[string]HealthChecker
+	vocabularies    *authz.VocabularyRegistry
 	startTime       time.Time
 	mu              sync.RWMutex
+}
+
+// WithVocabularies sets the application role vocabularies that
+// GET {base}/policy/vocabularies describes. Without it the endpoint lists
+// no application.
+func WithVocabularies(registry *authz.VocabularyRegistry) ProviderOption {
+	return func(p *Provider) {
+		p.vocabularies = registry
+	}
+}
+
+// Vocabularies returns the application role vocabularies, or nil.
+func (p *Provider) Vocabularies() *authz.VocabularyRegistry {
+	return p.vocabularies
 }
 
 // ProviderOption configures a Provider.

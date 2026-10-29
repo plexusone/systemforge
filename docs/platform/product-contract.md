@@ -249,6 +249,35 @@ Response:
 }
 ```
 
+#### List Application Vocabularies
+
+Read-only introspection of the application role vocabularies the provider
+was given with `contract.WithVocabularies(registry)` (ADR-007): each
+application's roles, lowest hierarchy level first, the permissions they
+grant, and the OAuth scopes it defines. Without a registry the list is
+empty. Like the other policy reads it needs `policy:read`. Assigning roles
+is done through the organization API's app-role routes (see
+[Application roles](../guides/application-roles.md)).
+
+```
+GET /systemforge/policy/vocabularies
+
+Response:
+{
+    "vocabularies": [
+        {
+            "app": "notes",
+            "roles": [
+                {"id": "viewer", "level": 10, "permissions": ["note.read"]},
+                {"id": "admin", "level": 40, "permissions": ["note.admin", "note.read"]}
+            ],
+            "permissions": ["note.admin", "note.read"],
+            "scopes": ["notes:admin", "notes:note:read"]
+        }
+    ]
+}
+```
+
 #### Sync Policies (Federation Mode)
 
 ```

@@ -151,6 +151,28 @@ type RolesListOutput struct {
 	}
 }
 
+// VocabularyRole is one application role in a vocabulary.
+type VocabularyRole struct {
+	ID          string   `json:"id" doc:"Role identifier" example:"editor"`
+	Level       int      `json:"level" doc:"Hierarchy level (higher = more access)" example:"20"`
+	Permissions []string `json:"permissions" doc:"Permissions the role grants, sorted"`
+}
+
+// Vocabulary is one application's role vocabulary (ADR-007).
+type Vocabulary struct {
+	App         string           `json:"app" doc:"Application identifier" example:"actionforge"`
+	Roles       []VocabularyRole `json:"roles" doc:"Roles, lowest level first"`
+	Permissions []string         `json:"permissions" doc:"Every permission the application's roles grant, sorted"`
+	Scopes      []string         `json:"scopes" doc:"OAuth scopes the application defines, sorted"`
+}
+
+// VocabulariesListOutput is returned by GET /systemforge/policy/vocabularies.
+type VocabulariesListOutput struct {
+	Body struct {
+		Vocabularies []Vocabulary `json:"vocabularies" doc:"Registered application vocabularies, in registration order"`
+	}
+}
+
 // Permission represents a permission in contract responses.
 type Permission struct {
 	ID           string   `json:"id" doc:"Permission identifier" example:"users:read"`
