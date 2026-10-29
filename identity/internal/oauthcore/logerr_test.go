@@ -79,7 +79,7 @@ func TestErrorAttrPlainError(t *testing.T) {
 	if got := ErrorCode(errors.New("x")); got != "server_error" {
 		t.Errorf("ErrorCode(plain) = %q", got)
 	}
-	if got := ErrorCode(fmt.Errorf("wrapped: %w", fosite.ErrInvalidClient)); got != "invalid_client" {
+	if got := ErrorCode(fmt.Errorf("wrapped: %w", error(fosite.ErrInvalidClient))); got != "invalid_client" {
 		t.Errorf("ErrorCode(invalid_client) = %q", got)
 	}
 }
