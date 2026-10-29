@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/systemauthsvc"
 )
 
@@ -34,11 +35,13 @@ func loadConfig(opts *options) (*systemauthsvc.Config, error) {
 	return systemauthsvc.LoadConfig(opts.configFile, overrides...)
 }
 
-// serviceOptions maps the command-line options to service options.
+// serviceOptions maps the command-line options to service options. The
+// server writes its security events to its log.
 func serviceOptions(opts *options, logger *slog.Logger) systemauthsvc.Options {
 	return systemauthsvc.Options{
 		Dev: opts.dev, Logger: logger, Migrate: opts.migrate,
 		InviteOnly: opts.inviteOnly, SignupDeniedURL: opts.signupDenied,
+		AuditEmitter: audit.NewLogEmitter(logger),
 	}
 }
 

@@ -149,8 +149,13 @@ type Options struct {
 	// used when the configuration enables connections. Optional.
 	Providers *provider.Registry
 
-	// AuditEmitter records the managed-principal API's actions when the
-	// configuration enables managed principals. Optional.
+	// AuditEmitter records security events: SystemAuth's sign-ins,
+	// sign-outs, refused token requests, token replay and revocations, the
+	// signing key and production waivers in effect at startup, membership
+	// and platform-administration changes made through the service, the
+	// managed-principal API's actions, and SCIM token changes. See
+	// docs/security/security-events.md. audit.NewLogEmitter writes them to
+	// a log. Optional: without it they are not recorded.
 	AuditEmitter audit.Emitter
 
 	// AuditStore records key lifecycle and connection events when the
@@ -306,6 +311,9 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 
 	syncer, syncMode := s.authzSyncer()
 	serverOpts := []systemauth.Option{systemauth.WithLogger(logger), systemauth.WithSocialAuthzSyncer(syncer, syncMode)}
+	if opts.AuditEmitter != nil {
+		serverOpts = append(serverOpts, systemauth.WithAuditEmitter(opts.AuditEmitter))
+	}
 	if s.client != nil {
 		if opts.Migrate {
 			logger.Info("running database migrations")
@@ -409,7 +417,7 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		return nil, err
 	}
 	serverOpts = append(serverOpts, rateOpts...)
-	serverOpts = append(serverOpts, productionPolicy(&c, opts, logger)...)
+	serverOpts = append(serverOpts, productionPolicy(ctx, &c, opts, logger)...)
 	serverOpts = append(serverOpts, opts.ServerOptions...)
 
 	server, err := systemauth.NewEmbedded(c, serverOpts...)
