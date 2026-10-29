@@ -85,6 +85,10 @@ type Config struct {
 	// signed-in caller, and the storage they share.
 	RateLimit RateLimitConfig `json:"rate_limit,omitempty" yaml:"rate_limit,omitempty" jsonschema:"description=Rate limits and their shared storage"`
 
+	// Secrets selects where ${NAME} references in secret fields are read
+	// from; nil reads them from the environment.
+	Secrets *SecretsConfig `json:"secrets,omitempty" yaml:"secrets,omitempty" jsonschema:"description=Vault the secret references in this configuration are read from (default: the environment)"`
+
 	// Production waives, by name, production checks that otherwise refuse
 	// to start the packaged service (systemauthsvc) or refuse requests.
 	Production ProductionConfig `json:"production,omitempty" yaml:"production,omitempty" jsonschema:"description=Named waivers of production checks"`
@@ -258,6 +262,17 @@ type ConsoleConfig struct {
 
 // ErrInvalidConsoleConfig is returned for a console that cannot work.
 var ErrInvalidConsoleConfig = errors.New("systemauth: invalid console configuration")
+
+// SecretsConfig selects the vault that ${NAME} references in secret fields
+// (client secrets, keys, DSNs, Redis URLs, ...) are read from. NAME is the
+// secret's path in the vault.
+type SecretsConfig struct {
+	// Vault is an omnivault URI: env:// (the default), env://PREFIX_,
+	// file:///dir, or a scheme a provider package registered with
+	// omnivault.RegisterProvider in the deployment's main package. It may
+	// itself reference an environment variable, e.g. ${SECRETS_VAULT}.
+	Vault string `json:"vault,omitempty" yaml:"vault,omitempty" jsonschema:"description=omnivault URI of the vault secret references are read from such as env:// or file:///dir (supports env var expansion)"`
+}
 
 // ConnectionsConfig configures connections to external services. Their
 // credentials are sealed under keys kept in KeysDir, whose root key and the

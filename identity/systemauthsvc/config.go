@@ -2,6 +2,7 @@ package systemauthsvc
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/plexusone/systemforge/identity/systemauth"
+	"github.com/plexusone/systemforge/secrets"
 )
 
 // Config is the SystemAuth server configuration.
@@ -101,10 +103,21 @@ func WithKeyID(kid string) Override {
 // applies defaults and validates the result. Validation runs after the
 // overrides, so an override can supply a value the file omits (e.g.
 // WithDefaultIssuer).
+//
+// Secret references in the file are read from the vault its secrets.vault
+// names, or the environment; LoadConfigWithResolver supplies the vault.
 func LoadConfig(path string, overrides ...Override) (*Config, error) {
+	return LoadConfigWithResolver(context.Background(), path, nil, overrides...)
+}
+
+// LoadConfigWithResolver is LoadConfig reading secret references through
+// r, e.g. a resolver over a cloud secret manager the deployment built
+// (secrets.New) or registered (omnivault.RegisterProvider, then
+// secrets.FromURI). A nil r uses secrets.vault, or the environment.
+func LoadConfigWithResolver(ctx context.Context, path string, r *secrets.Resolver, overrides ...Override) (*Config, error) {
 	cfg := &Config{}
 	if path != "" {
-		c, err := systemauth.DecodeConfigFile(path)
+		c, err := systemauth.DecodeConfigFileWithResolver(ctx, path, r)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config: %w", err)
 		}
@@ -119,13 +132,19 @@ func LoadConfig(path string, overrides ...Override) (*Config, error) {
 // non-space byte is '{' and YAML otherwise. Empty data starts from an
 // empty configuration.
 func LoadConfigBytes(data []byte, format string, overrides ...Override) (*Config, error) {
+	return LoadConfigBytesWithResolver(context.Background(), data, format, nil, overrides...)
+}
+
+// LoadConfigBytesWithResolver is LoadConfigBytes reading secret
+// references through r (nil: secrets.vault, or the environment).
+func LoadConfigBytesWithResolver(ctx context.Context, data []byte, format string, r *secrets.Resolver, overrides ...Override) (*Config, error) {
 	f, err := configFormat(data, format)
 	if err != nil {
 		return nil, err
 	}
 	cfg := &Config{}
 	if len(bytes.TrimSpace(data)) > 0 {
-		c, err := systemauth.DecodeConfig(data, f)
+		c, err := systemauth.DecodeConfigWithResolver(ctx, data, f, r)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config: %w", err)
 		}

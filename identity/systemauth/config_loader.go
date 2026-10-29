@@ -1,21 +1,32 @@
 package systemauth
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/plexusone/systemforge/secrets"
 )
 
 // LoadConfig loads configuration from a file, applies defaults and
 // validates it.
 // Supports both YAML (.yaml, .yml) and JSON (.json) formats.
-// The format is detected by file extension.
+// The format is detected by file extension. Secret references are read
+// from the vault named by secrets.vault, or the environment.
 func LoadConfig(path string) (*Config, error) {
-	cfg, err := DecodeConfigFile(path)
+	return LoadConfigWithResolver(context.Background(), path, nil)
+}
+
+// LoadConfigWithResolver is LoadConfig reading secret references through
+// r. A nil r uses the vault named by secrets.vault, or the environment.
+func LoadConfigWithResolver(ctx context.Context, path string, r *secrets.Resolver) (*Config, error) {
+	cfg, err := DecodeConfigFileWithResolver(ctx, path, r)
 	if err != nil {
 		return nil, err
 	}
@@ -23,17 +34,23 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 // DecodeConfigFile reads and decodes the configuration file at path like
-// LoadConfig, expanding environment variables, but without applying
+// LoadConfig, resolving secret references, but without applying
 // defaults or validating, so a caller can adjust the result first (then
 // call ApplyDefaults and Validate).
 func DecodeConfigFile(path string) (*Config, error) {
+	return DecodeConfigFileWithResolver(context.Background(), path, nil)
+}
+
+// DecodeConfigFileWithResolver is DecodeConfigFile reading secret
+// references through r (nil: secrets.vault, or the environment).
+func DecodeConfigFileWithResolver(ctx context.Context, path string, r *secrets.Resolver) (*Config, error) {
 	//nolint:gosec // G304: Path is provided by the user/caller for config loading
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	return DecodeConfig(data, detectFormat(path))
+	return DecodeConfigWithResolver(ctx, data, detectFormat(path), r)
 }
 
 // ConfigFormat represents a configuration file format.
@@ -61,9 +78,15 @@ func detectFormat(path string) ConfigFormat {
 }
 
 // ParseConfig parses configuration from bytes in the specified format,
-// expands environment variables, applies defaults and validates it.
+// resolves secret references, applies defaults and validates it.
 func ParseConfig(data []byte, format ConfigFormat) (*Config, error) {
-	cfg, err := DecodeConfig(data, format)
+	return ParseConfigWithResolver(context.Background(), data, format, nil)
+}
+
+// ParseConfigWithResolver is ParseConfig reading secret references
+// through r (nil: secrets.vault, or the environment).
+func ParseConfigWithResolver(ctx context.Context, data []byte, format ConfigFormat, r *secrets.Resolver) (*Config, error) {
+	cfg, err := DecodeConfigWithResolver(ctx, data, format, r)
 	if err != nil {
 		return nil, err
 	}
@@ -80,10 +103,17 @@ func finishConfig(cfg *Config) (*Config, error) {
 }
 
 // DecodeConfig decodes configuration from bytes in the specified format
-// and expands environment variables in it, without applying defaults or
+// and resolves secret references in it, without applying defaults or
 // validating. Callers that adjust the configuration afterwards (e.g. to
 // supply a missing issuer) then call ApplyDefaults and Validate.
 func DecodeConfig(data []byte, format ConfigFormat) (*Config, error) {
+	return DecodeConfigWithResolver(context.Background(), data, format, nil)
+}
+
+// DecodeConfigWithResolver is DecodeConfig reading secret references
+// through r. A nil r opens the vault named by secrets.vault for the
+// duration of the call, or reads the environment when none is named.
+func DecodeConfigWithResolver(ctx context.Context, data []byte, format ConfigFormat, r *secrets.Resolver) (*Config, error) {
 	var cfg Config
 
 	switch format {
@@ -99,73 +129,120 @@ func DecodeConfig(data []byte, format ConfigFormat) (*Config, error) {
 		return nil, fmt.Errorf("unsupported config format: %s", format)
 	}
 
-	// Expand environment variables in sensitive fields
-	cfg.expandEnvVars()
-
+	if err := cfg.resolveSecrets(ctx, r); err != nil {
+		return nil, err
+	}
 	return &cfg, nil
 }
 
-// expandEnvVars expands environment variables in config values.
-// Supports ${VAR} and $VAR syntax.
-func (c *Config) expandEnvVars() {
-	// Expand in client secrets
+// resolveSecrets resolves ${NAME} and $NAME references in the secret
+// fields through r, or, when r is nil, the vault secrets.vault names (the
+// environment by default).
+func (c *Config) resolveSecrets(ctx context.Context, r *secrets.Resolver) (err error) {
+	if r == nil {
+		var owned *secrets.Resolver
+		owned, err = c.secretsResolver()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if cerr := owned.Close(); cerr != nil {
+				err = errors.Join(err, fmt.Errorf("closing secrets vault: %w", cerr))
+			}
+		}()
+		r = owned
+	}
+	e := expander{ctx: ctx, r: r}
+
+	// Client secrets
 	for i := range c.Clients {
-		c.Clients[i].Secret = os.ExpandEnv(c.Clients[i].Secret)
+		e.expand(&c.Clients[i].Secret)
 	}
 
-	// Expand in the authorization engine settings
+	// The authorization engine settings
 	if c.Authz.SpiceDB != nil {
-		c.Authz.SpiceDB.Token = os.ExpandEnv(c.Authz.SpiceDB.Token)
-		c.Authz.SpiceDB.DatastoreURI = os.ExpandEnv(c.Authz.SpiceDB.DatastoreURI)
-		c.Authz.SpiceDB.Endpoint = os.ExpandEnv(c.Authz.SpiceDB.Endpoint)
+		e.expand(&c.Authz.SpiceDB.Token)
+		e.expand(&c.Authz.SpiceDB.DatastoreURI)
+		e.expand(&c.Authz.SpiceDB.Endpoint)
 	}
 
-	// Expand in federation config
+	// Federation
 	if c.Federation != nil {
-		c.Federation.ClientID = os.ExpandEnv(c.Federation.ClientID)
-		c.Federation.ClientSecret = os.ExpandEnv(c.Federation.ClientSecret)
+		e.expand(&c.Federation.ClientID)
+		e.expand(&c.Federation.ClientSecret)
 	}
 
-	// Expand in social login provider credentials
+	// Social login provider credentials
 	if c.SocialLogin != nil {
 		for _, p := range []*SocialProviderConfig{c.SocialLogin.GitHub, c.SocialLogin.Google} {
 			if p != nil {
-				p.ClientID = os.ExpandEnv(p.ClientID)
-				p.ClientSecret = os.ExpandEnv(p.ClientSecret)
+				e.expand(&p.ClientID)
+				e.expand(&p.ClientSecret)
 			}
 		}
 	}
 
-	// Expand in signing key settings
-	c.Keys.KeyID = os.ExpandEnv(c.Keys.KeyID)
-	c.Keys.PrivateKeyFile = os.ExpandEnv(c.Keys.PrivateKeyFile)
-	c.Keys.PrivateKeyPEM = expandWholeEnv(c.Keys.PrivateKeyPEM)
-	c.Tokens.HMACSecret = expandWholeEnv(c.Tokens.HMACSecret)
-	c.Tokens.HMACVerificationSecret = expandWholeEnv(c.Tokens.HMACVerificationSecret)
-	c.DPoP.NonceSecret = os.ExpandEnv(c.DPoP.NonceSecret)
-	c.DPoP.ReplayCacheRedisURL = os.ExpandEnv(c.DPoP.ReplayCacheRedisURL)
+	// Signing and verification keys, token and DPoP secrets
+	e.expand(&c.Keys.KeyID)
+	e.expand(&c.Keys.PrivateKeyFile)
+	e.expandWhole(&c.Keys.PrivateKeyPEM)
+	e.expandWhole(&c.Tokens.HMACSecret)
+	e.expandWhole(&c.Tokens.HMACVerificationSecret)
+	e.expand(&c.DPoP.NonceSecret)
+	e.expand(&c.DPoP.ReplayCacheRedisURL)
 	for i := range c.Keys.VerificationKeys {
 		v := &c.Keys.VerificationKeys[i]
-		v.KeyID = os.ExpandEnv(v.KeyID)
-		v.PublicKeyFile = os.ExpandEnv(v.PublicKeyFile)
-		v.PublicKeyPEM = expandWholeEnv(v.PublicKeyPEM)
+		e.expand(&v.KeyID)
+		e.expand(&v.PublicKeyFile)
+		e.expandWhole(&v.PublicKeyPEM)
 	}
 
-	// Expand in database DSN
+	// Shared rate limit storage
+	e.expand(&c.RateLimit.RedisURL)
+
+	// Database DSN
 	if c.Database != nil {
-		c.Database.DSN = os.ExpandEnv(c.Database.DSN)
+		e.expand(&c.Database.DSN)
 	}
+	return e.err
 }
 
-// expandWholeEnv expands a value that is entirely one ${VAR} reference
-// without re-scanning the substituted content (PEM data may contain "$").
-// Anything else goes through os.ExpandEnv.
-func expandWholeEnv(v string) string {
-	t := strings.TrimSpace(v)
-	if strings.HasPrefix(t, "${") && strings.HasSuffix(t, "}") && !strings.ContainsAny(t[2:len(t)-1], "${} ") {
-		return os.Getenv(t[2 : len(t)-1])
+// secretsResolver opens the vault secrets.vault names (its own value read
+// from the environment), or the environment when none is named.
+func (c *Config) secretsResolver() (*secrets.Resolver, error) {
+	if c.Secrets == nil || c.Secrets.Vault == "" {
+		return secrets.Env(), nil
 	}
-	return os.ExpandEnv(v)
+	uri := os.ExpandEnv(c.Secrets.Vault)
+	if uri == "" {
+		return secrets.Env(), nil
+	}
+	r, err := secrets.FromURI(uri)
+	if err != nil {
+		return nil, fmt.Errorf("secrets.vault: %w", err)
+	}
+	return r, nil
+}
+
+// expander resolves fields in place, keeping the first error.
+type expander struct {
+	ctx context.Context
+	r   *secrets.Resolver
+	err error
+}
+
+func (e *expander) expand(p *string) {
+	if e.err != nil {
+		return
+	}
+	*p, e.err = e.r.Expand(e.ctx, *p)
+}
+
+func (e *expander) expandWhole(p *string) {
+	if e.err != nil {
+		return
+	}
+	*p, e.err = e.r.ExpandWhole(e.ctx, *p)
 }
 
 // SaveConfig saves configuration to a file.

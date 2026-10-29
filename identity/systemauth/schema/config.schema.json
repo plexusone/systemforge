@@ -954,6 +954,17 @@
       "type": "object",
       "description": "Rate limits and their shared storage"
     },
+    "secrets": {
+      "properties": {
+        "vault": {
+          "type": "string",
+          "description": "omnivault URI of the vault secret references are read from such as env:// or file:///dir (supports env var expansion)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Vault the secret references in this configuration are read from (default: the environment)"
+    },
     "production": {
       "properties": {
         "allow": {
