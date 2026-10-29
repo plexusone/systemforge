@@ -251,11 +251,12 @@ type IDTokenClaims struct {
 	Email           string `json:"email,omitempty"`
 	EmailVerified   bool   `json:"email_verified,omitempty"`
 	// EmailVerifiedAt is SystemForge's email_verified_at extension: when
-	// the email was verified, in seconds since the epoch; 0 when absent.
-	EmailVerifiedAt int64  `json:"email_verified_at,omitempty"`
-	Name            string `json:"name,omitempty"`
-	Picture         string `json:"picture,omitempty"`
-	SID             string `json:"sid,omitempty"`
+	// the email was verified, as a NumericDate (seconds since the epoch,
+	// which may arrive in floating-point form); nil when absent.
+	EmailVerifiedAt *gojwt.NumericDate `json:"email_verified_at,omitempty"`
+	Name            string             `json:"name,omitempty"`
+	Picture         string             `json:"picture,omitempty"`
+	SID             string             `json:"sid,omitempty"`
 
 	// Raw holds every claim of the verified token.
 	Raw map[string]any `json:"-"`
@@ -410,10 +411,11 @@ type UserInfo struct {
 	Email         string `json:"email,omitempty"`
 	EmailVerified bool   `json:"email_verified,omitempty"`
 	// EmailVerifiedAt is SystemForge's email_verified_at extension: when
-	// the email was verified, in seconds since the epoch; 0 when absent.
-	EmailVerifiedAt int64  `json:"email_verified_at,omitempty"`
-	Name            string `json:"name,omitempty"`
-	Picture         string `json:"picture,omitempty"`
+	// the email was verified, as a NumericDate (seconds since the epoch,
+	// which may arrive in floating-point form); nil when absent.
+	EmailVerifiedAt *gojwt.NumericDate `json:"email_verified_at,omitempty"`
+	Name            string             `json:"name,omitempty"`
+	Picture         string             `json:"picture,omitempty"`
 
 	// Raw holds every returned claim.
 	Raw map[string]any `json:"-"`
@@ -515,9 +517,9 @@ func sessionClaims(idt *IDTokenClaims, info *UserInfo) map[string]any {
 
 // verifiedAt converts an email_verified_at NumericDate, which counts only
 // with email_verified, to a time; zero when absent.
-func verifiedAt(verified bool, at int64) time.Time {
-	if !verified || at <= 0 {
+func verifiedAt(verified bool, at *gojwt.NumericDate) time.Time {
+	if !verified || at == nil || at.Unix() <= 0 {
 		return time.Time{}
 	}
-	return time.Unix(at, 0).UTC()
+	return at.UTC().Truncate(time.Second)
 }
