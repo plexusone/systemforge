@@ -32,7 +32,7 @@ mail:
 
 | Provider | Delivery |
 |----------|----------|
-| `ses` | Amazon SES v2. The `systemauth` binary builds the sender from `mail.ses` with the AWS default credential chain. |
+| `ses` | Amazon SES v2. The `systemauth` binary builds the sender from `mail.ses` with the AWS default credential chain; see [Sending Mail with Amazon SES](ses-deployment.md). |
 | `smtp` | An SMTP server, `mail.smtp` (`host`, `port`, `security: starttls\|tls\|none`, `username`, `password`). Credentials are never sent without TLS. |
 | `log` | Writes each message, link included, to the server log. Development only. |
 
@@ -188,3 +188,12 @@ none of which records an address.
 The principal's identifier, which is its email for a person, changes with
 it. Relying parties see the new address in the next ID token or UserInfo
 response; one that keys accounts by email should key them by `sub` instead.
+
+## What relying parties receive
+
+With the `email` scope, ID tokens and UserInfo carry `email`,
+`email_verified` and, as a SystemForge extension, `email_verified_at`: when
+the current address was verified, as a NumericDate. It is set when an
+account is created with a verified email, when a sign-in proves the address
+with a link, and when an email change is confirmed. See
+[Reading email verification](relying-party.md#reading-email-verification).

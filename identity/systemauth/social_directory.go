@@ -282,12 +282,13 @@ func (d *MemoryPrincipalDirectory) CreateFromExternal(_ context.Context, login E
 		return nil, ErrEmailConflict
 	}
 	p := &HumanPrincipal{
-		ID:            uuid.New(),
-		Email:         login.Email,
-		EmailVerified: true,
-		DisplayName:   displayNameFor(login),
-		AvatarURL:     login.AvatarURL,
-		Active:        true,
+		ID:              uuid.New(),
+		Email:           login.Email,
+		EmailVerified:   true,
+		EmailVerifiedAt: time.Now(),
+		DisplayName:     displayNameFor(login),
+		AvatarURL:       login.AvatarURL,
+		Active:          true,
 	}
 	d.principals[p.ID] = p
 	d.byEmail[key] = p.ID

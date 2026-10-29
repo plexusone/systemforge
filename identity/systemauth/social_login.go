@@ -875,6 +875,9 @@ func (p *socialSessionProvider) GetUserClaims(ctx context.Context, userID string
 			}
 			claims["email"] = lp.Email
 			claims["email_verified"] = lp.EmailVerified
+			if lp.EmailVerified && !lp.EmailVerifiedAt.IsZero() {
+				claims[EmailVerifiedAtClaim] = lp.EmailVerifiedAt.Unix()
+			}
 		case "profile":
 			claims["name"] = lp.DisplayName
 			if lp.AvatarURL != "" {

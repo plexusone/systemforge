@@ -21,6 +21,14 @@ const LoginTokenPath = "/login-token"
 // without an email. It is absent for everyone else.
 const ManagedClaim = "managed"
 
+// EmailVerifiedAtClaim is the ID token and UserInfo claim carrying when the
+// principal's email was verified, as a NumericDate (seconds since the
+// epoch). It is a SystemForge extension, released with the email scope
+// alongside email_verified and only when email_verified is true and the
+// time is known. Verification belongs to the address: an email change
+// sets it anew.
+const EmailVerifiedAtClaim = "email_verified_at"
+
 // loginTokenProvider is recorded as the provider of sessions established
 // with a login token.
 const loginTokenProvider = "login_token"

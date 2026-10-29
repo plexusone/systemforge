@@ -13,12 +13,15 @@ type HumanPrincipal struct {
 	ID            uuid.UUID
 	Email         string
 	EmailVerified bool
-	DisplayName   string
-	GivenName     string
-	FamilyName    string
-	AvatarURL     string
-	Locale        string
-	Active        bool
+	// EmailVerifiedAt is when Email was verified; zero when it is not, or
+	// when the store does not record the time.
+	EmailVerifiedAt time.Time
+	DisplayName     string
+	GivenName       string
+	FamilyName      string
+	AvatarURL       string
+	Locale          string
+	Active          bool
 	// Managed is true while the principal has an active manager
 	// relationship (ADR-009), whether or not it has an email.
 	Managed   bool

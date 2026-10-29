@@ -21,6 +21,10 @@ type VerifiedIdentity struct {
 	Email string
 	// EmailVerified reports whether SystemAuth asserts Email is verified.
 	EmailVerified bool
+	// EmailVerifiedAt is when SystemAuth verified Email (the
+	// email_verified_at claim); zero when it is not verified or the time
+	// was not sent.
+	EmailVerifiedAt time.Time
 	// Name is the display name.
 	Name string
 	// Picture is the avatar URL.

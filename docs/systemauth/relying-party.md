@@ -171,6 +171,51 @@ An unverified email never links to or creates a principal; an email held by an
 unverified (or differently linked) local principal is a conflict (`409
 ACCOUNT_CONFLICT`).
 
+## Reading email verification
+
+SystemAuth proves address control for every application
+([Verified Email](verified-email.md)); a relying party sends no mail of its
+own. With the `email` scope, the ID token and UserInfo carry:
+
+| Claim | Type | Meaning |
+|-------|------|---------|
+| `email` | string | The principal's current address |
+| `email_verified` | boolean | `true` when SystemAuth considers the address verified: asserted by the provider at sign-up, proven with a verification link, or confirmed by an email change |
+| `email_verified_at` | NumericDate (seconds since the epoch) | When the current address was verified. **SystemForge extension**, not part of OpenID Connect Core; present only with `email_verified: true` and a known time, and listed in discovery's `claims_supported` |
+
+`relyingparty` decodes them into `VerifiedIdentity.Email`, `EmailVerified`
+and `EmailVerifiedAt` (a `time.Time`, zero when absent), preferring UserInfo
+as the fresher source:
+
+```go
+id, err := relyingparty.IdentityFromClaims(idToken, userInfo)
+if err != nil {
+    return err
+}
+switch {
+case !id.EmailVerified:
+    // Do not trust the address: no linking by email, no mail to it
+    // that grants anything.
+case time.Since(id.EmailVerifiedAt) > 365*24*time.Hour:
+    // Verified long ago: a policy may ask for a recent change or
+    // re-verification before a sensitive action.
+}
+```
+
+Rules for relying parties:
+
+- **Key accounts by `sub`, never by email.** A person can change their
+  email; the `sub` stays.
+- **Treat `email_verified: false` or an absent claim as unverified**, and do
+  not link accounts on such an address (`ResolvePrincipal` already does not).
+- **Ignore `email_verified_at` without `email_verified: true`.** A time that
+  is absent means only that it is not known (for example a principal created
+  before SystemAuth recorded it), not that the address is unverified.
+- **Expect the address and its time to change.** After an email change, the
+  next ID token or UserInfo response carries the new address and a new
+  `email_verified_at`; tokens issued before keep the old values until they
+  expire.
+
 ## Memberships
 
 Organization memberships (in `/bff/session`, `/bff/api/v1/users/me` and

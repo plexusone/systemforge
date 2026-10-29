@@ -121,6 +121,7 @@ func (s *Server) OpenIDConfiguration() OpenIDConfiguration {
 			"picture",
 			"email",
 			"email_verified",
+			EmailVerifiedAtClaim,
 		},
 		CodeChallengeMethodsSupported: []string{
 			"S256",

@@ -65,6 +65,9 @@ func checkIDTokenFlow(t *testing.T, s *Server) {
 	if claims["email"] != "octo@example.com" || claims["email_verified"] != true || claims["auth_time"] == nil {
 		t.Errorf("id token profile claims: %v", claims)
 	}
+	if at, ok := claims[EmailVerifiedAtClaim].(float64); !ok || at <= 0 {
+		t.Errorf("id token email_verified_at = %v", claims[EmailVerifiedAtClaim])
+	}
 
 	// Refresh issues a fresh ID token for the same subject.
 	rt, _ := tokens["refresh_token"].(string)

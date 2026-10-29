@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func userinfo(t *testing.T, s *Server, decorate func(*http.Request), method string, body url.Values) (*httptest.ResponseRecorder, map[string]any) {
@@ -70,6 +71,10 @@ func TestUserInfoScopes(t *testing.T) {
 	if _, ok := claims["name"]; ok {
 		t.Errorf("profile claim released without profile scope: %v", claims)
 	}
+	// The verification time is a NumericDate, released with the email scope.
+	if at, ok := claims[EmailVerifiedAtClaim].(float64); !ok || at <= 0 || at > float64(time.Now().Unix()) {
+		t.Errorf("email_verified_at = %v", claims[EmailVerifiedAtClaim])
+	}
 
 	// A DPoP-bound token cannot travel in a POST body, which carries only
 	// Bearer tokens.
@@ -86,6 +91,9 @@ func TestUserInfoScopes(t *testing.T) {
 	}
 	if _, ok := claims["email"]; ok {
 		t.Errorf("email released without email scope: %v", claims)
+	}
+	if _, ok := claims[EmailVerifiedAtClaim]; ok {
+		t.Errorf("email_verified_at released without email scope: %v", claims)
 	}
 
 	// No openid scope: 403 insufficient_scope.

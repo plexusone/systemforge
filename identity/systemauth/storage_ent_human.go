@@ -34,6 +34,9 @@ func toHumanPrincipal(p *ent.Principal) *HumanPrincipal {
 			hp.Email = *h.Email
 		}
 		hp.EmailVerified = h.EmailVerifiedAt != nil
+		if h.EmailVerifiedAt != nil {
+			hp.EmailVerifiedAt = *h.EmailVerifiedAt
+		}
 		hp.GivenName = h.GivenName
 		hp.FamilyName = h.FamilyName
 		hp.Locale = h.Locale

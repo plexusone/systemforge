@@ -90,7 +90,7 @@ func changeEmailInTx(ctx context.Context, tx *ent.Tx, principalID uuid.UUID, fro
 }
 
 // ChangeEmail implements PrincipalEmailChanger.
-func (d *MemoryPrincipalDirectory) ChangeEmail(_ context.Context, principalID uuid.UUID, from, to string, _ time.Time) error {
+func (d *MemoryPrincipalDirectory) ChangeEmail(_ context.Context, principalID uuid.UUID, from, to string, verifiedAt time.Time) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	p, ok := d.principals[principalID]
@@ -105,13 +105,13 @@ func (d *MemoryPrincipalDirectory) ChangeEmail(_ context.Context, principalID uu
 		return ErrEmailConflict
 	}
 	delete(d.byEmail, strings.ToLower(p.Email))
-	p.Email, p.EmailVerified = to, true
+	p.Email, p.EmailVerified, p.EmailVerifiedAt = to, true, verifiedAt
 	d.byEmail[key] = principalID
 	return nil
 }
 
 // ChangeEmail implements PrincipalEmailChanger.
-func (d memoryStorageDirectory) ChangeEmail(_ context.Context, principalID uuid.UUID, from, to string, _ time.Time) error {
+func (d memoryStorageDirectory) ChangeEmail(_ context.Context, principalID uuid.UUID, from, to string, verifiedAt time.Time) error {
 	d.s.mu.Lock()
 	defer d.s.mu.Unlock()
 	h, ok := d.s.humans[principalID]
@@ -124,6 +124,6 @@ func (d memoryStorageDirectory) ChangeEmail(_ context.Context, principalID uuid.
 	if other, taken := d.s.humanByEmailLocked(to); taken && other.ID != principalID {
 		return ErrEmailConflict
 	}
-	h.Email, h.EmailVerified, h.UpdatedAt = to, true, time.Now()
+	h.Email, h.EmailVerified, h.EmailVerifiedAt, h.UpdatedAt = to, true, verifiedAt, time.Now()
 	return nil
 }
