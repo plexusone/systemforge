@@ -10,7 +10,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 
@@ -142,6 +141,8 @@ type Limiter struct {
 	observability *observability.Observability
 	failOpen      bool
 	logger        *slog.Logger
+	name          string
+	skip          func(r *http.Request) bool
 }
 
 // New creates a new Limiter with the given storage and options.
@@ -151,6 +152,7 @@ func New(storage Storage, opts ...Option) *Limiter {
 		resolver: &StaticResolver{Limit: DefaultLimit()},
 		keyFunc:  IPKey(),
 		logger:   slog.Default(),
+		name:     DefaultPolicyName,
 	}
 
 	for _, opt := range opts {
@@ -194,6 +196,24 @@ func WithFailOpen() Option {
 	}
 }
 
+// WithName names the limit: the policy name in the RateLimit-Policy and
+// RateLimit headers and in metrics. Default: DefaultPolicyName.
+func WithName(name string) Option {
+	return func(l *Limiter) {
+		if name != "" {
+			l.name = name
+		}
+	}
+}
+
+// WithSkip exempts the requests skip reports true for, such as anonymous
+// requests to a limit keyed by the signed-in principal.
+func WithSkip(skip func(r *http.Request) bool) Option {
+	return func(l *Limiter) {
+		l.skip = skip
+	}
+}
+
 // WithLogger sets the logger for storage failures.
 func WithLogger(logger *slog.Logger) Option {
 	return func(l *Limiter) {
@@ -216,43 +236,51 @@ func (l *Limiter) Allow(r *http.Request) (Result, error) {
 	return l.storage.Allow(ctx, key, limit)
 }
 
-// Middleware returns an HTTP middleware that enforces rate limits.
+// Middleware returns an HTTP middleware that enforces rate limits. Every
+// checked response carries the RateLimit-Policy, RateLimit and
+// X-RateLimit-* headers; a refused one is a 429 with Retry-After of at
+// least one second. A storage failure answers 503 unless WithFailOpen is
+// given, and a full MemoryStorage (ErrTooManyKeys) is always a 429.
 func (l *Limiter) Middleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if l.skip != nil && l.skip(r) {
+				next.ServeHTTP(w, r)
+				return
+			}
 			ctx := r.Context()
 			key := l.keyFunc(r)
+			limit := l.resolver.Resolve(ctx, key, r)
 
-			result, err := l.Allow(r)
+			result, err := l.storage.Allow(ctx, key, limit)
+			if errors.Is(err, ErrTooManyKeys) {
+				l.logger.WarnContext(ctx, "rate limit storage is full", "policy", l.name)
+				WriteTooManyRequests(w, tooManyKeysWait)
+				return
+			}
 			if err != nil {
-				l.logger.ErrorContext(ctx, "rate limit storage failed", "error", err, "fail_open", l.failOpen)
+				l.logger.ErrorContext(ctx, "rate limit storage failed", "policy", l.name, "error", err, "fail_open", l.failOpen)
 				if l.failOpen {
 					next.ServeHTTP(w, r)
 					return
 				}
-				http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+				writeUnavailable(w)
 				return
 			}
 
 			// Record rate limit metrics
 			if l.observability != nil {
-				limit := l.resolver.Resolve(ctx, key, r)
-				l.observability.RecordRateLimitRequest(ctx, "default", key, result.Allowed)
+				l.observability.RecordRateLimitRequest(ctx, l.name, key, result.Allowed)
 				// Calculate usage ratio
 				if limit.Rate > 0 {
 					usage := float64(limit.Rate-result.Remaining) / float64(limit.Rate)
-					l.observability.RecordRateLimitUsage(ctx, "default", key, limit.Period.String(), usage)
+					l.observability.RecordRateLimitUsage(ctx, l.name, key, limit.Period.String(), usage)
 				}
 			}
 
-			// Set rate limit headers
-			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(l.resolver.Resolve(ctx, key, r).Rate))
-			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(result.Remaining))
-			w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(result.ResetAt.Unix(), 10))
-
+			WriteHeaders(w.Header(), l.name, limit, result)
 			if !result.Allowed {
-				w.Header().Set("Retry-After", strconv.FormatInt(int64(result.RetryAfter.Seconds()), 10))
-				http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
+				WriteTooManyRequests(w, result.RetryAfter)
 				return
 			}
 
