@@ -3,6 +3,7 @@ package systemauth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -92,11 +93,39 @@ func (p *EmbeddedOAuthProvider) Introspect(ctx context.Context, token string, to
 	return introspection, nil
 }
 
-// Revoke implements OAuthProvider.
+// Revoke implements OAuthProvider. It looks the access or refresh token
+// up (tokenTypeHint "refresh_token" tries it as a refresh token first) and
+// revokes its whole token family, the access and refresh tokens issued
+// from the same grant. It returns an error wrapping ErrInvalidToken when
+// the token is unknown, expired or already revoked, so a caller never
+// takes a no-op for a revocation.
 func (p *EmbeddedOAuthProvider) Revoke(ctx context.Context, token string, tokenTypeHint string) error {
-	// Fosite handles revocation via the revocation endpoint
-	// For programmatic access, we'd need to access storage directly
-	return p.server.storage.RevokeAccessToken(ctx, token)
+	if token == "" {
+		return fmt.Errorf("%w: empty token", ErrInvalidToken)
+	}
+	tokenType := fosite.AccessToken
+	if tokenTypeHint == "refresh_token" {
+		tokenType = fosite.RefreshToken
+	}
+	// Fosite's introspection verifies the token's signature and finds its
+	// stored request, whose ID names the token family. The principal's
+	// status is deliberately not checked: revoking must work for a
+	// deactivated principal too.
+	_, ar, err := p.server.oauth2.IntrospectToken(ctx, token, tokenType, p.server.Session(""))
+	if err != nil {
+		if errors.Is(err, fosite.ErrServerError) {
+			return fmt.Errorf("systemauth: looking up token to revoke: %w", err)
+		}
+		return fmt.Errorf("%w: unknown, expired or already revoked", ErrInvalidToken)
+	}
+	requestID := ar.GetID()
+	if err := p.server.storage.RevokeRefreshToken(ctx, requestID); err != nil {
+		return fmt.Errorf("systemauth: revoking refresh tokens: %w", err)
+	}
+	if err := p.server.storage.RevokeAccessToken(ctx, requestID); err != nil {
+		return fmt.Errorf("systemauth: revoking access tokens: %w", err)
+	}
+	return nil
 }
 
 // UserInfo implements OAuthProvider.
