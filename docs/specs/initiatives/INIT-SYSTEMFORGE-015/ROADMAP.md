@@ -51,3 +51,13 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 - [ ] `RMI-SYSTEMFORGE-215` Logs fit for incidents: no stack traces for client errors, no tokens or secrets (with a test), and a structured security-event log through `contract/audit`
 - [ ] `RMI-SYSTEMFORGE-216` No internal error text in API responses: known errors map to fixed messages, the rest are logged
 - [ ] `RMI-SYSTEMFORGE-217` The threat model, and removal of API keys from `appauth` and `relyingparty`
+
+## Phase 5 — Remaining Review Findings and Release
+
+**Theme:** The smaller findings from the launch review are closed
+
+- [ ] `RMI-SYSTEMFORGE-218` The BFF session cookie refuses `SameSite=None`, so a configuration cannot weaken the origin check
+- [ ] `RMI-SYSTEMFORGE-219` `EmbeddedOAuthProvider.Revoke` revokes the token it is given, or reports why it cannot
+- [ ] `RMI-SYSTEMFORGE-220` Every HTTP server systemforge builds sets `ReadHeaderTimeout`
+- [ ] `RMI-SYSTEMFORGE-221` v0.28.0 release notes, changelog and upgrade guide
+  - Depends on: `RMI-SYSTEMFORGE-213`, `RMI-SYSTEMFORGE-214`, `RMI-SYSTEMFORGE-215`, `RMI-SYSTEMFORGE-216`, `RMI-SYSTEMFORGE-217`, `RMI-SYSTEMFORGE-218`, `RMI-SYSTEMFORGE-219`, `RMI-SYSTEMFORGE-220`
