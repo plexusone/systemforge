@@ -93,3 +93,39 @@ return `already assigned`.
 Reducing or removing a role records an access change, so tokens issued
 before it are refused by relying parties that run a revocation cache; see
 [Access-change invalidation](access-change-invalidation.md).
+
+## Operator commands
+
+For recovery and bootstrap (restoring an owner who lost access, or granting
+the first role in a product before the product can grant one itself), an
+operator manages memberships and application roles from the command line,
+without the API's authorization checks. The commands open the database
+directly and go through the same services as the API, so removals record
+access changes the same way:
+
+```bash
+systemauth org member add acme ada@example.com --org-role admin --role billing:admin
+systemauth org member list acme            # --json, --include-inactive
+systemauth org member remove acme ada@example.com --app billing   # only the role
+systemauth org member remove acme ada@example.com                 # the membership
+```
+
+An organization is named by its slug (a slug it gave up within the
+cooling-off period also works) and a person by their email or principal ID;
+the person signs in once first. Adding an existing member changes their
+organization role only when `--org-role` is given, and each `--role` is
+assigned or changed. `--by` records the operator's principal ID as the
+assigner.
+
+The standalone `systemauth` binary registers no vocabularies, so it manages
+memberships but refuses `--role`. A host that embeds SystemAuth mounts
+`membercmd.Command` with its vocabularies and entitlements:
+
+```go
+root.AddCommand(membercmd.Command(open, membercmd.Options{
+    Roles: membercmd.DefaultRoles(registry, marketplace.ApproleOptions(entitlements)...),
+}))
+```
+
+Under authorization mode `rebac` the commands do not write the graph; the
+running server's reconciler applies the change at its next run.

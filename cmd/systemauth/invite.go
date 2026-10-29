@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/organization/membercmd"
 	"github.com/plexusone/systemforge/identity/principal/admincmd"
 	"github.com/plexusone/systemforge/identity/serviceaccount/serviceaccountcmd"
 	"github.com/plexusone/systemforge/identity/signupgate/signupcmd"
@@ -49,6 +50,14 @@ func newAllowanceCmd(opts *options) *cobra.Command {
 // database.
 func newAdminCmd(opts *options) *cobra.Command {
 	return admincmd.Command(admincmd.Open(openDatabase(opts)))
+}
+
+// newOrgCmd builds "systemauth org member" (membercmd) over the configured
+// database. Like service-account, the standalone server registers no role
+// vocabularies, so it manages memberships; a host that embeds SystemAuth
+// mounts membercmd with its own to grant application roles.
+func newOrgCmd(opts *options) *cobra.Command {
+	return membercmd.Command(membercmd.Open(openDatabase(opts)), membercmd.Options{})
 }
 
 // newServiceAccountCmd builds "systemauth service-account"

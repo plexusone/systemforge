@@ -164,6 +164,7 @@ Run without a subcommand it serves (same as "systemauth serve").
 		newAllowanceCmd(opts),
 		newWaitlistCmd(opts),
 		newAdminCmd(opts),
+		newOrgCmd(opts),
 		&cobra.Command{
 			Use:   "version",
 			Short: "Print version information",
