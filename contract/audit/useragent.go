@@ -18,21 +18,27 @@ var (
 )
 
 // SanitizeUserAgent returns the User-Agent an emitter may record: the
-// client sends it, so it can carry anything. A value that looks like it
-// holds an email address or a credential is dropped (""), and any other is
-// cut to MaxUserAgent bytes of valid UTF-8 without control characters.
+// client sends it, so it can carry anything. Control characters and
+// invalid UTF-8 are removed; a value that then looks like it holds an
+// email address or a credential is dropped (""), and any other is cut to
+// MaxUserAgent bytes.
+//
+// The value is cleaned before it is checked, so control characters cannot
+// split an address or a token past the check. The check is a heuristic: it
+// catches the common shapes, not every possible piece of personal data or
+// a short secret.
 func SanitizeUserAgent(ua string) string {
-	if ua == "" || emailInText.MatchString(ua) || credentialRun.MatchString(ua) {
-		return ""
-	}
-	if len(ua) > MaxUserAgent {
-		ua = ua[:MaxUserAgent]
-	}
-	ua = strings.ToValidUTF8(ua, "")
-	return strings.Map(func(r rune) rune {
+	ua = strings.Map(func(r rune) rune {
 		if r < 0x20 || r == 0x7f {
 			return -1
 		}
 		return r
-	}, ua)
+	}, strings.ToValidUTF8(ua, ""))
+	if ua == "" || emailInText.MatchString(ua) || credentialRun.MatchString(ua) {
+		return ""
+	}
+	if len(ua) > MaxUserAgent {
+		ua = strings.ToValidUTF8(ua[:MaxUserAgent], "")
+	}
+	return ua
 }

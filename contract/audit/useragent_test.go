@@ -20,6 +20,8 @@ func TestSanitizeUserAgent(t *testing.T) {
 	drop := []string{
 		"curl/8.7.1 alice@example.com",
 		"bot (contact: ops+alerts@example.co.uk)",
+		"curl/8 alice@\texample.com",
+		"curl/8 alice\x00@example\x7f.com",
 		"client eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.sig",
 		"app/1.0 token=" + strings.Repeat("ab", 20),
 		"tool/2 c2VjcmV0LXNlY3JldC1zZWNyZXQtc2VjcmV0LXNlY3JldA==",

@@ -505,3 +505,49 @@ func TestMultiEmitterWithLogEmitter(t *testing.T) {
 		t.Error("each emitter should have the event once")
 	}
 }
+
+// tearThenFailWriter tears its first line, fails its second Write without
+// writing anything, and writes whole lines after that.
+type tearThenFailWriter struct {
+	mu    sync.Mutex
+	buf   bytes.Buffer
+	calls int
+}
+
+func (w *tearThenFailWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.calls++
+	switch w.calls {
+	case 1:
+		w.buf.Write(p[:len(p)/2])
+		return len(p) / 2, errors.New("no space left on device")
+	case 2:
+		return 0, errors.New("no space left on device")
+	}
+	return w.buf.Write(p)
+}
+
+// TestTornLineSurvivesAnEmptyFailedWrite checks that a Write failing
+// without writing anything after a torn line keeps the next event off the
+// torn line.
+func TestTornLineSurvivesAnEmptyFailedWrite(t *testing.T) {
+	logger, _ := logCapture()
+	w := &tearThenFailWriter{}
+	e := New(w, Options{Logger: logger})
+	for range 3 {
+		if err := e.Emit(context.Background(), signIn()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSuffix(w.buf.String(), "\n"), "\n")
+	if len(lines) != 2 || json.Valid([]byte(lines[0])) || !json.Valid([]byte(lines[1])) {
+		t.Fatalf("want the torn line, then one whole line; got %q", w.buf.String())
+	}
+	if e.WriteFailures() != 2 {
+		t.Errorf("WriteFailures = %d, want 2", e.WriteFailures())
+	}
+}

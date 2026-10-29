@@ -249,7 +249,12 @@ func (e *Emitter) run() {
 		if err == nil && n < len(line) {
 			err = io.ErrShortWrite
 		}
-		torn = err != nil && n > 0 && n < len(line)
+		// A Write that wrote nothing leaves the line as it was, torn or
+		// not; one that wrote something leaves it torn unless it wrote
+		// the whole line.
+		if n > 0 {
+			torn = n < len(line)
+		}
 		if err != nil {
 			e.writeFailed(err)
 		}
