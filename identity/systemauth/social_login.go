@@ -18,6 +18,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/plexusone/systemforge/authz"
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/oauthclient"
 	"github.com/plexusone/systemforge/session/ratelimit"
@@ -163,6 +164,9 @@ type socialLogin struct {
 	// revoker revokes a principal's tokens on logout; nil when the storage
 	// does not support it.
 	revoker SubjectTokenRevoker
+
+	// emit records security events (Server.emitEvent).
+	emit func(context.Context, *audit.Event)
 }
 
 func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
@@ -210,6 +214,7 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 	sort.Strings(providers)
 
 	sl := &socialLogin{
+		emit:       s.emitEvent,
 		cfg:        cfg,
 		connectors: connectors,
 		providers:  providers,
@@ -467,6 +472,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	if upstreamErr := q.Get("error"); upstreamErr != "" {
 		logger.Info("upstream login denied", "provider", provider, "error", upstreamErr)
+		sl.signInRefused(ctx, provider, "", "upstream_denied")
 		http.Error(w, "login was cancelled or denied", http.StatusBadRequest)
 		return
 	}
@@ -476,6 +482,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	state := q.Get("state")
 	if state == "" || stateCookie == "" ||
 		subtle.ConstantTimeCompare([]byte(state), []byte(stateCookie)) != 1 {
+		sl.signInRefused(ctx, provider, "", "invalid_state")
 		http.Error(w, "invalid login state", http.StatusBadRequest)
 		return
 	}
@@ -484,17 +491,20 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		if !errors.Is(err, oauthclient.ErrInvalidState) {
 			logger.Error("reading login state", "error", err)
 		}
+		sl.signInRefused(ctx, provider, "", "invalid_state")
 		http.Error(w, "invalid login state", http.StatusBadRequest)
 		return
 	}
 	// Entries the age question keeps share the store; they are never
 	// upstream state.
 	if data.Provider != provider || data.Nonce == signupAgePending || data.Nonce == signupAgeConfirmed {
+		sl.signInRefused(ctx, provider, "", "invalid_state")
 		http.Error(w, "invalid login state", http.StatusBadRequest)
 		return
 	}
 	code := q.Get("code")
 	if code == "" {
+		sl.signInRefused(ctx, provider, "", "missing_code")
 		http.Error(w, "missing authorization code", http.StatusBadRequest)
 		return
 	}
@@ -502,12 +512,14 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	token, err := conn.Exchange(ctx, code, oauth2.VerifierOption(data.PKCEVerifier))
 	if err != nil {
 		logger.Warn("upstream code exchange failed", "provider", provider, "error", err)
+		sl.signInRefused(ctx, provider, "", "upstream_exchange_failed")
 		http.Error(w, "upstream login failed", http.StatusBadGateway)
 		return
 	}
 	user, err := conn.FetchUser(ctx, token)
 	if err != nil {
 		logger.Warn("upstream profile fetch failed", "provider", provider, "error", err)
+		sl.signInRefused(ctx, provider, "", "upstream_profile_failed")
 		http.Error(w, "upstream login failed", http.StatusBadGateway)
 		return
 	}
@@ -528,6 +540,9 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	}, sl.now())
 	if err != nil {
 		status, msg := http.StatusInternalServerError, "login failed"
+		if reason := signInRefusalReason(err); reason != "" {
+			sl.signInRefused(ctx, provider, "", reason)
+		}
 		switch {
 		case errors.Is(err, ErrEmailNotVerified):
 			status, msg = http.StatusForbidden, "a verified email address is required to sign in"
@@ -576,11 +591,13 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	if err := sl.establishSession(ctx, w, r, p.ID, provider); err != nil {
 		logger.Error("creating login session", "error", err)
+		sl.signInRefused(ctx, provider, "", "server_error")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	logger.Info("social login succeeded", "provider", provider, "principal_id", p.ID)
+	sl.signedIn(ctx, p.ID, provider, "")
 	http.Redirect(w, r, target, http.StatusFound)
 }
 

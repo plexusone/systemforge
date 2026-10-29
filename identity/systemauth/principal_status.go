@@ -104,6 +104,8 @@ func (s *Server) requireActiveSubject(ctx context.Context, ar fosite.Requester) 
 	}
 	if err := s.storage.RevokeRefreshToken(ctx, ar.GetID()); err != nil {
 		LoggerFromContext(ctx).ErrorContext(ctx, "revoking tokens of an inactive principal", "request_id", ar.GetID(), oauthcore.ErrorAttr(ctx, LoggerFromContext(ctx), err))
+	} else {
+		s.tokenFamilyRevoked(ctx, ar.GetID(), sessionSubject(ar.GetSession()), requesterClientID(ar), "principal_inactive")
 	}
 	return fosite.ErrInactiveToken.WithHint("The principal is no longer active.")
 }

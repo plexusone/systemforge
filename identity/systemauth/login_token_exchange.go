@@ -188,21 +188,25 @@ func (sl *socialLogin) handleLoginToken(w http.ResponseWriter, r *http.Request) 
 	principalID, err := sl.verifyLoginToken(ctx, x, clientID, plain, address)
 	if errors.Is(err, errLoginTokenRejected) {
 		logger.Info("login token rejected", "client_id", clientID)
+		sl.signInRefused(ctx, loginTokenProvider, clientID, "login_token_rejected")
 		http.Error(w, errLoginTokenRejected.Error(), http.StatusUnauthorized)
 		return
 	}
 	if err != nil {
 		logger.Error("login token exchange", "client_id", clientID, "error", err)
+		sl.signInRefused(ctx, loginTokenProvider, clientID, "server_error")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	if err := sl.establishSession(ctx, w, r, principalID, loginTokenProvider); err != nil {
 		logger.Error("creating login session", "error", err)
+		sl.signInRefused(ctx, loginTokenProvider, clientID, "server_error")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	logger.Info("login token sign-in succeeded", "client_id", clientID, "principal_id", principalID)
+	sl.signedIn(ctx, principalID, loginTokenProvider, clientID)
 	//nolint:gosec // G710: target is the default or a return_to resolved against the redirect allowlist
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/appcatalog"
 	"github.com/plexusone/systemforge/identity/internal/oauthcore"
 
@@ -59,6 +60,7 @@ type Server struct {
 	rates           ratelimit.Storage
 	ratePolicy      *ratelimit.Policy
 	signedIn        *ratelimit.Limiter
+	audit           audit.Emitter
 }
 
 // Option configures a Server.
@@ -113,6 +115,7 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		storage:         NewMemoryStorage(),
 		sessionProvider: NewDefaultSessionProvider(),
 		logger:          slog.Default(),
+		audit:           audit.NopEmitter{},
 	}
 
 	// Apply options
@@ -132,6 +135,7 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		return nil, err
 	}
 	key := cfg.Keys.PrivateKey
+	ephemeralKey := key == nil
 	if key == nil {
 		var err error
 		key, err = rsa.GenerateKey(rand.Reader, 2048)
@@ -153,6 +157,7 @@ func NewEmbedded(cfg Config, opts ...Option) (*Server, error) {
 		return nil, err
 	}
 	s.keys = oauthcore.NewKeyRing(key, s.keyID, verificationKeys(s.config.Keys.VerificationKeys))
+	s.signingKeyLoaded(ephemeralKey)
 
 	// The JWT-bearer grant's key storage is resolved before Fosite is
 	// composed with it.
@@ -308,6 +313,7 @@ func (s *Server) setupRouter() {
 	// Rate limits come next, before anything authenticates a request.
 	router.Use(s.rateLimitLayers)
 	router.Use(middleware.RequestID)
+	router.Use(eventRequestMiddleware)
 	router.Use(middleware.Recoverer)
 	router.Use(s.loggerMiddleware)
 	router.Use(s.tokenOutcomeLimits)
