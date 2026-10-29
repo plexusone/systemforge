@@ -44,9 +44,11 @@ An application with an audit store wraps the store's `Record` in an
 | `context.tenant_id` | The organization (membership events) |
 | `details` | Event-specific fields below |
 
-The client address is the request's direct peer. For a refused token
-request the `client_id` is the one the request names; the client may not
-have been authenticated.
+The client address comes from SystemAuth's client-address rule
+(`client_address`, see [Client Addresses and Rate Limiting](../guides/rate-limiting.md#the-client-address)),
+the same one rate limits use, so behind a trusted proxy it is the visitor's
+address. For a refused token request the `client_id` is the one the request
+names; the client may not have been authenticated.
 
 ## SystemAuth events
 
