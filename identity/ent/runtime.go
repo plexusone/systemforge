@@ -50,6 +50,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
+	"github.com/plexusone/systemforge/identity/ent/verificationtoken"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -1515,4 +1516,18 @@ func init() {
 	subscriptionDescID := subscriptionMixinFields0[0].Descriptor()
 	// subscription.DefaultID holds the default value on creation for the id field.
 	subscription.DefaultID = subscriptionDescID.Default.(func() uuid.UUID)
+	verificationtokenFields := schema.VerificationToken{}.Fields()
+	_ = verificationtokenFields
+	// verificationtokenDescEmail is the schema descriptor for email field.
+	verificationtokenDescEmail := verificationtokenFields[3].Descriptor()
+	// verificationtoken.EmailValidator is a validator for the "email" field. It is called by the builders before save.
+	verificationtoken.EmailValidator = verificationtokenDescEmail.Validators[0].(func(string) error)
+	// verificationtokenDescBinding is the schema descriptor for binding field.
+	verificationtokenDescBinding := verificationtokenFields[5].Descriptor()
+	// verificationtoken.BindingValidator is a validator for the "binding" field. It is called by the builders before save.
+	verificationtoken.BindingValidator = verificationtokenDescBinding.Validators[0].(func(string) error)
+	// verificationtokenDescID is the schema descriptor for id field.
+	verificationtokenDescID := verificationtokenFields[0].Descriptor()
+	// verificationtoken.DefaultID holds the default value on creation for the id field.
+	verificationtoken.DefaultID = verificationtokenDescID.Default.(func() uuid.UUID)
 }

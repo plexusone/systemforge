@@ -56,6 +56,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
+	"github.com/plexusone/systemforge/identity/ent/verificationtoken"
 )
 
 const (
@@ -110,6 +111,7 @@ const (
 	TypeSignupWaitlistEntry  = "SignupWaitlistEntry"
 	TypeSlugReservation      = "SlugReservation"
 	TypeSubscription         = "Subscription"
+	TypeVerificationToken    = "VerificationToken"
 )
 
 // AccessChangeMutation represents an operation that mutates the AccessChange nodes in the graph.
@@ -44282,4 +44284,828 @@ func (m *SubscriptionMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Subscription edge %s", name)
+}
+
+// VerificationTokenMutation represents an operation that mutates the VerificationToken nodes in the graph.
+type VerificationTokenMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	token_hash    *string
+	purpose       *verificationtoken.Purpose
+	email         *string
+	principal_id  *uuid.UUID
+	binding       *string
+	data          *[]byte
+	created_at    *time.Time
+	expires_at    *time.Time
+	consumed_at   *time.Time
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*VerificationToken, error)
+	predicates    []predicate.VerificationToken
+}
+
+var _ ent.Mutation = (*VerificationTokenMutation)(nil)
+
+// verificationtokenOption allows management of the mutation configuration using functional options.
+type verificationtokenOption func(*VerificationTokenMutation)
+
+// newVerificationTokenMutation creates new mutation for the VerificationToken entity.
+func newVerificationTokenMutation(c config, op Op, opts ...verificationtokenOption) *VerificationTokenMutation {
+	m := &VerificationTokenMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeVerificationToken,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withVerificationTokenID sets the ID field of the mutation.
+func withVerificationTokenID(id uuid.UUID) verificationtokenOption {
+	return func(m *VerificationTokenMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *VerificationToken
+		)
+		m.oldValue = func(ctx context.Context) (*VerificationToken, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().VerificationToken.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withVerificationToken sets the old VerificationToken of the mutation.
+func withVerificationToken(node *VerificationToken) verificationtokenOption {
+	return func(m *VerificationTokenMutation) {
+		m.oldValue = func(context.Context) (*VerificationToken, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m VerificationTokenMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m VerificationTokenMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of VerificationToken entities.
+func (m *VerificationTokenMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *VerificationTokenMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *VerificationTokenMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().VerificationToken.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTokenHash sets the "token_hash" field.
+func (m *VerificationTokenMutation) SetTokenHash(s string) {
+	m.token_hash = &s
+}
+
+// TokenHash returns the value of the "token_hash" field in the mutation.
+func (m *VerificationTokenMutation) TokenHash() (r string, exists bool) {
+	v := m.token_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTokenHash returns the old "token_hash" field's value of the VerificationToken entity.
+// If the VerificationToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VerificationTokenMutation) OldTokenHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTokenHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTokenHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTokenHash: %w", err)
+	}
+	return oldValue.TokenHash, nil
+}
+
+// ResetTokenHash resets all changes to the "token_hash" field.
+func (m *VerificationTokenMutation) ResetTokenHash() {
+	m.token_hash = nil
+}
+
+// SetPurpose sets the "purpose" field.
+func (m *VerificationTokenMutation) SetPurpose(v verificationtoken.Purpose) {
+	m.purpose = &v
+}
+
+// Purpose returns the value of the "purpose" field in the mutation.
+func (m *VerificationTokenMutation) Purpose() (r verificationtoken.Purpose, exists bool) {
+	v := m.purpose
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPurpose returns the old "purpose" field's value of the VerificationToken entity.
+// If the VerificationToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VerificationTokenMutation) OldPurpose(ctx context.Context) (v verificationtoken.Purpose, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPurpose is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPurpose requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPurpose: %w", err)
+	}
+	return oldValue.Purpose, nil
+}
+
+// ResetPurpose resets all changes to the "purpose" field.
+func (m *VerificationTokenMutation) ResetPurpose() {
+	m.purpose = nil
+}
+
+// SetEmail sets the "email" field.
+func (m *VerificationTokenMutation) SetEmail(s string) {
+	m.email = &s
+}
+
+// Email returns the value of the "email" field in the mutation.
+func (m *VerificationTokenMutation) Email() (r string, exists bool) {
+	v := m.email
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmail returns the old "email" field's value of the VerificationToken entity.
+// If the VerificationToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VerificationTokenMutation) OldEmail(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmail is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmail requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmail: %w", err)
+	}
+	return oldValue.Email, nil
+}
+
+// ResetEmail resets all changes to the "email" field.
+func (m *VerificationTokenMutation) ResetEmail() {
+	m.email = nil
+}
+
+// SetPrincipalID sets the "principal_id" field.
+func (m *VerificationTokenMutation) SetPrincipalID(u uuid.UUID) {
+	m.principal_id = &u
+}
+
+// PrincipalID returns the value of the "principal_id" field in the mutation.
+func (m *VerificationTokenMutation) PrincipalID() (r uuid.UUID, exists bool) {
+	v := m.principal_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrincipalID returns the old "principal_id" field's value of the VerificationToken entity.
+// If the VerificationToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VerificationTokenMutation) OldPrincipalID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrincipalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrincipalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrincipalID: %w", err)
+	}
+	return oldValue.PrincipalID, nil
+}
+
+// ClearPrincipalID clears the value of the "principal_id" field.
+func (m *VerificationTokenMutation) ClearPrincipalID() {
+	m.principal_id = nil
+	m.clearedFields[verificationtoken.FieldPrincipalID] = struct{}{}
+}
+
+// PrincipalIDCleared returns if the "principal_id" field was cleared in this mutation.
+func (m *VerificationTokenMutation) PrincipalIDCleared() bool {
+	_, ok := m.clearedFields[verificationtoken.FieldPrincipalID]
+	return ok
+}
+
+// ResetPrincipalID resets all changes to the "principal_id" field.
+func (m *VerificationTokenMutation) ResetPrincipalID() {
+	m.principal_id = nil
+	delete(m.clearedFields, verificationtoken.FieldPrincipalID)
+}
+
+// SetBinding sets the "binding" field.
+func (m *VerificationTokenMutation) SetBinding(s string) {
+	m.binding = &s
+}
+
+// Binding returns the value of the "binding" field in the mutation.
+func (m *VerificationTokenMutation) Binding() (r string, exists bool) {
+	v := m.binding
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBinding returns the old "binding" field's value of the VerificationToken entity.
+// If the VerificationToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VerificationTokenMutation) OldBinding(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBinding is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBinding requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBinding: %w", err)
+	}
+	return oldValue.Binding, nil
+}
+
+// ResetBinding resets all changes to the "binding" field.
+func (m *VerificationTokenMutation) ResetBinding() {
+	m.binding = nil
+}
+
+// SetData sets the "data" field.
+func (m *VerificationTokenMutation) SetData(b []byte) {
+	m.data = &b
+}
+
+// Data returns the value of the "data" field in the mutation.
+func (m *VerificationTokenMutation) Data() (r []byte, exists bool) {
+	v := m.data
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldData returns the old "data" field's value of the VerificationToken entity.
+// If the VerificationToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VerificationTokenMutation) OldData(ctx context.Context) (v []byte, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldData is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldData requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldData: %w", err)
+	}
+	return oldValue.Data, nil
+}
+
+// ClearData clears the value of the "data" field.
+func (m *VerificationTokenMutation) ClearData() {
+	m.data = nil
+	m.clearedFields[verificationtoken.FieldData] = struct{}{}
+}
+
+// DataCleared returns if the "data" field was cleared in this mutation.
+func (m *VerificationTokenMutation) DataCleared() bool {
+	_, ok := m.clearedFields[verificationtoken.FieldData]
+	return ok
+}
+
+// ResetData resets all changes to the "data" field.
+func (m *VerificationTokenMutation) ResetData() {
+	m.data = nil
+	delete(m.clearedFields, verificationtoken.FieldData)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *VerificationTokenMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *VerificationTokenMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the VerificationToken entity.
+// If the VerificationToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VerificationTokenMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *VerificationTokenMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (m *VerificationTokenMutation) SetExpiresAt(t time.Time) {
+	m.expires_at = &t
+}
+
+// ExpiresAt returns the value of the "expires_at" field in the mutation.
+func (m *VerificationTokenMutation) ExpiresAt() (r time.Time, exists bool) {
+	v := m.expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresAt returns the old "expires_at" field's value of the VerificationToken entity.
+// If the VerificationToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VerificationTokenMutation) OldExpiresAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresAt: %w", err)
+	}
+	return oldValue.ExpiresAt, nil
+}
+
+// ResetExpiresAt resets all changes to the "expires_at" field.
+func (m *VerificationTokenMutation) ResetExpiresAt() {
+	m.expires_at = nil
+}
+
+// SetConsumedAt sets the "consumed_at" field.
+func (m *VerificationTokenMutation) SetConsumedAt(t time.Time) {
+	m.consumed_at = &t
+}
+
+// ConsumedAt returns the value of the "consumed_at" field in the mutation.
+func (m *VerificationTokenMutation) ConsumedAt() (r time.Time, exists bool) {
+	v := m.consumed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldConsumedAt returns the old "consumed_at" field's value of the VerificationToken entity.
+// If the VerificationToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VerificationTokenMutation) OldConsumedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldConsumedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldConsumedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldConsumedAt: %w", err)
+	}
+	return oldValue.ConsumedAt, nil
+}
+
+// ClearConsumedAt clears the value of the "consumed_at" field.
+func (m *VerificationTokenMutation) ClearConsumedAt() {
+	m.consumed_at = nil
+	m.clearedFields[verificationtoken.FieldConsumedAt] = struct{}{}
+}
+
+// ConsumedAtCleared returns if the "consumed_at" field was cleared in this mutation.
+func (m *VerificationTokenMutation) ConsumedAtCleared() bool {
+	_, ok := m.clearedFields[verificationtoken.FieldConsumedAt]
+	return ok
+}
+
+// ResetConsumedAt resets all changes to the "consumed_at" field.
+func (m *VerificationTokenMutation) ResetConsumedAt() {
+	m.consumed_at = nil
+	delete(m.clearedFields, verificationtoken.FieldConsumedAt)
+}
+
+// Where appends a list predicates to the VerificationTokenMutation builder.
+func (m *VerificationTokenMutation) Where(ps ...predicate.VerificationToken) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the VerificationTokenMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *VerificationTokenMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.VerificationToken, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *VerificationTokenMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *VerificationTokenMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (VerificationToken).
+func (m *VerificationTokenMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *VerificationTokenMutation) Fields() []string {
+	fields := make([]string, 0, 9)
+	if m.token_hash != nil {
+		fields = append(fields, verificationtoken.FieldTokenHash)
+	}
+	if m.purpose != nil {
+		fields = append(fields, verificationtoken.FieldPurpose)
+	}
+	if m.email != nil {
+		fields = append(fields, verificationtoken.FieldEmail)
+	}
+	if m.principal_id != nil {
+		fields = append(fields, verificationtoken.FieldPrincipalID)
+	}
+	if m.binding != nil {
+		fields = append(fields, verificationtoken.FieldBinding)
+	}
+	if m.data != nil {
+		fields = append(fields, verificationtoken.FieldData)
+	}
+	if m.created_at != nil {
+		fields = append(fields, verificationtoken.FieldCreatedAt)
+	}
+	if m.expires_at != nil {
+		fields = append(fields, verificationtoken.FieldExpiresAt)
+	}
+	if m.consumed_at != nil {
+		fields = append(fields, verificationtoken.FieldConsumedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *VerificationTokenMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case verificationtoken.FieldTokenHash:
+		return m.TokenHash()
+	case verificationtoken.FieldPurpose:
+		return m.Purpose()
+	case verificationtoken.FieldEmail:
+		return m.Email()
+	case verificationtoken.FieldPrincipalID:
+		return m.PrincipalID()
+	case verificationtoken.FieldBinding:
+		return m.Binding()
+	case verificationtoken.FieldData:
+		return m.Data()
+	case verificationtoken.FieldCreatedAt:
+		return m.CreatedAt()
+	case verificationtoken.FieldExpiresAt:
+		return m.ExpiresAt()
+	case verificationtoken.FieldConsumedAt:
+		return m.ConsumedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *VerificationTokenMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case verificationtoken.FieldTokenHash:
+		return m.OldTokenHash(ctx)
+	case verificationtoken.FieldPurpose:
+		return m.OldPurpose(ctx)
+	case verificationtoken.FieldEmail:
+		return m.OldEmail(ctx)
+	case verificationtoken.FieldPrincipalID:
+		return m.OldPrincipalID(ctx)
+	case verificationtoken.FieldBinding:
+		return m.OldBinding(ctx)
+	case verificationtoken.FieldData:
+		return m.OldData(ctx)
+	case verificationtoken.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case verificationtoken.FieldExpiresAt:
+		return m.OldExpiresAt(ctx)
+	case verificationtoken.FieldConsumedAt:
+		return m.OldConsumedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown VerificationToken field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *VerificationTokenMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case verificationtoken.FieldTokenHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTokenHash(v)
+		return nil
+	case verificationtoken.FieldPurpose:
+		v, ok := value.(verificationtoken.Purpose)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPurpose(v)
+		return nil
+	case verificationtoken.FieldEmail:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmail(v)
+		return nil
+	case verificationtoken.FieldPrincipalID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrincipalID(v)
+		return nil
+	case verificationtoken.FieldBinding:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBinding(v)
+		return nil
+	case verificationtoken.FieldData:
+		v, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetData(v)
+		return nil
+	case verificationtoken.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case verificationtoken.FieldExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresAt(v)
+		return nil
+	case verificationtoken.FieldConsumedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetConsumedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown VerificationToken field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *VerificationTokenMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *VerificationTokenMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *VerificationTokenMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown VerificationToken numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *VerificationTokenMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(verificationtoken.FieldPrincipalID) {
+		fields = append(fields, verificationtoken.FieldPrincipalID)
+	}
+	if m.FieldCleared(verificationtoken.FieldData) {
+		fields = append(fields, verificationtoken.FieldData)
+	}
+	if m.FieldCleared(verificationtoken.FieldConsumedAt) {
+		fields = append(fields, verificationtoken.FieldConsumedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *VerificationTokenMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *VerificationTokenMutation) ClearField(name string) error {
+	switch name {
+	case verificationtoken.FieldPrincipalID:
+		m.ClearPrincipalID()
+		return nil
+	case verificationtoken.FieldData:
+		m.ClearData()
+		return nil
+	case verificationtoken.FieldConsumedAt:
+		m.ClearConsumedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown VerificationToken nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *VerificationTokenMutation) ResetField(name string) error {
+	switch name {
+	case verificationtoken.FieldTokenHash:
+		m.ResetTokenHash()
+		return nil
+	case verificationtoken.FieldPurpose:
+		m.ResetPurpose()
+		return nil
+	case verificationtoken.FieldEmail:
+		m.ResetEmail()
+		return nil
+	case verificationtoken.FieldPrincipalID:
+		m.ResetPrincipalID()
+		return nil
+	case verificationtoken.FieldBinding:
+		m.ResetBinding()
+		return nil
+	case verificationtoken.FieldData:
+		m.ResetData()
+		return nil
+	case verificationtoken.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case verificationtoken.FieldExpiresAt:
+		m.ResetExpiresAt()
+		return nil
+	case verificationtoken.FieldConsumedAt:
+		m.ResetConsumedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown VerificationToken field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *VerificationTokenMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *VerificationTokenMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *VerificationTokenMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *VerificationTokenMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *VerificationTokenMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *VerificationTokenMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *VerificationTokenMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown VerificationToken unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *VerificationTokenMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown VerificationToken edge %s", name)
 }

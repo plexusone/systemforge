@@ -47,6 +47,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
+	"github.com/plexusone/systemforge/identity/ent/verificationtoken"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -56,7 +57,7 @@ import (
 
 // schemaGraph holds a representation of ent/schema at runtime.
 var schemaGraph = func() *sqlgraph.Schema {
-	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 43)}
+	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 44)}
 	graph.Nodes[0] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   accesschange.Table,
@@ -1041,6 +1042,28 @@ var schemaGraph = func() *sqlgraph.Schema {
 			subscription.FieldCancelAtPeriodEnd:    {Type: field.TypeBool, Column: subscription.FieldCancelAtPeriodEnd},
 			subscription.FieldCreatedAt:            {Type: field.TypeTime, Column: subscription.FieldCreatedAt},
 			subscription.FieldUpdatedAt:            {Type: field.TypeTime, Column: subscription.FieldUpdatedAt},
+		},
+	}
+	graph.Nodes[43] = &sqlgraph.Node{
+		NodeSpec: sqlgraph.NodeSpec{
+			Table:   verificationtoken.Table,
+			Columns: verificationtoken.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeUUID,
+				Column: verificationtoken.FieldID,
+			},
+		},
+		Type: "VerificationToken",
+		Fields: map[string]*sqlgraph.FieldSpec{
+			verificationtoken.FieldTokenHash:   {Type: field.TypeString, Column: verificationtoken.FieldTokenHash},
+			verificationtoken.FieldPurpose:     {Type: field.TypeEnum, Column: verificationtoken.FieldPurpose},
+			verificationtoken.FieldEmail:       {Type: field.TypeString, Column: verificationtoken.FieldEmail},
+			verificationtoken.FieldPrincipalID: {Type: field.TypeUUID, Column: verificationtoken.FieldPrincipalID},
+			verificationtoken.FieldBinding:     {Type: field.TypeString, Column: verificationtoken.FieldBinding},
+			verificationtoken.FieldData:        {Type: field.TypeBytes, Column: verificationtoken.FieldData},
+			verificationtoken.FieldCreatedAt:   {Type: field.TypeTime, Column: verificationtoken.FieldCreatedAt},
+			verificationtoken.FieldExpiresAt:   {Type: field.TypeTime, Column: verificationtoken.FieldExpiresAt},
+			verificationtoken.FieldConsumedAt:  {Type: field.TypeTime, Column: verificationtoken.FieldConsumedAt},
 		},
 	}
 	graph.MustAddE(
@@ -6985,4 +7008,89 @@ func (f *SubscriptionFilter) WhereHasOrganizationWith(preds ...predicate.Organiz
 			p(s)
 		}
 	})))
+}
+
+// addPredicate implements the predicateAdder interface.
+func (_q *VerificationTokenQuery) addPredicate(pred func(s *sql.Selector)) {
+	_q.predicates = append(_q.predicates, pred)
+}
+
+// Filter returns a Filter implementation to apply filters on the VerificationTokenQuery builder.
+func (_q *VerificationTokenQuery) Filter() *VerificationTokenFilter {
+	return &VerificationTokenFilter{config: _q.config, predicateAdder: _q}
+}
+
+// addPredicate implements the predicateAdder interface.
+func (m *VerificationTokenMutation) addPredicate(pred func(s *sql.Selector)) {
+	m.predicates = append(m.predicates, pred)
+}
+
+// Filter returns an entql.Where implementation to apply filters on the VerificationTokenMutation builder.
+func (m *VerificationTokenMutation) Filter() *VerificationTokenFilter {
+	return &VerificationTokenFilter{config: m.config, predicateAdder: m}
+}
+
+// VerificationTokenFilter provides a generic filtering capability at runtime for VerificationTokenQuery.
+type VerificationTokenFilter struct {
+	predicateAdder
+	config
+}
+
+// Where applies the entql predicate on the query filter.
+func (f *VerificationTokenFilter) Where(p entql.P) {
+	f.addPredicate(func(s *sql.Selector) {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[43].Type, p, s); err != nil {
+			s.AddError(err)
+		}
+	})
+}
+
+// WhereID applies the entql [16]byte predicate on the id field.
+func (f *VerificationTokenFilter) WhereID(p entql.ValueP) {
+	f.Where(p.Field(verificationtoken.FieldID))
+}
+
+// WhereTokenHash applies the entql string predicate on the token_hash field.
+func (f *VerificationTokenFilter) WhereTokenHash(p entql.StringP) {
+	f.Where(p.Field(verificationtoken.FieldTokenHash))
+}
+
+// WherePurpose applies the entql string predicate on the purpose field.
+func (f *VerificationTokenFilter) WherePurpose(p entql.StringP) {
+	f.Where(p.Field(verificationtoken.FieldPurpose))
+}
+
+// WhereEmail applies the entql string predicate on the email field.
+func (f *VerificationTokenFilter) WhereEmail(p entql.StringP) {
+	f.Where(p.Field(verificationtoken.FieldEmail))
+}
+
+// WherePrincipalID applies the entql [16]byte predicate on the principal_id field.
+func (f *VerificationTokenFilter) WherePrincipalID(p entql.ValueP) {
+	f.Where(p.Field(verificationtoken.FieldPrincipalID))
+}
+
+// WhereBinding applies the entql string predicate on the binding field.
+func (f *VerificationTokenFilter) WhereBinding(p entql.StringP) {
+	f.Where(p.Field(verificationtoken.FieldBinding))
+}
+
+// WhereData applies the entql []byte predicate on the data field.
+func (f *VerificationTokenFilter) WhereData(p entql.BytesP) {
+	f.Where(p.Field(verificationtoken.FieldData))
+}
+
+// WhereCreatedAt applies the entql time.Time predicate on the created_at field.
+func (f *VerificationTokenFilter) WhereCreatedAt(p entql.TimeP) {
+	f.Where(p.Field(verificationtoken.FieldCreatedAt))
+}
+
+// WhereExpiresAt applies the entql time.Time predicate on the expires_at field.
+func (f *VerificationTokenFilter) WhereExpiresAt(p entql.TimeP) {
+	f.Where(p.Field(verificationtoken.FieldExpiresAt))
+}
+
+// WhereConsumedAt applies the entql time.Time predicate on the consumed_at field.
+func (f *VerificationTokenFilter) WhereConsumedAt(p entql.TimeP) {
+	f.Where(p.Field(verificationtoken.FieldConsumedAt))
 }

@@ -1982,6 +1982,37 @@ var (
 			},
 		},
 	}
+	// SfVerificationTokensColumns holds the columns for the "sf_verification_tokens" table.
+	SfVerificationTokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "token_hash", Type: field.TypeString, Unique: true},
+		{Name: "purpose", Type: field.TypeEnum, Enums: []string{"verify_email", "email_change"}},
+		{Name: "email", Type: field.TypeString},
+		{Name: "principal_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "binding", Type: field.TypeString},
+		{Name: "data", Type: field.TypeBytes, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "consumed_at", Type: field.TypeTime, Nullable: true},
+	}
+	// SfVerificationTokensTable holds the schema information for the "sf_verification_tokens" table.
+	SfVerificationTokensTable = &schema.Table{
+		Name:       "sf_verification_tokens",
+		Columns:    SfVerificationTokensColumns,
+		PrimaryKey: []*schema.Column{SfVerificationTokensColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "verificationtoken_purpose_binding",
+				Unique:  false,
+				Columns: []*schema.Column{SfVerificationTokensColumns[2], SfVerificationTokensColumns[5]},
+			},
+			{
+				Name:    "verificationtoken_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{SfVerificationTokensColumns[8]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		SfAccessChangesTable,
@@ -2027,6 +2058,7 @@ var (
 		SfSignupWaitlistTable,
 		SfSlugReservationsTable,
 		SfSubscriptionsTable,
+		SfVerificationTokensTable,
 	}
 )
 
@@ -2204,5 +2236,8 @@ func init() {
 	SfSubscriptionsTable.ForeignKeys[0].RefTable = SfOrganizationsTable
 	SfSubscriptionsTable.Annotation = &entsql.Annotation{
 		Table: "sf_subscriptions",
+	}
+	SfVerificationTokensTable.Annotation = &entsql.Annotation{
+		Table: "sf_verification_tokens",
 	}
 }

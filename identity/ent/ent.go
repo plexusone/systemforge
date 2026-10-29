@@ -55,6 +55,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/signupwaitlistentry"
 	"github.com/plexusone/systemforge/identity/ent/slugreservation"
 	"github.com/plexusone/systemforge/identity/ent/subscription"
+	"github.com/plexusone/systemforge/identity/ent/verificationtoken"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -158,6 +159,7 @@ func checkColumn(t, c string) error {
 			signupwaitlistentry.Table:  signupwaitlistentry.ValidColumn,
 			slugreservation.Table:      slugreservation.ValidColumn,
 			subscription.Table:         subscription.ValidColumn,
+			verificationtoken.Table:    verificationtoken.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

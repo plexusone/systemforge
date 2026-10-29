@@ -99,6 +99,7 @@ var RestrictedSharedTables = []string{
 	"sf_signup_codes",
 	"sf_signup_invites",
 	"sf_signup_waitlist",
+	"sf_verification_tokens",
 }
 
 // NoSharedReadTables is a SharedReadTables value that grants no shared
