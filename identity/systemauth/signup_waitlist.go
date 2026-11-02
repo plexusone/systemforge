@@ -96,6 +96,7 @@ var waitlistTemplate = template.Must(template.New("waitlist").Parse(`<!doctype h
 <label><input name="consent" type="checkbox" value="yes" required> {{.Page.ConsentText}}</label>
 <button type="submit">Notify me</button>
 </form>{{end}}
+{{if .HomeURL}}<p><a href="{{.HomeURL}}">&larr; Back to {{.HomeName}}</a></p>{{end}}
 </main></body></html>
 `))
 
@@ -106,10 +107,15 @@ type waitlistView struct {
 	Thanks  bool
 	Error   string
 	Email   string
+	// HomeURL and HomeName link back to social_login.signed_out_url, so
+	// the page is not a dead end; empty without one.
+	HomeURL  string
+	HomeName string
 }
 
 func (sl *socialLogin) renderWaitlist(w http.ResponseWriter, r *http.Request, status int, v waitlistView) {
 	v.Page, v.Action = sl.waitlistPage, SignupWaitlistPath
+	v.HomeURL, v.HomeName = sl.redirects.signedOut, sl.redirects.signedOutName
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	if err := waitlistTemplate.Execute(w, v); err != nil {
