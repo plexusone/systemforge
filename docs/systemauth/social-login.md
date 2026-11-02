@@ -16,7 +16,7 @@ endpoints:
 
 | Route | Purpose |
 |-------|---------|
-| `GET /login?return_to=...` | Provider chooser. Redirects straight to the provider when only one is configured. |
+| `GET /login?return_to=...` | The sign-in page: a link per provider, waiting for the person to choose, even with one provider. With `auto_select_single_provider`, redirects straight to the only provider. |
 | `GET /login/{provider}?return_to=...` | Starts the upstream authorization-code flow (`github` or `google`). |
 | `GET /login/{provider}/callback` | Upstream callback. Resolves the principal, sets the `__Host-sf_login` session, and redirects to `return_to`. |
 | `GET /logout?return_to=...` | Renders a sign-out confirmation form (never signs out by itself). |
@@ -142,6 +142,7 @@ social_login:
 | `allowed_redirect_origins` | none | Absolute origins a `return_to` may target in addition to the issuer origin. Relative same-origin paths are always allowed. |
 | `default_redirect` | `/` | Used when no `return_to` is given. Must itself pass the allowlist. |
 | `session_lifetime` | `12h` | Absolute lifetime of the login session. |
+| `auto_select_single_provider` | `false` | With one provider, skip the sign-in page and go straight to it. Off by default: a browser that has just signed out would otherwise be signed straight back in, since the provider keeps its own session and remembers the person's authorization. |
 | `skip_consent` | `false` | Deprecated and ignored; logs a warning at startup when set. First-party clients skip consent and other clients always ask (see [Consent](#consent)). |
 | `signup_minimum_age` | `0` | Asks a person's birth month and year before their first login creates an account, and refuses anyone younger, keeping nothing. See [Deploying SystemAuth](deployment.md#minimum-sign-up-age). |
 | `insecure_cookies` | `false` | Drops the `__Host-` prefix and `Secure` flag for local HTTP development, and logs a warning at startup. Never enable in production. See [Browser Cookies](../guides/cookies.md). |
