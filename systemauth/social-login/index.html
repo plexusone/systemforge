@@ -1897,6 +1897,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Account linking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#linking-sign-in-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linking sign-in methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4699,6 +4716,8 @@
       
         
       
+        
+      
     
     
     
@@ -4770,6 +4789,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.5
   
 
     
@@ -6002,6 +6049,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Account linking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#linking-sign-in-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linking sign-in methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -6072,6 +6136,10 @@ endpoints:</p>
 <tr>
 <td><code>GET /login/{provider}?return_to=...</code></td>
 <td>Starts the upstream authorization-code flow (<code>github</code> or <code>google</code>).</td>
+</tr>
+<tr>
+<td><code>GET /account/sign-in-methods</code></td>
+<td>A signed-in person's page to link another provider's sign-in to their account (see <a href="#linking-sign-in-methods">Linking sign-in methods</a>).</td>
 </tr>
 <tr>
 <td><code>GET /login/{provider}/callback</code></td>
@@ -6333,6 +6401,30 @@ an address marked verified after its owner loses the mailbox. When such an
 email already belongs to an account, the sign-in is refused as a conflict
 (<code>ErrEmailConflict</code>), and the person signs in the way they signed in before.
 GitHub sign-in uses the account's primary email only.</p>
+<h3 id="linking-sign-in-methods">Linking sign-in methods<a class="headerlink" href="#linking-sign-in-methods" title="Permanent link">&para;</a></h3>
+<p>A signed-in person can link another provider's sign-in to their account at
+<code>/account/sign-in-methods</code>, so either one signs them in to the same account,
+whatever email each provider reports. The page lists a <strong>Link</strong> button per
+configured provider. The button's form posts to
+<code>/account/sign-in-methods/{provider}</code>, which is origin-checked like sign-out
+and needs a login session. It sends the browser through the provider's
+sign-in. The callback then attaches that provider identity to the account:</p>
+<ul>
+<li>The browser must still be signed in as the account that started the link.</li>
+<li>An identity already on another account is never moved, and the page says
+  so. Removing a sign-in method from an account, or merging two accounts, is
+  not available yet: link a provider before its first sign-in makes an
+  account of its own.</li>
+<li>An identity already on this account is a success that changes nothing.</li>
+<li>No account is created, no sign-up gate or age question applies, and the
+  account's own email is unchanged.</li>
+</ul>
+<p>A completed link, and a link the callback refuses (the identity is on
+another account, or the browser is no longer signed in as the account that
+started it), is the security event <code>systemauth.sign_in_method.linked</code>. A
+start refused before the provider, such as a cross-origin request, is not;
+nor is a denial at the provider, which is a refused sign-in
+(<code>systemauth.sign_in</code>).</p>
 <h2 id="security-properties">Security properties<a class="headerlink" href="#security-properties" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>state</code> is stored server-side (single use, 10 minute TTL) <strong>and</strong> bound to the
