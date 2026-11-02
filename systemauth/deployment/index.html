@@ -4834,6 +4834,8 @@
       
         
       
+        
+      
     
     
     
@@ -4905,6 +4907,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.3
   
 
     
@@ -6781,7 +6811,12 @@ pages, carries:</p>
 </tr>
 </tbody>
 </table>
-<p>The pages run no script and no inline style. Browsers check <code>form-action</code>
+<p>The pages run no script and no inline style. They link one stylesheet,
+<code>/assets/systemauth.css</code>, served by SystemAuth from its own origin, which
+<code>default-src 'self'</code> allows: a plain card in light and dark, with the
+sign-in options as buttons. The link carries the stylesheet's content hash,
+so a browser caches it until it changes. A proxy in front of SystemAuth must
+pass <code>/assets/</code> through. Browsers check <code>form-action</code>
 on every redirect that follows a form submission, so a page whose form
 ends at another origin adds it: the consent page adds the origins of the
 client's redirect URIs, the logout page the <code>allowed_redirect_origins</code>,
