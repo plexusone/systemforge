@@ -100,6 +100,7 @@ selected by it as well as by OCSF class.
 | `systemauth.token_family.revoked` | Authentication (3002) | Logoff, protocol OAuth 2.0 | Informational |
 | `systemauth.email_verification.sent`, `systemauth.email.verified` | Authentication (3002) for purpose `verify_email`; User Management (3007) for `email_change` | Preauth; Update | Informational |
 | `systemauth.email_change.requested`, `.cancelled`, `systemauth.email.changed` | User Management (3007) | Update | Informational |
+| `systemauth.sign_in_method.linked` | User Management (3007) | Update | Informational; Low when refused |
 | `systemauth.signing_key.loaded` | Application Lifecycle (6002) | Start | Informational |
 | `systemauth.production.waiver` | Application Lifecycle (6002) | Start | Medium |
 | `organization.membership` | Group Management (3006) | Add User (`added`), Remove User (`removed`), Update (`updated`, `ownership_transferred`) | Informational; Medium for `ownership_transferred` |

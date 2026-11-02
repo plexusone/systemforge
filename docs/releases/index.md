@@ -4,7 +4,10 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.30.4](v0.30.4.md), adds
+The latest release, [v0.30.5](v0.30.5.md), lets a signed-in person link
+another provider's sign-in to their account. It adds no breaking change.
+
+Before it, [v0.30.4](v0.30.4.md) added
 `social_login.signed_out_url`, so every sign-out can land on the product's
 marketing site, and links the waitlist page back to it by the product's
 name. It adds no breaking change.

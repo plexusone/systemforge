@@ -18,6 +18,7 @@ endpoints:
 |-------|---------|
 | `GET /login?return_to=...` | The sign-in page: a link per provider, waiting for the person to choose, even with one provider. With `auto_select_single_provider`, redirects straight to the only provider. |
 | `GET /login/{provider}?return_to=...` | Starts the upstream authorization-code flow (`github` or `google`). |
+| `GET /account/sign-in-methods` | A signed-in person's page to link another provider's sign-in to their account (see [Linking sign-in methods](#linking-sign-in-methods)). |
 | `GET /login/{provider}/callback` | Upstream callback. Resolves the principal, sets the `__Host-sf_login` session, and redirects to `return_to`. |
 | `GET /logout?return_to=...` | Renders a sign-out confirmation form (never signs out by itself). |
 | `POST /logout` | Deletes the login session, clears the cookie, revokes all of the principal's access and refresh tokens, and redirects (`303`) to the validated `return_to` (default `default_redirect`). |
@@ -191,6 +192,32 @@ an address marked verified after its owner loses the mailbox. When such an
 email already belongs to an account, the sign-in is refused as a conflict
 (`ErrEmailConflict`), and the person signs in the way they signed in before.
 GitHub sign-in uses the account's primary email only.
+
+### Linking sign-in methods
+
+A signed-in person can link another provider's sign-in to their account at
+`/account/sign-in-methods`, so either one signs them in to the same account,
+whatever email each provider reports. The page lists a **Link** button per
+configured provider. The button's form posts to
+`/account/sign-in-methods/{provider}`, which is origin-checked like sign-out
+and needs a login session. It sends the browser through the provider's
+sign-in. The callback then attaches that provider identity to the account:
+
+- The browser must still be signed in as the account that started the link.
+- An identity already on another account is never moved, and the page says
+  so. Removing a sign-in method from an account, or merging two accounts, is
+  not available yet: link a provider before its first sign-in makes an
+  account of its own.
+- An identity already on this account is a success that changes nothing.
+- No account is created, no sign-up gate or age question applies, and the
+  account's own email is unchanged.
+
+A completed link, and a link the callback refuses (the identity is on
+another account, or the browser is no longer signed in as the account that
+started it), is the security event `systemauth.sign_in_method.linked`. A
+start refused before the provider, such as a cross-origin request, is not;
+nor is a denial at the provider, which is a refused sign-in
+(`systemauth.sign_in`).
 
 ## Security properties
 

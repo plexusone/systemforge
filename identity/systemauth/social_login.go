@@ -335,6 +335,8 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 		r.Get(LoginPath, sl.handleChooser)
 		r.Get(loginStartPattern, sl.handleStart)
 		r.Get(loginCallbackPattern, sl.handleCallback)
+		r.Get(SignInMethodsPath, sl.handleSignInMethods)
+		r.Post(linkStartPattern, sl.handleLinkStart)
 		if sl.cfg.SignupMinimumAge > 0 {
 			r.Get(SignupAgePath, sl.handleAgePage)
 			r.Post(SignupAgePath, sl.handleAgeAnswer)
@@ -597,6 +599,22 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 		logger.Warn("upstream profile fetch failed", "provider", provider, "error", err)
 		sl.signInRefused(ctx, provider, "", "upstream_profile_failed")
 		http.Error(w, "upstream login failed", http.StatusBadGateway)
+		return
+	}
+
+	// A state that links a sign-in method to the signed-in account: no
+	// sign-in, age question or sign-up gate applies.
+	if principalID, ok := linkingPrincipal(data.Nonce); ok {
+		sl.completeLink(ctx, w, r, principalID, ExternalLogin{
+			Provider:           provider,
+			Subject:            user.ProviderID,
+			Email:              user.Email,
+			EmailVerified:      user.EmailVerified,
+			EmailAuthoritative: AuthoritativeEmail(user),
+			Name:               user.Name,
+			Username:           user.Username,
+			AvatarURL:          user.AvatarURL,
+		})
 		return
 	}
 

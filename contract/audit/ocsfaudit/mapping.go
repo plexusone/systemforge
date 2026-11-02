@@ -94,6 +94,8 @@ func (m *mapper) toOCSF(ev *audit.Event) any {
 	case "systemauth.email_verification.sent", "systemauth.email.verified",
 		"systemauth.email_change.requested", "systemauth.email_change.cancelled", "systemauth.email.changed":
 		return c.email()
+	case "systemauth.sign_in_method.linked":
+		return c.userManagement(events.UserManagementActivityIDUpdate, c.subject())
 	case "systemauth.signing_key.loaded", "systemauth.production.waiver":
 		return c.startup()
 	case "organization.membership":

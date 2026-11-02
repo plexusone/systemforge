@@ -51,6 +51,7 @@
 //	systemauth.email_change.requested,        User Management (3007)      Update                                    Informational
 //	systemauth.email_change.cancelled,
 //	systemauth.email.changed
+//	systemauth.sign_in_method.linked          User Management (3007)      Update                                    Informational
 //	systemauth.signing_key.loaded             Application Lifecycle (6002) Start                                    Informational
 //	systemauth.production.waiver              Application Lifecycle (6002) Start                                    Medium
 //	organization.membership                   Group Management (3006)     Add User, Remove User, Update             Informational; Medium for ownership_transferred
