@@ -359,6 +359,13 @@ type SocialLoginConfig struct {
 	// Default: 12h.
 	SessionLifetime Duration `json:"session_lifetime,omitempty" yaml:"session_lifetime,omitempty" jsonschema:"default=12h,description=Absolute login session lifetime"`
 
+	// AutoSelectSingleProvider sends /login straight to the provider when
+	// only one is configured, skipping the sign-in page. Off by default:
+	// the page waits for the person to choose, so a browser that has just
+	// signed out is not signed straight back in by the provider's own
+	// session (the provider remembers the person and its authorization).
+	AutoSelectSingleProvider bool `json:"auto_select_single_provider,omitempty" yaml:"auto_select_single_provider,omitempty" jsonschema:"default=false,description=Skip the sign-in page when only one provider is configured; a browser that signs out is then signed straight back in while the provider's own session lasts"`
+
 	// SkipConsent is read for compatibility and ignored.
 	//
 	// Deprecated: first-party clients (ClientConfig.Party, first_party by
