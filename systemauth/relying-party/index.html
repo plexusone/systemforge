@@ -4769,6 +4769,8 @@
       
         
       
+        
+      
     
     
     
@@ -4840,6 +4842,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.4/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.4
   
 
     
@@ -6356,6 +6386,9 @@ back-channel logout, and redirects to <code>returnTo</code>. <code>@plexusone/au
 The app's origin must be in SystemAuth's <code>social_login.allowed_redirect_origins</code>,
 and the app and SystemAuth must share a site (registrable domain), because the
 login cookie is <code>SameSite=Lax</code> and is not sent on a cross-site <code>POST</code>.</p>
+<p>SystemAuth's <code>social_login.signed_out_url</code>, when set, replaces <code>returnTo</code>
+for every app, such as to send a signed-out browser to the product's
+marketing site.</p>
 <p><code>BFFConfig.SignOutURL</code> is the sign-out page: the issuer's <code>/logout</code> by
 default, or <code>-</code> to leave it out, which keeps the <code>204</code>.</p>
 <h2 id="account-linking">Account linking<a class="headerlink" href="#account-linking" title="Permanent link">&para;</a></h2>

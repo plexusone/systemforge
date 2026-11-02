@@ -4697,6 +4697,8 @@
       
         
       
+        
+      
     
     
     
@@ -4768,6 +4770,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.4/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.4
   
 
     
@@ -6228,6 +6258,16 @@ when <code>tokens.hmac_secret</code> is set (<a href="../deployment/#token-hmac-
 <td><code>default_redirect</code></td>
 <td><code>/</code></td>
 <td>Used when no <code>return_to</code> is given. Must itself pass the allowlist.</td>
+</tr>
+<tr>
+<td><code>signed_out_url</code></td>
+<td>none</td>
+<td>Where every sign-out lands, whatever <code>return_to</code> the app sent, such as the product's marketing site. Must pass the allowlist, so list its origin in <code>allowed_redirect_origins</code>.</td>
+</tr>
+<tr>
+<td><code>signed_out_name</code></td>
+<td><code>signed_out_url</code>'s host</td>
+<td>Display name of the site at <code>signed_out_url</code>, such as <code>ProductBuildersHQ</code>. The waitlist page links back to <code>signed_out_url</code> as "← Back to <name>". Display text only; the link always goes to <code>signed_out_url</code>.</td>
 </tr>
 <tr>
 <td><code>session_lifetime</code></td>

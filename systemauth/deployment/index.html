@@ -4836,6 +4836,8 @@
       
         
       
+        
+      
     
     
     
@@ -4907,6 +4909,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.4/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.4
   
 
     
@@ -6511,7 +6541,9 @@ address never matches.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>systemauth<span class="w"> </span>waitlist<span class="w"> </span>list<span class="w">          </span><span class="c1"># oldest first; --csv to export</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>systemauth<span class="w"> </span>waitlist<span class="w"> </span>remove<span class="w"> </span>ada@example.com
 </code></pre></div>
-<p>A host binary sets the page's wording with <code>Options.WaitlistPage</code> and
+<p>With <code>social_login.signed_out_url</code> set, the page links back to it, before
+  and after joining, as "← Back to" <code>social_login.signed_out_name</code>.
+  A host binary sets the page's wording with <code>Options.WaitlistPage</code> and
   reads the list with <code>Service.SignupWaitlist()</code>. Behind a proxy, configure
   <a href="#client-address"><code>client_address</code></a> so the per-address limit sees real
   clients.
