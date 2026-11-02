@@ -454,3 +454,70 @@ func TestBFFSignOut(t *testing.T) {
 		t.Errorf("SignOut without a session: %v", err)
 	}
 }
+
+// A client that asks for JSON learns where to end the SystemAuth login
+// session, so the next sign-in does not resume it.
+func TestBFFLogoutSaysWhereToEndTheLoginSession(t *testing.T) {
+	h := newHarness(t)
+	sess := cookieNamed(h.login("").Result(), SessionCookieName)
+	if sess == nil {
+		t.Fatal("no session cookie")
+	}
+	req := jsonPost("/bff/auth/logout", sess)
+	req.Header.Set("Accept", "application/json")
+	w := h.do(req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("logout: %d %s", w.Code, w.Body.String())
+	}
+	var got SignOutResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.SignOut == nil || got.SignOut.URL != h.fake.srv.URL+"/logout" || got.SignOut.ReturnTo != testAppURL+"/" {
+		t.Errorf("sign-out: %+v", got.SignOut)
+	}
+	if c := cookieNamed(w.Result(), SessionCookieName); c == nil || c.MaxAge >= 0 {
+		t.Errorf("cookie not cleared: %+v", c)
+	}
+	if len(h.fake.revoked) != 1 {
+		t.Errorf("tokens not revoked: %v", h.fake.revoked)
+	}
+}
+
+func TestBFFSignOutURL(t *testing.T) {
+	fake := newFakeSystemAuth(t)
+	store := NewMemoryPrincipalStore()
+	newBFF := func(signOut, returnTo string) (*BFF, error) {
+		return NewBFF(BFFConfig{Client: fake.client(t), Principals: store, SignOutURL: signOut, DefaultReturnTo: returnTo})
+	}
+	logout := func(b *BFF) *httptest.ResponseRecorder {
+		req := jsonPost("/bff/auth/logout", nil)
+		req.Header.Set("Accept", "application/json")
+		w := httptest.NewRecorder()
+		b.ServeHTTP(w, req)
+		return w
+	}
+
+	// "-" leaves it out: a plain 204, as for a client that does not ask.
+	b, err := newBFF("-", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w := logout(b); w.Code != http.StatusNoContent {
+		t.Errorf("without a sign-out URL: %d %s", w.Code, w.Body.String())
+	}
+
+	// A set URL is returned as is, with an absolute DefaultReturnTo.
+	b, err = newBFF("https://login.example.com/end", testAppURL+"/home")
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := logout(b)
+	if !strings.Contains(w.Body.String(), `"url":"https://login.example.com/end"`) || !strings.Contains(w.Body.String(), `"returnTo":"`+testAppURL+`/home"`) {
+		t.Errorf("a set sign-out URL: %s", w.Body.String())
+	}
+
+	if _, err := newBFF("/logout", ""); err == nil {
+		t.Error("a relative SignOutURL was accepted")
+	}
+}

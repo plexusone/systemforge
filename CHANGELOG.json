@@ -9,6 +9,39 @@
   ],
   "releases": [
     {
+      "version": "v0.30.1",
+      "date": "2026-11-02",
+      "highlights": [
+        {
+          "description": "Signing out of an app also ends the SystemAuth login session, so the next sign-in asks who the person is instead of resuming it"
+        }
+      ],
+      "security": [
+        {
+          "description": "`POST /bff/auth/logout` asked for JSON returns SystemAuth's sign-out page and where to return, so the client ends the SystemAuth login session as well as the app's; before, a person who signed out was signed straight back in by the still-open login session",
+          "commit": "5b14124"
+        }
+      ],
+      "added": [
+        {
+          "description": "`BFFConfig.SignOutURL`: SystemAuth's sign-out page, the issuer's `/logout` by default, or `-` to leave it out; and the `SignOutResponse` and `SystemAuthSignOut` types",
+          "commit": "5b14124"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The logout response with and without JSON, a set and a refused `SignOutURL`, and an absolute `DefaultReturnTo`",
+          "commit": "6a24341"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The relying-party guide describes ending the SystemAuth login session after `POST /bff/auth/logout`, and its same-site requirement",
+          "commit": "51b70be"
+        }
+      ]
+    },
+    {
       "version": "v0.30.0",
       "date": "2026-10-29",
       "highlights": [

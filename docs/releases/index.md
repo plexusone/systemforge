@@ -4,7 +4,11 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.30.0](v0.30.0.md), writes security events as
+The latest release, [v0.30.1](v0.30.1.md), is a security fix: signing out
+of an app also ends the SystemAuth login session, so the next sign-in asks
+who the person is instead of resuming it. It adds no breaking change.
+
+Before it, [v0.30.0](v0.30.0.md) wrote security events as
 OCSF, one JSON object per line, through `contract/audit/ocsfaudit`, for a
 security data lake or SIEM that ingests OCSF. It adds no breaking change.
 
