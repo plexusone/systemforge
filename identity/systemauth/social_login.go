@@ -376,12 +376,12 @@ func noStore(w http.ResponseWriter) {
 }
 
 var chooserTemplate = template.Must(template.New("login").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` + pageStyleLink + `
 <title>Sign in{{with .ClientName}} to {{.}}{{end}}</title></head>
 <body><main>{{if .LogoURL}}<img src="{{.LogoURL}}" alt="" width="64" height="64">
-{{end}}<h1>Sign in</h1>{{with .ClientName}}<p>to continue to {{.}}</p>{{end}}<ul>
-{{range .Links}}<li><a href="{{.URL}}">Continue with {{.Name}}</a></li>
-{{end}}</ul></main></body></html>
+{{end}}<h1>Sign in</h1>{{with .ClientName}}<p>to continue to {{.}}</p>{{end}}<nav aria-label="Sign-in options">
+{{range .Links}}<a href="{{.URL}}">Continue with {{.Name}}</a>
+{{end}}</nav></main></body></html>
 `))
 
 // chooserBranding returns the name and logo of the client whose

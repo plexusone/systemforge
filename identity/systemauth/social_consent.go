@@ -31,7 +31,7 @@ var scopeDescriptions = map[string]string{
 }
 
 var consentTemplate = template.Must(template.New("consent").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` + pageStyleLink + `
 <title>Authorize {{.ClientName}}</title></head>
 <body><main><h1>{{.ClientName}} wants to access your account</h1>
 <ul>

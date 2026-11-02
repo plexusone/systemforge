@@ -1,0 +1,181 @@
+/* SystemAuth's pages: sign-in, sign-out, consent, sign-up and email. It styles
+   the pages' plain elements, with no classes, in light and dark. */
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --text: #1f2328;
+  --muted: #59636e;
+  --border: #d1d9e0;
+  --accent: #1f2328;
+  --accent-text: #ffffff;
+  --accent-hover: #3d444d;
+  --focus: #0969da;
+  --alert-bg: #fff1f0;
+  --alert-text: #a40e26;
+  --status-bg: #eef6ff;
+  --status-text: #0b4a8b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --text: #e6edf3;
+    --muted: #9198a1;
+    --border: #30363d;
+    --accent: #e6edf3;
+    --accent-text: #0d1117;
+    --accent-hover: #c9d1d9;
+    --focus: #4493f8;
+    --alert-bg: #3c1618;
+    --alert-text: #ffa198;
+    --status-bg: #0c2d4f;
+    --status-text: #a5d6ff;
+  }
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+main {
+  width: 100%;
+  max-width: 400px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px 28px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.06);
+}
+main > img {
+  display: block;
+  margin: 0 auto 16px;
+  border-radius: 12px;
+}
+h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+}
+h1 + p {
+  margin-top: 0;
+  color: var(--muted);
+  text-align: center;
+}
+p {
+  margin: 12px 0;
+}
+a {
+  color: var(--focus);
+}
+ul {
+  margin: 16px 0;
+  padding-left: 20px;
+}
+li + li {
+  margin-top: 4px;
+}
+nav {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+nav a,
+button {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+nav a:hover,
+button:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+button + button {
+  margin-top: 10px;
+}
+button[value="deny"],
+button[value="cancel"] {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+button[value="deny"]:hover,
+button[value="cancel"]:hover {
+  background: var(--bg);
+}
+form {
+  margin-top: 20px;
+}
+label {
+  display: block;
+  margin: 12px 0 4px;
+  font-weight: 500;
+}
+input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+}
+input[type="checkbox"],
+input[type="radio"] {
+  margin-right: 6px;
+}
+input + button,
+select + button,
+textarea + button,
+label + button {
+  margin-top: 20px;
+}
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+[role="alert"],
+[role="status"] {
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+[role="alert"] {
+  background: var(--alert-bg);
+  color: var(--alert-text);
+}
+[role="status"] {
+  background: var(--status-bg);
+  color: var(--status-text);
+}
+small,
+.muted {
+  color: var(--muted);
+}
