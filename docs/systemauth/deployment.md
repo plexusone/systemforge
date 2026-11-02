@@ -174,6 +174,8 @@ systemauth invite revoke ada@example.com
   systemauth waitlist remove ada@example.com
   ```
 
+  With `social_login.signed_out_url` set, the page links back to it, before
+  and after joining, as "← Back to" `social_login.signed_out_name`.
   A host binary sets the page's wording with `Options.WaitlistPage` and
   reads the list with `Service.SignupWaitlist()`. Behind a proxy, configure
   [`client_address`](#client-address) so the per-address limit sees real
