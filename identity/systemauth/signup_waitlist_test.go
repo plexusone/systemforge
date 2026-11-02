@@ -126,3 +126,56 @@ func TestWaitlistNotServedWithoutOne(t *testing.T) {
 		t.Fatalf("waitlist served without one configured: %d", w.Code)
 	}
 }
+
+// newWaitlistServerWith is newWaitlistServer with its own social login
+// settings.
+func newWaitlistServerWith(t *testing.T, social *SocialLoginConfig) *Server {
+	t.Helper()
+	s, err := NewEmbedded(Config{Issuer: testIssuer, SocialLogin: social},
+		WithSocialConnector(newFakeGitHub(t).connector()), WithPrincipalDirectory(NewMemoryPrincipalDirectory()),
+		WithSignupWaitlist(&stubWaitlist{}, WaitlistPage{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// The waitlist page links back to signed_out_url by its display name, on
+// the form and after joining, so it is not a dead end.
+func TestWaitlistLinksBackToSignedOutURL(t *testing.T) {
+	s := newWaitlistServerWith(t, &SocialLoginConfig{
+		AllowedRedirectOrigins: []string{"https://www.example.com"},
+		SignedOutURL:           "https://www.example.com/",
+		SignedOutName:          "Example",
+	})
+	link := `<a href="https://www.example.com/">&larr; Back to Example</a>`
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, httptest.NewRequest(http.MethodGet, SignupWaitlistPath, nil))
+	if !strings.Contains(w.Body.String(), link) {
+		t.Errorf("form page has no link back: %s", w.Body.String())
+	}
+	w = postForm(s, SignupWaitlistPath, testIssuer, url.Values{"email": {"ada@example.com"}, "consent": {"yes"}})
+	if body := w.Body.String(); !strings.Contains(body, DefaultWaitlistPage.Thanks) || !strings.Contains(body, link) {
+		t.Errorf("thank-you page has no link back: %d %s", w.Code, body)
+	}
+}
+
+// Without signed_out_name the link names signed_out_url's host, and without
+// signed_out_url there is no link.
+func TestWaitlistLinkBackDefaults(t *testing.T) {
+	s := newWaitlistServerWith(t, &SocialLoginConfig{
+		AllowedRedirectOrigins: []string{"https://www.example.com"},
+		SignedOutURL:           "https://www.example.com/",
+	})
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, httptest.NewRequest(http.MethodGet, SignupWaitlistPath, nil))
+	if !strings.Contains(w.Body.String(), "&larr; Back to www.example.com</a>") {
+		t.Errorf("default name: %s", w.Body.String())
+	}
+	s = newWaitlistServerWith(t, &SocialLoginConfig{})
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, httptest.NewRequest(http.MethodGet, SignupWaitlistPath, nil))
+	if strings.Contains(w.Body.String(), "Back to") {
+		t.Errorf("link without signed_out_url: %s", w.Body.String())
+	}
+}
