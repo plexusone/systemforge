@@ -204,14 +204,20 @@ and needs a login session. It sends the browser through the provider's
 sign-in. The callback then attaches that provider identity to the account:
 
 - The browser must still be signed in as the account that started the link.
-- An identity already on another account is never moved; the page says so,
-  and the person signs in with it and removes it there instead.
+- An identity already on another account is never moved, and the page says
+  so. Removing a sign-in method from an account, or merging two accounts, is
+  not available yet: link a provider before its first sign-in makes an
+  account of its own.
 - An identity already on this account is a success that changes nothing.
 - No account is created, no sign-up gate or age question applies, and the
   account's own email is unchanged.
 
-Each link, and each refusal, is the security event
-`systemauth.sign_in_method.linked`.
+A completed link, and a link the callback refuses (the identity is on
+another account, or the browser is no longer signed in as the account that
+started it), is the security event `systemauth.sign_in_method.linked`. A
+start refused before the provider, such as a cross-origin request, is not;
+nor is a denial at the provider, which is a refused sign-in
+(`systemauth.sign_in`).
 
 ## Security properties
 
