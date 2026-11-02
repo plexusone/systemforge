@@ -4,7 +4,11 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.30.3](v0.30.3.md), styles SystemAuth's pages
+The latest release, [v0.30.4](v0.30.4.md), adds
+`social_login.signed_out_url`, so every sign-out can land on the product's
+marketing site. It adds no breaking change.
+
+Before it, [v0.30.3](v0.30.3.md) styled SystemAuth's pages
 with a same-origin stylesheet, in light and dark. It adds no breaking
 change.
 

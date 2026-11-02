@@ -9,6 +9,34 @@
   ],
   "releases": [
     {
+      "version": "v0.30.4",
+      "date": "2026-11-02",
+      "highlights": [
+        {
+          "description": "`social_login.signed_out_url` lands every sign-out on the product's own page, such as its marketing site",
+          "commit": "bba72ce"
+        }
+      ],
+      "added": [
+        {
+          "description": "`social_login.signed_out_url`: where every sign-out lands, whatever `return_to` the app sent; it must pass the redirect allowlist",
+          "commit": "bba72ce"
+        }
+      ],
+      "tests": [
+        {
+          "description": "A sign-out lands on `signed_out_url`, an open `return_to` is still refused, and an unlisted URL is refused at startup",
+          "commit": "e0e83eb"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The social login and relying-party guides describe `signed_out_url`",
+          "commit": "1285b92"
+        }
+      ]
+    },
+    {
       "version": "v0.30.3",
       "date": "2026-11-02",
       "highlights": [
