@@ -65,6 +65,10 @@ func (sl *socialLogin) handleLogout(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid return_to", http.StatusBadRequest)
 		return
 	}
+	// The operator's landing for every sign-out, such as the marketing site.
+	if sl.redirects.signedOut != "" {
+		target = sl.redirects.signedOut
+	}
 
 	if err := sl.endSession(w, r); err != nil {
 		logger.Error("ending login session", "error", err)

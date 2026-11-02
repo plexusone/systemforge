@@ -17,6 +17,10 @@ type redirectPolicy struct {
 	defaultTarget string
 	issuerOrigin  string
 	origins       map[string]bool
+	// signedOut, when set, is where every sign-out lands.
+	signedOut string
+	// signedOutName is signedOut's display name, for links back to it.
+	signedOutName string
 }
 
 func newRedirectPolicy(issuer string, cfg *SocialLoginConfig) (*redirectPolicy, error) {
@@ -36,6 +40,17 @@ func newRedirectPolicy(issuer string, cfg *SocialLoginConfig) (*redirectPolicy, 
 	}
 	if _, err := p.validate(p.defaultTarget); err != nil {
 		return nil, fmt.Errorf("default_redirect: %w", err)
+	}
+	if cfg.SignedOutURL != "" {
+		v, err := p.validate(cfg.SignedOutURL)
+		if err != nil {
+			return nil, fmt.Errorf("signed_out_url: %w", err)
+		}
+		p.signedOut = v
+		p.signedOutName = cfg.SignedOutName
+		if p.signedOutName == "" {
+			p.signedOutName = hostOf(v, issuerOrigin)
+		}
 	}
 	return p, nil
 }
@@ -134,4 +149,15 @@ func (p *redirectPolicy) fromIssuer(r *http.Request) bool {
 func (p *redirectPolicy) fromTrustedOrigin(r *http.Request) bool {
 	origin := requestOrigin(r)
 	return origin != "" && p.origins[origin]
+}
+
+// hostOf returns target's host, or the issuer's host for a relative path.
+func hostOf(target, issuerOrigin string) string {
+	if u, err := url.Parse(target); err == nil && u.Host != "" {
+		return u.Hostname()
+	}
+	if u, err := url.Parse(issuerOrigin); err == nil {
+		return u.Hostname()
+	}
+	return target
 }

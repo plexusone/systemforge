@@ -168,6 +168,10 @@ The app's origin must be in SystemAuth's `social_login.allowed_redirect_origins`
 and the app and SystemAuth must share a site (registrable domain), because the
 login cookie is `SameSite=Lax` and is not sent on a cross-site `POST`.
 
+SystemAuth's `social_login.signed_out_url`, when set, replaces `returnTo`
+for every app, such as to send a signed-out browser to the product's
+marketing site.
+
 `BFFConfig.SignOutURL` is the sign-out page: the issuer's `/logout` by
 default, or `-` to leave it out, which keeps the `204`.
 

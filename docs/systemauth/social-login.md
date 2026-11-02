@@ -141,6 +141,8 @@ social_login:
 | `github`, `google` | disabled | `client_id` / `client_secret` support `${ENV}` expansion. `redirect_url` defaults to `{issuer}/login/{provider}/callback`; register that URL with the provider. |
 | `allowed_redirect_origins` | none | Absolute origins a `return_to` may target in addition to the issuer origin. Relative same-origin paths are always allowed. |
 | `default_redirect` | `/` | Used when no `return_to` is given. Must itself pass the allowlist. |
+| `signed_out_url` | none | Where every sign-out lands, whatever `return_to` the app sent, such as the product's marketing site. Must pass the allowlist, so list its origin in `allowed_redirect_origins`. |
+| `signed_out_name` | `signed_out_url`'s host | Display name of the site at `signed_out_url`, such as `ProductBuildersHQ`. The waitlist page links back to `signed_out_url` as "← Back to <name>". Display text only; the link always goes to `signed_out_url`. |
 | `session_lifetime` | `12h` | Absolute lifetime of the login session. |
 | `auto_select_single_provider` | `false` | With one provider, skip the sign-in page and go straight to it. Off by default: a browser that has just signed out would otherwise be signed straight back in, since the provider keeps its own session and remembers the person's authorization. |
 | `skip_consent` | `false` | Deprecated and ignored; logs a warning at startup when set. First-party clients skip consent and other clients always ask (see [Consent](#consent)). |
