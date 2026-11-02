@@ -64,7 +64,7 @@ func emailChangeCSRF(sessionToken string) string {
 }
 
 var accountEmailTemplate = template.Must(template.New("account-email").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` + pageStyleLink + `
 <title>{{.Title}}</title></head>
 <body><main><h1>{{.Title}}</h1>
 {{if .Message}}<p role="status">{{.Message}}</p>{{end}}

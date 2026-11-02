@@ -9,6 +9,40 @@
   ],
   "releases": [
     {
+      "version": "v0.30.3",
+      "date": "2026-11-02",
+      "highlights": [
+        {
+          "description": "SystemAuth's sign-in, sign-out, consent, sign-up and email pages are styled: a centered card in light and dark, with the sign-in options as buttons",
+          "commit": "7564e10"
+        }
+      ],
+      "added": [
+        {
+          "description": "`/assets/systemauth.css` (`PageStylePath`): the pages' stylesheet, embedded and served from the issuer's origin, linked by every page with its content hash",
+          "commit": "7564e10"
+        }
+      ],
+      "changed": [
+        {
+          "description": "The sign-in page lists its options in a `nav`, as buttons",
+          "commit": "7564e10"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The stylesheet is served and cached by version, every page links it, and the no-inline-code check allows only that same-origin link",
+          "commit": "1185a05"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The deployment guide's security headers section describes the stylesheet",
+          "commit": "160ff73"
+        }
+      ]
+    },
+    {
       "version": "v0.30.2",
       "date": "2026-11-02",
       "highlights": [

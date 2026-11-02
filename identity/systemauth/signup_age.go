@@ -211,7 +211,7 @@ func (sl *socialLogin) askAge(w http.ResponseWriter, r *http.Request, provider, 
 }
 
 var signupAgeTemplate = template.Must(template.New("signup-age").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` + pageStyleLink + `
 <title>{{.Page.Title}}</title></head>
 <body><main><h1>{{.Page.Title}}</h1>
 {{if .Refused}}<p role="status">{{.RefusedText}}</p>{{else if .Expired}}<p role="status">This page has expired. <a href="{{.LoginPath}}">Sign in again</a>.</p>{{else}}

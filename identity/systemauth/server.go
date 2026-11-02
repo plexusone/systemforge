@@ -393,6 +393,9 @@ func (s *Server) registerEndpoints() {
 	s.router.Get(HealthzPath, s.handleHealthz)
 	s.router.Get(ReadyzPath, s.handleReadyz)
 
+	// The stylesheet SystemAuth's own pages link.
+	s.router.Get(PageStylePath, handlePageStyle)
+
 	// Register GitHub/Google login routes
 	if s.social != nil {
 		s.social.registerRoutes(s.router)

@@ -14,7 +14,7 @@ import (
 const LogoutPath = "/logout"
 
 var logoutTemplate = template.Must(template.New("logout").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` + pageStyleLink + `
 <title>Sign out</title></head>
 <body><main><h1>Sign out</h1>
 <form method="post" action="/logout">

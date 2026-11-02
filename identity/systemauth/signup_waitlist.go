@@ -83,7 +83,7 @@ func WithSignupWaitlist(list SignupWaitlist, page WaitlistPage) Option {
 }
 
 var waitlistTemplate = template.Must(template.New("waitlist").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` + pageStyleLink + `
 <title>{{.Page.Title}}</title></head>
 <body><main><h1>{{.Page.Title}}</h1>
 {{if .Thanks}}<p role="status">{{.Page.Thanks}}</p>{{else}}

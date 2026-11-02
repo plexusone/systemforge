@@ -41,13 +41,15 @@ func checkSecurityHeaders(t *testing.T, name string, w *httptest.ResponseRecorde
 }
 
 // checkNoInlineCode asserts that a page needs nothing the policy blocks:
-// no script, no style element or attribute, no event handler attribute.
+// no script, no style element or attribute, no event handler attribute,
+// and no link but the stylesheet SystemAuth serves from its own origin.
 func checkNoInlineCode(t *testing.T, name string, w *httptest.ResponseRecorder) {
 	t.Helper()
 	if !strings.HasPrefix(w.Header().Get("Content-Type"), "text/html") {
 		t.Fatalf("%s: not an HTML page: %d %q %s", name, w.Code, w.Header().Get("Content-Type"), w.Body.String())
 	}
-	body := strings.ToLower(w.Body.String())
+	// The page stylesheet is same-origin, which default-src 'self' allows.
+	body := strings.ToLower(strings.ReplaceAll(w.Body.String(), pageStyleLink, ""))
 	for _, banned := range []string{"<script", "<style", " style=", " onclick=", " onsubmit=", " onload=", "javascript:", "<link", "<iframe", "<object"} {
 		if strings.Contains(body, banned) {
 			t.Errorf("%s: page contains %q, which the content security policy blocks", name, banned)
