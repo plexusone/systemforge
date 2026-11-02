@@ -23,13 +23,13 @@
           "commit": "18333eb"
         },
         {
-          "description": "The security event `systemauth.sign_in_method.linked`, as OCSF User Management, Update",
+          "description": "The security event `systemauth.sign_in_method.linked`, for a completed link and a link the callback refuses, as OCSF User Management, Update",
           "commit": "18333eb"
         }
       ],
       "security": [
         {
-          "description": "Linking needs the session that started it and an allowed origin, never moves an identity from another account, never creates an account and never changes its email",
+          "description": "Linking needs a session for the account that started it and an allowed origin, never moves an identity from another account, never creates an account and never changes its email",
           "commit": "18333eb"
         }
       ],
