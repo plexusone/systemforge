@@ -47,7 +47,7 @@ var signInMethodsTemplate = template.Must(template.New("sign-in-methods").Parse(
 
 // linkProblems are the page's messages for a refused link, by reason.
 var linkProblems = map[string]string{
-	"other_account": "That sign-in already belongs to another account, so it was not linked. Sign in with it and remove it there first.",
+	"other_account": "That sign-in already belongs to another account, so it was not linked. Signing in with it opens that other account; removing a sign-in method or merging accounts is not available yet.",
 	"session":       "You were signed out while linking. Sign in and try again.",
 	"failed":        "Linking did not complete. Try again.",
 }
