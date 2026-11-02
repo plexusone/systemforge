@@ -9,6 +9,44 @@
   ],
   "releases": [
     {
+      "version": "v0.30.5",
+      "date": "2026-11-02",
+      "highlights": [
+        {
+          "description": "A signed-in person can link another provider's sign-in to their account at `/account/sign-in-methods`, so either reaches the same account",
+          "commit": "18333eb"
+        }
+      ],
+      "added": [
+        {
+          "description": "`/account/sign-in-methods` and `POST /account/sign-in-methods/{provider}`: link a provider's sign-in to the signed-in account (`SignInMethodsPath`)",
+          "commit": "18333eb"
+        },
+        {
+          "description": "The security event `systemauth.sign_in_method.linked`, as OCSF User Management, Update",
+          "commit": "18333eb"
+        }
+      ],
+      "security": [
+        {
+          "description": "Linking needs the session that started it and an allowed origin, never moves an identity from another account, never creates an account and never changes its email",
+          "commit": "18333eb"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Linking, relinking, signing in with a linked identity, and refusals for another account's identity, a missing session and a cross-origin start",
+          "commit": "1dc9898"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The social login guide describes linking sign-in methods; the OCSF guide lists the new event",
+          "commit": "2159827"
+        }
+      ]
+    },
+    {
       "version": "v0.30.4",
       "date": "2026-11-02",
       "highlights": [
