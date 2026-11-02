@@ -109,7 +109,7 @@ The routes match the shared frontend auth package (`BFFClient`):
 | `GET /bff/auth/login?return_to=` | `302` to SystemAuth `/oauth/authorize` |
 | `GET /bff/auth/{github,google}?return_to=` | Same, with `idp_hint` so SystemAuth skips its provider chooser |
 | `GET /bff/auth/callback` | Verifies the login, creates the session, `302` to `return_to` |
-| `POST /bff/auth/logout` | Deletes the session, revokes the SystemAuth refresh token, `204` |
+| `POST /bff/auth/logout` | Deletes the session, revokes the SystemAuth refresh token, `204`; with `Accept: application/json`, `200` with where to end the SystemAuth login session |
 | `POST /bff/auth/login` | `501 PASSWORD_LOGIN_UNSUPPORTED` (password login is not offered) |
 
 `User` is `{id, email, name, avatar_url?, memberships: [{id, organization_id,
@@ -152,9 +152,24 @@ refreshing it when it is about to expire and storing the rotated refresh
 token; a rejected refresh (revoked, reused, or past
 `refresh_token_absolute_lifetime`) ends the session.
 
-Logging out of the app does not end the SystemAuth login session. To sign the
-user out everywhere, send the browser to SystemAuth `GET /logout?return_to=...`
-after `POST /bff/auth/logout`.
+Logging out of the app does not by itself end the SystemAuth login session,
+so the next sign-in would resume it without asking who the user is. A client
+that sends `Accept: application/json` with `POST /bff/auth/logout` gets:
+
+```json
+{"signOut": {"url": "https://auth.example.com/logout", "returnTo": "https://app.example.com/"}}
+```
+
+It then submits a form, `POST` to `url` with a `return_to` field of
+`returnTo`, from the app's page. SystemAuth ends its login session, revokes
+the user's tokens, ends the user's sessions in the other apps through the
+back-channel logout, and redirects to `returnTo`. `@plexusone/auth` does this.
+The app's origin must be in SystemAuth's `social_login.allowed_redirect_origins`,
+and the app and SystemAuth must share a site (registrable domain), because the
+login cookie is `SameSite=Lax` and is not sent on a cross-site `POST`.
+
+`BFFConfig.SignOutURL` is the sign-out page: the issuer's `/logout` by
+default, or `-` to leave it out, which keeps the `204`.
 
 ## Account linking
 
