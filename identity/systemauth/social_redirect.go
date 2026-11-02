@@ -17,6 +17,8 @@ type redirectPolicy struct {
 	defaultTarget string
 	issuerOrigin  string
 	origins       map[string]bool
+	// signedOut, when set, is where every sign-out lands.
+	signedOut string
 }
 
 func newRedirectPolicy(issuer string, cfg *SocialLoginConfig) (*redirectPolicy, error) {
@@ -36,6 +38,13 @@ func newRedirectPolicy(issuer string, cfg *SocialLoginConfig) (*redirectPolicy, 
 	}
 	if _, err := p.validate(p.defaultTarget); err != nil {
 		return nil, fmt.Errorf("default_redirect: %w", err)
+	}
+	if cfg.SignedOutURL != "" {
+		v, err := p.validate(cfg.SignedOutURL)
+		if err != nil {
+			return nil, fmt.Errorf("signed_out_url: %w", err)
+		}
+		p.signedOut = v
 	}
 	return p, nil
 }

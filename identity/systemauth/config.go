@@ -355,6 +355,13 @@ type SocialLoginConfig struct {
 	// given. Default: "/".
 	DefaultRedirect string `json:"default_redirect,omitempty" yaml:"default_redirect,omitempty" jsonschema:"default=/,description=Post-login redirect when none is requested"`
 
+	// SignedOutURL, when set, is where a sign-out lands, whatever return_to
+	// the app sent, such as the product's marketing site. It must pass the
+	// same allowlist as return_to: an origin in AllowedRedirectOrigins, or a
+	// path on the issuer. Empty returns to the return_to, or to
+	// DefaultRedirect.
+	SignedOutURL string `json:"signed_out_url,omitempty" yaml:"signed_out_url,omitempty" jsonschema:"description=Where a sign-out lands whatever return_to the app sent; it must be an allowed redirect origin"`
+
 	// SessionLifetime is the absolute lifetime of the login session cookie.
 	// Default: 12h.
 	SessionLifetime Duration `json:"session_lifetime,omitempty" yaml:"session_lifetime,omitempty" jsonschema:"default=12h,description=Absolute login session lifetime"`
