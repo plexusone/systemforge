@@ -610,13 +610,35 @@ func TestSocialLoginUpstreamDenied(t *testing.T) {
 	}
 }
 
+// With one provider the sign-in page still waits for a click, so a browser
+// that has just signed out is not signed straight back in.
 func TestSocialLoginChooserSingleProvider(t *testing.T) {
 	f := newFakeGitHub(t)
 	s := newSocialTestServer(t, f, NewMemoryPrincipalDirectory())
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/login?return_to=%2Fwelcome", nil))
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `href="/login/github?return_to=%2Fwelcome"`) {
+		t.Errorf("chooser: %d %q %s", w.Code, w.Header().Get("Location"), w.Body.String())
+	}
+}
+
+// AutoSelectSingleProvider forwards to the one provider at once.
+func TestSocialLoginAutoSelectSingleProvider(t *testing.T) {
+	f := newFakeGitHub(t)
+	s, err := NewEmbedded(Config{
+		Issuer: testIssuer,
+		SocialLogin: &SocialLoginConfig{
+			AllowedRedirectOrigins:   []string{"https://app.example.com"},
+			AutoSelectSingleProvider: true,
+		},
+	}, WithSocialConnector(f.connector()), WithPrincipalDirectory(NewMemoryPrincipalDirectory()))
+	if err != nil {
+		t.Fatalf("NewEmbedded: %v", err)
+	}
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/login?return_to=%2Fwelcome", nil))
 	if w.Code != http.StatusFound || w.Header().Get("Location") != "/login/github?return_to=%2Fwelcome" {
-		t.Errorf("chooser: %d %q", w.Code, w.Header().Get("Location"))
+		t.Errorf("auto-select: %d %q", w.Code, w.Header().Get("Location"))
 	}
 }
 
