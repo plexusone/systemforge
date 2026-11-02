@@ -4541,6 +4541,8 @@
       
         
       
+        
+      
     
     
     
@@ -4610,6 +4612,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="v0.30.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.1
   
 
     
@@ -5665,7 +5695,10 @@
 <p>Release notes, one file per version, newest first. The
 <a href="changelog/">changelog</a> is generated from <code>CHANGELOG.json</code> and lists every
 change with its commit.</p>
-<p>The latest release, <a href="v0.30.0/">v0.30.0</a>, writes security events as
+<p>The latest release, <a href="v0.30.1/">v0.30.1</a>, is a security fix: signing out
+of an app also ends the SystemAuth login session, so the next sign-in asks
+who the person is instead of resuming it. It adds no breaking change.</p>
+<p>Before it, <a href="v0.30.0/">v0.30.0</a> wrote security events as
 OCSF, one JSON object per line, through <code>contract/audit/ocsfaudit</code>, for a
 security data lake or SIEM that ingests OCSF. It adds no breaking change.</p>
 <p>Before it, <a href="v0.29.0/">v0.29.0</a> asked for consent by the
