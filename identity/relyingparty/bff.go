@@ -95,6 +95,14 @@ type BFFConfig struct {
 	// endpoints. The origin of the Client's RedirectURL is always allowed.
 	AllowedOrigins []string
 
+	// SignOutURL is SystemAuth's sign-out page, where a browser that signed
+	// out of the app goes next to end its SystemAuth login session, so the
+	// next sign-in asks who it is instead of resuming that session.
+	// Signing out there also ends the person's sessions in the other apps,
+	// through the back-channel logout. Default: the issuer's /logout. "-"
+	// leaves it out, for an issuer without one.
+	SignOutURL string
+
 	// InsecureCookies drops the __Host- prefix and the Secure flag for
 	// local development over plain HTTP. Never enable in production;
 	// NewBFF logs a warning when it is set.
@@ -112,7 +120,9 @@ type BFFConfig struct {
 //	GET  {base}/auth/login            start SystemAuth login (?return_to=)
 //	GET  {base}/auth/{provider}       start login via github|google (?return_to=)
 //	GET  {base}/auth/callback         OIDC callback; sets the session cookie
-//	POST {base}/auth/logout           end the session, revoke SystemAuth tokens
+//	POST {base}/auth/logout           end the session, revoke SystemAuth tokens;
+//	                                  asked for JSON, also say where to end the
+//	                                  SystemAuth login session (SignOutResponse)
 //
 // Mount it on the application's router at BasePath.
 type BFF struct {
@@ -149,6 +159,17 @@ func NewBFF(cfg BFFConfig) (*BFF, error) {
 	}
 	if cfg.DefaultReturnTo == "" {
 		cfg.DefaultReturnTo = "/"
+	}
+	switch cfg.SignOutURL {
+	case "":
+		cfg.SignOutURL = strings.TrimRight(cfg.Client.Config().Issuer, "/") + "/logout"
+	case "-":
+		cfg.SignOutURL = ""
+	default:
+		u, err := url.Parse(cfg.SignOutURL)
+		if err != nil || !u.IsAbs() || u.Host == "" {
+			return nil, fmt.Errorf("relyingparty: SignOutURL %q is not an absolute URL", cfg.SignOutURL)
+		}
 	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
@@ -725,7 +746,39 @@ func (b *BFF) handleLogout(w http.ResponseWriter, r *http.Request) {
 		b.internalError(w, r, "signing out", err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	if b.cfg.SignOutURL == "" || !acceptsJSON(r) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	returnTo := b.cfg.DefaultReturnTo
+	if strings.HasPrefix(returnTo, "/") {
+		returnTo = b.appOrigin + returnTo
+	}
+	writeJSON(w, http.StatusOK, SignOutResponse{
+		SignOut: &SystemAuthSignOut{URL: b.cfg.SignOutURL, ReturnTo: returnTo},
+	})
+}
+
+// SignOutResponse answers POST {base}/auth/logout for a client that asks
+// for JSON.
+type SignOutResponse struct {
+	// SignOut, when set, is where the browser goes next to end its
+	// SystemAuth login session.
+	SignOut *SystemAuthSignOut `json:"signOut,omitempty"`
+}
+
+// SystemAuthSignOut is SystemAuth's sign-out, which the browser reaches
+// with a form POST: URL, with a return_to field of ReturnTo, where
+// SystemAuth sends it afterwards. SystemAuth accepts the POST from the
+// app's origin.
+type SystemAuthSignOut struct {
+	URL      string `json:"url"`
+	ReturnTo string `json:"returnTo"`
+}
+
+// acceptsJSON reports whether the request asks for JSON.
+func acceptsJSON(r *http.Request) bool {
+	return strings.Contains(r.Header.Get("Accept"), "application/json")
 }
 
 // SignOut ends r's browser session: it deletes the session, revokes its
