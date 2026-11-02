@@ -442,7 +442,10 @@ func (sl *socialLogin) handleChooser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if len(sl.providers) == 1 {
+	// With one provider the page still waits for a click unless the
+	// operator chose otherwise: forwarding at once would sign a browser
+	// that just signed out straight back in through the provider's session.
+	if len(sl.providers) == 1 && sl.cfg.AutoSelectSingleProvider {
 		//nolint:gosec // G710: same-origin relative path; returnTo was validated against the allowlist and is query-escaped
 		http.Redirect(w, r, startURL(sl.providers[0], returnTo), http.StatusFound)
 		return

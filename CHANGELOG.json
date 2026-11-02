@@ -9,6 +9,39 @@
   ],
   "releases": [
     {
+      "version": "v0.30.2",
+      "date": "2026-11-02",
+      "highlights": [
+        {
+          "description": "With one sign-in provider, the sign-in page waits for a click instead of redirecting, so signing out is no longer undone by the provider's own session"
+        }
+      ],
+      "security": [
+        {
+          "description": "`GET /login` no longer redirects straight to a single provider: after signing out, the provider's session and remembered authorization signed the person straight back in",
+          "commit": "ed99aca"
+        }
+      ],
+      "added": [
+        {
+          "description": "`social_login.auto_select_single_provider` restores the redirect to a single provider",
+          "commit": "ed99aca"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The sign-in page with one provider, and `auto_select_single_provider`",
+          "commit": "348bbdf"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The social login guide describes the sign-in page and `auto_select_single_provider`",
+          "commit": "9ad9e0f"
+        }
+      ]
+    },
+    {
       "version": "v0.30.1",
       "date": "2026-11-02",
       "highlights": [

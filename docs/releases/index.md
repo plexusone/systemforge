@@ -4,7 +4,11 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.30.1](v0.30.1.md), is a security fix: signing out
+The latest release, [v0.30.2](v0.30.2.md), keeps a signed-out browser
+signed out with a single sign-in provider: the sign-in page waits for a
+click instead of redirecting. Read its upgrade notes.
+
+Before it, [v0.30.1](v0.30.1.md) was a security fix: signing out
 of an app also ends the SystemAuth login session, so the next sign-in asks
 who the person is instead of resuming it. It adds no breaking change.
 
