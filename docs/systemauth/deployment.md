@@ -508,7 +508,12 @@ pages, carries:
 | `Referrer-Policy` | `same-origin` |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains`, when the issuer is https |
 
-The pages run no script and no inline style. Browsers check `form-action`
+The pages run no script and no inline style. They link one stylesheet,
+`/assets/systemauth.css`, served by SystemAuth from its own origin, which
+`default-src 'self'` allows: a plain card in light and dark, with the
+sign-in options as buttons. The link carries the stylesheet's content hash,
+so a browser caches it until it changes. A proxy in front of SystemAuth must
+pass `/assets/` through. Browsers check `form-action`
 on every redirect that follows a form submission, so a page whose form
 ends at another origin adds it: the consent page adds the origins of the
 client's redirect URIs, the logout page the `allowed_redirect_origins`,
