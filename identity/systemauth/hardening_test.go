@@ -307,6 +307,13 @@ func TestDefaultSessionProviderEscapesReturnURL(t *testing.T) {
 
 func newSocialFlowServer(t *testing.T, party ClientParty) *Server {
 	t.Helper()
+	return newSocialFlowServerWith(t, party, &SocialLoginConfig{AllowedRedirectOrigins: []string{"https://app.example.com"}})
+}
+
+// newSocialFlowServerWith is newSocialFlowServer with its own social login
+// settings.
+func newSocialFlowServerWith(t *testing.T, party ClientParty, social *SocialLoginConfig) *Server {
+	t.Helper()
 	f := newFakeGitHub(t)
 	s, err := NewEmbedded(Config{
 		Issuer: testIssuer,
@@ -320,9 +327,7 @@ func newSocialFlowServer(t *testing.T, party ClientParty) *Server {
 			ResponseTypes: []string{"code"},
 			Scopes:        []string{"openid", "profile", "email", "offline_access"},
 		}},
-		SocialLogin: &SocialLoginConfig{
-			AllowedRedirectOrigins: []string{"https://app.example.com"},
-		},
+		SocialLogin: social,
 	}, WithSocialConnector(f.connector()))
 	if err != nil {
 		t.Fatalf("NewEmbedded: %v", err)
@@ -596,5 +601,33 @@ func TestUnauthenticatedAuthorizeGoesToLogin(t *testing.T) {
 	s.ServeHTTP(w, req)
 	if w.Code != http.StatusFound || !strings.HasPrefix(w.Header().Get("Location"), "/login") {
 		t.Errorf("authorize with only a header: %d %q, want a redirect to login", w.Code, w.Header().Get("Location"))
+	}
+}
+
+// signed_out_url lands every sign-out on the operator's page, such as the
+// marketing site, whatever return_to the app sent; it must be allowed.
+func TestLogoutLandsOnSignedOutURL(t *testing.T) {
+	s := newSocialFlowServerWith(t, PartyFirst, &SocialLoginConfig{
+		AllowedRedirectOrigins: []string{"https://app.example.com", "https://www.example.com"},
+		SignedOutURL:           "https://www.example.com/",
+	})
+	sess := socialSession(t, s)
+	w := postForm(s, LogoutPath, "https://app.example.com", url.Values{"return_to": {"https://app.example.com/"}}, sess)
+	if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "https://www.example.com/" {
+		t.Fatalf("logout: %d %q", w.Code, w.Header().Get("Location"))
+	}
+	// An open redirect in return_to is still refused.
+	if w := postForm(s, LogoutPath, "https://app.example.com", url.Values{"return_to": {"https://evil.example.com/"}}, sess); w.Code != http.StatusBadRequest {
+		t.Errorf("open redirect: %d", w.Code)
+	}
+
+	// A signed_out_url outside the allowed origins is refused at startup.
+	f := newFakeGitHub(t)
+	_, err := NewEmbedded(Config{Issuer: testIssuer, SocialLogin: &SocialLoginConfig{
+		AllowedRedirectOrigins: []string{"https://app.example.com"},
+		SignedOutURL:           "https://elsewhere.example.com/",
+	}}, WithSocialConnector(f.connector()))
+	if err == nil || !strings.Contains(err.Error(), "signed_out_url") {
+		t.Errorf("an unlisted signed_out_url: %v", err)
 	}
 }
