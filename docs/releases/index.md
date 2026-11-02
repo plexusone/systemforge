@@ -4,7 +4,11 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.30.2](v0.30.2.md), keeps a signed-out browser
+The latest release, [v0.30.3](v0.30.3.md), styles SystemAuth's pages
+with a same-origin stylesheet, in light and dark. It adds no breaking
+change.
+
+Before it, [v0.30.2](v0.30.2.md) kept a signed-out browser
 signed out with a single sign-in provider: the sign-in page waits for a
 click instead of redirecting. Read its upgrade notes.
 
