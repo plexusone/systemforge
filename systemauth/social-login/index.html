@@ -4693,6 +4693,8 @@
       
         
       
+        
+      
     
     
     
@@ -4764,6 +4766,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.30.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.30.2
   
 
     
@@ -5977,7 +6007,7 @@ endpoints:</p>
 <tbody>
 <tr>
 <td><code>GET /login?return_to=...</code></td>
-<td>Provider chooser. Redirects straight to the provider when only one is configured.</td>
+<td>The sign-in page: a link per provider, waiting for the person to choose, even with one provider. With <code>auto_select_single_provider</code>, redirects straight to the only provider.</td>
 </tr>
 <tr>
 <td><code>GET /login/{provider}?return_to=...</code></td>
@@ -6173,6 +6203,11 @@ when <code>tokens.hmac_secret</code> is set (<a href="../deployment/#token-hmac-
 <td><code>session_lifetime</code></td>
 <td><code>12h</code></td>
 <td>Absolute lifetime of the login session.</td>
+</tr>
+<tr>
+<td><code>auto_select_single_provider</code></td>
+<td><code>false</code></td>
+<td>With one provider, skip the sign-in page and go straight to it. Off by default: a browser that has just signed out would otherwise be signed straight back in, since the provider keeps its own session and remembers the person's authorization.</td>
 </tr>
 <tr>
 <td><code>skip_consent</code></td>
