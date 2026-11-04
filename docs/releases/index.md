@@ -6,8 +6,8 @@ change with its commit.
 
 The latest release, [v0.31.0](v0.31.0.md), is a security release: only
 owners manage admins, return addresses with dot segments are refused, and
-stored logo, website and avatar URLs must be https. It is breaking; read its
-upgrade notes.
+logo, website and avatar URLs must be https when written; URLs already stored
+are not changed. It is breaking; read its upgrade notes.
 
 Before it, [v0.30.5](v0.30.5.md) let a signed-in person link
 another provider's sign-in to their account. It adds no breaking change.

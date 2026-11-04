@@ -21,7 +21,7 @@
           "commit": "e470751"
         },
         {
-          "description": "Organization logo and website URLs and application logos must be absolute https URLs; avatars that are not are not stored",
+          "description": "Organization logo and website URLs and application logos must be absolute https URLs on write; avatars that are not https are not stored",
           "commit": "8a7acdf"
         }
       ],
@@ -35,7 +35,7 @@
           "commit": "8aa1694"
         },
         {
-          "description": "Organization create and update refuse a `logo_url` or `website_url` that is not an absolute https URL with `organization.ErrInvalidURL` (400); an empty value clears it",
+          "description": "Organization create and update refuse a `logo_url` or `website_url` they supply that is not an absolute https URL with `organization.ErrInvalidURL` (400); an empty value clears it",
           "commit": "8a7acdf"
         },
         {
@@ -45,17 +45,21 @@
         {
           "description": "`return_to` values with `.` or `..` path segments, plain or percent-encoded, or whose path decodes to `//`, are refused by sign-in's redirect policy (`ErrRedirectNotAllowed`), `Server.ValidateReturnTo` and the relying-party BFF (400)",
           "commit": "e470751"
+        },
+        {
+          "description": "`organization.Service` gains `RemoveMemberIfRole`; implementations of the interface outside SystemForge must add it",
+          "commit": "bda0700"
         }
       ],
       "upgradeGuide": [
         {
-          "description": "Have an owner resend, as a new invitation, any pending admin invitation an admin sent; it can no longer be accepted"
+          "description": "Have an owner revoke any pending admin invitation an admin sent and create a new one: it can no longer be accepted, resending keeps its original inviter, and a pending invitation blocks a new one for the same email"
         },
         {
           "description": "Grant the owner role to everyone who should manage admins; keep at least two owners per organization, since a platform administrator is otherwise the only one who can change the admins of an organization whose only owner is unavailable"
         },
         {
-          "description": "Existing stored URLs are not changed. Find organizations whose `logo_url` or `website_url` is not https, and applications whose logo is not, and update them; the next update of such an organization is otherwise refused until the URL is fixed or cleared"
+          "description": "Existing stored URLs are not changed and are still served. Find organizations whose `logo_url` or `website_url` is not https, applications whose logo is not, and people whose `avatar_url` is not, and replace or clear them. A write is refused only when it supplies a URL that is not https"
         },
         {
           "description": "Clients that send `return_to` values with dot segments must send the canonical path instead"
@@ -69,6 +73,10 @@
         {
           "description": "`organization.ErrInvalidURL` and `principal.ErrInvalidURL` for URLs that are not absolute https URLs",
           "commit": "8a7acdf"
+        },
+        {
+          "description": "`UpdateMemberInput.IfRole`, `Service.RemoveMemberIfRole` and `organization.ErrMembershipChanged` (409): a member change applies only while the member still has the role it was authorized against",
+          "commit": "bda0700"
         }
       ],
       "security": [
@@ -91,6 +99,20 @@
         {
           "description": "Organization logo and website URLs, application logos and avatars were stored unchecked, so a `javascript:`, `data:` or `http:` value reached every browser that showed them. Avatars and personal-organization logos from identity providers that are not https are dropped, so sign-in does not fail",
           "commit": "8a7acdf"
+        },
+        {
+          "description": "The member endpoints read the target's role, decided the permission the change needed, and wrote without checking the role again, so an owner's promotion landing in between let an admin demote or remove the new admin; the write now applies only while the authorized role holds",
+          "commit": "bda0700"
+        },
+        {
+          "description": "An https URL with no host name, such as `https://:443/x`, passed the URL check",
+          "commit": "7899b8d"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "An avatar that is not https is cleared instead of stored as an empty string",
+          "commit": "7899b8d"
         }
       ],
       "tests": [
@@ -101,6 +123,10 @@
         {
           "description": "Dot-segment return addresses in both redirect policies, and https checks for organization, application and avatar URLs",
           "commit": "e470751"
+        },
+        {
+          "description": "Role-conditional member writes, cleared avatars and URLs without a host name",
+          "commit": "5fc2f7e"
         }
       ],
       "documentation": [
