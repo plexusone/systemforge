@@ -107,7 +107,7 @@ func WithResourceGrants(svc *resourcegrant.Service) ServiceOption {
 
 // WithAuthorizer makes Accept ask authorizer whether an invite's inviter
 // still holds authz.PermOrgInviteMember on the organization (and the
-// owner-only authz.PermOrgDelete for an owner invite), the permissions the
+// owner-only authz.PermOrgDelete for an owner or admin invite), the permissions the
 // API required to create it. Use it when invitations may be created by
 // principals whose authority is not an organization membership, such as
 // platform administrators. Without it, the inviter must hold an active

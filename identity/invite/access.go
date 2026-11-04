@@ -47,7 +47,7 @@ func (s *DefaultService) PrincipalEmail(ctx context.Context, principalID uuid.UU
 // still hold for it to be accepted: those the API required to create it.
 func inviterActions(inv *ent.Invite) []authz.Action {
 	actions := []authz.Action{authz.PermOrgInviteMember}
-	if inv.Role == organization.RoleOwner {
+	if organization.RoleManagedByOwners(inv.Role) {
 		actions = append(actions, authz.PermOrgDelete)
 	}
 	return actions
@@ -150,7 +150,7 @@ func (a *API) can(ctx context.Context, principalID, orgID uuid.UUID, action auth
 }
 
 // inviteInOrg loads an invite and requires it to belong to org.
-func (a *API) inviteInOrg(ctx context.Context, rawID string, org *organization.Organization) (uuid.UUID, error) {
+func (a *API) inviteInOrg(ctx context.Context, rawID string, org *organization.Organization, caller uuid.UUID) (uuid.UUID, error) {
 	id, err := uuid.Parse(rawID)
 	if err != nil {
 		return uuid.Nil, huma.Error400BadRequest("invalid invite_id")
@@ -159,7 +159,27 @@ func (a *API) inviteInOrg(ctx context.Context, rawID string, org *organization.O
 	if err != nil || inv.OrganizationID != org.ID {
 		return uuid.Nil, huma.Error404NotFound("invite not found")
 	}
+	// An invite is managed by whoever may send it.
+	if err := a.requireRoleRights(ctx, caller, org.ID, inv.Role); err != nil {
+		return uuid.Nil, err
+	}
 	return id, nil
+}
+
+// requireRoleRights checks that caller may invite someone as role: only an
+// owner may invite an owner or an admin.
+func (a *API) requireRoleRights(ctx context.Context, caller, orgID uuid.UUID, role string) error {
+	if !organization.RoleManagedByOwners(role) {
+		return nil
+	}
+	ok, err := a.can(ctx, caller, orgID, authz.PermOrgDelete)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return huma.Error403Forbidden(fmt.Sprintf("only an owner may invite or manage invitations for the %s role", role))
+	}
+	return nil
 }
 
 // callerEmail returns the caller and its verified email; the caller must
