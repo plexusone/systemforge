@@ -151,3 +151,55 @@ func TestAppRoleEndpointsNoSeatsIs409(t *testing.T) {
 		t.Errorf("assign without a seat: %d %s, want 409", code, body)
 	}
 }
+
+// TestOnlyOwnersChangeAdminsAppRoles checks that an admin manages the
+// application roles of members, but not of another admin or an owner.
+func TestOnlyOwnersChangeAdminsAppRoles(t *testing.T) {
+	ctx := context.Background()
+	api := newOrgAPI(t)
+	owner := newHuman(t, api.db, "o3@example.com")
+	admin := newHuman(t, api.db, "a3@example.com")
+	admin2 := newHuman(t, api.db, "a4@example.com")
+	member := newHuman(t, api.db, "m3@example.com")
+	org, err := api.svc.Create(ctx, organization.CreateOrganizationInput{Name: "C", Slug: "c-org", OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &owner})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	for who, role := range map[uuid.UUID]string{admin: organization.RoleAdmin, admin2: organization.RoleAdmin, member: organization.RoleMember} {
+		if _, err := api.svc.AddMember(ctx, organization.AddMemberInput{OrganizationID: org.ID, PrincipalID: who, Role: role}); err != nil {
+			t.Fatalf("AddMember: %v", err)
+		}
+	}
+	reg := authz.NewVocabularyRegistry()
+	if err := reg.Register(apiVocab{}); err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	cfg := organization.DefaultAPIConfig()
+	cfg.Authorizer = memberAuthorizer(api.svc)
+	cfg.AppRoles = approle.NewService(api.db, reg, approle.EntitleAll(reg))
+	api.h = organization.NewAPI(api.svc, cfg)
+
+	role := func(who uuid.UUID) string { return "/organizations/c-org/members/" + who.String() + "/app-roles/alpha" }
+	for _, tc := range []struct {
+		name   string
+		method string
+		path   string
+		as     uuid.UUID
+		want   int
+	}{
+		{"admin sets another admin's role", http.MethodPut, role(admin2), admin, http.StatusForbidden},
+		{"admin sets the owner's role", http.MethodPut, role(owner), admin, http.StatusForbidden},
+		{"admin sets a member's role", http.MethodPut, role(member), admin, http.StatusOK},
+		{"owner sets an admin's role", http.MethodPut, role(admin2), owner, http.StatusOK},
+		{"admin removes another admin's role", http.MethodDelete, role(admin2), admin, http.StatusForbidden},
+		{"owner removes an admin's role", http.MethodDelete, role(admin2), owner, http.StatusNoContent},
+	} {
+		var body any
+		if tc.method == http.MethodPut {
+			body = map[string]string{"role": "viewer"}
+		}
+		if code, out := api.do(tc.method, tc.path, tc.as, body); code != tc.want {
+			t.Errorf("%s: %d, want %d (%s)", tc.name, code, tc.want, out)
+		}
+	}
+}
