@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+
+	"github.com/plexusone/systemforge/internal/redirect"
 )
 
 // redirectPolicy validates post-login return_to targets. A target is allowed
@@ -92,6 +94,11 @@ func (p *redirectPolicy) validate(raw string) (string, error) {
 		return "", ErrRedirectNotAllowed
 	}
 	if u.User != nil {
+		return "", ErrRedirectNotAllowed
+	}
+	// The path must be the one a browser requests: "/.//evil.com" resolves
+	// to "//evil.com", another host, once a client rebuilds the URL.
+	if !redirect.PathIsPlain(u) {
 		return "", ErrRedirectNotAllowed
 	}
 

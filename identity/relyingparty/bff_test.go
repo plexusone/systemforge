@@ -273,7 +273,12 @@ func TestBFFRejectsBadIdentity(t *testing.T) {
 
 func TestBFFReturnToAndProviders(t *testing.T) {
 	h := newHarness(t)
-	for _, bad := range []string{"https://evil.example.com/", "//evil.example.com", "/\\evil.example.com", "javascript:alert(1)"} {
+	for _, bad := range []string{
+		"https://evil.example.com/", "//evil.example.com", "/\\evil.example.com", "javascript:alert(1)",
+		// Dot segments resolve to "//evil.example.com" in a client that
+		// rebuilds the URL from its path.
+		"/.//evil.example.com", "/a/..//evil.example.com", "/%2e//evil.example.com",
+	} {
 		w := h.do(httptest.NewRequest(http.MethodGet, "/bff/auth/login?return_to="+url.QueryEscape(bad), nil))
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("return_to %q: %d", bad, w.Code)
