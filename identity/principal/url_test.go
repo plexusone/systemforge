@@ -31,7 +31,7 @@ func TestAvatarsAndLogosMustBeHTTPS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpdateHuman: %v", err)
 	}
-	if h.Human.AvatarURL != nil && *h.Human.AvatarURL != "" {
+	if h.Human.AvatarURL != nil {
 		t.Errorf("avatar = %q, want it cleared", *h.Human.AvatarURL)
 	}
 

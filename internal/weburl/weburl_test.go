@@ -17,6 +17,8 @@ func TestCheckHTTPS(t *testing.T) {
 		"https://user:pw@example.com/",
 		"https://example.com/\nx",
 		"https:\\\\example.com",
+		"https://:443/logo.png",
+		"https:///logo.png",
 		"https://" + string(make([]byte, MaxLen)),
 	} {
 		if err := CheckHTTPS(bad); err == nil {

@@ -2,6 +2,7 @@ package organization_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -63,5 +64,48 @@ func TestOnlyOwnersManageAdmins(t *testing.T) {
 		if code, body := api.do(tc.method, tc.path, tc.as, tc.body); code != tc.want {
 			t.Errorf("%s: %d, want %d (%s)", tc.name, code, tc.want, body)
 		}
+	}
+}
+
+// TestRoleConditionalWrites checks that an update or removal authorized
+// against a role does not apply once the role has changed, so a concurrent
+// promotion cannot let an admin demote or remove the new admin.
+func TestRoleConditionalWrites(t *testing.T) {
+	ctx := context.Background()
+	api := newOrgAPI(t)
+	owner := newHuman(t, api.db, "owner@example.com")
+	target := newHuman(t, api.db, "target@example.com")
+	org, err := api.svc.Create(ctx, organization.CreateOrganizationInput{Name: "Acme", Slug: "acme", OrgType: organization.OrgTypeTeam, OwnerPrincipalID: &owner})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	m, err := api.svc.AddMember(ctx, organization.AddMemberInput{OrganizationID: org.ID, PrincipalID: target, Role: organization.RoleMember})
+	if err != nil {
+		t.Fatalf("AddMember: %v", err)
+	}
+	// An owner promotes the target after an admin's check read "member".
+	admin := organization.RoleAdmin
+	if _, err := api.svc.UpdateMember(ctx, m.ID, organization.UpdateMemberInput{Role: &admin}); err != nil {
+		t.Fatalf("promote: %v", err)
+	}
+
+	member := organization.RoleMember
+	if _, err := api.svc.UpdateMember(ctx, m.ID, organization.UpdateMemberInput{Role: &member, IfRole: organization.RoleMember}); !errors.Is(err, organization.ErrMembershipChanged) {
+		t.Errorf("stale update: %v, want ErrMembershipChanged", err)
+	}
+	if err := api.svc.RemoveMemberIfRole(ctx, org.ID, target, organization.RoleMember); !errors.Is(err, organization.ErrMembershipChanged) {
+		t.Errorf("stale removal: %v, want ErrMembershipChanged", err)
+	}
+	got, err := api.svc.GetMembership(ctx, org.ID, target)
+	if err != nil || got.Role != organization.RoleAdmin {
+		t.Fatalf("membership after stale writes = %+v, %v; want admin", got, err)
+	}
+
+	// With the current role, both apply.
+	if _, err := api.svc.UpdateMember(ctx, m.ID, organization.UpdateMemberInput{Role: &member, IfRole: organization.RoleAdmin}); err != nil {
+		t.Errorf("current update: %v", err)
+	}
+	if err := api.svc.RemoveMemberIfRole(ctx, org.ID, target, organization.RoleMember); err != nil {
+		t.Errorf("current removal: %v", err)
 	}
 }
