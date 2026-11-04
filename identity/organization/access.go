@@ -75,12 +75,22 @@ func (a *API) orgFor(ctx context.Context, slug string, action authz.Action) (*Or
 // requireOwnerRights checks the owner-only permission, which granting,
 // changing, or removing the owner role needs.
 func (a *API) requireOwnerRights(ctx context.Context, caller, orgID uuid.UUID) error {
+	return a.requireOwner(ctx, caller, orgID, "only an owner may grant, change, or remove the owner role")
+}
+
+// requireAdminRights checks the owner-only permission, which granting,
+// changing, or removing the admin role of someone else needs.
+func (a *API) requireAdminRights(ctx context.Context, caller, orgID uuid.UUID) error {
+	return a.requireOwner(ctx, caller, orgID, "only an owner may grant, change, or remove the admin role")
+}
+
+func (a *API) requireOwner(ctx context.Context, caller, orgID uuid.UUID, refusal string) error {
 	ok, err := a.can(ctx, caller, orgID, authz.PermOrgDelete)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		return huma.Error403Forbidden("only an owner may grant, change, or remove the owner role")
+		return huma.Error403Forbidden(refusal)
 	}
 	return nil
 }

@@ -97,6 +97,14 @@ const (
 	RoleMember = "member"
 )
 
+// RoleManagedByOwners reports whether only an owner may grant role, or
+// change, remove or invite someone holding it: owner and admin. An admin
+// manages members, but not the people who manage the organization, so one
+// admin account cannot replace the others.
+func RoleManagedByOwners(role string) bool {
+	return role == RoleOwner || role == RoleAdmin
+}
+
 // AddMemberInput contains input for adding a member to an organization.
 type AddMemberInput struct {
 	OrganizationID uuid.UUID

@@ -756,9 +756,9 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 // revokeInvitesBeyond revokes, in tx, the pending invitations inviterID
 // sent to the organization that its membership (role, active) no longer
 // allows it to send: all of them when it may not invite at all (removed,
-// deactivated, or demoted below invite_member), and owner invitations
-// when it is no longer an owner. An invitation does not outlive its
-// inviter's authority.
+// deactivated, or demoted below invite_member), and owner and admin
+// invitations when it is no longer an owner. An invitation does not
+// outlive its inviter's authority.
 func revokeInvitesBeyond(ctx context.Context, tx *ent.Tx, orgID, inviterID uuid.UUID, role string, active bool) error {
 	q := tx.Invite.Update().Where(
 		entinvite.OrganizationID(orgID),
@@ -768,7 +768,7 @@ func revokeInvitesBeyond(ctx context.Context, tx *ent.Tx, orgID, inviterID uuid.
 	switch {
 	case !active || !authz.OrgRoleAllows(role, authz.PermOrgInviteMember):
 	case !authz.OrgRoleAllows(role, authz.PermOrgDelete):
-		q = q.Where(entinvite.Role(RoleOwner))
+		q = q.Where(entinvite.RoleIn(RoleOwner, RoleAdmin))
 	default:
 		return nil
 	}

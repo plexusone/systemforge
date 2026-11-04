@@ -219,6 +219,9 @@ func (a *API) setAppRole(ctx context.Context, input *SetAppRoleInput) (*SetAppRo
 	if err != nil {
 		return nil, err
 	}
+	if err := a.requireAppRoleRights(ctx, caller, org.ID, principalID); err != nil {
+		return nil, err
+	}
 	in := approle.AssignInput{
 		OrganizationID: org.ID,
 		PrincipalID:    principalID,
@@ -249,8 +252,32 @@ func (a *API) removeAppRole(ctx context.Context, input *RemoveAppRoleInput) (*st
 	if err != nil {
 		return nil, err
 	}
+	if err := a.requireAppRoleRights(ctx, caller, org.ID, principalID); err != nil {
+		return nil, err
+	}
 	if err := svc.Remove(ctx, org.ID, principalID, input.Application, caller); err != nil {
 		return nil, a.appRoleError(ctx, err)
 	}
 	return nil, nil
+}
+
+// requireAppRoleRights checks that caller may change principalID's
+// application roles: only an owner may change those of an owner or of
+// another admin. A principal that is not a member is left to the
+// application role service, which refuses it.
+func (a *API) requireAppRoleRights(ctx context.Context, caller, orgID, principalID uuid.UUID) error {
+	if principalID == caller {
+		return nil
+	}
+	m, err := a.service.GetMembership(ctx, orgID, principalID)
+	if errors.Is(err, ErrMembershipNotFound) {
+		return nil
+	}
+	if err != nil {
+		return a.serviceError(ctx, "reading member", err)
+	}
+	if !RoleManagedByOwners(m.Role) {
+		return nil
+	}
+	return a.requireOwner(ctx, caller, orgID, "only an owner may change the application roles of an owner or admin")
 }

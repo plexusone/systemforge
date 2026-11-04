@@ -241,8 +241,13 @@ func (a *API) addMember(ctx context.Context, input *AddMemberRequest) (*AddMembe
 	if err != nil {
 		return nil, huma.Error400BadRequest("invalid principal_id")
 	}
-	if input.Body.Role == RoleOwner {
+	switch input.Body.Role {
+	case RoleOwner:
 		if err := a.requireOwnerRights(ctx, caller, org.ID); err != nil {
+			return nil, err
+		}
+	case RoleAdmin:
+		if err := a.requireAdminRights(ctx, caller, org.ID); err != nil {
 			return nil, err
 		}
 	}
@@ -278,8 +283,24 @@ func (a *API) updateMember(ctx context.Context, input *UpdateMemberRequest) (*Up
 	if err != nil {
 		return nil, a.serviceError(ctx, "reading member", err)
 	}
-	if membership.Role == RoleOwner || (input.Body.Role != nil && *input.Body.Role == RoleOwner) {
+	newRole := ""
+	if input.Body.Role != nil {
+		newRole = *input.Body.Role
+	}
+	switch {
+	case membership.Role == RoleOwner || newRole == RoleOwner:
 		if err := a.requireOwnerRights(ctx, caller, org.ID); err != nil {
+			return nil, err
+		}
+	case newRole == RoleAdmin && membership.Role != RoleAdmin:
+		// Promoting to admin.
+		if err := a.requireAdminRights(ctx, caller, org.ID); err != nil {
+			return nil, err
+		}
+	case membership.Role == RoleAdmin && !stepsDown(principalID, caller, input.Body.Permissions):
+		// Changing another admin, or one's own permissions. An admin may
+		// still step down or deactivate themselves.
+		if err := a.requireAdminRights(ctx, caller, org.ID); err != nil {
 			return nil, err
 		}
 	}
@@ -328,8 +349,13 @@ func (a *API) removeMember(ctx context.Context, input *RemoveMemberInput) (*stru
 		if err != nil {
 			return nil, a.serviceError(ctx, "reading member", err)
 		}
-		if membership.Role == RoleOwner {
+		switch membership.Role {
+		case RoleOwner:
 			if err := a.requireOwnerRights(ctx, caller, org.ID); err != nil {
+				return nil, err
+			}
+		case RoleAdmin:
+			if err := a.requireAdminRights(ctx, caller, org.ID); err != nil {
 				return nil, err
 			}
 		}
@@ -400,4 +426,10 @@ func (a *API) requireDirectAdd(ctx context.Context, caller, orgID, principalID u
 		return huma.Error403Forbidden("members join by invitation; this principal cannot be added directly")
 	}
 	return nil
+}
+
+// stepsDown reports whether an update to an admin's own membership only
+// gives up access: a new role or deactivation, without new permissions.
+func stepsDown(target, caller uuid.UUID, permissions []string) bool {
+	return target == caller && permissions == nil
 }
