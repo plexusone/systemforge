@@ -4968,6 +4968,8 @@
       
         
       
+        
+      
     
     
     
@@ -5039,6 +5041,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.31.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.31.0
   
 
     
@@ -6976,6 +7006,13 @@ only <code>role = owner</code> plus <code>sf_organizations.owner_principal_id</c
 <p><code>organization.MembershipRoleGetter(svc)</code> adapts <code>GetMembership</code> to
 <code>rbac.WithRoleGetter</code>: an inactive or missing membership has no role.</p>
 <h3 id="member-endpoints">Member endpoints<a class="headerlink" href="#member-endpoints" title="Permanent link">&para;</a></h3>
+<p>Owners manage the people who manage the organization. Granting <code>owner</code> or
+<code>admin</code>, and changing, deactivating or removing someone else's owner or admin
+membership, needs the owner-only permission (<code>delete</code>); an admin manages
+members and collaborators only, so one admin account cannot replace the
+others. An admin may still step down or leave. Keep at least two owners, so
+that losing one does not leave the admin roster unmanageable; a platform
+administrator can step in otherwise.</p>
 <table>
 <thead>
 <tr>
@@ -6993,17 +7030,17 @@ only <code>role = owner</code> plus <code>sf_organizations.owner_principal_id</c
 <tr>
 <td><code>addMember</code></td>
 <td><code>POST /organizations/{slug}/members</code></td>
-<td><code>invite_member</code>, and the caller must be allowed to enroll the principal without its consent: by default only a platform administrator; <code>APIConfig.DirectAdd</code> can allow principals the organization governs (for example managed principals the caller manages). Everyone else joins by invitation. Granting <code>owner</code> additionally needs the owner-only permission (<code>delete</code>)</td>
+<td><code>invite_member</code>, and the caller must be allowed to enroll the principal without its consent: by default only a platform administrator; <code>APIConfig.DirectAdd</code> can allow principals the organization governs (for example managed principals the caller manages). Everyone else joins by invitation. Granting <code>owner</code> or <code>admin</code> additionally needs the owner-only permission (<code>delete</code>)</td>
 </tr>
 <tr>
 <td><code>updateMember</code></td>
 <td><code>PATCH /organizations/{slug}/members/{principal_id}</code></td>
-<td><code>change_role</code>; touching an owner's role, or granting <code>owner</code>, needs the owner-only permission; deactivating needs <code>remove_member</code></td>
+<td><code>change_role</code>; granting <code>owner</code> or <code>admin</code>, or changing or deactivating someone else who is an owner or admin, needs the owner-only permission, as does an admin changing their own permissions; an admin may change their own role to step down; deactivating needs <code>remove_member</code></td>
 </tr>
 <tr>
 <td><code>removeMember</code></td>
 <td><code>DELETE /organizations/{slug}/members/{principal_id}</code></td>
-<td>A member may remove themself with <code>view</code>; removing someone else needs <code>remove_member</code>, and removing the owner needs the owner-only permission</td>
+<td>A member may remove themself with <code>view</code>; removing someone else needs <code>remove_member</code>, and removing an owner or admin needs the owner-only permission</td>
 </tr>
 <tr>
 <td><code>transferOwnership</code></td>
@@ -7101,7 +7138,8 @@ organization is refused with <code>ErrPersonalOrganization</code>.</p>
 <h3 id="invite-endpoints">Invite endpoints<a class="headerlink" href="#invite-endpoints" title="Permanent link">&para;</a></h3>
 <p>Organization-side routes (<code>POST</code>/<code>GET /organizations/{slug}/invites</code>,
 <code>DELETE .../{invite_id}</code>, <code>POST .../{invite_id}/resend</code>) need
-<code>invite_member</code>; inviting an <code>owner</code> needs the owner-only permission, and
+<code>invite_member</code>; inviting an <code>owner</code> or <code>admin</code>, and resending or revoking such
+an invite, needs the owner-only permission, and
 <code>inviter_principal_id</code> must be the caller. The create body takes <code>app_roles</code>
 and invites in responses carry them. A member's roles are changed later, per
 application and without touching the membership, through the application role
@@ -7400,11 +7438,11 @@ them again does not restore the roles.</p>
 </tr>
 <tr>
 <td><code>PUT /organizations/{slug}/members/{principal_id}/app-roles/{application}</code></td>
-<td><code>change_role</code>; body <code>{"role": "..."}</code>; assigns or changes</td>
+<td><code>change_role</code>, and the owner-only permission when the member is another owner or admin; body <code>{"role": "..."}</code>; assigns or changes</td>
 </tr>
 <tr>
 <td><code>DELETE /organizations/{slug}/members/{principal_id}/app-roles/{application}</code></td>
-<td><code>change_role</code></td>
+<td><code>change_role</code>, and the owner-only permission when the member is another owner or admin</td>
 </tr>
 </tbody>
 </table>

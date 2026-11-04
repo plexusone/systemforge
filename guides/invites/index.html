@@ -4679,6 +4679,8 @@
       
         
       
+        
+      
     
     
     
@@ -4750,6 +4752,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.31.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.31.0
   
 
     
@@ -6152,13 +6182,13 @@ account's email verified.</p>
 <p>An invite carries its inviter's current authority, not the authority it had
 when it was sent. Accepting requires the inviter to still hold
 <code>invite_member</code> on the organization, and the owner-only <code>delete</code> for an
-owner invite; otherwise acceptance fails with
+owner or admin invite; otherwise acceptance fails with
 <code>invite.ErrInviterNotAuthorized</code>. By default the inviter's active membership
 role is checked; <code>invite.WithAuthorizer(authorizer)</code> asks an authorizer
 instead, for deployments where principals who are not members (platform
 administrators) send invites. Removing or deactivating a member revokes the
 pending invites it sent, and demoting it revokes those it may no longer send
-(owner invites when it stops being an owner).</p>
+(owner and admin invites when it stops being an owner).</p>
 <p>Every change of an invite's status (accept, decline, revoke, resend, expiry)
 applies only to a pending invite, as one conditional update. An invite
 revoked while it is being accepted is not accepted, and revoking an accepted
@@ -6178,7 +6208,7 @@ the member through the organization instead.</p>
 <td><code>invite_member</code> on the organization (owner or admin)</td>
 </tr>
 <tr>
-<td>Invite with <code>role: owner</code></td>
+<td>Invite with <code>role: owner</code> or <code>role: admin</code>, or resend or revoke one</td>
 <td>The owner-only permission (<code>delete</code>)</td>
 </tr>
 <tr>
@@ -6202,7 +6232,7 @@ the member through the organization instead.</p>
 </tr>
 <tr>
 <td><code>403</code></td>
-<td><code>inviter_principal_id</code> is not the caller; an admin inviting an owner; a principal without a verified email (a managed principal, or one that has not verified its address) answering or listing invites; listing another address's invites; the caller can view the organization but may not invite</td>
+<td><code>inviter_principal_id</code> is not the caller; an admin inviting an owner or admin, or resending or revoking such an invite; a principal without a verified email (a managed principal, or one that has not verified its address) answering or listing invites; listing another address's invites; the caller can view the organization but may not invite</td>
 </tr>
 <tr>
 <td><code>404</code></td>
