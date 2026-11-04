@@ -23,6 +23,7 @@ type clientError struct {
 // fixed message. Any other error is logged and answered with a 500.
 var clientErrors = []clientError{
 	{ErrInvalidSlug, http.StatusBadRequest, ErrInvalidSlug.Error()},
+	{ErrInvalidURL, http.StatusBadRequest, ErrInvalidURL.Error()},
 	{ErrSlugTaken, http.StatusBadRequest, ErrSlugTaken.Error()},
 	{ErrSlugReserved, http.StatusBadRequest, ErrSlugReserved.Error()},
 	{ErrSlugCoolingOff, http.StatusBadRequest, ErrSlugCoolingOff.Error()},

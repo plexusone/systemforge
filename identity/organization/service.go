@@ -159,6 +159,9 @@ func NewService(client *ent.Client, opts ...ServiceOption) Service {
 
 // Create creates a new organization.
 func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInput) (*Organization, error) {
+	if err := checkURLs(input.LogoURL, input.WebsiteURL); err != nil {
+		return nil, err
+	}
 	if err := s.validateCreate(ctx, s.client, input); err != nil {
 		return nil, err
 	}
@@ -299,7 +302,7 @@ func (s *DefaultService) CreatePersonalOrgInTx(ctx context.Context, tx *ent.Tx, 
 		Slug:             input.Slug,
 		OrgType:          OrgTypePersonal,
 		OwnerPrincipalID: &input.OwnerPrincipalID,
-		LogoURL:          input.LogoURL,
+		LogoURL:          providerURL(input.LogoURL),
 	}
 	if err := s.validateCreate(ctx, tx.Client(), in); err != nil {
 		return nil, nil, nil, err
@@ -320,7 +323,7 @@ func (s *DefaultService) CreatePersonalOrg(ctx context.Context, input CreatePers
 		Slug:             input.Slug,
 		OrgType:          OrgTypePersonal,
 		OwnerPrincipalID: &input.OwnerPrincipalID,
-		LogoURL:          input.LogoURL,
+		LogoURL:          providerURL(input.LogoURL),
 	})
 }
 
@@ -369,6 +372,9 @@ func (s *DefaultService) GetPersonalOrg(ctx context.Context, principalID uuid.UU
 
 // Update updates an organization.
 func (s *DefaultService) Update(ctx context.Context, id uuid.UUID, input UpdateOrganizationInput) (*Organization, error) {
+	if err := checkURLs(input.LogoURL, input.WebsiteURL); err != nil {
+		return nil, err
+	}
 	update := s.client.Organization.UpdateOneID(id)
 
 	if input.Name != nil {

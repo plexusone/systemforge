@@ -17,6 +17,7 @@ import (
 	"github.com/plexusone/systemforge/identity/ent/application"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/graphlock"
+	"github.com/plexusone/systemforge/internal/weburl"
 )
 
 // DefaultService implements the Service interface.
@@ -219,7 +220,9 @@ func (s *DefaultService) insertHuman(ctx context.Context, tx *ent.Tx, input Crea
 	if input.FamilyName != "" {
 		humanCreate.SetFamilyName(input.FamilyName)
 	}
-	if input.AvatarURL != nil {
+	// Avatars come from identity providers and are loaded by every browser
+	// that shows the person; one that is not https is not stored.
+	if input.AvatarURL != nil && weburl.HTTPSOrEmpty(*input.AvatarURL) != "" {
 		humanCreate.SetAvatarURL(*input.AvatarURL)
 	}
 	if input.Locale != "" {
@@ -291,6 +294,9 @@ func humanResult(p *ent.Principal, h *ent.Human, caps Capabilities) *Principal {
 
 // CreateApplication creates a new application principal.
 func (s *DefaultService) CreateApplication(ctx context.Context, input CreateApplicationInput) (*Principal, error) {
+	if input.LogoURL != nil && weburl.CheckHTTPS(*input.LogoURL) != nil {
+		return nil, ErrInvalidURL
+	}
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
@@ -740,8 +746,9 @@ func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input Up
 	if input.FamilyName != nil {
 		update.SetFamilyName(*input.FamilyName)
 	}
+	// An avatar that is not https clears the stored one.
 	if input.AvatarURL != nil {
-		update.SetAvatarURL(*input.AvatarURL)
+		update.SetAvatarURL(weburl.HTTPSOrEmpty(*input.AvatarURL))
 	}
 	if input.Locale != nil {
 		update.SetLocale(*input.Locale)
@@ -784,6 +791,9 @@ func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input Up
 
 // UpdateApplication updates an application principal.
 func (s *DefaultService) UpdateApplication(ctx context.Context, id uuid.UUID, input UpdateApplicationInput) (*Principal, error) {
+	if input.LogoURL != nil && weburl.CheckHTTPS(*input.LogoURL) != nil {
+		return nil, ErrInvalidURL
+	}
 	// Check the type first, so a mismatch changes nothing.
 	if err := s.requireType(ctx, id, principal.TypeApplication); err != nil {
 		return nil, err
