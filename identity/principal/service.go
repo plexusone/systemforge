@@ -748,7 +748,11 @@ func (s *DefaultService) UpdateHuman(ctx context.Context, id uuid.UUID, input Up
 	}
 	// An avatar that is not https clears the stored one.
 	if input.AvatarURL != nil {
-		update.SetAvatarURL(weburl.HTTPSOrEmpty(*input.AvatarURL))
+		if avatar := weburl.HTTPSOrEmpty(*input.AvatarURL); avatar != "" {
+			update.SetAvatarURL(avatar)
+		} else {
+			update.ClearAvatarURL()
+		}
 	}
 	if input.Locale != nil {
 		update.SetLocale(*input.Locale)

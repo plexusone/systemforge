@@ -32,7 +32,9 @@ func CheckHTTPS(raw string) error {
 		}
 	}
 	u, err := url.Parse(raw)
-	if err != nil || !strings.EqualFold(u.Scheme, "https") || u.Host == "" || u.User != nil {
+	// u.Host is ":443" for "https://:443/x", which no browser can load, so
+	// the host name itself must be present.
+	if err != nil || !strings.EqualFold(u.Scheme, "https") || u.Hostname() == "" || u.User != nil {
 		return ErrNotHTTPS
 	}
 	return nil
