@@ -27,6 +27,10 @@ var ErrWrongType = errors.New("principal: wrong principal type")
 // does not exist or is not active.
 var ErrInvalidDelegator = errors.New("principal: delegating principal must exist and be active")
 
+// ErrInvalidURL is returned for an application logo URL that is not an
+// absolute https URL.
+var ErrInvalidURL = errors.New("principal: logo_url must be an absolute https URL")
+
 // Type represents the type of principal.
 type Type string
 

@@ -9,8 +9,6 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/google/uuid"
-	"github.com/plexusone/systemforge/authz"
-	"github.com/plexusone/systemforge/identity/organization"
 	"github.com/plexusone/systemforge/internal/apierror"
 )
 
@@ -284,15 +282,9 @@ func (a *API) createInvite(ctx context.Context, input *CreateInviteRequest) (*Cr
 			return nil, huma.Error403Forbidden("inviter_principal_id must be the authenticated caller")
 		}
 	}
-	// Inviting an owner needs owner rights.
-	if input.Body.Role == organization.RoleOwner {
-		ok, err := a.can(ctx, inviterID, org.ID, authz.PermOrgDelete)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			return nil, huma.Error403Forbidden("only an owner may invite an owner")
-		}
+	// Inviting an owner or an admin needs owner rights.
+	if err := a.requireRoleRights(ctx, inviterID, org.ID, input.Body.Role); err != nil {
+		return nil, err
 	}
 
 	expiresIn := DefaultInviteExpiry
@@ -353,11 +345,11 @@ func (a *API) listInvites(ctx context.Context, input *ListInvitesRequest) (*List
 }
 
 func (a *API) revokeInvite(ctx context.Context, input *RevokeInviteRequest) (*struct{}, error) {
-	org, _, err := a.orgForInvites(ctx, input.Slug)
+	org, caller, err := a.orgForInvites(ctx, input.Slug)
 	if err != nil {
 		return nil, err
 	}
-	inviteID, err := a.inviteInOrg(ctx, input.InviteID, org)
+	inviteID, err := a.inviteInOrg(ctx, input.InviteID, org, caller)
 	if err != nil {
 		return nil, err
 	}
@@ -370,11 +362,11 @@ func (a *API) revokeInvite(ctx context.Context, input *RevokeInviteRequest) (*st
 }
 
 func (a *API) resendInvite(ctx context.Context, input *ResendInviteRequest) (*ResendInviteResponse, error) {
-	org, _, err := a.orgForInvites(ctx, input.Slug)
+	org, caller, err := a.orgForInvites(ctx, input.Slug)
 	if err != nil {
 		return nil, err
 	}
-	inviteID, err := a.inviteInOrg(ctx, input.InviteID, org)
+	inviteID, err := a.inviteInOrg(ctx, input.InviteID, org, caller)
 	if err != nil {
 		return nil, err
 	}

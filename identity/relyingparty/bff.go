@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/plexusone/systemforge/identity/appcatalog"
+	"github.com/plexusone/systemforge/internal/redirect"
 
 	"golang.org/x/oauth2"
 )
@@ -904,7 +905,9 @@ func (b *BFF) validateReturnTo(raw string) (string, error) {
 		}
 	}
 	u, err := url.Parse(raw)
-	if err != nil || u.User != nil {
+	// The path must be the one a browser requests: "/.//evil.com" resolves
+	// to "//evil.com", another host, once a client rebuilds the URL.
+	if err != nil || u.User != nil || !redirect.PathIsPlain(u) {
 		return "", errors.New("return_to not allowed")
 	}
 	if u.Scheme == "" && u.Host == "" {

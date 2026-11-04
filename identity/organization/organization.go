@@ -97,6 +97,14 @@ const (
 	RoleMember = "member"
 )
 
+// RoleManagedByOwners reports whether only an owner may grant role, or
+// change, remove or invite someone holding it: owner and admin. An admin
+// manages members, but not the people who manage the organization, so one
+// admin account cannot replace the others.
+func RoleManagedByOwners(role string) bool {
+	return role == RoleOwner || role == RoleAdmin
+}
+
 // AddMemberInput contains input for adding a member to an organization.
 type AddMemberInput struct {
 	OrganizationID uuid.UUID
@@ -110,6 +118,10 @@ type UpdateMemberInput struct {
 	Role        *string
 	Permissions []string
 	Active      *bool
+	// IfRole, when set, applies the update only while the membership still
+	// has this role; otherwise UpdateMember returns ErrMembershipChanged.
+	// Set it to the role the update was authorized against.
+	IfRole string
 }
 
 // TransferOwnershipInput contains input for transferring organization ownership.
@@ -123,3 +135,7 @@ type TransferOwnershipInput struct {
 // ErrMembershipNotFound is returned when a principal has no membership,
 // active or not, in an organization.
 var ErrMembershipNotFound = errors.New("membership not found")
+
+// ErrMembershipChanged is returned when a membership's role changed between
+// the authorization check and the write; the caller should read it again.
+var ErrMembershipChanged = errors.New("membership changed; reload and try again")

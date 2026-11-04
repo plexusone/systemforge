@@ -64,6 +64,12 @@ func TestRedirectPolicy(t *testing.T) {
 		"javascript:alert(1)",
 		"relative/path",
 		"https://app.example.com:8443/",
+		// Dot segments resolve to "//evil.example.com" in a client that
+		// rebuilds the URL from its path.
+		"/.//evil.example.com",
+		"/a/..//evil.example.com",
+		"/%2e//evil.example.com",
+		"https://app.example.com/./x",
 	}
 	for _, raw := range denied {
 		if _, err := p.validate(raw); !errors.Is(err, ErrRedirectNotAllowed) {

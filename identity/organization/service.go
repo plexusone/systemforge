@@ -59,6 +59,11 @@ type Service interface {
 	// RemoveMember removes a principal from an organization.
 	RemoveMember(ctx context.Context, organizationID, principalID uuid.UUID) error
 
+	// RemoveMemberIfRole removes a principal from an organization only if
+	// its membership still has role, and returns ErrMembershipChanged
+	// otherwise. Use it when the removal was authorized against that role.
+	RemoveMemberIfRole(ctx context.Context, organizationID, principalID uuid.UUID, role string) error
+
 	// GetMembership retrieves a specific membership.
 	GetMembership(ctx context.Context, organizationID, principalID uuid.UUID) (*Membership, error)
 
@@ -159,6 +164,9 @@ func NewService(client *ent.Client, opts ...ServiceOption) Service {
 
 // Create creates a new organization.
 func (s *DefaultService) Create(ctx context.Context, input CreateOrganizationInput) (*Organization, error) {
+	if err := checkURLs(input.LogoURL, input.WebsiteURL); err != nil {
+		return nil, err
+	}
 	if err := s.validateCreate(ctx, s.client, input); err != nil {
 		return nil, err
 	}
@@ -299,7 +307,7 @@ func (s *DefaultService) CreatePersonalOrgInTx(ctx context.Context, tx *ent.Tx, 
 		Slug:             input.Slug,
 		OrgType:          OrgTypePersonal,
 		OwnerPrincipalID: &input.OwnerPrincipalID,
-		LogoURL:          input.LogoURL,
+		LogoURL:          providerURL(input.LogoURL),
 	}
 	if err := s.validateCreate(ctx, tx.Client(), in); err != nil {
 		return nil, nil, nil, err
@@ -320,7 +328,7 @@ func (s *DefaultService) CreatePersonalOrg(ctx context.Context, input CreatePers
 		Slug:             input.Slug,
 		OrgType:          OrgTypePersonal,
 		OwnerPrincipalID: &input.OwnerPrincipalID,
-		LogoURL:          input.LogoURL,
+		LogoURL:          providerURL(input.LogoURL),
 	})
 }
 
@@ -369,6 +377,9 @@ func (s *DefaultService) GetPersonalOrg(ctx context.Context, principalID uuid.UU
 
 // Update updates an organization.
 func (s *DefaultService) Update(ctx context.Context, id uuid.UUID, input UpdateOrganizationInput) (*Organization, error) {
+	if err := checkURLs(input.LogoURL, input.WebsiteURL); err != nil {
+		return nil, err
+	}
 	update := s.client.Organization.UpdateOneID(id)
 
 	if input.Name != nil {
@@ -570,6 +581,11 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
 	update := tx.PrincipalMembership.UpdateOneID(membershipID)
+	if input.IfRole != "" {
+		// The update was authorized against this role; a concurrent role
+		// change must not let it through.
+		update.Where(principalmembership.Role(input.IfRole))
+	}
 
 	if input.Role != nil {
 		update.SetRole(*input.Role)
@@ -585,6 +601,9 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			err = errors.Join(err, rerr)
+		}
+		if ent.IsNotFound(err) && input.IfRole != "" {
+			return nil, ErrMembershipChanged
 		}
 		if ent.IsNotFound(err) {
 			return nil, fmt.Errorf("%w: %s", ErrMembershipNotFound, membershipID)
@@ -683,6 +702,20 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 // the removal commits; if the graph refuses, nothing is removed and the
 // error is returned, so the call can be retried.
 func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, principalID uuid.UUID) error {
+	return s.removeMember(ctx, organizationID, principalID, "")
+}
+
+// RemoveMemberIfRole implements Service.
+func (s *DefaultService) RemoveMemberIfRole(ctx context.Context, organizationID, principalID uuid.UUID, role string) error {
+	if role == "" {
+		return fmt.Errorf("%w: no role given", ErrInvalidRole)
+	}
+	return s.removeMember(ctx, organizationID, principalID, role)
+}
+
+// removeMember removes the membership; with ifRole set, only while the
+// membership still has that role.
+func (s *DefaultService) removeMember(ctx context.Context, organizationID, principalID uuid.UUID, ifRole string) error {
 	// Get membership to know the role for authz sync
 	membership, err := s.GetMembership(ctx, organizationID, principalID)
 	if err != nil {
@@ -715,13 +748,23 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 		Exec(ctx); err != nil {
 		return errors.Join(fmt.Errorf("failed to remove application roles: %w", err), tx.Rollback())
 	}
-	if _, err = tx.PrincipalMembership.Delete().
+	del := tx.PrincipalMembership.Delete().
 		Where(
 			principalmembership.OrganizationID(organizationID),
 			principalmembership.PrincipalID(principalID),
-		).
-		Exec(ctx); err != nil {
+		)
+	if ifRole != "" {
+		// The removal was authorized against this role; a concurrent role
+		// change must not let it through.
+		del.Where(principalmembership.Role(ifRole))
+	}
+	removed, err := del.Exec(ctx)
+	if err != nil {
 		return errors.Join(fmt.Errorf("failed to remove membership: %w", err), tx.Rollback())
+	}
+	if removed == 0 {
+		// Rolling back also undoes the grant and role deletions above.
+		return errors.Join(ErrMembershipChanged, tx.Rollback())
 	}
 	changes, err := recordChanges(ctx, tx, []accesschange.Change{{PrincipalID: principalID, OrganizationID: &organizationID, Reason: accesschange.MembershipRemoved}})
 	if err != nil {
@@ -750,9 +793,9 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 // revokeInvitesBeyond revokes, in tx, the pending invitations inviterID
 // sent to the organization that its membership (role, active) no longer
 // allows it to send: all of them when it may not invite at all (removed,
-// deactivated, or demoted below invite_member), and owner invitations
-// when it is no longer an owner. An invitation does not outlive its
-// inviter's authority.
+// deactivated, or demoted below invite_member), and owner and admin
+// invitations when it is no longer an owner. An invitation does not
+// outlive its inviter's authority.
 func revokeInvitesBeyond(ctx context.Context, tx *ent.Tx, orgID, inviterID uuid.UUID, role string, active bool) error {
 	q := tx.Invite.Update().Where(
 		entinvite.OrganizationID(orgID),
@@ -762,7 +805,7 @@ func revokeInvitesBeyond(ctx context.Context, tx *ent.Tx, orgID, inviterID uuid.
 	switch {
 	case !active || !authz.OrgRoleAllows(role, authz.PermOrgInviteMember):
 	case !authz.OrgRoleAllows(role, authz.PermOrgDelete):
-		q = q.Where(entinvite.Role(RoleOwner))
+		q = q.Where(entinvite.RoleIn(RoleOwner, RoleAdmin))
 	default:
 		return nil
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/organization"
+	"github.com/plexusone/systemforge/internal/weburl"
 )
 
 // RoleCollaborator is the role of a principal granted access to individual
@@ -41,6 +42,31 @@ var ErrPersonalOrganization = errors.New("operation not allowed on a personal or
 // ErrOrganizationDeleted means the organization was deleted (it is
 // inactive): it takes no new members, and no membership changes.
 var ErrOrganizationDeleted = errors.New("organization has been deleted")
+
+// ErrInvalidURL is returned for a logo or website URL that is not an
+// absolute https URL. Every member's browser loads or follows these.
+var ErrInvalidURL = errors.New("logo_url and website_url must be absolute https URLs")
+
+// providerURL returns u, or nil when it is not an absolute https URL. A
+// personal organization's logo is the person's avatar from their identity
+// provider, and an unusable one is dropped rather than failing sign-up.
+func providerURL(u *string) *string {
+	if u == nil || weburl.HTTPSOrEmpty(*u) == "" {
+		return nil
+	}
+	return u
+}
+
+// checkURLs returns ErrInvalidURL when a logo or website URL that is set is
+// not an absolute https URL; an empty value clears the field.
+func checkURLs(urls ...*string) error {
+	for _, u := range urls {
+		if u != nil && weburl.CheckHTTPS(*u) != nil {
+			return ErrInvalidURL
+		}
+	}
+	return nil
+}
 
 // RequireMembersAllowed returns ErrInvalidRole when role is not an
 // organization role, ErrOrganizationDeleted when orgID is a deleted

@@ -91,6 +91,21 @@ func TestAcceptOwnerInviteRequiresOwnerInviter(t *testing.T) {
 	}
 }
 
+// TestAcceptAdminInviteRequiresOwnerInviter verifies that an admin invite,
+// like an owner invite, needs an inviter who is still an owner.
+func TestAcceptAdminInviteRequiresOwnerInviter(t *testing.T) {
+	ctx := context.Background()
+	f, _ := newInviterFixture(t)
+	byAdmin := f.invite(t, f.admin, organization.RoleAdmin)
+	if _, err := f.svc.Accept(ctx, invite.AcceptInviteInput{Token: tokenOf(t, byAdmin), PrincipalID: newHuman(t, f.db)}); !errors.Is(err, invite.ErrInviterNotAuthorized) {
+		t.Fatalf("Accept of an admin's admin invite: err = %v, want ErrInviterNotAuthorized", err)
+	}
+	byOwner := f.invite(t, f.owner, organization.RoleAdmin)
+	if _, err := f.svc.Accept(ctx, invite.AcceptInviteInput{Token: tokenOf(t, byOwner), PrincipalID: newHuman(t, f.db)}); err != nil {
+		t.Fatalf("Accept of an owner's admin invite: %v", err)
+	}
+}
+
 // TestRemovingInviterRevokesItsInvites verifies that removing, deactivating
 // or demoting a member revokes the pending invitations it may no longer
 // send.
@@ -119,18 +134,22 @@ func TestRemovingInviterRevokesItsInvites(t *testing.T) {
 		t.Errorf("owner's invite status = %s, want pending", got)
 	}
 
-	// Demoting the owner to admin revokes its owner invites only.
+	// Demoting the owner to admin revokes its owner and admin invites only.
 	m, err := f.orgs.GetMembership(ctx, f.orgID, f.owner)
 	if err != nil {
 		t.Fatalf("GetMembership: %v", err)
 	}
 	ownerInvite := f.invite(t, f.owner, organization.RoleOwner)
+	adminInvite := f.invite(t, f.owner, organization.RoleAdmin)
 	admin := organization.RoleAdmin
 	if _, err := f.orgs.UpdateMember(ctx, m.ID, organization.UpdateMemberInput{Role: &admin}); err != nil {
 		t.Fatalf("UpdateMember: %v", err)
 	}
 	if got := status(ownerInvite); got != invite.StatusRevoked {
 		t.Errorf("demoted owner's owner invite status = %s, want revoked", got)
+	}
+	if got := status(adminInvite); got != invite.StatusRevoked {
+		t.Errorf("demoted owner's admin invite status = %s, want revoked", got)
 	}
 	if got := status(byOwner); got != invite.StatusPending {
 		t.Errorf("demoted owner's member invite status = %s, want pending", got)

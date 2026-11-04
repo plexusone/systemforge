@@ -23,6 +23,7 @@ type clientError struct {
 // fixed message. Any other error is logged and answered with a 500.
 var clientErrors = []clientError{
 	{ErrInvalidSlug, http.StatusBadRequest, ErrInvalidSlug.Error()},
+	{ErrInvalidURL, http.StatusBadRequest, ErrInvalidURL.Error()},
 	{ErrSlugTaken, http.StatusBadRequest, ErrSlugTaken.Error()},
 	{ErrSlugReserved, http.StatusBadRequest, ErrSlugReserved.Error()},
 	{ErrSlugCoolingOff, http.StatusBadRequest, ErrSlugCoolingOff.Error()},
@@ -37,6 +38,7 @@ var clientErrors = []clientError{
 	{ErrNotOwner, http.StatusForbidden, ErrNotOwner.Error()},
 	{ErrOrganizationNotFound, http.StatusNotFound, ErrOrganizationNotFound.Error()},
 	{ErrMembershipNotFound, http.StatusNotFound, "member not found"},
+	{ErrMembershipChanged, http.StatusConflict, ErrMembershipChanged.Error()},
 }
 
 // serviceError maps a service error to an API error: the errors in

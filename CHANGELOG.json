@@ -9,6 +9,134 @@
   ],
   "releases": [
     {
+      "version": "v0.31.0",
+      "date": "2026-11-04",
+      "highlights": [
+        {
+          "description": "Only owners manage admins: granting the admin role, changing, deactivating or removing another admin, changing their application roles, and sending, resending or revoking admin invitations need the owner-only permission",
+          "commit": "afc8fcc"
+        },
+        {
+          "description": "Return addresses with dot segments are refused, so a client that rebuilds an allowed path cannot be sent to another host",
+          "commit": "e470751"
+        },
+        {
+          "description": "Organization logo and website URLs and application logos must be absolute https URLs on write; avatars that are not https are not stored",
+          "commit": "8a7acdf"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "An admin can no longer grant the admin role, or change, deactivate or remove another admin or change their application roles: these answer 403 unless the caller is an owner. An admin may still step down or leave",
+          "commit": "afc8fcc"
+        },
+        {
+          "description": "Inviting an admin, and resending or revoking an owner or admin invitation, needs the owner-only permission; a pending admin invitation an admin sent can no longer be accepted (`invite.ErrInviterNotAuthorized`)",
+          "commit": "8aa1694"
+        },
+        {
+          "description": "Organization create and update refuse a `logo_url` or `website_url` they supply that is not an absolute https URL with `organization.ErrInvalidURL` (400); an empty value clears it",
+          "commit": "8a7acdf"
+        },
+        {
+          "description": "`principal.Service.CreateApplication` and `UpdateApplication` refuse a logo URL that is not an absolute https URL with `principal.ErrInvalidURL`",
+          "commit": "8a7acdf"
+        },
+        {
+          "description": "`return_to` values with `.` or `..` path segments, plain or percent-encoded, or whose path decodes to `//`, are refused by sign-in's redirect policy (`ErrRedirectNotAllowed`), `Server.ValidateReturnTo` and the relying-party BFF (400)",
+          "commit": "e470751"
+        },
+        {
+          "description": "`organization.Service` gains `RemoveMemberIfRole`; implementations of the interface outside SystemForge must add it",
+          "commit": "bda0700"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "Have an owner revoke any pending admin invitation an admin sent and create a new one: it can no longer be accepted, resending keeps its original inviter, and a pending invitation blocks a new one for the same email"
+        },
+        {
+          "description": "Grant the owner role to everyone who should manage admins; keep at least two owners per organization, since a platform administrator is otherwise the only one who can change the admins of an organization whose only owner is unavailable"
+        },
+        {
+          "description": "Existing stored URLs are not changed and are still served. Find organizations whose `logo_url` or `website_url` is not https, applications whose logo is not, and people whose `avatar_url` is not, and replace or clear them. A write is refused only when it supplies a URL that is not https"
+        },
+        {
+          "description": "Clients that send `return_to` values with dot segments must send the canonical path instead"
+        }
+      ],
+      "added": [
+        {
+          "description": "`organization.RoleManagedByOwners` reports whether only an owner may grant a role or act on someone holding it (owner and admin)",
+          "commit": "afc8fcc"
+        },
+        {
+          "description": "`organization.ErrInvalidURL` and `principal.ErrInvalidURL` for URLs that are not absolute https URLs",
+          "commit": "8a7acdf"
+        },
+        {
+          "description": "`UpdateMemberInput.IfRole`, `Service.RemoveMemberIfRole` and `organization.ErrMembershipChanged` (409): a member change applies only while the member still has the role it was authorized against",
+          "commit": "bda0700"
+        }
+      ],
+      "security": [
+        {
+          "description": "`change_role` let any admin promote members to admin, demote, deactivate or remove other admins, change their application roles and invite admins, so one admin account could replace the rest; these now need an owner",
+          "commit": "afc8fcc"
+        },
+        {
+          "description": "An admin could resend or revoke an owner's pending owner or admin invitation; managing an invitation now needs the authority to send it, and accepting an admin invitation needs an inviter who is still an owner",
+          "commit": "8aa1694"
+        },
+        {
+          "description": "Demoting an owner revokes its pending admin invitations as well as its owner invitations",
+          "commit": "afc8fcc"
+        },
+        {
+          "description": "The return-to policies checked the raw value for a leading `//`, so `/.//host/x` passed; a client that resolved it and rebuilt the URL from its path was sent to another host",
+          "commit": "e470751"
+        },
+        {
+          "description": "Organization logo and website URLs, application logos and avatars were stored unchecked, so a `javascript:`, `data:` or `http:` value reached every browser that showed them. Avatars and personal-organization logos from identity providers that are not https are dropped, so sign-in does not fail",
+          "commit": "8a7acdf"
+        },
+        {
+          "description": "The member endpoints read the target's role, decided the permission the change needed, and wrote without checking the role again, so an owner's promotion landing in between let an admin demote or remove the new admin; the write now applies only while the authorized role holds",
+          "commit": "bda0700"
+        },
+        {
+          "description": "An https URL with no host name, such as `https://:443/x`, passed the URL check",
+          "commit": "7899b8d"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "An avatar that is not https is cleared instead of stored as an empty string",
+          "commit": "7899b8d"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Owner-only management of admins, their application roles and admin invitations, including what admins may still do",
+          "commit": "64cc6aa"
+        },
+        {
+          "description": "Dot-segment return addresses in both redirect policies, and https checks for organization, application and avatar URLs",
+          "commit": "e470751"
+        },
+        {
+          "description": "Role-conditional member writes, cleared avatars and URLs without a host name",
+          "commit": "5fc2f7e"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The organizations design and invites guide describe owner-only management of admins",
+          "commit": "5de5a1a"
+        }
+      ]
+    },
+    {
       "version": "v0.30.5",
       "date": "2026-11-02",
       "highlights": [

@@ -219,12 +219,20 @@ only `role = owner` plus `sf_organizations.owner_principal_id`.
 
 ### Member endpoints
 
+Owners manage the people who manage the organization. Granting `owner` or
+`admin`, and changing, deactivating or removing someone else's owner or admin
+membership, needs the owner-only permission (`delete`); an admin manages
+members and collaborators only, so one admin account cannot replace the
+others. An admin may still step down or leave. Keep at least two owners, so
+that losing one does not leave the admin roster unmanageable; a platform
+administrator can step in otherwise.
+
 | Operation | Route | Rule |
 |---|---|---|
 | `listMembers`, `getMember` | `GET /organizations/{slug}/members[/{principal_id}]` | `view` |
-| `addMember` | `POST /organizations/{slug}/members` | `invite_member`, and the caller must be allowed to enroll the principal without its consent: by default only a platform administrator; `APIConfig.DirectAdd` can allow principals the organization governs (for example managed principals the caller manages). Everyone else joins by invitation. Granting `owner` additionally needs the owner-only permission (`delete`) |
-| `updateMember` | `PATCH /organizations/{slug}/members/{principal_id}` | `change_role`; touching an owner's role, or granting `owner`, needs the owner-only permission; deactivating needs `remove_member` |
-| `removeMember` | `DELETE /organizations/{slug}/members/{principal_id}` | A member may remove themself with `view`; removing someone else needs `remove_member`, and removing the owner needs the owner-only permission |
+| `addMember` | `POST /organizations/{slug}/members` | `invite_member`, and the caller must be allowed to enroll the principal without its consent: by default only a platform administrator; `APIConfig.DirectAdd` can allow principals the organization governs (for example managed principals the caller manages). Everyone else joins by invitation. Granting `owner` or `admin` additionally needs the owner-only permission (`delete`) |
+| `updateMember` | `PATCH /organizations/{slug}/members/{principal_id}` | `change_role`; granting `owner` or `admin`, or changing or deactivating someone else who is an owner or admin, needs the owner-only permission, as does an admin changing their own permissions; an admin may change their own role to step down; deactivating needs `remove_member` |
+| `removeMember` | `DELETE /organizations/{slug}/members/{principal_id}` | A member may remove themself with `view`; removing someone else needs `remove_member`, and removing an owner or admin needs the owner-only permission |
 | `transferOwnership` | `POST /organizations/{slug}/transfer-ownership` | `delete`, and the caller must be `owner_principal_id` |
 
 ### Ownership transfer
@@ -266,7 +274,8 @@ organization is refused with `ErrPersonalOrganization`.
 
 Organization-side routes (`POST`/`GET /organizations/{slug}/invites`,
 `DELETE .../{invite_id}`, `POST .../{invite_id}/resend`) need
-`invite_member`; inviting an `owner` needs the owner-only permission, and
+`invite_member`; inviting an `owner` or `admin`, and resending or revoking such
+an invite, needs the owner-only permission, and
 `inviter_principal_id` must be the caller. The create body takes `app_roles`
 and invites in responses carry them. A member's roles are changed later, per
 application and without touching the membership, through the application role
@@ -481,8 +490,8 @@ HTTP endpoints, on the organization API when `APIConfig.AppRoles` is set
 |---|---|
 | `GET /organizations/{slug}/app-roles[?application=]` | `change_role` |
 | `GET /organizations/{slug}/members/{principal_id}/app-roles` | `change_role`, or `view` for one's own roles; returns stored and effective roles |
-| `PUT /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role`; body `{"role": "..."}`; assigns or changes |
-| `DELETE /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role` |
+| `PUT /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role`, and the owner-only permission when the member is another owner or admin; body `{"role": "..."}`; assigns or changes |
+| `DELETE /organizations/{slug}/members/{principal_id}/app-roles/{application}` | `change_role`, and the owner-only permission when the member is another owner or admin |
 
 With `approle.WithAuthzSyncer`, assign, change and remove also write to the
 authorization graph through the optional `authz.AppRoleSyncer` (see

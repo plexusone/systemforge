@@ -162,6 +162,41 @@ func TestInviteManagementAuthorization(t *testing.T) {
 	}
 }
 
+// TestOnlyOwnersInviteAdmins checks that admin invitations are an owner's:
+// an admin may neither send one nor resend or revoke one an owner sent.
+func TestOnlyOwnersInviteAdmins(t *testing.T) {
+	a := newInviteAPI(t)
+	code, body := a.do(http.MethodPost, "/organizations/acme/invites", "owner", map[string]any{"email": "new-admin@example.com", "role": "admin"})
+	if code >= 300 {
+		t.Fatalf("owner invites admin: %d %s", code, body)
+	}
+	var out struct {
+		Invite struct {
+			ID string `json:"id"`
+		} `json:"invite"`
+	}
+	if err := json.Unmarshal(body, &out); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	id := out.Invite.ID
+
+	for _, tc := range []struct {
+		name, method, path, as string
+		body                   any
+		want                   int
+	}{
+		{"admin invites admin", http.MethodPost, "/organizations/acme/invites", "admin", map[string]any{"email": "x@example.com", "role": "admin"}, 403},
+		{"admin resends an admin invite", http.MethodPost, "/organizations/acme/invites/" + id + "/resend", "admin", nil, 403},
+		{"admin revokes an admin invite", http.MethodDelete, "/organizations/acme/invites/" + id, "admin", nil, 403},
+		{"admin invites member", http.MethodPost, "/organizations/acme/invites", "admin", map[string]any{"email": "y@example.com", "role": "member"}, 201},
+		{"owner revokes an admin invite", http.MethodDelete, "/organizations/acme/invites/" + id, "owner", nil, 204},
+	} {
+		if code, body := a.do(tc.method, tc.path, tc.as, tc.body); code != tc.want {
+			t.Errorf("%s: %d, want %d (%s)", tc.name, code, tc.want, body)
+		}
+	}
+}
+
 func TestAcceptInviteIsBoundToTheInvitee(t *testing.T) {
 	ctx := context.Background()
 	a := newInviteAPI(t)
