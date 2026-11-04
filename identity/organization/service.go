@@ -59,6 +59,11 @@ type Service interface {
 	// RemoveMember removes a principal from an organization.
 	RemoveMember(ctx context.Context, organizationID, principalID uuid.UUID) error
 
+	// RemoveMemberIfRole removes a principal from an organization only if
+	// its membership still has role, and returns ErrMembershipChanged
+	// otherwise. Use it when the removal was authorized against that role.
+	RemoveMemberIfRole(ctx context.Context, organizationID, principalID uuid.UUID, role string) error
+
 	// GetMembership retrieves a specific membership.
 	GetMembership(ctx context.Context, organizationID, principalID uuid.UUID) (*Membership, error)
 
@@ -576,6 +581,11 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
 	update := tx.PrincipalMembership.UpdateOneID(membershipID)
+	if input.IfRole != "" {
+		// The update was authorized against this role; a concurrent role
+		// change must not let it through.
+		update.Where(principalmembership.Role(input.IfRole))
+	}
 
 	if input.Role != nil {
 		update.SetRole(*input.Role)
@@ -591,6 +601,9 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			err = errors.Join(err, rerr)
+		}
+		if ent.IsNotFound(err) && input.IfRole != "" {
+			return nil, ErrMembershipChanged
 		}
 		if ent.IsNotFound(err) {
 			return nil, fmt.Errorf("%w: %s", ErrMembershipNotFound, membershipID)
@@ -689,6 +702,20 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 // the removal commits; if the graph refuses, nothing is removed and the
 // error is returned, so the call can be retried.
 func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, principalID uuid.UUID) error {
+	return s.removeMember(ctx, organizationID, principalID, "")
+}
+
+// RemoveMemberIfRole implements Service.
+func (s *DefaultService) RemoveMemberIfRole(ctx context.Context, organizationID, principalID uuid.UUID, role string) error {
+	if role == "" {
+		return fmt.Errorf("%w: no role given", ErrInvalidRole)
+	}
+	return s.removeMember(ctx, organizationID, principalID, role)
+}
+
+// removeMember removes the membership; with ifRole set, only while the
+// membership still has that role.
+func (s *DefaultService) removeMember(ctx context.Context, organizationID, principalID uuid.UUID, ifRole string) error {
 	// Get membership to know the role for authz sync
 	membership, err := s.GetMembership(ctx, organizationID, principalID)
 	if err != nil {
@@ -721,13 +748,23 @@ func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, princ
 		Exec(ctx); err != nil {
 		return errors.Join(fmt.Errorf("failed to remove application roles: %w", err), tx.Rollback())
 	}
-	if _, err = tx.PrincipalMembership.Delete().
+	del := tx.PrincipalMembership.Delete().
 		Where(
 			principalmembership.OrganizationID(organizationID),
 			principalmembership.PrincipalID(principalID),
-		).
-		Exec(ctx); err != nil {
+		)
+	if ifRole != "" {
+		// The removal was authorized against this role; a concurrent role
+		// change must not let it through.
+		del.Where(principalmembership.Role(ifRole))
+	}
+	removed, err := del.Exec(ctx)
+	if err != nil {
 		return errors.Join(fmt.Errorf("failed to remove membership: %w", err), tx.Rollback())
+	}
+	if removed == 0 {
+		// Rolling back also undoes the grant and role deletions above.
+		return errors.Join(ErrMembershipChanged, tx.Rollback())
 	}
 	changes, err := recordChanges(ctx, tx, []accesschange.Change{{PrincipalID: principalID, OrganizationID: &organizationID, Reason: accesschange.MembershipRemoved}})
 	if err != nil {

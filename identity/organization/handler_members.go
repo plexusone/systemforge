@@ -318,6 +318,7 @@ func (a *API) updateMember(ctx context.Context, input *UpdateMemberRequest) (*Up
 		Role:        input.Body.Role,
 		Permissions: input.Body.Permissions,
 		Active:      input.Body.Active,
+		IfRole:      membership.Role,
 	})
 	if err != nil {
 		return nil, a.serviceError(ctx, "updating member", err)
@@ -337,6 +338,9 @@ func (a *API) removeMember(ctx context.Context, input *RemoveMemberInput) (*stru
 	if err != nil {
 		return nil, huma.Error400BadRequest("invalid principal_id")
 	}
+	// Removing someone else is authorized against their role, and applies
+	// only while they still hold it.
+	authorizedRole := ""
 	if principalID != caller {
 		ok, err := a.can(ctx, caller, org.ID, authz.PermOrgRemoveMember)
 		if err != nil {
@@ -359,9 +363,15 @@ func (a *API) removeMember(ctx context.Context, input *RemoveMemberInput) (*stru
 				return nil, err
 			}
 		}
+		authorizedRole = membership.Role
 	}
 
-	if err := a.service.RemoveMember(ctx, org.ID, principalID); err != nil {
+	if authorizedRole == "" {
+		err = a.service.RemoveMember(ctx, org.ID, principalID)
+	} else {
+		err = a.service.RemoveMemberIfRole(ctx, org.ID, principalID, authorizedRole)
+	}
+	if err != nil {
 		return nil, a.serviceError(ctx, "removing member", err)
 	}
 

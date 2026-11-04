@@ -38,6 +38,7 @@ var clientErrors = []clientError{
 	{ErrNotOwner, http.StatusForbidden, ErrNotOwner.Error()},
 	{ErrOrganizationNotFound, http.StatusNotFound, ErrOrganizationNotFound.Error()},
 	{ErrMembershipNotFound, http.StatusNotFound, "member not found"},
+	{ErrMembershipChanged, http.StatusConflict, ErrMembershipChanged.Error()},
 }
 
 // serviceError maps a service error to an API error: the errors in
