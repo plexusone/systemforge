@@ -9,6 +9,42 @@
   ],
   "releases": [
     {
+      "version": "v0.32.0",
+      "date": "2026-11-05",
+      "highlights": [
+        {
+          "description": "A manager replaces a managed principal's login tokens in one call: every live token is revoked and one issued, atomically, so a lost card is retired and reprinted in one step",
+          "commit": "289b658"
+        }
+      ],
+      "added": [
+        {
+          "description": "`managedprincipal.Service.ReplaceLoginTokens` revokes every live login token and issues one in one transaction; a failure while issuing revokes nothing",
+          "commit": "289b658"
+        },
+        {
+          "description": "`POST /{principalID}/login-tokens/replace` answers 201 with the new token and the number revoked; `mpclient.Client.ReplaceLoginTokens` calls it",
+          "commit": "289b658"
+        },
+        {
+          "description": "Audit event `managed_principal.login_tokens_replaced`, with the number of tokens revoked",
+          "commit": "289b658"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Replacing login tokens: every live token revoked and one issued, a failed issue keeps the old token, refusals revoke nothing, single-use and expiry honored, and the route and client",
+          "commit": "f263e91"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Replacing a card in the managed principals guide and the architecture's route list",
+          "commit": "6a73560"
+        }
+      ]
+    },
+    {
       "version": "v0.31.0",
       "date": "2026-11-04",
       "highlights": [

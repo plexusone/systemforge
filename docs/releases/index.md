@@ -4,7 +4,11 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.31.0](v0.31.0.md), is a security release: only
+The latest release, [v0.32.0](v0.32.0.md), lets a manager replace a
+managed principal's login tokens in one call, so a lost printed card is
+retired and reprinted in one step. It adds no breaking change.
+
+Before it, [v0.31.0](v0.31.0.md) was a security release: only
 owners manage admins, return addresses with dot segments are refused, and
 logo, website and avatar URLs must be https when written; URLs already stored
 are not changed. It is breaking; read its upgrade notes.
