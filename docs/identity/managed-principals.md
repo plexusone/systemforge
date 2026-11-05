@@ -334,8 +334,32 @@ principal is signed in:
 | Method | Covers |
 |--------|--------|
 | `ListLoginTokens`, `RevokeLoginToken` | Live login tokens, never their values |
+| `ReplaceLoginTokens` | Revokes every live login token and issues one, in one transaction |
 | `ListSessions`, `RevokeSession` | Browser login sessions, OAuth token families, principal token families |
 | `RevokeAll` | All of the above, in one transaction |
+
+### Replacing a Card
+
+A printed card is a reusable token, and tokens are stored only as hashes, so
+a lost or shared card cannot be printed again from what is stored.
+`ReplaceLoginTokens` takes the same input as `IssueLoginToken`, revokes every
+live login token and issues one new token, in one transaction:
+
+```go
+out, err := svc.ReplaceLoginTokens(ctx, managedprincipal.IssueLoginTokenInput{
+    ManagedID: learnerID,
+    ClientID:  "learning-app",
+    IssuedBy:  parentID,
+    Name:      "Robin's card",
+})
+// out.Token.PlainToken is the new card; out.Revoked counts the old ones.
+```
+
+If issuing fails, nothing is revoked, so the old card keeps working rather
+than none. Sessions already signed in with an old token keep running;
+`RevokeAll` ends them too. It is audited once, as `login_tokens_replaced`,
+with the number revoked. `mpclient.Client.ReplaceLoginTokens` calls it over
+HTTP.
 
 Revoking a token family revokes all its tokens, so a refresh token cannot
 renew it. `managedprincipal.NewHandler` serves these as JSON for the
@@ -349,6 +373,7 @@ router.With(requestprincipal.Middleware(opts, authenticators...)).
 ```text
 GET    /managed-principals/{id}/login-tokens
 POST   /managed-principals/{id}/login-tokens
+POST   /managed-principals/{id}/login-tokens/replace
 DELETE /managed-principals/{id}/login-tokens/{credentialID}
 GET    /managed-principals/{id}/sessions
 DELETE /managed-principals/{id}/sessions/{kind}/{sessionID}

@@ -258,10 +258,12 @@ ClientID, CreatedAt, ExpiresAt, LastUsedAt, ClientIP}`:
 | `principal_token` | `sf_principal_tokens`, one entry per family | Family marked revoked |
 
 `ListLoginTokens` returns live login tokens without their values;
-`RevokeLoginToken` revokes one; `RevokeSession(kind, id)` ends one session;
+`RevokeLoginToken` revokes one; `ReplaceLoginTokens` revokes every live
+login token and issues one in one transaction, so a failure leaves the old
+tokens working; `RevokeSession(kind, id)` ends one session;
 `RevokeAll` revokes every login token and ends every session in one
 transaction. Each emits an audit event (`login_token_revoked`,
-`session_revoked`, `all_revoked`). `managedprincipal.NewHandler(svc)`
+`login_tokens_replaced`, `session_revoked`, `all_revoked`). `managedprincipal.NewHandler(svc)`
 exposes these and the managing operations as a chi router to mount behind
 `requestprincipal.Middleware`, which identifies the calling principal. The
 caller is always the actor; every route runs the service operation and so
@@ -283,6 +285,7 @@ POST   /manager-invites/decline                   DeclineManagerInvite (JSON: to
 DELETE /manager-invites/{inviteID}                RevokeManagerInvite
 GET    /{principalID}/login-tokens
 POST   /{principalID}/login-tokens                IssueLoginToken (JSON: client_id, name?, single_use?, expires_at?)
+POST   /{principalID}/login-tokens/replace        ReplaceLoginTokens (same JSON); 201 with the token and `revoked`
 DELETE /{principalID}/login-tokens/{credentialID}
 GET    /{principalID}/sessions
 DELETE /{principalID}/sessions/{kind}/{sessionID}
