@@ -100,6 +100,11 @@ should not get harder.
   login linking, invitations, signup, SCIM, `userinfo` and ID-token claims,
   relying-party principal views, and marketplace purchasing (managed
   principals cannot purchase).
+- **F14.** A manager replaces a managed principal's login tokens in one
+  call: every live token is revoked and one new token is issued, with the
+  same name, single-use and expiry inputs as issuing, atomically. A lost or
+  shared printed card is retired and a new one printed in one step, and a
+  failure part way leaves the old tokens working rather than none.
 
 ### Non-Functional
 

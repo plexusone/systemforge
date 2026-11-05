@@ -277,6 +277,26 @@ permissions in their facets, for example `learning_org` granting
   `docs/identity/security.md` (token handling), and the authorization
   conventions doc (new base relations).
 
+### 9. Replacing login tokens
+
+`managedprincipal.ReplaceLoginTokens(ctx, managedID, IssueInput)` revokes
+every live `login_token` credential of the managed principal and issues one
+new token, in one transaction, and returns the new plain value once with
+the number revoked. It is authorized like issuing (`manage_credentials`),
+audited as one event carrying the revoked count, and served as
+`POST /managed-principals/{principalID}/login-tokens/replace`, with the
+same body as issuing; `mpclient` gains `ReplaceLoginTokens`.
+
+- **Atomic.** If issuing fails, nothing is revoked, so a manager is never
+  left with no working token by a failure.
+- **Sessions are unchanged.** A session signed in with an old token keeps
+  running until it ends or is revoked; `RevokeAll` remains the way to end
+  everything at once. A replace that should also end sessions is a later
+  option if a consumer needs it.
+- **No reissue of an old value.** Tokens are hashed, so a printed card
+  cannot be produced again from a stored token; replacing is how a card is
+  reprinted.
+
 ## Sequencing Constraints
 
 - §1 and §2 depend on INIT-SYSTEMFORGE-008 having removed the legacy model
@@ -311,3 +331,6 @@ permissions in their facets, for example `learning_org` granting
   class returning an identical response, rate limiting, claim shape.
 - `authz/providertest` cases for the new base relations in both providers.
 - A no-opt-in regression run: both flags off, full suite green.
+- Replace: every live token revoked and one issued; a failure while issuing
+  leaves the old tokens working; another manager's principal refused;
+  single-use and expiry inputs honored.

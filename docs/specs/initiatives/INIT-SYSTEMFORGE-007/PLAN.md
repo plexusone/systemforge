@@ -40,6 +40,12 @@ tag v0.14.0, the release INIT-SYSTEMFORGE-008 also ships in, after CI
 passes, and record the release. Exit: PRD success
 criteria hold.
 
+### Phase 4 — Card Lifecycle
+
+`RMI-SYSTEMFORGE-222`, after release, when the first printed cards need a
+one-step replacement. It is additive: a new service method, endpoint and
+client method, with no change to existing ones.
+
 ## Risks and Mitigations
 
 | Risk | Mitigation |
