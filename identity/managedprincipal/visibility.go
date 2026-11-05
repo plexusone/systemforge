@@ -26,6 +26,7 @@ const (
 	EventAllRevoked     = "managed_principal.all_revoked"
 
 	revokedByManager    = "revoked by manager"
+	revokedByReplace    = "replaced by manager"
 	revokedAllByManager = "all revoked by manager"
 	revokedDeleted      = "principal deleted"
 )

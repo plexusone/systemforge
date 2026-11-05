@@ -156,29 +156,64 @@ type IssuedLoginToken struct {
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 
+// ReplacedLoginTokens is the response to POST
+// /{principalID}/login-tokens/replace: the new token, whose value is
+// returned only here, and how many live tokens were revoked.
+type ReplacedLoginTokens struct {
+	IssuedLoginToken
+	Revoked int `json:"revoked"`
+}
+
 func (h *handler) issueLoginToken(w http.ResponseWriter, r *http.Request) {
-	actor, managed, ok := h.ids(w, r)
+	in, ok := h.loginTokenInput(w, r)
 	if !ok {
 		return
 	}
-	var req IssueLoginTokenRequest
-	if !h.decode(w, r, &req) {
-		return
-	}
-	clientID, ok := h.client(w, r, req.ClientID)
-	if !ok {
-		return
-	}
-	tok, err := h.svc.IssueLoginToken(r.Context(), IssueLoginTokenInput{
-		ManagedID: managed, ClientID: clientID, IssuedBy: actor,
-		ExpiresAt: req.ExpiresAt, SingleUse: req.SingleUse, Name: req.Name,
-	})
+	tok, err := h.svc.IssueLoginToken(r.Context(), in)
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	h.writeCreated(w, r, IssuedLoginToken{
+	h.writeCreated(w, r, issuedLoginToken(tok))
+}
+
+func (h *handler) replaceLoginTokens(w http.ResponseWriter, r *http.Request) {
+	in, ok := h.loginTokenInput(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.ReplaceLoginTokens(r.Context(), in)
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	h.writeCreated(w, r, ReplacedLoginTokens{IssuedLoginToken: issuedLoginToken(out.Token), Revoked: out.Revoked})
+}
+
+// loginTokenInput reads an IssueLoginTokenRequest, which issuing and
+// replacing share. On failure it has written the response.
+func (h *handler) loginTokenInput(w http.ResponseWriter, r *http.Request) (IssueLoginTokenInput, bool) {
+	actor, managed, ok := h.ids(w, r)
+	if !ok {
+		return IssueLoginTokenInput{}, false
+	}
+	var req IssueLoginTokenRequest
+	if !h.decode(w, r, &req) {
+		return IssueLoginTokenInput{}, false
+	}
+	clientID, ok := h.client(w, r, req.ClientID)
+	if !ok {
+		return IssueLoginTokenInput{}, false
+	}
+	return IssueLoginTokenInput{
+		ManagedID: managed, ClientID: clientID, IssuedBy: actor,
+		ExpiresAt: req.ExpiresAt, SingleUse: req.SingleUse, Name: req.Name,
+	}, true
+}
+
+func issuedLoginToken(tok *credential.GeneratedLoginToken) IssuedLoginToken {
+	return IssuedLoginToken{
 		ID: tok.Credential.ID, Token: tok.PlainToken, Prefix: tok.Prefix,
 		SingleUse: credential.LoginTokenSingleUse(tok.Credential), ExpiresAt: tok.Credential.ExpiresAt,
-	})
+	}
 }
