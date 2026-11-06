@@ -6075,6 +6075,11 @@ should not get harder.</p>
   login linking, invitations, signup, SCIM, <code>userinfo</code> and ID-token claims,
   relying-party principal views, and marketplace purchasing (managed
   principals cannot purchase).</li>
+<li><strong>F14.</strong> A manager replaces a managed principal's login tokens in one
+  call: every live token is revoked and one new token is issued, with the
+  same name, single-use and expiry inputs as issuing, atomically. A lost or
+  shared printed card is retired and a new one printed in one step, and a
+  failure part way leaves the old tokens working rather than none.</li>
 </ul>
 <h3 id="non-functional">Non-Functional<a class="headerlink" href="#non-functional" title="Permanent link">&para;</a></h3>
 <ul>

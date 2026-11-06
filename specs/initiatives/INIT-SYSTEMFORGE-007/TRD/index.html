@@ -5936,6 +5936,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#9-replacing-login-tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Replacing login tokens
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -6308,6 +6319,25 @@ permissions in their facets, for example <code>learning_org</code> granting
   <code>docs/identity/security.md</code> (token handling), and the authorization
   conventions doc (new base relations).</li>
 </ul>
+<h3 id="9-replacing-login-tokens">9. Replacing login tokens<a class="headerlink" href="#9-replacing-login-tokens" title="Permanent link">&para;</a></h3>
+<p><code>managedprincipal.ReplaceLoginTokens(ctx, managedID, IssueInput)</code> revokes
+every live <code>login_token</code> credential of the managed principal and issues one
+new token, in one transaction, and returns the new plain value once with
+the number revoked. It is authorized like issuing (<code>manage_credentials</code>),
+audited as one event carrying the revoked count, and served as
+<code>POST /managed-principals/{principalID}/login-tokens/replace</code>, with the
+same body as issuing; <code>mpclient</code> gains <code>ReplaceLoginTokens</code>.</p>
+<ul>
+<li><strong>Atomic.</strong> If issuing fails, nothing is revoked, so a manager is never
+  left with no working token by a failure.</li>
+<li><strong>Sessions are unchanged.</strong> A session signed in with an old token keeps
+  running until it ends or is revoked; <code>RevokeAll</code> remains the way to end
+  everything at once. A replace that should also end sessions is a later
+  option if a consumer needs it.</li>
+<li><strong>No reissue of an old value.</strong> Tokens are hashed, so a printed card
+  cannot be produced again from a stored token; replacing is how a card is
+  reprinted.</li>
+</ul>
 <h2 id="sequencing-constraints">Sequencing Constraints<a class="headerlink" href="#sequencing-constraints" title="Permanent link">&para;</a></h2>
 <ul>
 <li>§1 and §2 depend on INIT-SYSTEMFORGE-008 having removed the legacy model
@@ -6342,6 +6372,9 @@ permissions in their facets, for example <code>learning_org</code> granting
   class returning an identical response, rate limiting, claim shape.</li>
 <li><code>authz/providertest</code> cases for the new base relations in both providers.</li>
 <li>A no-opt-in regression run: both flags off, full suite green.</li>
+<li>Replace: every live token revoked and one issued; a failure while issuing
+  leaves the old tokens working; another manager's principal refused;
+  single-use and expiry inputs honored.</li>
 </ul>
 
 
