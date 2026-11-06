@@ -47,6 +47,12 @@
           "commit": "19553ad"
         }
       ],
+      "security": [
+        {
+          "description": "Issuing and replacing a login token check the issuer's authority under the managed principal's row lock, in the transaction that issues, so a manager removed at the same moment can no longer be issued a token",
+          "commit": "0d8d277"
+        }
+      ],
       "tests": [
         {
           "description": "Replacing login tokens: every live token revoked and one issued, a failed issue keeps the old token, refusals revoke nothing, single-use and expiry honored, and the route and client",
@@ -55,6 +61,10 @@
         {
           "description": "Sign-in methods page: linked providers listed and not offered, valid and invalid `return_to`, and `return_to` kept through the link and the signed-out redirect",
           "commit": "53b650d"
+        },
+        {
+          "description": "A manager removed between the client check and the transaction is refused for issuing and replacing; two concurrent replaces on PostgreSQL leave one live token; a failed replace had revoked the old token before rolling back",
+          "commit": "8630cb2"
         }
       ],
       "documentation": [
