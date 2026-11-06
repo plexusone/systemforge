@@ -6,7 +6,8 @@ change with its commit.
 
 The latest release, [v0.32.0](v0.32.0.md), lets a manager replace a
 managed principal's login tokens in one call, so a lost printed card is
-retired and reprinted in one step. It adds no breaking change.
+retired and reprinted in one step. Its sign-in methods page shows what is
+linked and links back to the application. It adds no breaking change.
 
 Before it, [v0.31.0](v0.31.0.md) was a security release: only
 owners manage admins, return addresses with dot segments are refused, and

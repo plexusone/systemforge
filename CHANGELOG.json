@@ -15,6 +15,10 @@
         {
           "description": "A manager replaces a managed principal's login tokens in one call: every live token is revoked and one issued, atomically, so a lost card is retired and reprinted in one step",
           "commit": "289b658"
+        },
+        {
+          "description": "The sign-in methods page shows the account's linked methods, offers only the others, and links back to the application through a validated `return_to`",
+          "commit": "19553ad"
         }
       ],
       "added": [
@@ -29,18 +33,38 @@
         {
           "description": "Audit event `managed_principal.login_tokens_replaced`, with the number of tokens revoked",
           "commit": "289b658"
+        },
+        {
+          "description": "The sign-in methods page shows the account's email and its linked providers, with a Link button only for the others",
+          "commit": "19553ad"
+        },
+        {
+          "description": "`/account/sign-in-methods?return_to=...` shows a back link to an allowed `return_to`, kept through signing in, linking and the callback and validated again at each step",
+          "commit": "19553ad"
+        },
+        {
+          "description": "Optional `LinkedProviderLister` directory interface, implemented by the Ent and memory directories",
+          "commit": "19553ad"
         }
       ],
       "tests": [
         {
           "description": "Replacing login tokens: every live token revoked and one issued, a failed issue keeps the old token, refusals revoke nothing, single-use and expiry honored, and the route and client",
           "commit": "f263e91"
+        },
+        {
+          "description": "Sign-in methods page: linked providers listed and not offered, valid and invalid `return_to`, and `return_to` kept through the link and the signed-out redirect",
+          "commit": "53b650d"
         }
       ],
       "documentation": [
         {
           "description": "Replacing a card in the managed principals guide and the architecture's route list",
           "commit": "6a73560"
+        },
+        {
+          "description": "Linked methods and `return_to` on the sign-in methods page in the social login guide",
+          "commit": "c6be3bb"
         }
       ]
     },
