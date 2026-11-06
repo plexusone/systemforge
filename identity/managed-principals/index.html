@@ -1337,6 +1337,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Manager Visibility and Revocation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#replacing-a-card" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replacing a Card
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4780,6 +4797,8 @@
       
         
       
+        
+      
     
     
     
@@ -4851,6 +4870,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.32.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.32.0
   
 
     
@@ -6183,6 +6230,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Manager Visibility and Revocation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#replacing-a-card" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replacing a Card
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -6618,6 +6682,10 @@ principal is signed in:</p>
 <td>Live login tokens, never their values</td>
 </tr>
 <tr>
+<td><code>ReplaceLoginTokens</code></td>
+<td>Revokes every live login token and issues one, in one transaction</td>
+</tr>
+<tr>
 <td><code>ListSessions</code>, <code>RevokeSession</code></td>
 <td>Browser login sessions, OAuth token families, principal token families</td>
 </tr>
@@ -6627,18 +6695,37 @@ principal is signed in:</p>
 </tr>
 </tbody>
 </table>
+<h3 id="replacing-a-card">Replacing a Card<a class="headerlink" href="#replacing-a-card" title="Permanent link">&para;</a></h3>
+<p>A printed card is a reusable token, and tokens are stored only as hashes, so
+a lost or shared card cannot be printed again from what is stored.
+<code>ReplaceLoginTokens</code> takes the same input as <code>IssueLoginToken</code>, revokes every
+live login token and issues one new token, in one transaction:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">out</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">ReplaceLoginTokens</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">IssueLoginTokenInput</span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nx">ManagedID</span><span class="p">:</span><span class="w"> </span><span class="nx">learnerID</span><span class="p">,</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nx">ClientID</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;learning-app&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nx">IssuedBy</span><span class="p">:</span><span class="w">  </span><span class="nx">parentID</span><span class="p">,</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nx">Name</span><span class="p">:</span><span class="w">      </span><span class="s">&quot;Robin&#39;s card&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="p">})</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1">// out.Token.PlainToken is the new card; out.Revoked counts the old ones.</span>
+</code></pre></div>
+<p>If issuing fails, nothing is revoked, so the old card keeps working rather
+than none. Sessions already signed in with an old token keep running;
+<code>RevokeAll</code> ends them too. It is audited once, as <code>login_tokens_replaced</code>,
+with the number revoked. <code>mpclient.Client.ReplaceLoginTokens</code> calls it over
+HTTP.</p>
 <p>Revoking a token family revokes all its tokens, so a refresh token cannot
 renew it. <code>managedprincipal.NewHandler</code> serves these as JSON for the
 manager identified by <code>requestprincipal</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">router</span><span class="p">.</span><span class="nx">With</span><span class="p">(</span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">(</span><span class="nx">opts</span><span class="p">,</span><span class="w"> </span><span class="nx">authenticators</span><span class="o">...</span><span class="p">)).</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="nx">Mount</span><span class="p">(</span><span class="s">&quot;/managed-principals&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">NewHandler</span><span class="p">(</span><span class="nx">svc</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">router</span><span class="p">.</span><span class="nx">With</span><span class="p">(</span><span class="nx">requestprincipal</span><span class="p">.</span><span class="nx">Middleware</span><span class="p">(</span><span class="nx">opts</span><span class="p">,</span><span class="w"> </span><span class="nx">authenticators</span><span class="o">...</span><span class="p">)).</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="nx">Mount</span><span class="p">(</span><span class="s">&quot;/managed-principals&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">managedprincipal</span><span class="p">.</span><span class="nx">NewHandler</span><span class="p">(</span><span class="nx">svc</span><span class="p">))</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>GET    /managed-principals/{id}/login-tokens
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>POST   /managed-principals/{id}/login-tokens
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>DELETE /managed-principals/{id}/login-tokens/{credentialID}
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>GET    /managed-principals/{id}/sessions
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>DELETE /managed-principals/{id}/sessions/{kind}/{sessionID}
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>POST   /managed-principals/{id}/revoke-all
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>GET    /managed-principals/{id}/login-tokens
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>POST   /managed-principals/{id}/login-tokens
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>POST   /managed-principals/{id}/login-tokens/replace
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>DELETE /managed-principals/{id}/login-tokens/{credentialID}
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>GET    /managed-principals/{id}/sessions
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>DELETE /managed-principals/{id}/sessions/{kind}/{sessionID}
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>POST   /managed-principals/{id}/revoke-all
 </code></pre></div>
 <p>Permissions are checked through an <code>authz.Authorizer</code>. The default is the
 simple provider backed by the service's <code>ManagerRoles</code>; pass
@@ -6648,11 +6735,11 @@ platform-administrator check.</p>
 <p>A teacher often creates the account before any parent is involved. A
 manager with <code>manage_credentials</code> issues a <strong>claim</strong>, a single-use code
 handed to the parent on paper or as a QR code:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nx">claim</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">IssueClaim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">teacherID</span><span class="p">,</span><span class="w"> </span><span class="nx">learnerID</span><span class="p">)</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1">// claim.Code is shown once; claim.ExpiresAt is seven days out by default.</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">RedeemClaim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">code</span><span class="p">,</span><span class="w"> </span><span class="nx">parentID</span><span class="p">)</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1">// The parent is now a guardian of the learner.</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">claim</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">IssueClaim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">teacherID</span><span class="p">,</span><span class="w"> </span><span class="nx">learnerID</span><span class="p">)</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1">// claim.Code is shown once; claim.ExpiresAt is seven days out by default.</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">RedeemClaim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">code</span><span class="p">,</span><span class="w"> </span><span class="nx">parentID</span><span class="p">)</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="c1">// The parent is now a guardian of the learner.</span>
 </code></pre></div>
 <p>The claimant must be an active human with an email who is not managed.
 Claims are stored hashed in their own table, apart from credentials, so a
@@ -6660,7 +6747,7 @@ claim code can never sign anyone in. <code>WithClaimTTL</code> changes the lifet
 <h2 id="attaching-an-email">Attaching an Email<a class="headerlink" href="#attaching-an-email" title="Permanent link">&para;</a></h2>
 <p>When a managed principal is ready for its own account, a guardian attaches
 an email:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">AttachVerifiedEmail</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">parentID</span><span class="p">,</span><span class="w"> </span><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;robin@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">verifiedAt</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svc</span><span class="p">.</span><span class="nx">AttachVerifiedEmail</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">parentID</span><span class="p">,</span><span class="w"> </span><span class="nx">learnerID</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;robin@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">verifiedAt</span><span class="p">)</span>
 </code></pre></div>
 <p>The email becomes the identifier and default human capabilities are
 restored, so the principal can set a password and manage its own profile.
@@ -6668,15 +6755,15 @@ Manager relationships remain until removed, and now the last one may be.
 The caller must have verified that the principal controls the address.</p>
 <h2 id="authorization">Authorization<a class="headerlink" href="#authorization" title="Permanent link">&para;</a></h2>
 <p>The base SpiceDB schema defines:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>definition principal {
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    relation guardian: principal
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    relation educator: principal
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    permission manage_account     = guardian
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    permission manage_credentials = guardian + educator
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    permission view_profile       = guardian + educator
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    permission manage_managers    = guardian
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>definition principal {
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    relation guardian: principal
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    relation educator: principal
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    permission manage_account     = guardian
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    permission manage_credentials = guardian + educator
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    permission view_profile       = guardian + educator
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    permission manage_managers    = guardian
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>}
 </code></pre></div>
 <p>With <code>WithAuthzSyncer</code>, every relationship change is written to the
 authorization backend: removals inside the transaction, before the commit,
@@ -6687,11 +6774,11 @@ same table, so both providers agree.</p>
 <p>Applications add domain permissions in their own definitions, for example
 a learner's progress record, which the learner's managers and the
 organization's administrators may view:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>definition learning_progress {
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    relation learner: principal
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    relation org: organization
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    permission view = learner-&gt;view_profile + org-&gt;manage
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>definition learning_progress {
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    relation learner: principal
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    relation org: organization
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    permission view = learner-&gt;view_profile + org-&gt;manage
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>}
 </code></pre></div>
 <h2 id="other-surfaces">Other Surfaces<a class="headerlink" href="#other-surfaces" title="Permanent link">&para;</a></h2>
 <table>

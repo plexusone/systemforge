@@ -4720,6 +4720,8 @@
       
         
       
+        
+      
     
     
     
@@ -4791,6 +4793,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.32.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.32.0
   
 
     
@@ -6168,8 +6198,8 @@ endpoints:</p>
 <td>Starts the upstream authorization-code flow (<code>github</code> or <code>google</code>).</td>
 </tr>
 <tr>
-<td><code>GET /account/sign-in-methods</code></td>
-<td>A signed-in person's page to link another provider's sign-in to their account (see <a href="#linking-sign-in-methods">Linking sign-in methods</a>).</td>
+<td><code>GET /account/sign-in-methods?return_to=...</code></td>
+<td>A signed-in person's page: their account's email, the sign-in methods linked to it, a button to link each other provider, and a link back to the validated <code>return_to</code> (see <a href="#linking-sign-in-methods">Linking sign-in methods</a>).</td>
 </tr>
 <tr>
 <td><code>GET /login/{provider}/callback</code></td>
@@ -6434,8 +6464,9 @@ GitHub sign-in uses the account's primary email only.</p>
 <h3 id="linking-sign-in-methods">Linking sign-in methods<a class="headerlink" href="#linking-sign-in-methods" title="Permanent link">&para;</a></h3>
 <p>A signed-in person can link another provider's sign-in to their account at
 <code>/account/sign-in-methods</code>, so either one signs them in to the same account,
-whatever email each provider reports. The page lists a <strong>Link</strong> button per
-configured provider. The button's form posts to
+whatever email each provider reports. The page shows the account's email
+and the providers already linked to it, and a <strong>Link</strong> button for each
+configured provider that is not. The button's form posts to
 <code>/account/sign-in-methods/{provider}</code>, which is origin-checked like sign-out
 and needs a login session. It sends the browser through the provider's
 sign-in. The callback then attaches that provider identity to the account:</p>
@@ -6449,6 +6480,19 @@ sign-in. The callback then attaches that provider identity to the account:</p>
 <li>No account is created, no sign-up gate or age question applies, and the
   account's own email is unchanged.</li>
 </ul>
+<p>An application links to the page from its own account settings with
+<code>return_to</code>, such as
+<code>https://auth.example.com/account/sign-in-methods?return_to=https://app.example.com/settings</code>.
+<code>return_to</code> passes the same allowlist as sign-in's: a path on the issuer, or
+an origin in <code>allowed_redirect_origins</code>. A valid one shows a <strong>Back to</strong>
+link named by <code>signed_out_name</code>, or by its host when that is not set, and is
+kept through signing in first, the link button, the provider and the
+callback's return to the page; it is validated again at each step. An
+invalid one is ignored: the page shows no back link and never redirects to
+it.</p>
+<p>A directory lists the linked providers through the optional
+<code>LinkedProviderLister</code> interface, which the Ent and memory directories
+implement. With a directory that does not, the page offers every provider.</p>
 <p>A completed link, and a link the callback refuses (the identity is on
 another account, or the browser is no longer signed in as the account that
 started it), is the security event <code>systemauth.sign_in_method.linked</code>. A

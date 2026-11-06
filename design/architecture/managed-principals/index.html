@@ -4836,6 +4836,8 @@
       
         
       
+        
+      
     
     
     
@@ -4907,6 +4909,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v0.32.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.32.0
   
 
     
@@ -6875,10 +6905,12 @@ ClientID, CreatedAt, ExpiresAt, LastUsedAt, ClientIP}</code>:</p>
 </tbody>
 </table>
 <p><code>ListLoginTokens</code> returns live login tokens without their values;
-<code>RevokeLoginToken</code> revokes one; <code>RevokeSession(kind, id)</code> ends one session;
+<code>RevokeLoginToken</code> revokes one; <code>ReplaceLoginTokens</code> revokes every live
+login token and issues one in one transaction, so a failure leaves the old
+tokens working; <code>RevokeSession(kind, id)</code> ends one session;
 <code>RevokeAll</code> revokes every login token and ends every session in one
 transaction. Each emits an audit event (<code>login_token_revoked</code>,
-<code>session_revoked</code>, <code>all_revoked</code>). <code>managedprincipal.NewHandler(svc)</code>
+<code>login_tokens_replaced</code>, <code>session_revoked</code>, <code>all_revoked</code>). <code>managedprincipal.NewHandler(svc)</code>
 exposes these and the managing operations as a chi router to mount behind
 <code>requestprincipal.Middleware</code>, which identifies the calling principal. The
 caller is always the actor; every route runs the service operation and so
@@ -6898,10 +6930,11 @@ its authorizer check:</p>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>DELETE /manager-invites/{inviteID}                RevokeManagerInvite
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>GET    /{principalID}/login-tokens
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>POST   /{principalID}/login-tokens                IssueLoginToken (JSON: client_id, name?, single_use?, expires_at?)
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>DELETE /{principalID}/login-tokens/{credentialID}
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>GET    /{principalID}/sessions
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>DELETE /{principalID}/sessions/{kind}/{sessionID}
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>POST   /{principalID}/revoke-all
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>POST   /{principalID}/login-tokens/replace        ReplaceLoginTokens (same JSON); 201 with the token and `revoked`
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>DELETE /{principalID}/login-tokens/{credentialID}
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>GET    /{principalID}/sessions
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>DELETE /{principalID}/sessions/{kind}/{sessionID}
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>POST   /{principalID}/revoke-all
 </code></pre></div>
 <p>Responses: 401 without a principal, 403 for a missing permission (or a
 client that does not allow managed principals), 404 for an unknown or
