@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/identity/credential"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/hook"
+	"github.com/plexusone/systemforge/identity/ent/managerrelationship"
 )
 
 func TestReplaceLoginTokens(t *testing.T) {
@@ -84,9 +87,17 @@ func TestReplaceLoginTokensFailureKeepsTheOldTokens(t *testing.T) {
 	ctx := context.Background()
 	f := newVisibilityFixture(t)
 	errCreate := errors.New("create refused")
+	revokedFirst := false
 	f.db.Credential.Use(func(next ent.Mutator) ent.Mutator {
 		return hook.CredentialFunc(func(ctx context.Context, m *ent.CredentialMutation) (ent.Value, error) {
 			if m.Op().Is(ent.OpCreate) {
+				// The old token is revoked in the transaction before the
+				// new one is created; the rollback undoes it.
+				live, err := m.Client().Credential.Query().Where(liveLoginTokens(f.learner, time.Now())...).Count(ctx)
+				if err != nil {
+					return nil, err
+				}
+				revokedFirst = live == 0
 				return nil, errCreate
 			}
 			return next.Mutate(ctx, m)
@@ -94,6 +105,9 @@ func TestReplaceLoginTokensFailureKeepsTheOldTokens(t *testing.T) {
 	})
 	if _, err := f.svc.ReplaceLoginTokens(ctx, IssueLoginTokenInput{ManagedID: f.learner, ClientID: client, IssuedBy: f.teacher}); !errors.Is(err, errCreate) {
 		t.Fatalf("ReplaceLoginTokens = %v, want the create's error", err)
+	}
+	if !revokedFirst {
+		t.Error("the old token was still live in the transaction when the new one was created")
 	}
 	if _, err := f.svc.creds.VerifyLoginToken(ctx, f.plain, ""); err != nil {
 		t.Errorf("the old token stopped working after a failed replace: %v", err)
@@ -163,5 +177,90 @@ func TestRemoteReplaceLoginTokens(t *testing.T) {
 	}
 	if _, err := svc.creds.VerifyLoginToken(context.Background(), got.Token, ""); err != nil {
 		t.Errorf("the new token does not verify: %v", err)
+	}
+}
+
+// racingGate stands in for a manager's removal committing between the
+// client check and the issuing transaction: it runs removed when the token
+// policy is read, which happens in between.
+type racingGate struct {
+	gate
+	removed func()
+}
+
+func (g racingGate) LoginTokenPolicy(ctx context.Context, clientID string) (credential.LoginTokenPolicy, error) {
+	g.removed()
+	return g.gate.LoginTokenPolicy(ctx, clientID)
+}
+
+// TestIssuingRechecksTheIssuerUnderTheLock verifies that a manager removed
+// after the client check but before the issuing transaction is refused,
+// for both issuing and replacing, and that a refused replace keeps the
+// principal's token.
+func TestIssuingRechecksTheIssuerUnderTheLock(t *testing.T) {
+	ctx := context.Background()
+	f := newVisibilityFixture(t)
+	remove := func() {
+		if err := f.db.ManagerRelationship.Update().
+			Where(managerrelationship.ManagedPrincipalID(f.learner), managerrelationship.ManagerPrincipalID(f.parent)).
+			SetActive(false).Exec(ctx); err != nil {
+			t.Fatalf("deactivate relationship: %v", err)
+		}
+	}
+	svc := NewService(f.db, racingGate{gate: gate{client: true}, removed: remove}, WithDirectManagerAdds())
+	in := IssueLoginTokenInput{ManagedID: f.learner, ClientID: client, IssuedBy: f.parent}
+	if _, err := svc.IssueLoginToken(ctx, in); !errors.Is(err, ErrNotManager) {
+		t.Errorf("IssueLoginToken by a manager removed meanwhile = %v, want %v", err, ErrNotManager)
+	}
+	if _, err := svc.ReplaceLoginTokens(ctx, in); !errors.Is(err, ErrNotManager) {
+		t.Errorf("ReplaceLoginTokens by a manager removed meanwhile = %v, want %v", err, ErrNotManager)
+	}
+	if _, err := f.svc.creds.VerifyLoginToken(ctx, f.plain, ""); err != nil {
+		t.Errorf("a refused replace revoked the token: %v", err)
+	}
+}
+
+// TestConcurrentReplacesLeaveOneToken verifies on PostgreSQL that two
+// managers replacing a principal's card at the same moment both succeed and
+// leave exactly one live token: the second waits for the first's lock and
+// revokes its token.
+func TestConcurrentReplacesLeaveOneToken(t *testing.T) {
+	ctx := context.Background()
+	db := openPostgres(t)
+	svc, _ := newService(t, db)
+	for range 10 {
+		a := addHuman(t, db, uuid.NewString()+"@example.com", true)
+		b := addHuman(t, db, uuid.NewString()+"@example.com", true)
+		id, err := svc.Create(ctx, CreateInput{ActorID: a, DisplayName: "Learner", ClientID: client,
+			Managers: []ManagerInput{{a, RoleGuardian}, {b, RoleEducator}}})
+		if err != nil {
+			t.Fatalf("Create: %v", err)
+		}
+		if _, err := svc.IssueLoginToken(ctx, IssueLoginTokenInput{ManagedID: id, ClientID: client, IssuedBy: a}); err != nil {
+			t.Fatalf("IssueLoginToken: %v", err)
+		}
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		errs := make([]error, 2)
+		for i, by := range []uuid.UUID{a, b} {
+			wg.Go(func() {
+				<-start
+				_, errs[i] = svc.ReplaceLoginTokens(ctx, IssueLoginTokenInput{ManagedID: id, ClientID: client, IssuedBy: by})
+			})
+		}
+		close(start)
+		wg.Wait()
+		for i, err := range errs {
+			if err != nil {
+				t.Fatalf("replace %d: %v", i, err)
+			}
+		}
+		live, err := db.Credential.Query().Where(liveLoginTokens(id, time.Now())...).Count(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if live != 1 {
+			t.Fatalf("live tokens after two concurrent replaces = %d, want 1", live)
+		}
 	}
 }
