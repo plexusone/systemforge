@@ -770,6 +770,16 @@ func (s *Server) CurrentLoginSession(r *http.Request) (*LoginSession, error) {
 	return s.social.currentSession(r)
 }
 
+// Principal returns a human principal's profile from the directory social
+// login uses, such as its display name and avatar. It returns
+// ErrPrincipalNotFound when there is none or social login is not enabled.
+func (s *Server) Principal(ctx context.Context, id uuid.UUID) (*HumanPrincipal, error) {
+	if s.social == nil {
+		return nil, ErrPrincipalNotFound
+	}
+	return s.social.directory.GetPrincipal(ctx, id)
+}
+
 // ValidateReturnTo checks a place to send a person after an action, by the
 // policy sign-in uses for return_to: an absolute path on this host, or a URL
 // on an allowed redirect origin. It returns the URL to use, or
