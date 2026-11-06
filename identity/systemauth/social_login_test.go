@@ -863,3 +863,29 @@ func TestEndLoginSession(t *testing.T) {
 		t.Errorf("without social login: %v", err)
 	}
 }
+
+func TestServerPrincipal(t *testing.T) {
+	ctx := context.Background()
+	dir := NewMemoryPrincipalDirectory()
+	s := newSocialTestServer(t, newFakeGitHub(t), dir)
+	p, err := ResolveExternalLogin(ctx, dir, ExternalLogin{Provider: "google", Subject: "g-1", Email: "g@example.com",
+		EmailVerified: true, EmailAuthoritative: true, Name: "Grace", AvatarURL: "https://img.example.com/g.png"}, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Principal(ctx, p.ID)
+	if err != nil || got.DisplayName != "Grace" || got.Email != "g@example.com" || got.AvatarURL != "https://img.example.com/g.png" {
+		t.Fatalf("Principal = %+v, %v", got, err)
+	}
+	if _, err := s.Principal(ctx, uuid.New()); !errors.Is(err, ErrPrincipalNotFound) {
+		t.Errorf("an unknown principal: %v", err)
+	}
+
+	plain, err := NewEmbedded(Config{Issuer: testIssuer})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := plain.Principal(ctx, p.ID); !errors.Is(err, ErrPrincipalNotFound) {
+		t.Errorf("without social login: %v", err)
+	}
+}
