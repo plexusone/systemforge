@@ -26,6 +26,7 @@ func (s *Service) mountConsole(c *Config) error {
 		ReturnTo:      s.server.ValidateReturnTo,
 		SignOut:       s.server.EndLoginSession,
 		Apps:          s.consoleApps,
+		Profile:       s.consoleProfile,
 		Connections:   s.conns,
 		WebDir:        c.Console.WebDir,
 		LoginPath:     systemauth.LoginPath,
@@ -82,4 +83,14 @@ func (s *Service) consoleApps(context.Context) ([]console.App, error) {
 		out = append(out, console.App{ID: a.ID, Name: a.Name, URL: a.URL, Icon: a.Icon, Order: a.Order})
 	}
 	return out, nil
+}
+
+// consoleProfile is the signed-in person's name, email and avatar, as the
+// applications' tokens carry them.
+func (s *Service) consoleProfile(ctx context.Context, principal uuid.UUID) (console.Profile, error) {
+	p, err := s.server.Principal(ctx, principal)
+	if err != nil {
+		return console.Profile{}, err
+	}
+	return console.Profile{Name: p.DisplayName, Email: p.Email, AvatarURL: p.AvatarURL}, nil
 }
