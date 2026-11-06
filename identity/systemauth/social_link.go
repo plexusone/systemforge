@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -37,12 +38,18 @@ var signInMethodsTemplate = template.Must(template.New("sign-in-methods").Parse(
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` + pageStyleLink + `
 <title>Sign-in methods</title></head>
 <body><main><h1>Sign-in methods</h1>
-<p>Link another sign-in to this account, so either one signs you in to the same account and its work.</p>
-{{with .Linked}}<p role="status">{{.}} is linked to your account. You can now sign in with it.</p>
+{{with .Email}}<p>Signed in as <strong>{{.}}</strong>.</p>
+{{end}}{{with .JustLinked}}<p role="status">{{.}} is linked to your account. You can now sign in with it.</p>
 {{end}}{{with .Problem}}<p role="alert">{{.}}</p>
-{{end}}<nav aria-label="Link a sign-in method">
-{{range .Providers}}<form method="post" action="{{.Action}}"><button type="submit">Link {{.Name}}</button></form>
-{{end}}</nav></main></body></html>
+{{end}}{{if .Linked}}<h2>Linked</h2>
+<ul>{{range .Linked}}<li>{{.}}</li>{{end}}</ul>
+{{end}}{{if .Providers}}<p>Link another sign-in to this account, so either one signs you in to the same account and its work.</p>
+<nav aria-label="Link a sign-in method">
+{{range .Providers}}<form method="post" action="{{.Action}}">{{with $.ReturnTo}}<input type="hidden" name="return_to" value="{{.}}">{{end}}<button type="submit">Link {{.Name}}</button></form>
+{{end}}</nav>
+{{else}}<p>Every available sign-in method is linked to this account.</p>
+{{end}}{{with .Back}}<p><a href="{{.URL}}">Back to {{.Name}}</a></p>
+{{end}}</main></body></html>
 `))
 
 // linkProblems are the page's messages for a refused link, by reason.
@@ -52,36 +59,106 @@ var linkProblems = map[string]string{
 	"failed":        "Linking did not complete. Try again.",
 }
 
-// handleSignInMethods serves GET SignInMethodsPath. Without a login session
-// it sends the browser to sign in first, and back here.
+// returnTo is the validated return_to: where the page's back link goes, an
+// allowed redirect target, or "" for none. An invalid one is dropped, never
+// followed.
+func (sl *socialLogin) returnTo(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	v, err := sl.redirects.validate(raw)
+	if err != nil {
+		return ""
+	}
+	return v
+}
+
+// methodsURL is the sign-in methods page's address, keeping returnTo (already
+// validated) and adding extra, such as the outcome of a link.
+func methodsURL(returnTo string, extra url.Values) string {
+	q := url.Values{}
+	for k, v := range extra {
+		q[k] = v
+	}
+	if returnTo != "" {
+		q.Set("return_to", returnTo)
+	}
+	if len(q) == 0 {
+		return SignInMethodsPath
+	}
+	return SignInMethodsPath + "?" + q.Encode()
+}
+
+// signInFirst sends a browser without a login session to sign in, and back
+// to the page with its return_to.
+func signInFirst(w http.ResponseWriter, r *http.Request, returnTo string, status int) {
+	http.Redirect(w, r, LoginPath+"?return_to="+url.QueryEscape(methodsURL(returnTo, nil)), status)
+}
+
+// handleSignInMethods serves GET SignInMethodsPath: the account's email,
+// the sign-in methods linked to it, a Link button for each one that is not,
+// and, with a valid return_to, a link back to the app. Without a login
+// session it sends the browser to sign in first, and back here.
 func (sl *socialLogin) handleSignInMethods(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	noStore(w)
-	if _, err := sl.currentSession(r); err != nil {
-		http.Redirect(w, r, LoginPath+"?return_to="+url.QueryEscape(SignInMethodsPath), http.StatusFound)
+	q := r.URL.Query()
+	returnTo := sl.returnTo(q.Get("return_to"))
+	sess, err := sl.currentSession(r)
+	if err != nil {
+		signInFirst(w, r, returnTo, http.StatusFound)
 		return
+	}
+	var email string
+	if p, err := sl.directory.GetPrincipal(ctx, sess.PrincipalID); err == nil {
+		email = p.Email
+	}
+	var linked []string
+	if lister, ok := sl.directory.(LinkedProviderLister); ok {
+		linked, err = lister.LinkedProviders(ctx, sess.PrincipalID)
+		if err != nil {
+			LoggerFromContext(ctx).Error("listing linked sign-in methods", "error", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
 	}
 	type provider struct{ Name, Action string }
 	var providers []provider
-	var authorizeURLs []string
+	var linkedNames, authorizeURLs []string
 	for _, p := range sl.providers {
+		if slices.Contains(linked, p) {
+			linkedNames = append(linkedNames, displayName(p))
+			continue
+		}
 		providers = append(providers, provider{Name: displayName(p), Action: SignInMethodsPath + "/" + url.PathEscape(p)})
 		// Each form's POST is answered with a redirect to the provider,
 		// which form-action must allow.
 		authorizeURLs = append(authorizeURLs, sl.connectors[p].AuthCodeURL("state"))
 	}
-	var linked, problem string
-	q := r.URL.Query()
+	var justLinked string
 	if p := q.Get("linked"); p != "" && sl.connectors[p] != nil {
-		linked = displayName(p)
+		justLinked = displayName(p)
 	}
-	problem = linkProblems[q.Get("error")]
-	allowFormTargets(w, formSources(authorizeURLs...))
+	type back struct{ URL, Name string }
+	var backLink *back
+	if returnTo != "" {
+		name := sl.redirects.signedOutName
+		if name == "" {
+			name = hostOf(returnTo, sl.redirects.issuerOrigin)
+		}
+		backLink = &back{URL: returnTo, Name: name}
+	}
+	if len(authorizeURLs) > 0 {
+		allowFormTargets(w, formSources(authorizeURLs...))
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := signInMethodsTemplate.Execute(w, struct {
-		Providers       []provider
-		Linked, Problem string
-	}{providers, linked, problem}); err != nil {
-		LoggerFromContext(r.Context()).Error("rendering sign-in methods page", "error", err)
+		Email, JustLinked, Problem, ReturnTo string
+		Linked                               []string
+		Providers                            []provider
+		Back                                 *back
+	}{email, justLinked, linkProblems[q.Get("error")], returnTo, linkedNames, providers, backLink}); err != nil {
+		LoggerFromContext(ctx).Error("rendering sign-in methods page", "error", err)
 	}
 }
 
@@ -109,9 +186,10 @@ func (sl *socialLogin) handleLinkStart(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	returnTo := sl.returnTo(r.PostFormValue("return_to"))
 	sess, err := sl.currentSession(r)
 	if err != nil {
-		http.Redirect(w, r, LoginPath+"?return_to="+url.QueryEscape(SignInMethodsPath), http.StatusSeeOther)
+		signInFirst(w, r, returnTo, http.StatusSeeOther)
 		return
 	}
 	state, err := oauthclient.GenerateState()
@@ -123,7 +201,7 @@ func (sl *socialLogin) handleLinkStart(w http.ResponseWriter, r *http.Request) {
 	verifier := oauth2.GenerateVerifier()
 	if err := sl.states.Put(ctx, state, oauthclient.StateData{
 		Provider:     provider,
-		RedirectURL:  SignInMethodsPath,
+		RedirectURL:  methodsURL(returnTo, nil),
 		Nonce:        linkNoncePrefix + sess.PrincipalID.String(),
 		PKCEVerifier: verifier,
 	}, loginStateTTL); err != nil {
@@ -148,13 +226,19 @@ func linkingPrincipal(nonce string) (uuid.UUID, bool) {
 }
 
 // completeLink links login's identity to principalID, the account that
-// started the link, and returns the browser to the sign-in methods page.
+// started the link, and returns the browser to the sign-in methods page,
+// with the return_to the link started with (page, from the login state),
+// validated again.
 // The browser must still be signed in as that account. An identity already
 // on another account is never moved; one already on this account is a
 // success. No account is created, and the account's email is unchanged.
-func (sl *socialLogin) completeLink(ctx context.Context, w http.ResponseWriter, r *http.Request, principalID uuid.UUID, login ExternalLogin) {
+func (sl *socialLogin) completeLink(ctx context.Context, w http.ResponseWriter, r *http.Request, page string, principalID uuid.UUID, login ExternalLogin) {
+	var returnTo string
+	if u, err := url.Parse(page); err == nil {
+		returnTo = sl.returnTo(u.Query().Get("return_to"))
+	}
 	back := func(param, value string) {
-		http.Redirect(w, r, SignInMethodsPath+"?"+param+"="+url.QueryEscape(value), http.StatusFound)
+		http.Redirect(w, r, methodsURL(returnTo, url.Values{param: {value}}), http.StatusFound)
 	}
 	sess, err := sl.currentSession(r)
 	if err != nil || sess.PrincipalID != principalID {

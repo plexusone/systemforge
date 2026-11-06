@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -79,6 +80,33 @@ type PrincipalDirectory interface {
 
 	// GetPrincipal returns a principal by ID, or ErrPrincipalNotFound.
 	GetPrincipal(ctx context.Context, id uuid.UUID) (*HumanPrincipal, error)
+}
+
+// LinkedProviderLister is an optional PrincipalDirectory capability: it
+// lists the providers whose sign-in is linked to a principal, so the
+// sign-in methods page can show them. A directory without it gets a page
+// that offers every provider.
+type LinkedProviderLister interface {
+	// LinkedProviders returns the distinct providers linked to principalID,
+	// sorted, or none.
+	LinkedProviders(ctx context.Context, principalID uuid.UUID) ([]string, error)
+}
+
+// providersLinkedTo returns the sorted, distinct providers of the external
+// identities in byExternal that belong to id.
+func providersLinkedTo(byExternal map[string]uuid.UUID, id uuid.UUID) []string {
+	var out []string
+	for key, owner := range byExternal {
+		if owner != id {
+			continue
+		}
+		provider, _, _ := strings.Cut(key, "\x00")
+		if !slices.Contains(out, provider) {
+			out = append(out, provider)
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
 // ResolveExternalLogin finds or creates the principal for an upstream login
@@ -323,6 +351,13 @@ func (d *MemoryPrincipalDirectory) RecordLogin(_ context.Context, principalID uu
 	return nil
 }
 
+// LinkedProviders implements LinkedProviderLister.
+func (d *MemoryPrincipalDirectory) LinkedProviders(_ context.Context, principalID uuid.UUID) ([]string, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return providersLinkedTo(d.byExternal, principalID), nil
+}
+
 // GetPrincipal implements PrincipalDirectory.
 func (d *MemoryPrincipalDirectory) GetPrincipal(_ context.Context, id uuid.UUID) (*HumanPrincipal, error) {
 	d.mu.Lock()
@@ -330,7 +365,10 @@ func (d *MemoryPrincipalDirectory) GetPrincipal(_ context.Context, id uuid.UUID)
 	return d.copyOf(id)
 }
 
-var _ PrincipalDirectory = (*MemoryPrincipalDirectory)(nil)
+var (
+	_ PrincipalDirectory   = (*MemoryPrincipalDirectory)(nil)
+	_ LinkedProviderLister = (*MemoryPrincipalDirectory)(nil)
+)
 
 func displayNameFor(login ExternalLogin) string {
 	if login.Name != "" {
