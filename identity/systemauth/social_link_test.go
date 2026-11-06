@@ -5,15 +5,24 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/plexusone/systemforge/identity/oauthclient"
 )
 
 // linkStart posts the page's Link button for GitHub as the signed-in
 // browser and returns the provider redirect's state and its cookie.
 func linkStart(t *testing.T, s *Server, sess *http.Cookie) (string, *http.Cookie) {
 	t.Helper()
-	w := postForm(s, SignInMethodsPath+"/github", testIssuer, url.Values{}, sess)
+	return linkStartWith(t, s, sess, url.Values{})
+}
+
+// linkStartWith is linkStart posting form, such as the page's return_to.
+func linkStartWith(t *testing.T, s *Server, sess *http.Cookie, form url.Values) (string, *http.Cookie) {
+	t.Helper()
+	w := postForm(s, SignInMethodsPath+"/github", testIssuer, form, sess)
 	if w.Code != http.StatusSeeOther {
 		t.Fatalf("link start: %d %s", w.Code, w.Body.String())
 	}
@@ -49,18 +58,18 @@ func TestLinkSignInMethod(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The page offers each provider, styled, and lets its form reach the
-	// provider through the POST's redirect.
+	// The page, styled, shows the account and GitHub as linked; with every
+	// provider linked, it offers none.
 	req := httptest.NewRequest(http.MethodGet, SignInMethodsPath, nil)
 	req.AddCookie(sess)
 	w = httptest.NewRecorder()
 	s.ServeHTTP(w, req)
-	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), ">Link GitHub</button>") || !strings.Contains(w.Body.String(), pageStyleLink) {
-		t.Fatalf("page: %d %s", w.Code, w.Body.String())
-	}
-	// The fake provider is on loopback, which form-action names by host.
-	if csp := w.Header().Get("Content-Security-Policy"); !strings.Contains(csp, "form-action 'self' http://127.0.0.1") {
-		t.Errorf("form-action does not allow the provider: %s", csp)
+	body := w.Body.String()
+	if w.Code != http.StatusOK || !strings.Contains(body, pageStyleLink) ||
+		!strings.Contains(body, "Signed in as <strong>octo@example.com</strong>") ||
+		!strings.Contains(body, "<li>GitHub</li>") || strings.Contains(body, ">Link GitHub</button>") ||
+		!strings.Contains(body, "Every available sign-in method is linked") {
+		t.Fatalf("page: %d %s", w.Code, body)
 	}
 
 	// A cross-origin POST is refused.
@@ -140,5 +149,160 @@ func TestLinkSignInMethodRefusals(t *testing.T) {
 	s.ServeHTTP(rec, req)
 	if body := rec.Body.String(); !strings.Contains(body, "already belongs to another account") || strings.Contains(body, "<b>x</b>") {
 		t.Errorf("page messages: %s", body)
+	}
+}
+
+// newTwoProviderServer is a social server with the fake GitHub and Google,
+// whose authorization endpoint is never reached, and AcademyOS-like
+// redirect settings.
+func newTwoProviderServer(t *testing.T, f *fakeGitHub, dir PrincipalDirectory, signedOutName string) *Server {
+	t.Helper()
+	google := oauthclient.NewGoogleConnector(oauthclient.ProviderConfig{
+		ClientID: "g-client", ClientSecret: "g-secret", RedirectURL: testIssuer + "/login/google/callback",
+	})
+	social := &SocialLoginConfig{AllowedRedirectOrigins: []string{"https://app.example.com"}}
+	if signedOutName != "" {
+		social.SignedOutURL, social.SignedOutName = "https://app.example.com/", signedOutName
+	}
+	s, err := NewEmbedded(Config{Issuer: testIssuer, SocialLogin: social},
+		WithSocialConnector(f.connector()), WithSocialConnector(google), WithPrincipalDirectory(dir))
+	if err != nil {
+		t.Fatalf("NewEmbedded: %v", err)
+	}
+	return s
+}
+
+func methodsPage(s *Server, target string, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, target, nil)
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	return w
+}
+
+func TestSignInMethodsPage(t *testing.T) {
+	const back = "https://app.example.com/settings"
+	f := newFakeGitHub(t)
+	s := newTwoProviderServer(t, f, NewMemoryPrincipalDirectory(), "")
+	page := SignInMethodsPath + "?return_to=" + url.QueryEscape(back)
+
+	// Signed out, the sign-in comes back to the page with its return_to.
+	w := methodsPage(s, page)
+	if want := LoginPath + "?return_to=" + url.QueryEscape(page); w.Code != http.StatusFound || w.Header().Get("Location") != want {
+		t.Fatalf("signed out: %d %q, want %q", w.Code, w.Header().Get("Location"), want)
+	}
+
+	// Signed in with GitHub: GitHub is listed as linked, only Google is
+	// offered, its form carries return_to, and the page links back.
+	sess := socialSession(t, s)
+	w = methodsPage(s, page, sess)
+	body := w.Body.String()
+	for _, want := range []string{
+		"<li>GitHub</li>",
+		">Link Google</button>",
+		`<input type="hidden" name="return_to" value="https://app.example.com/settings">`,
+		`<a href="https://app.example.com/settings">Back to app.example.com</a>`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("page lacks %q:\n%s", want, body)
+		}
+	}
+	if strings.Contains(body, ">Link GitHub</button>") {
+		t.Errorf("page offers the linked GitHub:\n%s", body)
+	}
+	if csp := w.Header().Get("Content-Security-Policy"); !strings.Contains(csp, "https://accounts.google.com") {
+		t.Errorf("form-action does not allow Google: %s", csp)
+	}
+
+	// A return_to outside the allowed origins is dropped, never linked.
+	w = methodsPage(s, SignInMethodsPath+"?return_to="+url.QueryEscape("https://evil.example.com/x"), sess)
+	if body := w.Body.String(); w.Code != http.StatusOK || strings.Contains(body, "evil.example.com") || strings.Contains(body, "Back to") {
+		t.Errorf("invalid return_to: %d %s", w.Code, body)
+	}
+
+	// The site's name, when configured, names the back link.
+	named := newTwoProviderServer(t, f, NewMemoryPrincipalDirectory(), "Example")
+	if body := methodsPage(named, page, socialSession(t, named)).Body.String(); !strings.Contains(body, ">Back to Example</a>") {
+		t.Errorf("named back link:\n%s", body)
+	}
+}
+
+func TestLinkKeepsReturnTo(t *testing.T) {
+	const back = "https://app.example.com/settings"
+	f := newFakeGitHub(t)
+	s := newTwoProviderServer(t, f, NewMemoryPrincipalDirectory(), "")
+	sess := socialSession(t, s)
+
+	// The link's outcome comes back to the page with return_to.
+	f.userID, f.email = 5555, "other@example.com"
+	state, stateCookie := linkStartWith(t, s, sess, url.Values{"return_to": {back}})
+	w := callback(s, state, stateCookie, sess)
+	want := SignInMethodsPath + "?linked=github&return_to=" + url.QueryEscape(back)
+	if w.Code != http.StatusFound || w.Header().Get("Location") != want {
+		t.Errorf("link: %d %q, want %q", w.Code, w.Header().Get("Location"), want)
+	}
+
+	// A refusal keeps it too.
+	state, stateCookie = linkStartWith(t, s, sess, url.Values{"return_to": {back}})
+	w = callback(s, state, stateCookie)
+	if want := SignInMethodsPath + "?error=session&return_to=" + url.QueryEscape(back); w.Header().Get("Location") != want {
+		t.Errorf("refused: %q, want %q", w.Header().Get("Location"), want)
+	}
+
+	// An invalid return_to is dropped at the start.
+	f.userID, f.email = 6666, "third@example.com"
+	state, stateCookie = linkStartWith(t, s, sess, url.Values{"return_to": {"https://evil.example.com/x"}})
+	if w := callback(s, state, stateCookie, sess); w.Header().Get("Location") != SignInMethodsPath+"?linked=github" {
+		t.Errorf("invalid return_to: %q", w.Header().Get("Location"))
+	}
+
+	// Without a session, the start sends the browser to sign in, keeping it.
+	w = postForm(s, SignInMethodsPath+"/github", testIssuer, url.Values{"return_to": {back}})
+	page := SignInMethodsPath + "?return_to=" + url.QueryEscape(back)
+	if want := LoginPath + "?return_to=" + url.QueryEscape(page); w.Code != http.StatusSeeOther || w.Header().Get("Location") != want {
+		t.Errorf("signed out start: %d %q, want %q", w.Code, w.Header().Get("Location"), want)
+	}
+}
+
+func TestLinkedProviders(t *testing.T) {
+	ctx := context.Background()
+	dirs := map[string]func(t *testing.T) PrincipalDirectory{
+		"memory":         func(*testing.T) PrincipalDirectory { return NewMemoryPrincipalDirectory() },
+		"memory storage": func(*testing.T) PrincipalDirectory { return NewMemoryStorage().PrincipalDirectory() },
+		"ent":            func(t *testing.T) PrincipalDirectory { return NewEntPrincipalDirectory(openTestEnt(t)) },
+	}
+	for name, newDir := range dirs {
+		t.Run(name, func(t *testing.T) {
+			dir := newDir(t)
+			lister, ok := dir.(LinkedProviderLister)
+			if !ok {
+				t.Fatal("not a LinkedProviderLister")
+			}
+			p, err := dir.CreateFromExternal(ctx, githubLogin("1", "a@example.com", true))
+			if err != nil {
+				t.Fatal(err)
+			}
+			other, err := dir.CreateFromExternal(ctx, githubLogin("2", "b@example.com", true))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, login := range []ExternalLogin{
+				githubLogin("3", "a@example.com", true),
+				{Provider: "google", Subject: "g1", Email: "a@example.com", EmailVerified: true},
+			} {
+				if err := dir.LinkExternalIdentity(ctx, p.ID, login); err != nil {
+					t.Fatal(err)
+				}
+			}
+			got, err := lister.LinkedProviders(ctx, p.ID)
+			if err != nil || !slices.Equal(got, []string{"github", "google"}) {
+				t.Errorf("linked to the account: %v %v", got, err)
+			}
+			if got, err := lister.LinkedProviders(ctx, other.ID); err != nil || !slices.Equal(got, []string{"github"}) {
+				t.Errorf("linked to the other account: %v %v", got, err)
+			}
+		})
 	}
 }
