@@ -63,7 +63,13 @@ type Session struct {
 // authorizeCredentials requires actorID to hold manage_credentials on a
 // managed principal.
 func (s *Service) authorizeCredentials(ctx context.Context, actorID, managedID uuid.UUID) error {
-	managed, err := s.client.Human.Query().
+	return s.authorizeCredentialsIn(ctx, s.client, actorID, managedID)
+}
+
+// authorizeCredentialsIn is authorizeCredentials reading through c, such
+// as a transaction's client.
+func (s *Service) authorizeCredentialsIn(ctx context.Context, c *ent.Client, actorID, managedID uuid.UUID) error {
+	managed, err := c.Human.Query().
 		Where(human.PrincipalID(managedID), hasActiveManager()).
 		Exist(ctx)
 	if err != nil {
