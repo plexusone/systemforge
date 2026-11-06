@@ -87,4 +87,14 @@ func (d memoryStorageDirectory) GetPrincipal(ctx context.Context, id uuid.UUID) 
 	return d.s.GetHuman(ctx, id)
 }
 
-var _ PrincipalDirectory = memoryStorageDirectory{}
+// LinkedProviders implements LinkedProviderLister.
+func (d memoryStorageDirectory) LinkedProviders(_ context.Context, principalID uuid.UUID) ([]string, error) {
+	d.s.mu.RLock()
+	defer d.s.mu.RUnlock()
+	return providersLinkedTo(d.s.external, principalID), nil
+}
+
+var (
+	_ PrincipalDirectory   = memoryStorageDirectory{}
+	_ LinkedProviderLister = memoryStorageDirectory{}
+)

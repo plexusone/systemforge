@@ -124,6 +124,13 @@ type IssuedLoginToken struct {
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 
+// ReplacedLoginTokens is the result of ReplaceLoginTokens: the new token,
+// returned only once, and how many live tokens were revoked.
+type ReplacedLoginTokens struct {
+	IssuedLoginToken
+	Revoked int `json:"revoked"`
+}
+
 // LoginToken is a live login token, without its value.
 type LoginToken struct {
 	ID         uuid.UUID  `json:"id"`
@@ -230,6 +237,17 @@ func (c *Client) List(ctx context.Context, token string, after uuid.UUID, limit 
 func (c *Client) IssueLoginToken(ctx context.Context, token string, id uuid.UUID, in IssueLoginTokenInput) (*IssuedLoginToken, error) {
 	var out IssuedLoginToken
 	if err := c.do(ctx, token, http.MethodPost, "/"+id.String()+"/login-tokens", in, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ReplaceLoginTokens revokes every live login token of a managed principal
+// and issues one, atomically: a lost or shared card is retired and a new
+// one printed in one call. If the call fails, the old tokens still work.
+func (c *Client) ReplaceLoginTokens(ctx context.Context, token string, id uuid.UUID, in IssueLoginTokenInput) (*ReplacedLoginTokens, error) {
+	var out ReplacedLoginTokens
+	if err := c.do(ctx, token, http.MethodPost, "/"+id.String()+"/login-tokens/replace", in, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

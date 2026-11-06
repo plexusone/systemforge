@@ -115,7 +115,14 @@ func TestClientManagesAPrincipal(t *testing.T) {
 	if err != nil || len(tokens) != 1 || tokens[0].ID != issued.ID || tokens[0].Name != "card" {
 		t.Fatalf("tokens %+v %v", tokens, err)
 	}
-	if err := f.api.RevokeLoginToken(ctx, teacherTok, id, issued.ID); err != nil {
+	replaced, err := f.api.ReplaceLoginTokens(ctx, teacherTok, id, mpclient.IssueLoginTokenInput{Name: "new card"})
+	if err != nil || replaced.Revoked != 1 || replaced.Token == "" || replaced.ID == issued.ID {
+		t.Fatalf("replace %+v %v", replaced, err)
+	}
+	if err := f.api.RevokeLoginToken(ctx, teacherTok, id, issued.ID); err == nil {
+		t.Fatal("revoked a token the replace had already revoked")
+	}
+	if err := f.api.RevokeLoginToken(ctx, teacherTok, id, replaced.ID); err != nil {
 		t.Fatal(err)
 	}
 	if sessions, err := f.api.ListSessions(ctx, teacherTok, id); err != nil || len(sessions) != 0 {

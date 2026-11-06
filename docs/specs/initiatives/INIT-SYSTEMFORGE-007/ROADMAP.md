@@ -51,5 +51,5 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 **Theme:** A lost card is retired and replaced in one step
 
-- [ ] `RMI-SYSTEMFORGE-222` Replace a managed principal's login tokens in one call: revoke every live token and issue one, atomically, in the service, the handler and `mpclient`
+- [x] `RMI-SYSTEMFORGE-222` Replace a managed principal's login tokens in one call: revoke every live token and issue one, atomically, in the service, the handler and `mpclient`
   - Depends on: `RMI-SYSTEMFORGE-108`

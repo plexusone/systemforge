@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -96,8 +97,9 @@ func (d *EntPrincipalDirectory) syncOrg(ctx context.Context, org *signup.Persona
 }
 
 var (
-	_ PrincipalDirectory = (*EntPrincipalDirectory)(nil)
-	_ PersonalOrgEnsurer = (*EntPrincipalDirectory)(nil)
+	_ PrincipalDirectory   = (*EntPrincipalDirectory)(nil)
+	_ PersonalOrgEnsurer   = (*EntPrincipalDirectory)(nil)
+	_ LinkedProviderLister = (*EntPrincipalDirectory)(nil)
 )
 
 // FindByExternalIdentity implements PrincipalDirectory.
@@ -358,6 +360,20 @@ func (d *EntPrincipalDirectory) LinkExternalIdentity(ctx context.Context, princi
 		return err
 	}
 	return nil
+}
+
+// LinkedProviders implements LinkedProviderLister.
+func (d *EntPrincipalDirectory) LinkedProviders(ctx context.Context, principalID uuid.UUID) ([]string, error) {
+	providers, err := d.db.ExternalIdentity.Query().
+		Where(externalidentity.PrincipalIDEQ(principalID)).
+		Unique(true).
+		Select(externalidentity.FieldProvider).
+		Strings(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("listing linked providers: %w", err)
+	}
+	slices.Sort(providers)
+	return slices.Compact(providers), nil
 }
 
 // RecordLogin implements PrincipalDirectory.

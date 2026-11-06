@@ -33,6 +33,9 @@ const (
 	EventManagerAdded   = "managed_principal.manager_added"
 	EventManagerRemoved = "managed_principal.manager_removed"
 	EventTokenIssued    = "managed_principal.login_token_issued"
+	// EventTokensReplaced records a replace: live login tokens revoked and
+	// one issued, with the number revoked.
+	EventTokensReplaced = "managed_principal.login_tokens_replaced"
 	// EventReleased records that a principal's management ended.
 	EventReleased = "managed_principal.released"
 )
@@ -377,61 +380,153 @@ func (s *Service) RemoveManager(ctx context.Context, managedID uuid.UUID, m Mana
 // IssueLoginToken issues a login token for a managed principal on behalf
 // of one of its active managers holding manage_credentials, which
 // guardians and educators do. The plain token is returned once.
+// The issuer's authority is checked under the principal's lock, in the
+// transaction that issues, so a manager removed at the same moment cannot
+// be issued a token.
 func (s *Service) IssueLoginToken(ctx context.Context, in IssueLoginTokenInput) (*credential.GeneratedLoginToken, error) {
+	issue, clamped, err := s.prepareLoginToken(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	var tok *credential.GeneratedLoginToken
+	err = s.withTx(ctx, func(tx *ent.Tx) error {
+		if err := s.lockAndAuthorizeIssuer(ctx, tx, in); err != nil {
+			return err
+		}
+		tok, err = credential.NewService(tx.Client()).IssueLoginToken(ctx, issue)
+		if err != nil {
+			return fmt.Errorf("managedprincipal: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	s.emit(ctx, EventTokenIssued, "issue_login_token", in.IssuedBy, in.ManagedID, issuedDetails(in, issue.ExpiresAt, tok, clamped))
+	return tok, nil
+}
+
+// ReplaceLoginTokens revokes every live login token of a managed principal
+// and issues one new token, in one transaction, so a lost or shared card
+// is retired and a new one printed in one step. It is authorized like
+// IssueLoginToken, under the same lock. If issuing fails nothing is revoked, so a failure never
+// leaves the principal with no working token. Sessions already signed in
+// with an old token keep running; RevokeAll ends them.
+func (s *Service) ReplaceLoginTokens(ctx context.Context, in IssueLoginTokenInput) (*LoginTokenReplacement, error) {
+	issue, clamped, err := s.prepareLoginToken(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	out := &LoginTokenReplacement{}
+	err = s.withTx(ctx, func(tx *ent.Tx) error {
+		// Two replaces of one principal at once would each leave a token;
+		// the principal's lock makes the second wait and revoke the first's.
+		// The locks are taken in RemoveManager's order: the row, then the
+		// graph.
+		if err := s.lockAndAuthorizeIssuer(ctx, tx, in); err != nil {
+			return err
+		}
+		if err := graphlock.Lock(ctx, tx, graphlock.Principal(in.ManagedID)); err != nil {
+			return err
+		}
+		n, err := tx.Credential.Update().
+			Where(liveLoginTokens(in.ManagedID, s.now())...).
+			SetRevoked(true).
+			SetRevokedAt(s.now()).
+			SetRevokedReason(revokedByReplace).
+			SetActive(false).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("managedprincipal: revoke login tokens: %w", err)
+		}
+		out.Revoked = n
+		out.Token, err = credential.NewService(tx.Client()).IssueLoginToken(ctx, issue)
+		if err != nil {
+			return fmt.Errorf("managedprincipal: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	details := issuedDetails(in, issue.ExpiresAt, out.Token, clamped)
+	details["revoked"] = out.Revoked
+	s.emit(ctx, EventTokensReplaced, "replace_login_tokens", in.IssuedBy, in.ManagedID, details)
+	return out, nil
+}
+
+// prepareLoginToken checks that in.ClientID may issue login tokens, and
+// resolves the token's expiry. The issuer's authority is checked later,
+// under the principal's lock (lockAndAuthorizeIssuer). clamped reports that
+// the expiry was cut to the platform ceiling.
+func (s *Service) prepareLoginToken(ctx context.Context, in IssueLoginTokenInput) (credential.IssueLoginTokenInput, bool, error) {
+	var none credential.IssueLoginTokenInput
 	allowed, err := s.gate.ManagedPrincipalsAllowed(ctx, in.ClientID)
 	if err != nil {
-		return nil, fmt.Errorf("managedprincipal: check client: %w", err)
+		return none, false, fmt.Errorf("managedprincipal: check client: %w", err)
 	}
 	if !allowed {
-		return nil, ErrNotAllowed
-	}
-	if err := s.checkIssuer(ctx, in.ManagedID, in.IssuedBy); err != nil {
-		return nil, err
-	}
-	// A login token signs the principal in, so issuing one is a credential
-	// action: an active manager whose role lacks manage_credentials, such
-	// as an application-defined role, cannot issue one.
-	if err := s.authorizeCredentials(ctx, in.IssuedBy, in.ManagedID); err != nil {
-		return nil, err
+		return none, false, ErrNotAllowed
 	}
 	policy, err := s.gate.LoginTokenPolicy(ctx, in.ClientID)
 	if err != nil {
-		return nil, fmt.Errorf("managedprincipal: login token policy: %w", err)
+		return none, false, fmt.Errorf("managedprincipal: login token policy: %w", err)
 	}
 	expiresAt, clamped, err := policy.ExpiresAt(s.now(), in.ExpiresAt, in.SingleUse)
 	if err != nil {
-		return nil, err
+		return none, false, err
 	}
 	if clamped {
 		s.logger.Info("managedprincipal: login token lifetime clamped to the platform ceiling",
 			"principal_id", in.ManagedID, "client_id", in.ClientID, "expires_at", expiresAt)
 	}
-
-	tok, err := s.creds.IssueLoginToken(ctx, credential.IssueLoginTokenInput{
+	return credential.IssueLoginTokenInput{
 		PrincipalID: in.ManagedID,
 		IssuedBy:    in.IssuedBy,
 		ExpiresAt:   expiresAt,
 		SingleUse:   in.SingleUse,
 		Name:        in.Name,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("managedprincipal: %w", err)
+	}, clamped, nil
+}
+
+// lockAndAuthorizeIssuer takes the managed principal's row lock, as
+// RemoveManager does, and then requires in.IssuedBy to be one of its
+// active managers holding manage_credentials, reading in tx. A removal of
+// that manager has committed, or has not started, by the time it is read.
+func (s *Service) lockAndAuthorizeIssuer(ctx context.Context, tx *ent.Tx, in IssueLoginTokenInput) error {
+	if _, err := lockHuman(ctx, tx, in.ManagedID); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return ErrNotManaged
+		}
+		return err
 	}
-	s.emit(ctx, EventTokenIssued, "issue_login_token", in.IssuedBy, in.ManagedID, map[string]any{
+	c := tx.Client()
+	if err := s.checkIssuer(ctx, c, in.ManagedID, in.IssuedBy); err != nil {
+		return err
+	}
+	// A login token signs the principal in, so issuing one is a credential
+	// action: an active manager whose role lacks manage_credentials, such
+	// as an application-defined role, cannot issue one. The authorizer
+	// reads manager roles in tx (ManagerRoles).
+	return s.authorizeCredentialsIn(context.WithValue(ctx, txContextKey{}, tx), c, in.IssuedBy, in.ManagedID)
+}
+
+// issuedDetails is the audit detail of an issued login token.
+func issuedDetails(in IssueLoginTokenInput, expiresAt time.Time, tok *credential.GeneratedLoginToken, clamped bool) map[string]any {
+	return map[string]any{
 		"client_id":     in.ClientID,
 		"credential_id": tok.Credential.ID.String(),
 		"prefix":        tok.Prefix,
 		"expires_at":    expiresAt,
 		"single_use":    in.SingleUse,
 		"clamped":       clamped,
-	})
-	return tok, nil
+	}
 }
 
 // checkIssuer requires an active managed principal and an issuer that is
 // one of its active managers and still a valid manager.
-func (s *Service) checkIssuer(ctx context.Context, managedID, issuerID uuid.UUID) error {
-	ok, err := s.client.Human.Query().
+func (s *Service) checkIssuer(ctx context.Context, c *ent.Client, managedID, issuerID uuid.UUID) error {
+	ok, err := c.Human.Query().
 		Where(
 			human.PrincipalID(managedID),
 			hasActiveManager(),
@@ -444,7 +539,7 @@ func (s *Service) checkIssuer(ctx context.Context, managedID, issuerID uuid.UUID
 	if !ok {
 		return ErrNotManaged
 	}
-	ok, err = s.client.ManagerRelationship.Query().
+	ok, err = c.ManagerRelationship.Query().
 		Where(
 			managerrelationship.ManagedPrincipalID(managedID),
 			managerrelationship.ManagerPrincipalID(issuerID),

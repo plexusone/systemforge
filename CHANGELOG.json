@@ -9,6 +9,76 @@
   ],
   "releases": [
     {
+      "version": "v0.32.0",
+      "date": "2026-11-05",
+      "highlights": [
+        {
+          "description": "A manager replaces a managed principal's login tokens in one call: every live token is revoked and one issued, atomically, so a lost card is retired and reprinted in one step",
+          "commit": "289b658"
+        },
+        {
+          "description": "The sign-in methods page shows the account's linked methods, offers only the others, and links back to the application through a validated `return_to`",
+          "commit": "19553ad"
+        }
+      ],
+      "added": [
+        {
+          "description": "`managedprincipal.Service.ReplaceLoginTokens` revokes every live login token and issues one in one transaction; a failure while issuing revokes nothing",
+          "commit": "289b658"
+        },
+        {
+          "description": "`POST /{principalID}/login-tokens/replace` answers 201 with the new token and the number revoked; `mpclient.Client.ReplaceLoginTokens` calls it",
+          "commit": "289b658"
+        },
+        {
+          "description": "Audit event `managed_principal.login_tokens_replaced`, with the number of tokens revoked",
+          "commit": "289b658"
+        },
+        {
+          "description": "The sign-in methods page shows the account's email and its linked providers, with a Link button only for the others",
+          "commit": "19553ad"
+        },
+        {
+          "description": "`/account/sign-in-methods?return_to=...` shows a back link to an allowed `return_to`, kept through signing in, linking and the callback and validated again at each step",
+          "commit": "19553ad"
+        },
+        {
+          "description": "Optional `LinkedProviderLister` directory interface, implemented by the Ent and memory directories",
+          "commit": "19553ad"
+        }
+      ],
+      "security": [
+        {
+          "description": "Issuing and replacing a login token check the issuer's authority under the managed principal's row lock, in the transaction that issues, so a manager removed at the same moment can no longer be issued a token",
+          "commit": "0d8d277"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Replacing login tokens: every live token revoked and one issued, a failed issue keeps the old token, refusals revoke nothing, single-use and expiry honored, and the route and client",
+          "commit": "f263e91"
+        },
+        {
+          "description": "Sign-in methods page: linked providers listed and not offered, valid and invalid `return_to`, and `return_to` kept through the link and the signed-out redirect",
+          "commit": "53b650d"
+        },
+        {
+          "description": "A manager removed between the client check and the transaction is refused for issuing and replacing; two concurrent replaces on PostgreSQL leave one live token; a failed replace had revoked the old token before rolling back",
+          "commit": "8630cb2"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Replacing a card in the managed principals guide and the architecture's route list",
+          "commit": "6a73560"
+        },
+        {
+          "description": "Linked methods and `return_to` on the sign-in methods page in the social login guide",
+          "commit": "c6be3bb"
+        }
+      ]
+    },
+    {
       "version": "v0.31.0",
       "date": "2026-11-04",
       "highlights": [

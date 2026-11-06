@@ -18,7 +18,7 @@ endpoints:
 |-------|---------|
 | `GET /login?return_to=...` | The sign-in page: a link per provider, waiting for the person to choose, even with one provider. With `auto_select_single_provider`, redirects straight to the only provider. |
 | `GET /login/{provider}?return_to=...` | Starts the upstream authorization-code flow (`github` or `google`). |
-| `GET /account/sign-in-methods` | A signed-in person's page to link another provider's sign-in to their account (see [Linking sign-in methods](#linking-sign-in-methods)). |
+| `GET /account/sign-in-methods?return_to=...` | A signed-in person's page: their account's email, the sign-in methods linked to it, a button to link each other provider, and a link back to the validated `return_to` (see [Linking sign-in methods](#linking-sign-in-methods)). |
 | `GET /login/{provider}/callback` | Upstream callback. Resolves the principal, sets the `__Host-sf_login` session, and redirects to `return_to`. |
 | `GET /logout?return_to=...` | Renders a sign-out confirmation form (never signs out by itself). |
 | `POST /logout` | Deletes the login session, clears the cookie, revokes all of the principal's access and refresh tokens, and redirects (`303`) to the validated `return_to` (default `default_redirect`). |
@@ -197,8 +197,9 @@ GitHub sign-in uses the account's primary email only.
 
 A signed-in person can link another provider's sign-in to their account at
 `/account/sign-in-methods`, so either one signs them in to the same account,
-whatever email each provider reports. The page lists a **Link** button per
-configured provider. The button's form posts to
+whatever email each provider reports. The page shows the account's email
+and the providers already linked to it, and a **Link** button for each
+configured provider that is not. The button's form posts to
 `/account/sign-in-methods/{provider}`, which is origin-checked like sign-out
 and needs a login session. It sends the browser through the provider's
 sign-in. The callback then attaches that provider identity to the account:
@@ -211,6 +212,21 @@ sign-in. The callback then attaches that provider identity to the account:
 - An identity already on this account is a success that changes nothing.
 - No account is created, no sign-up gate or age question applies, and the
   account's own email is unchanged.
+
+An application links to the page from its own account settings with
+`return_to`, such as
+`https://auth.example.com/account/sign-in-methods?return_to=https://app.example.com/settings`.
+`return_to` passes the same allowlist as sign-in's: a path on the issuer, or
+an origin in `allowed_redirect_origins`. A valid one shows a **Back to**
+link named by `signed_out_name`, or by its host when that is not set, and is
+kept through signing in first, the link button, the provider and the
+callback's return to the page; it is validated again at each step. An
+invalid one is ignored: the page shows no back link and never redirects to
+it.
+
+A directory lists the linked providers through the optional
+`LinkedProviderLister` interface, which the Ent and memory directories
+implement. With a directory that does not, the page offers every provider.
 
 A completed link, and a link the callback refuses (the identity is on
 another account, or the browser is no longer signed in as the account that

@@ -605,7 +605,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 	// A state that links a sign-in method to the signed-in account: no
 	// sign-in, age question or sign-up gate applies.
 	if principalID, ok := linkingPrincipal(data.Nonce); ok {
-		sl.completeLink(ctx, w, r, principalID, ExternalLogin{
+		sl.completeLink(ctx, w, r, data.RedirectURL, principalID, ExternalLogin{
 			Provider:           provider,
 			Subject:            user.ProviderID,
 			Email:              user.Email,

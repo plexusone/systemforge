@@ -128,3 +128,11 @@ type IssueLoginTokenInput struct {
 	// Name optionally labels the token, such as the card or device.
 	Name string
 }
+
+// LoginTokenReplacement is the result of ReplaceLoginTokens: the new token,
+// whose plain value is available only here, and how many live tokens were
+// revoked.
+type LoginTokenReplacement struct {
+	Token   *credential.GeneratedLoginToken
+	Revoked int
+}

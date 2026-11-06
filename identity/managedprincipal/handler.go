@@ -59,6 +59,7 @@ type LoginTokenView struct {
 //
 //	GET    /{principalID}/login-tokens
 //	POST   /{principalID}/login-tokens               issue; the caller is an active manager
+//	POST   /{principalID}/login-tokens/replace       revoke every live token and issue one, atomically
 //	DELETE /{principalID}/login-tokens/{credentialID}
 //	GET    /{principalID}/sessions
 //	DELETE /{principalID}/sessions/{kind}/{sessionID}
@@ -87,6 +88,7 @@ func NewHandler(svc *Service, opts ...HandlerOption) http.Handler {
 	r.Post("/{principalID}/claims", h.issueClaim)
 	r.Get("/{principalID}/login-tokens", h.listLoginTokens)
 	r.Post("/{principalID}/login-tokens", h.issueLoginToken)
+	r.Post("/{principalID}/login-tokens/replace", h.replaceLoginTokens)
 	r.Delete("/{principalID}/login-tokens/{credentialID}", h.revokeLoginToken)
 	r.Get("/{principalID}/sessions", h.listSessions)
 	r.Delete("/{principalID}/sessions/{kind}/{sessionID}", h.revokeSession)
