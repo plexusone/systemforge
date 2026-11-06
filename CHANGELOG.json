@@ -9,6 +9,37 @@
   ],
   "releases": [
     {
+      "version": "v0.32.1",
+      "date": "2026-11-06",
+      "added": [
+        {
+          "description": "`systemauth.Server.Principal` returns a human principal's profile from social login's directory",
+          "commit": "dd0381d"
+        },
+        {
+          "description": "`console.Options.Profile` supplies the signed-in person's name, email and avatar to the console's session",
+          "commit": "4571bca"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "The organization console's profile menu showed no name or picture; its session now carries them, filled by `systemauthsvc` from SystemAuth's directory",
+          "commit": "4571bca"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The console's session with and without a profile, and `Server.Principal` with and without social login",
+          "commit": "e54e806"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The console guide describes the person's profile in the session"
+        }
+      ]
+    },
+    {
       "version": "v0.32.0",
       "date": "2026-11-05",
       "highlights": [
