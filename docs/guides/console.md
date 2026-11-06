@@ -51,7 +51,7 @@ The session routes under `/console/bff` speak the format `@plexusone/auth`'s
 
 | Call | Does |
 |---|---|
-| `GET /console/bff/session` | The person and their organizations, personal first, and the deployment's app catalog. Each organization grants the application `console` with the person's organization role, besides their roles in the products, so the console's product switcher links back to them. Without a session: `{"authenticated":false}` |
+| `GET /console/bff/session` | The person, with their name, email and avatar as the applications show them, and their organizations, personal first, and the deployment's app catalog. Each organization grants the application `console` with the person's organization role, besides their roles in the products, so the console's product switcher links back to them. Without a session: `{"authenticated":false}` |
 | `GET /console/bff/auth/login?return_to=` | Sends the person to `/login`, and back to `return_to`, a path on this host |
 | `GET /console/bff/auth/{provider}?return_to=` | The same, straight to that provider's sign-in |
 | `POST /console/bff/auth/logout` | Signs the person out of SystemAuth, as `POST /logout` does, and answers `204` |
