@@ -19,6 +19,10 @@
         {
           "description": "`console.Options.Profile` supplies the signed-in person's name, email and avatar to the console's session",
           "commit": "4571bca"
+        },
+        {
+          "description": "The connections API returns each connection's `health.details`, what its last successful check found the credential reaches, such as the Search Console properties an account can read",
+          "commit": "846ed7b"
         }
       ],
       "fixed": [
@@ -31,6 +35,12 @@
         {
           "description": "The console's session with and without a profile, and `Server.Principal` with and without social login",
           "commit": "e54e806"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump `github.com/plexusone/connectforge` from 0.6.0 to 0.7.0",
+          "commit": "846ed7b"
         }
       ],
       "documentation": [
