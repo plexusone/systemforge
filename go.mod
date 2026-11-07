@@ -23,7 +23,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/grokify/goauth v0.25.0
 	github.com/grokify/guardsql v0.4.0
-	github.com/grokify/ocsf-schema-go v0.2.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/jackc/pgx/v5 v5.12.0
 	github.com/mattn/go-sqlite3 v1.14.52
@@ -193,6 +192,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/ngrok/sqlmw v0.0.0-20220520173518-97c9c04efc79 // indirect
+	github.com/opensecurity-dev/ocsf-schema-go v0.3.0
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/ory/go-acc v0.2.9-0.20230103102148-6b1c9a70dbbe // indirect
 	github.com/ory/go-convenience v0.1.0 // indirect

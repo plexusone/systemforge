@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/grokify/ocsf-schema-go/ocsf/events"
-	"github.com/grokify/ocsf-schema-go/ocsf/objects"
+	"github.com/opensecurity-dev/ocsf-schema-go/ocsf/events"
+	"github.com/opensecurity-dev/ocsf-schema-go/ocsf/objects"
 
 	"github.com/plexusone/systemforge/contract/audit"
 )

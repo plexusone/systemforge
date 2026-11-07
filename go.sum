@@ -323,8 +323,6 @@ github.com/grokify/goauth v0.25.0 h1:YzkzfSoBPPDc3fVwldngHehhc8ZqQWrv/PyR7xMPZys
 github.com/grokify/goauth v0.25.0/go.mod h1:9dwrmlIm92sgoE/0hnOrnhu9E0D2l701K5SLCXsj2HE=
 github.com/grokify/guardsql v0.4.0 h1:jjOSY4oCGLMQn5r3KKV95NONl5rfjV8khCScZ8ya4LQ=
 github.com/grokify/guardsql v0.4.0/go.mod h1:lA42KNXkMJyy3XX5oOV2wtKIIF9q9aDhGnorGaJnxSM=
-github.com/grokify/ocsf-schema-go v0.2.0 h1:2BG4lH8RcNHxz4CCzlw9wAL40OXmr/r0wIdnRVUYc2c=
-github.com/grokify/ocsf-schema-go v0.2.0/go.mod h1:cqeYF9vUXf+3XzF0vTIBCgWLri/Es0X5M9bKrqFRIsQ=
 github.com/grokify/oscompat v0.13.0 h1:WVqStATaUe3cBj3Kep0htGBIGd8/X+jvnTuRXcUNNPg=
 github.com/grokify/oscompat v0.13.0/go.mod h1:Ekex/WzHaA39LNt5xbeQRASo74NEXAIqBlqdvNF2oUM=
 github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 h1:UH//fgunKIs4JdUbpDl1VZCDaL56wXCB/5+wF6uHfaI=
@@ -498,6 +496,8 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
 github.com/opencontainers/image-spec v1.1.1/go.mod h1:qpqAh3Dmcf36wStyyWU+kCeDgrGnAve2nCC8+7h8Q0M=
+github.com/opensecurity-dev/ocsf-schema-go v0.3.0 h1:nWIWWBKJI2//mjpvtvBk2jdOriIIK+32v7OO6RkQGMA=
+github.com/opensecurity-dev/ocsf-schema-go v0.3.0/go.mod h1:J7UYBMFtnDHBUW68MtSG2NYFO1bGfkQNnVjoxnP0pd0=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/openzipkin/zipkin-go v0.4.3 h1:9EGwpqkgnwdEIJ+Od7QVSEIH+ocmm5nPat0G7sjsSdg=
 github.com/openzipkin/zipkin-go v0.4.3/go.mod h1:M9wCJZFWCo2RiY+o1eBCEMe0Dp2S5LDHcMZmk3RmK7c=
