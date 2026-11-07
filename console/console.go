@@ -67,6 +67,14 @@ type Organization struct {
 	Apps map[string]string `json:"apps,omitempty"`
 }
 
+// Profile is how the signed-in person appears in the console's chrome: the
+// name and picture in the profile menu.
+type Profile struct {
+	Name      string
+	Email     string
+	AvatarURL string
+}
+
 // App is an application in the deployment's catalog.
 type App struct {
 	ID    string `json:"id"`
@@ -92,6 +100,10 @@ type Options struct {
 	// Apps lists the deployment's application catalog, for the console's
 	// product switcher. Nil lists none.
 	Apps func(ctx context.Context) ([]App, error)
+	// Profile returns the person's name, email and picture, for the
+	// profile menu, as the applications show them. Nil, or an error, shows
+	// the person without them; the console still works.
+	Profile func(ctx context.Context, principal uuid.UUID) (Profile, error)
 	// Connections, if set, serves the connections section.
 	Connections *connections.Connections
 	// WebDir holds the built console pages. Empty serves only the API.
@@ -198,6 +210,9 @@ type wireSession struct {
 
 type wireUser struct {
 	ID          string           `json:"id"`
+	Name        string           `json:"name,omitempty"`
+	Email       string           `json:"email,omitempty"`
+	AvatarURL   string           `json:"avatar_url,omitempty"`
 	Memberships []wireMembership `json:"memberships"`
 }
 
@@ -248,9 +263,19 @@ func (c *console) session(w http.ResponseWriter, r *http.Request) {
 		}
 		catalog = append(catalog, apps...)
 	}
+	user := &wireUser{ID: pid.String(), Memberships: ms}
+	if c.o.Profile != nil {
+		p, err := c.o.Profile(r.Context(), pid)
+		if err != nil {
+			// The profile menu then shows no name or picture.
+			c.o.Logger.Error("console: reading the profile", "principal", pid, "error", err)
+		} else {
+			user.Name, user.Email, user.AvatarURL = p.Name, p.Email, p.AvatarURL
+		}
+	}
 	writeJSON(w, http.StatusOK, wireSession{
 		Authenticated: true, UserID: pid.String(),
-		User: &wireUser{ID: pid.String(), Memberships: ms},
+		User: user,
 		Apps: catalog,
 	})
 }

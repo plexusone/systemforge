@@ -4,7 +4,11 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.32.0](v0.32.0.md), lets a manager replace a
+The latest release, [v0.32.1](v0.32.1.md), shows the signed-in person's
+name and picture in the organization console, as the applications do. It
+adds no breaking change.
+
+Before it, [v0.32.0](v0.32.0.md) let a manager replace a
 managed principal's login tokens in one call, so a lost printed card is
 retired and reprinted in one step. Its sign-in methods page shows what is
 linked and links back to the application. It adds no breaking change.

@@ -43,6 +43,7 @@ type env struct {
 	admin        uuid.UUID
 	member       uuid.UUID
 	sessionError error
+	profileError error
 	signedOut    bool
 }
 
@@ -78,6 +79,18 @@ func newEnv(t *testing.T, webDir string, withConnections bool) *env {
 		},
 		Apps: func(context.Context) ([]console.App, error) {
 			return []console.App{{ID: "portfolio", Name: "Portfolio", URL: "https://portfolio.example.com", Order: 3}}, nil
+		},
+		Profile: func(_ context.Context, p uuid.UUID) (console.Profile, error) {
+			if e.profileError != nil {
+				return console.Profile{}, e.profileError
+			}
+			switch p {
+			case e.admin:
+				return console.Profile{Name: "Ada Admin", Email: "ada@example.com", AvatarURL: "https://img.example.com/ada.png"}, nil
+			case e.member:
+				return console.Profile{Name: "Max Member", Email: "max@example.com", AvatarURL: "https://img.example.com/max.png"}, nil
+			}
+			return console.Profile{}, errors.New("no such person")
 		},
 		ReturnTo: func(raw string) (string, error) {
 			if strings.HasPrefix(raw, "/") && !strings.HasPrefix(raw, "//") || strings.HasPrefix(raw, "https://app.example.com/") {
@@ -169,6 +182,9 @@ func TestSession(t *testing.T) {
 		Apps          []console.App
 		User          struct {
 			ID          string
+			Name        string
+			Email       string
+			AvatarURL   string `json:"avatar_url"`
 			Memberships []struct {
 				OrganizationID   string `json:"organization_id"`
 				OrganizationName string `json:"organization_name"`
@@ -183,6 +199,10 @@ func TestSession(t *testing.T) {
 	if !s.Authenticated || s.User.ID != e.admin.String() || len(s.User.Memberships) != 1 {
 		t.Fatalf("session: %+v", s)
 	}
+	// The profile menu shows the person as the applications do.
+	if s.User.Name != "Ada Admin" || s.User.Email != "ada@example.com" || s.User.AvatarURL != "https://img.example.com/ada.png" {
+		t.Errorf("profile: %+v", s.User)
+	}
 	m := s.User.Memberships[0]
 	if m.OrganizationID != e.org.String() || m.OrganizationName != "Acme" || m.Role != "admin" || m.Applications[console.AppID] != "admin" {
 		t.Fatalf("membership: %+v", m)
@@ -192,6 +212,34 @@ func TestSession(t *testing.T) {
 	if m.Applications["portfolio"] != "editor" || len(s.Apps) != 1 || s.Apps[0].URL != "https://portfolio.example.com" {
 		t.Fatalf("products: %+v, catalog %+v", m.Applications, s.Apps)
 	}
+
+	// Each person's session carries their own profile.
+	resp, body = e.do(t, e.member, http.MethodGet, console.SessionPath, nil, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("member's session: %d %s", resp.StatusCode, body)
+	}
+	var ms struct {
+		User struct {
+			ID        string
+			Name      string
+			Email     string
+			AvatarURL string `json:"avatar_url"`
+		}
+	}
+	if err := json.Unmarshal([]byte(body), &ms); err != nil {
+		t.Fatal(err)
+	}
+	if ms.User.ID != e.member.String() || ms.User.Name != "Max Member" || ms.User.Email != "max@example.com" || ms.User.AvatarURL != "https://img.example.com/max.png" {
+		t.Errorf("member's profile: %+v", ms.User)
+	}
+
+	// A profile that cannot be read leaves it out; the session still works.
+	e.profileError = errors.New("directory down")
+	resp, body = e.do(t, e.admin, http.MethodGet, console.SessionPath, nil, nil)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(body, `"authenticated":true`) || strings.Contains(body, `"name":"Ada`) {
+		t.Fatalf("without a profile: %d %s", resp.StatusCode, body)
+	}
+	e.profileError = nil
 
 	e.sessionError = errors.New("store down")
 	if resp, _ := e.do(t, e.admin, http.MethodGet, console.SessionPath, nil, nil); resp.StatusCode != http.StatusInternalServerError {
