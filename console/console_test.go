@@ -84,7 +84,13 @@ func newEnv(t *testing.T, webDir string, withConnections bool) *env {
 			if e.profileError != nil {
 				return console.Profile{}, e.profileError
 			}
-			return console.Profile{Name: "Ada Admin", Email: "ada@example.com", AvatarURL: "https://img.example.com/ada.png"}, nil
+			switch p {
+			case e.admin:
+				return console.Profile{Name: "Ada Admin", Email: "ada@example.com", AvatarURL: "https://img.example.com/ada.png"}, nil
+			case e.member:
+				return console.Profile{Name: "Max Member", Email: "max@example.com", AvatarURL: "https://img.example.com/max.png"}, nil
+			}
+			return console.Profile{}, errors.New("no such person")
 		},
 		ReturnTo: func(raw string) (string, error) {
 			if strings.HasPrefix(raw, "/") && !strings.HasPrefix(raw, "//") || strings.HasPrefix(raw, "https://app.example.com/") {
@@ -205,6 +211,26 @@ func TestSession(t *testing.T) {
 	// product switcher.
 	if m.Applications["portfolio"] != "editor" || len(s.Apps) != 1 || s.Apps[0].URL != "https://portfolio.example.com" {
 		t.Fatalf("products: %+v, catalog %+v", m.Applications, s.Apps)
+	}
+
+	// Each person's session carries their own profile.
+	resp, body = e.do(t, e.member, http.MethodGet, console.SessionPath, nil, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("member's session: %d %s", resp.StatusCode, body)
+	}
+	var ms struct {
+		User struct {
+			ID        string
+			Name      string
+			Email     string
+			AvatarURL string `json:"avatar_url"`
+		}
+	}
+	if err := json.Unmarshal([]byte(body), &ms); err != nil {
+		t.Fatal(err)
+	}
+	if ms.User.ID != e.member.String() || ms.User.Name != "Max Member" || ms.User.Email != "max@example.com" || ms.User.AvatarURL != "https://img.example.com/max.png" {
+		t.Errorf("member's profile: %+v", ms.User)
 	}
 
 	// A profile that cannot be read leaves it out; the session still works.
