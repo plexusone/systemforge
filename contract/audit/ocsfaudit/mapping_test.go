@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/grokify/ocsf-schema-go/ocsf/events"
-	"github.com/grokify/ocsf-schema-go/ocsf/objects"
-	"github.com/grokify/ocsf-schema-go/ocsf/ocsfdata"
-	"github.com/grokify/ocsf-schema-go/validate"
+	"github.com/opensecurity-dev/ocsf-schema-go/ocsf/events"
+	"github.com/opensecurity-dev/ocsf-schema-go/ocsf/objects"
+	"github.com/opensecurity-dev/ocsf-schema-go/ocsf/ocsfdata"
+	"github.com/opensecurity-dev/ocsf-schema-go/validate"
 
 	"github.com/plexusone/systemforge/contract/audit"
 )

@@ -5,7 +5,7 @@ as [OCSF](https://schema.ocsf.io/) events, one JSON object per line, for a
 security data lake or SIEM that ingests OCSF. Events follow OCSF schema
 `1.10.0-dev`, the development version of OCSF 1.10, which they carry in
 `metadata.version`; check that a destination accepts it. They use the
-generated types and embedded schema of `github.com/grokify/ocsf-schema-go`
+generated types and embedded schema of `github.com/opensecurity-dev/ocsf-schema-go`
 v0.2.0, and a test validates the output of every event type against that
 schema.
 

@@ -2,8 +2,8 @@ package ocsfaudit
 
 import (
 	"github.com/google/uuid"
-	"github.com/grokify/ocsf-schema-go/ocsf/events"
-	"github.com/grokify/ocsf-schema-go/ocsf/objects"
+	"github.com/opensecurity-dev/ocsf-schema-go/ocsf/events"
+	"github.com/opensecurity-dev/ocsf-schema-go/ocsf/objects"
 )
 
 // Authentication protocols of sign-in methods. A method not listed is
