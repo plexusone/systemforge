@@ -151,14 +151,16 @@ func TestNewCheckoutChecksConfig(t *testing.T) {
 			t.Fatalf("redirect %q was accepted", bad)
 		}
 	}
-	cfg = r.config()
-	cfg.URLs.PortalReturn = "http://localhost:8080/billing"
-	if _, err := NewCheckout(cfg); err != nil {
-		t.Fatalf("localhost with a test-mode provider: %v", err)
+	for _, local := range []string{"http://localhost:8080/billing", "http://auth.localhost:8080/console/orgs/" + OrganizationPlaceholder + "/billing"} {
+		cfg = r.config()
+		cfg.URLs.PortalReturn = local
+		if _, err := NewCheckout(cfg); err != nil {
+			t.Fatalf("%s with a test-mode provider: %v", local, err)
+		}
 	}
 
 	r.provider.live = true
-	for _, local := range []string{"http://localhost:8080/billing", "https://localhost/billing", "http://127.0.0.1/billing"} {
+	for _, local := range []string{"http://localhost:8080/billing", "https://localhost/billing", "http://auth.localhost:8080/billing", "http://127.0.0.1/billing"} {
 		cfg = r.config()
 		cfg.URLs.PortalReturn = local
 		if _, err := NewCheckout(cfg); err == nil {
