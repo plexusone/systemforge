@@ -426,6 +426,14 @@
           "description": "Post-login redirect when none is requested",
           "default": "/"
         },
+        "signed_out_url": {
+          "type": "string",
+          "description": "Where a sign-out lands whatever return_to the app sent; it must be an allowed redirect origin"
+        },
+        "signed_out_name": {
+          "type": "string",
+          "description": "Display name of the site at signed_out_url for links back to it (default: its host)"
+        },
         "session_lifetime": {
           "type": "string",
           "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
@@ -437,6 +445,11 @@
             "168h",
             "720h"
           ]
+        },
+        "auto_select_single_provider": {
+          "type": "boolean",
+          "description": "Skip the sign-in page when only one provider is configured; a browser that signs out is then signed straight back in while the provider's own session lasts",
+          "default": false
         },
         "skip_consent": {
           "type": "boolean",
@@ -654,6 +667,24 @@
       "additionalProperties": false,
       "type": "object",
       "description": "Organization console under /console (ADR-018)"
+    },
+    "billing": {
+      "properties": {
+        "stripe_secret_key": {
+          "type": "string",
+          "description": "Stripe secret key; empty runs in free mode (supports secret references such as ${STRIPE_SECRET_KEY})"
+        },
+        "stripe_webhook_secrets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Signing secrets of the Stripe webhook endpoints (supports secret references)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Billing for the deployment's plans through Stripe (ADR-021)"
     },
     "dpop": {
       "properties": {
