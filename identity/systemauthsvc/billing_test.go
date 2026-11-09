@@ -67,7 +67,7 @@ func TestBillingFreeMode(t *testing.T) {
 	if rec := serve(s, http.MethodPost, systemauthsvc.BillingWebhookPath); rec.Code != http.StatusNotFound && rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("free mode serves a webhook: %d", rec.Code)
 	}
-	if _, err := s.SyncPrices(t.Context(), true); !errors.Is(err, systemauthsvc.ErrBillingNotConfigured) {
+	if _, err := systemauthsvc.SyncPrices(t.Context(), &systemauthsvc.Config{Billing: &systemauth.BillingConfig{}}, pricing(t), true); !errors.Is(err, systemauthsvc.ErrBillingNotConfigured) {
 		t.Errorf("syncing prices in free mode: %v", err)
 	}
 	plan, err := s.OrganizationPlan(t.Context(), [16]byte{1})

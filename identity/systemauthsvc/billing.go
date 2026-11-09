@@ -178,10 +178,18 @@ func (s *Service) OrganizationPlan(ctx context.Context, org uuid.UUID) (pricings
 
 // SyncPrices creates or updates the payment provider's products and prices
 // from the pricing spec, or with dryRun reports what it would change. It
-// fails with ErrBillingNotConfigured in free mode.
-func (s *Service) SyncPrices(ctx context.Context, dryRun bool) (payforgestripe.SyncReport, error) {
-	if s.billing == nil || s.billing.client == nil {
+// reads only the configuration's Stripe key, so it runs without starting
+// the service, and fails with ErrBillingNotConfigured when there is none.
+func SyncPrices(ctx context.Context, cfg *Config, spec *pricingspec.Spec, dryRun bool) (payforgestripe.SyncReport, error) {
+	if cfg == nil || !cfg.Billing.Configured() {
 		return payforgestripe.SyncReport{}, ErrBillingNotConfigured
 	}
-	return s.billing.client.Sync(ctx, dryRun)
+	if spec == nil {
+		return payforgestripe.SyncReport{}, errors.New("systemauthsvc: syncing prices needs a pricing spec")
+	}
+	client, err := payforgestripe.New(spec, payforgestripe.Config{SecretKey: cfg.Billing.StripeSecretKey})
+	if err != nil {
+		return payforgestripe.SyncReport{}, fmt.Errorf("systemauthsvc: billing: %w", err)
+	}
+	return client.Sync(ctx, dryRun)
 }
