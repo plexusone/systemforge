@@ -21,13 +21,15 @@ import (
 // to the console's prefix. The checkout and portal endpoints are under it.
 const ConsolePath = "/api/v1/organizations/{org}/billing"
 
-// OrganizationPlan is the plan an organization is on: its platform
+// OrganizationPlan is the plan an organization is on: the plan the
+// operator set, when there is one (ADR-022); otherwise its platform
 // subscription's plan while the subscription grants it (active, in a
-// trial, or past due), and the spec's default plan otherwise. payments is
+// trial, or past due); and the spec's default plan otherwise. payments is
 // whether the deployment takes payments; in free mode it does not, and a
-// stored subscription grants nothing, so a deployment that removes its key
-// puts every organization on the default plan. The subscription is
-// returned either way, and is nil when the organization never had one.
+// paid subscription grants nothing, so a deployment that removes its key
+// puts every organization without an operator's plan on the default plan.
+// The subscription is returned either way, and is nil when the
+// organization never had one.
 func OrganizationPlan(ctx context.Context, db *ent.Client, spec *pricingspec.Spec, org uuid.UUID, payments bool) (pricingspec.Plan, *marketplace.Subscription, error) {
 	sub, err := marketplace.NewEntSubscriptionService(db).GetByOrg(ctx, org)
 	if errors.Is(err, marketplace.ErrSubscriptionNotFound) {
@@ -36,10 +38,14 @@ func OrganizationPlan(ctx context.Context, db *ent.Client, spec *pricingspec.Spe
 	if err != nil {
 		return pricingspec.Plan{}, nil, fmt.Errorf("billing: organization plan: %w", err)
 	}
-	if !payments || !sub.IsActive() {
+	if sub.OperatorPlan != "" {
+		return spec.PlanOrDefault(sub.OperatorPlan), sub, nil
+	}
+	plan, ok := sub.GrantedPlan()
+	if !payments || !ok {
 		return spec.PlanOrDefault(""), sub, nil
 	}
-	return spec.PlanOrDefault(sub.PlanTier), sub, nil
+	return spec.PlanOrDefault(plan), sub, nil
 }
 
 // ConsoleConfig configures the console's billing section.
@@ -74,6 +80,10 @@ type Status struct {
 	Mode       string `json:"mode,omitempty"`
 	// Plan is the plan the organization is on.
 	Plan string `json:"plan"`
+	// SetByOperator is whether the deployment's operator set the plan
+	// (ADR-022). Checkout does not change it, so a page offers no other
+	// plan; the billing portal still manages a paid subscription.
+	SetByOperator bool `json:"setByOperator,omitempty"`
 	// Subscription is the organization's subscription, if it ever had one.
 	Subscription *SubscriptionStatus `json:"subscription,omitempty"`
 	// CanManage is whether the person may choose a plan and open the
@@ -219,6 +229,7 @@ func (c *Console) status(w http.ResponseWriter, r *http.Request) {
 		Pricing:    c.cfg.Spec.PricingView(),
 	}
 	if sub != nil {
+		out.SetByOperator = sub.OperatorPlan != ""
 		out.Subscription = &SubscriptionStatus{
 			Plan: sub.PlanTier, Status: string(sub.Status), CurrentPeriodEnd: sub.CurrentPeriodEnd,
 			CancelAtPeriodEnd: sub.CancelAtPeriodEnd, Paid: sub.StripeSubscriptionID != "",

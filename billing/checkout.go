@@ -297,6 +297,13 @@ func (c *Checkout) PlanHandler() http.Handler {
 		if err := decode(r, &body); err != nil {
 			return "", err
 		}
+		// A plan the operator set is not for sale: checkout would charge
+		// for a plan the organization would not be on.
+		if _, set, err := OperatorPlanOf(ctx, c.cfg.DB, org); err != nil {
+			return "", fail(http.StatusInternalServerError, "billing is unavailable", err)
+		} else if set {
+			return "", fail(http.StatusConflict, "the organization's plan is set by the operator", nil)
+		}
 		subject, err := c.subject(ctx, org)
 		if err != nil {
 			return "", err

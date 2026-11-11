@@ -167,9 +167,11 @@ func (s *Service) writeBillingAuthError(w http.ResponseWriter, err error) {
 }
 
 // OrganizationPlan is the plan an organization is on, for the host's
-// limits and features: its subscription's plan while the subscription
-// grants it, and the spec's default plan otherwise, which is every
-// organization's plan in free mode. It needs billing in the configuration.
+// limits and features: the plan the operator set, when there is one
+// (ADR-022); otherwise its subscription's plan while the subscription
+// grants it; and the spec's default plan otherwise, which is the plan of
+// every organization without an operator's plan in free mode. It needs
+// billing in the configuration.
 func (s *Service) OrganizationPlan(ctx context.Context, org uuid.UUID) (pricingspec.Plan, error) {
 	if s.billing == nil {
 		return pricingspec.Plan{}, errors.New("systemauthsvc: the configuration has no billing section")
