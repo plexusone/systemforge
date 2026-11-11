@@ -109,6 +109,23 @@ func TestConsoleStatus(t *testing.T) {
 	}
 }
 
+func TestConsoleInFreeModeManagesNothing(t *testing.T) {
+	r := newConsoleRig(t, false)
+	code, out := r.do(t, http.MethodGet, r.buyer, "", "")
+	if code != http.StatusOK || out["configured"] != false || out["canManage"] != false || out["plan"] != "free" {
+		t.Fatalf("free mode status: %d %v", code, out)
+	}
+	if err := r.sink.Apply(context.Background(), payforge.Entitlement{
+		Subject: r.buyer.String(), Plan: "pro", Status: "active", SubscriptionID: "sub_1", CustomerID: "cus_1",
+		ValidUntil: time.Now().Add(time.Hour),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, out := r.do(t, http.MethodGet, r.buyer, "", ""); out["plan"] != "free" || out["subscription"] == nil {
+		t.Errorf("free mode with a stored pro subscription: %v", out)
+	}
+}
+
 func TestConsoleRefusesOutsiders(t *testing.T) {
 	r := newConsoleRig(t, true)
 	if code, _ := r.do(t, http.MethodGet, r.seller, "", ""); code != http.StatusNotFound {
@@ -173,12 +190,17 @@ func TestOrganizationPlanFollowsTheSubscription(t *testing.T) {
 	}
 	for status, want := range map[string]string{"trialing": "pro", "past_due": "pro", "canceled": "free", "active": "pro"} {
 		apply(status)
-		plan, _, err := OrganizationPlan(ctx, r.db, r.spec, r.buyer)
+		plan, _, err := OrganizationPlan(ctx, r.db, r.spec, r.buyer, true)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if plan.ID != want {
 			t.Errorf("%s: plan %q, want %q", status, plan.ID, want)
 		}
+	}
+	// In free mode a stored subscription grants nothing.
+	plan, sub, err := OrganizationPlan(ctx, r.db, r.spec, r.buyer, false)
+	if err != nil || plan.ID != "free" || sub == nil || sub.PlanTier != "pro" {
+		t.Errorf("free mode with an active pro subscription: %q %+v %v", plan.ID, sub, err)
 	}
 }

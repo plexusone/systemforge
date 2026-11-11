@@ -172,7 +172,7 @@ func (s *Service) OrganizationPlan(ctx context.Context, org uuid.UUID) (pricings
 	if s.billing == nil {
 		return pricingspec.Plan{}, errors.New("systemauthsvc: the configuration has no billing section")
 	}
-	plan, _, err := billing.OrganizationPlan(ctx, s.client, s.billing.spec, org)
+	plan, _, err := billing.OrganizationPlan(ctx, s.client, s.billing.spec, org, s.billing.client != nil)
 	return plan, err
 }
 
