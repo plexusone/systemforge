@@ -50,7 +50,8 @@ organization, by the people who manage it, which is the console's audience
 ## Consequences
 
 - A host that sells plans supplies a pricing spec and two secrets, and
-  syncs its prices with `Service.SyncPrices`.
+  syncs its prices with `systemauthsvc.SyncPrices` (or the `billing sync`
+  command).
 - Buying is in one place for every application of a deployment.
 - The console's billing section has no listing (marketplace) checkout; a
   deployment that sells listings still mounts `billing.Checkout` itself.
