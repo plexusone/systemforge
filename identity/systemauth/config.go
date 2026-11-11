@@ -300,8 +300,6 @@ func (b *BillingConfig) validate(c *Config) error {
 	switch {
 	case c.Console == nil:
 		return fmt.Errorf("%w: billing is managed in the console, which is not configured", ErrInvalidBillingConfig)
-	case c.Database == nil:
-		return fmt.Errorf("%w: billing needs a database", ErrInvalidBillingConfig)
 	case b.StripeSecretKey != "" && len(b.WebhookSecrets()) == 0:
 		return fmt.Errorf("%w: stripe_webhook_secrets is required with a secret key", ErrInvalidBillingConfig)
 	}

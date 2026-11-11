@@ -17,6 +17,7 @@ import (
 	"github.com/plexusone/systemforge/billing"
 	"github.com/plexusone/systemforge/billing/pglock"
 	"github.com/plexusone/systemforge/console"
+	"github.com/plexusone/systemforge/identity/systemauth"
 )
 
 // BillingWebhookPath is where the payment provider posts events, on the
@@ -52,8 +53,9 @@ func (s *Service) openBilling(c *Config, opts Options) error {
 	if opts.Pricing == nil {
 		return errors.New("systemauthsvc: the configuration has billing, which needs Options.Pricing")
 	}
+	// Checked once storage is open, so an injected client or pool counts.
 	if s.client == nil {
-		return errors.New("systemauthsvc: billing needs a database")
+		return fmt.Errorf("%w: billing needs a database", systemauth.ErrInvalidBillingConfig)
 	}
 	b := &billingService{spec: opts.Pricing}
 	s.billing = b

@@ -89,6 +89,35 @@ func TestBillingWithStripe(t *testing.T) {
 	}
 }
 
+// TestBillingWithAnInjectedDatabase checks that billing accepts storage a
+// host injects in place of a configured database, and refuses to run
+// without any.
+func TestBillingWithAnInjectedDatabase(t *testing.T) {
+	first := billingService(t, &systemauth.BillingConfig{})
+	cfg := consoleConfig(t, "")
+	cfg.Database = nil
+	cfg.Billing = &systemauth.BillingConfig{}
+	s, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{
+		SigningKey: testKey(t), Logger: discardLogger(), Pricing: pricing(t), EntClient: first.EntClient(),
+	})
+	if err != nil {
+		t.Fatalf("billing with an injected Ent client: %v", err)
+	}
+	closeService(t, s)
+	if plan, err := s.OrganizationPlan(t.Context(), [16]byte{1}); err != nil || plan.ID != "free" {
+		t.Errorf("an organization's plan: %q %v", plan.ID, err)
+	}
+
+	cfg = consoleConfig(t, "")
+	cfg.Database = nil
+	cfg.Billing = &systemauth.BillingConfig{}
+	if _, err := systemauthsvc.New(t.Context(), cfg, systemauthsvc.Options{
+		SigningKey: testKey(t), Logger: discardLogger(), Pricing: pricing(t),
+	}); err == nil {
+		t.Error("billing without any database started")
+	}
+}
+
 func TestBillingConfigErrors(t *testing.T) {
 	for name, tc := range map[string]struct {
 		edit      func(*systemauthsvc.Config)
