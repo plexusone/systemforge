@@ -135,6 +135,48 @@ func (_c *SubscriptionCreate) SetNillableCancelAtPeriodEnd(v *bool) *Subscriptio
 	return _c
 }
 
+// SetOperatorPlan sets the "operator_plan" field.
+func (_c *SubscriptionCreate) SetOperatorPlan(v string) *SubscriptionCreate {
+	_c.mutation.SetOperatorPlan(v)
+	return _c
+}
+
+// SetNillableOperatorPlan sets the "operator_plan" field if the given value is not nil.
+func (_c *SubscriptionCreate) SetNillableOperatorPlan(v *string) *SubscriptionCreate {
+	if v != nil {
+		_c.SetOperatorPlan(*v)
+	}
+	return _c
+}
+
+// SetOperatorNote sets the "operator_note" field.
+func (_c *SubscriptionCreate) SetOperatorNote(v string) *SubscriptionCreate {
+	_c.mutation.SetOperatorNote(v)
+	return _c
+}
+
+// SetNillableOperatorNote sets the "operator_note" field if the given value is not nil.
+func (_c *SubscriptionCreate) SetNillableOperatorNote(v *string) *SubscriptionCreate {
+	if v != nil {
+		_c.SetOperatorNote(*v)
+	}
+	return _c
+}
+
+// SetOperatorSetAt sets the "operator_set_at" field.
+func (_c *SubscriptionCreate) SetOperatorSetAt(v time.Time) *SubscriptionCreate {
+	_c.mutation.SetOperatorSetAt(v)
+	return _c
+}
+
+// SetNillableOperatorSetAt sets the "operator_set_at" field if the given value is not nil.
+func (_c *SubscriptionCreate) SetNillableOperatorSetAt(v *time.Time) *SubscriptionCreate {
+	if v != nil {
+		_c.SetOperatorSetAt(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *SubscriptionCreate) SetCreatedAt(v time.Time) *SubscriptionCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -233,6 +275,10 @@ func (_c *SubscriptionCreate) defaults() {
 		v := subscription.DefaultCancelAtPeriodEnd
 		_c.mutation.SetCancelAtPeriodEnd(v)
 	}
+	if _, ok := _c.mutation.OperatorNote(); !ok {
+		v := subscription.DefaultOperatorNote
+		_c.mutation.SetOperatorNote(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := subscription.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -276,6 +322,11 @@ func (_c *SubscriptionCreate) check() error {
 	}
 	if _, ok := _c.mutation.CancelAtPeriodEnd(); !ok {
 		return &ValidationError{Name: "cancel_at_period_end", err: errors.New(`ent: missing required field "Subscription.cancel_at_period_end"`)}
+	}
+	if v, ok := _c.mutation.OperatorNote(); ok {
+		if err := subscription.OperatorNoteValidator(v); err != nil {
+			return &ValidationError{Name: "operator_note", err: fmt.Errorf(`ent: validator failed for field "Subscription.operator_note": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Subscription.created_at"`)}
@@ -353,6 +404,18 @@ func (_c *SubscriptionCreate) createSpec() (*Subscription, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.CancelAtPeriodEnd(); ok {
 		_spec.SetField(subscription.FieldCancelAtPeriodEnd, field.TypeBool, value)
 		_node.CancelAtPeriodEnd = value
+	}
+	if value, ok := _c.mutation.OperatorPlan(); ok {
+		_spec.SetField(subscription.FieldOperatorPlan, field.TypeString, value)
+		_node.OperatorPlan = &value
+	}
+	if value, ok := _c.mutation.OperatorNote(); ok {
+		_spec.SetField(subscription.FieldOperatorNote, field.TypeString, value)
+		_node.OperatorNote = value
+	}
+	if value, ok := _c.mutation.OperatorSetAt(); ok {
+		_spec.SetField(subscription.FieldOperatorSetAt, field.TypeTime, value)
+		_node.OperatorSetAt = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(subscription.FieldCreatedAt, field.TypeTime, value)
@@ -554,6 +617,60 @@ func (u *SubscriptionUpsert) SetCancelAtPeriodEnd(v bool) *SubscriptionUpsert {
 // UpdateCancelAtPeriodEnd sets the "cancel_at_period_end" field to the value that was provided on create.
 func (u *SubscriptionUpsert) UpdateCancelAtPeriodEnd() *SubscriptionUpsert {
 	u.SetExcluded(subscription.FieldCancelAtPeriodEnd)
+	return u
+}
+
+// SetOperatorPlan sets the "operator_plan" field.
+func (u *SubscriptionUpsert) SetOperatorPlan(v string) *SubscriptionUpsert {
+	u.Set(subscription.FieldOperatorPlan, v)
+	return u
+}
+
+// UpdateOperatorPlan sets the "operator_plan" field to the value that was provided on create.
+func (u *SubscriptionUpsert) UpdateOperatorPlan() *SubscriptionUpsert {
+	u.SetExcluded(subscription.FieldOperatorPlan)
+	return u
+}
+
+// ClearOperatorPlan clears the value of the "operator_plan" field.
+func (u *SubscriptionUpsert) ClearOperatorPlan() *SubscriptionUpsert {
+	u.SetNull(subscription.FieldOperatorPlan)
+	return u
+}
+
+// SetOperatorNote sets the "operator_note" field.
+func (u *SubscriptionUpsert) SetOperatorNote(v string) *SubscriptionUpsert {
+	u.Set(subscription.FieldOperatorNote, v)
+	return u
+}
+
+// UpdateOperatorNote sets the "operator_note" field to the value that was provided on create.
+func (u *SubscriptionUpsert) UpdateOperatorNote() *SubscriptionUpsert {
+	u.SetExcluded(subscription.FieldOperatorNote)
+	return u
+}
+
+// ClearOperatorNote clears the value of the "operator_note" field.
+func (u *SubscriptionUpsert) ClearOperatorNote() *SubscriptionUpsert {
+	u.SetNull(subscription.FieldOperatorNote)
+	return u
+}
+
+// SetOperatorSetAt sets the "operator_set_at" field.
+func (u *SubscriptionUpsert) SetOperatorSetAt(v time.Time) *SubscriptionUpsert {
+	u.Set(subscription.FieldOperatorSetAt, v)
+	return u
+}
+
+// UpdateOperatorSetAt sets the "operator_set_at" field to the value that was provided on create.
+func (u *SubscriptionUpsert) UpdateOperatorSetAt() *SubscriptionUpsert {
+	u.SetExcluded(subscription.FieldOperatorSetAt)
+	return u
+}
+
+// ClearOperatorSetAt clears the value of the "operator_set_at" field.
+func (u *SubscriptionUpsert) ClearOperatorSetAt() *SubscriptionUpsert {
+	u.SetNull(subscription.FieldOperatorSetAt)
 	return u
 }
 
@@ -764,6 +881,69 @@ func (u *SubscriptionUpsertOne) SetCancelAtPeriodEnd(v bool) *SubscriptionUpsert
 func (u *SubscriptionUpsertOne) UpdateCancelAtPeriodEnd() *SubscriptionUpsertOne {
 	return u.Update(func(s *SubscriptionUpsert) {
 		s.UpdateCancelAtPeriodEnd()
+	})
+}
+
+// SetOperatorPlan sets the "operator_plan" field.
+func (u *SubscriptionUpsertOne) SetOperatorPlan(v string) *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.SetOperatorPlan(v)
+	})
+}
+
+// UpdateOperatorPlan sets the "operator_plan" field to the value that was provided on create.
+func (u *SubscriptionUpsertOne) UpdateOperatorPlan() *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.UpdateOperatorPlan()
+	})
+}
+
+// ClearOperatorPlan clears the value of the "operator_plan" field.
+func (u *SubscriptionUpsertOne) ClearOperatorPlan() *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.ClearOperatorPlan()
+	})
+}
+
+// SetOperatorNote sets the "operator_note" field.
+func (u *SubscriptionUpsertOne) SetOperatorNote(v string) *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.SetOperatorNote(v)
+	})
+}
+
+// UpdateOperatorNote sets the "operator_note" field to the value that was provided on create.
+func (u *SubscriptionUpsertOne) UpdateOperatorNote() *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.UpdateOperatorNote()
+	})
+}
+
+// ClearOperatorNote clears the value of the "operator_note" field.
+func (u *SubscriptionUpsertOne) ClearOperatorNote() *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.ClearOperatorNote()
+	})
+}
+
+// SetOperatorSetAt sets the "operator_set_at" field.
+func (u *SubscriptionUpsertOne) SetOperatorSetAt(v time.Time) *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.SetOperatorSetAt(v)
+	})
+}
+
+// UpdateOperatorSetAt sets the "operator_set_at" field to the value that was provided on create.
+func (u *SubscriptionUpsertOne) UpdateOperatorSetAt() *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.UpdateOperatorSetAt()
+	})
+}
+
+// ClearOperatorSetAt clears the value of the "operator_set_at" field.
+func (u *SubscriptionUpsertOne) ClearOperatorSetAt() *SubscriptionUpsertOne {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.ClearOperatorSetAt()
 	})
 }
 
@@ -1143,6 +1323,69 @@ func (u *SubscriptionUpsertBulk) SetCancelAtPeriodEnd(v bool) *SubscriptionUpser
 func (u *SubscriptionUpsertBulk) UpdateCancelAtPeriodEnd() *SubscriptionUpsertBulk {
 	return u.Update(func(s *SubscriptionUpsert) {
 		s.UpdateCancelAtPeriodEnd()
+	})
+}
+
+// SetOperatorPlan sets the "operator_plan" field.
+func (u *SubscriptionUpsertBulk) SetOperatorPlan(v string) *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.SetOperatorPlan(v)
+	})
+}
+
+// UpdateOperatorPlan sets the "operator_plan" field to the value that was provided on create.
+func (u *SubscriptionUpsertBulk) UpdateOperatorPlan() *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.UpdateOperatorPlan()
+	})
+}
+
+// ClearOperatorPlan clears the value of the "operator_plan" field.
+func (u *SubscriptionUpsertBulk) ClearOperatorPlan() *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.ClearOperatorPlan()
+	})
+}
+
+// SetOperatorNote sets the "operator_note" field.
+func (u *SubscriptionUpsertBulk) SetOperatorNote(v string) *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.SetOperatorNote(v)
+	})
+}
+
+// UpdateOperatorNote sets the "operator_note" field to the value that was provided on create.
+func (u *SubscriptionUpsertBulk) UpdateOperatorNote() *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.UpdateOperatorNote()
+	})
+}
+
+// ClearOperatorNote clears the value of the "operator_note" field.
+func (u *SubscriptionUpsertBulk) ClearOperatorNote() *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.ClearOperatorNote()
+	})
+}
+
+// SetOperatorSetAt sets the "operator_set_at" field.
+func (u *SubscriptionUpsertBulk) SetOperatorSetAt(v time.Time) *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.SetOperatorSetAt(v)
+	})
+}
+
+// UpdateOperatorSetAt sets the "operator_set_at" field to the value that was provided on create.
+func (u *SubscriptionUpsertBulk) UpdateOperatorSetAt() *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.UpdateOperatorSetAt()
+	})
+}
+
+// ClearOperatorSetAt clears the value of the "operator_set_at" field.
+func (u *SubscriptionUpsertBulk) ClearOperatorSetAt() *SubscriptionUpsertBulk {
+	return u.Update(func(s *SubscriptionUpsert) {
+		s.ClearOperatorSetAt()
 	})
 }
 

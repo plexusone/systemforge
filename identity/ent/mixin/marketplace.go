@@ -247,6 +247,24 @@ func (SubscriptionMixin) Fields() []ent.Field {
 		field.Bool("cancel_at_period_end").
 			Default(false),
 
+		// A plan the deployment's operator set by hand, for an organization
+		// that runs or tests the service, or one given a plan without
+		// paying. While it is set it is the plan granted, whatever the
+		// status; billing events never change it (ADR-022).
+		field.String("operator_plan").
+			Optional().
+			Nillable().
+			Comment("Plan set by the operator; overrides plan_tier while set"),
+		field.String("operator_note").
+			Optional().
+			MaxLen(200).
+			Default("").
+			Comment("Why the operator set the plan"),
+		field.Time("operator_set_at").
+			Optional().
+			Nillable().
+			Comment("When the operator set the plan"),
+
 		// Timestamps
 		field.Time("created_at").
 			Default(time.Now).

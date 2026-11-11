@@ -43314,6 +43314,9 @@ type SubscriptionMutation struct {
 	stripe_subscription_id *string
 	stripe_customer_id     *string
 	cancel_at_period_end   *bool
+	operator_plan          *string
+	operator_note          *string
+	operator_set_at        *time.Time
 	created_at             *time.Time
 	updated_at             *time.Time
 	clearedFields          map[string]struct{}
@@ -43791,6 +43794,153 @@ func (m *SubscriptionMutation) ResetCancelAtPeriodEnd() {
 	m.cancel_at_period_end = nil
 }
 
+// SetOperatorPlan sets the "operator_plan" field.
+func (m *SubscriptionMutation) SetOperatorPlan(s string) {
+	m.operator_plan = &s
+}
+
+// OperatorPlan returns the value of the "operator_plan" field in the mutation.
+func (m *SubscriptionMutation) OperatorPlan() (r string, exists bool) {
+	v := m.operator_plan
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOperatorPlan returns the old "operator_plan" field's value of the Subscription entity.
+// If the Subscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionMutation) OldOperatorPlan(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOperatorPlan is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOperatorPlan requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOperatorPlan: %w", err)
+	}
+	return oldValue.OperatorPlan, nil
+}
+
+// ClearOperatorPlan clears the value of the "operator_plan" field.
+func (m *SubscriptionMutation) ClearOperatorPlan() {
+	m.operator_plan = nil
+	m.clearedFields[subscription.FieldOperatorPlan] = struct{}{}
+}
+
+// OperatorPlanCleared returns if the "operator_plan" field was cleared in this mutation.
+func (m *SubscriptionMutation) OperatorPlanCleared() bool {
+	_, ok := m.clearedFields[subscription.FieldOperatorPlan]
+	return ok
+}
+
+// ResetOperatorPlan resets all changes to the "operator_plan" field.
+func (m *SubscriptionMutation) ResetOperatorPlan() {
+	m.operator_plan = nil
+	delete(m.clearedFields, subscription.FieldOperatorPlan)
+}
+
+// SetOperatorNote sets the "operator_note" field.
+func (m *SubscriptionMutation) SetOperatorNote(s string) {
+	m.operator_note = &s
+}
+
+// OperatorNote returns the value of the "operator_note" field in the mutation.
+func (m *SubscriptionMutation) OperatorNote() (r string, exists bool) {
+	v := m.operator_note
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOperatorNote returns the old "operator_note" field's value of the Subscription entity.
+// If the Subscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionMutation) OldOperatorNote(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOperatorNote is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOperatorNote requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOperatorNote: %w", err)
+	}
+	return oldValue.OperatorNote, nil
+}
+
+// ClearOperatorNote clears the value of the "operator_note" field.
+func (m *SubscriptionMutation) ClearOperatorNote() {
+	m.operator_note = nil
+	m.clearedFields[subscription.FieldOperatorNote] = struct{}{}
+}
+
+// OperatorNoteCleared returns if the "operator_note" field was cleared in this mutation.
+func (m *SubscriptionMutation) OperatorNoteCleared() bool {
+	_, ok := m.clearedFields[subscription.FieldOperatorNote]
+	return ok
+}
+
+// ResetOperatorNote resets all changes to the "operator_note" field.
+func (m *SubscriptionMutation) ResetOperatorNote() {
+	m.operator_note = nil
+	delete(m.clearedFields, subscription.FieldOperatorNote)
+}
+
+// SetOperatorSetAt sets the "operator_set_at" field.
+func (m *SubscriptionMutation) SetOperatorSetAt(t time.Time) {
+	m.operator_set_at = &t
+}
+
+// OperatorSetAt returns the value of the "operator_set_at" field in the mutation.
+func (m *SubscriptionMutation) OperatorSetAt() (r time.Time, exists bool) {
+	v := m.operator_set_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOperatorSetAt returns the old "operator_set_at" field's value of the Subscription entity.
+// If the Subscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionMutation) OldOperatorSetAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOperatorSetAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOperatorSetAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOperatorSetAt: %w", err)
+	}
+	return oldValue.OperatorSetAt, nil
+}
+
+// ClearOperatorSetAt clears the value of the "operator_set_at" field.
+func (m *SubscriptionMutation) ClearOperatorSetAt() {
+	m.operator_set_at = nil
+	m.clearedFields[subscription.FieldOperatorSetAt] = struct{}{}
+}
+
+// OperatorSetAtCleared returns if the "operator_set_at" field was cleared in this mutation.
+func (m *SubscriptionMutation) OperatorSetAtCleared() bool {
+	_, ok := m.clearedFields[subscription.FieldOperatorSetAt]
+	return ok
+}
+
+// ResetOperatorSetAt resets all changes to the "operator_set_at" field.
+func (m *SubscriptionMutation) ResetOperatorSetAt() {
+	m.operator_set_at = nil
+	delete(m.clearedFields, subscription.FieldOperatorSetAt)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *SubscriptionMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -43924,7 +44074,7 @@ func (m *SubscriptionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SubscriptionMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 14)
 	if m.organization != nil {
 		fields = append(fields, subscription.FieldOrganizationID)
 	}
@@ -43951,6 +44101,15 @@ func (m *SubscriptionMutation) Fields() []string {
 	}
 	if m.cancel_at_period_end != nil {
 		fields = append(fields, subscription.FieldCancelAtPeriodEnd)
+	}
+	if m.operator_plan != nil {
+		fields = append(fields, subscription.FieldOperatorPlan)
+	}
+	if m.operator_note != nil {
+		fields = append(fields, subscription.FieldOperatorNote)
+	}
+	if m.operator_set_at != nil {
+		fields = append(fields, subscription.FieldOperatorSetAt)
 	}
 	if m.created_at != nil {
 		fields = append(fields, subscription.FieldCreatedAt)
@@ -43984,6 +44143,12 @@ func (m *SubscriptionMutation) Field(name string) (ent.Value, bool) {
 		return m.StripeCustomerID()
 	case subscription.FieldCancelAtPeriodEnd:
 		return m.CancelAtPeriodEnd()
+	case subscription.FieldOperatorPlan:
+		return m.OperatorPlan()
+	case subscription.FieldOperatorNote:
+		return m.OperatorNote()
+	case subscription.FieldOperatorSetAt:
+		return m.OperatorSetAt()
 	case subscription.FieldCreatedAt:
 		return m.CreatedAt()
 	case subscription.FieldUpdatedAt:
@@ -44015,6 +44180,12 @@ func (m *SubscriptionMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldStripeCustomerID(ctx)
 	case subscription.FieldCancelAtPeriodEnd:
 		return m.OldCancelAtPeriodEnd(ctx)
+	case subscription.FieldOperatorPlan:
+		return m.OldOperatorPlan(ctx)
+	case subscription.FieldOperatorNote:
+		return m.OldOperatorNote(ctx)
+	case subscription.FieldOperatorSetAt:
+		return m.OldOperatorSetAt(ctx)
 	case subscription.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case subscription.FieldUpdatedAt:
@@ -44091,6 +44262,27 @@ func (m *SubscriptionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCancelAtPeriodEnd(v)
 		return nil
+	case subscription.FieldOperatorPlan:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOperatorPlan(v)
+		return nil
+	case subscription.FieldOperatorNote:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOperatorNote(v)
+		return nil
+	case subscription.FieldOperatorSetAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOperatorSetAt(v)
+		return nil
 	case subscription.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -44144,6 +44336,15 @@ func (m *SubscriptionMutation) ClearedFields() []string {
 	if m.FieldCleared(subscription.FieldStripeCustomerID) {
 		fields = append(fields, subscription.FieldStripeCustomerID)
 	}
+	if m.FieldCleared(subscription.FieldOperatorPlan) {
+		fields = append(fields, subscription.FieldOperatorPlan)
+	}
+	if m.FieldCleared(subscription.FieldOperatorNote) {
+		fields = append(fields, subscription.FieldOperatorNote)
+	}
+	if m.FieldCleared(subscription.FieldOperatorSetAt) {
+		fields = append(fields, subscription.FieldOperatorSetAt)
+	}
 	return fields
 }
 
@@ -44166,6 +44367,15 @@ func (m *SubscriptionMutation) ClearField(name string) error {
 		return nil
 	case subscription.FieldStripeCustomerID:
 		m.ClearStripeCustomerID()
+		return nil
+	case subscription.FieldOperatorPlan:
+		m.ClearOperatorPlan()
+		return nil
+	case subscription.FieldOperatorNote:
+		m.ClearOperatorNote()
+		return nil
+	case subscription.FieldOperatorSetAt:
+		m.ClearOperatorSetAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Subscription nullable field %s", name)
@@ -44201,6 +44411,15 @@ func (m *SubscriptionMutation) ResetField(name string) error {
 		return nil
 	case subscription.FieldCancelAtPeriodEnd:
 		m.ResetCancelAtPeriodEnd()
+		return nil
+	case subscription.FieldOperatorPlan:
+		m.ResetOperatorPlan()
+		return nil
+	case subscription.FieldOperatorNote:
+		m.ResetOperatorNote()
+		return nil
+	case subscription.FieldOperatorSetAt:
+		m.ResetOperatorSetAt()
 		return nil
 	case subscription.FieldCreatedAt:
 		m.ResetCreatedAt()

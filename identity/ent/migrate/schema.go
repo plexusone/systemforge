@@ -1909,6 +1909,9 @@ var (
 		{Name: "stripe_subscription_id", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "stripe_customer_id", Type: field.TypeString, Nullable: true},
 		{Name: "cancel_at_period_end", Type: field.TypeBool, Default: false},
+		{Name: "operator_plan", Type: field.TypeString, Nullable: true},
+		{Name: "operator_note", Type: field.TypeString, Nullable: true, Size: 200, Default: ""},
+		{Name: "operator_set_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "organization_id", Type: field.TypeUUID},
@@ -1921,7 +1924,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sf_subscriptions_sf_organizations_subscriptions",
-				Columns:    []*schema.Column{SfSubscriptionsColumns[11]},
+				Columns:    []*schema.Column{SfSubscriptionsColumns[14]},
 				RefColumns: []*schema.Column{SfOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1930,17 +1933,17 @@ var (
 			{
 				Name:    "subscription_organization_id",
 				Unique:  false,
-				Columns: []*schema.Column{SfSubscriptionsColumns[11]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[14]},
 			},
 			{
 				Name:    "subscription_organization_id_listing_id",
 				Unique:  true,
-				Columns: []*schema.Column{SfSubscriptionsColumns[11], SfSubscriptionsColumns[1]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[14], SfSubscriptionsColumns[1]},
 			},
 			{
 				Name:    "subscription_platform_per_org",
 				Unique:  true,
-				Columns: []*schema.Column{SfSubscriptionsColumns[11]},
+				Columns: []*schema.Column{SfSubscriptionsColumns[14]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "listing_id IS NULL",
 				},

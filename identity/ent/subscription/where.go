@@ -96,6 +96,21 @@ func CancelAtPeriodEnd(v bool) predicate.Subscription {
 	return predicate.Subscription(sql.FieldEQ(FieldCancelAtPeriodEnd, v))
 }
 
+// OperatorPlan applies equality check predicate on the "operator_plan" field. It's identical to OperatorPlanEQ.
+func OperatorPlan(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldEQ(FieldOperatorPlan, v))
+}
+
+// OperatorNote applies equality check predicate on the "operator_note" field. It's identical to OperatorNoteEQ.
+func OperatorNote(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldEQ(FieldOperatorNote, v))
+}
+
+// OperatorSetAt applies equality check predicate on the "operator_set_at" field. It's identical to OperatorSetAtEQ.
+func OperatorSetAt(v time.Time) predicate.Subscription {
+	return predicate.Subscription(sql.FieldEQ(FieldOperatorSetAt, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Subscription {
 	return predicate.Subscription(sql.FieldEQ(FieldCreatedAt, v))
@@ -499,6 +514,206 @@ func CancelAtPeriodEndEQ(v bool) predicate.Subscription {
 // CancelAtPeriodEndNEQ applies the NEQ predicate on the "cancel_at_period_end" field.
 func CancelAtPeriodEndNEQ(v bool) predicate.Subscription {
 	return predicate.Subscription(sql.FieldNEQ(FieldCancelAtPeriodEnd, v))
+}
+
+// OperatorPlanEQ applies the EQ predicate on the "operator_plan" field.
+func OperatorPlanEQ(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldEQ(FieldOperatorPlan, v))
+}
+
+// OperatorPlanNEQ applies the NEQ predicate on the "operator_plan" field.
+func OperatorPlanNEQ(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldNEQ(FieldOperatorPlan, v))
+}
+
+// OperatorPlanIn applies the In predicate on the "operator_plan" field.
+func OperatorPlanIn(vs ...string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldIn(FieldOperatorPlan, vs...))
+}
+
+// OperatorPlanNotIn applies the NotIn predicate on the "operator_plan" field.
+func OperatorPlanNotIn(vs ...string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldNotIn(FieldOperatorPlan, vs...))
+}
+
+// OperatorPlanGT applies the GT predicate on the "operator_plan" field.
+func OperatorPlanGT(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldGT(FieldOperatorPlan, v))
+}
+
+// OperatorPlanGTE applies the GTE predicate on the "operator_plan" field.
+func OperatorPlanGTE(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldGTE(FieldOperatorPlan, v))
+}
+
+// OperatorPlanLT applies the LT predicate on the "operator_plan" field.
+func OperatorPlanLT(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldLT(FieldOperatorPlan, v))
+}
+
+// OperatorPlanLTE applies the LTE predicate on the "operator_plan" field.
+func OperatorPlanLTE(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldLTE(FieldOperatorPlan, v))
+}
+
+// OperatorPlanContains applies the Contains predicate on the "operator_plan" field.
+func OperatorPlanContains(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldContains(FieldOperatorPlan, v))
+}
+
+// OperatorPlanHasPrefix applies the HasPrefix predicate on the "operator_plan" field.
+func OperatorPlanHasPrefix(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldHasPrefix(FieldOperatorPlan, v))
+}
+
+// OperatorPlanHasSuffix applies the HasSuffix predicate on the "operator_plan" field.
+func OperatorPlanHasSuffix(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldHasSuffix(FieldOperatorPlan, v))
+}
+
+// OperatorPlanIsNil applies the IsNil predicate on the "operator_plan" field.
+func OperatorPlanIsNil() predicate.Subscription {
+	return predicate.Subscription(sql.FieldIsNull(FieldOperatorPlan))
+}
+
+// OperatorPlanNotNil applies the NotNil predicate on the "operator_plan" field.
+func OperatorPlanNotNil() predicate.Subscription {
+	return predicate.Subscription(sql.FieldNotNull(FieldOperatorPlan))
+}
+
+// OperatorPlanEqualFold applies the EqualFold predicate on the "operator_plan" field.
+func OperatorPlanEqualFold(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldEqualFold(FieldOperatorPlan, v))
+}
+
+// OperatorPlanContainsFold applies the ContainsFold predicate on the "operator_plan" field.
+func OperatorPlanContainsFold(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldContainsFold(FieldOperatorPlan, v))
+}
+
+// OperatorNoteEQ applies the EQ predicate on the "operator_note" field.
+func OperatorNoteEQ(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldEQ(FieldOperatorNote, v))
+}
+
+// OperatorNoteNEQ applies the NEQ predicate on the "operator_note" field.
+func OperatorNoteNEQ(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldNEQ(FieldOperatorNote, v))
+}
+
+// OperatorNoteIn applies the In predicate on the "operator_note" field.
+func OperatorNoteIn(vs ...string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldIn(FieldOperatorNote, vs...))
+}
+
+// OperatorNoteNotIn applies the NotIn predicate on the "operator_note" field.
+func OperatorNoteNotIn(vs ...string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldNotIn(FieldOperatorNote, vs...))
+}
+
+// OperatorNoteGT applies the GT predicate on the "operator_note" field.
+func OperatorNoteGT(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldGT(FieldOperatorNote, v))
+}
+
+// OperatorNoteGTE applies the GTE predicate on the "operator_note" field.
+func OperatorNoteGTE(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldGTE(FieldOperatorNote, v))
+}
+
+// OperatorNoteLT applies the LT predicate on the "operator_note" field.
+func OperatorNoteLT(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldLT(FieldOperatorNote, v))
+}
+
+// OperatorNoteLTE applies the LTE predicate on the "operator_note" field.
+func OperatorNoteLTE(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldLTE(FieldOperatorNote, v))
+}
+
+// OperatorNoteContains applies the Contains predicate on the "operator_note" field.
+func OperatorNoteContains(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldContains(FieldOperatorNote, v))
+}
+
+// OperatorNoteHasPrefix applies the HasPrefix predicate on the "operator_note" field.
+func OperatorNoteHasPrefix(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldHasPrefix(FieldOperatorNote, v))
+}
+
+// OperatorNoteHasSuffix applies the HasSuffix predicate on the "operator_note" field.
+func OperatorNoteHasSuffix(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldHasSuffix(FieldOperatorNote, v))
+}
+
+// OperatorNoteIsNil applies the IsNil predicate on the "operator_note" field.
+func OperatorNoteIsNil() predicate.Subscription {
+	return predicate.Subscription(sql.FieldIsNull(FieldOperatorNote))
+}
+
+// OperatorNoteNotNil applies the NotNil predicate on the "operator_note" field.
+func OperatorNoteNotNil() predicate.Subscription {
+	return predicate.Subscription(sql.FieldNotNull(FieldOperatorNote))
+}
+
+// OperatorNoteEqualFold applies the EqualFold predicate on the "operator_note" field.
+func OperatorNoteEqualFold(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldEqualFold(FieldOperatorNote, v))
+}
+
+// OperatorNoteContainsFold applies the ContainsFold predicate on the "operator_note" field.
+func OperatorNoteContainsFold(v string) predicate.Subscription {
+	return predicate.Subscription(sql.FieldContainsFold(FieldOperatorNote, v))
+}
+
+// OperatorSetAtEQ applies the EQ predicate on the "operator_set_at" field.
+func OperatorSetAtEQ(v time.Time) predicate.Subscription {
+	return predicate.Subscription(sql.FieldEQ(FieldOperatorSetAt, v))
+}
+
+// OperatorSetAtNEQ applies the NEQ predicate on the "operator_set_at" field.
+func OperatorSetAtNEQ(v time.Time) predicate.Subscription {
+	return predicate.Subscription(sql.FieldNEQ(FieldOperatorSetAt, v))
+}
+
+// OperatorSetAtIn applies the In predicate on the "operator_set_at" field.
+func OperatorSetAtIn(vs ...time.Time) predicate.Subscription {
+	return predicate.Subscription(sql.FieldIn(FieldOperatorSetAt, vs...))
+}
+
+// OperatorSetAtNotIn applies the NotIn predicate on the "operator_set_at" field.
+func OperatorSetAtNotIn(vs ...time.Time) predicate.Subscription {
+	return predicate.Subscription(sql.FieldNotIn(FieldOperatorSetAt, vs...))
+}
+
+// OperatorSetAtGT applies the GT predicate on the "operator_set_at" field.
+func OperatorSetAtGT(v time.Time) predicate.Subscription {
+	return predicate.Subscription(sql.FieldGT(FieldOperatorSetAt, v))
+}
+
+// OperatorSetAtGTE applies the GTE predicate on the "operator_set_at" field.
+func OperatorSetAtGTE(v time.Time) predicate.Subscription {
+	return predicate.Subscription(sql.FieldGTE(FieldOperatorSetAt, v))
+}
+
+// OperatorSetAtLT applies the LT predicate on the "operator_set_at" field.
+func OperatorSetAtLT(v time.Time) predicate.Subscription {
+	return predicate.Subscription(sql.FieldLT(FieldOperatorSetAt, v))
+}
+
+// OperatorSetAtLTE applies the LTE predicate on the "operator_set_at" field.
+func OperatorSetAtLTE(v time.Time) predicate.Subscription {
+	return predicate.Subscription(sql.FieldLTE(FieldOperatorSetAt, v))
+}
+
+// OperatorSetAtIsNil applies the IsNil predicate on the "operator_set_at" field.
+func OperatorSetAtIsNil() predicate.Subscription {
+	return predicate.Subscription(sql.FieldIsNull(FieldOperatorSetAt))
+}
+
+// OperatorSetAtNotNil applies the NotNil predicate on the "operator_set_at" field.
+func OperatorSetAtNotNil() predicate.Subscription {
+	return predicate.Subscription(sql.FieldNotNull(FieldOperatorSetAt))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

@@ -174,6 +174,66 @@ func (_u *SubscriptionUpdate) SetNillableCancelAtPeriodEnd(v *bool) *Subscriptio
 	return _u
 }
 
+// SetOperatorPlan sets the "operator_plan" field.
+func (_u *SubscriptionUpdate) SetOperatorPlan(v string) *SubscriptionUpdate {
+	_u.mutation.SetOperatorPlan(v)
+	return _u
+}
+
+// SetNillableOperatorPlan sets the "operator_plan" field if the given value is not nil.
+func (_u *SubscriptionUpdate) SetNillableOperatorPlan(v *string) *SubscriptionUpdate {
+	if v != nil {
+		_u.SetOperatorPlan(*v)
+	}
+	return _u
+}
+
+// ClearOperatorPlan clears the value of the "operator_plan" field.
+func (_u *SubscriptionUpdate) ClearOperatorPlan() *SubscriptionUpdate {
+	_u.mutation.ClearOperatorPlan()
+	return _u
+}
+
+// SetOperatorNote sets the "operator_note" field.
+func (_u *SubscriptionUpdate) SetOperatorNote(v string) *SubscriptionUpdate {
+	_u.mutation.SetOperatorNote(v)
+	return _u
+}
+
+// SetNillableOperatorNote sets the "operator_note" field if the given value is not nil.
+func (_u *SubscriptionUpdate) SetNillableOperatorNote(v *string) *SubscriptionUpdate {
+	if v != nil {
+		_u.SetOperatorNote(*v)
+	}
+	return _u
+}
+
+// ClearOperatorNote clears the value of the "operator_note" field.
+func (_u *SubscriptionUpdate) ClearOperatorNote() *SubscriptionUpdate {
+	_u.mutation.ClearOperatorNote()
+	return _u
+}
+
+// SetOperatorSetAt sets the "operator_set_at" field.
+func (_u *SubscriptionUpdate) SetOperatorSetAt(v time.Time) *SubscriptionUpdate {
+	_u.mutation.SetOperatorSetAt(v)
+	return _u
+}
+
+// SetNillableOperatorSetAt sets the "operator_set_at" field if the given value is not nil.
+func (_u *SubscriptionUpdate) SetNillableOperatorSetAt(v *time.Time) *SubscriptionUpdate {
+	if v != nil {
+		_u.SetOperatorSetAt(*v)
+	}
+	return _u
+}
+
+// ClearOperatorSetAt clears the value of the "operator_set_at" field.
+func (_u *SubscriptionUpdate) ClearOperatorSetAt() *SubscriptionUpdate {
+	_u.mutation.ClearOperatorSetAt()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *SubscriptionUpdate) SetUpdatedAt(v time.Time) *SubscriptionUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -244,6 +304,11 @@ func (_u *SubscriptionUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Subscription.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.OperatorNote(); ok {
+		if err := subscription.OperatorNoteValidator(v); err != nil {
+			return &ValidationError{Name: "operator_note", err: fmt.Errorf(`ent: validator failed for field "Subscription.operator_note": %w`, err)}
+		}
+	}
 	if _u.mutation.OrganizationCleared() && len(_u.mutation.OrganizationIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Subscription.organization"`)
 	}
@@ -294,6 +359,24 @@ func (_u *SubscriptionUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.CancelAtPeriodEnd(); ok {
 		_spec.SetField(subscription.FieldCancelAtPeriodEnd, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.OperatorPlan(); ok {
+		_spec.SetField(subscription.FieldOperatorPlan, field.TypeString, value)
+	}
+	if _u.mutation.OperatorPlanCleared() {
+		_spec.ClearField(subscription.FieldOperatorPlan, field.TypeString)
+	}
+	if value, ok := _u.mutation.OperatorNote(); ok {
+		_spec.SetField(subscription.FieldOperatorNote, field.TypeString, value)
+	}
+	if _u.mutation.OperatorNoteCleared() {
+		_spec.ClearField(subscription.FieldOperatorNote, field.TypeString)
+	}
+	if value, ok := _u.mutation.OperatorSetAt(); ok {
+		_spec.SetField(subscription.FieldOperatorSetAt, field.TypeTime, value)
+	}
+	if _u.mutation.OperatorSetAtCleared() {
+		_spec.ClearField(subscription.FieldOperatorSetAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(subscription.FieldUpdatedAt, field.TypeTime, value)
@@ -491,6 +574,66 @@ func (_u *SubscriptionUpdateOne) SetNillableCancelAtPeriodEnd(v *bool) *Subscrip
 	return _u
 }
 
+// SetOperatorPlan sets the "operator_plan" field.
+func (_u *SubscriptionUpdateOne) SetOperatorPlan(v string) *SubscriptionUpdateOne {
+	_u.mutation.SetOperatorPlan(v)
+	return _u
+}
+
+// SetNillableOperatorPlan sets the "operator_plan" field if the given value is not nil.
+func (_u *SubscriptionUpdateOne) SetNillableOperatorPlan(v *string) *SubscriptionUpdateOne {
+	if v != nil {
+		_u.SetOperatorPlan(*v)
+	}
+	return _u
+}
+
+// ClearOperatorPlan clears the value of the "operator_plan" field.
+func (_u *SubscriptionUpdateOne) ClearOperatorPlan() *SubscriptionUpdateOne {
+	_u.mutation.ClearOperatorPlan()
+	return _u
+}
+
+// SetOperatorNote sets the "operator_note" field.
+func (_u *SubscriptionUpdateOne) SetOperatorNote(v string) *SubscriptionUpdateOne {
+	_u.mutation.SetOperatorNote(v)
+	return _u
+}
+
+// SetNillableOperatorNote sets the "operator_note" field if the given value is not nil.
+func (_u *SubscriptionUpdateOne) SetNillableOperatorNote(v *string) *SubscriptionUpdateOne {
+	if v != nil {
+		_u.SetOperatorNote(*v)
+	}
+	return _u
+}
+
+// ClearOperatorNote clears the value of the "operator_note" field.
+func (_u *SubscriptionUpdateOne) ClearOperatorNote() *SubscriptionUpdateOne {
+	_u.mutation.ClearOperatorNote()
+	return _u
+}
+
+// SetOperatorSetAt sets the "operator_set_at" field.
+func (_u *SubscriptionUpdateOne) SetOperatorSetAt(v time.Time) *SubscriptionUpdateOne {
+	_u.mutation.SetOperatorSetAt(v)
+	return _u
+}
+
+// SetNillableOperatorSetAt sets the "operator_set_at" field if the given value is not nil.
+func (_u *SubscriptionUpdateOne) SetNillableOperatorSetAt(v *time.Time) *SubscriptionUpdateOne {
+	if v != nil {
+		_u.SetOperatorSetAt(*v)
+	}
+	return _u
+}
+
+// ClearOperatorSetAt clears the value of the "operator_set_at" field.
+func (_u *SubscriptionUpdateOne) ClearOperatorSetAt() *SubscriptionUpdateOne {
+	_u.mutation.ClearOperatorSetAt()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *SubscriptionUpdateOne) SetUpdatedAt(v time.Time) *SubscriptionUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -574,6 +717,11 @@ func (_u *SubscriptionUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Subscription.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.OperatorNote(); ok {
+		if err := subscription.OperatorNoteValidator(v); err != nil {
+			return &ValidationError{Name: "operator_note", err: fmt.Errorf(`ent: validator failed for field "Subscription.operator_note": %w`, err)}
+		}
+	}
 	if _u.mutation.OrganizationCleared() && len(_u.mutation.OrganizationIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Subscription.organization"`)
 	}
@@ -641,6 +789,24 @@ func (_u *SubscriptionUpdateOne) sqlSave(ctx context.Context) (_node *Subscripti
 	}
 	if value, ok := _u.mutation.CancelAtPeriodEnd(); ok {
 		_spec.SetField(subscription.FieldCancelAtPeriodEnd, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.OperatorPlan(); ok {
+		_spec.SetField(subscription.FieldOperatorPlan, field.TypeString, value)
+	}
+	if _u.mutation.OperatorPlanCleared() {
+		_spec.ClearField(subscription.FieldOperatorPlan, field.TypeString)
+	}
+	if value, ok := _u.mutation.OperatorNote(); ok {
+		_spec.SetField(subscription.FieldOperatorNote, field.TypeString, value)
+	}
+	if _u.mutation.OperatorNoteCleared() {
+		_spec.ClearField(subscription.FieldOperatorNote, field.TypeString)
+	}
+	if value, ok := _u.mutation.OperatorSetAt(); ok {
+		_spec.SetField(subscription.FieldOperatorSetAt, field.TypeTime, value)
+	}
+	if _u.mutation.OperatorSetAtCleared() {
+		_spec.ClearField(subscription.FieldOperatorSetAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(subscription.FieldUpdatedAt, field.TypeTime, value)
