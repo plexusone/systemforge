@@ -1,6 +1,7 @@
 // Package billingcmd is the "billing" command a SystemAuth host adds to its
 // CLI: it syncs the pricing spec's products and prices to the payment
-// provider (ADR-021).
+// provider (ADR-021), and shows and sets the plans the operator sets by
+// hand (ADR-022).
 package billingcmd
 
 import (
@@ -20,7 +21,7 @@ import (
 // are parsed.
 type Load func(ctx context.Context) (*systemauthsvc.Config, *pricingspec.Spec, error)
 
-// Command returns "billing" with its "sync" subcommand.
+// Command returns "billing" with its "sync" and "plan" subcommands.
 func Command(load Load) *cobra.Command {
 	billing := &cobra.Command{
 		Use:   "billing",
@@ -49,7 +50,7 @@ reports what it would change.`,
 		},
 	}
 	sync.Flags().BoolVar(&dryRun, "dry-run", false, "Report what would change without changing anything")
-	billing.AddCommand(sync)
+	billing.AddCommand(sync, planCmd(load))
 	return billing
 }
 
