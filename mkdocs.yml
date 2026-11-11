@@ -161,6 +161,8 @@ nav:
       - "ADR-018: The Organization Console (Proposed)": design/adrs/ADR-018-organization-console.md
       - "ADR-019: Support Requests and Feedback (Proposed)": design/adrs/ADR-019-support-requests-and-feedback.md
       - "ADR-020: Customer-Authorized Support Access (Proposed)": design/adrs/ADR-020-customer-authorized-support-access.md
+      - "ADR-021: Billing in the Organization Console (Proposed)": design/adrs/ADR-021-billing-in-the-organization-console.md
+      - "ADR-022: Plans Set by the Operator (Proposed)": design/adrs/ADR-022-plans-set-by-the-operator.md
     - ProductGraph:
       - PRD: design/productgraph/PRD.md
       - TRD: design/productgraph/TRD.md

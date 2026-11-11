@@ -23,3 +23,17 @@ Commits implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
   - Depends on: `RMI-SYSTEMFORGE-242`
 - [ ] `RMI-SYSTEMFORGE-245` Proven in production by a first host: a live subscription bought, changed in the portal and canceled
   - Depends on: `RMI-SYSTEMFORGE-244`
+
+## Phase 2 — Plans Set by the Operator
+
+**Theme:** An operator puts an organization on a plan nobody pays for, and billing leaves it there ([ADR-022](../../../design/adrs/ADR-022-plans-set-by-the-operator.md))
+
+- [x] `RMI-SYSTEMFORGE-246` The operator's plan on the platform subscription, which `GrantedPlan`, `OrganizationPlan`, the entitlements and `GetPlanTier` honor and billing events never write
+- [x] `RMI-SYSTEMFORGE-247` Plan checkout refused while an operator's plan is set, and `setByOperator` in the console's billing status
+  - Depends on: `RMI-SYSTEMFORGE-246`
+- [x] `RMI-SYSTEMFORGE-248` `billing plan list|show|set|clear` in `billingcmd`, naming an organization by slug, ID or owner's email
+  - Depends on: `RMI-SYSTEMFORGE-246`
+- [ ] `RMI-SYSTEMFORGE-249` The console's billing page says when the operator set the plan and offers no checkout (systemforge-web)
+  - Depends on: `RMI-SYSTEMFORGE-247`
+- [ ] `RMI-SYSTEMFORGE-250` A first host reads its plan from SystemForge, with its own accounts on an internal plan
+  - Depends on: `RMI-SYSTEMFORGE-248`
