@@ -61,6 +61,7 @@ nav:
     - Authorization Mode: guides/authorization-mode.md
     - Connections to External Services: guides/connections.md
     - The Organization Console: guides/console.md
+    - Selling Plans from the Console: guides/billing.md
     - Key Management: guides/key-management.md
     - Minimum Sign-Up Age: guides/signup-age.md
     - Invite-Gated Sign-Up: guides/invite-gated-signup.md
@@ -171,6 +172,7 @@ nav:
   - Releases:
     - Overview: releases/index.md
     - Changelog: releases/changelog.md
+    - v0.33.0: releases/v0.33.0.md
     - v0.32.1: releases/v0.32.1.md
     - v0.32.0: releases/v0.32.0.md
     - v0.31.0: releases/v0.31.0.md

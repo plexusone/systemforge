@@ -261,6 +261,22 @@ PostgreSQL, enables row-level security on them. `systemauth serve` runs the
 key lifecycle jobs. See [Connections](../guides/connections.md) and
 [Key management](../guides/key-management.md).
 
+## Billing
+
+Setting `billing` lets organizations buy the deployment's plans in the
+console. It needs the console, a database and a pricing spec from the host
+(`Options.Pricing`). Without a key it runs in free mode, where every
+organization is on the spec's default plan:
+
+```yaml
+billing:
+  stripe_secret_key: ${STRIPE_SECRET_KEY}
+  stripe_webhook_secrets: ["${STRIPE_WEBHOOK_SECRET}"]
+```
+
+Stripe posts events to `/billing/webhook` on the SystemAuth host. See
+[Selling plans from the console](../guides/billing.md).
+
 ## Signing key
 
 Generate a key once and keep it in your secret store:

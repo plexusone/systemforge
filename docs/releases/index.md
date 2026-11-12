@@ -4,7 +4,12 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.32.1](v0.32.1.md), shows the signed-in person's
+The latest release, [v0.33.0](v0.33.0.md), sells a deployment's plans from
+the organization console: SystemAuth wires billing from a `billing` section
+and the host's pricing spec, with a free mode, and an operator can put an
+organization on a plan by hand. It adds no breaking change.
+
+Before it, [v0.32.1](v0.32.1.md) showed the signed-in person's
 name and picture in the organization console, as the applications do. It
 adds no breaking change.
 

@@ -25,7 +25,7 @@ console:
 | `web_dir` | Directory of the console's built pages, with an `index.html`. Empty serves only the console's API |
 
 The connections section appears when [connections](connections.md) are
-enabled. Startup fails when `console` is set without `social_login`, or when
+enabled, and the billing section when [billing](billing.md) is. Startup fails when `console` is set without `social_login`, or when
 `web_dir` has no `index.html`.
 
 ## Build the pages
@@ -63,6 +63,7 @@ session. A request without one gets `401 {"error":"sign in required"}`.
 |---|---|
 | `GET /console/api/v1/return-to?url=` | The return address, when sign-in's redirect policy allows it, else `400` |
 | `/console/api/v1/providers` and `/console/api/v1/organizations/{org}/connections/...` | The [connections API](connections.md#http-api), unchanged; `404` when connections are not enabled |
+| `/console/api/v1/organizations/{org}/billing/...` | The organization's plan, checkout and the customer portal ([billing](billing.md#the-consoles-billing-section)); `404` when the configuration has no `billing` section. In free mode (`billing: {}`) the status answers with `configured: false` and checkout with `409` |
 
 OAuth scopes do not apply to the console: it is SystemAuth's own interface
 acting as the signed-in person. Every call is authorized by the person's
