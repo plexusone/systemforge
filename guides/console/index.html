@@ -16,7 +16,7 @@
         <link rel="prev" href="../connections/">
       
       
-        <link rel="next" href="../key-management/">
+        <link rel="next" href="../billing/">
       
       
         
@@ -486,6 +486,8 @@
       
         
       
+        
+      
     
     
     
@@ -897,6 +899,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../billing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Selling Plans from the Console
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -4706,6 +4736,8 @@
       
         
       
+        
+      
     
     
     
@@ -4777,6 +4809,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.33.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.33.0
   
 
     
@@ -6135,7 +6195,7 @@ in with social login's session, so <code>social_login</code> must be configured 
 </tbody>
 </table>
 <p>The connections section appears when <a href="../connections/">connections</a> are
-enabled. Startup fails when <code>console</code> is set without <code>social_login</code>, or when
+enabled, and the billing section when <a href="../billing/">billing</a> is. Startup fails when <code>console</code> is set without <code>social_login</code>, or when
 <code>web_dir</code> has no <code>index.html</code>.</p>
 <h2 id="build-the-pages">Build the pages<a class="headerlink" href="#build-the-pages" title="Permanent link">&para;</a></h2>
 <p>The pages are a static build of <code>@plexusone/console</code> from
@@ -6197,6 +6257,10 @@ session. A request without one gets <code>401 {"error":"sign in required"}</code
 <tr>
 <td><code>/console/api/v1/providers</code> and <code>/console/api/v1/organizations/{org}/connections/...</code></td>
 <td>The <a href="../connections/#http-api">connections API</a>, unchanged; <code>404</code> when connections are not enabled</td>
+</tr>
+<tr>
+<td><code>/console/api/v1/organizations/{org}/billing/...</code></td>
+<td>The organization's plan, checkout and the customer portal (<a href="../billing/#the-consoles-billing-section">billing</a>); <code>404</code> when the configuration has no <code>billing</code> section. In free mode (<code>billing: {}</code>) the status answers with <code>configured: false</code> and checkout with <code>409</code></td>
 </tr>
 </tbody>
 </table>
