@@ -60,7 +60,7 @@ func (s *Service) openBilling(c *Config, opts Options) error {
 	b := &billingService{spec: opts.Pricing}
 	s.billing = b
 	if !c.Billing.Configured() {
-		s.logger.Warn("billing has no secret key: free mode, every organization is on the default plan",
+		s.logger.Warn("billing has no secret key: free mode, every organization is on the default plan unless an operator sets one",
 			"default_plan", opts.Pricing.PlanOrDefault("").ID)
 		return nil
 	}
