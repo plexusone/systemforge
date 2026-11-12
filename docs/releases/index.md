@@ -4,9 +4,15 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.33.0](v0.33.0.md), sells a deployment's plans from
-the organization console: SystemAuth wires billing from a `billing` section
-and the host's pricing spec, with a free mode, and an operator can put an
+The latest release, [v0.34.0](v0.34.0.md), lands a sign-out where the
+person signed in: `social_login.managed_signed_out_url` sends a child
+signed in with a login token back to the app's sign-in page, while other
+sign-outs keep `signed_out_url`. Entitlements can follow billing's free
+mode with `marketplace.WithoutPayments`. It adds no breaking change.
+
+Before it, [v0.33.0](v0.33.0.md) sold a deployment's plans from
+the organization console: SystemAuth wired billing from a `billing` section
+and the host's pricing spec, with a free mode, and an operator could put an
 organization on a plan by hand. It adds no breaking change.
 
 Before it, [v0.32.1](v0.32.1.md) showed the signed-in person's

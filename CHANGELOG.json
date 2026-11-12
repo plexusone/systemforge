@@ -9,6 +9,68 @@
   ],
   "releases": [
     {
+      "version": "v0.34.0",
+      "date": "2026-11-12",
+      "highlights": [
+        {
+          "description": "A sign-out can land where the person signed in: `social_login.managed_signed_out_url` sends a session signed in with a managed principal's login token, such as a child's on a shared device, back to the app's sign-in page while other sign-outs keep `signed_out_url`",
+          "commit": "7b1b0af"
+        },
+        {
+          "description": "Entitlements can follow billing's free mode with `marketplace.WithoutPayments`, resolving v0.33.0's known issue",
+          "commit": "099074b"
+        }
+      ],
+      "added": [
+        {
+          "description": "`social_login.managed_signed_out_url`: where a sign-out lands for a session signed in with a managed principal's login token, in place of `signed_out_url` and whatever `return_to` the app sent; it must pass the redirect allowlist",
+          "commit": "7b1b0af"
+        },
+        {
+          "description": "`marketplace.WithoutPayments()` makes `EntitlementSource` grant a subscription only an operator's plan, as in billing's free mode, and `Service.TakesPayments()` reports whether billing takes payments (a `billing` section with a Stripe key)",
+          "commit": "099074b"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "Entitlements can follow free mode: with `marketplace.WithoutPayments` a paid plan stored from an earlier configuration grants nothing, matching `OrganizationPlan`",
+          "commit": "099074b"
+        },
+        {
+          "description": "The free-mode startup log says an operator's plan still applies",
+          "commit": "4b2a419"
+        }
+      ],
+      "tests": [
+        {
+          "description": "A login token's session lands on `managed_signed_out_url`, other sessions keep `signed_out_url` or their `return_to`, a sign-out without a session is not treated as managed, and an unlisted URL is refused at startup",
+          "commit": "3dee36d"
+        },
+        {
+          "description": "`TestEntitlementsWithoutPayments`, and `TestBillingFreeMode` and `TestBillingWithStripe` check `TakesPayments`",
+          "commit": "099074b"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The social login and relying-party guides describe `managed_signed_out_url`",
+          "commit": "921ecaf"
+        },
+        {
+          "description": "The billing guide describes `marketplace.WithoutPayments` in free mode",
+          "commit": "5b0eaa7"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "A host that builds `marketplace.EntitlementSource` over the platform subscription passes `marketplace.WithoutPayments()` when `Service.TakesPayments()` is false; without the option the behavior is unchanged"
+        },
+        {
+          "description": "To send children back to the app's sign-in page on a shared device, set `social_login.managed_signed_out_url` to an allowed URL; leaving it unset keeps every sign-out as before"
+        }
+      ]
+    },
+    {
       "version": "v0.33.0",
       "date": "2026-11-12",
       "highlights": [
