@@ -172,6 +172,7 @@ nav:
   - Releases:
     - Overview: releases/index.md
     - Changelog: releases/changelog.md
+    - v0.33.1: releases/v0.33.1.md
     - v0.33.0: releases/v0.33.0.md
     - v0.32.1: releases/v0.32.1.md
     - v0.32.0: releases/v0.32.0.md
