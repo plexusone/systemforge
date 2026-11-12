@@ -6628,7 +6628,9 @@ and the app and SystemAuth must share a site (registrable domain), because the
 login cookie is <code>SameSite=Lax</code> and is not sent on a cross-site <code>POST</code>.</p>
 <p>SystemAuth's <code>social_login.signed_out_url</code>, when set, replaces <code>returnTo</code>
 for every app, such as to send a signed-out browser to the product's
-marketing site.</p>
+marketing site. <code>social_login.managed_signed_out_url</code>, when set, replaces
+it for a session signed in with a managed principal's login token, such as
+to send a child back to the app's sign-in page on a shared device.</p>
 <p><code>BFFConfig.SignOutURL</code> is the sign-out page: the issuer's <code>/logout</code> by
 default, or <code>-</code> to leave it out, which keeps the <code>204</code>.</p>
 <h2 id="account-linking">Account linking<a class="headerlink" href="#account-linking" title="Permanent link">&para;</a></h2>

@@ -6369,9 +6369,10 @@ mode:</p>
 </code></pre></div>
 <ul>
 <li>Every organization is on the spec's default plan, unless an operator has
-  set its plan. <code>marketplace.EntitlementSource</code> does not follow this yet: it
-  still grants a paid plan stored from an earlier configuration, so check
-  plans with <code>Service.OrganizationPlan</code> in free mode.</li>
+  set its plan. A host that builds <code>marketplace.EntitlementSource</code> over the
+  platform subscription passes <code>marketplace.WithoutPayments()</code> when
+  <code>Service.TakesPayments()</code> is false, so a paid plan stored from an earlier
+  configuration grants nothing there either.</li>
 <li>The console's billing section shows the plans, with <code>configured: false</code>
   and <code>canManage: false</code>, and starts no checkout (<code>409</code>).</li>
 <li>No webhook route is mounted.</li>
