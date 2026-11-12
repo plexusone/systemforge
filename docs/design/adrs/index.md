@@ -28,6 +28,7 @@ under `docs/specs/` and execute these decisions.
 | [ADR-019](ADR-019-support-requests-and-feedback.md) | Support Requests and Feedback in Every Application | Proposed |
 | [ADR-020](ADR-020-customer-authorized-support-access.md) | Customer-Authorized Support Access | Proposed |
 | [ADR-021](ADR-021-billing-in-the-organization-console.md) | Billing in the Organization Console | Proposed |
+| [ADR-022](ADR-022-plans-set-by-the-operator.md) | Plans Set by the Operator | Proposed |
 
 ## Statuses
 

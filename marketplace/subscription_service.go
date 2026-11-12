@@ -196,7 +196,8 @@ func (s *EntSubscriptionService) IsActive(ctx context.Context, orgID uuid.UUID) 
 	return sub.IsActive(), nil
 }
 
-// GetPlanTier returns the current plan tier for an organization.
+// GetPlanTier returns the current plan tier for an organization: the
+// operator's plan when one is set, and otherwise the subscription's plan.
 func (s *EntSubscriptionService) GetPlanTier(ctx context.Context, orgID uuid.UUID) (string, error) {
 	sub, err := s.GetByOrg(ctx, orgID)
 	if err != nil {
@@ -204,6 +205,9 @@ func (s *EntSubscriptionService) GetPlanTier(ctx context.Context, orgID uuid.UUI
 			return PlanTierFree, nil
 		}
 		return "", err
+	}
+	if sub.OperatorPlan != "" {
+		return sub.OperatorPlan, nil
 	}
 	return sub.PlanTier, nil
 }
@@ -228,6 +232,11 @@ func entSubscriptionToSubscription(es *ent.Subscription) *Subscription {
 	}
 	if es.StripeCustomerID != nil {
 		sub.StripeCustomerID = *es.StripeCustomerID
+	}
+	if es.OperatorPlan != nil {
+		sub.OperatorPlan = *es.OperatorPlan
+		sub.OperatorNote = es.OperatorNote
+		sub.OperatorSetAt = es.OperatorSetAt
 	}
 
 	return sub

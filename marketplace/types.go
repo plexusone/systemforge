@@ -307,6 +307,17 @@ type Subscription struct {
 	// CancelAtPeriodEnd indicates if subscription will cancel at period end.
 	CancelAtPeriodEnd bool `json:"cancelAtPeriodEnd"`
 
+	// OperatorPlan is a plan the deployment's operator set by hand, or ""
+	// when there is none. While it is set it is the plan granted, whatever
+	// the status; billing events never change it. See GrantedPlan.
+	OperatorPlan string `json:"operatorPlan,omitempty"`
+
+	// OperatorNote says why the operator set the plan.
+	OperatorNote string `json:"operatorNote,omitempty"`
+
+	// OperatorSetAt is when the operator set the plan.
+	OperatorSetAt *time.Time `json:"operatorSetAt,omitempty"`
+
 	// CreatedAt is when the subscription was created.
 	CreatedAt time.Time `json:"createdAt"`
 
@@ -324,6 +335,19 @@ func (s *Subscription) IsActive() bool {
 		return true
 	}
 	return false
+}
+
+// GrantedPlan returns the plan the subscription grants and whether it grants
+// one: the operator's plan while one is set, and otherwise PlanTier while
+// IsActive.
+func (s *Subscription) GrantedPlan() (string, bool) {
+	if s.OperatorPlan != "" {
+		return s.OperatorPlan, true
+	}
+	if s.IsActive() {
+		return s.PlanTier, true
+	}
+	return "", false
 }
 
 // IsInTrial returns true if the subscription is in trial period.

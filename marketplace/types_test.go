@@ -137,6 +137,28 @@ func TestLicense_SeatsRemaining(t *testing.T) {
 	}
 }
 
+func TestSubscription_GrantedPlan(t *testing.T) {
+	tests := []struct {
+		name     string
+		sub      Subscription
+		wantPlan string
+		wantOK   bool
+	}{
+		{"active", Subscription{PlanTier: "pro", Status: SubscriptionStatusActive}, "pro", true},
+		{"canceled", Subscription{PlanTier: "pro", Status: SubscriptionStatusCanceled}, "", false},
+		{"operator over active", Subscription{PlanTier: "pro", Status: SubscriptionStatusActive, OperatorPlan: "internal"}, "internal", true},
+		{"operator over canceled", Subscription{PlanTier: "pro", Status: SubscriptionStatusCanceled, OperatorPlan: "internal"}, "internal", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plan, ok := tt.sub.GrantedPlan()
+			assert.Equal(t, tt.wantPlan, plan)
+			assert.Equal(t, tt.wantOK, ok)
+		})
+	}
+}
+
 func TestSubscription_IsActive(t *testing.T) {
 	tests := []struct {
 		name   string

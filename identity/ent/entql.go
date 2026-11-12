@@ -1040,6 +1040,9 @@ var schemaGraph = func() *sqlgraph.Schema {
 			subscription.FieldStripeSubscriptionID: {Type: field.TypeString, Column: subscription.FieldStripeSubscriptionID},
 			subscription.FieldStripeCustomerID:     {Type: field.TypeString, Column: subscription.FieldStripeCustomerID},
 			subscription.FieldCancelAtPeriodEnd:    {Type: field.TypeBool, Column: subscription.FieldCancelAtPeriodEnd},
+			subscription.FieldOperatorPlan:         {Type: field.TypeString, Column: subscription.FieldOperatorPlan},
+			subscription.FieldOperatorNote:         {Type: field.TypeString, Column: subscription.FieldOperatorNote},
+			subscription.FieldOperatorSetAt:        {Type: field.TypeTime, Column: subscription.FieldOperatorSetAt},
 			subscription.FieldCreatedAt:            {Type: field.TypeTime, Column: subscription.FieldCreatedAt},
 			subscription.FieldUpdatedAt:            {Type: field.TypeTime, Column: subscription.FieldUpdatedAt},
 		},
@@ -6984,6 +6987,21 @@ func (f *SubscriptionFilter) WhereStripeCustomerID(p entql.StringP) {
 // WhereCancelAtPeriodEnd applies the entql bool predicate on the cancel_at_period_end field.
 func (f *SubscriptionFilter) WhereCancelAtPeriodEnd(p entql.BoolP) {
 	f.Where(p.Field(subscription.FieldCancelAtPeriodEnd))
+}
+
+// WhereOperatorPlan applies the entql string predicate on the operator_plan field.
+func (f *SubscriptionFilter) WhereOperatorPlan(p entql.StringP) {
+	f.Where(p.Field(subscription.FieldOperatorPlan))
+}
+
+// WhereOperatorNote applies the entql string predicate on the operator_note field.
+func (f *SubscriptionFilter) WhereOperatorNote(p entql.StringP) {
+	f.Where(p.Field(subscription.FieldOperatorNote))
+}
+
+// WhereOperatorSetAt applies the entql time.Time predicate on the operator_set_at field.
+func (f *SubscriptionFilter) WhereOperatorSetAt(p entql.TimeP) {
+	f.Where(p.Field(subscription.FieldOperatorSetAt))
 }
 
 // WhereCreatedAt applies the entql time.Time predicate on the created_at field.

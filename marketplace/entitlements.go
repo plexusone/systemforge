@@ -101,12 +101,13 @@ func (e *entitler) entitlements(ctx context.Context, orgID uuid.UUID) ([]organiz
 			return nil, err
 		}
 		for _, sub := range list {
-			if !sub.IsActive() {
+			plan, ok := sub.GrantedPlan()
+			if !ok {
 				continue
 			}
 			ent := organization.Entitlement{
 				Source: organization.EntitlementSourceSubscription,
-				Tier:   sub.PlanTier,
+				Tier:   plan,
 			}
 			if sub.ListingID != nil {
 				ent.ListingID = sub.ListingID.String()
@@ -114,7 +115,8 @@ func (e *entitler) entitlements(ctx context.Context, orgID uuid.UUID) ([]organiz
 					return nil, err
 				}
 			}
-			if !sub.CurrentPeriodEnd.IsZero() {
+			// An operator's plan lasts until the operator clears it.
+			if sub.OperatorPlan == "" && !sub.CurrentPeriodEnd.IsZero() {
 				end := sub.CurrentPeriodEnd
 				ent.ValidUntil = &end
 			}

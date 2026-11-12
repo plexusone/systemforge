@@ -101,6 +101,44 @@ func TestEntitlementSource(t *testing.T) {
 	}
 }
 
+// TestEntitlementsFollowTheOperatorsPlan checks that a plan the operator
+// set is the subscription entitlement's tier, granted whatever the
+// subscription's status and until the operator clears it.
+func TestEntitlementsFollowTheOperatorsPlan(t *testing.T) {
+	f := newEntFixture(t)
+	ctx := context.Background()
+	sub := &Subscription{
+		ID: uuid.New(), OrganizationID: f.orgID, PlanTier: "pro", Status: SubscriptionStatusCanceled,
+		CurrentPeriodStart: time.Now().Add(-48 * time.Hour), CurrentPeriodEnd: time.Now().Add(-time.Hour),
+	}
+	if err := f.subs.Create(ctx, sub); err != nil {
+		t.Fatalf("Create subscription: %v", err)
+	}
+	if err := f.client.Subscription.UpdateOneID(sub.ID).SetOperatorPlan("internal").SetOperatorSetAt(time.Now()).Exec(ctx); err != nil {
+		t.Fatalf("set operator plan: %v", err)
+	}
+
+	got, err := EntitlementSource(f.subs, f.licenses, f.listings)(ctx, f.orgID)
+	if err != nil {
+		t.Fatalf("source: %v", err)
+	}
+	if len(got) != 1 || got[0].Tier != "internal" || got[0].ValidUntil != nil {
+		t.Errorf("entitlements = %+v, want one internal subscription entitlement with no end", got)
+	}
+	if tier, err := f.subs.GetPlanTier(ctx, f.orgID); err != nil || tier != "internal" {
+		t.Errorf("GetPlanTier = %q, %v, want internal", tier, err)
+	}
+
+	// A domain update, as billing makes, leaves the operator's plan.
+	sub.PlanTier = "free"
+	if err := f.subs.Update(ctx, sub); err != nil {
+		t.Fatalf("Update subscription: %v", err)
+	}
+	if stored, err := f.subs.GetByOrg(ctx, f.orgID); err != nil || stored.OperatorPlan != "internal" || stored.OperatorSetAt == nil {
+		t.Errorf("after an update: %+v, %v", stored, err)
+	}
+}
+
 func TestEntitlementsMapListingsToApplications(t *testing.T) {
 	f := newEntFixture(t)
 	ctx := context.Background()

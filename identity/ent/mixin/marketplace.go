@@ -2,7 +2,9 @@
 package mixin
 
 import (
+	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
@@ -247,6 +249,24 @@ func (SubscriptionMixin) Fields() []ent.Field {
 		field.Bool("cancel_at_period_end").
 			Default(false),
 
+		// A plan the deployment's operator set by hand, for an organization
+		// that runs or tests the service, or one given a plan without
+		// paying. While it is set it is the plan granted, whatever the
+		// status; billing events never change it (ADR-022).
+		field.String("operator_plan").
+			Optional().
+			Nillable().
+			Comment("Plan set by the operator; overrides plan_tier while set"),
+		field.String("operator_note").
+			Optional().
+			Validate(maxRunes(200)).
+			Default("").
+			Comment("Why the operator set the plan"),
+		field.Time("operator_set_at").
+			Optional().
+			Nillable().
+			Comment("When the operator set the plan"),
+
 		// Timestamps
 		field.Time("created_at").
 			Default(time.Now).
@@ -307,4 +327,15 @@ func (CreatorOrgMixin) Fields() []ent.Field {
 			Comment("Creator's revenue share percentage (nil = platform default)"),
 	}
 	return append(baseFields, creatorFields...)
+}
+
+// maxRunes limits a string to n characters (Unicode code points), where
+// MaxLen counts bytes.
+func maxRunes(n int) func(string) error {
+	return func(s string) error {
+		if utf8.RuneCountInString(s) > n {
+			return fmt.Errorf("longer than %d characters", n)
+		}
+		return nil
+	}
 }
