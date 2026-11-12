@@ -23,6 +23,9 @@ type redirectPolicy struct {
 	signedOut string
 	// signedOutName is signedOut's display name, for links back to it.
 	signedOutName string
+	// managedSignedOut, when set, is where a sign-out lands for a session
+	// signed in with a login token.
+	managedSignedOut string
 }
 
 func newRedirectPolicy(issuer string, cfg *SocialLoginConfig) (*redirectPolicy, error) {
@@ -54,6 +57,13 @@ func newRedirectPolicy(issuer string, cfg *SocialLoginConfig) (*redirectPolicy, 
 			p.signedOutName = hostOf(v, issuerOrigin)
 		}
 	}
+	if cfg.ManagedSignedOutURL != "" {
+		v, err := p.validate(cfg.ManagedSignedOutURL)
+		if err != nil {
+			return nil, fmt.Errorf("managed_signed_out_url: %w", err)
+		}
+		p.managedSignedOut = v
+	}
 	return p, nil
 }
 
@@ -65,6 +75,19 @@ func (p *redirectPolicy) originList() []string {
 	}
 	slices.Sort(out)
 	return out
+}
+
+// signedOutTarget returns where a sign-out of sess lands: the operator's
+// landing for its kind of sign-in, else target, the validated return_to.
+// ended is false when there was no session to end.
+func (p *redirectPolicy) signedOutTarget(target string, sess LoginSession, ended bool) string {
+	if ended && sess.Provider == loginTokenProvider && p.managedSignedOut != "" {
+		return p.managedSignedOut
+	}
+	if p.signedOut != "" {
+		return p.signedOut
+	}
+	return target
 }
 
 // resolve returns the validated target, or the default when raw is empty.

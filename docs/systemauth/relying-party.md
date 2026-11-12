@@ -170,7 +170,9 @@ login cookie is `SameSite=Lax` and is not sent on a cross-site `POST`.
 
 SystemAuth's `social_login.signed_out_url`, when set, replaces `returnTo`
 for every app, such as to send a signed-out browser to the product's
-marketing site.
+marketing site. `social_login.managed_signed_out_url`, when set, replaces
+it for a session signed in with a managed principal's login token, such as
+to send a child back to the app's sign-in page on a shared device.
 
 `BFFConfig.SignOutURL` is the sign-out page: the issuer's `/logout` by
 default, or `-` to leave it out, which keeps the `204`.

@@ -420,6 +420,13 @@ type SocialLoginConfig struct {
 	// host.
 	SignedOutName string `json:"signed_out_name,omitempty" yaml:"signed_out_name,omitempty" jsonschema:"description=Display name of the site at signed_out_url for links back to it (default: its host)"`
 
+	// ManagedSignedOutURL, when set, is where a sign-out lands for a
+	// session signed in with a managed principal's login token, such as a
+	// child's sign-in page on a shared device, whatever return_to the app
+	// sent and in place of SignedOutURL. It must pass the same allowlist.
+	// Empty treats those sessions like any other.
+	ManagedSignedOutURL string `json:"managed_signed_out_url,omitempty" yaml:"managed_signed_out_url,omitempty" jsonschema:"description=Where a sign-out lands for a session signed in with a managed principal's login token; it must be an allowed redirect origin"`
+
 	// SessionLifetime is the absolute lifetime of the login session cookie.
 	// Default: 12h.
 	SessionLifetime Duration `json:"session_lifetime,omitempty" yaml:"session_lifetime,omitempty" jsonschema:"default=12h,description=Absolute login session lifetime"`

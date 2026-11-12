@@ -10,7 +10,9 @@ import (
 // LogoutPath ends the SystemAuth login session. GET renders a confirmation
 // form; POST (same-origin or from an allowed relying-party origin) deletes
 // the __Host-sf_login session, revokes the principal's OAuth tokens and
-// redirects to the validated return_to (default: social_login.default_redirect).
+// redirects to social_login.managed_signed_out_url for a login token's
+// session, else social_login.signed_out_url, else the validated return_to
+// (default: social_login.default_redirect).
 const LogoutPath = "/logout"
 
 var logoutTemplate = template.Must(template.New("logout").Parse(`<!doctype html>
@@ -65,46 +67,49 @@ func (sl *socialLogin) handleLogout(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid return_to", http.StatusBadRequest)
 		return
 	}
-	// The operator's landing for every sign-out, such as the marketing site.
-	if sl.redirects.signedOut != "" {
-		target = sl.redirects.signedOut
-	}
 
-	if err := sl.endSession(w, r); err != nil {
+	sess, ended, err := sl.endSession(w, r)
+	if err != nil {
 		logger.Error("ending login session", "error", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	// The operator's landing for this kind of sign-in, such as the
+	// marketing site, or a child's sign-in page.
+	target = sl.redirects.signedOutTarget(target, sess, ended)
 
 	//nolint:gosec // G710: target was validated against the redirect allowlist
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }
 
 // endSession deletes r's login session, revokes the tokens issued to its
-// principal and clears the cookie. A request without a session only has its
-// cookie cleared. The caller checks where the request came from.
-func (sl *socialLogin) endSession(w http.ResponseWriter, r *http.Request) error {
+// principal and clears the cookie, returning the session it ended. A request
+// without a session only has its cookie cleared, and ended is false. The
+// caller checks where the request came from.
+func (sl *socialLogin) endSession(w http.ResponseWriter, r *http.Request) (sess LoginSession, ended bool, err error) {
 	ctx := r.Context()
 	if token := cookieValue(r, sl.cookies.sessionName); token != "" {
-		sess, err := sl.sessions.Get(ctx, token)
+		sess, err = sl.sessions.Get(ctx, token)
 		switch {
 		case err == nil:
 			if err := sl.sessions.Delete(ctx, token); err != nil {
-				return fmt.Errorf("deleting login session: %w", err)
+				return LoginSession{}, false, fmt.Errorf("deleting login session: %w", err)
 			}
 			if err := sl.revokePrincipalTokens(r, sess.PrincipalID.String()); err != nil {
-				return fmt.Errorf("revoking tokens of %s: %w", sess.PrincipalID, err)
+				return LoginSession{}, false, fmt.Errorf("revoking tokens of %s: %w", sess.PrincipalID, err)
 			}
 			LoggerFromContext(ctx).Info("logout", "principal_id", sess.PrincipalID)
 			sl.signedOut(ctx, sess)
+			ended = true
 		case errors.Is(err, ErrLoginSessionNotFound):
 			// Already signed out or expired; still clear the cookie.
+			sess = LoginSession{}
 		default:
-			return fmt.Errorf("reading login session: %w", err)
+			return LoginSession{}, false, fmt.Errorf("reading login session: %w", err)
 		}
 	}
 	sl.cookies.clearSession(w)
-	return nil
+	return sess, ended, nil
 }
 
 // EndLoginSession signs the person on r out of SystemAuth, as POST /logout
@@ -115,7 +120,8 @@ func (s *Server) EndLoginSession(w http.ResponseWriter, r *http.Request) error {
 	if s.social == nil {
 		return nil
 	}
-	return s.social.endSession(w, r)
+	_, _, err := s.social.endSession(w, r)
+	return err
 }
 
 // revokePrincipalTokens revokes every access and refresh token issued to
