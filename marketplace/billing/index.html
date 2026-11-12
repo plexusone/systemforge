@@ -3242,6 +3242,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#plans-set-by-the-operator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plans Set by the Operator
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#tables" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3732,6 +3743,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -4374,6 +4389,62 @@
     
   
     ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-021-billing-in-the-organization-console/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-021: Billing in the Organization Console (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-022-plans-set-by-the-operator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-022: Plans Set by the Operator (Proposed)
   
 
     
@@ -6059,6 +6130,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#plans-set-by-the-operator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plans Set by the Operator
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#tables" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -6267,9 +6349,34 @@ connected account and the platform keeps its fee; record the account with
 <code>store.LinkSeller</code> after payforge's <code>Connect.CreateAccount</code>. The checkout is
 recorded (<code>sf_billing_orders</code>) before the buyer sees it, and its payment,
 refunds and disputes are matched through that record.</p>
+<h2 id="plans-set-by-the-operator">Plans Set by the Operator<a class="headerlink" href="#plans-set-by-the-operator" title="Permanent link">&para;</a></h2>
+<p>An operator can put an organization on any plan of the spec by hand
+(<a href="../../design/adrs/ADR-022-plans-set-by-the-operator/">ADR-022</a>): an
+internal plan for the deployment's own accounts, or a plan given without
+payment. It is stored on the platform subscription beside the plan billing
+stores, and while it is set:</p>
+<ul>
+<li>it is the organization's plan for <code>OrganizationPlan</code>, the entitlements
+  and the authorization graph, whatever the subscription's status;</li>
+<li>billing events still update the subscription underneath, but never the
+  operator's plan;</li>
+<li>plan checkout is refused with 409, and the console reports
+  <code>setByOperator</code>.</li>
+</ul>
+<p>Clearing it puts the organization back on its subscription's plan, or the
+default plan. A host that adds <code>billingcmd.Command</code> to its CLI gets:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&lt;host&gt;<span class="w"> </span>billing<span class="w"> </span>plan<span class="w"> </span>show<span class="w"> </span>&lt;organization&gt;<span class="w">                   </span><span class="c1"># slug, ID or owner&#39;s email</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>&lt;host&gt;<span class="w"> </span>billing<span class="w"> </span>plan<span class="w"> </span><span class="nb">set</span><span class="w"> </span>&lt;organization&gt;<span class="w"> </span>&lt;plan&gt;<span class="w"> </span>--note<span class="w"> </span><span class="s2">&quot;…&quot;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>&lt;host&gt;<span class="w"> </span>billing<span class="w"> </span>plan<span class="w"> </span>clear<span class="w"> </span>&lt;organization&gt;
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>&lt;host&gt;<span class="w"> </span>billing<span class="w"> </span>plan<span class="w"> </span>list<span class="w">                                  </span><span class="c1"># every operator&#39;s plan</span>
+</code></pre></div>
+<p>The library functions are <code>SetOperatorPlan</code>, <code>ClearOperatorPlan</code>,
+<code>OperatorPlanOf</code> and <code>OperatorPlans</code>.</p>
 <h2 id="tables">Tables<a class="headerlink" href="#tables" title="Permanent link">&para;</a></h2>
 <p>Created by the Ent schema migration (<code>systemauth migrate</code>, or
-<code>Schema.Create</code>); no SQL migration is needed.</p>
+<code>Schema.Create</code>); no SQL migration is needed. The operator's plan is three
+nullable columns of <code>sf_subscriptions</code> (<code>operator_plan</code>, <code>operator_note</code>,
+<code>operator_set_at</code>), added the same way.</p>
 <table>
 <thead>
 <tr>

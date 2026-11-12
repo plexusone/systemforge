@@ -3657,6 +3657,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4346,6 +4350,62 @@
     
   
     ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ADR-021-billing-in-the-organization-console/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-021: Billing in the Organization Console (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ADR-022-plans-set-by-the-operator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-022: Plans Set by the Operator (Proposed)
   
 
     
@@ -6047,7 +6107,7 @@
 <h1 id="adr-019-support-requests-and-feedback-in-every-application">ADR-019: Support Requests and Feedback in Every Application<a class="headerlink" href="#adr-019-support-requests-and-feedback-in-every-application" title="Permanent link">&para;</a></h1>
 <p><strong>Status:</strong> Proposed
 <strong>Deciders:</strong> @grokify
-<strong>Relates to:</strong> ADR-003 (omnimail, which the default desk uses), ADR-011 and
+<strong>Relates to:</strong> ADR-003 (omnimail, which the mail desk uses), ADR-011 and
 ADR-012 (classification, privacy rights and holds, which cover support
 requests), ADR-013 (keys, which can seal message text), ADR-017 (the same
 adoption pattern as connectforge), ADR-007 (organization and platform roles),
@@ -6093,10 +6153,15 @@ adopts it, as ADR-017 does for connectforge.</p>
      of the capability is a few tables and a background job. An optional
      component would be left out of exactly the early launches that need it
      most.</li>
-<li><strong>How it works with nothing configured.</strong> The default desk is mail
-     through omnimail, which every deployment already configures for
-     verified email (ADR-003). A deployment sets its support address and
-     needs nothing else. A help desk is added by configuration.</li>
+<li><strong>How it works with little configured.</strong> The mail desk sends requests
+     through omnimail, which a deployment configures for verified email
+     (ADR-003). A deployment that sends mail sets its support address and
+     needs nothing else. A deployment without mail supplies a help desk
+     instead. Either way it needs at least one desk.</li>
+<li><strong>In two steps.</strong> The first release turns support on when the
+     configuration has a support section, so a deployment that has not set
+     one keeps starting. A later release makes the missing section a startup
+     error.</li>
 <li><strong>supportforge owns its schema.</strong> SystemForge runs its migration on the
    platform database. Its tables are prefixed <code>supportforge_</code> and are not
    merged into SystemForge's Ent client.</li>
@@ -6104,7 +6169,9 @@ adopts it, as ADR-017 does for connectforge.</p>
    which imports supportforge-core. A desk adapter imports only
    supportforge-core and nothing from SystemForge, so adapters can live in
    vendor SDKs, in applications or in private repositories. SystemForge ships
-   no vendor desks. The <code>support</code> package supplies supportforge's ports:</li>
+   no vendor desks and no bot challenge: a host supplies them, so an
+   application can compose integrations from its own or private modules.
+   The <code>support</code> package supplies supportforge's ports:</li>
 </ol>
 <table>
 <thead>
@@ -6120,7 +6187,7 @@ adopts it, as ADR-017 does for connectforge.</p>
 </tr>
 <tr>
 <td><code>ChallengeVerifier</code></td>
-<td>The deployment's bot challenge, for visitor requests</td>
+<td>The host's bot challenge, such as Cloudflare Turnstile, for visitor requests; without one, the visitor route is off</td>
 </tr>
 <tr>
 <td><code>RateLimiter</code></td>
@@ -6225,7 +6292,10 @@ adopts it, as ADR-017 does for connectforge.</p>
 <li><strong>Desks are configured per deployment and per product.</strong> A desk's
    credentials belong to the operator's own account at the vendor, so they are
    deployment secrets read through omnivault, not organization connections.
-   The desk order always ends with mail.</li>
+   When the deployment sends mail, the mail desk is last, as the fallback
+   that accepts what the others refuse. Without mail, a request every desk
+   refuses waits in the outbox, is retried, and is reported so the operator
+   is alerted.</li>
 <li>
 <p><strong>The user interface is shared, and it is ours.</strong> One package in
     systemforge-web, <code>@plexusone/support</code>, built over the API and embedded by
@@ -6286,18 +6356,31 @@ grant, but the customer's application data still does (ADR-020). An
 operator who passes request text to a model provider adds that provider
 as a processor, under a processing agreement and in the privacy notice.</p>
 </li>
+<li>
+<p><strong>Outbound mail is capped.</strong> Acknowledgments go to addresses nobody has
+    verified, so every message systemauthsvc sends passes through a hard
+    cap: monthly, daily, per recipient and per kind, counted on the platform
+    database, failing closed, and changed by a platform administrator
+    without a deploy. A reached limit, or a provider that has stopped
+    sending, leaves support requests in the outbox and skips
+    acknowledgments; nothing is lost.</p>
+</li>
 </ul>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Every application can hear its users at launch,</strong> with no vendor account
-  and no extra work beyond a support address.</li>
+  and no extra work beyond a support address, or a help desk where the
+  deployment sends no mail.</li>
 <li><strong>Product code stays vendor-neutral.</strong> Changing help desks is a
   configuration change, and an adapter can be written anywhere.</li>
 <li><strong>More tables in the platform database,</strong> owned and migrated by another
-  module, and two more background jobs.</li>
-<li><strong>Mail is the floor.</strong> A deployment without working outbound mail has no
-  support delivery. It already lacks verified email, so this adds no new
-  requirement.</li>
+  module, and three more background jobs: delivery, status and clearing.</li>
+<li><strong>Mail is the fallback, not a requirement.</strong> With mail, every request has
+  a desk that accepts it. Without mail, a request waits while every desk
+  refuses it, until one accepts it or the operator steps in.</li>
+<li><strong>Mail can stop at its cap,</strong> and address verification with it. Per-kind
+  limits keep acknowledgments from using up what sign-in needs, and alerts
+  come before the limit.</li>
 <li><strong>Requests are personal data in the platform's governance,</strong> so privacy
   requests and holds include them without each application's help.</li>
 <li><strong>No console to build or run at launch.</strong> Responders use the desk's inbox

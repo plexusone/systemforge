@@ -3655,6 +3655,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4255,6 +4259,62 @@
     
   
     ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-021-billing-in-the-organization-console/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-021: Billing in the Organization Console (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-022-plans-set-by-the-operator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-022: Plans Set by the Operator (Proposed)
   
 
     
@@ -8795,6 +8855,24 @@
 <td>bool</td>
 <td>default: false</td>
 <td></td>
+</tr>
+<tr>
+<td><code>operator_plan</code></td>
+<td>string</td>
+<td>nullable</td>
+<td>Plan set by the operator; overrides plan_tier while set (ADR-022)</td>
+</tr>
+<tr>
+<td><code>operator_note</code></td>
+<td>string</td>
+<td>max 200 characters, default: ""</td>
+<td>Why the operator set the plan</td>
+</tr>
+<tr>
+<td><code>operator_set_at</code></td>
+<td>time</td>
+<td>nullable</td>
+<td>When the operator set the plan</td>
 </tr>
 <tr>
 <td><code>created_at</code></td>

@@ -4074,6 +4074,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -4674,6 +4678,62 @@
     
   
     ADR-020: Customer-Authorized Support Access (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-021-billing-in-the-organization-console/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-021: Billing in the Organization Console (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/ADR-022-plans-set-by-the-operator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-022: Plans Set by the Operator (Proposed)
   
 
     
@@ -7297,8 +7357,10 @@ need nothing.</p>
 every <code>OrgResponse</code> and derived from the marketplace (next section).
 <code>APIConfig.Entitlements</code> supplies the source;
 <code>marketplace.EntitlementSource(subscriptions, licenses, listings, opts...)</code>
-builds one from each active subscription (source <code>subscription</code>, tier =
-<code>plan_tier</code>, valid until the period end), each valid license (source
+builds one from each subscription that grants a plan (source
+<code>subscription</code>, tier = the operator's plan with no end date when one is set
+(ADR-022), and otherwise <code>plan_tier</code> while active, valid until the period
+end), each valid license (source
 <code>license</code>, the listing ID, tier = license type, valid until, and <code>seats</code>
 for a seat-based license) and the deployment's default entitlements (source
 <code>default</code>). An entitlement that comes from a listing naming an application
@@ -7333,7 +7395,7 @@ organization:</p>
 <tr>
 <td><code>sf_subscriptions</code></td>
 <td>A subscription of an organization: at most one platform-wide (no <code>listing_id</code>) plus one per listing</td>
-<td><code>organization_id</code>, <code>listing_id</code> (optional), <code>plan_tier</code> (<code>free</code>, <code>starter</code>, <code>pro</code>, <code>enterprise</code>), <code>status</code> (<code>active</code>, <code>trialing</code>, <code>past_due</code>, <code>canceled</code>, <code>unpaid</code>), <code>current_period_start/end</code>, <code>cancel_at_period_end</code>, Stripe IDs</td>
+<td><code>organization_id</code>, <code>listing_id</code> (optional), <code>plan_tier</code> (<code>free</code>, <code>starter</code>, <code>pro</code>, <code>enterprise</code>), <code>status</code> (<code>active</code>, <code>trialing</code>, <code>past_due</code>, <code>canceled</code>, <code>unpaid</code>), <code>current_period_start/end</code>, <code>cancel_at_period_end</code>, Stripe IDs, and the operator's plan (<code>operator_plan</code>, <code>operator_note</code>, <code>operator_set_at</code>; ADR-022)</td>
 </tr>
 </tbody>
 </table>
