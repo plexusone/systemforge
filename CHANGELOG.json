@@ -9,6 +9,133 @@
   ],
   "releases": [
     {
+      "version": "v0.33.0",
+      "date": "2026-11-12",
+      "highlights": [
+        {
+          "description": "A deployment sells its plans with configuration alone: SystemAuth wires billing from a `billing` section and the host's pricing spec, and organizations choose and pay for a plan in the organization console, with a free mode when there is no Stripe key",
+          "commit": "ae96a9b"
+        },
+        {
+          "description": "An operator puts an organization on any plan of the spec, including internal plans, and billing events never change it",
+          "commit": "0fe2d3b"
+        }
+      ],
+      "added": [
+        {
+          "description": "The `billing` section of the SystemAuth configuration: the Stripe secret key and webhook signing secrets as secret references, with free mode when there is no key",
+          "commit": "361b6bd"
+        },
+        {
+          "description": "`systemauthsvc` builds billing from the section and `Options.Pricing`: the webhook at `/billing/webhook`, locks across instances on PostgreSQL, `Options.OnPlanChange` and `Service.OrganizationPlan`",
+          "commit": "ae96a9b"
+        },
+        {
+          "description": "The console's billing API under `/console/api/v1/organizations/{org}/billing`: the plan, the subscription and the pricing view for members, and checkout and the customer portal for owners and admins (`billing.NewConsole`)",
+          "commit": "9fb25b9"
+        },
+        {
+          "description": "`billing.OrganizationPlaceholder` in redirect URLs, filled with the organization the caller was authorized for, and names under `localhost` treated as loopback hosts in test mode",
+          "commit": "c42d16e"
+        },
+        {
+          "description": "`systemauthsvc.SyncPrices` and `billingcmd.Command` with `billing sync [--dry-run]`, which create or update Stripe's products and prices from the pricing spec without starting the service",
+          "commit": "4064bbd"
+        },
+        {
+          "description": "An operator's plan on the platform subscription (`operator_plan`, `operator_note`, `operator_set_at`), honored by `Subscription.GrantedPlan`, `OrganizationPlan`, the entitlements and `GetPlanTier`",
+          "commit": "0fe2d3b"
+        },
+        {
+          "description": "Billing events keep an operator's plan, plan checkout is refused with 409 while it is set, and the console's billing status reports `setByOperator`",
+          "commit": "33b8af9"
+        },
+        {
+          "description": "`billing plan list|show|set|clear` in `billingcmd`, naming an organization by slug, ID or owner's email",
+          "commit": "e49eecd"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "In free mode every organization is on the pricing spec's default plan, even one with a stored paid subscription",
+          "commit": "4063784"
+        },
+        {
+          "description": "Billing accepts a storage client the host passes in instead of requiring `database` in the configuration",
+          "commit": "067c849"
+        },
+        {
+          "description": "An operator's note is limited to 200 characters rather than 200 bytes",
+          "commit": "9262096"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Test tokens in `identity/relyingparty` get random IDs, so two made in a row are not refused as a replay on Windows",
+          "commit": "5589920"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Bump `github.com/plexusone/payforge` from 0.1.0 to 0.1.1",
+          "commit": "49f3baf"
+        },
+        {
+          "description": "Bump `github.com/plexusone/systemspec-pricingpackaging` from 0.1.0 to 0.2.0, with internal plans",
+          "commit": "0fe2d3b"
+        },
+        {
+          "description": "Replace `github.com/grokify/ocsf-schema-go` 0.2.0 with `github.com/opensecurity-dev/ocsf-schema-go` 0.3.0, its new module path",
+          "commit": "91d3574"
+        },
+        {
+          "description": "Bump `golang.org/x/oauth2` from 0.37.0 to 0.38.0",
+          "commit": "faeac6b"
+        },
+        {
+          "description": "Bump `golang.org/x/sys` from 0.49.0 to 0.50.0",
+          "commit": "78690be"
+        },
+        {
+          "description": "Bump `github.com/authzed/spicedb` to 1.57.1, `github.com/jackc/pgx/v5` to 5.13.0, `github.com/mattn/go-sqlite3` to 1.14.53, `github.com/spf13/pflag` to 1.1.0 and `golang.org/x/crypto` to 0.59.0",
+          "commit": "e84f819"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "ADR-021, billing in the organization console",
+          "commit": "487154a"
+        },
+        {
+          "description": "ADR-022, plans set by the operator",
+          "commit": "a8ef73d"
+        },
+        {
+          "description": "Plans for support requests and feedback (INIT-SYSTEMFORGE-016), with ADR-019 updated so hosts supply help desks and bot challenges and the mail desk is optional",
+          "commit": "3adb6f6"
+        },
+        {
+          "description": "A guide to selling plans from the console, and billing in the console guide, the deployment guide and the README"
+        }
+      ],
+      "knownIssues": [
+        {
+          "description": "`marketplace.EntitlementSource` still grants a stored paid plan in free mode, unlike `OrganizationPlan`"
+        },
+        {
+          "description": "The billing page of `@plexusone/console` ships in a later systemforge-web release; until then the console serves only the billing API"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "Run the schema migration (`systemauth migrate`, or `Schema.Create`) to add the operator's plan columns to `sf_subscriptions`; no SQL migration is needed"
+        },
+        {
+          "description": "To sell plans, pass the pricing spec as `Options.Pricing`, add a `billing` section, add `billingcmd.Command` to the host's CLI and run `billing sync`"
+        }
+      ]
+    },
+    {
       "version": "v0.32.1",
       "date": "2026-11-06",
       "added": [
