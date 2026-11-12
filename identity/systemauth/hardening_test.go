@@ -631,3 +631,65 @@ func TestLogoutLandsOnSignedOutURL(t *testing.T) {
 		t.Errorf("an unlisted signed_out_url: %v", err)
 	}
 }
+
+// loginTokenSession signs principalID in as a login token exchange does.
+func loginTokenSession(t *testing.T, s *Server, principalID uuid.UUID) *http.Cookie {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	if err := s.social.establishSession(req.Context(), rec, req, principalID, loginTokenProvider); err != nil {
+		t.Fatalf("establishSession: %v", err)
+	}
+	return findCookie(t, rec.Result(), LoginCookieName)
+}
+
+// managed_signed_out_url lands a sign-out of a login token's session, such
+// as a child's, on its own page, while other sign-outs keep signed_out_url;
+// it must be allowed.
+func TestLogoutLandsOnManagedSignedOutURL(t *testing.T) {
+	s := newSocialFlowServerWith(t, PartyFirst, &SocialLoginConfig{
+		AllowedRedirectOrigins: []string{"https://app.example.com", "https://www.example.com"},
+		SignedOutURL:           "https://www.example.com/",
+		ManagedSignedOutURL:    "https://app.example.com/",
+	})
+	returnTo := url.Values{"return_to": {"https://app.example.com/play"}}
+
+	child := loginTokenSession(t, s, uuid.New())
+	if w := postForm(s, LogoutPath, "https://app.example.com", returnTo, child); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "https://app.example.com/" {
+		t.Errorf("login token session: %d %q", w.Code, w.Header().Get("Location"))
+	}
+	adult := socialSession(t, s)
+	if w := postForm(s, LogoutPath, "https://app.example.com", returnTo, adult); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "https://www.example.com/" {
+		t.Errorf("social session: %d %q", w.Code, w.Header().Get("Location"))
+	}
+	// Without a session, nobody is known to be managed.
+	if w := postForm(s, LogoutPath, "https://app.example.com", returnTo); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "https://www.example.com/" {
+		t.Errorf("no session: %d %q", w.Code, w.Header().Get("Location"))
+	}
+	// An open redirect in return_to is still refused.
+	if w := postForm(s, LogoutPath, "https://app.example.com", url.Values{"return_to": {"https://evil.example.com/"}}, loginTokenSession(t, s, uuid.New())); w.Code != http.StatusBadRequest {
+		t.Errorf("open redirect: %d", w.Code)
+	}
+
+	// Without signed_out_url, other sign-outs return to return_to.
+	s = newSocialFlowServerWith(t, PartyFirst, &SocialLoginConfig{
+		AllowedRedirectOrigins: []string{"https://app.example.com"},
+		ManagedSignedOutURL:    "/start",
+	})
+	if w := postForm(s, LogoutPath, "https://app.example.com", returnTo, loginTokenSession(t, s, uuid.New())); w.Header().Get("Location") != "/start" {
+		t.Errorf("login token session without signed_out_url: %q", w.Header().Get("Location"))
+	}
+	if w := postForm(s, LogoutPath, "https://app.example.com", returnTo, socialSession(t, s)); w.Header().Get("Location") != "https://app.example.com/play" {
+		t.Errorf("social session without signed_out_url: %q", w.Header().Get("Location"))
+	}
+
+	// A managed_signed_out_url outside the allowed origins is refused at startup.
+	f := newFakeGitHub(t)
+	_, err := NewEmbedded(Config{Issuer: testIssuer, SocialLogin: &SocialLoginConfig{
+		AllowedRedirectOrigins: []string{"https://app.example.com"},
+		ManagedSignedOutURL:    "https://elsewhere.example.com/",
+	}}, WithSocialConnector(f.connector()))
+	if err == nil || !strings.Contains(err.Error(), "managed_signed_out_url") {
+		t.Errorf("an unlisted managed_signed_out_url: %v", err)
+	}
+}
