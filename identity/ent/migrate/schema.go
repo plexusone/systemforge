@@ -1910,7 +1910,7 @@ var (
 		{Name: "stripe_customer_id", Type: field.TypeString, Nullable: true},
 		{Name: "cancel_at_period_end", Type: field.TypeBool, Default: false},
 		{Name: "operator_plan", Type: field.TypeString, Nullable: true},
-		{Name: "operator_note", Type: field.TypeString, Nullable: true, Size: 200, Default: ""},
+		{Name: "operator_note", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "operator_set_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},

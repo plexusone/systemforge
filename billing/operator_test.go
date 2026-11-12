@@ -120,6 +120,16 @@ func TestOperatorPlanRefusesBadInput(t *testing.T) {
 	if _, set, err := OperatorPlanOf(ctx, r.db, r.buyer); err != nil || set {
 		t.Errorf("a refused plan was stored: %v %v", set, err)
 	}
+
+	// The limit counts characters, so a note of multibyte characters at
+	// the limit is stored, though it is longer in bytes.
+	note := strings.Repeat("é", MaxOperatorNote)
+	if err := SetOperatorPlan(ctx, r.db, r.spec, r.buyer, "staff", note); err != nil {
+		t.Fatalf("a %d-character note: %v", MaxOperatorNote, err)
+	}
+	if op, _, err := OperatorPlanOf(ctx, r.db, r.buyer); err != nil || op.Note != note {
+		t.Errorf("the note read back: %v", err)
+	}
 }
 
 func TestOperatorPlansLists(t *testing.T) {

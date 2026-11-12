@@ -2,7 +2,9 @@
 package mixin
 
 import (
+	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
@@ -257,7 +259,7 @@ func (SubscriptionMixin) Fields() []ent.Field {
 			Comment("Plan set by the operator; overrides plan_tier while set"),
 		field.String("operator_note").
 			Optional().
-			MaxLen(200).
+			Validate(maxRunes(200)).
 			Default("").
 			Comment("Why the operator set the plan"),
 		field.Time("operator_set_at").
@@ -325,4 +327,15 @@ func (CreatorOrgMixin) Fields() []ent.Field {
 			Comment("Creator's revenue share percentage (nil = platform default)"),
 	}
 	return append(baseFields, creatorFields...)
+}
+
+// maxRunes limits a string to n characters (Unicode code points), where
+// MaxLen counts bytes.
+func maxRunes(n int) func(string) error {
+	return func(s string) error {
+		if utf8.RuneCountInString(s) > n {
+			return fmt.Errorf("longer than %d characters", n)
+		}
+		return nil
+	}
 }
