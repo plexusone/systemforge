@@ -70,7 +70,9 @@ billing: {}
 ```
 
 - Every organization is on the spec's default plan, unless an operator has
-  set its plan.
+  set its plan. `marketplace.EntitlementSource` does not follow this yet: it
+  still grants a paid plan stored from an earlier configuration, so check
+  plans with `Service.OrganizationPlan` in free mode.
 - The console's billing section shows the plans, with `configured: false`
   and `canManage: false`, and starts no checkout (`409`).
 - No webhook route is mounted.
@@ -152,8 +154,10 @@ session:
   `?checkout=canceled` after checkout. The addresses are fixed on the
   server; nothing in the request changes them.
 
-The billing page of `@plexusone/console` comes in a systemforge-web
-release. A host enables it with `createConsoleApp({ billing: true })`.
+This release serves the billing API only. The billing page of
+`@plexusone/console` comes in a later systemforge-web release, which will
+enable it with `createConsoleApp({ billing: true })`; until then a host
+builds its own page on the API.
 
 ## Which plan an organization is on
 
@@ -216,4 +220,6 @@ runs without starting the service.
 
 The tables and the operator's plan columns of `sf_subscriptions` are
 created by the Ent schema migration (`systemauth migrate`, or
-`Schema.Create`). No SQL migration is needed.
+`Schema.Create`). Every deployment runs it on upgrading, with or without
+billing, since every query of subscriptions reads those columns. No SQL
+migration is needed.
