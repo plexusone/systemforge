@@ -434,6 +434,10 @@
           "type": "string",
           "description": "Display name of the site at signed_out_url for links back to it (default: its host)"
         },
+        "managed_signed_out_url": {
+          "type": "string",
+          "description": "Where a sign-out lands for a session signed in with a managed principal's login token; it must be an allowed redirect origin"
+        },
         "session_lifetime": {
           "type": "string",
           "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
