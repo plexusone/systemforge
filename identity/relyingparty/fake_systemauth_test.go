@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-jose/go-jose/v3"
 	gojwt "github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/grokify/goauth/dpop"
 )
 
@@ -150,7 +151,7 @@ func (f *fakeSystemAuth) accessJWT(sub, clientID string, scopes []string, ttl ti
 	now := time.Now()
 	return f.sign(gojwt.MapClaims{
 		"iss": f.srv.URL, "sub": sub, "client_id": clientID, "scp": scopes,
-		"exp": now.Add(ttl).Unix(), "iat": now.Unix(), "jti": fmt.Sprint(now.UnixNano()),
+		"exp": now.Add(ttl).Unix(), "iat": now.Unix(), "jti": uuid.NewString(),
 	})
 }
 

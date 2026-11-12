@@ -11,6 +11,7 @@ import (
 	"time"
 
 	gojwt "github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 // logoutToken signs a logout token with the fake's key.
@@ -18,7 +19,7 @@ func (f *fakeSystemAuth) logoutToken(typ string, mutate func(gojwt.MapClaims)) s
 	now := time.Now()
 	claims := gojwt.MapClaims{
 		"iss": f.srv.URL, "aud": testClientID, "sub": f.subject,
-		"iat": now.Unix(), "exp": now.Add(2 * time.Minute).Unix(), "jti": "jti-" + now.Format(time.RFC3339Nano),
+		"iat": now.Unix(), "exp": now.Add(2 * time.Minute).Unix(), "jti": uuid.NewString(),
 		"events": map[string]any{EventBackchannelLogout: map[string]any{}},
 	}
 	if mutate != nil {

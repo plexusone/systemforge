@@ -2,11 +2,11 @@ package relyingparty
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
 	gojwt "github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 // signTyp signs claims with the fake SystemAuth key and a JOSE typ header.
@@ -26,7 +26,7 @@ func (f *fakeSystemAuth) accessClaims(clientID string, aud ...string) gojwt.MapC
 	now := time.Now()
 	c := gojwt.MapClaims{
 		"iss": f.srv.URL, "sub": f.subject, "client_id": clientID,
-		"exp": now.Add(time.Minute).Unix(), "iat": now.Unix(), "jti": fmt.Sprint(now.UnixNano()),
+		"exp": now.Add(time.Minute).Unix(), "iat": now.Unix(), "jti": uuid.NewString(),
 	}
 	if len(aud) > 0 {
 		c["aud"] = aud

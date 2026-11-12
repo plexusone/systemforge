@@ -2,7 +2,6 @@ package relyingparty
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -204,7 +203,7 @@ func TestRecordChangeAdapter(t *testing.T) {
 func (f *fakeSystemAuth) signedAccessJWT(sub string, iat time.Time) string {
 	return f.sign(gojwt.MapClaims{
 		"iss": f.srv.URL, "sub": sub, "client_id": testClientID, "scp": []string{"things:read"},
-		"exp": iat.Add(time.Hour).Unix(), "iat": iat.Unix(), "jti": fmt.Sprint(iat.UnixNano()),
+		"exp": iat.Add(time.Hour).Unix(), "iat": iat.Unix(), "jti": uuid.NewString(),
 	})
 }
 
