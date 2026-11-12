@@ -132,10 +132,40 @@ connected account and the platform keeps its fee; record the account with
 recorded (`sf_billing_orders`) before the buyer sees it, and its payment,
 refunds and disputes are matched through that record.
 
+## Plans Set by the Operator
+
+An operator can put an organization on any plan of the spec by hand
+([ADR-022](../design/adrs/ADR-022-plans-set-by-the-operator.md)): an
+internal plan for the deployment's own accounts, or a plan given without
+payment. It is stored on the platform subscription beside the plan billing
+stores, and while it is set:
+
+- it is the organization's plan for `OrganizationPlan`, the entitlements
+  and the authorization graph, whatever the subscription's status;
+- billing events still update the subscription underneath, but never the
+  operator's plan;
+- plan checkout is refused with 409, and the console reports
+  `setByOperator`.
+
+Clearing it puts the organization back on its subscription's plan, or the
+default plan. A host that adds `billingcmd.Command` to its CLI gets:
+
+```bash
+<host> billing plan show <organization>                   # slug, ID or owner's email
+<host> billing plan set <organization> <plan> --note "…"
+<host> billing plan clear <organization>
+<host> billing plan list                                  # every operator's plan
+```
+
+The library functions are `SetOperatorPlan`, `ClearOperatorPlan`,
+`OperatorPlanOf` and `OperatorPlans`.
+
 ## Tables
 
 Created by the Ent schema migration (`systemauth migrate`, or
-`Schema.Create`); no SQL migration is needed.
+`Schema.Create`); no SQL migration is needed. The operator's plan is three
+nullable columns of `sf_subscriptions` (`operator_plan`, `operator_note`,
+`operator_set_at`), added the same way.
 
 | Table | Holds |
 |-------|-------|

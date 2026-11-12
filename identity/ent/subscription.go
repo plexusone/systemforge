@@ -37,6 +37,12 @@ type Subscription struct {
 	StripeCustomerID *string `json:"stripe_customer_id,omitempty"`
 	// CancelAtPeriodEnd holds the value of the "cancel_at_period_end" field.
 	CancelAtPeriodEnd bool `json:"cancel_at_period_end,omitempty"`
+	// Plan set by the operator; overrides plan_tier while set
+	OperatorPlan *string `json:"operator_plan,omitempty"`
+	// Why the operator set the plan
+	OperatorNote string `json:"operator_note,omitempty"`
+	// When the operator set the plan
+	OperatorSetAt *time.Time `json:"operator_set_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -76,9 +82,9 @@ func (*Subscription) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case subscription.FieldCancelAtPeriodEnd:
 			values[i] = new(sql.NullBool)
-		case subscription.FieldPlanTier, subscription.FieldStatus, subscription.FieldStripeSubscriptionID, subscription.FieldStripeCustomerID:
+		case subscription.FieldPlanTier, subscription.FieldStatus, subscription.FieldStripeSubscriptionID, subscription.FieldStripeCustomerID, subscription.FieldOperatorPlan, subscription.FieldOperatorNote:
 			values[i] = new(sql.NullString)
-		case subscription.FieldCurrentPeriodStart, subscription.FieldCurrentPeriodEnd, subscription.FieldCreatedAt, subscription.FieldUpdatedAt:
+		case subscription.FieldCurrentPeriodStart, subscription.FieldCurrentPeriodEnd, subscription.FieldOperatorSetAt, subscription.FieldCreatedAt, subscription.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case subscription.FieldID, subscription.FieldOrganizationID:
 			values[i] = new(uuid.UUID)
@@ -159,6 +165,26 @@ func (_m *Subscription) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field cancel_at_period_end", values[i])
 			} else if value.Valid {
 				_m.CancelAtPeriodEnd = value.Bool
+			}
+		case subscription.FieldOperatorPlan:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field operator_plan", values[i])
+			} else if value.Valid {
+				_m.OperatorPlan = new(string)
+				*_m.OperatorPlan = value.String
+			}
+		case subscription.FieldOperatorNote:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field operator_note", values[i])
+			} else if value.Valid {
+				_m.OperatorNote = value.String
+			}
+		case subscription.FieldOperatorSetAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field operator_set_at", values[i])
+			} else if value.Valid {
+				_m.OperatorSetAt = new(time.Time)
+				*_m.OperatorSetAt = value.Time
 			}
 		case subscription.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -245,6 +271,19 @@ func (_m *Subscription) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("cancel_at_period_end=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CancelAtPeriodEnd))
+	builder.WriteString(", ")
+	if v := _m.OperatorPlan; v != nil {
+		builder.WriteString("operator_plan=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("operator_note=")
+	builder.WriteString(_m.OperatorNote)
+	builder.WriteString(", ")
+	if v := _m.OperatorSetAt; v != nil {
+		builder.WriteString("operator_set_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

@@ -1502,12 +1502,18 @@ func init() {
 	subscriptionDescCancelAtPeriodEnd := subscriptionMixinFields0[9].Descriptor()
 	// subscription.DefaultCancelAtPeriodEnd holds the default value on creation for the cancel_at_period_end field.
 	subscription.DefaultCancelAtPeriodEnd = subscriptionDescCancelAtPeriodEnd.Default.(bool)
+	// subscriptionDescOperatorNote is the schema descriptor for operator_note field.
+	subscriptionDescOperatorNote := subscriptionMixinFields0[11].Descriptor()
+	// subscription.DefaultOperatorNote holds the default value on creation for the operator_note field.
+	subscription.DefaultOperatorNote = subscriptionDescOperatorNote.Default.(string)
+	// subscription.OperatorNoteValidator is a validator for the "operator_note" field. It is called by the builders before save.
+	subscription.OperatorNoteValidator = subscriptionDescOperatorNote.Validators[0].(func(string) error)
 	// subscriptionDescCreatedAt is the schema descriptor for created_at field.
-	subscriptionDescCreatedAt := subscriptionMixinFields0[10].Descriptor()
+	subscriptionDescCreatedAt := subscriptionMixinFields0[13].Descriptor()
 	// subscription.DefaultCreatedAt holds the default value on creation for the created_at field.
 	subscription.DefaultCreatedAt = subscriptionDescCreatedAt.Default.(func() time.Time)
 	// subscriptionDescUpdatedAt is the schema descriptor for updated_at field.
-	subscriptionDescUpdatedAt := subscriptionMixinFields0[11].Descriptor()
+	subscriptionDescUpdatedAt := subscriptionMixinFields0[14].Descriptor()
 	// subscription.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	subscription.DefaultUpdatedAt = subscriptionDescUpdatedAt.Default.(func() time.Time)
 	// subscription.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

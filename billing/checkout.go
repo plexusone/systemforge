@@ -46,13 +46,25 @@ func CredentialOrganization(r *http.Request) (uuid.UUID, error) {
 
 // RedirectURLs are where the provider sends the buyer back to. They are
 // configured on the server and never taken from a request. The checkout
-// session ID is appended to a success URL.
+// session ID is appended to a success URL. OrganizationPlaceholder in a URL
+// is replaced with the ID of the organization the caller acts for, so a
+// buyer can return to that organization's page.
 type RedirectURLs struct {
 	PlanSuccess    string
 	PlanCancel     string
 	ListingSuccess string
 	ListingCancel  string
 	PortalReturn   string
+}
+
+// OrganizationPlaceholder in a redirect URL stands for the organization's
+// ID.
+const OrganizationPlaceholder = "{organization}"
+
+// forOrganization fills OrganizationPlaceholder in a configured URL. The
+// ID is a UUID, which needs no escaping in a path or query.
+func forOrganization(raw, org string) string {
+	return strings.ReplaceAll(raw, OrganizationPlaceholder, org)
 }
 
 // CheckoutConfig configures Checkout. Billing, Spec, Store, DB, Purchases
@@ -169,7 +181,8 @@ func checkRedirect(raw string, hosts map[string]bool, testMode bool) error {
 		return errors.New("must be an absolute URL without user information")
 	}
 	host := strings.ToLower(u.Hostname())
-	local := host == "localhost" || host == "127.0.0.1" || host == "::1"
+	// Names under localhost are loopback too (RFC 6761).
+	local := host == "localhost" || strings.HasSuffix(host, ".localhost") || host == "127.0.0.1" || host == "::1"
 	if local && !testMode {
 		return fmt.Errorf("host %q is loopback, which a live payment provider never redirects to", host)
 	}
@@ -284,6 +297,13 @@ func (c *Checkout) PlanHandler() http.Handler {
 		if err := decode(r, &body); err != nil {
 			return "", err
 		}
+		// A plan the operator set is not for sale: checkout would charge
+		// for a plan the organization would not be on.
+		if _, set, err := OperatorPlanOf(ctx, c.cfg.DB, org); err != nil {
+			return "", fail(http.StatusInternalServerError, "billing is unavailable", err)
+		} else if set {
+			return "", fail(http.StatusConflict, "the organization's plan is set by the operator", nil)
+		}
 		subject, err := c.subject(ctx, org)
 		if err != nil {
 			return "", err
@@ -293,7 +313,7 @@ func (c *Checkout) PlanHandler() http.Handler {
 		}
 		sess, err := c.cfg.Billing.CheckoutPlan(ctx, payforge.PlanCheckout{
 			Subject: subject, Plan: body.Plan, Interval: pricingspec.Interval(body.Interval),
-			SuccessURL: c.cfg.URLs.PlanSuccess, CancelURL: c.cfg.URLs.PlanCancel,
+			SuccessURL: forOrganization(c.cfg.URLs.PlanSuccess, subject.ID), CancelURL: forOrganization(c.cfg.URLs.PlanCancel, subject.ID),
 		})
 		if err != nil {
 			return "", providerError(err)
@@ -379,7 +399,7 @@ func (c *Checkout) startListingCheckout(ctx context.Context, subject payforge.Su
 	if c.cfg.Spec.Marketplace == nil {
 		sess, err := c.cfg.Billing.CheckoutProduct(ctx, payforge.ProductCheckout{
 			Subject: subject, Product: c.cfg.ListingProduct, AmountCents: listing.PriceCents,
-			SuccessURL: c.cfg.URLs.ListingSuccess, CancelURL: c.cfg.URLs.ListingCancel,
+			SuccessURL: forOrganization(c.cfg.URLs.ListingSuccess, subject.ID), CancelURL: forOrganization(c.cfg.URLs.ListingCancel, subject.ID),
 		})
 		if err != nil {
 			return payforge.Session{}, providerError(err)
@@ -401,7 +421,8 @@ func (c *Checkout) startListingCheckout(ctx context.Context, subject payforge.Su
 	}
 	sess, err := c.cfg.Connect.CheckoutSale(ctx, payforge.Sale{
 		Buyer: subject, SellerAccount: seller.AccountID, SellerPlan: plan, Product: c.cfg.ListingProduct,
-		AmountCents: listing.PriceCents, SuccessURL: c.cfg.URLs.ListingSuccess, CancelURL: c.cfg.URLs.ListingCancel,
+		AmountCents: listing.PriceCents,
+		SuccessURL:  forOrganization(c.cfg.URLs.ListingSuccess, subject.ID), CancelURL: forOrganization(c.cfg.URLs.ListingCancel, subject.ID),
 	})
 	if err != nil {
 		return payforge.Session{}, providerError(err)
@@ -420,7 +441,7 @@ func (c *Checkout) PortalHandler() http.Handler {
 		if err != nil {
 			return "", fail(http.StatusInternalServerError, "billing is unavailable", err)
 		}
-		u, err := c.cfg.Billing.Portal(ctx, customer, c.cfg.URLs.PortalReturn)
+		u, err := c.cfg.Billing.Portal(ctx, customer, forOrganization(c.cfg.URLs.PortalReturn, org.String()))
 		if err != nil {
 			return "", providerError(err)
 		}

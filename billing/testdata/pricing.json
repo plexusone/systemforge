@@ -18,7 +18,8 @@
       "prices": [ { "interval": "month", "amountCents": 1500 }, { "interval": "year", "amountCents": 15000 } ],
       "platformFeeBps": 500
     },
-    { "id": "enterprise", "name": "Enterprise", "tier": "enterprise", "selfServe": false }
+    { "id": "enterprise", "name": "Enterprise", "tier": "enterprise", "selfServe": false },
+    { "id": "staff", "name": "Staff", "tier": "enterprise", "internal": true }
   ],
   "products": [
     { "id": "listing", "name": "A marketplace listing", "sellerSet": true, "minAmountCents": 100 }

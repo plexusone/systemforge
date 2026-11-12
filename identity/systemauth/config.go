@@ -65,6 +65,11 @@ type Config struct {
 	// nil disables it. It signs in with social login's session.
 	Console *ConsoleConfig `json:"console,omitempty" yaml:"console,omitempty" jsonschema:"description=Organization console under /console (ADR-018)"`
 
+	// Billing takes payment for the deployment's plans through Stripe and
+	// serves the console's billing section (ADR-021); nil disables it. It
+	// needs a database, the console, and a pricing spec from the host.
+	Billing *BillingConfig `json:"billing,omitempty" yaml:"billing,omitempty" jsonschema:"description=Billing for the deployment's plans through Stripe (ADR-021)"`
+
 	// DPoP tunes DPoP proof checking (RFC 9449). DPoP itself is always on:
 	// every client must prove possession of a key at the token endpoint and
 	// gets tokens bound to it, unless its registration sets
@@ -267,6 +272,52 @@ type ConsoleConfig struct {
 
 // ErrInvalidConsoleConfig is returned for a console that cannot work.
 var ErrInvalidConsoleConfig = errors.New("systemauth: invalid console configuration")
+
+// BillingConfig configures billing (ADR-021). With no secret key the
+// deployment runs in free mode: every organization is on the pricing
+// spec's default plan, and the console says so.
+type BillingConfig struct {
+	// StripeSecretKey is the Stripe secret key, or a restricted key with
+	// write access to products, prices, customers, checkout sessions and
+	// the billing portal. Its mode, test or live, is the mode webhook
+	// events must match. A secret: ${STRIPE_SECRET_KEY}.
+	StripeSecretKey string `json:"stripe_secret_key,omitempty" yaml:"stripe_secret_key,omitempty" jsonschema:"description=Stripe secret key; empty runs in free mode (supports secret references such as ${STRIPE_SECRET_KEY})"`
+
+	// StripeWebhookSecrets are the signing secrets of the webhook
+	// endpoints that post to /billing/webhook. A secret each:
+	// ${STRIPE_WEBHOOK_SECRET}.
+	StripeWebhookSecrets []string `json:"stripe_webhook_secrets,omitempty" yaml:"stripe_webhook_secrets,omitempty" jsonschema:"description=Signing secrets of the Stripe webhook endpoints (supports secret references)"`
+}
+
+// ErrInvalidBillingConfig is returned for billing that cannot work.
+var ErrInvalidBillingConfig = errors.New("systemauth: invalid billing configuration")
+
+// Configured reports whether billing has a payment provider. Without one
+// the deployment is in free mode.
+func (b *BillingConfig) Configured() bool { return b != nil && b.StripeSecretKey != "" }
+
+func (b *BillingConfig) validate(c *Config) error {
+	switch {
+	case c.Console == nil:
+		return fmt.Errorf("%w: billing is managed in the console, which is not configured", ErrInvalidBillingConfig)
+	case b.StripeSecretKey != "" && len(b.WebhookSecrets()) == 0:
+		return fmt.Errorf("%w: stripe_webhook_secrets is required with a secret key", ErrInvalidBillingConfig)
+	}
+	return nil
+}
+
+// WebhookSecrets are the webhook signing secrets that are set. A reference
+// to a secret that does not exist is empty, so a configuration can name
+// one that only some deployments have.
+func (b *BillingConfig) WebhookSecrets() []string {
+	var out []string
+	for _, w := range b.StripeWebhookSecrets {
+		if w != "" {
+			out = append(out, w)
+		}
+	}
+	return out
+}
 
 // SecretsConfig selects the vault that ${NAME} references in secret fields
 // (client secrets, keys, DSNs, Redis URLs, ...) are read from. NAME is the
@@ -848,6 +899,11 @@ func (c *Config) Validate() error {
 	}
 	if c.Console != nil && c.SocialLogin == nil {
 		return fmt.Errorf("%w: the console signs in with social login, which is not configured", ErrInvalidConsoleConfig)
+	}
+	if c.Billing != nil {
+		if err := c.Billing.validate(c); err != nil {
+			return err
+		}
 	}
 	// A configuration that never called ApplyDefaults has no mode, which
 	// means rbac; a stated mode is checked as written.

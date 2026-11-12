@@ -364,8 +364,10 @@ What an organization may use is its `entitlements`, a list returned in
 every `OrgResponse` and derived from the marketplace (next section).
 `APIConfig.Entitlements` supplies the source;
 `marketplace.EntitlementSource(subscriptions, licenses, listings, opts...)`
-builds one from each active subscription (source `subscription`, tier =
-`plan_tier`, valid until the period end), each valid license (source
+builds one from each subscription that grants a plan (source
+`subscription`, tier = the operator's plan with no end date when one is set
+(ADR-022), and otherwise `plan_tier` while active, valid until the period
+end), each valid license (source
 `license`, the listing ID, tier = license type, valid until, and `seats`
 for a seat-based license) and the deployment's default entitlements (source
 `default`). An entitlement that comes from a listing naming an application
@@ -381,7 +383,7 @@ organization:
 | `sf_listings` | A product offered by a creator organization | `creator_org_id`, `owner_id`, `product_type`, `product_id`, `application` (optional), `pricing_model` (`free`, `one_time`, `subscription`, `per_seat`), `price_cents`, `currency`, `status` (`draft`, `pending_review`, `published`, `archived`) |
 | `sf_licenses` | An organization's right to a listing | `listing_id`, `organization_id`, `license_type` (`seat_based`, `team`, `unlimited`), `seats`, `used_seats`, `valid_from`, `valid_until`, `stripe_subscription_id`, `purchased_by` |
 | `sf_seat_assignments` | A seat of a license given to a principal | `license_id`, `principal_id`, `assigned_by`, `assigned_at` |
-| `sf_subscriptions` | A subscription of an organization: at most one platform-wide (no `listing_id`) plus one per listing | `organization_id`, `listing_id` (optional), `plan_tier` (`free`, `starter`, `pro`, `enterprise`), `status` (`active`, `trialing`, `past_due`, `canceled`, `unpaid`), `current_period_start/end`, `cancel_at_period_end`, Stripe IDs |
+| `sf_subscriptions` | A subscription of an organization: at most one platform-wide (no `listing_id`) plus one per listing | `organization_id`, `listing_id` (optional), `plan_tier` (`free`, `starter`, `pro`, `enterprise`), `status` (`active`, `trialing`, `past_due`, `canceled`, `unpaid`), `current_period_start/end`, `cancel_at_period_end`, Stripe IDs, and the operator's plan (`operator_plan`, `operator_note`, `operator_set_at`; ADR-022) |
 
 Services: `marketplace.ListingService` (create, publish, archive, list),
 `LicenseService` (`Grant`, `Revoke`, `Check(listingID, orgID)` for a valid

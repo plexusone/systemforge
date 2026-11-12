@@ -34,6 +34,12 @@ const (
 	FieldStripeCustomerID = "stripe_customer_id"
 	// FieldCancelAtPeriodEnd holds the string denoting the cancel_at_period_end field in the database.
 	FieldCancelAtPeriodEnd = "cancel_at_period_end"
+	// FieldOperatorPlan holds the string denoting the operator_plan field in the database.
+	FieldOperatorPlan = "operator_plan"
+	// FieldOperatorNote holds the string denoting the operator_note field in the database.
+	FieldOperatorNote = "operator_note"
+	// FieldOperatorSetAt holds the string denoting the operator_set_at field in the database.
+	FieldOperatorSetAt = "operator_set_at"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -63,6 +69,9 @@ var Columns = []string{
 	FieldStripeSubscriptionID,
 	FieldStripeCustomerID,
 	FieldCancelAtPeriodEnd,
+	FieldOperatorPlan,
+	FieldOperatorNote,
+	FieldOperatorSetAt,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -86,6 +95,10 @@ var (
 	DefaultCurrentPeriodStart func() time.Time
 	// DefaultCancelAtPeriodEnd holds the default value on creation for the "cancel_at_period_end" field.
 	DefaultCancelAtPeriodEnd bool
+	// DefaultOperatorNote holds the default value on creation for the "operator_note" field.
+	DefaultOperatorNote string
+	// OperatorNoteValidator is a validator for the "operator_note" field. It is called by the builders before save.
+	OperatorNoteValidator func(string) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -176,6 +189,21 @@ func ByStripeCustomerID(opts ...sql.OrderTermOption) OrderOption {
 // ByCancelAtPeriodEnd orders the results by the cancel_at_period_end field.
 func ByCancelAtPeriodEnd(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCancelAtPeriodEnd, opts...).ToFunc()
+}
+
+// ByOperatorPlan orders the results by the operator_plan field.
+func ByOperatorPlan(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOperatorPlan, opts...).ToFunc()
+}
+
+// ByOperatorNote orders the results by the operator_note field.
+func ByOperatorNote(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOperatorNote, opts...).ToFunc()
+}
+
+// ByOperatorSetAt orders the results by the operator_set_at field.
+func ByOperatorSetAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOperatorSetAt, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

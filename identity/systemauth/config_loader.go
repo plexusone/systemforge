@@ -203,6 +203,14 @@ func (c *Config) resolveSecrets(ctx context.Context, r *secrets.Resolver) (err e
 		e.expandWhole(&v.PublicKeyPEM)
 	}
 
+	// Billing
+	if c.Billing != nil {
+		e.expandWhole(&c.Billing.StripeSecretKey)
+		for i := range c.Billing.StripeWebhookSecrets {
+			e.expandWhole(&c.Billing.StripeWebhookSecrets[i])
+		}
+	}
+
 	// Shared rate limit storage
 	e.expand(&c.RateLimit.RedisURL)
 

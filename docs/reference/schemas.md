@@ -676,6 +676,9 @@ A platform subscription.
 | `stripe_subscription_id` | string | unique, nullable |  |
 | `stripe_customer_id` | string | nullable |  |
 | `cancel_at_period_end` | bool | default: false |  |
+| `operator_plan` | string | nullable | Plan set by the operator; overrides plan_tier while set (ADR-022) |
+| `operator_note` | string | max 200 characters, default: "" | Why the operator set the plan |
+| `operator_set_at` | time | nullable | When the operator set the plan |
 | `created_at` | time | immutable | Creation time |
 | `updated_at` | time | — | Last modification time |
 | `organization_id` | UUID | FK → Organization, unique | The subscribing organization |
