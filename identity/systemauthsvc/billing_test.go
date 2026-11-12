@@ -74,6 +74,9 @@ func TestBillingFreeMode(t *testing.T) {
 	if err != nil || plan.ID != "free" {
 		t.Errorf("an organization's plan in free mode: %q %v", plan.ID, err)
 	}
+	if s.TakesPayments() {
+		t.Error("free mode takes payments")
+	}
 }
 
 func TestBillingWithStripe(t *testing.T) {
@@ -86,6 +89,9 @@ func TestBillingWithStripe(t *testing.T) {
 	}
 	if rec := serve(s, http.MethodGet, orgBilling); rec.Code != http.StatusUnauthorized {
 		t.Errorf("the console's billing without a session: %d", rec.Code)
+	}
+	if !s.TakesPayments() {
+		t.Error("billing with a Stripe key takes no payments")
 	}
 }
 

@@ -166,6 +166,15 @@ func (s *Service) writeBillingAuthError(w http.ResponseWriter, err error) {
 	}
 }
 
+// TakesPayments reports whether billing takes payments: the configuration
+// has a billing section with a Stripe key. It is false in free mode and
+// without billing. A host that builds marketplace.EntitlementSource over
+// the platform subscription passes marketplace.WithoutPayments when it is
+// false, so entitlements agree with OrganizationPlan.
+func (s *Service) TakesPayments() bool {
+	return s.billing != nil && s.billing.client != nil
+}
+
 // OrganizationPlan is the plan an organization is on, for the host's
 // limits and features: the plan the operator set, when there is one
 // (ADR-022); otherwise its subscription's plan while the subscription

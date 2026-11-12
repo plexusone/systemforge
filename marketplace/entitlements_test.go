@@ -139,6 +139,46 @@ func TestEntitlementsFollowTheOperatorsPlan(t *testing.T) {
 	}
 }
 
+// TestEntitlementsWithoutPayments checks that without payments a stored
+// paid subscription grants nothing, while an operator's plan still does.
+func TestEntitlementsWithoutPayments(t *testing.T) {
+	f := newEntFixture(t)
+	ctx := context.Background()
+	sub := &Subscription{
+		ID: uuid.New(), OrganizationID: f.orgID, PlanTier: "pro", Status: SubscriptionStatusActive,
+		CurrentPeriodStart: time.Now().Add(-time.Hour), CurrentPeriodEnd: time.Now().Add(24 * time.Hour),
+	}
+	if err := f.subs.Create(ctx, sub); err != nil {
+		t.Fatalf("Create subscription: %v", err)
+	}
+
+	got, err := EntitlementSource(f.subs, f.licenses, f.listings, WithoutPayments())(ctx, f.orgID)
+	if err != nil {
+		t.Fatalf("source: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("entitlements = %+v, want none from a paid plan without payments", got)
+	}
+	got, err = EntitlementSource(f.subs, f.licenses, f.listings)(ctx, f.orgID)
+	if err != nil {
+		t.Fatalf("source: %v", err)
+	}
+	if len(got) != 1 || got[0].Tier != "pro" {
+		t.Errorf("entitlements = %+v, want the pro plan with payments", got)
+	}
+
+	if err := f.client.Subscription.UpdateOneID(sub.ID).SetOperatorPlan("internal").SetOperatorSetAt(time.Now()).Exec(ctx); err != nil {
+		t.Fatalf("set operator plan: %v", err)
+	}
+	got, err = EntitlementSource(f.subs, f.licenses, f.listings, WithoutPayments())(ctx, f.orgID)
+	if err != nil {
+		t.Fatalf("source: %v", err)
+	}
+	if len(got) != 1 || got[0].Tier != "internal" {
+		t.Errorf("entitlements = %+v, want the operator's internal plan without payments", got)
+	}
+}
+
 func TestEntitlementsMapListingsToApplications(t *testing.T) {
 	f := newEntFixture(t)
 	ctx := context.Background()
