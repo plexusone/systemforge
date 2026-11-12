@@ -2,7 +2,6 @@ package relyingparty
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	gojwt "github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/grokify/goauth/dpop"
 )
 
@@ -35,7 +35,7 @@ func (f *fakeSystemAuth) boundAccessJWT(sub, jkt string) string {
 	now := time.Now()
 	return f.sign(gojwt.MapClaims{
 		"iss": f.srv.URL, "sub": sub, "client_id": testClientID,
-		"exp": now.Add(time.Minute).Unix(), "iat": now.Unix(), "jti": fmt.Sprint(now.UnixNano()),
+		"exp": now.Add(time.Minute).Unix(), "iat": now.Unix(), "jti": uuid.NewString(),
 		"cnf": map[string]any{"jkt": jkt},
 	})
 }
