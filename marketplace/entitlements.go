@@ -16,7 +16,8 @@ import (
 type EntitlementOption func(*entitlementConfig)
 
 type entitlementConfig struct {
-	defaults []string
+	defaults   []string
+	noPayments bool
 }
 
 // WithDefaultEntitlements declares applications every organization is
@@ -25,6 +26,14 @@ type entitlementConfig struct {
 // marketplace. It is the deployment's marketplace.default_entitlements.
 func WithDefaultEntitlements(applications ...string) EntitlementOption {
 	return func(c *entitlementConfig) { c.defaults = append(c.defaults, applications...) }
+}
+
+// WithoutPayments declares that the deployment takes no payments, as in
+// billing's free mode: a subscription then grants only a plan the operator
+// set (ADR-022), never a paid plan stored from an earlier configuration.
+// It matches billing.OrganizationPlan with payments off.
+func WithoutPayments() EntitlementOption {
+	return func(c *entitlementConfig) { c.noPayments = true }
 }
 
 // EntitlementSource returns an organization.EntitlementSource that
@@ -44,7 +53,7 @@ func EntitlementSource(subs SubscriptionService, licenses LicenseService, listin
 	for _, o := range opts {
 		o(&cfg)
 	}
-	e := &entitler{subs: subs, licenses: licenses, listings: listings, defaults: cfg.defaults}
+	e := &entitler{subs: subs, licenses: licenses, listings: listings, defaults: cfg.defaults, noPayments: cfg.noPayments}
 	return e.entitlements
 }
 
@@ -53,6 +62,8 @@ type entitler struct {
 	licenses LicenseService
 	listings ListingService
 	defaults []string
+	// noPayments grants a subscription's plan only when the operator set it.
+	noPayments bool
 }
 
 func (e *entitler) application(ctx context.Context, listingID uuid.UUID, cache map[uuid.UUID]string) (string, error) {
@@ -102,7 +113,7 @@ func (e *entitler) entitlements(ctx context.Context, orgID uuid.UUID) ([]organiz
 		}
 		for _, sub := range list {
 			plan, ok := sub.GrantedPlan()
-			if !ok {
+			if !ok || (e.noPayments && sub.OperatorPlan == "") {
 				continue
 			}
 			ent := organization.Entitlement{

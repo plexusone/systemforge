@@ -70,9 +70,10 @@ billing: {}
 ```
 
 - Every organization is on the spec's default plan, unless an operator has
-  set its plan. `marketplace.EntitlementSource` does not follow this yet: it
-  still grants a paid plan stored from an earlier configuration, so check
-  plans with `Service.OrganizationPlan` in free mode.
+  set its plan. A host that builds `marketplace.EntitlementSource` over the
+  platform subscription passes `marketplace.WithoutPayments()` when
+  `Service.TakesPayments()` is false, so a paid plan stored from an earlier
+  configuration grants nothing there either.
 - The console's billing section shows the plans, with `configured: false`
   and `canManage: false`, and starts no checkout (`409`).
 - No webhook route is mounted.

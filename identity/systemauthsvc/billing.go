@@ -60,7 +60,7 @@ func (s *Service) openBilling(c *Config, opts Options) error {
 	b := &billingService{spec: opts.Pricing}
 	s.billing = b
 	if !c.Billing.Configured() {
-		s.logger.Warn("billing has no secret key: free mode, every organization is on the default plan",
+		s.logger.Warn("billing has no secret key: free mode, every organization is on the default plan unless an operator sets one",
 			"default_plan", opts.Pricing.PlanOrDefault("").ID)
 		return nil
 	}
@@ -164,6 +164,15 @@ func (s *Service) writeBillingAuthError(w http.ResponseWriter, err error) {
 	if err := json.NewEncoder(w).Encode(map[string]string{"error": msg}); err != nil {
 		s.logger.Debug("billing: writing a response", "error", err)
 	}
+}
+
+// TakesPayments reports whether billing takes payments: the configuration
+// has a billing section with a Stripe key. It is false in free mode and
+// without billing. A host that builds marketplace.EntitlementSource over
+// the platform subscription passes marketplace.WithoutPayments when it is
+// false, so entitlements agree with OrganizationPlan.
+func (s *Service) TakesPayments() bool {
+	return s.billing != nil && s.billing.client != nil
 }
 
 // OrganizationPlan is the plan an organization is on, for the host's
