@@ -4,11 +4,7 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.33.1](v0.33.1.md), lets entitlements follow
-billing's free mode with `marketplace.WithoutPayments`. It adds no breaking
-change.
-
-Before it, [v0.33.0](v0.33.0.md) sold a deployment's plans from
+The latest release, [v0.33.0](v0.33.0.md), sells a deployment's plans from
 the organization console: SystemAuth wires billing from a `billing` section
 and the host's pricing spec, with a free mode, and an operator can put an
 organization on a plan by hand. It adds no breaking change.
