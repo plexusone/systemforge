@@ -43,6 +43,9 @@ const (
 	BFFPrefix = Prefix + "/bff"
 	// SessionPath describes the signed-in person and their organizations.
 	SessionPath = BFFPrefix + "/session"
+	// BillingPath is an organization's billing, relative to Prefix; its
+	// checkout and portal endpoints are below it (ADR-021).
+	BillingPath = "/api/v1/organizations/{org}/billing"
 	// AppID is the console's application ID in the session's memberships:
 	// each organization grants the person their organization role in it.
 	AppID = "console"
@@ -106,6 +109,10 @@ type Options struct {
 	Profile func(ctx context.Context, principal uuid.UUID) (Profile, error)
 	// Connections, if set, serves the connections section.
 	Connections *connections.Connections
+	// Billing, if set, serves the billing section at BillingPath and below
+	// (billing.NewConsole), with paths relative to Prefix. It authenticates
+	// requests itself.
+	Billing http.Handler
 	// WebDir holds the built console pages. Empty serves only the API.
 	WebDir string
 	// LoginPath is where a page load without a session is sent, with the
@@ -145,6 +152,11 @@ func New(o Options) (*Console, error) {
 		mux.Handle(Prefix+connections.ProvidersPath, h)
 		mux.Handle(Prefix+connections.ConnectionsPath, h)
 		mux.Handle(Prefix+connections.ConnectionsPath+"/", h)
+	}
+	if o.Billing != nil {
+		h := http.StripPrefix(Prefix, o.Billing)
+		mux.Handle(Prefix+BillingPath, h)
+		mux.Handle(Prefix+BillingPath+"/", h)
 	}
 	mux.HandleFunc(APIPrefix+"/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not found")

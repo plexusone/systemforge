@@ -14,10 +14,12 @@ import (
 
 	"github.com/plexusone/connectforge/provider"
 	"github.com/plexusone/omnimail"
+	"github.com/plexusone/systemspec-pricingpackaging/pricingspec"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/mode"
+	"github.com/plexusone/systemforge/billing"
 	"github.com/plexusone/systemforge/connections"
 	"github.com/plexusone/systemforge/console"
 	"github.com/plexusone/systemforge/contract/audit"
@@ -200,6 +202,18 @@ type Options struct {
 	// Revocations remove access from the graph before they commit in both.
 	AuthzSyncMode authz.SyncMode
 
+	// Pricing is the deployment's pricing spec. It is required when the
+	// configuration has a billing section (ADR-021): the plans the console
+	// offers, the prices synced to the payment provider, and the default
+	// plan of free mode all come from it.
+	Pricing *pricingspec.Spec
+
+	// OnPlanChange is called after an organization's plan is stored from
+	// the payment provider, for the host's own state that follows the
+	// plan. It must be idempotent: an error makes the provider redeliver
+	// the event.
+	OnPlanChange func(ctx context.Context, c billing.PlanChange) error
+
 	// SCIM serves SCIM 2.0 provisioning at SCIMPath, authenticated by
 	// default with tenant SCIM tokens from the built-in store (see
 	// SCIMOptions and Service.SCIMTokens). It needs a database. Nil, the
@@ -237,6 +251,9 @@ type Service struct {
 
 	// console is set when the organization console is enabled.
 	console *console.Console
+
+	// billing is set when the configuration has a billing section.
+	billing *billingService
 
 	// mp is set when managed principals are enabled.
 	mp *managedprincipal.Service
@@ -441,6 +458,10 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 	}
 	s.server = server
 	s.mountConnections()
+	if err := s.openBilling(&c, opts); err != nil {
+		s.closeQuietly()
+		return nil, err
+	}
 	if err := s.mountConsole(&c); err != nil {
 		s.closeQuietly()
 		return nil, err

@@ -20,6 +20,10 @@ func (s *Service) mountConsole(c *Config) error {
 	if c.Console == nil {
 		return nil
 	}
+	bill, err := s.billingConsole()
+	if err != nil {
+		return err
+	}
 	con, err := console.New(console.Options{
 		Principal:     s.consolePrincipal,
 		Organizations: s.consoleOrganizations,
@@ -28,6 +32,7 @@ func (s *Service) mountConsole(c *Config) error {
 		Apps:          s.consoleApps,
 		Profile:       s.consoleProfile,
 		Connections:   s.conns,
+		Billing:       bill,
 		WebDir:        c.Console.WebDir,
 		LoginPath:     systemauth.LoginPath,
 		Logger:        s.logger,
@@ -39,7 +44,7 @@ func (s *Service) mountConsole(c *Config) error {
 	router := s.server.Router()
 	router.Handle(console.Prefix, con)
 	router.Handle(console.Prefix+"/*", con)
-	s.logger.Info("console enabled", "web_dir", c.Console.WebDir, "connections", s.conns != nil)
+	s.logger.Info("console enabled", "web_dir", c.Console.WebDir, "connections", s.conns != nil, "billing", bill != nil)
 	return nil
 }
 
