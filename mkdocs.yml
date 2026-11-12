@@ -61,6 +61,7 @@ nav:
     - Authorization Mode: guides/authorization-mode.md
     - Connections to External Services: guides/connections.md
     - The Organization Console: guides/console.md
+    - Selling Plans from the Console: guides/billing.md
     - Key Management: guides/key-management.md
     - Minimum Sign-Up Age: guides/signup-age.md
     - Invite-Gated Sign-Up: guides/invite-gated-signup.md

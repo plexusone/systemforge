@@ -104,7 +104,7 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 ### Marketplace
 
 - 🛒 **Listings** - Product catalog with tiers and pricing
-- 💳 **Stripe Integration** - Subscription billing and webhooks
+- 💳 **Billing** - Plans from a pricing spec, sold through Stripe in the organization console, with a free mode and plans set by the operator
 - 📜 **Licensing** - Per-seat, unlimited, and time-limited licenses
 - 👥 **Seat Management** - Assign and revoke user access
 
@@ -360,10 +360,13 @@ github.com/plexusone/systemforge/
 │   └── middleware.go      # HTTP middleware
 │
 ├── marketplace/           # SaaS marketplace
-│   ├── listing.go         # Product listings and tiers
-│   ├── license.go         # License management
-│   ├── subscription.go    # Subscription handling
-│   └── stripe/            # Stripe billing integration
+│   ├── listing_service.go       # Product listings and tiers
+│   ├── license_service.go       # License management
+│   └── subscription_service.go  # Subscriptions and granted plans
+│
+├── billing/               # Payments through payforge (Stripe)
+│   ├── billingcmd/        # Host CLI: billing sync, billing plan
+│   └── pglock/            # Locks across instances on PostgreSQL
 │
 ├── featureflags/          # Feature flag engine
 │   └── stores/            # Flag stores
