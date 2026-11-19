@@ -955,6 +955,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Turning it on">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#saying-why-you-ask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Saying why you ask
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4762,6 +4779,8 @@
       
         
       
+        
+      
     
     
     
@@ -4833,6 +4852,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.35.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.35.0
   
 
     
@@ -6172,6 +6219,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Turning it on">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#saying-why-you-ask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Saying why you ask
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -6279,6 +6343,16 @@ else fails at startup with <code>ErrInvalidSocialLoginConfig</code>.</p>
 </code></pre></div>
 <p>Empty fields keep <code>systemauth.DefaultSignupAgePage</code>. An embedded server
 takes the same wording with <code>systemauth.WithSignupAgePage</code>.</p>
+<h3 id="saying-why-you-ask">Saying why you ask<a class="headerlink" href="#saying-why-you-ask" title="Permanent link">&para;</a></h3>
+<p>Asking a birth date can feel intrusive. Set <code>ReasonURL</code> to a page that
+explains why the deployment asks, such as the laws it follows, and the
+question and the refusal both link to it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">SignupAgePage</span><span class="p">:</span><span class="w"> </span><span class="nx">systemauth</span><span class="p">.</span><span class="nx">SignupAgePage</span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">ReasonURL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://example.com/age/&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="c1">// ReasonLabel defaults to &quot;Why we ask&quot;.</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">},</span>
+</code></pre></div>
+<p>Without <code>ReasonURL</code> the page shows no link.</p>
 <h2 id="how-it-decides">How it decides<a class="headerlink" href="#how-it-decides" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Nothing is kept before the answer.</strong> The login is parked with only its
