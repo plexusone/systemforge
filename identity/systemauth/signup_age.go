@@ -64,19 +64,25 @@ type SignupAgePage struct {
 	Message string
 	// Refused is shown to a person under the minimum age.
 	Refused string
+	// ReasonURL, when set, links the question and the refusal to a page
+	// explaining why the deployment asks, such as the laws it follows.
+	ReasonURL string
+	// ReasonLabel is the link's text.
+	ReasonLabel string
 }
 
 // DefaultSignupAgePage is the wording used for empty SignupAgePage fields.
 var DefaultSignupAgePage = SignupAgePage{
-	Title:   "Before you create an account",
-	Message: "Accounts are for adults, %d or older. Enter the month and year you were born.",
-	Refused: "Sorry, you need to be %d or older to create an account. Nothing about you has been kept.",
+	Title:       "Before you create an account",
+	Message:     "Accounts are for adults, %d or older. Enter the month and year you were born.",
+	Refused:     "Sorry, you need to be %d or older to create an account. Nothing about you has been kept.",
+	ReasonLabel: "Why we ask",
 }
 
 func (p SignupAgePage) withDefaults() SignupAgePage {
 	d := DefaultSignupAgePage
 	for _, f := range []struct{ v, def *string }{
-		{&p.Title, &d.Title}, {&p.Message, &d.Message}, {&p.Refused, &d.Refused},
+		{&p.Title, &d.Title}, {&p.Message, &d.Message}, {&p.Refused, &d.Refused}, {&p.ReasonLabel, &d.ReasonLabel},
 	} {
 		if *f.v == "" {
 			*f.v = *f.def
@@ -214,8 +220,9 @@ var signupAgeTemplate = template.Must(template.New("signup-age").Parse(`<!doctyp
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` + pageStyleLink + `
 <title>{{.Page.Title}}</title></head>
 <body><main><h1>{{.Page.Title}}</h1>
-{{if .Refused}}<p role="status">{{.RefusedText}}</p>{{else if .Expired}}<p role="status">This page has expired. <a href="{{.LoginPath}}">Sign in again</a>.</p>{{else}}
+{{if .Refused}}<p role="status">{{.RefusedText}}</p>{{template "reason" .}}{{else if .Expired}}<p role="status">This page has expired. <a href="{{.LoginPath}}">Sign in again</a>.</p>{{else}}
 <p>{{.MessageText}}</p>
+{{template "reason" .}}
 {{if .Error}}<p role="alert">{{.Error}}</p>{{end}}
 <form method="post" action="{{.Action}}">
 <label for="month">Month</label>
@@ -225,6 +232,7 @@ var signupAgeTemplate = template.Must(template.New("signup-age").Parse(`<!doctyp
 <button type="submit">Continue</button>
 </form>{{end}}
 </main></body></html>
+{{define "reason"}}{{if .Page.ReasonURL}}<p><a href="{{.Page.ReasonURL}}">{{.Page.ReasonLabel}}</a></p>{{end}}{{end}}
 `))
 
 type monthOption struct {
