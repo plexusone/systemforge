@@ -9,6 +9,34 @@
   ],
   "releases": [
     {
+      "version": "v0.35.0",
+      "date": "2026-11-18",
+      "highlights": [
+        {
+          "description": "The sign-up age question can link to the deployment's page explaining why it asks, with `SignupAgePage.ReasonURL`",
+          "commit": "544e46a"
+        }
+      ],
+      "added": [
+        {
+          "description": "`SignupAgePage.ReasonURL` and `ReasonLabel`: the age question and the refusal link to a page explaining why the deployment asks; the label defaults to \"Why we ask\", and without a URL no link is shown",
+          "commit": "544e46a"
+        }
+      ],
+      "tests": [
+        {
+          "description": "`TestSignupAgePageReasonLink`: the link appears with a `ReasonURL` and not without one",
+          "commit": "487c5ab"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The minimum sign-up age guide shows how to link the question to why it is asked",
+          "commit": "84a3d19"
+        }
+      ]
+    },
+    {
       "version": "v0.34.0",
       "date": "2026-11-12",
       "highlights": [
