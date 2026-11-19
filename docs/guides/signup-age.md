@@ -51,6 +51,21 @@ svc, err := systemauthsvc.New(ctx, cfg, systemauthsvc.Options{
 Empty fields keep `systemauth.DefaultSignupAgePage`. An embedded server
 takes the same wording with `systemauth.WithSignupAgePage`.
 
+### Saying why you ask
+
+Asking a birth date can feel intrusive. Set `ReasonURL` to a page that
+explains why the deployment asks, such as the laws it follows, and the
+question and the refusal both link to it:
+
+```go
+SignupAgePage: systemauth.SignupAgePage{
+    ReasonURL: "https://example.com/age/",
+    // ReasonLabel defaults to "Why we ask".
+},
+```
+
+Without `ReasonURL` the page shows no link.
+
 ## How it decides
 
 - **Nothing is kept before the answer.** The login is parked with only its
