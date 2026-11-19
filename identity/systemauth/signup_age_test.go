@@ -297,3 +297,18 @@ func TestSignupAgePageWording(t *testing.T) {
 		t.Errorf("custom title with default message: %s", body)
 	}
 }
+
+func TestSignupAgePageReasonLink(t *testing.T) {
+	f := newFakeGitHub(t)
+	s := newAgeServer(t, f, NewMemoryPrincipalDirectory(), WithSignupAgePage(SignupAgePage{ReasonURL: "https://example.com/age/"}))
+	pending := askedAge(t, s, "")
+	body := getAgePage(s, pending).Body.String()
+	if !strings.Contains(body, `<a href="https://example.com/age/">Why we ask</a>`) {
+		t.Errorf("reason link missing: %s", body)
+	}
+
+	plain := newAgeServer(t, f, NewMemoryPrincipalDirectory())
+	if body := getAgePage(plain, askedAge(t, plain, "")).Body.String(); strings.Contains(body, "Why we ask") {
+		t.Errorf("no ReasonURL should show no link: %s", body)
+	}
+}
