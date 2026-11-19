@@ -74,8 +74,8 @@ github.com/authzed/consistent v0.4.0 h1:/OQ6rdrE0btNG11E97NjS8RmVSV5y3h6uyoQSNSf
 github.com/authzed/consistent v0.4.0/go.mod h1:e7134iDBFLZ+VsOxmO9FkU0a14xAn/TCJbr1Kbotc0Y=
 github.com/authzed/ctxkey v0.1.0 h1:wtQnpKgjzxF//qotuiR/Toh691lbY2ZFynsQFQ57mrA=
 github.com/authzed/ctxkey v0.1.0/go.mod h1:ve6DXRv9l2HcM2lxSUmZKWXl7Iq/00xYixBuHOtST+4=
-github.com/authzed/grpcutil v0.0.0-20261112214214-9968d92209a5 h1:8lOfw6sfKTelldBp9pr68w7eHjc9t3DvJhKkBnmcV6Q=
-github.com/authzed/grpcutil v0.0.0-20261112214214-9968d92209a5/go.mod h1:6lEJ2WmozJ7ow5fHNERir9qsGvmanPM0jBuDPQcy9zA=
+github.com/authzed/grpcutil v0.0.0-20260105210157-e237581949c2 h1:ymPD1ugBsXVUpLIG/lnRn1ndgOrsrki/0ZX7uP/S1GI=
+github.com/authzed/grpcutil v0.0.0-20260105210157-e237581949c2/go.mod h1:FLssYBs1DrwuItfI411kzqcV8QSqGb/B7PC6snNhjvU=
 github.com/authzed/jitterbug v0.0.0-20260128162915-e97d76daaa24 h1:BXaWSanmHFu3P0xWfTDPpwcJIQ/oSol29+CWe4lSGSU=
 github.com/authzed/jitterbug v0.0.0-20260128162915-e97d76daaa24/go.mod h1:WvEk4YHnUsmbUaWA/VseQty3X91f6/jEHek5mjYDZUg=
 github.com/authzed/spicedb v1.57.1 h1:cWY7avFOawXz5KbFibzmg7dzfFD/oSbijyhnmTY+QYE=

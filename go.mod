@@ -1,6 +1,6 @@
 module github.com/plexusone/systemforge
 
-go 1.27.4
+go 1.26.10
 
 // github.com/authzed/cel-go v0.30.0 rewrote cel.NewStaticOptimizer to return
 // (*StaticOptimizer, error) instead of *StaticOptimizer, breaking the build
@@ -14,7 +14,7 @@ require (
 	entgo.io/ent v0.14.6
 	github.com/aauth-dev/aauth-go v0.3.0
 	github.com/authzed/authzed-go v1.11.0
-	github.com/authzed/grpcutil v0.0.0-20261112214214-9968d92209a5
+	github.com/authzed/grpcutil v0.0.0-20260105210157-e237581949c2
 	github.com/authzed/spicedb v1.57.1
 	github.com/danielgtaylor/huma/v2 v2.41.0
 	github.com/go-chi/chi/v5 v5.5.0
