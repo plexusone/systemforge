@@ -55,7 +55,8 @@ func driverDialect(driver string) (driverName, dialectName string, err error) {
 
 // OpenDatabase opens the configured database without connecting:
 // PostgreSQL through the pgx stdlib driver, SQLite through go-sqlite3,
-// each with the matching Ent dialect.
+// each with the matching Ent dialect. A PostgreSQL pool holds at most
+// cfg.OpenConns connections, and keeps up to five of them idle.
 func OpenDatabase(cfg *systemauth.DatabaseConfig) (*Database, error) {
 	driverName, dialectName, err := driverDialect(cfg.Driver)
 	if err != nil {
@@ -66,12 +67,17 @@ func OpenDatabase(cfg *systemauth.DatabaseConfig) (*Database, error) {
 		return nil, fmt.Errorf("opening %s database: %w", cfg.Driver, err)
 	}
 	if dialectName == dialect.Postgres {
-		db.SetMaxOpenConns(20)
-		db.SetMaxIdleConns(5)
+		open := cfg.OpenConns()
+		db.SetMaxOpenConns(open)
+		db.SetMaxIdleConns(min(maxIdleConns, open))
 		db.SetConnMaxIdleTime(5 * time.Minute)
 	}
 	return wrapDB(db, dialectName), nil
 }
+
+// maxIdleConns is how many PostgreSQL connections the pool keeps idle, at
+// most.
+const maxIdleConns = 5
 
 func wrapDB(db *sql.DB, dialectName string) *Database {
 	return &Database{Client: ent.NewClient(ent.Driver(entsql.OpenDB(dialectName, db))), DB: db, Dialect: dialectName}

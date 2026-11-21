@@ -21,6 +21,11 @@
         "dsn": {
           "type": "string",
           "description": "Database connection string (supports env var expansion)"
+        },
+        "max_open_conns": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum open PostgreSQL connections; 0 means the default of 20. Set it to the database role's connection limit or below"
         }
       },
       "additionalProperties": false,

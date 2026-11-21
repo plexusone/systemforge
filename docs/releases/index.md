@@ -4,11 +4,13 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.35.0](v0.35.0.md), lets the sign-up age question
-link to the deployment's page explaining why it asks, with
-`SignupAgePage.ReasonURL`. It adds no breaking change.
+The latest release, [v0.36.0](v0.36.0.md), makes SystemAuth's PostgreSQL
+pool size configurable with `database.max_open_conns`, so it can match the
+database role's connection limit. It adds no breaking change.
 
-Before it, [v0.34.0](v0.34.0.md) landed a sign-out where the
+Before it, [v0.35.0](v0.35.0.md) let the sign-up age question link to the
+deployment's page explaining why it asks, with `SignupAgePage.ReasonURL`,
+and [v0.34.0](v0.34.0.md) landed a sign-out where the
 person signed in: `social_login.managed_signed_out_url` sent a child
 signed in with a login token back to the app's sign-in page, while other
 sign-outs keep `signed_out_url`. Entitlements can follow billing's free
