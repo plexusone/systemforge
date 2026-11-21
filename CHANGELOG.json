@@ -9,6 +9,27 @@
   ],
   "releases": [
     {
+      "version": "v0.36.0",
+      "date": "2026-11-21",
+      "highlights": [
+        {
+          "description": "SystemAuth's PostgreSQL pool size is configurable with `database.max_open_conns`, so it can match the database role's connection limit"
+        }
+      ],
+      "added": [
+        {
+          "description": "`database.max_open_conns` caps SystemAuth's PostgreSQL pool; zero or unset keeps 20, idle connections stay at five or the pool size when smaller, and a negative value is a configuration error. `DatabaseConfig.OpenConns` and `DefaultMaxOpenConns` give the effective size",
+          "commit": "5b5183e"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Deployment guide: sizing the database pool to the role's `CONNECTION LIMIT`",
+          "commit": "e01861b"
+        }
+      ]
+    },
+    {
       "version": "v0.35.0",
       "date": "2026-11-18",
       "highlights": [
