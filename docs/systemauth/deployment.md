@@ -67,6 +67,24 @@ load balancer on one PostgreSQL database. Statically
 configured clients are updated from the configuration on each start. See
 [Production Stores](production-stores.md).
 
+### Database connections
+
+A PostgreSQL pool holds up to `database.max_open_conns` connections, 20
+when it is not set, and keeps up to five of them idle. When the database
+role has a `CONNECTION LIMIT`, as a role on a shared server should, set
+`max_open_conns` to that limit or below. Then a busy server waits for a
+free connection rather than failing with "too many connections for role":
+
+```yaml
+database:
+  driver: postgres
+  dsn: ${DATABASE_URL}
+  max_open_conns: 10   # the role's CONNECTION LIMIT, or below
+```
+
+With several instances on one role, their pools together must stay within
+the limit. SQLite ignores the setting.
+
 ## Flags and environment
 
 Running `systemauth` without a subcommand serves. Go-style single-dash flags
@@ -412,6 +430,7 @@ issuer: https://auth.example.com
 database:
   driver: postgres
   dsn: ${DATABASE_URL}
+  max_open_conns: 10   # the database role's connection limit
 keys:
   private_key_file: ${SYSTEMAUTH_SIGNING_KEY_FILE}
 tokens:
