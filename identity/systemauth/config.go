@@ -486,6 +486,25 @@ type DatabaseConfig struct {
 	// DSN is the database connection string.
 	// Supports environment variable expansion: ${DATABASE_URL}
 	DSN string `json:"dsn" yaml:"dsn" jsonschema:"required,description=Database connection string (supports env var expansion)"`
+
+	// MaxOpenConns caps PostgreSQL connections in the pool. Set it to the
+	// database role's CONNECTION LIMIT, or below, so a busy server waits
+	// for a connection instead of failing with "too many connections for
+	// role". Zero means DefaultMaxOpenConns. SQLite ignores it.
+	MaxOpenConns int `json:"max_open_conns,omitempty" yaml:"max_open_conns,omitempty" jsonschema:"minimum=0,description=Maximum open PostgreSQL connections; 0 means the default of 20. Set it to the database role's connection limit or below"`
+}
+
+// DefaultMaxOpenConns is the PostgreSQL pool size when
+// DatabaseConfig.MaxOpenConns is zero.
+const DefaultMaxOpenConns = 20
+
+// OpenConns is the PostgreSQL pool size: MaxOpenConns, or
+// DefaultMaxOpenConns when it is zero.
+func (d *DatabaseConfig) OpenConns() int {
+	if d.MaxOpenConns > 0 {
+		return d.MaxOpenConns
+	}
+	return DefaultMaxOpenConns
 }
 
 // KeyConfig configures signing key management.
@@ -862,6 +881,9 @@ func (c *Config) Validate() error {
 	}
 	if err := c.Tokens.validate(); err != nil {
 		return err
+	}
+	if c.Database != nil && c.Database.MaxOpenConns < 0 {
+		return fmt.Errorf("%w: database.max_open_conns must not be negative", ErrInvalidConfig)
 	}
 	if c.SocialLogin != nil {
 		if err := c.SocialLogin.validate(); err != nil {

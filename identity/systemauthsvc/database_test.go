@@ -34,6 +34,34 @@ func TestOpenDatabaseDrivers(t *testing.T) {
 	}
 }
 
+func TestOpenDatabasePoolSize(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		max  int
+		want int
+	}{
+		{"default", 0, systemauth.DefaultMaxOpenConns},
+		{"the role's limit", 10, 10},
+		{"below the idle count", 3, 3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			//nolint:gosec // G101: dummy DSN for a closed local port
+			db, err := systemauthsvc.OpenDatabase(&systemauth.DatabaseConfig{Driver: "postgres", DSN: "postgres://u:p@127.0.0.1:1/x?sslmode=disable", MaxOpenConns: tc.max})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := db.Close(); err != nil {
+					t.Errorf("close: %v", err)
+				}
+			})
+			if got := db.DB.Stats().MaxOpenConnections; got != tc.want {
+				t.Errorf("MaxOpenConnections = %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestNewLogger(t *testing.T) {
 	var buf bytes.Buffer
 	logger, err := systemauthsvc.NewLogger(&buf, "warn", "json")
