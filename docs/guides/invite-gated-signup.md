@@ -3,7 +3,8 @@
 A deployment launching to a small audience can grow on purpose: first the
 people its operators know by name, then people those early members vouch
 for, then larger cohorts. Invite-only sign-up does this with three kinds of
-invite, all needing a verified email from the upstream provider:
+invite, all needing a verified email, from the upstream provider or proven by
+a code mailed to it ([email sign-in](email-sign-in.md)):
 
 | Invite | Created by | Admits | Shared as |
 | --- | --- | --- | --- |
@@ -53,7 +54,8 @@ point it at the application's sign-in URL: the person is already signed in
 to SystemAuth, so the application's own sign-in completes at once.
 
 Links that start at a provider directly can carry the code too:
-`/login/google?invite_code=…&return_to=…`.
+`/login/google?invite_code=…&return_to=…`, or `/login/email?invite_code=…&return_to=…`
+for email sign-in.
 
 ## Operating from the command line
 

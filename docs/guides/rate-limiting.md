@@ -148,10 +148,18 @@ They use the same storage through `ratelimit.Check`, or `Exhausted` and
 | Failed client authentication, per address | 60 a minute |
 | Tokens the JWT-bearer grant issues, per service account | 60 a minute |
 | Social login start, and separately the callback, per address | 30 a minute |
+| Email sign-in: the address form, a code request and a resend, per address | 30 a minute each |
+| Email sign-in: entries of a code, per address | 20 a minute (`DefaultEmailCodeSubmitLimit`) |
 | Login-token exchange, per address and per registered client | 60 and 600 a minute |
 | Sign-up waitlist, per address and per submitted email | 20 a minute, 5 an hour |
 | Sign-up code page, per address | 30 a minute |
 | Claim codes and manager invitations, per caller | `managedprincipal.DefaultCodeLimit` |
+
+The messages email sign-in and email verification send are limited too, by
+`mail.per_address` (5 an hour to one address) and `mail.per_client` (20 an
+hour per client address), which also bound how many email sign-in codes can be
+guessed at. With several instances, share this storage or those limits apply
+per instance.
 
 ## Responses
 

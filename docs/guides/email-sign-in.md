@@ -1,0 +1,87 @@
+# Launching with Email Sign-In
+
+Email sign-in lets people use an application on day one, before its GitHub or
+Google sign-in has been reviewed, and it keeps working for people who have
+neither. This guide turns it on for a deployment and an application, step by
+step. The reference is [Sign In with an Email Code](../systemauth/email-sign-in.md).
+
+## 1. Choose a mail provider
+
+Codes are mail, so delivery decides whether anyone can sign in.
+SystemAuth sends through [omnimail](https://github.com/plexusone/omnimail),
+so the provider is a setting:
+
+- [Resend](../systemauth/resend-deployment.md) over SMTP needs no new code, and
+  its free plan allows 100 messages a day, so plan for a paid one if several
+  applications share the account.
+- [Amazon SES](../systemauth/ses-deployment.md) needs its sending identity
+  verified, and may need production access approved before it sends to anyone.
+
+Verify the sending domain (SPF, DKIM, DMARC) before launch.
+
+## 2. Configure SystemAuth
+
+```yaml
+social_login:
+  email: {}              # turns it on; or set code_length, code_lifetime, max_attempts
+mail:
+  provider: smtp
+  from: "Example <no-reply@mail.example.com>"
+  smtp:
+    host: smtp.resend.com
+    port: 465
+    security: tls
+    username: resend
+    password: ${SYSTEMAUTH_SMTP_PASSWORD}
+tokens:
+  hmac_secret: ${SYSTEMAUTH_HMAC_SECRET}
+```
+
+`tokens.hmac_secret` keys the code hash and is required in production; without
+it codes stop working on a restart and on a second instance. Production
+refuses `mail.provider: log`. If several instances serve SystemAuth, give them
+shared [rate limit storage](rate-limiting.md), or the send limits that bound
+guessing apply per instance. Run `systemauth migrate` once for the new column.
+
+You can keep `github` and `google` beside it; the sign-in page lists each.
+
+## 3. Check delivery
+
+Request a code for addresses at two mailbox providers, from the production
+domain, and read the headers: SPF, DKIM and DMARC should pass and align. The
+[delivery check](../systemauth/resend-deployment.md#delivery-check) lists the
+steps. Make sure the deployment records security events (the packaged
+`systemauth` command logs them; an embedding application sets an audit
+emitter), so you can see `systemauth.email_code.sent` with `sent: true`.
+
+## 4. Point the application at it
+
+With the relying-party BFF, link to `/bff/auth/email?return_to=/path`. With
+`@plexusone/pages`, add `email` to the login page:
+
+```tsx
+<LoginPage oauthProviders={['github', 'google', 'email']} />
+```
+
+Deploy SystemAuth and the BFF before the page: an older BFF answers
+`UNKNOWN_PROVIDER` when the button is clicked. The application never receives
+the code; it receives the verified address afterward, as for any provider.
+
+## 5. Decide who may sign up
+
+Email sign-in creates accounts for addresses nobody has seen, so the sign-up
+controls matter: a [minimum age](signup-age.md), and
+[invite-gated sign-up](invite-gated-signup.md), which applies to email exactly
+as to a provider.
+
+## What to watch
+
+- `systemauth.email_code.exhausted` events: codes that used up their tries.
+  Many from one client address, or many for one address, are guessing.
+- `systemauth.email_code.sent` events with `sent: false`: a limit suppressed
+  the message, or delivery failed.
+- Bounce and complaint rates at the mail provider.
+
+A person who changes their account's email stops being reachable at the old
+address: its email identity is unlinked, and the old mailbox gets an account of
+its own if it signs in again.
