@@ -10,6 +10,8 @@ browsers enforce those attributes.
 |-----------|--------|------------------|----------|--------------------|
 | SystemAuth login session | `__Host-sf_login` | `sf_login` | Lax | `social_login.insecure_cookies` |
 | SystemAuth upstream login state | `__Host-sf_oauth_state` | `sf_oauth_state` | Lax | `social_login.insecure_cookies` |
+| SystemAuth email sign-in, the pending code | `__Host-sf_email_code` | `sf_email_code` | Lax | `social_login.insecure_cookies` |
+| SystemAuth email verification, the pending sign-in | `__Host-sf_verify_email` | `sf_verify_email` | Lax | `social_login.insecure_cookies` |
 | SystemAuth sign-up age question | `__Host-sf_signup_age`, `__Host-sf_signup_age_ok`, `__Host-sf_signup_age_refused` | same without `__Host-` | Lax | `social_login.insecure_cookies` |
 | Relying-party BFF session | `__Host-sf_rp_session` | `sf_rp_session` | Lax | `BFFConfig.InsecureCookies` |
 | Relying-party BFF login state | `__Host-sf_rp_state` | `sf_rp_state` | Lax | `BFFConfig.InsecureCookies` |

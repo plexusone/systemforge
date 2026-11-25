@@ -17,6 +17,10 @@ and refuses anyone younger, keeping nothing about them.
 4. **Under the age,** they are told they need to be older and that nothing
    about them has been kept. The same browser is not asked again for a day.
 
+Signing in with an [emailed code](email-sign-in.md) asks the same question
+before it creates an account. After the answer, the person asks for a new
+code, since nothing about them was kept.
+
 People who already have an account never see the question. Neither do
 children signing in with login tokens: they are managed principals, created
 by their managers, not by an upstream login.
