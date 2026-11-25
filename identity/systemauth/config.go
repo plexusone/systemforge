@@ -507,6 +507,15 @@ type EmailLoginConfig struct {
 	MaxAttempts int `json:"max_attempts,omitempty" yaml:"max_attempts,omitempty" jsonschema:"default=5,minimum=3,maximum=10,description=Entries allowed per sign-in before its code stops working"`
 }
 
+// JSONSchemaExtend implements jsonschema.Extender. Duration's own examples
+// (1h, 168h, 720h) exceed the lifetime's 30-minute maximum, so this field's
+// examples stay within the allowed range.
+func (EmailLoginConfig) JSONSchemaExtend(schema *jsonschema.Schema) {
+	if p, ok := schema.Properties.Get("code_lifetime"); ok {
+		p.Examples = []any{"5m", "10m", "30m"}
+	}
+}
+
 func (c *EmailLoginConfig) applyDefaults() {
 	if c.CodeLength == 0 {
 		c.CodeLength = DefaultEmailCodeLength

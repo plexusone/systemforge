@@ -487,10 +487,9 @@
               "description": "How long a sign-in code works (5m to 30m)",
               "default": "10m",
               "examples": [
-                "15m",
-                "1h",
-                "168h",
-                "720h"
+                "5m",
+                "10m",
+                "30m"
               ]
             },
             "max_attempts": {

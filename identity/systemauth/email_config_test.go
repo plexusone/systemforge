@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/invopop/jsonschema"
 )
 
 func emailLoginTestConfig(email *EmailLoginConfig, mail *MailConfig) Config {
@@ -101,5 +103,27 @@ func TestEmailLoginConfigBounds(t *testing.T) {
 				t.Fatalf("Validate: %v", err)
 			}
 		})
+	}
+}
+
+// TestEmailLoginSchemaExamplesAreValid keeps the published examples within
+// the bounds Validate enforces: a copied example must load.
+func TestEmailLoginSchemaExamplesAreValid(t *testing.T) {
+	r := &jsonschema.Reflector{DoNotReference: true}
+	schema := r.Reflect(&EmailLoginConfig{})
+	prop, ok := schema.Properties.Get("code_lifetime")
+	if !ok || len(prop.Examples) == 0 {
+		t.Fatalf("code_lifetime schema = %+v, want examples", prop)
+	}
+	for _, ex := range prop.Examples {
+		text, _ := ex.(string)
+		d, err := time.ParseDuration(text)
+		if err != nil {
+			t.Fatalf("example %v: %v", ex, err)
+		}
+		cfg := EmailLoginConfig{CodeLifetime: Duration(d)}
+		if err := cfg.validate(); err != nil {
+			t.Errorf("example %q fails validation: %v", text, err)
+		}
 	}
 }
