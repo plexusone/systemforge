@@ -76,10 +76,15 @@ security, not the code:
   request still stores a code, but one no entry can match (not digits, 128
   random bits). Without that, anyone could make unlimited live codes for an
   address, each with fresh tries, and the mail limits would not cap the
-  guessing. With it, live codes for an address are the mailed ones: at the
-  defaults, 5 mails an hour with 5 tries each is 25 guesses an hour, 2.5 in
-  100,000 per hour. The same limit lets an attacker keep a victim from
-  receiving codes for an hour by spending the address's sends; that cost is
+  guessing. With it, live codes for an address are the mailed ones, so the
+  guesses are bounded per batch of sends: each send the address limit allows
+  (5 an hour by default) gives one code with 5 tries, so 25 guesses, 2.5 in
+  100,000, per full quota. The limit counts sends, not entries, so this is not
+  a strict hourly cap on guesses: tries on one batch can fall in the same hour
+  as tries on the next once the earlier sends leave the limiter's window. The
+  quota is shared across replicas only when they share rate limit storage.
+  The same limit lets an attacker keep a victim from receiving codes for an
+  hour by spending the address's sends; that cost is
   accepted, as it is for verification links.
 - **No enumeration.** Responses and timing do not reveal whether an address
   has an account.
