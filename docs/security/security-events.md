@@ -67,6 +67,8 @@ names; the client may not have been authenticated.
 | `systemauth.token.revoked` | `revoke` | `success` or `failure` | `client_id`, `token_type_hint`, `error` |
 | `systemauth.token_family.revoked` | `revoke` | `success` | `reason`, `subject`, `client_id`; `resource.identifier` is the family's request ID |
 | `systemauth.email_verification.sent` | `send_verification` | `success` | `purpose` (`verify_email` or `email_change`), `sent` (false when a send limit suppressed the message or delivery failed); the address is never recorded |
+| `systemauth.email_code.sent` | `send_code` | `success` | `sent` (false when a send limit suppressed the message or delivery failed); neither the code nor the address is recorded |
+| `systemauth.email_code.exhausted` | `enter_code` | `failure` | none. A code used up its tries without being entered correctly; repeated, it is what guessing looks like |
 | `systemauth.email.verified` | `verify_email` | `success` | `purpose`, `method` (the pending sign-in's provider, for `verify_email`) |
 | `systemauth.email_change.requested` | `request_email_change` | `success` | none; `resource.id` is the principal |
 | `systemauth.email_change.cancelled` | `cancel_email_change` | `success` | none; `resource.id` is the principal |
@@ -89,6 +91,9 @@ previous key among the `verification_key_ids`.
 | `principal_inactive` | The account is disabled |
 | `not_invited` | Sign-up is by invitation and there was none |
 | `verification_invalid` | An email verification link was invalid, expired, replaced, already used or opened without the browser that asked for it |
+| `code_mismatch` | An email sign-in code was entered wrongly, or was not in the shape of a code |
+| `code_unusable` | An email sign-in code was expired, already used, replaced, out of tries, or entered without the browser that asked for it |
+| `stale_email_identity` | An email sign-in identity names an address its account no longer uses |
 | `login_token_rejected` | A managed principal's login token was refused |
 | `server_error` | SystemAuth failed |
 

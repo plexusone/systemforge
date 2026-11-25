@@ -42,6 +42,8 @@ var allowed = map[string]map[string]kind{
 	"systemauth.token_family.revoked":     {"reason": kindCode, "subject": kindUUID, "client_id": kindCode},
 	"systemauth.email_verification.sent":  {"purpose": kindCode, "sent": kindBool},
 	"systemauth.email.verified":           {"purpose": kindCode, "method": kindCode},
+	"systemauth.email_code.sent":          {"sent": kindBool},
+	"systemauth.email_code.exhausted":     {},
 	"systemauth.sign_in_method.linked":    {"method": kindCode, "reason": kindCode},
 	"systemauth.signing_key.loaded":       {"key_id": kindCode, "verification_key_ids": kindCodeList, "ephemeral": kindBool},
 	"systemauth.production.waiver":        {"check": kindCode, "setting": kindCode},

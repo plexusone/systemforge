@@ -93,6 +93,8 @@ func mappingCases() []mappingCase {
 		{"verification sent change", evt("systemauth.email_verification.sent", "send_verification", ok, map[string]any{"purpose": "email_change", "sent": false}), userMg, events.UserManagementActivityIDUpdate, info},
 		{"email verified sign-in", withActor(evt("systemauth.email.verified", "verify_email", ok, map[string]any{"purpose": "verify_email", "method": "github"}), audit.Actor{Type: "principal"}), auth, events.AuthenticationActivityIDPreauth, info},
 		{"email verified change", evt("systemauth.email.verified", "verify_email", ok, map[string]any{"purpose": "email_change"}), userMg, events.UserManagementActivityIDUpdate, info},
+		{"email code sent", withActor(evt("systemauth.email_code.sent", "send_code", ok, map[string]any{"sent": true, "email": leakEmail, "code": "123456"}), audit.Actor{Type: "principal"}), auth, events.AuthenticationActivityIDPreauth, info},
+		{"email code exhausted", withActor(evt("systemauth.email_code.exhausted", "enter_code", fail, nil), audit.Actor{Type: "principal"}), auth, events.AuthenticationActivityIDLogon, medium},
 		{"email change requested", evt("systemauth.email_change.requested", "request_email_change", ok, nil), userMg, events.UserManagementActivityIDUpdate, info},
 		{"email change cancelled", evt("systemauth.email_change.cancelled", "cancel_email_change", ok, nil), userMg, events.UserManagementActivityIDUpdate, info},
 		{"email changed", evt("systemauth.email.changed", "change_email", ok, map[string]any{"old_email": leakEmail, "new_email": leakEmail}), userMg, events.UserManagementActivityIDUpdate, info},

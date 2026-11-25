@@ -41,6 +41,14 @@ const (
 	EventEmailVerificationSent = "systemauth.email_verification.sent"
 	// EventEmailVerified records an address proven by a verification link.
 	EventEmailVerified = "systemauth.email.verified"
+	// EventEmailCodeSent records a sign-in code issued for an email sign-in:
+	// sent is false when a send limit suppressed the message or delivery
+	// failed. Neither the code nor the address is recorded.
+	EventEmailCodeSent = "systemauth.email_code.sent"
+	// EventEmailCodeExhausted records a sign-in code that used up its tries
+	// without being entered correctly: repeated, it is what guessing looks
+	// like.
+	EventEmailCodeExhausted = "systemauth.email_code.exhausted"
 )
 
 // pendingSignIn is a sign-in held until its email is verified. It is kept

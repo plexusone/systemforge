@@ -116,6 +116,20 @@ func (c *common) email() any {
 	return c.userManagement(events.UserManagementActivityIDUpdate, c.subject())
 }
 
+// emailCode: an email sign-in code sent is Authentication, Preauth; a code
+// that used up its tries is Authentication, Logon, Medium, since repeated it
+// is what guessing looks like. Neither the code nor the address is recorded.
+func (c *common) emailCode() any {
+	activity := events.AuthenticationActivityIDPreauth
+	if c.ev.EventType == "systemauth.email_code.exhausted" {
+		activity = events.AuthenticationActivityIDLogon
+		c.severityID, c.statusDetail = events.SeverityIDMedium, "email_code_exhausted"
+	}
+	a := c.authentication(activity, c.subject())
+	a.signInMethod("email")
+	return a
+}
+
 // startup: the signing key loaded and the production checks waived at
 // startup: Application Lifecycle, Start. A waiver is Medium.
 func (c *common) startup() any {

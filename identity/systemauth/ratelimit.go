@@ -138,6 +138,12 @@ var (
 	// separately the callbacks, per client address.
 	DefaultSocialLoginLimit = ratelimit.PerMinute(30)
 
+	// DefaultEmailCodeSubmitLimit bounds the entries of email sign-in codes
+	// per client address, a bound on guessing from one address beside the
+	// tries each code allows and the mail limits that bound how many codes
+	// exist.
+	DefaultEmailCodeSubmitLimit = ratelimit.PerMinute(20)
+
 	// DefaultClientAuthFailureLimit bounds failed client authentications
 	// at the token endpoint per client address and client; once reached,
 	// the pair is refused until the window ends.

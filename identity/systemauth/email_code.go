@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"github.com/plexusone/omnimail"
+
+	"github.com/plexusone/systemforge/contract/audit"
 )
 
 // Email sign-in routes (ADR-023), mounted with social login when
@@ -319,13 +321,23 @@ func (sl *socialLogin) issueEmailCode(ctx context.Context, cookie, email, redire
 	}); err != nil {
 		return err
 	}
+	sent := false
 	if decision == sendAllowed {
 		if err := sl.mail.send(ctx, mailSignInCode, email, mailData{Code: code, ExpiresIn: humanDuration(sl.email.ttl)}); err != nil {
 			// Logged, not shown: the person sees the same page and can ask
 			// for another code.
 			LoggerFromContext(ctx).Error("sending sign-in code mail", "error", err)
+		} else {
+			sent = true
 		}
 	}
+	sl.emit(ctx, &audit.Event{
+		EventType: EventEmailCodeSent,
+		Action:    "send_code",
+		Actor:     audit.Actor{Type: actorPrincipal},
+		Resource:  audit.Resource{Type: "email"},
+		Details:   details("sent", sent),
+	})
 	return nil
 }
 
@@ -444,7 +456,7 @@ func (sl *socialLogin) checkEmailCodeForm(w http.ResponseWriter, r *http.Request
 func (sl *socialLogin) handleEmailCodeSubmit(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := LoggerFromContext(ctx)
-	if !sl.limit(w, r, "email_code_submit", DefaultSocialLoginLimit) {
+	if !sl.limit(w, r, "email_code_submit", DefaultEmailCodeSubmitLimit) {
 		return
 	}
 	cookie := sl.checkEmailCodeForm(w, r)
@@ -483,6 +495,13 @@ func (sl *socialLogin) handleEmailCodeSubmit(w http.ResponseWriter, r *http.Requ
 		if left <= 0 {
 			// Nothing to revoke: RecordAttempt refuses further entries, and
 			// revoking here could consume a replacement issued meanwhile.
+			sl.emit(ctx, &audit.Event{
+				EventType: EventEmailCodeExhausted,
+				Action:    "enter_code",
+				Actor:     audit.Actor{Type: actorPrincipal},
+				Resource:  audit.Resource{Type: "email"},
+				Outcome:   audit.OutcomeFailure,
+			})
 			sl.renderEmailCode(w, r, expiredEmailCodeView(payload.RedirectURL))
 			return
 		}

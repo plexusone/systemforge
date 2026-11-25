@@ -99,6 +99,8 @@ selected by it as well as by OCSF class.
 | `systemauth.token.revoked` | Authentication (3002) | Logoff, protocol OAuth 2.0 | Informational; Low on failure |
 | `systemauth.token_family.revoked` | Authentication (3002) | Logoff, protocol OAuth 2.0 | Informational |
 | `systemauth.email_verification.sent`, `systemauth.email.verified` | Authentication (3002) for purpose `verify_email`; User Management (3007) for `email_change` | Preauth; Update | Informational |
+| `systemauth.email_code.sent` | Authentication (3002) | Preauth, sign-in method `email` | Informational |
+| `systemauth.email_code.exhausted` | Authentication (3002) | Logon, failure, sign-in method `email` | Medium |
 | `systemauth.email_change.requested`, `.cancelled`, `systemauth.email.changed` | User Management (3007) | Update | Informational |
 | `systemauth.sign_in_method.linked` | User Management (3007) | Update | Informational; Low when refused |
 | `systemauth.signing_key.loaded` | Application Lifecycle (6002) | Start | Informational |
