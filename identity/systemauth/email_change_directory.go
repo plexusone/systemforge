@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/externalidentity"
 	"github.com/plexusone/systemforge/identity/ent/human"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 )
@@ -24,7 +25,10 @@ var ErrEmailChangeStale = errors.New("systemauth: the email changed since the ch
 // only after the new address is proven.
 type PrincipalEmailChanger interface {
 	// ChangeEmail replaces the principal's email from with to, marked
-	// verified at verifiedAt. It returns ErrPrincipalNotFound,
+	// verified at verifiedAt, and unlinks the principal's email sign-in
+	// identity (provider email), which names the old address, so control of
+	// the old mailbox no longer reaches the account. Identities of other
+	// providers stay. It returns ErrPrincipalNotFound,
 	// ErrEmailChangeStale when the current email is not from (ignoring
 	// case), or ErrEmailConflict when another principal has to.
 	ChangeEmail(ctx context.Context, principalID uuid.UUID, from, to string, verifiedAt time.Time) error
@@ -85,8 +89,24 @@ func changeEmailInTx(ctx context.Context, tx *ent.Tx, principalID uuid.UUID, fro
 	if _, err := tx.Human.UpdateOne(h).SetEmail(to).SetEmailVerifiedAt(verifiedAt).Save(ctx); err != nil {
 		return err
 	}
+	if _, err := tx.ExternalIdentity.Delete().
+		Where(externalidentity.PrincipalIDEQ(principalID), externalidentity.ProviderEQ(emailLoginProvider)).
+		Exec(ctx); err != nil {
+		return fmt.Errorf("unlinking the email sign-in identity: %w", err)
+	}
 	_, err = tx.Principal.UpdateOneID(principalID).SetIdentifier(to).Save(ctx)
 	return err
+}
+
+// unlinkEmailIdentities removes the email sign-in identities of principalID
+// from an external-identity index keyed by externalKey.
+func unlinkEmailIdentities(external map[string]uuid.UUID, principalID uuid.UUID) {
+	prefix := externalKey(emailLoginProvider, "")
+	for key, id := range external {
+		if id == principalID && strings.HasPrefix(key, prefix) {
+			delete(external, key)
+		}
+	}
 }
 
 // ChangeEmail implements PrincipalEmailChanger.
@@ -107,6 +127,7 @@ func (d *MemoryPrincipalDirectory) ChangeEmail(_ context.Context, principalID uu
 	delete(d.byEmail, strings.ToLower(p.Email))
 	p.Email, p.EmailVerified, p.EmailVerifiedAt = to, true, verifiedAt
 	d.byEmail[key] = principalID
+	unlinkEmailIdentities(d.byExternal, principalID)
 	return nil
 }
 
@@ -125,5 +146,6 @@ func (d memoryStorageDirectory) ChangeEmail(_ context.Context, principalID uuid.
 		return ErrEmailConflict
 	}
 	h.Email, h.EmailVerified, h.EmailVerifiedAt, h.UpdatedAt = to, true, verifiedAt, time.Now()
+	unlinkEmailIdentities(d.s.external, principalID)
 	return nil
 }
