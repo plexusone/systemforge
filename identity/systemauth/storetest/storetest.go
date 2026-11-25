@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -463,20 +462,18 @@ func VerificationTokenStore(t *testing.T, newStore func(t *testing.T) systemauth
 		b := binding()
 		create(t, s, newToken(), systemauth.VerificationToken{Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b})
 		const guesses, limit = 20, 5
-		var counted atomic.Int32
-		var wg sync.WaitGroup
-		for range guesses {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				if _, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, limit); err == nil {
-					counted.Add(1)
-				}
-			}()
+		ok, errs := race(guesses, func() error {
+			_, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, limit)
+			return err
+		}, systemauth.ErrVerificationTokenInvalid)
+		if len(errs) != 0 {
+			t.Fatalf("%d concurrent guesses failed with errors other than ErrVerificationTokenInvalid: %v", len(errs), errs)
 		}
-		wg.Wait()
-		if got := counted.Load(); got != limit {
-			t.Fatalf("%d concurrent guesses counted %d attempts, want exactly %d", guesses, got, limit)
+		if ok != limit {
+			t.Fatalf("%d concurrent guesses counted %d attempts, want exactly %d", guesses, ok, limit)
+		}
+		if got, err := s.Latest(ctx, systemauth.PurposeSignInCode, b); err != nil || got.Attempts != limit {
+			t.Fatalf("Latest after the race = %+v, %v; want Attempts %d", got, err, limit)
 		}
 	})
 
