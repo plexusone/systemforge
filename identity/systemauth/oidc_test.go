@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/plexusone/omnimail/memsender"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/go-jose/go-jose/v3"
 	gojwt "github.com/golang-jwt/jwt/v5"
+	"github.com/plexusone/omnimail/memsender"
 
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 )
