@@ -175,6 +175,10 @@ type socialLogin struct {
 	// emailChanger changes a principal's email after the new address is
 	// proven; nil when the directory cannot, or mail is not configured.
 	emailChanger PrincipalEmailChanger
+
+	// email signs people in with a mailed one-time code (ADR-023); nil when
+	// social_login.email is not configured.
+	email *emailLogin
 }
 
 func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
@@ -210,9 +214,17 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 		}
 		connectors[c.Provider] = c
 	}
+	if cfg.Email != nil {
+		if _, taken := connectors[emailLoginProvider]; taken {
+			return nil, fmt.Errorf("%w: %q is the name of email sign-in, not a social provider", ErrInvalidSocialLoginConfig, emailLoginProvider)
+		}
+		if s.mail == nil || s.verificationTokens == nil {
+			return nil, fmt.Errorf("%w: email sign-in sends its codes with the mail section, which is not configured", ErrInvalidSocialLoginConfig)
+		}
+	}
 	// Managed principals sign in with login tokens through the same
-	// browser sessions, so they need no social provider.
-	if len(connectors) == 0 && !s.managedPrincipalsEnabled() {
+	// browser sessions, and email sign-in needs no social provider.
+	if len(connectors) == 0 && !s.managedPrincipalsEnabled() && cfg.Email == nil {
 		return nil, fmt.Errorf("%w: no providers configured", ErrInvalidSocialLoginConfig)
 	}
 	providers := make([]string, 0, len(connectors))
@@ -239,6 +251,18 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 
 		mail:         s.mail,
 		verifyTokens: s.verificationTokens,
+	}
+	if e := cfg.Email; e != nil {
+		// Config.ApplyDefaults filled these in, but a Config built by hand
+		// may not have gone through it.
+		e = &EmailLoginConfig{CodeLength: e.CodeLength, CodeLifetime: e.CodeLifetime, MaxAttempts: e.MaxAttempts}
+		e.applyDefaults()
+		sl.email = &emailLogin{
+			digits:      e.CodeLength,
+			ttl:         e.CodeLifetime.Duration(),
+			maxAttempts: e.MaxAttempts,
+			key:         s.codeKey,
+		}
 	}
 	if cfg.InsecureCookies {
 		s.logger.Warn("systemauth: InsecureCookies is set; login, state and sign-up cookies are not Secure. Use it for local development over plain HTTP only")
@@ -331,7 +355,7 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 func (sl *socialLogin) registerRoutes(r chi.Router) {
 	// Without social providers, browser login exists only for login
 	// tokens, so there is nothing to choose or call back to.
-	if len(sl.providers) > 0 {
+	if len(sl.providers) > 0 || sl.email != nil {
 		r.Get(LoginPath, sl.handleChooser)
 		r.Get(loginStartPattern, sl.handleStart)
 		r.Get(loginCallbackPattern, sl.handleCallback)
@@ -343,6 +367,13 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 		}
 		if sl.signupCodes != nil {
 			r.Get(SignupPath, sl.handleSignupPage)
+		}
+		if sl.email != nil {
+			r.Get(EmailLoginPath, sl.handleEmailLoginPage)
+			r.Post(EmailLoginPath, sl.handleEmailLoginRequest)
+			r.Get(EmailCodePath, sl.handleEmailCodePage)
+			r.Post(EmailCodePath, sl.handleEmailCodeSubmit)
+			r.Post(EmailCodeResendPath, sl.handleEmailCodeResend)
 		}
 		if sl.mail != nil {
 			r.Get(VerifyEmailPath, sl.handleVerifyEmailPage)
@@ -447,7 +478,7 @@ func (sl *socialLogin) handleChooser(w http.ResponseWriter, r *http.Request) {
 	// With one provider the page still waits for a click unless the
 	// operator chose otherwise: forwarding at once would sign a browser
 	// that just signed out straight back in through the provider's session.
-	if len(sl.providers) == 1 && sl.cfg.AutoSelectSingleProvider {
+	if len(sl.providers) == 1 && sl.email == nil && sl.cfg.AutoSelectSingleProvider {
 		//nolint:gosec // G710: same-origin relative path; returnTo was validated against the allowlist and is query-escaped
 		http.Redirect(w, r, startURL(sl.providers[0], returnTo), http.StatusFound)
 		return
@@ -461,6 +492,9 @@ func (sl *socialLogin) handleChooser(w http.ResponseWriter, r *http.Request) {
 			name = p
 		}
 		links = append(links, link{Name: name, URL: startURL(p, returnTo)})
+	}
+	if sl.email != nil {
+		links = append(links, link{Name: "Email", URL: startURL(emailLoginProvider, returnTo)})
 	}
 	// A login started by an authorization request names the client.
 	clientName, logoURL, logoOrigin := sl.chooserBranding(r, returnTo)
