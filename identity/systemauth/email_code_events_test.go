@@ -3,6 +3,7 @@ package systemauth
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"sync"
@@ -146,18 +147,60 @@ func TestEmailSignInExhaustedOnceWhenEntriesRace(t *testing.T) {
 		_, cookie := requestCode(t, s, "a@example.com")
 		wrong := wrongCode(lastCode(t, sender))
 
+		const entries = 10
 		var wg sync.WaitGroup
-		for i := range 10 {
+		codes := make(chan int, entries)
+		for i := range entries {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				postFrom(s, fmt.Sprintf("198.51.100.%d:4000", i+1), EmailCodePath,
+				w := postFrom(s, fmt.Sprintf("198.51.100.%d:4000", i+1), EmailCodePath,
 					url.Values{"code": {wrong}, "csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie)
+				codes <- w.Code
 			}()
 		}
 		wg.Wait()
+		close(codes)
+		// A wrong entry is answered 400, whether it had tries left or not; a
+		// store failure would show as another status the event count misses.
+		for code := range codes {
+			if code != http.StatusBadRequest {
+				t.Fatalf("round %d: an entry was answered %d, want 400", round, code)
+			}
+		}
 		if got := len(events.find(EventEmailCodeExhausted, "")); got != 1 {
 			t.Fatalf("round %d: %d exhausted events, want exactly 1", round, got)
 		}
+	}
+}
+
+func TestEmailSignInSuppressedRequestsAreRecorded(t *testing.T) {
+	events := &eventCapture{}
+	mail := &MailConfig{
+		Provider: MailProviderSES, From: "Example <no-reply@example.com>",
+		PerAddress: &RateLimitRule{Requests: 1, Period: Duration(time.Hour)},
+	}
+	s, sender := newEmailLoginServer(t, nil, mail, nil, WithAuditEmitter(events))
+	_, cookie := requestCode(t, s, "a@example.com") // sent
+	code := lastCode(t, sender)
+
+	// A resend that cannot be sent changes nothing, and is recorded.
+	postIssuerForm(s, EmailCodeResendPath, url.Values{"csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie)
+	// So is a repeated request for the address the browser already has pending.
+	req := httptest.NewRequest(http.MethodPost, EmailLoginPath, strings.NewReader(url.Values{"email": {"a@example.com"}, "return_to": {emailTestReturn}}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", testIssuer)
+	req.AddCookie(cookie)
+	s.ServeHTTP(httptest.NewRecorder(), req)
+
+	var sent []any
+	for _, ev := range events.find(EventEmailCodeSent, "") {
+		sent = append(sent, ev.Details["sent"])
+	}
+	if len(sent) != 3 || sent[0] != true || sent[1] != false || sent[2] != false {
+		t.Fatalf("code sent events = %v, want true, false, false", sent)
+	}
+	if w := submitCode(s, cookie, code); w.Code != http.StatusFound {
+		t.Fatalf("the mailed code was lost: %d", w.Code)
 	}
 }
