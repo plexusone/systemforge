@@ -12,6 +12,7 @@ import (
 	"html/template"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -166,7 +167,7 @@ var emailCodeTemplate = template.Must(template.New("email-code").Parse(`<!doctyp
 <input type="hidden" name="csrf_token" value="{{.CSRF}}">
 <button type="submit">Send a new code</button>
 </form>{{end}}
-{{if .Restart}}<p><a href="{{.LoginPath}}">Sign in again</a></p>{{end}}
+{{if .Restart}}<p><a href="{{.RestartURL}}">Sign in again</a></p>{{end}}
 </main></body></html>
 `))
 
@@ -183,8 +184,11 @@ type emailCodeView struct {
 	Action, ResendAction, LoginPath string
 	Digits, MaxInput                int
 	Restart                         bool
-	status                          int
-	formTargetsAnyOrigin            bool
+	// RestartURL is where "Sign in again" leads: the sign-in page, with the
+	// pending sign-in's destination when it is known.
+	RestartURL           string
+	status               int
+	formTargetsAnyOrigin bool
 }
 
 func (sl *socialLogin) renderEmailLogin(w http.ResponseWriter, r *http.Request, v emailLoginView) {
@@ -209,6 +213,9 @@ func (sl *socialLogin) renderEmailCode(w http.ResponseWriter, r *http.Request, v
 		v.Title = "Enter your code"
 	}
 	v.Action, v.ResendAction, v.LoginPath = EmailCodePath, EmailCodeResendPath, LoginPath
+	if v.RestartURL == "" {
+		v.RestartURL = LoginPath
+	}
 	v.Digits = sl.email.digits
 	v.MaxInput = sl.email.digits * 2 // room for the spaces and hyphens people type
 	if v.formTargetsAnyOrigin {
@@ -232,13 +239,20 @@ func (sl *socialLogin) renderEmailCode(w http.ResponseWriter, r *http.Request, v
 	}
 }
 
-func expiredEmailCodeView() emailCodeView {
-	return emailCodeView{
+// expiredEmailCodeView is shown when the browser has no usable pending
+// sign-in. returnTo, when known, is carried to the sign-in page so signing
+// in again resumes where the person was going.
+func expiredEmailCodeView(returnTo string) emailCodeView {
+	v := emailCodeView{
 		Title:   "Sign in again",
 		Message: "This sign-in has expired, was completed or has used up its tries. Sign in again to get a new code.",
 		Restart: true,
 		status:  http.StatusBadRequest,
 	}
+	if returnTo != "" {
+		v.RestartURL = LoginPath + "?return_to=" + url.QueryEscape(returnTo)
+	}
+	return v
 }
 
 // handleEmailLoginPage serves GET /login/email: the address form.
@@ -350,10 +364,14 @@ func (sl *socialLogin) handleEmailLoginRequest(w http.ResponseWriter, r *http.Re
 	if decision == sendRefused || decision == sendFailed {
 		return
 	}
-	// A new request replaces the browser's earlier pending sign-in.
-	if old := cookieValue(r, sl.emailCodeCookieName()); old != "" {
-		if _, err := sl.verifyTokens.Revoke(ctx, PurposeSignInCode, emailCodeBinding(old)); err != nil {
-			logger.Warn("revoking the earlier sign-in code", "error", err)
+	old := cookieValue(r, sl.emailCodeCookieName())
+	if decision == sendSuppressed && old != "" {
+		// Nothing can be sent. A browser that already holds a pending
+		// sign-in for this address keeps it, so a code that arrives late
+		// still works; the answer is the same as for a sent message.
+		if t, err := sl.verifyTokens.Latest(ctx, PurposeSignInCode, emailCodeBinding(old)); err == nil && t.Email == email {
+			http.Redirect(w, r, EmailCodePath, http.StatusSeeOther)
+			return
 		}
 	}
 	cookie, err := newSessionToken()
@@ -365,6 +383,14 @@ func (sl *socialLogin) handleEmailLoginRequest(w http.ResponseWriter, r *http.Re
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	// The new request replaces the browser's earlier pending sign-in. It is
+	// retired after the new code is stored, so a failure to store leaves the
+	// earlier one usable.
+	if old != "" {
+		if _, err := sl.verifyTokens.Revoke(ctx, PurposeSignInCode, emailCodeBinding(old)); err != nil {
+			logger.Warn("revoking the earlier sign-in code", "error", err)
+		}
+	}
 	http.SetCookie(w, sl.cookies.cookie(sl.emailCodeCookieName(), cookie, int(sl.email.ttl.Seconds())))
 	http.Redirect(w, r, EmailCodePath, http.StatusSeeOther)
 }
@@ -374,7 +400,7 @@ func (sl *socialLogin) handleEmailLoginRequest(w http.ResponseWriter, r *http.Re
 func (sl *socialLogin) pendingEmailCode(w http.ResponseWriter, r *http.Request) (string, *VerificationToken, bool) {
 	cookie := cookieValue(r, sl.emailCodeCookieName())
 	if cookie == "" {
-		sl.renderEmailCode(w, r, expiredEmailCodeView())
+		sl.renderEmailCode(w, r, expiredEmailCodeView(""))
 		return "", nil, false
 	}
 	t, err := sl.verifyTokens.Latest(r.Context(), PurposeSignInCode, emailCodeBinding(cookie))
@@ -384,7 +410,7 @@ func (sl *socialLogin) pendingEmailCode(w http.ResponseWriter, r *http.Request) 
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return "", nil, false
 		}
-		sl.renderEmailCode(w, r, expiredEmailCodeView())
+		sl.renderEmailCode(w, r, expiredEmailCodeView(""))
 		return "", nil, false
 	}
 	return cookie, t, true
@@ -398,7 +424,7 @@ func (sl *socialLogin) handleEmailCodePage(w http.ResponseWriter, r *http.Reques
 	}
 	v := emailCodeView{Email: t.Email, ExpiresIn: humanDuration(sl.email.ttl), CSRF: emailCodeCSRF(cookie), formTargetsAnyOrigin: true}
 	if r.URL.Query().Get("resent") != "" {
-		v.Message = "If we could, we sent a new code. The earlier one no longer works."
+		v.Message = "If we could, we sent another code. Use the newest one you received."
 	}
 	sl.renderEmailCode(w, r, v)
 }
@@ -407,7 +433,7 @@ func (sl *socialLogin) handleEmailCodePage(w http.ResponseWriter, r *http.Reques
 // returns the cookie, or "" when it answered the request.
 func (sl *socialLogin) checkEmailCodeForm(w http.ResponseWriter, r *http.Request) string {
 	return sl.checkPendingForm(w, r, sl.emailCodeCookieName(), emailCodeCSRF, func() {
-		sl.renderEmailCode(w, r, expiredEmailCodeView())
+		sl.renderEmailCode(w, r, expiredEmailCodeView(""))
 	})
 }
 
@@ -434,7 +460,7 @@ func (sl *socialLogin) handleEmailCodeSubmit(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		sl.signInRefused(ctx, emailLoginProvider, "", "code_unusable")
-		sl.renderEmailCode(w, r, expiredEmailCodeView())
+		sl.renderEmailCode(w, r, expiredEmailCodeView(""))
 		return
 	}
 	var payload emailCodePayload
@@ -455,10 +481,9 @@ func (sl *socialLogin) handleEmailCodeSubmit(w http.ResponseWriter, r *http.Requ
 		sl.signInRefused(ctx, emailLoginProvider, "", "code_mismatch")
 		left := sl.email.maxAttempts - t.Attempts
 		if left <= 0 {
-			if _, err := sl.verifyTokens.Revoke(ctx, PurposeSignInCode, binding); err != nil {
-				logger.Warn("revoking a used-up sign-in code", "error", err)
-			}
-			sl.renderEmailCode(w, r, expiredEmailCodeView())
+			// Nothing to revoke: RecordAttempt refuses further entries, and
+			// revoking here could consume a replacement issued meanwhile.
+			sl.renderEmailCode(w, r, expiredEmailCodeView(payload.RedirectURL))
 			return
 		}
 		sl.renderEmailCode(w, r, emailCodeView{
@@ -469,19 +494,23 @@ func (sl *socialLogin) handleEmailCodeSubmit(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// The code is right. The revocation is the single use: of concurrent
-	// correct entries, one update matches the token and the others find
-	// nothing.
-	n, err := sl.verifyTokens.Revoke(ctx, PurposeSignInCode, binding)
-	if err != nil {
-		logger.Error("using a sign-in code", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+	// The code is right. Using the row it matched is the single use: of
+	// concurrent correct entries one update matches the row and the others
+	// find it used, and a code that was replaced since is refused without
+	// touching its replacement.
+	if err := sl.verifyTokens.ConsumeToken(ctx, t.ID, PurposeSignInCode, binding); err != nil {
+		if !errors.Is(err, ErrVerificationTokenInvalid) {
+			logger.Error("using a sign-in code", "error", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		sl.signInRefused(ctx, emailLoginProvider, "", "code_unusable")
+		sl.renderEmailCode(w, r, expiredEmailCodeView(payload.RedirectURL))
 		return
 	}
-	if n == 0 {
-		sl.signInRefused(ctx, emailLoginProvider, "", "code_unusable")
-		sl.renderEmailCode(w, r, expiredEmailCodeView())
-		return
+	// Any other pending code of this browser is dead now.
+	if _, err := sl.verifyTokens.Revoke(ctx, PurposeSignInCode, binding); err != nil {
+		logger.Warn("revoking the browser's other sign-in codes", "error", err)
 	}
 	http.SetCookie(w, sl.cookies.cookie(sl.emailCodeCookieName(), "", -1))
 	sl.completeEmailSignIn(ctx, w, r, t.Email, payload.RedirectURL)
@@ -503,6 +532,14 @@ func (sl *socialLogin) completeEmailSignIn(ctx context.Context, w http.ResponseW
 		EmailProven: true,
 	}
 	p, err := ResolveExternalLogin(ctx, sl.directory, login, sl.now())
+	if err == nil && !strings.EqualFold(p.Email, email) {
+		// The identity is linked to this address but the account has since
+		// moved to another one: the old mailbox no longer reaches it.
+		sl.signInRefused(ctx, emailLoginProvider, "", "stale_email_identity")
+		LoggerFromContext(ctx).Info("email sign-in refused: the account no longer uses this address", "principal_id", p.ID)
+		http.Error(w, "this address is no longer used by the account", http.StatusForbidden)
+		return
+	}
 	sl.completeSignIn(ctx, w, r, emailLoginProvider, redirectURL, p, err)
 }
 
@@ -532,15 +569,23 @@ func (sl *socialLogin) handleEmailCodeResend(w http.ResponseWriter, r *http.Requ
 	if decision == sendRefused || decision == sendFailed {
 		return
 	}
-	if _, err := sl.verifyTokens.Revoke(ctx, PurposeSignInCode, emailCodeBinding(cookie)); err != nil {
-		logger.Error("revoking the earlier sign-in code", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+	if decision == sendSuppressed {
+		// Nothing can be sent, so nothing changes: the code already mailed
+		// stays usable, and the answer is the same as for a sent message.
+		http.Redirect(w, r, EmailCodePath+"?resent=1", http.StatusSeeOther)
 		return
 	}
+	// The replacement is stored first and the earlier code retired after,
+	// so a failure to store leaves the earlier one usable. Entries are
+	// counted against the newest code only, so the earlier one is already
+	// out of use once the replacement exists.
 	if err := sl.issueEmailCode(ctx, cookie, t.Email, payload.RedirectURL, decision); err != nil {
 		logger.Error("resending a sign-in code", "error", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
+	}
+	if err := sl.verifyTokens.ConsumeToken(ctx, t.ID, PurposeSignInCode, emailCodeBinding(cookie)); err != nil && !errors.Is(err, ErrVerificationTokenInvalid) {
+		logger.Warn("retiring the replaced sign-in code", "error", err)
 	}
 	http.SetCookie(w, sl.cookies.cookie(sl.emailCodeCookieName(), cookie, int(sl.email.ttl.Seconds())))
 	http.Redirect(w, r, EmailCodePath+"?resent=1", http.StatusSeeOther)
