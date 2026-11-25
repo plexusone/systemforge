@@ -148,7 +148,14 @@ func prepareVerificationToken(token string, t *VerificationToken, now time.Time)
 		return errors.New("systemauth: verification token needs a binding")
 	}
 	if t.ID == uuid.Nil {
-		t.ID = uuid.New()
+		// A time-ordered ID: tokens issued at the same instant (a coarse
+		// clock) still order by issue, which the "newest token" rules
+		// (Latest, RecordAttempt, ConsumeToken) depend on.
+		id, err := uuid.NewV7()
+		if err != nil {
+			return fmt.Errorf("systemauth: generating a verification token ID: %w", err)
+		}
+		t.ID = id
 	}
 	if t.CreatedAt.IsZero() {
 		t.CreatedAt = now
