@@ -194,16 +194,29 @@ func TestEmailSignInTriesLeftAreShown(t *testing.T) {
 }
 
 func TestEmailSignInMalformedEntriesCountAsTries(t *testing.T) {
-	s, sender := newEmailLoginServer(t, &EmailLoginConfig{MaxAttempts: 3}, nil, nil)
-	_, cookie := requestCode(t, s, "a@example.com")
-	code := lastCode(t, sender)
-	for _, bad := range []string{"", "abc", code + "1", code[:5]} {
-		if w := submitCode(s, cookie, bad); w.Code != http.StatusBadRequest {
-			t.Fatalf("entry %q: %d", bad, w.Code)
+	// With three tries, three malformed entries use them all. Leaving any one
+	// out must leave the correct code usable, so each kind of entry counts.
+	malformed := func(code string) []string { return []string{"", "abc", code + "1"} }
+	for skip := -1; skip < 3; skip++ {
+		s, sender := newEmailLoginServer(t, &EmailLoginConfig{MaxAttempts: 3}, nil, nil)
+		_, cookie := requestCode(t, s, "a@example.com")
+		code := lastCode(t, sender)
+		for i, bad := range malformed(code) {
+			if i == skip {
+				continue
+			}
+			if w := submitCode(s, cookie, bad); w.Code != http.StatusBadRequest {
+				t.Fatalf("skip %d, entry %q: %d, want 400", skip, bad, w.Code)
+			}
 		}
-	}
-	if w := submitCode(s, cookie, code); findCookie(t, w.Result(), LoginCookieName) != nil {
-		t.Fatal("entries of the wrong shape did not count as tries")
+		w := submitCode(s, cookie, code)
+		signedIn := findCookie(t, w.Result(), LoginCookieName) != nil
+		if skip == -1 && signedIn {
+			t.Fatal("three malformed entries did not use the three tries")
+		}
+		if skip != -1 && !signedIn {
+			t.Fatalf("entry %d was not counted as a try: two entries used up three tries", skip)
+		}
 	}
 }
 
@@ -480,5 +493,236 @@ func TestEmailCodeGeneration(t *testing.T) {
 	}
 	if c, err := newEmailCode(10); err != nil || len(c) != 10 {
 		t.Fatalf("10-digit code %q, %v", c, err)
+	}
+}
+
+func TestEmailSignInOutOfTriesKeepsTheDestination(t *testing.T) {
+	s, sender := newEmailLoginServer(t, &EmailLoginConfig{MaxAttempts: 3}, nil, nil)
+	_, cookie := requestCode(t, s, "a@example.com")
+	code := lastCode(t, sender)
+	var w *httptest.ResponseRecorder
+	for range 3 {
+		w = submitCode(s, cookie, wrongCode(code))
+	}
+	want := LoginPath + "?return_to=" + url.QueryEscape(emailTestReturn)
+	if !strings.Contains(w.Body.String(), `href="`+strings.ReplaceAll(want, "&", "&amp;")+`"`) {
+		t.Fatalf("restart link does not resume the destination %q: %s", want, w.Body.String())
+	}
+	// A browser with nothing pending has no destination to keep.
+	if w := getWithCookies(s, EmailCodePath); !strings.Contains(w.Body.String(), `href="`+LoginPath+`"`) {
+		t.Fatalf("generic restart link missing: %s", w.Body.String())
+	}
+}
+
+func TestEmailSignInLastWrongEntryDoesNotBlockACountedCorrectOne(t *testing.T) {
+	// The wrong entry that spends the last try used to revoke the code, which
+	// could strand a correct entry already counted. Spending the last try
+	// leaves the row alone; only the limit refuses further entries.
+	s, sender := newEmailLoginServer(t, &EmailLoginConfig{MaxAttempts: 3}, nil, nil)
+	_, cookie := requestCode(t, s, "a@example.com")
+	code := lastCode(t, sender)
+	binding := emailCodeBinding(cookie.Value)
+	for range 3 {
+		submitCode(s, cookie, wrongCode(code))
+	}
+	row, err := s.verificationTokens.Latest(context.Background(), PurposeSignInCode, binding)
+	if err != nil || row.Attempts != 3 {
+		t.Fatalf("after the last wrong entry: %+v, %v; want the row still there with 3 attempts", row, err)
+	}
+	if _, err := s.verificationTokens.RecordAttempt(context.Background(), PurposeSignInCode, binding, 3); err == nil {
+		t.Fatal("the limit let a fourth entry through")
+	}
+}
+
+// failingCreateStore fails Create while fail is set.
+type failingCreateStore struct {
+	VerificationTokenStore
+	mu   sync.Mutex
+	fail bool
+}
+
+func (f *failingCreateStore) setFail(v bool) { f.mu.Lock(); f.fail = v; f.mu.Unlock() }
+
+func (f *failingCreateStore) Create(ctx context.Context, token string, t VerificationToken) error {
+	f.mu.Lock()
+	fail := f.fail
+	f.mu.Unlock()
+	if fail {
+		return context.DeadlineExceeded
+	}
+	return f.VerificationTokenStore.Create(ctx, token, t)
+}
+
+func TestEmailSignInResendKeepsTheCodeWhenStoringFails(t *testing.T) {
+	store := &failingCreateStore{VerificationTokenStore: NewMemoryVerificationTokenStore()}
+	s, sender := newEmailLoginServer(t, nil, nil, nil, WithVerificationTokenStore(store))
+	_, cookie := requestCode(t, s, "a@example.com")
+
+	store.setFail(true)
+	w := postIssuerForm(s, EmailCodeResendPath, url.Values{"csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie)
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("resend with a failing store: %d, want 500", w.Code)
+	}
+	store.setFail(false)
+	// The code that was sent still works, and a retry can proceed.
+	if w := postIssuerForm(s, EmailCodeResendPath, url.Values{"csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie); w.Code != http.StatusSeeOther {
+		t.Fatalf("retried resend: %d, want 303", w.Code)
+	}
+	if w := submitCode(s, cookie, lastCode(t, sender)); w.Code != http.StatusFound {
+		t.Fatalf("the code of the retried resend was refused: %d", w.Code)
+	}
+}
+
+func TestEmailSignInResendKeepsTheCodeWhenStoringFailsOriginalStillWorks(t *testing.T) {
+	store := &failingCreateStore{VerificationTokenStore: NewMemoryVerificationTokenStore()}
+	s, sender := newEmailLoginServer(t, nil, nil, nil, WithVerificationTokenStore(store))
+	_, cookie := requestCode(t, s, "a@example.com")
+	code := lastCode(t, sender)
+	store.setFail(true)
+	postIssuerForm(s, EmailCodeResendPath, url.Values{"csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie)
+	store.setFail(false)
+	if w := submitCode(s, cookie, code); w.Code != http.StatusFound {
+		t.Fatalf("the original code was lost when its replacement failed to store: %d", w.Code)
+	}
+}
+
+func TestEmailSignInSuppressedResendKeepsTheCurrentCode(t *testing.T) {
+	mail := &MailConfig{
+		Provider: MailProviderSES, From: "Example <no-reply@example.com>",
+		PerAddress: &RateLimitRule{Requests: 1, Period: Duration(time.Hour)},
+	}
+	s, sender := newEmailLoginServer(t, nil, mail, nil)
+	_, cookie := requestCode(t, s, "a@example.com")
+	code := lastCode(t, sender)
+
+	w := postIssuerForm(s, EmailCodeResendPath, url.Values{"csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie)
+	if w.Code != http.StatusSeeOther || !strings.HasPrefix(w.Header().Get("Location"), EmailCodePath) {
+		t.Fatalf("suppressed resend: %d %q", w.Code, w.Header().Get("Location"))
+	}
+	if sender.Len() != 1 {
+		t.Fatalf("%d messages, want the resend suppressed", sender.Len())
+	}
+	// A late first email still works.
+	if w := submitCode(s, cookie, code); w.Code != http.StatusFound {
+		t.Fatalf("the code already mailed was lost by a suppressed resend: %d", w.Code)
+	}
+}
+
+func TestEmailSignInSuppressedRequestKeepsAPendingSignInForTheSameAddress(t *testing.T) {
+	mail := &MailConfig{
+		Provider: MailProviderSES, From: "Example <no-reply@example.com>",
+		PerAddress: &RateLimitRule{Requests: 1, Period: Duration(time.Hour)},
+	}
+	s, sender := newEmailLoginServer(t, nil, mail, nil)
+	_, cookie := requestCode(t, s, "a@example.com")
+	code := lastCode(t, sender)
+
+	// The same browser asks again for the same address and cannot be sent
+	// another: its pending sign-in stays.
+	req := httptest.NewRequest(http.MethodPost, EmailLoginPath, strings.NewReader(url.Values{"email": {"a@example.com"}, "return_to": {emailTestReturn}}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", testIssuer)
+	req.AddCookie(cookie)
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	if w.Code != http.StatusSeeOther || w.Header().Get("Location") != EmailCodePath {
+		t.Fatalf("suppressed request: %d %q", w.Code, w.Header().Get("Location"))
+	}
+	if w := submitCode(s, cookie, code); w.Code != http.StatusFound {
+		t.Fatalf("the code already mailed was lost: %d", w.Code)
+	}
+}
+
+// emailIdentityDirectories are the directories that change an email, built
+// fresh, with a way to read their identities back.
+func emailIdentityDirectories(t *testing.T) map[string]PrincipalDirectory {
+	t.Helper()
+	return map[string]PrincipalDirectory{
+		"memory":         NewMemoryPrincipalDirectory(),
+		"memory-storage": NewMemoryStorage().PrincipalDirectory(),
+		"ent":            NewEntPrincipalDirectory(newEntTestClient(t, "email_change_identity_"+strings.ReplaceAll(t.Name(), "/", "_"))),
+	}
+}
+
+func TestChangeEmailUnlinksTheEmailSignInIdentity(t *testing.T) {
+	ctx := context.Background()
+	for name, dir := range emailIdentityDirectories(t) {
+		t.Run(name, func(t *testing.T) {
+			p, err := dir.CreateFromExternal(ctx, ExternalLogin{Provider: emailLoginProvider, Subject: "old@example.com", Email: "old@example.com", EmailProven: true})
+			if err != nil {
+				t.Fatalf("CreateFromExternal: %v", err)
+			}
+			if err := dir.LinkExternalIdentity(ctx, p.ID, ExternalLogin{Provider: "github", Subject: "42", Email: "old@example.com"}); err != nil {
+				t.Fatalf("LinkExternalIdentity: %v", err)
+			}
+			changer, ok := dir.(PrincipalEmailChanger)
+			if !ok {
+				t.Fatalf("%T cannot change an email", dir)
+			}
+			if err := changer.ChangeEmail(ctx, p.ID, "old@example.com", "new@example.com", time.Now()); err != nil {
+				t.Fatalf("ChangeEmail: %v", err)
+			}
+			if _, err := dir.FindByExternalIdentity(ctx, emailLoginProvider, "old@example.com"); err == nil {
+				t.Error("the old address still signs in to the account")
+			}
+			if got, err := dir.FindByExternalIdentity(ctx, "github", "42"); err != nil || got.ID != p.ID {
+				t.Errorf("the GitHub identity = %+v, %v; want it kept", got, err)
+			}
+		})
+	}
+}
+
+func TestEmailSignInAfterTheAddressChanged(t *testing.T) {
+	ctx := context.Background()
+	dir := NewMemoryPrincipalDirectory()
+	s, sender := newEmailLoginServer(t, nil, nil, dir)
+
+	_, cookie := requestCode(t, s, "old@example.com")
+	if w := submitCode(s, cookie, lastCode(t, sender)); w.Code != http.StatusFound {
+		t.Fatalf("first sign-in: %d", w.Code)
+	}
+	original, err := dir.FindByExternalIdentity(ctx, emailLoginProvider, "old@example.com")
+	if err != nil {
+		t.Fatalf("original account: %v", err)
+	}
+	if err := dir.ChangeEmail(ctx, original.ID, "old@example.com", "new@example.com", time.Now()); err != nil {
+		t.Fatalf("ChangeEmail: %v", err)
+	}
+
+	// The new mailbox reaches the same account.
+	_, cookie = requestCode(t, s, "new@example.com")
+	if w := submitCode(s, cookie, lastCode(t, sender)); w.Code != http.StatusFound {
+		t.Fatalf("sign-in with the new address: %d", w.Code)
+	}
+	if p, err := dir.FindByExternalIdentity(ctx, emailLoginProvider, "new@example.com"); err != nil || p.ID != original.ID {
+		t.Fatalf("new address reaches %+v, %v; want the original account %s", p, err, original.ID)
+	}
+	// The old mailbox does not: it gets an account of its own.
+	_, cookie = requestCode(t, s, "old@example.com")
+	if w := submitCode(s, cookie, lastCode(t, sender)); w.Code != http.StatusFound {
+		t.Fatalf("sign-in with the old address: %d", w.Code)
+	}
+	if p, err := dir.FindByExternalIdentity(ctx, emailLoginProvider, "old@example.com"); err != nil || p.ID == original.ID {
+		t.Fatalf("old address reaches %+v, %v; want a different account from %s", p, err, original.ID)
+	}
+}
+
+func TestEmailSignInRefusesAStaleStoredIdentity(t *testing.T) {
+	// An email identity stored before email changes retired them still names
+	// the old address. It must not sign in.
+	ctx := context.Background()
+	dir := NewMemoryPrincipalDirectory()
+	s, sender := newEmailLoginServer(t, nil, nil, dir)
+	p, err := dir.CreateFromExternal(ctx, ExternalLogin{Provider: "github", Subject: "42", Email: "new@example.com"})
+	if err != nil {
+		t.Fatalf("CreateFromExternal: %v", err)
+	}
+	if err := dir.LinkExternalIdentity(ctx, p.ID, ExternalLogin{Provider: emailLoginProvider, Subject: "old@example.com"}); err != nil {
+		t.Fatalf("LinkExternalIdentity: %v", err)
+	}
+	_, cookie := requestCode(t, s, "old@example.com")
+	w := submitCode(s, cookie, lastCode(t, sender))
+	if w.Code != http.StatusForbidden || findCookie(t, w.Result(), LoginCookieName) != nil {
+		t.Fatalf("stale identity: %d, want 403 and no session", w.Code)
 	}
 }
