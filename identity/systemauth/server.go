@@ -35,7 +35,10 @@ import (
 
 // Server is the SystemAuth OAuth 2.0 / OpenID Connect server.
 type Server struct {
-	config          *Config
+	config *Config
+	// codeKey keys the hash of email sign-in codes (derived from the token
+	// HMAC secret); see emailCodeKey.
+	codeKey         []byte
 	storage         Storage
 	sessionProvider SessionProvider
 	oauth2          fosite.OAuth2Provider
@@ -257,6 +260,7 @@ func (s *Server) setupFosite() error {
 	if err != nil {
 		return err
 	}
+	s.codeKey = emailCodeKey(hashSecret)
 
 	fositeConfig := &fosite.Config{
 		AccessTokenIssuer:              s.config.Issuer,

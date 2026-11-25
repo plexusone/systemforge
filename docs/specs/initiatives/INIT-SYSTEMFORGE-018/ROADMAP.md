@@ -16,11 +16,11 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 - [x] `RMI-SYSTEMFORGE-268` Verification token attempts: an attempt counter, an atomic check-and-count store method on the memory and Ent stores, and `storetest` conformance cases
 - [x] `RMI-SYSTEMFORGE-269` The `social_login.email` configuration section (code length, code lifetime, attempt limit; an empty section enables it with defaults), validated, requiring `mail`; the production refusal of the `log` mail provider already covers it
   - Depends on: `RMI-SYSTEMFORGE-268`
-- [ ] `RMI-SYSTEMFORGE-270` The `sign_in_code` message (text and HTML) and the request, entry and resend routes, with keyed-hash storage, browser binding, send limits and no enumeration
+- [x] `RMI-SYSTEMFORGE-270` The `sign_in_code` message (text and HTML) and the request, entry and resend routes, with keyed-hash storage, browser binding, send limits and no enumeration
   - Depends on: `RMI-SYSTEMFORGE-269`
-- [ ] `RMI-SYSTEMFORGE-271` A proven code resolves through `ResolveExternalLogin` as provider `email`: account creation behind the signup gate, linking by verified email, consent and session
+- [x] `RMI-SYSTEMFORGE-271` A proven code resolves through `ResolveExternalLogin` as provider `email`: account creation behind the signup gate, linking by verified email, consent and session
   - Depends on: `RMI-SYSTEMFORGE-270`
-- [ ] `RMI-SYSTEMFORGE-272` The chooser's email form, `idp_hint=email`, and email listed on the sign-in-methods page
+- [ ] `RMI-SYSTEMFORGE-272` The chooser links to the email form (done with 270); still to do: `idp_hint=email` and email listed on the sign-in-methods page
   - Depends on: `RMI-SYSTEMFORGE-271`
 - [ ] `RMI-SYSTEMFORGE-273` Security events and OCSF mapping for code sent, failed and succeeded; per-client verification rate limit
   - Depends on: `RMI-SYSTEMFORGE-270`

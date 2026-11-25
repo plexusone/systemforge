@@ -275,6 +275,18 @@ func (sl *socialLogin) handleVerifyEmailPage(w http.ResponseWriter, r *http.Requ
 // size and the CSRF token derived from the pending sign-in's cookie. It
 // returns the cookie, or "" when it answered the request.
 func (sl *socialLogin) checkVerifyForm(w http.ResponseWriter, r *http.Request) string {
+	return sl.checkPendingForm(w, r, sl.verifyCookieName(), verifyCSRF, func() {
+		sl.renderVerifyEmail(w, r, expiredVerifyView())
+	})
+}
+
+// checkPendingForm checks a form of a pending sign-in held by a cookie: the
+// request comes from the issuer's origin, the body is small, the browser has
+// the pending sign-in's cookie, and the form's CSRF token is the one csrf
+// derives from that cookie, which a cross-site page cannot read. It returns
+// the cookie, or "" when it answered the request (expired answers a browser
+// without the cookie).
+func (sl *socialLogin) checkPendingForm(w http.ResponseWriter, r *http.Request, cookieName string, csrf func(cookie string) string, expired func()) string {
 	noStore(w)
 	if !sl.redirects.fromIssuer(r) {
 		http.Error(w, "cross-origin request rejected", http.StatusForbidden)
@@ -285,12 +297,12 @@ func (sl *socialLogin) checkVerifyForm(w http.ResponseWriter, r *http.Request) s
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return ""
 	}
-	cookie := cookieValue(r, sl.verifyCookieName())
+	cookie := cookieValue(r, cookieName)
 	if cookie == "" {
-		sl.renderVerifyEmail(w, r, expiredVerifyView())
+		expired()
 		return ""
 	}
-	if subtle.ConstantTimeCompare([]byte(r.PostForm.Get("csrf_token")), []byte(verifyCSRF(cookie))) != 1 {
+	if subtle.ConstantTimeCompare([]byte(r.PostForm.Get("csrf_token")), []byte(csrf(cookie))) != 1 {
 		http.Error(w, "invalid form token", http.StatusForbidden)
 		return ""
 	}

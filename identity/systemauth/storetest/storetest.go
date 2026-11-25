@@ -477,6 +477,97 @@ func VerificationTokenStore(t *testing.T, newStore func(t *testing.T) systemauth
 		}
 	})
 
+	t.Run("ConsumeTokenExactRow", func(t *testing.T) {
+		s := newStore(t)
+		b := binding()
+		now := time.Now().UTC().Truncate(time.Second)
+		create(t, s, newToken(), systemauth.VerificationToken{
+			Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b,
+			CreatedAt: now, ExpiresAt: now.Add(time.Hour),
+		})
+		old, err := s.Latest(ctx, systemauth.PurposeSignInCode, b)
+		if err != nil {
+			t.Fatalf("Latest: %v", err)
+		}
+		create(t, s, newToken(), systemauth.VerificationToken{
+			Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b,
+			CreatedAt: now.Add(time.Second), ExpiresAt: now.Add(time.Hour),
+		})
+		newest, err := s.Latest(ctx, systemauth.PurposeSignInCode, b)
+		if err != nil || newest.ID == old.ID {
+			t.Fatalf("Latest = %+v, %v; want the newer row", newest, err)
+		}
+		if err := s.ConsumeToken(ctx, old.ID, systemauth.PurposeVerifyEmail, b); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("ConsumeToken for another purpose err = %v, want ErrVerificationTokenInvalid", err)
+		}
+		if err := s.ConsumeToken(ctx, old.ID, systemauth.PurposeSignInCode, binding()); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("ConsumeToken for another binding err = %v, want ErrVerificationTokenInvalid", err)
+		}
+		if err := s.ConsumeToken(ctx, uuid.New(), systemauth.PurposeSignInCode, b); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("ConsumeToken for an unknown row err = %v, want ErrVerificationTokenInvalid", err)
+		}
+		// A row that a newer one replaced is dead, usable or not: refusing it
+		// leaves the replacement alone.
+		if err := s.ConsumeToken(ctx, old.ID, systemauth.PurposeSignInCode, b); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("ConsumeToken of a replaced row err = %v, want ErrVerificationTokenInvalid", err)
+		}
+		if got, err := s.Latest(ctx, systemauth.PurposeSignInCode, b); err != nil || got.ID != newest.ID {
+			t.Fatalf("Latest after = %+v, %v; want the newer row still usable", got, err)
+		}
+		if err := s.ConsumeToken(ctx, newest.ID, systemauth.PurposeSignInCode, b); err != nil {
+			t.Fatalf("ConsumeToken of the newest row: %v", err)
+		}
+		if err := s.ConsumeToken(ctx, newest.ID, systemauth.PurposeSignInCode, b); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("ConsumeToken a second time err = %v, want ErrVerificationTokenInvalid", err)
+		}
+		// Using the newest row does not bring the replaced one back.
+		if err := s.ConsumeToken(ctx, old.ID, systemauth.PurposeSignInCode, b); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("ConsumeToken of a replaced row after its replacement was used err = %v, want ErrVerificationTokenInvalid", err)
+		}
+	})
+
+	t.Run("ConsumeTokenOnlyAgainstItsOwnBinding", func(t *testing.T) {
+		// A newer token of another binding or purpose does not replace this one.
+		s := newStore(t)
+		b, other := binding(), binding()
+		now := time.Now().UTC().Truncate(time.Second)
+		create(t, s, newToken(), systemauth.VerificationToken{
+			Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b,
+			CreatedAt: now, ExpiresAt: now.Add(time.Hour),
+		})
+		create(t, s, newToken(), systemauth.VerificationToken{
+			Purpose: systemauth.PurposeSignInCode, Email: "b@example.com", Binding: other,
+			CreatedAt: now.Add(time.Second), ExpiresAt: now.Add(time.Hour),
+		})
+		create(t, s, newToken(), systemauth.VerificationToken{
+			Purpose: systemauth.PurposeVerifyEmail, Email: "a@example.com", Binding: b,
+			CreatedAt: now.Add(2 * time.Second), ExpiresAt: now.Add(time.Hour),
+		})
+		row, err := s.Latest(ctx, systemauth.PurposeSignInCode, b)
+		if err != nil {
+			t.Fatalf("Latest: %v", err)
+		}
+		if err := s.ConsumeToken(ctx, row.ID, systemauth.PurposeSignInCode, b); err != nil {
+			t.Fatalf("ConsumeToken: %v", err)
+		}
+	})
+
+	t.Run("ConsumeTokenOnceConcurrently", func(t *testing.T) {
+		s := newStore(t)
+		b := binding()
+		create(t, s, newToken(), systemauth.VerificationToken{Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b})
+		row, err := s.Latest(ctx, systemauth.PurposeSignInCode, b)
+		if err != nil {
+			t.Fatalf("Latest: %v", err)
+		}
+		ok, errs := race(Concurrency, func() error {
+			return s.ConsumeToken(ctx, row.ID, systemauth.PurposeSignInCode, b)
+		}, systemauth.ErrVerificationTokenInvalid)
+		if len(errs) != 0 || ok != 1 {
+			t.Fatalf("%d concurrent calls: %d succeeded, unexpected errors %v; want exactly 1", Concurrency, ok, errs)
+		}
+	})
+
 	t.Run("LatestAndRevoke", func(t *testing.T) {
 		s := newStore(t)
 		b, other := binding(), binding()

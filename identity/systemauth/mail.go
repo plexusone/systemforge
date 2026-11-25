@@ -221,6 +221,8 @@ const (
 	mailChangeRequested mailKind = "email_change_requested"
 	// mailChanged tells the old address the change was made.
 	mailChanged mailKind = "email_changed"
+	// mailSignInCode carries the one-time code of an email sign-in.
+	mailSignInCode mailKind = "sign_in_code"
 )
 
 // mailData is what the templates see.
@@ -229,7 +231,10 @@ type mailData struct {
 	SupportURL string
 	// Link is the verification link (verification messages only).
 	Link string
-	// ExpiresIn says how long Link works, e.g. "30 minutes".
+	// Code is the one-time sign-in code (sign-in code messages only).
+	Code string
+	// ExpiresIn says how long Link or Code works, e.g. "30 minutes". The
+	// mailer fills it with the verification link lifetime when empty.
 	ExpiresIn string
 	// NewEmail is the requested address, masked (notices only).
 	NewEmail string
@@ -280,6 +285,27 @@ Help: {{.SupportURL}}
 <p><a href="{{.Link}}">Confirm new email address</a></p>
 <p>The link works once, while you are signed in, and expires in {{.ExpiresIn}}.</p>
 <p>If you did not ask for this, ignore this message: the address is not used unless the link is opened.</p>
+{{if .SupportURL}}<p><a href="{{.SupportURL}}">Help</a></p>{{end}}
+</body></html>`,
+	},
+	mailSignInCode: {
+		Subject: `Your {{.Product}} sign-in code`,
+		Text: `Your {{.Product}} sign-in code is:
+
+{{.Code}}
+
+Enter it in the browser where you asked to sign in. It works once and expires in {{.ExpiresIn}}.
+
+If you did not ask to sign in to {{.Product}}, ignore this message and do not share the code: nothing happens unless it is entered.
+{{if .SupportURL}}
+Help: {{.SupportURL}}
+{{end}}`,
+		HTML: `<!doctype html>
+<html lang="en"><body style="font-family:sans-serif;line-height:1.5">
+<p>Your <strong>{{.Product}}</strong> sign-in code is:</p>
+<p style="font-size:1.75em;letter-spacing:0.15em;font-family:monospace"><strong>{{.Code}}</strong></p>
+<p>Enter it in the browser where you asked to sign in. It works once and expires in {{.ExpiresIn}}.</p>
+<p>If you did not ask to sign in to {{.Product}}, ignore this message and do not share the code: nothing happens unless it is entered.</p>
 {{if .SupportURL}}<p><a href="{{.SupportURL}}">Help</a></p>{{end}}
 </body></html>`,
 	},
@@ -446,7 +472,9 @@ func (m *mailer) send(ctx context.Context, kind mailKind, to string, data mailDa
 	}
 	data.Product = m.product
 	data.SupportURL = m.supportURL
-	data.ExpiresIn = humanDuration(m.ttl)
+	if data.ExpiresIn == "" {
+		data.ExpiresIn = humanDuration(m.ttl)
+	}
 	msg := &omnimail.Message{
 		From:    m.from,
 		To:      []omnimail.Address{addr},
