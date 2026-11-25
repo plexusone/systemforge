@@ -331,6 +331,15 @@ func (sl *socialLogin) issueEmailCode(ctx context.Context, cookie, email, redire
 			sent = true
 		}
 	}
+	sl.emitCodeSent(ctx, sent)
+	return nil
+}
+
+// emitCodeSent records a request for a sign-in code: sent is false when a
+// send limit suppressed the message or delivery failed. A request that
+// changes nothing because nothing could be sent is recorded too, so the
+// trail shows every request that reached the send limits.
+func (sl *socialLogin) emitCodeSent(ctx context.Context, sent bool) {
 	sl.emit(ctx, &audit.Event{
 		EventType: EventEmailCodeSent,
 		Action:    "send_code",
@@ -338,7 +347,6 @@ func (sl *socialLogin) issueEmailCode(ctx context.Context, cookie, email, redire
 		Resource:  audit.Resource{Type: "email"},
 		Details:   details("sent", sent),
 	})
-	return nil
 }
 
 // handleEmailLoginRequest serves POST /login/email: it mails a code to the
@@ -382,6 +390,7 @@ func (sl *socialLogin) handleEmailLoginRequest(w http.ResponseWriter, r *http.Re
 		// sign-in for this address keeps it, so a code that arrives late
 		// still works; the answer is the same as for a sent message.
 		if t, err := sl.verifyTokens.Latest(ctx, PurposeSignInCode, emailCodeBinding(old)); err == nil && t.Email == email {
+			sl.emitCodeSent(ctx, false)
 			http.Redirect(w, r, EmailCodePath, http.StatusSeeOther)
 			return
 		}
@@ -588,6 +597,7 @@ func (sl *socialLogin) handleEmailCodeResend(w http.ResponseWriter, r *http.Requ
 	if decision == sendSuppressed {
 		// Nothing can be sent, so nothing changes: the code already mailed
 		// stays usable, and the answer is the same as for a sent message.
+		sl.emitCodeSent(ctx, false)
 		http.Redirect(w, r, EmailCodePath+"?resent=1", http.StatusSeeOther)
 		return
 	}
