@@ -9,6 +9,83 @@
   ],
   "releases": [
     {
+      "version": "v0.37.0",
+      "date": "2026-11-25",
+      "highlights": [
+        {
+          "description": "SystemAuth signs people in with a one-time code mailed to them, with no upstream provider account, so an application can launch without waiting for a GitHub or Google app review; every federated application gets it with no code of its own",
+          "commit": "20ab4a9"
+        },
+        {
+          "description": "Codes go through the same omnimail `mail` section as verification links, so the provider is configuration; sending through Resend's SMTP service needs no new code",
+          "commit": "20ab4a9"
+        }
+      ],
+      "added": [
+        {
+          "description": "`social_login.email` section: `code_length` (6 to 10), `code_lifetime` (5m to 30m) and `max_attempts` (3 to 10), validated, requiring `mail`; an empty section enables it with the defaults, and the configuration schema lists it",
+          "commit": "ddbb280"
+        },
+        {
+          "description": "Email one-time code sign-in at `/login/email`, `/login/email/code` and `/login/email/code/resend`: the code is stored as a keyed hash bound to the browser and the address, each entry is counted atomically before it is compared, a correct code is used once, a replaced code cannot be used, a suppressed send leaves a code no entry can match, and asking for a code looks up no account. A proven address resolves through `ResolveExternalLogin` as provider `email`, so the sign-up gate, age question, invite codes, linking by verified email, consent and the session apply",
+          "commit": "20ab4a9"
+        },
+        {
+          "description": "`idp_hint=email` skips the sign-in page when email sign-in is configured, the sign-in page lists Email, and the relying-party BFF serves `/bff/auth/email`",
+          "commit": "10f08d2"
+        },
+        {
+          "description": "Security events `systemauth.email_code.sent` and `systemauth.email_code.exhausted`, mapped to OCSF Authentication events, with sign-in refusal reasons `code_mismatch`, `code_unusable` and `stale_email_identity`; no event holds a code or an address. Code entries are limited per client address with `DefaultEmailCodeSubmitLimit` (20 a minute)",
+          "commit": "d6c47e3"
+        },
+        {
+          "description": "`VerificationTokenStore.RecordAttempt` counts an attempt against the newest usable token atomically and hands back its own count, and `ConsumeToken` uses one row by ID, refusing a row a newer one replaced; the `sign_in_code` purpose, `sf_verification_tokens.attempts` and `migrations/0013_verification_token_attempts.sql`; time-ordered token IDs keep tokens issued at the same instant in issue order",
+          "commit": "d597bc9"
+        }
+      ],
+      "changed": [
+        {
+          "description": "`PrincipalEmailChanger.ChangeEmail` unlinks the principal's `email` sign-in identity in the same transaction, in the Ent and in-memory directories, so control of the old mailbox no longer reaches the account; identities of other providers stay",
+          "commit": "f2d6a3c"
+        }
+      ],
+      "breaking": [
+        {
+          "description": "`systemauth.VerificationTokenStore` gains `RecordAttempt` and `ConsumeToken`: a host with its own store must implement them (`storetest.VerificationTokenStore` covers both)",
+          "commit": "5506deb"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Dependencies updated; `go.mod` keeps the `go` directive at 1.26.10 and excludes an `authzed/grpcutil` pseudo-version that needs Go 1.27.4",
+          "commit": "780ddb3"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Email sign-in through a real SystemAuth and a real relying-party BFF with a browser that follows redirects and keeps cookies, and handler tests for entries racing resends, the attempt limit, replaced codes, address changes, suppressed sends and events",
+          "commit": "d627875"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "ADR-023, the INIT-SYSTEMFORGE-018 roadmap, and the guides: Sign In with an Email Code, Sending Mail with Resend, the how-to guide, and updates to the social login, verified email, cookie, rate limit, sign-up age and invite guides",
+          "commit": "b409de7"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "Run `systemauth migrate` (or start with `--migrate`), or apply `migrations/0013_verification_token_attempts.sql`, which adds `sf_verification_tokens.attempts`"
+        },
+        {
+          "description": "A host with its own `VerificationTokenStore` or `PrincipalEmailChanger` implements the new methods and the unlinking; the conformance suite checks the store"
+        },
+        {
+          "description": "To enable email sign-in, configure `mail` and set `social_login.email: {}`; set `tokens.hmac_secret`, which production requires; production refuses the `log` mail provider. Deploy this release before listing `email` in an application's `oauthProviders`"
+        }
+      ]
+    },
+    {
       "version": "v0.36.0",
       "date": "2026-11-21",
       "highlights": [
