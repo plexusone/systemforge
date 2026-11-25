@@ -72,6 +72,15 @@ security, not the code:
 - **Send limits.** The existing `per_address` and `per_client` limits apply;
   a used-up address limit suppresses the message and the response stays the
   same. Verification attempts are rate limited per client address as well.
+- **Guesses are bounded per address, not only per code.** A suppressed
+  request still stores a code, but one no entry can match (not digits, 128
+  random bits). Without that, anyone could make unlimited live codes for an
+  address, each with fresh tries, and the mail limits would not cap the
+  guessing. With it, live codes for an address are the mailed ones: at the
+  defaults, 5 mails an hour with 5 tries each is 25 guesses an hour, 2.5 in
+  100,000 per hour. The same limit lets an attacker keep a victim from
+  receiving codes for an hour by spending the address's sends; that cost is
+  accepted, as it is for verification links.
 - **No enumeration.** Responses and timing do not reveal whether an address
   has an account.
 - **Same-origin POSTs with CSRF tokens**, as the verify-email pages.
