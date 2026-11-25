@@ -1532,6 +1532,12 @@ func init() {
 	verificationtokenDescBinding := verificationtokenFields[5].Descriptor()
 	// verificationtoken.BindingValidator is a validator for the "binding" field. It is called by the builders before save.
 	verificationtoken.BindingValidator = verificationtokenDescBinding.Validators[0].(func(string) error)
+	// verificationtokenDescAttempts is the schema descriptor for attempts field.
+	verificationtokenDescAttempts := verificationtokenFields[9].Descriptor()
+	// verificationtoken.DefaultAttempts holds the default value on creation for the attempts field.
+	verificationtoken.DefaultAttempts = verificationtokenDescAttempts.Default.(int)
+	// verificationtoken.AttemptsValidator is a validator for the "attempts" field. It is called by the builders before save.
+	verificationtoken.AttemptsValidator = verificationtokenDescAttempts.Validators[0].(func(int) error)
 	// verificationtokenDescID is the schema descriptor for id field.
 	verificationtokenDescID := verificationtokenFields[0].Descriptor()
 	// verificationtoken.DefaultID holds the default value on creation for the id field.

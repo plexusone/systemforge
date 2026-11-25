@@ -44519,6 +44519,8 @@ type VerificationTokenMutation struct {
 	data          *[]byte
 	created_at    *time.Time
 	expires_at    *time.Time
+	attempts      *int
+	addattempts   *int
 	consumed_at   *time.Time
 	clearedFields map[string]struct{}
 	done          bool
@@ -44944,6 +44946,62 @@ func (m *VerificationTokenMutation) ResetExpiresAt() {
 	m.expires_at = nil
 }
 
+// SetAttempts sets the "attempts" field.
+func (m *VerificationTokenMutation) SetAttempts(i int) {
+	m.attempts = &i
+	m.addattempts = nil
+}
+
+// Attempts returns the value of the "attempts" field in the mutation.
+func (m *VerificationTokenMutation) Attempts() (r int, exists bool) {
+	v := m.attempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttempts returns the old "attempts" field's value of the VerificationToken entity.
+// If the VerificationToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VerificationTokenMutation) OldAttempts(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttempts requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
+	}
+	return oldValue.Attempts, nil
+}
+
+// AddAttempts adds i to the "attempts" field.
+func (m *VerificationTokenMutation) AddAttempts(i int) {
+	if m.addattempts != nil {
+		*m.addattempts += i
+	} else {
+		m.addattempts = &i
+	}
+}
+
+// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
+func (m *VerificationTokenMutation) AddedAttempts() (r int, exists bool) {
+	v := m.addattempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAttempts resets all changes to the "attempts" field.
+func (m *VerificationTokenMutation) ResetAttempts() {
+	m.attempts = nil
+	m.addattempts = nil
+}
+
 // SetConsumedAt sets the "consumed_at" field.
 func (m *VerificationTokenMutation) SetConsumedAt(t time.Time) {
 	m.consumed_at = &t
@@ -45027,7 +45085,7 @@ func (m *VerificationTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *VerificationTokenMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.token_hash != nil {
 		fields = append(fields, verificationtoken.FieldTokenHash)
 	}
@@ -45051,6 +45109,9 @@ func (m *VerificationTokenMutation) Fields() []string {
 	}
 	if m.expires_at != nil {
 		fields = append(fields, verificationtoken.FieldExpiresAt)
+	}
+	if m.attempts != nil {
+		fields = append(fields, verificationtoken.FieldAttempts)
 	}
 	if m.consumed_at != nil {
 		fields = append(fields, verificationtoken.FieldConsumedAt)
@@ -45079,6 +45140,8 @@ func (m *VerificationTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case verificationtoken.FieldExpiresAt:
 		return m.ExpiresAt()
+	case verificationtoken.FieldAttempts:
+		return m.Attempts()
 	case verificationtoken.FieldConsumedAt:
 		return m.ConsumedAt()
 	}
@@ -45106,6 +45169,8 @@ func (m *VerificationTokenMutation) OldField(ctx context.Context, name string) (
 		return m.OldCreatedAt(ctx)
 	case verificationtoken.FieldExpiresAt:
 		return m.OldExpiresAt(ctx)
+	case verificationtoken.FieldAttempts:
+		return m.OldAttempts(ctx)
 	case verificationtoken.FieldConsumedAt:
 		return m.OldConsumedAt(ctx)
 	}
@@ -45173,6 +45238,13 @@ func (m *VerificationTokenMutation) SetField(name string, value ent.Value) error
 		}
 		m.SetExpiresAt(v)
 		return nil
+	case verificationtoken.FieldAttempts:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttempts(v)
+		return nil
 	case verificationtoken.FieldConsumedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -45187,13 +45259,21 @@ func (m *VerificationTokenMutation) SetField(name string, value ent.Value) error
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *VerificationTokenMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addattempts != nil {
+		fields = append(fields, verificationtoken.FieldAttempts)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *VerificationTokenMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case verificationtoken.FieldAttempts:
+		return m.AddedAttempts()
+	}
 	return nil, false
 }
 
@@ -45202,6 +45282,13 @@ func (m *VerificationTokenMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *VerificationTokenMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case verificationtoken.FieldAttempts:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAttempts(v)
+		return nil
 	}
 	return fmt.Errorf("unknown VerificationToken numeric field %s", name)
 }
@@ -45273,6 +45360,9 @@ func (m *VerificationTokenMutation) ResetField(name string) error {
 		return nil
 	case verificationtoken.FieldExpiresAt:
 		m.ResetExpiresAt()
+		return nil
+	case verificationtoken.FieldAttempts:
+		m.ResetAttempts()
 		return nil
 	case verificationtoken.FieldConsumedAt:
 		m.ResetConsumedAt()

@@ -30,6 +30,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldExpiresAt holds the string denoting the expires_at field in the database.
 	FieldExpiresAt = "expires_at"
+	// FieldAttempts holds the string denoting the attempts field in the database.
+	FieldAttempts = "attempts"
 	// FieldConsumedAt holds the string denoting the consumed_at field in the database.
 	FieldConsumedAt = "consumed_at"
 	// Table holds the table name of the verificationtoken in the database.
@@ -47,6 +49,7 @@ var Columns = []string{
 	FieldData,
 	FieldCreatedAt,
 	FieldExpiresAt,
+	FieldAttempts,
 	FieldConsumedAt,
 }
 
@@ -65,6 +68,10 @@ var (
 	EmailValidator func(string) error
 	// BindingValidator is a validator for the "binding" field. It is called by the builders before save.
 	BindingValidator func(string) error
+	// DefaultAttempts holds the default value on creation for the "attempts" field.
+	DefaultAttempts int
+	// AttemptsValidator is a validator for the "attempts" field. It is called by the builders before save.
+	AttemptsValidator func(int) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -76,6 +83,7 @@ type Purpose string
 const (
 	PurposeVerifyEmail Purpose = "verify_email"
 	PurposeEmailChange Purpose = "email_change"
+	PurposeSignInCode  Purpose = "sign_in_code"
 )
 
 func (pu Purpose) String() string {
@@ -85,7 +93,7 @@ func (pu Purpose) String() string {
 // PurposeValidator is a validator for the "purpose" field enum values. It is called by the builders before save.
 func PurposeValidator(pu Purpose) error {
 	switch pu {
-	case PurposeVerifyEmail, PurposeEmailChange:
+	case PurposeVerifyEmail, PurposeEmailChange, PurposeSignInCode:
 		return nil
 	default:
 		return fmt.Errorf("verificationtoken: invalid enum value for purpose field: %q", pu)
@@ -133,6 +141,11 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByExpiresAt orders the results by the expires_at field.
 func ByExpiresAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldExpiresAt, opts...).ToFunc()
+}
+
+// ByAttempts orders the results by the attempts field.
+func ByAttempts(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAttempts, opts...).ToFunc()
 }
 
 // ByConsumedAt orders the results by the consumed_at field.

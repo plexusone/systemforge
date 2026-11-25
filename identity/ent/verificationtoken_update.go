@@ -28,6 +28,27 @@ func (_u *VerificationTokenUpdate) Where(ps ...predicate.VerificationToken) *Ver
 	return _u
 }
 
+// SetAttempts sets the "attempts" field.
+func (_u *VerificationTokenUpdate) SetAttempts(v int) *VerificationTokenUpdate {
+	_u.mutation.ResetAttempts()
+	_u.mutation.SetAttempts(v)
+	return _u
+}
+
+// SetNillableAttempts sets the "attempts" field if the given value is not nil.
+func (_u *VerificationTokenUpdate) SetNillableAttempts(v *int) *VerificationTokenUpdate {
+	if v != nil {
+		_u.SetAttempts(*v)
+	}
+	return _u
+}
+
+// AddAttempts adds value to the "attempts" field.
+func (_u *VerificationTokenUpdate) AddAttempts(v int) *VerificationTokenUpdate {
+	_u.mutation.AddAttempts(v)
+	return _u
+}
+
 // SetConsumedAt sets the "consumed_at" field.
 func (_u *VerificationTokenUpdate) SetConsumedAt(v time.Time) *VerificationTokenUpdate {
 	_u.mutation.SetConsumedAt(v)
@@ -80,7 +101,20 @@ func (_u *VerificationTokenUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *VerificationTokenUpdate) check() error {
+	if v, ok := _u.mutation.Attempts(); ok {
+		if err := verificationtoken.AttemptsValidator(v); err != nil {
+			return &ValidationError{Name: "attempts", err: fmt.Errorf(`ent: validator failed for field "VerificationToken.attempts": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *VerificationTokenUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(verificationtoken.Table, verificationtoken.Columns, sqlgraph.NewFieldSpec(verificationtoken.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -94,6 +128,12 @@ func (_u *VerificationTokenUpdate) sqlSave(ctx context.Context) (_node int, err 
 	}
 	if _u.mutation.DataCleared() {
 		_spec.ClearField(verificationtoken.FieldData, field.TypeBytes)
+	}
+	if value, ok := _u.mutation.Attempts(); ok {
+		_spec.SetField(verificationtoken.FieldAttempts, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedAttempts(); ok {
+		_spec.AddField(verificationtoken.FieldAttempts, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.ConsumedAt(); ok {
 		_spec.SetField(verificationtoken.FieldConsumedAt, field.TypeTime, value)
@@ -119,6 +159,27 @@ type VerificationTokenUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *VerificationTokenMutation
+}
+
+// SetAttempts sets the "attempts" field.
+func (_u *VerificationTokenUpdateOne) SetAttempts(v int) *VerificationTokenUpdateOne {
+	_u.mutation.ResetAttempts()
+	_u.mutation.SetAttempts(v)
+	return _u
+}
+
+// SetNillableAttempts sets the "attempts" field if the given value is not nil.
+func (_u *VerificationTokenUpdateOne) SetNillableAttempts(v *int) *VerificationTokenUpdateOne {
+	if v != nil {
+		_u.SetAttempts(*v)
+	}
+	return _u
+}
+
+// AddAttempts adds value to the "attempts" field.
+func (_u *VerificationTokenUpdateOne) AddAttempts(v int) *VerificationTokenUpdateOne {
+	_u.mutation.AddAttempts(v)
+	return _u
 }
 
 // SetConsumedAt sets the "consumed_at" field.
@@ -186,7 +247,20 @@ func (_u *VerificationTokenUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *VerificationTokenUpdateOne) check() error {
+	if v, ok := _u.mutation.Attempts(); ok {
+		if err := verificationtoken.AttemptsValidator(v); err != nil {
+			return &ValidationError{Name: "attempts", err: fmt.Errorf(`ent: validator failed for field "VerificationToken.attempts": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *VerificationTokenUpdateOne) sqlSave(ctx context.Context) (_node *VerificationToken, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(verificationtoken.Table, verificationtoken.Columns, sqlgraph.NewFieldSpec(verificationtoken.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -217,6 +291,12 @@ func (_u *VerificationTokenUpdateOne) sqlSave(ctx context.Context) (_node *Verif
 	}
 	if _u.mutation.DataCleared() {
 		_spec.ClearField(verificationtoken.FieldData, field.TypeBytes)
+	}
+	if value, ok := _u.mutation.Attempts(); ok {
+		_spec.SetField(verificationtoken.FieldAttempts, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedAttempts(); ok {
+		_spec.AddField(verificationtoken.FieldAttempts, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.ConsumedAt(); ok {
 		_spec.SetField(verificationtoken.FieldConsumedAt, field.TypeTime, value)

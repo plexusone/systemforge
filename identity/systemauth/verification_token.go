@@ -24,11 +24,15 @@ const (
 	// PurposeEmailChange verifies the new address of a signed-in
 	// principal's email change.
 	PurposeEmailChange VerificationPurpose = "email_change"
+	// PurposeSignInCode proves control of an address for an email
+	// one-time code sign-in (ADR-023). It is the one purpose whose secret
+	// is short enough to guess, so it is used through RecordAttempt.
+	PurposeSignInCode VerificationPurpose = "sign_in_code"
 )
 
 // Valid reports whether p is a known purpose.
 func (p VerificationPurpose) Valid() bool {
-	return p == PurposeVerifyEmail || p == PurposeEmailChange
+	return p == PurposeVerifyEmail || p == PurposeEmailChange || p == PurposeSignInCode
 }
 
 // DefaultVerificationTokenTTL is how long a verification link works when
@@ -71,6 +75,8 @@ type VerificationToken struct {
 	CreatedAt time.Time
 	// ExpiresAt is when the token stops being accepted.
 	ExpiresAt time.Time
+	// Attempts is how many attempts RecordAttempt has counted.
+	Attempts int
 	// ConsumedAt is when the token was used or revoked; nil while it is
 	// usable.
 	ConsumedAt *time.Time
@@ -96,6 +102,17 @@ type VerificationTokenStore interface {
 	// Latest returns the most recently issued usable token for purpose and
 	// binding, or ErrVerificationTokenNotFound.
 	Latest(ctx context.Context, purpose VerificationPurpose, binding string) (*VerificationToken, error)
+
+	// RecordAttempt counts one attempt against the most recently issued
+	// usable token for purpose and binding, and returns it with Attempts
+	// including this attempt. The check and the count are one atomic step:
+	// across concurrent calls and instances at most limit attempts are
+	// counted, however many guesses arrive. Once a token has had limit
+	// attempts it returns ErrVerificationTokenInvalid, as it does when
+	// there is no usable token, and changes nothing. The caller compares
+	// its secret with the returned token and, when it matches, uses
+	// Consume; a wrong guess needs no further call.
+	RecordAttempt(ctx context.Context, purpose VerificationPurpose, binding string, limit int) (*VerificationToken, error)
 
 	// Revoke marks every usable token for purpose and binding consumed and
 	// returns how many it revoked.
@@ -205,6 +222,28 @@ func (s *MemoryVerificationTokenStore) Latest(_ context.Context, purpose Verific
 	}
 	sort.Slice(found, func(i, j int) bool { return found[i].CreatedAt.After(found[j].CreatedAt) })
 	return found[0].clone(), nil
+}
+
+// RecordAttempt implements VerificationTokenStore.
+func (s *MemoryVerificationTokenStore) RecordAttempt(_ context.Context, purpose VerificationPurpose, binding string, limit int) (*VerificationToken, error) {
+	if limit < 1 || !purpose.Valid() || binding == "" {
+		return nil, ErrVerificationTokenInvalid
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := s.now()
+	var latest *VerificationToken
+	for _, t := range s.tokens {
+		if t.Purpose == purpose && t.Binding == binding && t.usable(now) &&
+			(latest == nil || t.CreatedAt.After(latest.CreatedAt)) {
+			latest = t
+		}
+	}
+	if latest == nil || latest.Attempts >= limit {
+		return nil, ErrVerificationTokenInvalid
+	}
+	latest.Attempts++
+	return latest.clone(), nil
 }
 
 // Revoke implements VerificationTokenStore.

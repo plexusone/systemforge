@@ -1989,13 +1989,14 @@ var (
 	SfVerificationTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "token_hash", Type: field.TypeString, Unique: true},
-		{Name: "purpose", Type: field.TypeEnum, Enums: []string{"verify_email", "email_change"}},
+		{Name: "purpose", Type: field.TypeEnum, Enums: []string{"verify_email", "email_change", "sign_in_code"}},
 		{Name: "email", Type: field.TypeString},
 		{Name: "principal_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "binding", Type: field.TypeString},
 		{Name: "data", Type: field.TypeBytes, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "attempts", Type: field.TypeInt, Default: 0},
 		{Name: "consumed_at", Type: field.TypeTime, Nullable: true},
 	}
 	// SfVerificationTokensTable holds the schema information for the "sf_verification_tokens" table.
