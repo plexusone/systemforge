@@ -114,6 +114,13 @@ type VerificationTokenStore interface {
 	// Consume; a wrong guess needs no further call.
 	RecordAttempt(ctx context.Context, purpose VerificationPurpose, binding string, limit int) (*VerificationToken, error)
 
+	// ConsumeToken marks the token with id used, provided it was issued for
+	// purpose and binding, is unexpired and was not used or revoked. The
+	// check and the mark are one atomic step, so of concurrent calls at most
+	// one succeeds, and a token that replaced it is never touched. Otherwise
+	// it returns ErrVerificationTokenInvalid and changes nothing.
+	ConsumeToken(ctx context.Context, id uuid.UUID, purpose VerificationPurpose, binding string) error
+
 	// Revoke marks every usable token for purpose and binding consumed and
 	// returns how many it revoked.
 	Revoke(ctx context.Context, purpose VerificationPurpose, binding string) (int, error)
@@ -222,6 +229,26 @@ func (s *MemoryVerificationTokenStore) Latest(_ context.Context, purpose Verific
 	}
 	sort.Slice(found, func(i, j int) bool { return found[i].CreatedAt.After(found[j].CreatedAt) })
 	return found[0].clone(), nil
+}
+
+// ConsumeToken implements VerificationTokenStore.
+func (s *MemoryVerificationTokenStore) ConsumeToken(_ context.Context, id uuid.UUID, purpose VerificationPurpose, binding string) error {
+	if binding == "" {
+		return ErrVerificationTokenInvalid
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := s.now()
+	for _, t := range s.tokens {
+		if t.ID == id {
+			if t.Purpose != purpose || t.Binding != binding || !t.usable(now) {
+				return ErrVerificationTokenInvalid
+			}
+			t.ConsumedAt = &now
+			return nil
+		}
+	}
+	return ErrVerificationTokenInvalid
 }
 
 // RecordAttempt implements VerificationTokenStore.

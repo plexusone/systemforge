@@ -114,6 +114,31 @@ func (s *EntVerificationTokenStore) Latest(ctx context.Context, purpose Verifica
 	return toVerificationToken(row), nil
 }
 
+// ConsumeToken implements VerificationTokenStore.
+func (s *EntVerificationTokenStore) ConsumeToken(ctx context.Context, id uuid.UUID, purpose VerificationPurpose, binding string) error {
+	if binding == "" || !purpose.Valid() {
+		return ErrVerificationTokenInvalid
+	}
+	now := s.now()
+	n, err := s.db.VerificationToken.Update().
+		Where(
+			verificationtoken.IDEQ(id),
+			verificationtoken.PurposeEQ(verificationtoken.Purpose(purpose)),
+			verificationtoken.BindingEQ(binding),
+			verificationtoken.ConsumedAtIsNil(),
+			verificationtoken.ExpiresAtGT(now),
+		).
+		SetConsumedAt(now).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("consuming verification token: %w", err)
+	}
+	if n != 1 {
+		return ErrVerificationTokenInvalid
+	}
+	return nil
+}
+
 // RecordAttempt implements VerificationTokenStore.
 func (s *EntVerificationTokenStore) RecordAttempt(ctx context.Context, purpose VerificationPurpose, binding string, limit int) (*VerificationToken, error) {
 	if limit < 1 || !purpose.Valid() || binding == "" {
