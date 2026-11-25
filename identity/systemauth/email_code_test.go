@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/plexusone/omnimail/memsender"
 )
 
@@ -725,4 +726,120 @@ func TestEmailSignInRefusesAStaleStoredIdentity(t *testing.T) {
 	if w.Code != http.StatusForbidden || findCookie(t, w.Result(), LoginCookieName) != nil {
 		t.Fatalf("stale identity: %d, want 403 and no session", w.Code)
 	}
+}
+
+// postFrom posts form from the issuer's origin as client address addr, so a
+// test making many requests does not run into the per-client limits.
+func postFrom(s *Server, addr, target string, form url.Values, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, target, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", testIssuer)
+	req.RemoteAddr = addr
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	return w
+}
+
+// hookConsumeStore runs beforeConsume just before ConsumeToken reaches the
+// store, to play out an interleaving.
+type hookConsumeStore struct {
+	VerificationTokenStore
+	beforeConsume func()
+}
+
+func (h *hookConsumeStore) ConsumeToken(ctx context.Context, id uuid.UUID, purpose VerificationPurpose, binding string) error {
+	if f := h.beforeConsume; f != nil {
+		h.beforeConsume = nil
+		f()
+	}
+	return h.VerificationTokenStore.ConsumeToken(ctx, id, purpose, binding)
+}
+
+func TestEmailSignInEntryCountedBeforeAResendIsRefusedAfterIt(t *testing.T) {
+	// The interleaving: an entry is counted against the code, a resend stores
+	// its replacement, then the entry's code is used. The replaced code must
+	// not sign in, and the replacement must survive.
+	store := &hookConsumeStore{VerificationTokenStore: NewMemoryVerificationTokenStore()}
+	s, sender := newEmailLoginServer(t, nil, nil, nil, WithVerificationTokenStore(store))
+	_, cookie := requestCode(t, s, "a@example.com")
+	first := lastCode(t, sender)
+
+	store.beforeConsume = func() {
+		w := postIssuerForm(s, EmailCodeResendPath, url.Values{"csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie)
+		if w.Code != http.StatusSeeOther {
+			t.Errorf("resend in the middle of an entry: %d", w.Code)
+		}
+	}
+	w := submitCode(s, cookie, first)
+	if w.Code != http.StatusBadRequest || findCookie(t, w.Result(), LoginCookieName) != nil {
+		t.Fatalf("a replaced code signed in: %d", w.Code)
+	}
+	if sender.Len() != 2 {
+		t.Fatalf("%d messages, want the resend's", sender.Len())
+	}
+	// The replacement was not touched: its code signs in.
+	if w := submitCode(s, cookie, lastCode(t, sender)); w.Code != http.StatusFound {
+		t.Fatalf("the replacement was lost: %d", w.Code)
+	}
+}
+
+func TestEmailSignInEntryAndResendRacing(t *testing.T) {
+	// One client address makes every request, so lift the mail send limit
+	// per client to keep the test from running into it.
+	mail := &MailConfig{
+		Provider: MailProviderSES, From: "Example <no-reply@example.com>",
+		PerClient: &RateLimitRule{Requests: 1000, Period: Duration(time.Hour)},
+	}
+	s, sender := newEmailLoginServer(t, nil, mail, nil)
+	var signedIn, refused int
+	for i := range 60 {
+		email := fmt.Sprintf("racer%d@example.com", i)
+		addr := fmt.Sprintf("198.51.100.%d:4000", i+1)
+		w := postFrom(s, addr, EmailLoginPath, url.Values{"email": {email}, "return_to": {emailTestReturn}})
+		cookie := findCookie(t, w.Result(), emailCodeCookie)
+		if cookie == nil {
+			t.Fatalf("iteration %d: request answered %d", i, w.Code)
+		}
+		first := lastCode(t, sender)
+
+		var (
+			wg      sync.WaitGroup
+			entered *httptest.ResponseRecorder
+		)
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			entered = postFrom(s, addr, EmailCodePath, url.Values{"code": {first}, "csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie)
+		}()
+		go func() {
+			defer wg.Done()
+			postFrom(s, addr, EmailCodeResendPath, url.Values{"csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie)
+		}()
+		wg.Wait()
+
+		switch entered.Code {
+		case http.StatusFound:
+			signedIn++
+		case http.StatusBadRequest:
+			refused++
+			// An entry that lost the race must not have destroyed the
+			// replacement: the code mailed by the resend signs in.
+			if sender.Len() == 0 {
+				t.Fatal("no mail")
+			}
+			second := lastCode(t, sender)
+			if second == first {
+				continue // the draws repeated: nothing to tell apart
+			}
+			if w := postFrom(s, addr, EmailCodePath, url.Values{"code": {second}, "csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie); w.Code != http.StatusFound {
+				t.Fatalf("iteration %d: the replacement was lost to a refused entry: %d", i, w.Code)
+			}
+		default:
+			t.Fatalf("iteration %d: entry answered %d", i, entered.Code)
+		}
+	}
+	t.Logf("entry won %d times, lost %d times", signedIn, refused)
 }
