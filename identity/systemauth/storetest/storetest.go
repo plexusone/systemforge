@@ -607,6 +607,50 @@ func VerificationTokenStore(t *testing.T, newStore func(t *testing.T) systemauth
 		}
 	})
 
+	t.Run("RecordAttemptReturnsItsOwnCount", func(t *testing.T) {
+		// Each counted call must be handed the count its own increment made,
+		// so that exactly one call sees the last try. Counts read back after
+		// another call's increment would repeat.
+		s := newStore(t)
+		b := binding()
+		create(t, s, newToken(), systemauth.VerificationToken{Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b})
+		const guesses, limit = 20, 5
+		var (
+			mu     sync.Mutex
+			counts []int
+			wg     sync.WaitGroup
+		)
+		for range guesses {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				got, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, limit)
+				if err != nil {
+					if !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+						t.Errorf("RecordAttempt: %v", err)
+					}
+					return
+				}
+				mu.Lock()
+				counts = append(counts, got.Attempts)
+				mu.Unlock()
+			}()
+		}
+		wg.Wait()
+		seen := map[int]int{}
+		for _, c := range counts {
+			seen[c]++
+		}
+		for want := 1; want <= limit; want++ {
+			if seen[want] != 1 {
+				t.Fatalf("counts handed back = %v, want each of 1..%d exactly once", counts, limit)
+			}
+		}
+		if len(counts) != limit {
+			t.Fatalf("%d calls were counted, want %d: %v", len(counts), limit, counts)
+		}
+	})
+
 	t.Run("LatestAndRevoke", func(t *testing.T) {
 		s := newStore(t)
 		b, other := binding(), binding()

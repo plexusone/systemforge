@@ -187,8 +187,14 @@ func (s *EntVerificationTokenStore) RecordAttempt(ctx context.Context, purpose V
 	// The limit and the count are one statement: of concurrent guesses
 	// only those whose update matched while attempts were below limit are
 	// counted, so the limit holds across instances. A token consumed or
-	// expired since Latest matches nothing.
-	n, err := s.db.VerificationToken.Update().
+	// expired since Latest matches nothing. The count handed back is read in
+	// the same transaction: the update holds the row until the commit, so the
+	// value read is this call's own increment, never another call's.
+	tx, err := s.db.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	n, err := tx.VerificationToken.Update().
 		Where(
 			verificationtoken.IDEQ(latest.ID),
 			verificationtoken.AttemptsLT(limit),
@@ -198,16 +204,28 @@ func (s *EntVerificationTokenStore) RecordAttempt(ctx context.Context, purpose V
 		AddAttempts(1).
 		Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("counting verification attempt: %w", err)
+		return nil, rollbackWith(tx, fmt.Errorf("counting verification attempt: %w", err))
 	}
 	if n != 1 {
-		return nil, ErrVerificationTokenInvalid
+		return nil, rollbackWith(tx, ErrVerificationTokenInvalid)
 	}
-	row, err := s.db.VerificationToken.Get(ctx, latest.ID)
+	row, err := tx.VerificationToken.Get(ctx, latest.ID)
 	if err != nil {
-		return nil, fmt.Errorf("reading verification token: %w", err)
+		return nil, rollbackWith(tx, fmt.Errorf("reading verification token: %w", err))
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("committing verification attempt: %w", err)
 	}
 	return toVerificationToken(row), nil
+}
+
+// rollbackWith rolls tx back and returns err, joined with the rollback's own
+// error when that fails too.
+func rollbackWith(tx *ent.Tx, err error) error {
+	if rbErr := tx.Rollback(); rbErr != nil {
+		return errors.Join(err, fmt.Errorf("rolling back: %w", rbErr))
+	}
+	return err
 }
 
 // Revoke implements VerificationTokenStore.
