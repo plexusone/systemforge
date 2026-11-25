@@ -31,11 +31,11 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 
 - [ ] `RMI-SYSTEMFORGE-274` `email` as a provider in `@plexusone/auth` and `LoginPage`, sending `idp_hint=email` (systemforge-web)
   - Depends on: `RMI-SYSTEMFORGE-272`
-- [ ] `RMI-SYSTEMFORGE-275` Guides: `docs/systemauth/email-sign-in.md`, updates to social login and verified-email docs, release notes
+- [x] `RMI-SYSTEMFORGE-275` Guides: `docs/systemauth/email-sign-in.md`, updates to social login and verified-email docs, release notes
   - Depends on: `RMI-SYSTEMFORGE-272`
 - [x] `RMI-SYSTEMFORGE-276` End-to-end test through a relying party with the memory mail sender: request, code, session, authorization code
   - Depends on: `RMI-SYSTEMFORGE-271`
-- [ ] `RMI-SYSTEMFORGE-278` Launch mail through Resend over SMTP: the Resend settings in the deployment guide, and a delivery check from the production domain
+- [ ] `RMI-SYSTEMFORGE-278` Launch mail through Resend over SMTP: the guide is written (`docs/systemauth/resend-deployment.md`); still to do: the delivery check from the production domain
   - Depends on: `RMI-SYSTEMFORGE-275`
 - [ ] `RMI-SYSTEMFORGE-277` Hosts enable it in their configuration with SES (host repositories)
   - Depends on: `RMI-SYSTEMFORGE-275`

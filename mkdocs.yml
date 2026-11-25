@@ -92,6 +92,8 @@ nav:
     - Providers: systemauth/providers.md
     - Social Login: systemauth/social-login.md
     - Verified Email: systemauth/verified-email.md
+    - Email Sign-In: systemauth/email-sign-in.md
+    - Sending Mail with Resend: systemauth/resend-deployment.md
     - Sending Mail with Amazon SES: systemauth/ses-deployment.md
     - Relying Parties: systemauth/relying-party.md
     - Deployment: systemauth/deployment.md

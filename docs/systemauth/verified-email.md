@@ -7,8 +7,10 @@ It sends a single-use link and, when the link is opened, marks the address
 verified. Relying parties read the result from the ID token and UserInfo;
 they implement no mail flows of their own.
 
-Email links verify an address. They are **not** a way to sign in: GitHub and
-Google remain the sign-in methods.
+Email links verify an address; they do not sign anyone in. Signing in with a
+mailed code is a separate method, described in
+[Sign In with an Email Code](email-sign-in.md), which uses the same `mail`
+section.
 
 ## Configuration
 
