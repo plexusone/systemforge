@@ -1,8 +1,11 @@
 package systemauth
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -127,5 +130,34 @@ func TestEmailSignInEntriesAreLimitedPerClient(t *testing.T) {
 	}
 	if w := submitCode(s, cookie, wrong); w.Code != http.StatusTooManyRequests {
 		t.Fatalf("entry %d: %d, want 429", limit+1, w.Code)
+	}
+}
+
+func TestEmailSignInExhaustedOnceWhenEntriesRace(t *testing.T) {
+	// Several wrong entries arriving together spend the tries between them;
+	// only the one that spends the last try reports the code as exhausted.
+	for round := range 10 {
+		events := &eventCapture{}
+		mail := &MailConfig{
+			Provider: MailProviderSES, From: "Example <no-reply@example.com>",
+			PerClient: &RateLimitRule{Requests: 1000, Period: Duration(time.Hour)},
+		}
+		s, sender := newEmailLoginServer(t, &EmailLoginConfig{MaxAttempts: 3}, mail, nil, WithAuditEmitter(events))
+		_, cookie := requestCode(t, s, "a@example.com")
+		wrong := wrongCode(lastCode(t, sender))
+
+		var wg sync.WaitGroup
+		for i := range 10 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				postFrom(s, fmt.Sprintf("198.51.100.%d:4000", i+1), EmailCodePath,
+					url.Values{"code": {wrong}, "csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie)
+			}()
+		}
+		wg.Wait()
+		if got := len(events.find(EventEmailCodeExhausted, "")); got != 1 {
+			t.Fatalf("round %d: %d exhausted events, want exactly 1", round, got)
+		}
 	}
 }
