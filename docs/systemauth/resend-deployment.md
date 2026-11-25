@@ -86,7 +86,11 @@ Before launch, from the production deployment and the production domain:
    domain.
 4. Enter the code and confirm the sign-in completes.
 5. Check `systemauth.email_code.sent` events show `sent: true`, and that no
-   `sent: false` appears for these requests.
+   `sent: false` appears for these requests. The packaged `systemauth` command
+   logs security events; an application embedding SystemAuth discards them
+   unless it sets an audit emitter (`systemauth.WithAuditEmitter`, or
+   `systemauthsvc.Options.AuditEmitter`), so configure one first. See the
+   [security events](../security/security-events.md) reference.
 6. Confirm the account's quota in the Resend dashboard moved by the number of
    messages sent.
 

@@ -106,8 +106,10 @@ account.
 
 An application that uses the [relying party BFF](relying-party.md) links to
 `/bff/auth/email?return_to=/path`. The BFF forwards `idp_hint=email`, and
-SystemAuth's own pages collect the address and the code, so the application
-never sees either. With `@plexusone/pages`, add `email` to the login page's
+SystemAuth's own pages collect the address and the code. The application never
+receives the code or handles the person's typing of it; it does receive the
+verified address afterward, as identity data in the ID token and the user
+profile, as it does for any provider. With `@plexusone/pages`, add `email` to the login page's
 `oauthProviders`. Deploy SystemAuth and the BFF before listing `email` in an
 application: an older BFF answers `UNKNOWN_PROVIDER`, and a SystemAuth
 without the section shows its chooser.
