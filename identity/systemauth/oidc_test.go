@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-jose/go-jose/v3"
 	gojwt "github.com/golang-jwt/jwt/v5"
+	"github.com/plexusone/omnimail/memsender"
 
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 )
@@ -178,6 +179,38 @@ func TestIDPHintSkipsChooser(t *testing.T) {
 	w = httptestRecorder(s, authorizeURL("openid")+"&"+IDPHintParam+"=myspace")
 	if !strings.HasPrefix(w.Header().Get("Location"), LoginPath+"?") {
 		t.Errorf("unknown hint redirect = %s", w.Header().Get("Location"))
+	}
+}
+
+func TestIDPHintEmail(t *testing.T) {
+	u := authorizeURL("openid") + "&" + IDPHintParam + "=email"
+
+	// With email sign-in configured, the hint skips the chooser.
+	s, err := NewEmbedded(Config{
+		Issuer: testIssuer,
+		Clients: []ClientConfig{{
+			ID: "spa", Type: "public", Name: "Example App", Party: string(PartyFirst),
+			RedirectURIs: []string{testRPCB}, GrantTypes: []string{"authorization_code", "refresh_token"},
+			ResponseTypes: []string{"code"}, Scopes: []string{"openid", "profile", "email"},
+		}},
+		SocialLogin: &SocialLoginConfig{AllowedRedirectOrigins: []string{"https://app.example.com"}, Email: &EmailLoginConfig{}},
+		Mail:        &MailConfig{Provider: MailProviderSES, From: "Example <no-reply@example.com>"},
+	}, WithMailSender(memsender.New()), WithPrincipalDirectory(NewMemoryPrincipalDirectory()))
+	if err != nil {
+		t.Fatalf("NewEmbedded: %v", err)
+	}
+	loc, err := url.Parse(httptestRecorder(s, u).Header().Get("Location"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loc.Path != EmailLoginPath || loc.Query().Get("return_to") != u {
+		t.Errorf("idp_hint=email redirect = %s", loc)
+	}
+
+	// Without it, email is not a provider: the chooser is shown.
+	s = newSocialFlowServer(t, PartyFirst)
+	if got := httptestRecorder(s, u).Header().Get("Location"); !strings.HasPrefix(got, LoginPath+"?") {
+		t.Errorf("idp_hint=email without email sign-in redirects to %s, want the chooser", got)
 	}
 }
 

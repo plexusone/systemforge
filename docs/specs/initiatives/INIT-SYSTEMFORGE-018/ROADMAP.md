@@ -20,9 +20,9 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
   - Depends on: `RMI-SYSTEMFORGE-269`
 - [x] `RMI-SYSTEMFORGE-271` A proven code resolves through `ResolveExternalLogin` as provider `email`: account creation behind the signup gate, linking by verified email, consent and session
   - Depends on: `RMI-SYSTEMFORGE-270`
-- [ ] `RMI-SYSTEMFORGE-272` The chooser links to the email form (done with 270); still to do: `idp_hint=email` and email listed on the sign-in-methods page
+- [ ] `RMI-SYSTEMFORGE-272` The chooser links to the email form and `idp_hint=email` skips the chooser, which the BFF accepts as `/bff/auth/email` (both done); still to do: email listed on the sign-in-methods page
   - Depends on: `RMI-SYSTEMFORGE-271`
-- [ ] `RMI-SYSTEMFORGE-273` Security events and OCSF mapping for code sent, failed and succeeded; per-client verification rate limit
+- [x] `RMI-SYSTEMFORGE-273` Security events and OCSF mapping for code sent, failed and succeeded; per-client verification rate limit
   - Depends on: `RMI-SYSTEMFORGE-270`
 
 ## Phase 2 — Applications and Documentation

@@ -292,6 +292,9 @@ func TestBFFReturnToAndProviders(t *testing.T) {
 	if authURL.Query().Get("idp_hint") != "github" {
 		t.Errorf("idp_hint missing: %s", authURL)
 	}
+	if authURL, _ := h.start("/bff/auth/email?return_to=%2F"); authURL.Query().Get("idp_hint") != "email" {
+		t.Errorf("idp_hint=email missing: %s", authURL)
+	}
 	if w := h.do(httptest.NewRequest(http.MethodGet, "/bff/auth/myspace", nil)); w.Code != http.StatusNotFound {
 		t.Errorf("unknown provider: %d", w.Code)
 	}

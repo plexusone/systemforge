@@ -526,6 +526,45 @@ func VerificationTokenStore(t *testing.T, newStore func(t *testing.T) systemauth
 		}
 	})
 
+	t.Run("SameInstantFollowsIssueOrder", func(t *testing.T) {
+		// A coarse clock (Windows') gives a resend the same time as the code it
+		// replaces. The order must still be the order of issue, or a
+		// replacement could be treated as the older code.
+		for range 20 {
+			s := newStore(t)
+			b := binding()
+			at := time.Now().UTC().Truncate(time.Second)
+			var firstID uuid.UUID
+			for i := range 2 {
+				create(t, s, newToken(), systemauth.VerificationToken{
+					Purpose: systemauth.PurposeSignInCode, Email: fmt.Sprintf("a%d@example.com", i), Binding: b,
+					CreatedAt: at, ExpiresAt: at.Add(time.Hour),
+				})
+				if i == 0 {
+					row, err := s.Latest(ctx, systemauth.PurposeSignInCode, b)
+					if err != nil {
+						t.Fatalf("Latest: %v", err)
+					}
+					firstID = row.ID
+				}
+			}
+			got, err := s.Latest(ctx, systemauth.PurposeSignInCode, b)
+			if err != nil || got.Email != "a1@example.com" {
+				t.Fatalf("Latest = %+v, %v; want the token issued second", got, err)
+			}
+			counted, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, 3)
+			if err != nil || counted.Email != "a1@example.com" {
+				t.Fatalf("RecordAttempt counted %+v, %v; want the token issued second", counted, err)
+			}
+			if err := s.ConsumeToken(ctx, firstID, systemauth.PurposeSignInCode, b); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+				t.Fatalf("ConsumeToken of the token issued first err = %v, want ErrVerificationTokenInvalid", err)
+			}
+			if err := s.ConsumeToken(ctx, got.ID, systemauth.PurposeSignInCode, b); err != nil {
+				t.Fatalf("ConsumeToken of the token issued second: %v", err)
+			}
+		}
+	})
+
 	t.Run("ConsumeTokenOnlyAgainstItsOwnBinding", func(t *testing.T) {
 		// A newer token of another binding or purpose does not replace this one.
 		s := newStore(t)
@@ -565,6 +604,50 @@ func VerificationTokenStore(t *testing.T, newStore func(t *testing.T) systemauth
 		}, systemauth.ErrVerificationTokenInvalid)
 		if len(errs) != 0 || ok != 1 {
 			t.Fatalf("%d concurrent calls: %d succeeded, unexpected errors %v; want exactly 1", Concurrency, ok, errs)
+		}
+	})
+
+	t.Run("RecordAttemptReturnsItsOwnCount", func(t *testing.T) {
+		// Each counted call must be handed the count its own increment made,
+		// so that exactly one call sees the last try. Counts read back after
+		// another call's increment would repeat.
+		s := newStore(t)
+		b := binding()
+		create(t, s, newToken(), systemauth.VerificationToken{Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b})
+		const guesses, limit = 20, 5
+		var (
+			mu     sync.Mutex
+			counts []int
+			wg     sync.WaitGroup
+		)
+		for range guesses {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				got, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, limit)
+				if err != nil {
+					if !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+						t.Errorf("RecordAttempt: %v", err)
+					}
+					return
+				}
+				mu.Lock()
+				counts = append(counts, got.Attempts)
+				mu.Unlock()
+			}()
+		}
+		wg.Wait()
+		seen := map[int]int{}
+		for _, c := range counts {
+			seen[c]++
+		}
+		for want := 1; want <= limit; want++ {
+			if seen[want] != 1 {
+				t.Fatalf("counts handed back = %v, want each of 1..%d exactly once", counts, limit)
+			}
+		}
+		if len(counts) != limit {
+			t.Fatalf("%d calls were counted, want %d: %v", len(counts), limit, counts)
 		}
 	})
 

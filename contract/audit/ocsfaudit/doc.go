@@ -48,6 +48,8 @@
 //	systemauth.token_family.revoked           Authentication (3002)       Logoff, OAuth 2.0                         Informational
 //	systemauth.email_verification.sent,       Authentication (3002)       Preauth (purpose verify_email)            Informational
 //	systemauth.email.verified                 User Management (3007)      Update (purpose email_change)
+//	systemauth.email_code.sent                Authentication (3002)       Preauth (method email)                    Informational
+//	systemauth.email_code.exhausted           Authentication (3002)       Logon, Failure (method email)             Medium
 //	systemauth.email_change.requested,        User Management (3007)      Update                                    Informational
 //	systemauth.email_change.cancelled,
 //	systemauth.email.changed

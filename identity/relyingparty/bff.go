@@ -566,8 +566,10 @@ func (b *BFF) handleLogin(w http.ResponseWriter, r *http.Request) {
 	b.startLogin(w, r)
 }
 
-// knownProviders are the upstream providers SystemAuth may offer.
-var knownProviders = map[string]bool{"github": true, "google": true}
+// knownProviders are the sign-in methods SystemAuth may offer: upstream
+// providers, and email for a mailed one-time code. A method the deployment
+// has not configured falls back to SystemAuth's chooser.
+var knownProviders = map[string]bool{"github": true, "google": true, "email": true}
 
 func (b *BFF) handleProviderLogin(w http.ResponseWriter, r *http.Request) {
 	provider := r.PathValue("provider")
