@@ -80,6 +80,20 @@ func (_c *VerificationTokenCreate) SetExpiresAt(v time.Time) *VerificationTokenC
 	return _c
 }
 
+// SetAttempts sets the "attempts" field.
+func (_c *VerificationTokenCreate) SetAttempts(v int) *VerificationTokenCreate {
+	_c.mutation.SetAttempts(v)
+	return _c
+}
+
+// SetNillableAttempts sets the "attempts" field if the given value is not nil.
+func (_c *VerificationTokenCreate) SetNillableAttempts(v *int) *VerificationTokenCreate {
+	if v != nil {
+		_c.SetAttempts(*v)
+	}
+	return _c
+}
+
 // SetConsumedAt sets the "consumed_at" field.
 func (_c *VerificationTokenCreate) SetConsumedAt(v time.Time) *VerificationTokenCreate {
 	_c.mutation.SetConsumedAt(v)
@@ -143,6 +157,10 @@ func (_c *VerificationTokenCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *VerificationTokenCreate) defaults() {
+	if _, ok := _c.mutation.Attempts(); !ok {
+		v := verificationtoken.DefaultAttempts
+		_c.mutation.SetAttempts(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := verificationtoken.DefaultID()
 		_c.mutation.SetID(v)
@@ -183,6 +201,14 @@ func (_c *VerificationTokenCreate) check() error {
 	}
 	if _, ok := _c.mutation.ExpiresAt(); !ok {
 		return &ValidationError{Name: "expires_at", err: errors.New(`ent: missing required field "VerificationToken.expires_at"`)}
+	}
+	if _, ok := _c.mutation.Attempts(); !ok {
+		return &ValidationError{Name: "attempts", err: errors.New(`ent: missing required field "VerificationToken.attempts"`)}
+	}
+	if v, ok := _c.mutation.Attempts(); ok {
+		if err := verificationtoken.AttemptsValidator(v); err != nil {
+			return &ValidationError{Name: "attempts", err: fmt.Errorf(`ent: validator failed for field "VerificationToken.attempts": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -252,6 +278,10 @@ func (_c *VerificationTokenCreate) createSpec() (*VerificationToken, *sqlgraph.C
 		_spec.SetField(verificationtoken.FieldExpiresAt, field.TypeTime, value)
 		_node.ExpiresAt = value
 	}
+	if value, ok := _c.mutation.Attempts(); ok {
+		_spec.SetField(verificationtoken.FieldAttempts, field.TypeInt, value)
+		_node.Attempts = value
+	}
 	if value, ok := _c.mutation.ConsumedAt(); ok {
 		_spec.SetField(verificationtoken.FieldConsumedAt, field.TypeTime, value)
 		_node.ConsumedAt = &value
@@ -307,6 +337,24 @@ type (
 		*sql.UpdateSet
 	}
 )
+
+// SetAttempts sets the "attempts" field.
+func (u *VerificationTokenUpsert) SetAttempts(v int) *VerificationTokenUpsert {
+	u.Set(verificationtoken.FieldAttempts, v)
+	return u
+}
+
+// UpdateAttempts sets the "attempts" field to the value that was provided on create.
+func (u *VerificationTokenUpsert) UpdateAttempts() *VerificationTokenUpsert {
+	u.SetExcluded(verificationtoken.FieldAttempts)
+	return u
+}
+
+// AddAttempts adds v to the "attempts" field.
+func (u *VerificationTokenUpsert) AddAttempts(v int) *VerificationTokenUpsert {
+	u.Add(verificationtoken.FieldAttempts, v)
+	return u
+}
 
 // SetConsumedAt sets the "consumed_at" field.
 func (u *VerificationTokenUpsert) SetConsumedAt(v time.Time) *VerificationTokenUpsert {
@@ -396,6 +444,27 @@ func (u *VerificationTokenUpsertOne) Update(set func(*VerificationTokenUpsert)) 
 		set(&VerificationTokenUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetAttempts sets the "attempts" field.
+func (u *VerificationTokenUpsertOne) SetAttempts(v int) *VerificationTokenUpsertOne {
+	return u.Update(func(s *VerificationTokenUpsert) {
+		s.SetAttempts(v)
+	})
+}
+
+// AddAttempts adds v to the "attempts" field.
+func (u *VerificationTokenUpsertOne) AddAttempts(v int) *VerificationTokenUpsertOne {
+	return u.Update(func(s *VerificationTokenUpsert) {
+		s.AddAttempts(v)
+	})
+}
+
+// UpdateAttempts sets the "attempts" field to the value that was provided on create.
+func (u *VerificationTokenUpsertOne) UpdateAttempts() *VerificationTokenUpsertOne {
+	return u.Update(func(s *VerificationTokenUpsert) {
+		s.UpdateAttempts()
+	})
 }
 
 // SetConsumedAt sets the "consumed_at" field.
@@ -656,6 +725,27 @@ func (u *VerificationTokenUpsertBulk) Update(set func(*VerificationTokenUpsert))
 		set(&VerificationTokenUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetAttempts sets the "attempts" field.
+func (u *VerificationTokenUpsertBulk) SetAttempts(v int) *VerificationTokenUpsertBulk {
+	return u.Update(func(s *VerificationTokenUpsert) {
+		s.SetAttempts(v)
+	})
+}
+
+// AddAttempts adds v to the "attempts" field.
+func (u *VerificationTokenUpsertBulk) AddAttempts(v int) *VerificationTokenUpsertBulk {
+	return u.Update(func(s *VerificationTokenUpsert) {
+		s.AddAttempts(v)
+	})
+}
+
+// UpdateAttempts sets the "attempts" field to the value that was provided on create.
+func (u *VerificationTokenUpsertBulk) UpdateAttempts() *VerificationTokenUpsertBulk {
+	return u.Update(func(s *VerificationTokenUpsert) {
+		s.UpdateAttempts()
+	})
 }
 
 // SetConsumedAt sets the "consumed_at" field.

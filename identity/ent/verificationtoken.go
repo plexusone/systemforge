@@ -34,6 +34,8 @@ type VerificationToken struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// When the token stops being accepted
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
+	// Wrong or right guesses spent on the token; a sign-in code stops accepting attempts at its limit
+	Attempts int `json:"attempts,omitempty"`
 	// When the token was used or revoked; a consumed token is never accepted again
 	ConsumedAt   *time.Time `json:"consumed_at,omitempty"`
 	selectValues sql.SelectValues
@@ -48,6 +50,8 @@ func (*VerificationToken) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case verificationtoken.FieldData:
 			values[i] = new([]byte)
+		case verificationtoken.FieldAttempts:
+			values[i] = new(sql.NullInt64)
 		case verificationtoken.FieldTokenHash, verificationtoken.FieldPurpose, verificationtoken.FieldEmail, verificationtoken.FieldBinding:
 			values[i] = new(sql.NullString)
 		case verificationtoken.FieldCreatedAt, verificationtoken.FieldExpiresAt, verificationtoken.FieldConsumedAt:
@@ -124,6 +128,12 @@ func (_m *VerificationToken) assignValues(columns []string, values []any) error 
 			} else if value.Valid {
 				_m.ExpiresAt = value.Time
 			}
+		case verificationtoken.FieldAttempts:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field attempts", values[i])
+			} else if value.Valid {
+				_m.Attempts = int(value.Int64)
+			}
 		case verificationtoken.FieldConsumedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field consumed_at", values[i])
@@ -191,6 +201,9 @@ func (_m *VerificationToken) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("expires_at=")
 	builder.WriteString(_m.ExpiresAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("attempts=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Attempts))
 	builder.WriteString(", ")
 	if v := _m.ConsumedAt; v != nil {
 		builder.WriteString("consumed_at=")

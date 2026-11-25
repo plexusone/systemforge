@@ -389,6 +389,94 @@ func VerificationTokenStore(t *testing.T, newStore func(t *testing.T) systemauth
 		}
 	})
 
+	t.Run("RecordAttemptLimit", func(t *testing.T) {
+		s := newStore(t)
+		b := binding()
+		create(t, s, newToken(), systemauth.VerificationToken{Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b})
+		for i := 1; i <= 3; i++ {
+			got, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, 3)
+			if err != nil {
+				t.Fatalf("RecordAttempt %d: %v", i, err)
+			}
+			if got.Attempts != i {
+				t.Fatalf("RecordAttempt %d: Attempts = %d, want %d", i, got.Attempts, i)
+			}
+		}
+		if _, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, 3); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("RecordAttempt past the limit err = %v, want ErrVerificationTokenInvalid", err)
+		}
+		if got, err := s.Latest(ctx, systemauth.PurposeSignInCode, b); err != nil || got.Attempts != 3 {
+			t.Fatalf("Latest after the limit = %+v, %v; want Attempts 3 (a refused attempt changes nothing)", got, err)
+		}
+	})
+
+	t.Run("RecordAttemptScope", func(t *testing.T) {
+		s := newStore(t)
+		b := binding()
+		if _, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, 3); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("RecordAttempt without a token err = %v, want ErrVerificationTokenInvalid", err)
+		}
+		create(t, s, newToken(), systemauth.VerificationToken{Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b})
+		if _, err := s.RecordAttempt(ctx, systemauth.PurposeVerifyEmail, b, 3); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("RecordAttempt for another purpose err = %v, want ErrVerificationTokenInvalid", err)
+		}
+		if _, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, binding(), 3); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("RecordAttempt for another binding err = %v, want ErrVerificationTokenInvalid", err)
+		}
+		if _, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, 0); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("RecordAttempt with no limit err = %v, want ErrVerificationTokenInvalid", err)
+		}
+		// Refused attempts did not touch the token.
+		if got, err := s.Latest(ctx, systemauth.PurposeSignInCode, b); err != nil || got.Attempts != 0 {
+			t.Fatalf("Latest = %+v, %v; want Attempts 0", got, err)
+		}
+	})
+
+	t.Run("RecordAttemptTargetsNewestAndUsable", func(t *testing.T) {
+		s := newStore(t)
+		b := binding()
+		now := time.Now().UTC().Truncate(time.Second)
+		old, newer := newToken(), newToken()
+		create(t, s, old, systemauth.VerificationToken{
+			Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b,
+			CreatedAt: now, ExpiresAt: now.Add(time.Hour),
+		})
+		create(t, s, newer, systemauth.VerificationToken{
+			Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b,
+			CreatedAt: now.Add(time.Second), ExpiresAt: now.Add(time.Hour),
+		})
+		got, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, 3)
+		if err != nil || got.Attempts != 1 || !got.CreatedAt.Equal(now.Add(time.Second)) {
+			t.Fatalf("RecordAttempt = %+v, %v; want the newest token", got, err)
+		}
+		if _, err := s.Revoke(ctx, systemauth.PurposeSignInCode, b); err != nil {
+			t.Fatalf("Revoke: %v", err)
+		}
+		if _, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, 3); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
+			t.Fatalf("RecordAttempt after Revoke err = %v, want ErrVerificationTokenInvalid", err)
+		}
+	})
+
+	t.Run("RecordAttemptConcurrent", func(t *testing.T) {
+		s := newStore(t)
+		b := binding()
+		create(t, s, newToken(), systemauth.VerificationToken{Purpose: systemauth.PurposeSignInCode, Email: "a@example.com", Binding: b})
+		const guesses, limit = 20, 5
+		ok, errs := race(guesses, func() error {
+			_, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, limit)
+			return err
+		}, systemauth.ErrVerificationTokenInvalid)
+		if len(errs) != 0 {
+			t.Fatalf("%d concurrent guesses failed with errors other than ErrVerificationTokenInvalid: %v", len(errs), errs)
+		}
+		if ok != limit {
+			t.Fatalf("%d concurrent guesses counted %d attempts, want exactly %d", guesses, ok, limit)
+		}
+		if got, err := s.Latest(ctx, systemauth.PurposeSignInCode, b); err != nil || got.Attempts != limit {
+			t.Fatalf("Latest after the race = %+v, %v; want Attempts %d", got, err, limit)
+		}
+	})
+
 	t.Run("LatestAndRevoke", func(t *testing.T) {
 		s := newStore(t)
 		b, other := binding(), binding()

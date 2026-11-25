@@ -164,6 +164,7 @@ nav:
       - "ADR-020: Customer-Authorized Support Access (Proposed)": design/adrs/ADR-020-customer-authorized-support-access.md
       - "ADR-021: Billing in the Organization Console (Proposed)": design/adrs/ADR-021-billing-in-the-organization-console.md
       - "ADR-022: Plans Set by the Operator (Proposed)": design/adrs/ADR-022-plans-set-by-the-operator.md
+      - "ADR-023: Email One-Time Code Sign-In (Proposed)": design/adrs/ADR-023-email-code-sign-in.md
     - ProductGraph:
       - PRD: design/productgraph/PRD.md
       - TRD: design/productgraph/TRD.md

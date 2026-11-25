@@ -1066,6 +1066,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			verificationtoken.FieldData:        {Type: field.TypeBytes, Column: verificationtoken.FieldData},
 			verificationtoken.FieldCreatedAt:   {Type: field.TypeTime, Column: verificationtoken.FieldCreatedAt},
 			verificationtoken.FieldExpiresAt:   {Type: field.TypeTime, Column: verificationtoken.FieldExpiresAt},
+			verificationtoken.FieldAttempts:    {Type: field.TypeInt, Column: verificationtoken.FieldAttempts},
 			verificationtoken.FieldConsumedAt:  {Type: field.TypeTime, Column: verificationtoken.FieldConsumedAt},
 		},
 	}
@@ -7106,6 +7107,11 @@ func (f *VerificationTokenFilter) WhereCreatedAt(p entql.TimeP) {
 // WhereExpiresAt applies the entql time.Time predicate on the expires_at field.
 func (f *VerificationTokenFilter) WhereExpiresAt(p entql.TimeP) {
 	f.Where(p.Field(verificationtoken.FieldExpiresAt))
+}
+
+// WhereAttempts applies the entql int predicate on the attempts field.
+func (f *VerificationTokenFilter) WhereAttempts(p entql.IntP) {
+	f.Where(p.Field(verificationtoken.FieldAttempts))
 }
 
 // WhereConsumedAt applies the entql time.Time predicate on the consumed_at field.

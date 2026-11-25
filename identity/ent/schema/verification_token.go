@@ -37,7 +37,7 @@ func (VerificationToken) Fields() []ent.Field {
 			Comment("Hex SHA-256 of the verification token; the token itself is never stored"),
 
 		field.Enum("purpose").
-			Values("verify_email", "email_change").
+			Values("verify_email", "email_change", "sign_in_code").
 			Immutable().
 			Comment("What the token may be used for; a token is never accepted for another purpose"),
 
@@ -70,6 +70,11 @@ func (VerificationToken) Fields() []ent.Field {
 		field.Time("expires_at").
 			Immutable().
 			Comment("When the token stops being accepted"),
+
+		field.Int("attempts").
+			Default(0).
+			NonNegative().
+			Comment("Wrong or right guesses spent on the token; a sign-in code stops accepting attempts at its limit"),
 
 		field.Time("consumed_at").
 			Optional().

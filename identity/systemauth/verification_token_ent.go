@@ -2,6 +2,7 @@ package systemauth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -113,6 +114,44 @@ func (s *EntVerificationTokenStore) Latest(ctx context.Context, purpose Verifica
 	return toVerificationToken(row), nil
 }
 
+// RecordAttempt implements VerificationTokenStore.
+func (s *EntVerificationTokenStore) RecordAttempt(ctx context.Context, purpose VerificationPurpose, binding string, limit int) (*VerificationToken, error) {
+	if limit < 1 || !purpose.Valid() || binding == "" {
+		return nil, ErrVerificationTokenInvalid
+	}
+	latest, err := s.Latest(ctx, purpose, binding)
+	if err != nil {
+		if errors.Is(err, ErrVerificationTokenNotFound) {
+			return nil, ErrVerificationTokenInvalid
+		}
+		return nil, err
+	}
+	// The limit and the count are one statement: of concurrent guesses
+	// only those whose update matched while attempts were below limit are
+	// counted, so the limit holds across instances. A token consumed or
+	// expired since Latest matches nothing.
+	n, err := s.db.VerificationToken.Update().
+		Where(
+			verificationtoken.IDEQ(latest.ID),
+			verificationtoken.AttemptsLT(limit),
+			verificationtoken.ConsumedAtIsNil(),
+			verificationtoken.ExpiresAtGT(s.now()),
+		).
+		AddAttempts(1).
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("counting verification attempt: %w", err)
+	}
+	if n != 1 {
+		return nil, ErrVerificationTokenInvalid
+	}
+	row, err := s.db.VerificationToken.Get(ctx, latest.ID)
+	if err != nil {
+		return nil, fmt.Errorf("reading verification token: %w", err)
+	}
+	return toVerificationToken(row), nil
+}
+
 // Revoke implements VerificationTokenStore.
 func (s *EntVerificationTokenStore) Revoke(ctx context.Context, purpose VerificationPurpose, binding string) (int, error) {
 	if !purpose.Valid() || binding == "" {
@@ -154,6 +193,7 @@ func toVerificationToken(row *ent.VerificationToken) *VerificationToken {
 		Data:       row.Data,
 		CreatedAt:  row.CreatedAt,
 		ExpiresAt:  row.ExpiresAt,
+		Attempts:   row.Attempts,
 		ConsumedAt: row.ConsumedAt,
 	}
 	if row.PrincipalID != nil {

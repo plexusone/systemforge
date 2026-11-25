@@ -90,6 +90,11 @@ func ExpiresAt(v time.Time) predicate.VerificationToken {
 	return predicate.VerificationToken(sql.FieldEQ(FieldExpiresAt, v))
 }
 
+// Attempts applies equality check predicate on the "attempts" field. It's identical to AttemptsEQ.
+func Attempts(v int) predicate.VerificationToken {
+	return predicate.VerificationToken(sql.FieldEQ(FieldAttempts, v))
+}
+
 // ConsumedAt applies equality check predicate on the "consumed_at" field. It's identical to ConsumedAtEQ.
 func ConsumedAt(v time.Time) predicate.VerificationToken {
 	return predicate.VerificationToken(sql.FieldEQ(FieldConsumedAt, v))
@@ -488,6 +493,46 @@ func ExpiresAtLT(v time.Time) predicate.VerificationToken {
 // ExpiresAtLTE applies the LTE predicate on the "expires_at" field.
 func ExpiresAtLTE(v time.Time) predicate.VerificationToken {
 	return predicate.VerificationToken(sql.FieldLTE(FieldExpiresAt, v))
+}
+
+// AttemptsEQ applies the EQ predicate on the "attempts" field.
+func AttemptsEQ(v int) predicate.VerificationToken {
+	return predicate.VerificationToken(sql.FieldEQ(FieldAttempts, v))
+}
+
+// AttemptsNEQ applies the NEQ predicate on the "attempts" field.
+func AttemptsNEQ(v int) predicate.VerificationToken {
+	return predicate.VerificationToken(sql.FieldNEQ(FieldAttempts, v))
+}
+
+// AttemptsIn applies the In predicate on the "attempts" field.
+func AttemptsIn(vs ...int) predicate.VerificationToken {
+	return predicate.VerificationToken(sql.FieldIn(FieldAttempts, vs...))
+}
+
+// AttemptsNotIn applies the NotIn predicate on the "attempts" field.
+func AttemptsNotIn(vs ...int) predicate.VerificationToken {
+	return predicate.VerificationToken(sql.FieldNotIn(FieldAttempts, vs...))
+}
+
+// AttemptsGT applies the GT predicate on the "attempts" field.
+func AttemptsGT(v int) predicate.VerificationToken {
+	return predicate.VerificationToken(sql.FieldGT(FieldAttempts, v))
+}
+
+// AttemptsGTE applies the GTE predicate on the "attempts" field.
+func AttemptsGTE(v int) predicate.VerificationToken {
+	return predicate.VerificationToken(sql.FieldGTE(FieldAttempts, v))
+}
+
+// AttemptsLT applies the LT predicate on the "attempts" field.
+func AttemptsLT(v int) predicate.VerificationToken {
+	return predicate.VerificationToken(sql.FieldLT(FieldAttempts, v))
+}
+
+// AttemptsLTE applies the LTE predicate on the "attempts" field.
+func AttemptsLTE(v int) predicate.VerificationToken {
+	return predicate.VerificationToken(sql.FieldLTE(FieldAttempts, v))
 }
 
 // ConsumedAtEQ applies the EQ predicate on the "consumed_at" field.
