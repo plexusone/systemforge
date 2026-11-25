@@ -552,6 +552,10 @@ func VerificationTokenStore(t *testing.T, newStore func(t *testing.T) systemauth
 			if err != nil || got.Email != "a1@example.com" {
 				t.Fatalf("Latest = %+v, %v; want the token issued second", got, err)
 			}
+			counted, err := s.RecordAttempt(ctx, systemauth.PurposeSignInCode, b, 3)
+			if err != nil || counted.Email != "a1@example.com" {
+				t.Fatalf("RecordAttempt counted %+v, %v; want the token issued second", counted, err)
+			}
 			if err := s.ConsumeToken(ctx, firstID, systemauth.PurposeSignInCode, b); !errors.Is(err, systemauth.ErrVerificationTokenInvalid) {
 				t.Fatalf("ConsumeToken of the token issued first err = %v, want ErrVerificationTokenInvalid", err)
 			}

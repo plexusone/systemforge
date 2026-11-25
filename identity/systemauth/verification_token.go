@@ -290,7 +290,7 @@ func (s *MemoryVerificationTokenStore) RecordAttempt(_ context.Context, purpose 
 	var latest *VerificationToken
 	for _, t := range s.tokens {
 		if t.Purpose == purpose && t.Binding == binding && t.usable(now) &&
-			(latest == nil || t.CreatedAt.After(latest.CreatedAt)) {
+			(latest == nil || t.newerThan(latest)) {
 			latest = t
 		}
 	}
