@@ -89,9 +89,12 @@ security, not the code:
 - **No enumeration.** Responses and timing do not reveal whether an address
   has an account.
 - **Same-origin POSTs with CSRF tokens**, as the verify-email pages.
-- **Audit events** `systemauth.email_code.sent` and
-  `systemauth.email_code.failed`, plus the existing sign-in events, through
-  the security event log and OCSF emitter.
+- **Audit events** `systemauth.email_code.sent` (with whether it was sent),
+  `systemauth.email_code.exhausted` (a code used up its tries), and the
+  existing `systemauth.sign_in` events for each refusal (`code_mismatch`,
+  `code_unusable`, `stale_email_identity`) and success (method `email`),
+  through the security event log and OCSF emitter. No event holds a code or
+  an address.
 - **Address handling.** Addresses are parsed with `omnimail.ParseAddress`,
   lowercased and length limited. Plus-addressing is preserved, since stripping
   it would merge distinct mailboxes at some providers.

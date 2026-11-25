@@ -22,7 +22,7 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
   - Depends on: `RMI-SYSTEMFORGE-270`
 - [ ] `RMI-SYSTEMFORGE-272` The chooser links to the email form (done with 270); still to do: `idp_hint=email` and email listed on the sign-in-methods page
   - Depends on: `RMI-SYSTEMFORGE-271`
-- [ ] `RMI-SYSTEMFORGE-273` Security events and OCSF mapping for code sent, failed and succeeded; per-client verification rate limit
+- [x] `RMI-SYSTEMFORGE-273` Security events and OCSF mapping for code sent, failed and succeeded; per-client verification rate limit
   - Depends on: `RMI-SYSTEMFORGE-270`
 
 ## Phase 2 — Applications and Documentation
