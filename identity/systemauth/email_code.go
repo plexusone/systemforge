@@ -496,8 +496,9 @@ func (sl *socialLogin) handleEmailCodeSubmit(w http.ResponseWriter, r *http.Requ
 
 	// The code is right. Using the row it matched is the single use: of
 	// concurrent correct entries one update matches the row and the others
-	// find it used, and a code that was replaced since is refused without
-	// touching its replacement.
+	// find it used. A code that a resend replaced since the entry was counted
+	// is refused by the same update, whichever came first, and the
+	// replacement is left alone: nothing here revokes by binding.
 	if err := sl.verifyTokens.ConsumeToken(ctx, t.ID, PurposeSignInCode, binding); err != nil {
 		if !errors.Is(err, ErrVerificationTokenInvalid) {
 			logger.Error("using a sign-in code", "error", err)
@@ -507,10 +508,6 @@ func (sl *socialLogin) handleEmailCodeSubmit(w http.ResponseWriter, r *http.Requ
 		sl.signInRefused(ctx, emailLoginProvider, "", "code_unusable")
 		sl.renderEmailCode(w, r, expiredEmailCodeView(payload.RedirectURL))
 		return
-	}
-	// Any other pending code of this browser is dead now.
-	if _, err := sl.verifyTokens.Revoke(ctx, PurposeSignInCode, binding); err != nil {
-		logger.Warn("revoking the browser's other sign-in codes", "error", err)
 	}
 	http.SetCookie(w, sl.cookies.cookie(sl.emailCodeCookieName(), "", -1))
 	sl.completeEmailSignIn(ctx, w, r, t.Email, payload.RedirectURL)
@@ -575,17 +572,15 @@ func (sl *socialLogin) handleEmailCodeResend(w http.ResponseWriter, r *http.Requ
 		http.Redirect(w, r, EmailCodePath+"?resent=1", http.StatusSeeOther)
 		return
 	}
-	// The replacement is stored first and the earlier code retired after,
-	// so a failure to store leaves the earlier one usable. Entries are
-	// counted against the newest code only, so the earlier one is already
-	// out of use once the replacement exists.
+	// The replacement is stored, and nothing is revoked: a code that a newer
+	// one replaced cannot be used (entries are counted against the newest
+	// code, and consuming refuses a replaced one), so storing is what
+	// retires the earlier code, atomically, and a failure to store leaves it
+	// usable.
 	if err := sl.issueEmailCode(ctx, cookie, t.Email, payload.RedirectURL, decision); err != nil {
 		logger.Error("resending a sign-in code", "error", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
-	}
-	if err := sl.verifyTokens.ConsumeToken(ctx, t.ID, PurposeSignInCode, emailCodeBinding(cookie)); err != nil && !errors.Is(err, ErrVerificationTokenInvalid) {
-		logger.Warn("retiring the replaced sign-in code", "error", err)
 	}
 	http.SetCookie(w, sl.cookies.cookie(sl.emailCodeCookieName(), cookie, int(sl.email.ttl.Seconds())))
 	http.Redirect(w, r, EmailCodePath+"?resent=1", http.StatusSeeOther)
