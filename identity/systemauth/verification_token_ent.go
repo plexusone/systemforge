@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 
 	"github.com/plexusone/systemforge/identity/ent"
+	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/verificationtoken"
 )
 
@@ -119,7 +121,17 @@ func (s *EntVerificationTokenStore) ConsumeToken(ctx context.Context, id uuid.UU
 	if binding == "" || !purpose.Valid() {
 		return ErrVerificationTokenInvalid
 	}
+	row, err := s.db.VerificationToken.Get(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return ErrVerificationTokenInvalid
+		}
+		return fmt.Errorf("reading verification token: %w", err)
+	}
 	now := s.now()
+	// Whether a newer token exists is part of the update, not a read before
+	// it: a replacement stored between a check and the mark would otherwise
+	// be missed. A replacement stored after the mark is a later sign-in's.
 	n, err := s.db.VerificationToken.Update().
 		Where(
 			verificationtoken.IDEQ(id),
@@ -127,6 +139,7 @@ func (s *EntVerificationTokenStore) ConsumeToken(ctx context.Context, id uuid.UU
 			verificationtoken.BindingEQ(binding),
 			verificationtoken.ConsumedAtIsNil(),
 			verificationtoken.ExpiresAtGT(now),
+			noNewerToken(row),
 		).
 		SetConsumedAt(now).
 		Save(ctx)
@@ -137,6 +150,26 @@ func (s *EntVerificationTokenStore) ConsumeToken(ctx context.Context, id uuid.UU
 		return ErrVerificationTokenInvalid
 	}
 	return nil
+}
+
+// noNewerToken matches rows for which no token of the same purpose and
+// binding was issued later, or at the same time with a greater ID, the
+// order Latest uses.
+func noNewerToken(row *ent.VerificationToken) predicate.VerificationToken {
+	return func(s *sql.Selector) {
+		newer := sql.Table(verificationtoken.Table).As("newer")
+		s.Where(sql.NotExists(sql.Select(newer.C(verificationtoken.FieldID)).From(newer).Where(sql.And(
+			sql.EQ(newer.C(verificationtoken.FieldPurpose), string(row.Purpose)),
+			sql.EQ(newer.C(verificationtoken.FieldBinding), row.Binding),
+			sql.Or(
+				sql.GT(newer.C(verificationtoken.FieldCreatedAt), row.CreatedAt),
+				sql.And(
+					sql.EQ(newer.C(verificationtoken.FieldCreatedAt), row.CreatedAt),
+					sql.GT(newer.C(verificationtoken.FieldID), row.ID),
+				),
+			),
+		))))
+	}
 }
 
 // RecordAttempt implements VerificationTokenStore.

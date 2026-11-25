@@ -1,6 +1,7 @@
 package systemauth
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -115,10 +116,14 @@ type VerificationTokenStore interface {
 	RecordAttempt(ctx context.Context, purpose VerificationPurpose, binding string, limit int) (*VerificationToken, error)
 
 	// ConsumeToken marks the token with id used, provided it was issued for
-	// purpose and binding, is unexpired and was not used or revoked. The
-	// check and the mark are one atomic step, so of concurrent calls at most
-	// one succeeds, and a token that replaced it is never touched. Otherwise
-	// it returns ErrVerificationTokenInvalid and changes nothing.
+	// purpose and binding, is unexpired, was not used or revoked, and no
+	// newer token of the same purpose and binding exists: a token that a
+	// newer one replaced is dead whether or not the newer one is still
+	// usable. The checks and the mark are one atomic step, so of concurrent
+	// calls at most one succeeds, a token being replaced while it is
+	// consumed is decided one way or the other and never both, and the
+	// replacement is never touched. Otherwise it returns
+	// ErrVerificationTokenInvalid and changes nothing.
 	ConsumeToken(ctx context.Context, id uuid.UUID, purpose VerificationPurpose, binding string) error
 
 	// Revoke marks every usable token for purpose and binding consumed and
@@ -153,6 +158,15 @@ func prepareVerificationToken(token string, t *VerificationToken, now time.Time)
 	}
 	t.ConsumedAt = nil
 	return nil
+}
+
+// newerThan reports whether t was issued after o: later, or at the same
+// time with a greater ID, the order Latest uses.
+func (t *VerificationToken) newerThan(o *VerificationToken) bool {
+	if !t.CreatedAt.Equal(o.CreatedAt) {
+		return t.CreatedAt.After(o.CreatedAt)
+	}
+	return bytes.Compare(t.ID[:], o.ID[:]) > 0
 }
 
 // usable reports whether t can still be consumed at now.
@@ -227,7 +241,7 @@ func (s *MemoryVerificationTokenStore) Latest(_ context.Context, purpose Verific
 	if len(found) == 0 {
 		return nil, ErrVerificationTokenNotFound
 	}
-	sort.Slice(found, func(i, j int) bool { return found[i].CreatedAt.After(found[j].CreatedAt) })
+	sort.Slice(found, func(i, j int) bool { return found[i].newerThan(found[j]) })
 	return found[0].clone(), nil
 }
 
@@ -239,16 +253,23 @@ func (s *MemoryVerificationTokenStore) ConsumeToken(_ context.Context, id uuid.U
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := s.now()
+	var row *VerificationToken
 	for _, t := range s.tokens {
 		if t.ID == id {
-			if t.Purpose != purpose || t.Binding != binding || !t.usable(now) {
-				return ErrVerificationTokenInvalid
-			}
-			t.ConsumedAt = &now
-			return nil
+			row = t
+			break
 		}
 	}
-	return ErrVerificationTokenInvalid
+	if row == nil || row.Purpose != purpose || row.Binding != binding || !row.usable(now) {
+		return ErrVerificationTokenInvalid
+	}
+	for _, t := range s.tokens {
+		if t != row && t.Purpose == purpose && t.Binding == binding && t.newerThan(row) {
+			return ErrVerificationTokenInvalid
+		}
+	}
+	row.ConsumedAt = &now
+	return nil
 }
 
 // RecordAttempt implements VerificationTokenStore.
