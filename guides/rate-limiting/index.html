@@ -488,6 +488,8 @@
       
         
       
+        
+      
     
     
     
@@ -856,6 +858,34 @@
     
   
     Key Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../email-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Launching with Email Sign-In
   
 
     
@@ -1857,6 +1887,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -2003,6 +2037,62 @@
     
   
     Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/email-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Email Sign-In
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/resend-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Resend
   
 
     
@@ -3869,6 +3959,8 @@
       
         
       
+        
+      
     
     
     
@@ -4538,6 +4630,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-023-email-code-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-023: Email One-Time Code Sign-In (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4833,6 +4953,8 @@
       
         
       
+        
+      
     
     
     
@@ -4904,6 +5026,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.37.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.37.0
   
 
     
@@ -6664,6 +6814,14 @@ They use the same storage through <code>ratelimit.Check</code>, or <code>Exhaust
 <td>30 a minute</td>
 </tr>
 <tr>
+<td>Email sign-in: the address form, a code request and a resend, per address</td>
+<td>30 a minute each</td>
+</tr>
+<tr>
+<td>Email sign-in: entries of a code, per address</td>
+<td>20 a minute (<code>DefaultEmailCodeSubmitLimit</code>)</td>
+</tr>
+<tr>
 <td>Login-token exchange, per address and per registered client</td>
 <td>60 and 600 a minute</td>
 </tr>
@@ -6681,6 +6839,11 @@ They use the same storage through <code>ratelimit.Check</code>, or <code>Exhaust
 </tr>
 </tbody>
 </table>
+<p>The messages email sign-in and email verification send are limited too, by
+<code>mail.per_address</code> (5 an hour to one address) and <code>mail.per_client</code> (20 an
+hour per client address), which also bound how many email sign-in codes can be
+guessed at. With several instances, share this storage or those limits apply
+per instance.</p>
 <h2 id="responses">Responses<a class="headerlink" href="#responses" title="Permanent link">&para;</a></h2>
 <p>A refused request gets <code>429 Too Many Requests</code> with <code>Retry-After</code> in whole
 seconds, rounded up and never below 1. Every checked response carries the

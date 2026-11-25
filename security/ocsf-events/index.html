@@ -486,6 +486,8 @@
       
         
       
+        
+      
     
     
     
@@ -856,6 +858,34 @@
     
   
     Key Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/email-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Launching with Email Sign-In
   
 
     
@@ -1677,6 +1707,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1823,6 +1857,62 @@
     
   
     Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/email-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Email Sign-In
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/resend-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Resend
   
 
     
@@ -3791,6 +3881,8 @@
       
         
       
+        
+      
     
     
     
@@ -4460,6 +4552,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-023-email-code-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-023: Email One-Time Code Sign-In (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4755,6 +4875,8 @@
       
         
       
+        
+      
     
     
     
@@ -4826,6 +4948,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.37.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.37.0
   
 
     
@@ -6446,6 +6596,18 @@ selected by it as well as by OCSF class.</p>
 <td>Authentication (3002) for purpose <code>verify_email</code>; User Management (3007) for <code>email_change</code></td>
 <td>Preauth; Update</td>
 <td>Informational</td>
+</tr>
+<tr>
+<td><code>systemauth.email_code.sent</code></td>
+<td>Authentication (3002)</td>
+<td>Preauth, sign-in method <code>email</code></td>
+<td>Informational</td>
+</tr>
+<tr>
+<td><code>systemauth.email_code.exhausted</code></td>
+<td>Authentication (3002)</td>
+<td>Logon, failure, sign-in method <code>email</code></td>
+<td>Medium</td>
 </tr>
 <tr>
 <td><code>systemauth.email_change.requested</code>, <code>.cancelled</code>, <code>systemauth.email.changed</code></td>

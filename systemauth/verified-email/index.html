@@ -16,7 +16,7 @@
         <link rel="prev" href="../social-login/">
       
       
-        <link rel="next" href="../ses-deployment/">
+        <link rel="next" href="../email-sign-in/">
       
       
         
@@ -486,6 +486,8 @@
       
         
       
+        
+      
     
     
     
@@ -856,6 +858,34 @@
     
   
     Key Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/email-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Launching with Email Sign-In
   
 
     
@@ -1679,6 +1709,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1978,6 +2012,62 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../email-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Email Sign-In
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../resend-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Resend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -3836,6 +3926,8 @@
       
         
       
+        
+      
     
     
     
@@ -4505,6 +4597,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-023-email-code-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-023: Email One-Time Code Sign-In (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4800,6 +4920,8 @@
       
         
       
+        
+      
     
     
     
@@ -4871,6 +4993,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.37.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.37.0
   
 
     
@@ -6373,8 +6523,10 @@ application that federates to it
 It sends a single-use link and, when the link is opened, marks the address
 verified. Relying parties read the result from the ID token and UserInfo;
 they implement no mail flows of their own.</p>
-<p>Email links verify an address. They are <strong>not</strong> a way to sign in: GitHub and
-Google remain the sign-in methods.</p>
+<p>Email links verify an address; they do not sign anyone in. Signing in with a
+mailed code is a separate method, described in
+<a href="../email-sign-in/">Sign In with an Email Code</a>, which uses the same <code>mail</code>
+section.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Verification mail is off until the configuration has a <code>mail</code> section, which
 needs <code>social_login</code>:</p>

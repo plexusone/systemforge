@@ -486,6 +486,8 @@
       
         
       
+        
+      
     
     
     
@@ -856,6 +858,34 @@
     
   
     Key Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/email-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Launching with Email Sign-In
   
 
     
@@ -1679,6 +1709,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1992,6 +2026,62 @@
     
   
     Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../email-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Email Sign-In
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../resend-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Resend
   
 
     
@@ -3858,6 +3948,8 @@
       
         
       
+        
+      
     
     
     
@@ -4527,6 +4619,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-023-email-code-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-023: Email One-Time Code Sign-In (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4822,6 +4942,8 @@
       
         
       
+        
+      
     
     
     
@@ -4893,6 +5015,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.37.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.37.0
   
 
     
@@ -6434,6 +6584,10 @@ endpoints:</p>
 <td>The sign-in page: a link per provider, waiting for the person to choose, even with one provider. With <code>auto_select_single_provider</code>, redirects straight to the only provider.</td>
 </tr>
 <tr>
+<td><code>GET /login/email?return_to=...</code> and the routes under it</td>
+<td>With <a href="../email-sign-in/">email sign-in</a>: the address form, the code page and resend. The chooser lists <strong>Email</strong> beside the providers, and <code>idp_hint=email</code> goes straight to the form.</td>
+</tr>
+<tr>
 <td><code>GET /login/{provider}?return_to=...</code></td>
 <td>Starts the upstream authorization-code flow (<code>github</code> or <code>google</code>).</td>
 </tr>
@@ -6474,7 +6628,8 @@ endpoints:</p>
 <p><code>/oauth/authorize</code> sends unauthenticated users to <code>/login?return_to=&lt;authorize URL&gt;</code>,
 so after login the authorization request resumes and the relying party receives
 an authorization code. No token ever appears in a redirect URL. An
-<code>idp_hint=github|google</code> authorization parameter skips the chooser. When the
+<code>idp_hint=github|google</code> authorization parameter skips the chooser (and
+<code>idp_hint=email</code> goes to the <a href="../email-sign-in/">email sign-in</a> form). When the
 login was started by an authorization request, the chooser names the client
 ("to continue to ...") and shows its <code>logo_url</code>, an https URL, when it has
 one. The authorization endpoint also honours the OIDC <code>prompt</code> parameter; see

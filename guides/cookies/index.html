@@ -488,6 +488,8 @@
       
         
       
+        
+      
     
     
     
@@ -856,6 +858,34 @@
     
   
     Key Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../email-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Launching with Email Sign-In
   
 
     
@@ -1746,6 +1776,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1892,6 +1926,62 @@
     
   
     Verified Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/email-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Email Sign-In
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../systemauth/resend-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sending Mail with Resend
   
 
     
@@ -3758,6 +3848,8 @@
       
         
       
+        
+      
     
     
     
@@ -4427,6 +4519,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-023-email-code-sign-in/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-023: Email One-Time Code Sign-In (Proposed)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4722,6 +4842,8 @@
       
         
       
+        
+      
     
     
     
@@ -4793,6 +4915,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.37.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.37.0
   
 
     
@@ -6238,6 +6388,20 @@ browsers enforce those attributes.</p>
 <td>SystemAuth upstream login state</td>
 <td><code>__Host-sf_oauth_state</code></td>
 <td><code>sf_oauth_state</code></td>
+<td>Lax</td>
+<td><code>social_login.insecure_cookies</code></td>
+</tr>
+<tr>
+<td>SystemAuth email sign-in, the pending code</td>
+<td><code>__Host-sf_email_code</code></td>
+<td><code>sf_email_code</code></td>
+<td>Lax</td>
+<td><code>social_login.insecure_cookies</code></td>
+</tr>
+<tr>
+<td>SystemAuth email verification, the pending sign-in</td>
+<td><code>__Host-sf_verify_email</code></td>
+<td><code>sf_verify_email</code></td>
 <td>Lax</td>
 <td><code>social_login.insecure_cookies</code></td>
 </tr>
