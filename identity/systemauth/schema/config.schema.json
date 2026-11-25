@@ -472,6 +472,38 @@
           "description": "Minimum age to create an account; 0 asks no age",
           "default": 0
         },
+        "email": {
+          "properties": {
+            "code_length": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 6,
+              "description": "Digits in the sign-in code",
+              "default": 6
+            },
+            "code_lifetime": {
+              "type": "string",
+              "pattern": "^(\\d+(\\.\\d+)?(ns|us|µs|ms|s|m|h))+$",
+              "description": "How long a sign-in code works (5m to 30m)",
+              "default": "10m",
+              "examples": [
+                "5m",
+                "10m",
+                "30m"
+              ]
+            },
+            "max_attempts": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 3,
+              "description": "Entries allowed per sign-in before its code stops working",
+              "default": 5
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Sign-in with a one-time code mailed to the person (needs mail; an empty section enables it with defaults)"
+        },
         "insecure_cookies": {
           "type": "boolean",
           "description": "Development only: allow login cookies over plain HTTP",

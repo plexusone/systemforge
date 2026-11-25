@@ -14,7 +14,7 @@ implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
 **Theme:** A person signs in with an emailed code on the SystemAuth sign-in page
 
 - [x] `RMI-SYSTEMFORGE-268` Verification token attempts: an attempt counter, an atomic check-and-count store method on the memory and Ent stores, and `storetest` conformance cases
-- [ ] `RMI-SYSTEMFORGE-269` The `social_login.email` configuration section (enabled, code length, lifetime, attempt limit), validated, requiring `mail`, with the `log` provider refused in production
+- [x] `RMI-SYSTEMFORGE-269` The `social_login.email` configuration section (code length, code lifetime, attempt limit; an empty section enables it with defaults), validated, requiring `mail`; the production refusal of the `log` mail provider already covers it
   - Depends on: `RMI-SYSTEMFORGE-268`
 - [ ] `RMI-SYSTEMFORGE-270` The `sign_in_code` message (text and HTML) and the request, entry and resend routes, with keyed-hash storage, browser binding, send limits and no enumeration
   - Depends on: `RMI-SYSTEMFORGE-269`

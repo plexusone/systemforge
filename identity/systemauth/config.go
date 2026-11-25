@@ -453,9 +453,96 @@ type SocialLoginConfig struct {
 	// Default: 0, no question.
 	SignupMinimumAge int `json:"signup_minimum_age,omitempty" yaml:"signup_minimum_age,omitempty" jsonschema:"default=0,minimum=0,maximum=120,description=Minimum age to create an account; 0 asks no age"`
 
+	// Email enables sign-in with a one-time code mailed to the person's
+	// address (ADR-023). Nil disables it. It needs the mail section, and an
+	// empty section ({}) enables it with the defaults.
+	Email *EmailLoginConfig `json:"email,omitempty" yaml:"email,omitempty" jsonschema:"description=Sign-in with a one-time code mailed to the person (needs mail; an empty section enables it with defaults)"`
+
 	// InsecureCookies drops the __Host- prefix and the Secure flag so the
 	// login works over plain HTTP. Local development only.
 	InsecureCookies bool `json:"insecure_cookies,omitempty" yaml:"insecure_cookies,omitempty" jsonschema:"default=false,description=Development only: allow login cookies over plain HTTP"`
+}
+
+// Bounds and defaults of the email sign-in code (ADR-023). A code this
+// short can be guessed, so the security of the method rests on the attempt
+// limit and the lifetime together: with the defaults an attacker has 5
+// guesses in 10 minutes, a 5 in 1,000,000 chance, and the mail send limits
+// bound how many codes they can have issued.
+const (
+	// DefaultEmailCodeLength is the number of digits of a sign-in code.
+	DefaultEmailCodeLength = 6
+	// MinEmailCodeLength and MaxEmailCodeLength bound email.code_length. A
+	// shorter code is too easy to guess; a longer one is hard to type.
+	MinEmailCodeLength = 6
+	MaxEmailCodeLength = 10
+
+	// DefaultEmailCodeLifetime is how long a sign-in code works.
+	DefaultEmailCodeLifetime = 10 * time.Minute
+	// MinEmailCodeLifetime and MaxEmailCodeLifetime bound
+	// email.code_lifetime.
+	MinEmailCodeLifetime = 5 * time.Minute
+	MaxEmailCodeLifetime = 30 * time.Minute
+
+	// DefaultEmailMaxAttempts is how many codes may be entered for one
+	// sign-in before it is refused and a new code is needed.
+	DefaultEmailMaxAttempts = 5
+	// MinEmailMaxAttempts and MaxEmailMaxAttempts bound
+	// email.max_attempts.
+	MinEmailMaxAttempts = 3
+	MaxEmailMaxAttempts = 10
+)
+
+// EmailLoginConfig configures sign-in with a one-time code (ADR-023). The
+// message is sent through the mail section's sender, so its provider, sender
+// address and send limits apply to codes as to verification links.
+type EmailLoginConfig struct {
+	// CodeLength is the number of digits of the code. Default: 6; 6 to 10.
+	CodeLength int `json:"code_length,omitempty" yaml:"code_length,omitempty" jsonschema:"default=6,minimum=6,maximum=10,description=Digits in the sign-in code"`
+
+	// CodeLifetime is how long a code works. Default: 10m; 5m to 30m.
+	CodeLifetime Duration `json:"code_lifetime,omitempty" yaml:"code_lifetime,omitempty" jsonschema:"default=10m,description=How long a sign-in code works (5m to 30m)"`
+
+	// MaxAttempts is how many entries one sign-in allows before its code is
+	// dead. Default: 5; 3 to 10.
+	MaxAttempts int `json:"max_attempts,omitempty" yaml:"max_attempts,omitempty" jsonschema:"default=5,minimum=3,maximum=10,description=Entries allowed per sign-in before its code stops working"`
+}
+
+// JSONSchemaExtend implements jsonschema.Extender. Duration's own examples
+// (1h, 168h, 720h) exceed the lifetime's 30-minute maximum, so this field's
+// examples stay within the allowed range.
+func (EmailLoginConfig) JSONSchemaExtend(schema *jsonschema.Schema) {
+	if p, ok := schema.Properties.Get("code_lifetime"); ok {
+		p.Examples = []any{"5m", "10m", "30m"}
+	}
+}
+
+func (c *EmailLoginConfig) applyDefaults() {
+	if c.CodeLength == 0 {
+		c.CodeLength = DefaultEmailCodeLength
+	}
+	if c.CodeLifetime == 0 {
+		c.CodeLifetime = Duration(DefaultEmailCodeLifetime)
+	}
+	if c.MaxAttempts == 0 {
+		c.MaxAttempts = DefaultEmailMaxAttempts
+	}
+}
+
+// validate checks the section as written; zero values mean the default.
+func (c *EmailLoginConfig) validate() error {
+	invalid := func(format string, args ...any) error {
+		return fmt.Errorf("%w: email: %s", ErrInvalidSocialLoginConfig, fmt.Sprintf(format, args...))
+	}
+	if n := c.CodeLength; n != 0 && (n < MinEmailCodeLength || n > MaxEmailCodeLength) {
+		return invalid("code_length must be between %d and %d", MinEmailCodeLength, MaxEmailCodeLength)
+	}
+	if d := c.CodeLifetime.Duration(); d != 0 && (d < MinEmailCodeLifetime || d > MaxEmailCodeLifetime) {
+		return invalid("code_lifetime must be between %s and %s", MinEmailCodeLifetime, MaxEmailCodeLifetime)
+	}
+	if n := c.MaxAttempts; n != 0 && (n < MinEmailMaxAttempts || n > MaxEmailMaxAttempts) {
+		return invalid("max_attempts must be between %d and %d", MinEmailMaxAttempts, MaxEmailMaxAttempts)
+	}
+	return nil
 }
 
 // SocialProviderConfig holds upstream OAuth client credentials.
@@ -926,6 +1013,9 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("%w: mail verifies addresses for social login, which is not configured", ErrInvalidConfig)
 		}
 	}
+	if c.SocialLogin != nil && c.SocialLogin.Email != nil && c.Mail == nil {
+		return fmt.Errorf("%w: social_login.email sends its codes with the mail section, which is not configured", ErrInvalidSocialLoginConfig)
+	}
 	if c.Console != nil && c.SocialLogin == nil {
 		return fmt.Errorf("%w: the console signs in with social login, which is not configured", ErrInvalidConsoleConfig)
 	}
@@ -969,6 +1059,11 @@ func (c *SocialLoginConfig) validate() error {
 	for _, o := range c.AllowedRedirectOrigins {
 		if _, err := parseOrigin(o); err != nil {
 			return fmt.Errorf("%w: allowed_redirect_origins: %v", ErrInvalidSocialLoginConfig, err)
+		}
+	}
+	if c.Email != nil {
+		if err := c.Email.validate(); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -1026,6 +1121,9 @@ func (c *Config) ApplyDefaults() {
 		}
 		if c.SocialLogin.SessionLifetime == 0 {
 			c.SocialLogin.SessionLifetime = Duration(12 * time.Hour)
+		}
+		if c.SocialLogin.Email != nil {
+			c.SocialLogin.Email.applyDefaults()
 		}
 	}
 }
