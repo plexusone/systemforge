@@ -13,6 +13,7 @@ import (
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
+	"github.com/plexusone/systemforge/identity/displayname"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/credential"
@@ -386,9 +387,8 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 	if name == "" && scimUser.Name != nil {
 		name = scimUser.Name.Formatted
 	}
-	if name == "" {
-		name = email // fallback
-	}
+	// Never the address: a name is shown to other people.
+	name = displayname.Show(name)
 
 	// Determine active status
 	active := true

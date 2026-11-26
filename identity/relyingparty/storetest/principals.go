@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/identity/displayname"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 )
 
@@ -54,12 +55,13 @@ func principalCreateAndFind(t *testing.T, s relyingparty.PrincipalStore) {
 		}
 	}
 
-	// The name defaults to the email.
+	// A missing name is never made from the email: the neutral default, so a
+	// name shown to other people cannot be an address.
 	noName := Identity()
 	noName.Name = ""
 	p, err = s.CreatePrincipal(ctx, noName)
-	if err != nil || p.Name != noName.Email {
-		t.Errorf("default name: %+v %v", p, err)
+	if err != nil || p.Name != displayname.Default {
+		t.Errorf("default name: %+v %v, want %q", p, err, displayname.Default)
 	}
 }
 

@@ -20,6 +20,8 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
+
+	"github.com/plexusone/systemforge/identity/displayname"
 )
 
 // Provider names used in User.Provider and StateData.Provider.
@@ -207,13 +209,9 @@ func FetchSystemAuthUser(ctx context.Context, cfg SystemAuthConfig, accessToken 
 		return nil, fmt.Errorf("decoding userinfo: %w", err)
 	}
 
-	name := userInfo.Name
-	if name == "" {
-		name = userInfo.PreferredUsername
-	}
-	if name == "" {
-		name = userInfo.Email
-	}
+	// The name, else the handle, never the address: a name is shown to other
+	// people.
+	name := displayname.Or(userInfo.Name, displayname.Show(userInfo.PreferredUsername))
 
 	return &User{
 		ProviderID:    userInfo.Sub,

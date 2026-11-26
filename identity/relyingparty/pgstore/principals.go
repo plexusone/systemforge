@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/identity/displayname"
 	"github.com/plexusone/systemforge/identity/relyingparty"
 )
 
@@ -97,10 +98,8 @@ func (s *PrincipalStore) LinkSubject(ctx context.Context, principalID, subject s
 // service identity. An identity without an email (a managed principal or a
 // service account) is stored without one.
 func (s *PrincipalStore) CreatePrincipal(ctx context.Context, id relyingparty.VerifiedIdentity) (*relyingparty.Principal, error) {
-	name := id.Name
-	if name == "" {
-		name = id.Email
-	}
+	// Never the address: a name is shown to other people.
+	name := displayname.Show(id.Name)
 	var email sql.NullString
 	if id.Email != "" {
 		email = sql.NullString{String: id.Email, Valid: true}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/identity/displayname"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 	"github.com/plexusone/systemforge/identity/scim"
 	"github.com/plexusone/systemforge/identity/scim/store"
@@ -116,8 +117,8 @@ func TestUserCreateRules(t *testing.T) {
 	if u.UserName != "work@example.com" {
 		t.Errorf("userName from emails = %q, want the work email", u.UserName)
 	}
-	if u.DisplayName != "work@example.com" {
-		t.Errorf("displayName fallback = %q, want the email", u.DisplayName)
+	if u.DisplayName != displayname.Default {
+		t.Errorf("displayName fallback = %q, want %q, never the email", u.DisplayName, displayname.Default)
 	}
 
 	if _, err := s.CreateUser(ctx, &scim.User{DisplayName: "No Email"}); scimStatus(t, err) != http.StatusBadRequest {

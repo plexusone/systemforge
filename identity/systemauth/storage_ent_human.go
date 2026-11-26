@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/identity/displayname"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/credential"
 	"github.com/plexusone/systemforge/identity/ent/externalidentity"
@@ -47,13 +48,11 @@ func toHumanPrincipal(p *ent.Principal) *HumanPrincipal {
 	return hp
 }
 
-// humanDisplayName falls back to the email when no display name is given,
-// since a principal requires one.
+// humanDisplayName gives a human a display name when none is given, since a
+// principal requires one: never the email, which is not the person's to
+// publish (ADR-024).
 func humanDisplayName(h *HumanPrincipal) string {
-	if h.DisplayName != "" {
-		return h.DisplayName
-	}
-	return h.Email
+	return displayname.Or(h.DisplayName, displayname.Default)
 }
 
 // createHumanRows inserts a human Principal and its Human extension inside
