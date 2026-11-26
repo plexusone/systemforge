@@ -4,13 +4,19 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.37.0](v0.37.0.md), signs people in with a one-time
-code mailed to them, so an application can launch without waiting for an
-upstream provider's app review. It adds methods to `VerificationTokenStore`,
-which is breaking for a host with its own store, and a database column to
-migrate.
+The latest release, [v0.38.0](v0.38.0.md), stops making a person's name from
+their email address: SystemAuth asks a new account for its name, and
+optionally a workspace name, before creating it, so applications receive a
+real `name` claim. It adds `SignInMethods` for hosts and fixes the sign-in
+methods page for gated deployments. It adds no breaking change and needs no
+migration.
 
-Before it, [v0.36.0](v0.36.0.md) made SystemAuth's PostgreSQL pool size
+Before it, [v0.37.0](v0.37.0.md) signed people in with a one-time code mailed
+to them, so an application can launch without waiting for an upstream
+provider's app review. It added methods to `VerificationTokenStore`, which is
+breaking for a host with its own store, and a database column to migrate.
+
+Before that, [v0.36.0](v0.36.0.md) made SystemAuth's PostgreSQL pool size
 configurable with `database.max_open_conns`, so it can match the database
 role's connection limit.
 
