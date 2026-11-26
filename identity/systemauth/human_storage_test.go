@@ -276,3 +276,38 @@ func TestFederationSyncLinksAndResolves(t *testing.T) {
 		t.Errorf("update of unlinked identity = %+v, want failed", resp)
 	}
 }
+
+func TestFederationSyncNeverNamesByAddress(t *testing.T) {
+	ctx := context.Background()
+	s := NewMemoryStorage()
+	h := NewDefaultIdentitySyncHandler(s)
+	id := uuid.New()
+	sync := func(action string, gi GlobalIdentity) {
+		t.Helper()
+		gi.ID = id
+		resp, err := h.SyncIdentity(ctx, &IdentitySyncRequest{Action: action, Identity: &gi})
+		if err != nil || resp.Status != "synced" {
+			t.Fatalf("%s: %+v %v", action, resp, err)
+		}
+	}
+	name := func(email string) string {
+		t.Helper()
+		hp, err := s.GetHumanByEmail(ctx, email)
+		if err != nil {
+			t.Fatalf("GetHumanByEmail: %v", err)
+		}
+		return hp.DisplayName
+	}
+
+	sync("create", GlobalIdentity{Email: "lee@example.com", DisplayName: "lee@example.com"})
+	if got := name("lee@example.com"); got != "Member" {
+		t.Errorf("created with an address as the name: %q, want Member", got)
+	}
+	sync("update", GlobalIdentity{Email: "lee@example.com", DisplayName: "Lee", Status: "active"})
+	for _, none := range []string{"", "lee@example.com"} {
+		sync("update", GlobalIdentity{Email: "lee@example.com", DisplayName: none, Status: "active"})
+		if got := name("lee@example.com"); got != "Lee" {
+			t.Errorf("update with name %q: %q, want the stored name kept", none, got)
+		}
+	}
+}

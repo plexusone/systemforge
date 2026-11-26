@@ -21,6 +21,7 @@ import (
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/contract/audit"
 	"github.com/plexusone/systemforge/identity/credential"
+	"github.com/plexusone/systemforge/identity/displayname"
 	"github.com/plexusone/systemforge/identity/oauthclient"
 	"github.com/plexusone/systemforge/session/ratelimit"
 )
@@ -979,7 +980,11 @@ func (p *socialSessionProvider) GetUserClaims(ctx context.Context, userID string
 				claims[EmailVerifiedAtClaim] = lp.EmailVerifiedAt.Unix()
 			}
 		case "profile":
-			claims["name"] = lp.DisplayName
+			// A stored name that is an address (an account from before names
+			// were asked for) is not released as the person's name.
+			if name := displayname.Safe(lp.DisplayName); name != "" {
+				claims["name"] = name
+			}
 			if lp.AvatarURL != "" {
 				claims["picture"] = lp.AvatarURL
 			}
