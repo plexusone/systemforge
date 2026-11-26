@@ -60,10 +60,14 @@ The same fallbacks applied to any social login whose provider gave no name.
 - Accounts created before this change keep the names they have; a person who
   signed up by email earlier may still have their address as their name.
   Changing a name is not offered yet.
-- Consumer-side fallbacks remain in the relying-party stores and in
-  `oauthclient`, which use the address when a host receives no name. SystemAuth
-  now always sends one for a new account, so they apply only to older accounts
-  and other identity providers.
+- The package `identity/displayname` is the one place a name that is missing,
+  or is an address, becomes something safe to show (`Show`, `Safe`, `Or`; the
+  neutral default is "Member"). The relying-party stores, `oauthclient`, the
+  SCIM store and SystemAuth's own directories use it, so no layer falls back to
+  the address, and a host calls it instead of writing its own guard. (The first
+  release of this ADR left the relying-party stores and `oauthclient` falling
+  back to the address; v0.39.0 replaces that.) A profile whose name field holds
+  an address is treated as having no name, and the person is asked.
 - The sign-in methods page's linked-provider list, which the sign-up wrappers
   had hidden from deployments with a gate or an age check, is read from the
   directory itself again.
