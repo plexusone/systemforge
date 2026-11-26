@@ -389,8 +389,9 @@ func (s *MemoryPrincipalStore) RecordLogin(_ context.Context, principalID string
 	if !ok {
 		return ErrPrincipalNotFound
 	}
-	if id.Name != "" {
-		p.Name = id.Name
+	// An address is not a name: keep the stored one.
+	if name := displayname.Safe(id.Name); name != "" {
+		p.Name = name
 	}
 	if id.Picture != "" {
 		p.AvatarURL = id.Picture
