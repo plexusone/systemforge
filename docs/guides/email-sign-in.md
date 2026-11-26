@@ -78,6 +78,27 @@ controls matter: a [minimum age](signup-age.md), and
 [invite-gated sign-up](invite-gated-signup.md), which applies to email exactly
 as to a provider.
 
+## Managed people
+
+Email sign-in creates ordinary accounts with no managers. A managed principal,
+such as a child a parent or teacher manages, has no email and cannot be reached
+by an email code or by a social login: sign-in by address matches only a
+**verified** email.
+
+A host that gives a managed principal an address
+(`managedprincipal.Service.AttachVerifiedEmail`) turns that address into a sign-in
+key, by email code and by social login, on purpose: management does not depend
+on the email ([ADR-009](../design/adrs/ADR-009-management-is-a-relationship.md)),
+and a child may have their own address, such as a school one. Management
+continues, and the managers keep their authority. So attach only an address the
+person controls and has proved, not one a guardian typed; SystemAuth's mailed
+code is that proof.
+
+An address on a managed principal that is **not** verified is not a sign-in key,
+but it still holds the address: a person who later signs up with it is refused as
+a conflict. A host that proxies `POST /managed-principals/` should not forward an
+arbitrary `email`.
+
 ## What to watch
 
 - `systemauth.email_code.exhausted` events: codes that used up their tries.
