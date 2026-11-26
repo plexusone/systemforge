@@ -107,7 +107,8 @@ The routes match the shared frontend auth package (`BFFClient`):
 | `GET /bff/session` | `200 {"authenticated": false}` or `{"authenticated": true, "user_id", "expires_at", "user": User, "apps"}` (`apps` only when `BFFConfig.Apps` is set) |
 | `GET /bff/api/v1/users/me` | `200 User` or `401 {"code": "UNAUTHENTICATED", "message"}` |
 | `GET /bff/auth/login?return_to=` | `302` to SystemAuth `/oauth/authorize` |
-| `GET /bff/auth/{github,google}?return_to=` | Same, with `idp_hint` so SystemAuth skips its provider chooser |
+| `GET /bff/auth/{github,google,email}?return_to=` | Same, with `idp_hint` so SystemAuth skips its provider chooser (`email` goes to the mailed-code form) |
+| `GET /bff/auth/methods` | `{"methods":[{"id","name","path"}]}`: the sign-in methods to offer, so an application builds its buttons from the deployment. They come from `BFFConfig.SignInMethods` when set, else from SystemAuth's discovery document (`sf_sign_in_methods_supported`, from v0.39.0), in SystemAuth's order and limited to what the BFF can start. Empty from an older SystemAuth |
 | `GET /bff/auth/callback` | Verifies the login, creates the session, `302` to `return_to` |
 | `POST /bff/auth/logout` | Deletes the session, revokes the SystemAuth refresh token, `204`; with `Accept: application/json`, `200` with where to end the SystemAuth login session |
 | `POST /bff/auth/login` | `501 PASSWORD_LOGIN_UNSUPPORTED` (password login is not offered) |

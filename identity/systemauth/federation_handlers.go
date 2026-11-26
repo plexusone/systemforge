@@ -10,6 +10,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/ory/fosite"
+
+	"github.com/plexusone/systemforge/identity/displayname"
 )
 
 // IdentitySyncHandler handles identity sync requests from SystemAuth.
@@ -245,7 +247,11 @@ func (h *DefaultIdentitySyncHandler) SyncIdentity(ctx context.Context, req *Iden
 	case "update":
 		return h.syncUpdate(ctx, req.Identity, false, func(hp *HumanPrincipal) {
 			hp.Email = req.Identity.Email
-			hp.DisplayName = req.Identity.DisplayName
+			// An update that carries no name, or an address, keeps the
+			// stored one.
+			if name := displayname.Safe(req.Identity.DisplayName); name != "" {
+				hp.DisplayName = name
+			}
 			hp.Active = req.Identity.Status == "active"
 		}), nil
 	case "delete":
@@ -287,7 +293,7 @@ func (h *DefaultIdentitySyncHandler) syncCreate(ctx context.Context, fi *GlobalI
 	case errors.Is(err, ErrPrincipalNotFound):
 		hp = &HumanPrincipal{
 			Email:       fi.Email,
-			DisplayName: fi.DisplayName,
+			DisplayName: displayname.Show(fi.DisplayName),
 			Active:      true,
 		}
 		if err := h.storage.CreateHuman(ctx, hp); err != nil {

@@ -319,3 +319,67 @@ func TestDisplayNameIsNeverTheEmail(t *testing.T) {
 		t.Errorf("with a handle: %q, want the handle", got)
 	}
 }
+
+func TestANameThatIsAnAddressIsNoName(t *testing.T) {
+	// Some profiles carry the address in the name field. It is treated as no
+	// name, so the person is asked, and it is never stored as the display name.
+	base := NewMemoryPrincipalDirectory()
+	dir := &nameCheckedDirectory{PrincipalDirectory: base}
+	login := ExternalLogin{Provider: "google", Subject: "g1", Email: "jane@example.com", EmailVerified: true, Name: "jane@example.com"}
+	_, err := dir.CreateFromExternal(context.Background(), login)
+	var need *nameRequiredError
+	if !errors.As(err, &need) {
+		t.Fatalf("a name that is an address: %v, want the name question", err)
+	}
+	if got := displayNameFor(login); strings.Contains(got, "@") {
+		t.Errorf("displayNameFor kept the address: %q", got)
+	}
+	login.Name = "Jane Doe"
+	if p, err := dir.CreateFromExternal(context.Background(), login); err != nil || p.DisplayName != "Jane Doe" {
+		t.Fatalf("with a real name: %+v, %v", p, err)
+	}
+}
+
+func TestHumanDisplayNameIsNeverTheEmail(t *testing.T) {
+	for _, h := range []*HumanPrincipal{
+		{Email: "a@example.com"},
+		{Email: "a@example.com", DisplayName: "a@example.com"},
+		{Email: "a@example.com", DisplayName: "   "},
+	} {
+		if got := humanDisplayName(h); strings.Contains(got, "@") || got == "" {
+			t.Errorf("humanDisplayName(%+v) = %q", h, got)
+		}
+	}
+	if got := humanDisplayName(&HumanPrincipal{DisplayName: "Ada Lovelace"}); got != "Ada Lovelace" {
+		t.Errorf("humanDisplayName kept a real name as %q", got)
+	}
+}
+
+func TestNameClaimIsNeverAnAddress(t *testing.T) {
+	// An account from before names were asked for may hold its address as its
+	// name. Applications show the name claim to other people, so it is left
+	// out; the address is still released as the email claim.
+	dir := NewMemoryPrincipalDirectory()
+	srv := newSocialTestServer(t, newFakeGitHub(t), dir)
+	ctx := context.Background()
+	for _, tc := range []struct{ email, name, want string }{
+		{"old@example.com", "old@example.com", ""},
+		{"new@example.com", "New Person", "New Person"},
+	} {
+		p, err := dir.CreateFromExternal(ctx, ExternalLogin{Provider: "github", Subject: tc.email, Email: tc.email, EmailVerified: true, Name: "Seed"})
+		if err != nil {
+			t.Fatalf("CreateFromExternal: %v", err)
+		}
+		dir.mu.Lock()
+		dir.principals[p.ID].DisplayName = tc.name
+		dir.mu.Unlock()
+		claims := srv.sessionProvider.GetUserClaims(ctx, p.ID.String(), []string{"openid", "profile", "email"})
+		got, released := claims["name"].(string)
+		if got != tc.want || released != (tc.want != "") {
+			t.Errorf("name claim for a stored name %q = %q (released %v), want %q", tc.name, got, released, tc.want)
+		}
+		if claims["email"] != tc.email {
+			t.Errorf("email claim = %v, want %s", claims["email"], tc.email)
+		}
+	}
+}

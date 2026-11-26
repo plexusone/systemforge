@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/plexusone/systemforge/identity/displayname"
 )
 
 // VerifiedIdentity is a SystemAuth identity whose ID token (and UserInfo)
@@ -351,10 +353,8 @@ func (s *MemoryPrincipalStore) CreatePrincipal(_ context.Context, id VerifiedIde
 		}
 	}
 	now := s.now()
-	name := id.Name
-	if name == "" {
-		name = id.Email
-	}
+	// Never the address: a name is shown to other people.
+	name := displayname.Show(id.Name)
 	typ := "human"
 	if id.Service {
 		typ = "service"
@@ -389,8 +389,9 @@ func (s *MemoryPrincipalStore) RecordLogin(_ context.Context, principalID string
 	if !ok {
 		return ErrPrincipalNotFound
 	}
-	if id.Name != "" {
-		p.Name = id.Name
+	// An address is not a name: keep the stored one.
+	if name := displayname.Safe(id.Name); name != "" {
+		p.Name = name
 	}
 	if id.Picture != "" {
 		p.AvatarURL = id.Picture

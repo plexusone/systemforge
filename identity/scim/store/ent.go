@@ -13,6 +13,7 @@ import (
 
 	"github.com/plexusone/systemforge/authz"
 	"github.com/plexusone/systemforge/authz/noop"
+	"github.com/plexusone/systemforge/identity/displayname"
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/approle"
 	"github.com/plexusone/systemforge/identity/ent/credential"
@@ -381,14 +382,8 @@ func (s *EntStore) CreateUser(ctx context.Context, scimUser *scim.User) (*scim.U
 		return nil, scim.ErrInvalidValue("userName or email is required")
 	}
 
-	// Extract name
-	name := scimUser.DisplayName
-	if name == "" && scimUser.Name != nil {
-		name = scimUser.Name.Formatted
-	}
-	if name == "" {
-		name = email // fallback
-	}
+	// Never the address: a name is shown to other people.
+	name := displayname.Show(scimName(scimUser))
 
 	// Determine active status
 	active := true
@@ -561,6 +556,18 @@ func (s *EntStore) UpdateUser(ctx context.Context, id string, scimUser *scim.Use
 	return s.GetUserByID(ctx, id)
 }
 
+// scimName is the name a SCIM user carries that is safe to show: its
+// displayName, else its formatted name; "" when neither is a name.
+func scimName(u *scim.User) string {
+	if name := displayname.Safe(u.DisplayName); name != "" {
+		return name
+	}
+	if u.Name != nil {
+		return displayname.Safe(u.Name.Formatted)
+	}
+	return ""
+}
+
 // updateIdentity applies the email, name and photo of scimUser to p.
 func (s *EntStore) updateIdentity(ctx context.Context, tx *ent.Tx, p *ent.Principal, scimUser *scim.User) error {
 	pu := tx.Principal.UpdateOne(p)
@@ -586,10 +593,9 @@ func (s *EntStore) updateIdentity(ctx context.Context, tx *ent.Tx, p *ent.Princi
 			}
 		}
 	}
-	if scimUser.DisplayName != "" {
-		pu.SetDisplayName(scimUser.DisplayName)
-	} else if scimUser.Name != nil && scimUser.Name.Formatted != "" {
-		pu.SetDisplayName(scimUser.Name.Formatted)
+	// An update that carries no name, or an address, keeps the stored one.
+	if name := scimName(scimUser); name != "" {
+		pu.SetDisplayName(name)
 	}
 	if url, ok := primaryPhoto(scimUser.Photos); ok {
 		hu.SetAvatarURL(url)

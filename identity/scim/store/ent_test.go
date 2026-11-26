@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/identity/displayname"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
 	"github.com/plexusone/systemforge/identity/scim"
 	"github.com/plexusone/systemforge/identity/scim/store"
@@ -95,6 +96,25 @@ func TestUserLifecycle(t *testing.T) {
 		t.Errorf("updated user = %+v", updated)
 	}
 
+	// An update that names the user by an address keeps the name; a real
+	// formatted name beside it is used.
+	for _, update := range []struct {
+		user *scim.User
+		want string
+	}{
+		{&scim.User{DisplayName: "ada.l@example.com"}, "Ada Lovelace"},
+		{&scim.User{Name: &scim.Name{Formatted: "ada.l@example.com"}}, "Ada Lovelace"},
+		{&scim.User{DisplayName: "ada.l@example.com", Name: &scim.Name{Formatted: "Ada King"}}, "Ada King"},
+	} {
+		kept, err := s.UpdateUser(ctx, u.ID, update.user)
+		if err != nil {
+			t.Fatalf("UpdateUser: %v", err)
+		}
+		if kept.DisplayName != update.want {
+			t.Errorf("displayName after %+v = %q, want %q", update.user, kept.DisplayName, update.want)
+		}
+	}
+
 	if err := s.DeleteUser(ctx, u.ID); err != nil {
 		t.Fatalf("DeleteUser: %v", err)
 	}
@@ -116,8 +136,8 @@ func TestUserCreateRules(t *testing.T) {
 	if u.UserName != "work@example.com" {
 		t.Errorf("userName from emails = %q, want the work email", u.UserName)
 	}
-	if u.DisplayName != "work@example.com" {
-		t.Errorf("displayName fallback = %q, want the email", u.DisplayName)
+	if u.DisplayName != displayname.Default {
+		t.Errorf("displayName fallback = %q, want %q, never the email", u.DisplayName, displayname.Default)
 	}
 
 	if _, err := s.CreateUser(ctx, &scim.User{DisplayName: "No Email"}); scimStatus(t, err) != http.StatusBadRequest {

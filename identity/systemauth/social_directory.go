@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/plexusone/systemforge/identity/displayname"
 	"github.com/plexusone/systemforge/identity/oauthclient"
 )
 
@@ -374,21 +375,12 @@ var (
 )
 
 func displayNameFor(login ExternalLogin) string {
-	if login.Name != "" {
-		return login.Name
-	}
-	if login.Username != "" {
-		return login.Username
-	}
 	// Never the email address: a name is shown to other people, and an
 	// address is not the person's to publish. Sign-up asks for a name, so
-	// this is reached only by a directory used without that step.
-	return defaultDisplayName
+	// the neutral default is reached only by a directory used without that
+	// step.
+	return displayname.Or(login.Name, displayname.Or(login.Username, displayname.Default))
 }
-
-// defaultDisplayName names an account whose person gave no name and has no
-// handle. It reveals nothing about them.
-const defaultDisplayName = "Member"
 
 // consumerGoogleDomains are the domains whose addresses only Google issues.
 var consumerGoogleDomains = map[string]bool{"gmail.com": true, "googlemail.com": true}

@@ -34,6 +34,9 @@ type fakeSystemAuth struct {
 	key *rsa.PrivateKey
 	kid string
 
+	// signInMethods, when set, are published in the discovery document.
+	signInMethods []string
+
 	mu      sync.Mutex
 	codes   map[string]fakeCode
 	refresh map[string]bool // refresh token -> active
@@ -68,14 +71,18 @@ func newFakeSystemAuth(t *testing.T) *fakeSystemAuth {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
-		f.json(w, http.StatusOK, map[string]any{
+		doc := map[string]any{
 			"issuer":                 f.srv.URL,
 			"authorization_endpoint": f.srv.URL + "/oauth/authorize",
 			"token_endpoint":         f.srv.URL + "/oauth/token",
 			"userinfo_endpoint":      f.srv.URL + "/oauth/userinfo",
 			"jwks_uri":               f.srv.URL + "/.well-known/jwks.json",
 			"revocation_endpoint":    f.srv.URL + "/oauth/revoke",
-		})
+		}
+		if f.signInMethods != nil {
+			doc["sf_sign_in_methods_supported"] = f.signInMethods
+		}
+		f.json(w, http.StatusOK, doc)
 	})
 	mux.HandleFunc("GET /.well-known/jwks.json", func(w http.ResponseWriter, _ *http.Request) {
 		f.mu.Lock()

@@ -40,3 +40,24 @@ func TestSignInMethods(t *testing.T) {
 		t.Errorf("server without browser sign-in = %v, want nil", got)
 	}
 }
+
+func TestDiscoveryPublishesTheSignInMethods(t *testing.T) {
+	// A relying party builds its buttons from this, so it must match what the
+	// server's sign-in page offers.
+	email, _ := newEmailLoginServer(t, nil, nil, nil)
+	if got := strings.Join(email.OpenIDConfiguration().SignInMethodsSupported, ","); got != "email" {
+		t.Errorf("email-only discovery = %q, want email", got)
+	}
+	f := newFakeGitHub(t)
+	social, _ := newMailSocialTestServer(t, f, NewMemoryPrincipalDirectory(), nil)
+	if got := strings.Join(social.OpenIDConfiguration().SignInMethodsSupported, ","); got != "github" {
+		t.Errorf("github discovery = %q, want github", got)
+	}
+	none, err := NewEmbedded(Config{Issuer: testIssuer})
+	if err != nil {
+		t.Fatalf("NewEmbedded: %v", err)
+	}
+	if got := none.OpenIDConfiguration().SignInMethodsSupported; got != nil {
+		t.Errorf("a server without browser sign-in publishes %v, want none", got)
+	}
+}

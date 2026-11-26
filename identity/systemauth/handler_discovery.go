@@ -54,6 +54,12 @@ type OpenIDConfiguration struct {
 	ClaimsSupported                   []string `json:"claims_supported,omitempty"`
 	CodeChallengeMethodsSupported     []string `json:"code_challenge_methods_supported,omitempty"`
 	DPoPSigningAlgValuesSupported     []string `json:"dpop_signing_alg_values_supported,omitempty"`
+	// SignInMethodsSupported lists the sign-in methods the server offers
+	// people (github, google, email), in the order its sign-in page lists
+	// them. It is a SystemForge extension of the discovery document, so a
+	// relying party builds its buttons from the deployment instead of listing
+	// providers by hand. Absent when the server has no browser sign-in.
+	SignInMethodsSupported []string `json:"sf_sign_in_methods_supported,omitempty"`
 }
 
 // OpenIDConfigInput is the input for the discovery endpoint (no params).
@@ -135,6 +141,7 @@ func (s *Server) OpenIDConfiguration() OpenIDConfiguration {
 	if s.jwtBearerEnabled() {
 		config.GrantTypesSupported = append(config.GrantTypesSupported, GrantTypeJWTBearer)
 	}
+	config.SignInMethodsSupported = s.SignInMethods()
 
 	return config
 }

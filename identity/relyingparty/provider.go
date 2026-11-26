@@ -50,21 +50,37 @@ const maxDocumentSize = 1 << 20
 // Discover fetches {issuer}/.well-known/openid-configuration and checks
 // that the advertised issuer matches.
 func Discover(ctx context.Context, issuer string, httpClient *http.Client) (*Metadata, error) {
+	md, _, err := discover(ctx, issuer, httpClient)
+	return md, err
+}
+
+// discoveryDocument is the discovery document as the client reads it: the
+// metadata, and the sign-in methods SystemAuth publishes (a SystemForge
+// extension, from v0.39.0). The methods stay out of Metadata so that struct
+// remains comparable for hosts that compare it.
+type discoveryDocument struct {
+	Metadata
+	SignInMethods []string `json:"sf_sign_in_methods_supported"`
+}
+
+// discover is Discover that also returns the published sign-in methods.
+func discover(ctx context.Context, issuer string, httpClient *http.Client) (*Metadata, []string, error) {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
 	issuer = strings.TrimRight(issuer, "/")
-	var md Metadata
-	if err := getJSON(ctx, httpClient, issuer+"/.well-known/openid-configuration", &md); err != nil {
-		return nil, fmt.Errorf("relyingparty: discovery: %w", err)
+	var doc discoveryDocument
+	if err := getJSON(ctx, httpClient, issuer+"/.well-known/openid-configuration", &doc); err != nil {
+		return nil, nil, fmt.Errorf("relyingparty: discovery: %w", err)
 	}
+	md := doc.Metadata
 	if strings.TrimRight(md.Issuer, "/") != issuer {
-		return nil, fmt.Errorf("relyingparty: discovery issuer %q does not match %q", md.Issuer, issuer)
+		return nil, nil, fmt.Errorf("relyingparty: discovery issuer %q does not match %q", md.Issuer, issuer)
 	}
 	if md.AuthorizationEndpoint == "" || md.TokenEndpoint == "" || md.JWKSURI == "" {
-		return nil, errors.New("relyingparty: discovery document is missing required endpoints")
+		return nil, nil, errors.New("relyingparty: discovery document is missing required endpoints")
 	}
-	return &md, nil
+	return &md, doc.SignInMethods, nil
 }
 
 func getJSON(ctx context.Context, httpClient *http.Client, url string, v any) (err error) {

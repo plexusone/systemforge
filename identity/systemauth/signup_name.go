@@ -13,6 +13,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/plexusone/systemforge/identity/displayname"
 )
 
 // The sign-up name step (ADR-024). A name is shown to other people, so it is
@@ -57,7 +59,9 @@ type nameCheckedDirectory struct {
 
 // CreateFromExternal implements PrincipalDirectory.
 func (d *nameCheckedDirectory) CreateFromExternal(ctx context.Context, login ExternalLogin) (*HumanPrincipal, error) {
-	if strings.TrimSpace(login.Name) == "" {
+	// A name that is an email address is no name: some profiles carry the
+	// address in the name field.
+	if displayname.Safe(login.Name) == "" {
 		return nil, &nameRequiredError{login: login}
 	}
 	return d.PrincipalDirectory.CreateFromExternal(ctx, login)
