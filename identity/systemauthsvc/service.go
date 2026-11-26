@@ -80,6 +80,14 @@ type Options struct {
 	// already exist (run Migrate or "systemauth migrate" first).
 	Migrate bool
 
+	// SkipSchemaCheck starts without checking that the database has every
+	// table and column of this version. By default, when Migrate is false, New
+	// compares the database with the schema and refuses to start with
+	// ErrSchemaBehind if the migration has not been run, since a missing
+	// column otherwise fails on the first request that uses it. Skip the check
+	// only when the schema is managed by other means.
+	SkipSchemaCheck bool
+
 	// Vocabularies declares the application roles of the products hosted on
 	// this SystemAuth (ADR-007). With a database, New emits the orgs claim
 	// (organizations, the principal's role in each, and per-application
@@ -343,6 +351,11 @@ func New(ctx context.Context, cfg *Config, opts Options) (*Service, error) {
 		if opts.Migrate {
 			logger.Info("running database migrations")
 			if err := s.Migrate(ctx); err != nil {
+				s.closeQuietly()
+				return nil, err
+			}
+		} else if !opts.SkipSchemaCheck {
+			if err := CheckSchema(ctx, s.client, s.dialect); err != nil {
 				s.closeQuietly()
 				return nil, err
 			}
