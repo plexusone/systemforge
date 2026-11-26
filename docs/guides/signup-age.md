@@ -18,7 +18,9 @@ and refuses anyone younger, keeping nothing about them.
    about them has been kept. The same browser is not asked again for a day.
 
 Signing in with an [emailed code](email-sign-in.md) asks the same question
-before it creates an account. After the answer, the person asks for a new
+before it creates an account; the request for the person's name, which a new
+account gets next, comes after it, so someone who will be refused is not asked
+for a name. After the answer, the person asks for a new
 code, since nothing about them was kept.
 
 People who already have an account never see the question. Neither do
