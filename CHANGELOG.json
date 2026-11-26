@@ -61,7 +61,7 @@
       ],
       "upgradeGuide": [
         {
-          "description": "There is no migration: the `sign_up_name` token purpose is a plain value of an existing column, and nothing needs enabling"
+          "description": "From v0.37.0 there is no migration: the `sign_up_name` token purpose is a plain value of an existing column, and nothing needs enabling; from an earlier version run the schema migration first (`systemauth migrate` or `systemauthsvc.Migrate`, which works on PostgreSQL and SQLite and creates `sf_verification_tokens` with its `attempts` column; `migrations/0013_verification_token_attempts.sql` is PostgreSQL-only and only for a database that already has that table and every earlier migration), because v0.38.0 parks every sign-up that needs a name in the verification token store, with or without mail"
         },
         {
           "description": "A host with its own name prompt for email accounts can drop it for new accounts and keep a guard that never shows or prints a name that is an email address, since accounts created earlier keep the names they have; build sign-in buttons from `SignInMethods()` instead of listing providers by hand"
@@ -135,7 +135,7 @@
       ],
       "upgradeGuide": [
         {
-          "description": "Run `systemauth migrate` (or start with `--migrate`), or apply `migrations/0013_verification_token_attempts.sql`, which adds `sf_verification_tokens.attempts`"
+          "description": "Run `systemauth migrate` (or start with `--migrate`), which works on PostgreSQL and SQLite and is the route for a database from before `sf_verification_tokens` existed; or, on a PostgreSQL database that already has that table and every earlier migration, apply `migrations/0013_verification_token_attempts.sql`, which adds `sf_verification_tokens.attempts`"
         },
         {
           "description": "A host with its own `VerificationTokenStore` or `PrincipalEmailChanger` implements the new methods and the unlinking; the conformance suite checks the store"

@@ -184,6 +184,12 @@ func (s *Service) RedeemClaim(ctx context.Context, code string, claimantID uuid.
 // verified email is what allows it to end. The actor needs manage_account,
 // which guardians hold.
 //
+// The address becomes a sign-in key: whoever controls the mailbox can sign in
+// as the principal by an emailed code, or by a social login whose provider is
+// authoritative for the address (Google for its own domains; GitHub is not),
+// while management continues. Attach only an address the person controls and has proved, never
+// one a guardian typed.
+//
 // Proving control of the address is the caller's job until SystemAuth's
 // email verification (ADR-003) drives this step. A principal created with
 // an unverified email is verified with VerifyEmail instead.
