@@ -127,6 +127,19 @@ func TestEmailSignInThroughRelyingParty(t *testing.T) {
 		return html.UnescapeString(m[1])
 	}
 
+	// 0. The app builds its buttons from the deployment: SystemAuth publishes
+	// its methods in discovery and the BFF lists them, with no provider list
+	// written in the app.
+	var offered struct {
+		Methods []relyingparty.SignInMethod `json:"methods"`
+	}
+	if err := json.Unmarshal([]byte(body(get(appSrv.URL+"/bff/auth/methods"))), &offered); err != nil {
+		t.Fatalf("methods: %v", err)
+	}
+	if len(offered.Methods) != 1 || offered.Methods[0].ID != "email" || offered.Methods[0].Path != "/bff/auth/email" {
+		t.Fatalf("the app is offered %+v, want email only", offered.Methods)
+	}
+
 	// 1. The app's "continue with email" link goes through the BFF to
 	// SystemAuth with the hint, and SystemAuth shows its address form.
 	resp := get(appSrv.URL + "/bff/auth/email?return_to=%2Fhome")
