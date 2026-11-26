@@ -1989,7 +1989,7 @@ var (
 	SfVerificationTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "token_hash", Type: field.TypeString, Unique: true},
-		{Name: "purpose", Type: field.TypeEnum, Enums: []string{"verify_email", "email_change", "sign_in_code"}},
+		{Name: "purpose", Type: field.TypeEnum, Enums: []string{"verify_email", "email_change", "sign_in_code", "sign_up_name"}},
 		{Name: "email", Type: field.TypeString},
 		{Name: "principal_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "binding", Type: field.TypeString},

@@ -29,11 +29,15 @@ const (
 	// one-time code sign-in (ADR-023). It is the one purpose whose secret
 	// is short enough to guess, so it is used through RecordAttempt.
 	PurposeSignInCode VerificationPurpose = "sign_in_code"
+	// PurposeSignUpName holds a sign-up whose account waits for the person's
+	// name: the login is proven and parked, bound to the browser, until the
+	// name form is answered.
+	PurposeSignUpName VerificationPurpose = "sign_up_name"
 )
 
 // Valid reports whether p is a known purpose.
 func (p VerificationPurpose) Valid() bool {
-	return p == PurposeVerifyEmail || p == PurposeEmailChange || p == PurposeSignInCode
+	return p == PurposeVerifyEmail || p == PurposeEmailChange || p == PurposeSignInCode || p == PurposeSignUpName
 }
 
 // DefaultVerificationTokenTTL is how long a verification link works when

@@ -530,13 +530,22 @@ func (s *Server) setupMail() error {
 		return err
 	}
 	s.mail = m
-	if s.verificationTokens == nil {
-		if es, ok := s.storage.(*EntStorage); ok {
-			s.verificationTokens = NewEntVerificationTokenStore(es.db)
-		} else {
-			s.logger.Warn("verification tokens kept in memory; links stop working on restart and on other instances")
-			s.verificationTokens = NewMemoryVerificationTokenStore()
-		}
-	}
+	s.ensureVerificationTokens()
 	return nil
+}
+
+// ensureVerificationTokens gives the server a verification token store when
+// it has none: the database with Ent storage, otherwise memory (one
+// instance). Mail links, email sign-in codes and sign-ups waiting for a name
+// all keep their tokens in it.
+func (s *Server) ensureVerificationTokens() {
+	if s.verificationTokens != nil {
+		return
+	}
+	if es, ok := s.storage.(*EntStorage); ok {
+		s.verificationTokens = NewEntVerificationTokenStore(es.db)
+		return
+	}
+	s.logger.Warn("verification tokens kept in memory; links, codes and sign-ups waiting for a name stop working on restart and on other instances")
+	s.verificationTokens = NewMemoryVerificationTokenStore()
 }
