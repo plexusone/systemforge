@@ -62,16 +62,40 @@ type pendingSignIn struct {
 	AvatarURL    string `json:"avatar_url,omitempty"`
 	RedirectURL  string `json:"redirect_url,omitempty"`
 	AgeConfirmed bool   `json:"age_confirmed,omitempty"`
+	// The proof of the address, kept for a sign-up parked for its name.
+	EmailVerified      bool `json:"email_verified,omitempty"`
+	EmailAuthoritative bool `json:"email_authoritative,omitempty"`
+	EmailProven        bool `json:"email_proven,omitempty"`
 }
 
 func (p pendingSignIn) login() ExternalLogin {
 	return ExternalLogin{
-		Provider:  p.Provider,
-		Subject:   p.Subject,
-		Email:     p.Email,
-		Name:      p.Name,
-		Username:  p.Username,
-		AvatarURL: p.AvatarURL,
+		Provider:           p.Provider,
+		Subject:            p.Subject,
+		Email:              p.Email,
+		EmailVerified:      p.EmailVerified,
+		EmailAuthoritative: p.EmailAuthoritative,
+		EmailProven:        p.EmailProven,
+		Name:               p.Name,
+		Username:           p.Username,
+		AvatarURL:          p.AvatarURL,
+	}
+}
+
+// pendingFromLogin is the pending sign-in that resumes login.
+func pendingFromLogin(login ExternalLogin, redirectURL string, ageAnswered bool) pendingSignIn {
+	return pendingSignIn{
+		Provider:           login.Provider,
+		Subject:            login.Subject,
+		Email:              login.Email,
+		Name:               login.Name,
+		Username:           login.Username,
+		AvatarURL:          login.AvatarURL,
+		RedirectURL:        redirectURL,
+		AgeConfirmed:       ageAnswered,
+		EmailVerified:      login.EmailVerified,
+		EmailAuthoritative: login.EmailAuthoritative,
+		EmailProven:        login.EmailProven,
 	}
 }
 

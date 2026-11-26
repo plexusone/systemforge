@@ -84,6 +84,7 @@ const (
 	PurposeVerifyEmail Purpose = "verify_email"
 	PurposeEmailChange Purpose = "email_change"
 	PurposeSignInCode  Purpose = "sign_in_code"
+	PurposeSignUpName  Purpose = "sign_up_name"
 )
 
 func (pu Purpose) String() string {
@@ -93,7 +94,7 @@ func (pu Purpose) String() string {
 // PurposeValidator is a validator for the "purpose" field enum values. It is called by the builders before save.
 func PurposeValidator(pu Purpose) error {
 	switch pu {
-	case PurposeVerifyEmail, PurposeEmailChange, PurposeSignInCode:
+	case PurposeVerifyEmail, PurposeEmailChange, PurposeSignInCode, PurposeSignUpName:
 		return nil
 	default:
 		return fmt.Errorf("verificationtoken: invalid enum value for purpose field: %q", pu)

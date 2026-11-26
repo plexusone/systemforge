@@ -545,6 +545,29 @@ func (c *EmailLoginConfig) validate() error {
 	return nil
 }
 
+// SignInMethods lists the sign-in methods this configuration offers, in the
+// order SystemAuth lists them: GitHub, Google, then email. A host builds its
+// sign-in buttons from it, so a method turned on in the configuration shows
+// up without a change to the host. It is nil for a nil configuration. A
+// server also offers the methods of connectors passed in code; Server's
+// SignInMethods includes those.
+func (c *SocialLoginConfig) SignInMethods() []string {
+	if c == nil {
+		return nil
+	}
+	var methods []string
+	if c.GitHub != nil {
+		methods = append(methods, "github")
+	}
+	if c.Google != nil {
+		methods = append(methods, "google")
+	}
+	if c.Email != nil {
+		methods = append(methods, emailLoginProvider)
+	}
+	return methods
+}
+
 // SocialProviderConfig holds upstream OAuth client credentials.
 //
 //nolint:gosec // G117: Field names are OAuth 2.0 spec-compliant, not actual secrets

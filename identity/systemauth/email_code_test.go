@@ -71,8 +71,37 @@ func lastCode(t *testing.T, sender *memsender.Sender) string {
 	return m[1]
 }
 
-func submitCode(s *Server, cookie *http.Cookie, code string) *httptest.ResponseRecorder {
+// submitCodeRaw enters code and returns the answer as it is, which for a new
+// account is the redirect to the name form.
+func submitCodeRaw(s *Server, cookie *http.Cookie, code string) *httptest.ResponseRecorder {
 	return postIssuerForm(s, EmailCodePath, url.Values{"code": {code}, "csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie)
+}
+
+// submitCode enters code and, when the account is new and SystemAuth asks for
+// a name, answers the form, so a test about the code sees the sign-in finish.
+func submitCode(s *Server, cookie *http.Cookie, code string) *httptest.ResponseRecorder {
+	w := submitCodeRaw(s, cookie, code)
+	if w.Code == http.StatusSeeOther && w.Header().Get("Location") == SignupNamePath {
+		return answerName(s, w, "Dev Person", "")
+	}
+	return w
+}
+
+// answerName answers the name form that w redirected to.
+func answerName(s *Server, w *httptest.ResponseRecorder, name, org string) *httptest.ResponseRecorder {
+	nameCookie := findCookieIn(w.Result(), signupNameCookie)
+	return postIssuerForm(s, SignupNamePath, url.Values{
+		"name": {name}, "organization_name": {org}, "csrf_token": {signupNameCSRF(nameCookie.Value)},
+	}, nameCookie)
+}
+
+func findCookieIn(resp *http.Response, name string) *http.Cookie {
+	for _, c := range resp.Cookies() {
+		if c.Name == name {
+			return c
+		}
+	}
+	return nil
 }
 
 func wrongCode(code string) string {
@@ -113,17 +142,25 @@ func TestEmailSignInCreatesAccountAndSession(t *testing.T) {
 		t.Fatal("an account exists before the code was entered")
 	}
 
-	// People type spaces and hyphens in a code.
-	w = submitCode(s, cookie, code[:3]+" - "+code[3:])
-	if w.Code != http.StatusFound || w.Header().Get("Location") != emailTestReturn {
+	// People type spaces and hyphens in a code. A new account is asked for a
+	// name before it is created.
+	w = submitCodeRaw(s, cookie, code[:3]+" - "+code[3:])
+	if w.Code != http.StatusSeeOther || w.Header().Get("Location") != SignupNamePath {
 		t.Fatalf("submit: %d location %q: %s", w.Code, w.Header().Get("Location"), w.Body.String())
-	}
-	session := findCookie(t, w.Result(), LoginCookieName)
-	if session == nil || session.Value == "" {
-		t.Fatal("no session cookie after a correct code")
 	}
 	if c := findCookie(t, w.Result(), emailCodeCookie); c == nil || c.MaxAge >= 0 {
 		t.Errorf("pending cookie not cleared: %+v", c)
+	}
+	if _, err := dir.FindByExternalIdentity(context.Background(), emailLoginProvider, "jane.doe@example.com"); err == nil {
+		t.Fatal("an account exists before the name was given")
+	}
+	w = answerName(s, w, "Jane Doe", "")
+	if w.Code != http.StatusFound || w.Header().Get("Location") != emailTestReturn {
+		t.Fatalf("name: %d location %q: %s", w.Code, w.Header().Get("Location"), w.Body.String())
+	}
+	session := findCookie(t, w.Result(), LoginCookieName)
+	if session == nil || session.Value == "" {
+		t.Fatal("no session cookie after the name")
 	}
 	p, err := dir.FindByExternalIdentity(context.Background(), emailLoginProvider, "jane.doe@example.com")
 	if err != nil || p.Email != "jane.doe@example.com" || !p.Active {
@@ -821,7 +858,7 @@ func TestEmailSignInEntryAndResendRacing(t *testing.T) {
 		wg.Wait()
 
 		switch entered.Code {
-		case http.StatusFound:
+		case http.StatusSeeOther: // the code was right: a new account is asked for its name
 			signedIn++
 		case http.StatusBadRequest:
 			refused++
@@ -834,7 +871,7 @@ func TestEmailSignInEntryAndResendRacing(t *testing.T) {
 			if second == first {
 				continue // the draws repeated: nothing to tell apart
 			}
-			if w := postFrom(s, addr, EmailCodePath, url.Values{"code": {second}, "csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie); w.Code != http.StatusFound {
+			if w := postFrom(s, addr, EmailCodePath, url.Values{"code": {second}, "csrf_token": {emailCodeCSRF(cookie.Value)}}, cookie); w.Code != http.StatusSeeOther {
 				t.Fatalf("iteration %d: the replacement was lost to a refused entry: %d", i, w.Code)
 			}
 		default:

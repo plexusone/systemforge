@@ -46,6 +46,9 @@ type ExternalLogin struct {
 	// Username is the provider's handle for the person (the GitHub login),
 	// when it has one. It seeds the personal organization's slug.
 	Username string
+	// OrganizationName is the name the person gave their personal
+	// organization at sign-up, when they were asked. Empty uses Name.
+	OrganizationName string
 	// AvatarURL is the profile picture URL.
 	AvatarURL string
 }
@@ -374,11 +377,18 @@ func displayNameFor(login ExternalLogin) string {
 	if login.Name != "" {
 		return login.Name
 	}
-	if login.Email != "" {
-		return login.Email
+	if login.Username != "" {
+		return login.Username
 	}
-	return login.Provider + ":" + login.Subject
+	// Never the email address: a name is shown to other people, and an
+	// address is not the person's to publish. Sign-up asks for a name, so
+	// this is reached only by a directory used without that step.
+	return defaultDisplayName
 }
+
+// defaultDisplayName names an account whose person gave no name and has no
+// handle. It reveals nothing about them.
+const defaultDisplayName = "Member"
 
 // consumerGoogleDomains are the domains whose addresses only Google issues.
 var consumerGoogleDomains = map[string]bool{"gmail.com": true, "googlemail.com": true}

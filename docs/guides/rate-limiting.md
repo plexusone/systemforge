@@ -149,6 +149,7 @@ They use the same storage through `ratelimit.Check`, or `Exhausted` and
 | Tokens the JWT-bearer grant issues, per service account | 60 a minute |
 | Social login start, and separately the callback, per address | 30 a minute |
 | Email sign-in: the address form, a code request and a resend, per address | 30 a minute each |
+| Sign-up name form, shown and answered, per address | 30 a minute each |
 | Email sign-in: entries of a code, per address | 20 a minute (`DefaultEmailCodeSubmitLimit`) |
 | Login-token exchange, per address and per registered client | 60 and 600 a minute |
 | Sign-up waitlist, per address and per submitted email | 20 a minute, 5 an hour |

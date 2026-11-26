@@ -1,6 +1,6 @@
 # ADR-023: Email One-Time Code Sign-In in SystemAuth
 
-**Status:** Proposed
+**Status:** Accepted
 **Deciders:** @grokify
 **Relates to:** ADR-002 (centralized social login), ADR-003 (verified email via omnimail)
 

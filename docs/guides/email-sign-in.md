@@ -69,6 +69,10 @@ the code; it receives the verified address afterward, as for any provider.
 
 ## 5. Decide who may sign up
 
+A new account is asked for its name, and optionally a workspace name, before
+it is created, so every application gets a real `name` and none needs its own
+prompt. Nothing is taken from the address.
+
 Email sign-in creates accounts for addresses nobody has seen, so the sign-up
 controls matter: a [minimum age](signup-age.md), and
 [invite-gated sign-up](invite-gated-signup.md), which applies to email exactly

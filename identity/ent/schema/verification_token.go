@@ -37,7 +37,7 @@ func (VerificationToken) Fields() []ent.Field {
 			Comment("Hex SHA-256 of the verification token; the token itself is never stored"),
 
 		field.Enum("purpose").
-			Values("verify_email", "email_change", "sign_in_code").
+			Values("verify_email", "email_change", "sign_in_code", "sign_up_name").
 			Immutable().
 			Comment("What the token may be used for; a token is never accepted for another purpose"),
 

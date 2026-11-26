@@ -114,7 +114,7 @@ func (sl *socialLogin) handleSignInMethods(w http.ResponseWriter, r *http.Reques
 		email = p.Email
 	}
 	var linked []string
-	if lister, ok := sl.directory.(LinkedProviderLister); ok {
+	if lister, ok := sl.baseDirectory.(LinkedProviderLister); ok {
 		linked, err = lister.LinkedProviders(ctx, sess.PrincipalID)
 		if err != nil {
 			LoggerFromContext(ctx).Error("listing linked sign-in methods", "error", err)

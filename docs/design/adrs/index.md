@@ -29,7 +29,8 @@ under `docs/specs/` and execute these decisions.
 | [ADR-020](ADR-020-customer-authorized-support-access.md) | Customer-Authorized Support Access | Proposed |
 | [ADR-021](ADR-021-billing-in-the-organization-console.md) | Billing in the Organization Console | Proposed |
 | [ADR-022](ADR-022-plans-set-by-the-operator.md) | Plans Set by the Operator | Proposed |
-| [ADR-023](ADR-023-email-code-sign-in.md) | Email One-Time Code Sign-In in SystemAuth | Proposed |
+| [ADR-023](ADR-023-email-code-sign-in.md) | Email One-Time Code Sign-In in SystemAuth | Accepted |
+| [ADR-024](ADR-024-names-are-supplied-not-derived.md) | Names Are Supplied, Not Derived from the Email Address | Accepted |
 
 ## Statuses
 

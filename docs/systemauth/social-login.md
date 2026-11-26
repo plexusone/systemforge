@@ -18,6 +18,7 @@ endpoints:
 |-------|---------|
 | `GET /login?return_to=...` | The sign-in page: a link per provider, waiting for the person to choose, even with one provider. With `auto_select_single_provider`, redirects straight to the only provider. |
 | `GET /login/email?return_to=...` and the routes under it | With [email sign-in](email-sign-in.md): the address form, the code page and resend. The chooser lists **Email** beside the providers, and `idp_hint=email` goes straight to the form. |
+| `GET /signup/name`, `POST /signup/name` | Asks a person who is about to get an account, and gave no name, for their name and an optional workspace name. Nothing is made from their email address. |
 | `GET /login/{provider}?return_to=...` | Starts the upstream authorization-code flow (`github` or `google`). |
 | `GET /account/sign-in-methods?return_to=...` | A signed-in person's page: their account's email, the sign-in methods linked to it, a button to link each other provider, and a link back to the validated `return_to` (see [Linking sign-in methods](#linking-sign-in-methods)). |
 | `GET /login/{provider}/callback` | Upstream callback. Resolves the principal, sets the `__Host-sf_login` session, and redirects to `return_to`. |

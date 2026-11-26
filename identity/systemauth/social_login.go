@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -125,6 +126,10 @@ type socialLogin struct {
 	states     oauthclient.StateStore
 	sessions   LoginSessionStore
 	directory  PrincipalDirectory
+	// baseDirectory is the directory before the sign-up wrappers (name, age
+	// and gate), which expose only PrincipalDirectory: optional interfaces of
+	// the directory, such as LinkedProviderLister, are asked of this one.
+	baseDirectory PrincipalDirectory
 	// signupDenied is where a refused sign-up is redirected; nil answers 403
 	// unless a waitlist is served.
 	signupDenied *url.URL
@@ -183,6 +188,9 @@ type socialLogin struct {
 
 func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 	issuer := strings.TrimRight(s.config.Issuer, "/")
+	// Sign-ups waiting for a name keep their state in the verification token
+	// store, which a deployment without mail has not built yet.
+	s.ensureVerificationTokens()
 
 	redirects, err := newRedirectPolicy(s.config.Issuer, cfg)
 	if err != nil {
@@ -339,6 +347,10 @@ func newSocialLogin(s *Server, cfg *SocialLoginConfig) (*socialLogin, error) {
 			sl.waitlistRates = s.rates
 		}
 	}
+	sl.baseDirectory = sl.directory
+	// Innermost of the sign-up wrappers, so an uninvited or underage login
+	// is refused before it is asked for a name.
+	sl.directory = &nameCheckedDirectory{PrincipalDirectory: sl.directory}
 	if err := validateSignupMinimumAge(cfg.SignupMinimumAge); err != nil {
 		return nil, err
 	}
@@ -368,6 +380,8 @@ func (sl *socialLogin) registerRoutes(r chi.Router) {
 		if sl.signupCodes != nil {
 			r.Get(SignupPath, sl.handleSignupPage)
 		}
+		r.Get(SignupNamePath, sl.handleSignupNamePage)
+		r.Post(SignupNamePath, sl.handleSignupNameSubmit)
 		if sl.email != nil {
 			r.Get(EmailLoginPath, sl.handleEmailLoginPage)
 			r.Post(EmailLoginPath, sl.handleEmailLoginRequest)
@@ -682,6 +696,7 @@ func (sl *socialLogin) handleCallback(w http.ResponseWriter, r *http.Request) {
 func (sl *socialLogin) completeSignIn(ctx context.Context, w http.ResponseWriter, r *http.Request, provider, redirectURL string, p *HumanPrincipal, err error) {
 	logger := LoggerFromContext(ctx)
 	if err != nil {
+		var needsName *nameRequiredError
 		status, msg := http.StatusInternalServerError, "login failed"
 		if reason := signInRefusalReason(err); reason != "" {
 			sl.signInRefused(ctx, provider, "", reason)
@@ -693,6 +708,9 @@ func (sl *socialLogin) completeSignIn(ctx context.Context, w http.ResponseWriter
 			status, msg = http.StatusConflict, "an account with this email already exists; sign in the way you signed in before"
 		case errors.Is(err, ErrPrincipalInactive):
 			status, msg = http.StatusForbidden, "account is disabled"
+		case errors.As(err, &needsName):
+			sl.askName(ctx, w, r, needsName.login, redirectURL)
+			return
 		case errors.Is(err, errSignupAgeRequired):
 			target, rErr := sl.redirects.resolve(redirectURL)
 			if rErr != nil {
@@ -792,6 +810,21 @@ func (sl *socialLogin) currentSession(r *http.Request) (*LoginSession, error) {
 		return nil, ErrLoginSessionNotFound
 	}
 	return &sess, nil
+}
+
+// SignInMethods lists the methods the server offers people, in the order its
+// sign-in page lists them: the social providers by name, then email. It
+// includes connectors passed in code as well as those in the configuration,
+// and is nil without browser sign-in.
+func (s *Server) SignInMethods() []string {
+	if s.social == nil {
+		return nil
+	}
+	methods := slices.Clone(s.social.providers)
+	if s.social.email != nil {
+		methods = append(methods, emailLoginProvider)
+	}
+	return methods
 }
 
 // CurrentLoginSession returns the SystemAuth login session carried by r's

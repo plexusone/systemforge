@@ -51,7 +51,7 @@ func (sl *socialLogin) signedOut(ctx context.Context, sess LoginSession) {
 // refused but continues with the sign-up age question.
 func signInRefusalReason(err error) string {
 	switch {
-	case errors.Is(err, errSignupAgeRequired):
+	case errors.Is(err, errSignupAgeRequired), errors.Is(err, errSignupNameRequired):
 		return ""
 	case errors.Is(err, ErrEmailNotVerified):
 		return "email_not_verified"
