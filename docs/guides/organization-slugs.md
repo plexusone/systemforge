@@ -14,10 +14,13 @@ A slug matches `^[a-z][a-z0-9-]*[a-z0-9]$` and is 3 to 63 characters
 cooling-off slug. `GenerateSlug(name)` slugifies a name and appends `-1` to
 `-100`, then a UUID fragment, until one is free.
 
-Social login derives the personal slug from the provider: the GitHub
-username, the Google email local part, otherwise the username or local
-part; collisions take `-1` to `-100` and then a random suffix. A managed
-principal's slug is never taken from an email (`signup.SlugForManaged`).
+Social login takes the personal slug from the provider's handle (the GitHub
+username) when it has one, and otherwise generates one
+(`signup.SlugForManaged`), such as `brave-cedar-96`; collisions take `-1` to
+`-100` and then a random suffix. No slug is ever taken from an email address,
+for any kind of account, since a handle made from the address would publish
+it. The organization's display name is the workspace name the person gave at
+sign-up, else their name, else their handle.
 
 ## Reserved slugs
 

@@ -9,6 +9,66 @@
   ],
   "releases": [
     {
+      "version": "v0.38.0",
+      "date": "2026-11-25",
+      "highlights": [
+        {
+          "description": "A person's name is no longer made from their email address: SystemAuth asks a new account for its name, and optionally a workspace name, before creating it, so every application receives a real `name` claim and none needs a name prompt of its own for new accounts",
+          "commit": "21d182f"
+        },
+        {
+          "description": "The display name, the personal organization's name and its slug are never derived from the address: the name given or the provider handle, the workspace name given, and a handle or generated slug",
+          "commit": "e442074"
+        }
+      ],
+      "added": [
+        {
+          "description": "The sign-up name step at `/signup/name`: a proven login with no name is parked in the verification token store (purpose `sign_up_name`), bound to the browser by `__Host-sf_signup_name` for 15 minutes, and asked for a name (up to 100 characters, printable, no `@`) and an optional workspace name (up to 80). Nothing is created until the form is answered, answering uses the parked sign-up once, and the form checks the origin and a token derived from the cookie. It follows the invite gate and the age question, never asks an existing account, and works without a `mail` section",
+          "commit": "21d182f"
+        },
+        {
+          "description": "`SocialLoginConfig.SignInMethods` and `Server.SignInMethods` list the methods a deployment offers in the order its sign-in page lists them, so a host builds its sign-in buttons from the deployment",
+          "commit": "1b836dd"
+        },
+        {
+          "description": "`ExternalLogin.OrganizationName`, the name the person gave their personal workspace",
+          "commit": "e442074"
+        }
+      ],
+      "changed": [
+        {
+          "description": "The display name is the name given or the provider handle, never the email address, with the neutral \"Member\" for a directory used without the name step; the personal organization is named with the workspace name given, else the name, else the handle, and slugged with the handle or a generated slug, so a new Google account no longer gets its address's local part",
+          "commit": "e442074"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "The sign-up wrappers around account creation hid the directory's optional interfaces, so a deployment with an invite gate or an age check offered every provider on the sign-in methods page instead of listing the linked ones; they are read from the directory itself",
+          "commit": "21d182f"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The name step: no account before the name, validation of names, a refused answer keeping what was typed, single use under concurrent answers, the form's origin and token checks, the order after the age question, social sign-in with and without a name, and a relying party receiving the name given",
+          "commit": "4d52d31"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "ADR-024 and the INIT-SYSTEMFORGE-019 roadmap, the name step in the email sign-in and social login pages, and the cookie, rate limit and organization slug guides",
+          "commit": "25764c8"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "There is no migration: the `sign_up_name` token purpose is a plain value of an existing column, and nothing needs enabling"
+        },
+        {
+          "description": "A host with its own name prompt for email accounts can drop it for new accounts and keep a guard that never shows or prints a name that is an email address, since accounts created earlier keep the names they have; build sign-in buttons from `SignInMethods()` instead of listing providers by hand"
+        }
+      ]
+    },
+    {
       "version": "v0.37.0",
       "date": "2026-11-25",
       "highlights": [

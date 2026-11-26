@@ -17,5 +17,5 @@ Commits implementing an item carry `Refs: RMI-SYSTEMFORGE-<NNN>`.
   - Depends on: `RMI-SYSTEMFORGE-279`
 - [x] `RMI-SYSTEMFORGE-281` `SocialLoginConfig.SignInMethods` and `Server.SignInMethods`, so hosts build their sign-in buttons from the deployment
 - [x] `RMI-SYSTEMFORGE-282` The directory's optional interfaces stay visible through the sign-up wrappers, so the sign-in methods page lists linked providers for deployments with a gate or an age check
-- [ ] `RMI-SYSTEMFORGE-283` Release v0.38.0: notes, changelog, guides
+- [x] `RMI-SYSTEMFORGE-283` Release v0.38.0: notes, changelog, guides
   - Depends on: `RMI-SYSTEMFORGE-280`, `RMI-SYSTEMFORGE-281`, `RMI-SYSTEMFORGE-282`
