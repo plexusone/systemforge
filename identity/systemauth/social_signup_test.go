@@ -66,27 +66,58 @@ func TestSocialSignupFirstLoginCreatesPersonalOrg(t *testing.T) {
 	assertCounts(t, db, 1, 1, 1, 1, 1)
 }
 
-func TestSocialSignupGoogleSlugAndCollision(t *testing.T) {
+func TestSocialSignupNamesAreNeverFromTheEmail(t *testing.T) {
 	ctx := context.Background()
 	db := openTestEnt(t)
 	dir := NewEntPrincipalDirectory(db)
 	now := time.Now()
 
-	for i, subject := range []string{"g1", "g2"} {
-		email := []string{"jane@gmail.com", "jane@example.org"}[i]
-		if _, err := ResolveExternalLogin(ctx, dir, ExternalLogin{Provider: "google", Subject: subject, Email: email, EmailVerified: true}, now); err != nil {
-			t.Fatalf("login %s: %v", subject, err)
+	// Two logins whose addresses would have made the same handle. Whatever
+	// they are named, nothing comes from the address.
+	logins := []ExternalLogin{
+		{Provider: "google", Subject: "g1", Email: "jane@gmail.com", EmailVerified: true, Name: "Jane Doe"},
+		{Provider: "google", Subject: "g2", Email: "jane@example.org", EmailVerified: true, Name: "Jane Roe", OrganizationName: "Roe Studio"},
+	}
+	for _, l := range logins {
+		if _, err := ResolveExternalLogin(ctx, dir, l, now); err != nil {
+			t.Fatalf("login %s: %v", l.Subject, err)
 		}
 	}
+	names := map[string]bool{}
 	slugs := map[string]bool{}
 	for _, o := range db.Organization.Query().AllX(ctx) {
+		names[o.Name] = true
 		slugs[o.Slug] = true
-		if o.Name != "jane" {
-			t.Errorf("name = %q, want login-derived fallback jane", o.Name)
+		if strings.Contains(o.Slug, "jane") || strings.Contains(o.Slug, "example") || strings.Contains(o.Slug, "gmail") {
+			t.Errorf("slug %q is made from the address", o.Slug)
 		}
 	}
-	if !slugs["jane"] || !slugs["jane-1"] || len(slugs) != 2 {
-		t.Errorf("slugs = %v, want jane and jane-1", slugs)
+	if !names["Jane Doe"] || !names["Roe Studio"] || len(names) != 2 {
+		t.Errorf("organization names = %v, want the name given and the workspace name given", names)
+	}
+	if len(slugs) != 2 {
+		t.Errorf("slugs = %v, want two distinct generated slugs", slugs)
+	}
+	for _, p := range db.Principal.Query().AllX(ctx) {
+		if strings.Contains(p.DisplayName, "@") {
+			t.Errorf("display name %q is an email address", p.DisplayName)
+		}
+	}
+}
+
+func TestSocialSignupUsesTheHandleForTheSlug(t *testing.T) {
+	ctx := context.Background()
+	db := openTestEnt(t)
+	dir := NewEntPrincipalDirectory(db)
+	if _, err := ResolveExternalLogin(ctx, dir, ExternalLogin{
+		Provider: "github", Subject: "7", Email: "octo@example.com", EmailVerified: true, EmailAuthoritative: true,
+		Name: "Octo Cat", Username: "octocat",
+	}, time.Now()); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	orgs := db.Organization.Query().AllX(ctx)
+	if len(orgs) != 1 || orgs[0].Slug != "octocat" || orgs[0].Name != "Octo Cat" {
+		t.Fatalf("organizations = %+v, want one named Octo Cat with the handle as its slug", orgs)
 	}
 }
 

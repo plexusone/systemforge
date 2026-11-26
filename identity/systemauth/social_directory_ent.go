@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -261,23 +260,32 @@ func personalOrgParamsFor(p *HumanPrincipal, login ExternalLogin) signup.Persona
 }
 
 // personalOrgParams builds the personal organization for a login: named for
-// the person (display name, else provider handle, else email local part),
-// slugged by signup.SlugForLogin.
+// the person (the name they gave, else their provider handle), with the
+// handle or a generated slug, never anything from the email address.
 func personalOrgParams(ownerID uuid.UUID, login ExternalLogin) signup.PersonalOrgParams {
-	name := login.Name
+	// Nothing here comes from the email address: a handle or a name made
+	// from it would publish the address. The name is the one the person
+	// gave, and the slug is the provider's handle or a generated one.
+	name := login.OrganizationName
+	if name == "" {
+		name = login.Name
+	}
 	if name == "" {
 		name = login.Username
 	}
-	if name == "" {
-		name, _, _ = strings.Cut(login.Email, "@")
+	var slug string
+	if login.Username != "" {
+		slug = signup.SlugForLogin(login.Provider, login.Username, "")
+	} else {
+		slug = signup.SlugForManaged("")
 	}
 	if name == "" {
-		name = displayNameFor(login)
+		name = slug
 	}
 	return signup.PersonalOrgParams{
 		OwnerID: ownerID,
 		Name:    name,
-		Slug:    signup.SlugForLogin(login.Provider, login.Username, login.Email),
+		Slug:    slug,
 		LogoURL: login.AvatarURL,
 	}
 }
