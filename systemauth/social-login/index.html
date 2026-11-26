@@ -3950,6 +3950,8 @@
       
         
       
+        
+      
     
     
     
@@ -4633,7 +4635,35 @@
   <span class="md-ellipsis">
     
   
-    ADR-023: Email One-Time Code Sign-In (Proposed)
+    ADR-023: Email One-Time Code Sign-In
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-024-names-are-supplied-not-derived/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-024: Names Are Supplied, Not Derived
   
 
     
@@ -6586,6 +6616,10 @@ endpoints:</p>
 <tr>
 <td><code>GET /login/email?return_to=...</code> and the routes under it</td>
 <td>With <a href="../email-sign-in/">email sign-in</a>: the address form, the code page and resend. The chooser lists <strong>Email</strong> beside the providers, and <code>idp_hint=email</code> goes straight to the form.</td>
+</tr>
+<tr>
+<td><code>GET /signup/name</code>, <code>POST /signup/name</code></td>
+<td>Asks a person who is about to get an account, and gave no name, for their name and an optional workspace name. Nothing is made from their email address.</td>
 </tr>
 <tr>
 <td><code>GET /login/{provider}?return_to=...</code></td>

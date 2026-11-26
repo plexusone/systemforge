@@ -3894,6 +3894,8 @@
       
         
       
+        
+      
     
     
     
@@ -4577,7 +4579,35 @@
   <span class="md-ellipsis">
     
   
-    ADR-023: Email One-Time Code Sign-In (Proposed)
+    ADR-023: Email One-Time Code Sign-In
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-024-names-are-supplied-not-derived/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-024: Names Are Supplied, Not Derived
   
 
     
@@ -6502,6 +6532,9 @@ emitter), so you can see <code>systemauth.email_code.sent</code> with <code>sent
 <code>UNKNOWN_PROVIDER</code> when the button is clicked. The application never receives
 the code; it receives the verified address afterward, as for any provider.</p>
 <h2 id="5-decide-who-may-sign-up">5. Decide who may sign up<a class="headerlink" href="#5-decide-who-may-sign-up" title="Permanent link">&para;</a></h2>
+<p>A new account is asked for its name, and optionally a workspace name, before
+it is created, so every application gets a real <code>name</code> and none needs its own
+prompt. Nothing is taken from the address.</p>
 <p>Email sign-in creates accounts for addresses nobody has seen, so the sign-up
 controls matter: a <a href="../signup-age/">minimum age</a>, and
 <a href="../invite-gated-signup/">invite-gated sign-up</a>, which applies to email exactly

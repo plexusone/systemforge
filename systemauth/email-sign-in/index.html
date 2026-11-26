@@ -1970,6 +1970,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Names
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-protects-the-code" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3905,6 +3916,8 @@
       
         
       
+        
+      
     
     
     
@@ -4588,7 +4601,35 @@
   <span class="md-ellipsis">
     
   
-    ADR-023: Email One-Time Code Sign-In (Proposed)
+    ADR-023: Email One-Time Code Sign-In
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/adrs/ADR-024-names-are-supplied-not-derived/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-024: Names Are Supplied, Not Derived
   
 
     
@@ -6407,6 +6448,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Names
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-protects-the-code" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -6483,11 +6535,16 @@ neither. Applications federate to SystemAuth as they do for
    application sends them there with <code>idp_hint=email</code>) and enters an address.</li>
 <li>SystemAuth mails a numeric code, through the configured
    <a href="../verified-email/#configuration">mail sender</a>, and shows a page to enter it.</li>
-<li>The person enters the code in the same browser. A correct code signs them
-   in: SystemAuth finds or creates the account for that address and resumes
-   the application's authorization request.</li>
+<li>The person enters the code in the same browser. A correct code proves the
+   address. For an address with an account, that signs them in. For a new
+   address, SystemAuth first asks for their name and, if they like, a name for
+   their personal workspace, then creates the account and resumes the
+   application's authorization request.</li>
 </ol>
-<p>The address becomes an <code>email</code> identity of the account. An existing account
+<p>The name is never made from the address: SystemAuth asks for it, so the <code>name</code>
+claim applications receive, and the name on public profiles and printed
+certificates, is one the person chose (see
+<a href="#names">names</a>). The address becomes an <code>email</code> identity of the account. An existing account
 with the same verified address (for example one created with GitHub) is
 reached, not duplicated, and everything that applies to social sign-in applies
 here too: the sign-up age question, invite codes and the waitlist, consent,
@@ -6576,10 +6633,30 @@ would write codes to the log.</p>
 <td><code>POST /login/email/code/resend</code></td>
 <td>Sends a new code.</td>
 </tr>
+<tr>
+<td><code>GET /signup/name</code>, <code>POST /signup/name</code></td>
+<td>Asks a new account for its name; also used by social login when a provider gives none.</td>
+</tr>
 </tbody>
 </table>
 <p><code>/oauth/authorize?...&amp;idp_hint=email</code> goes straight to the address form when
 email sign-in is configured, and to the chooser otherwise.</p>
+<h2 id="names">Names<a class="headerlink" href="#names" title="Permanent link">&para;</a></h2>
+<p>An email address says nothing about what to call someone, and an address is not
+theirs to publish. So SystemAuth makes no name from it. When an account is about
+to be created for a login with no name (every email sign-in, and a social login
+whose provider gave neither a name nor a handle), it parks the proven sign-in
+for 15 minutes, bound to the browser, and shows <code>/signup/name</code>:</p>
+<ul>
+<li><strong>Your name</strong>, required, up to 100 characters, no <code>@</code>.</li>
+<li><strong>A name for your personal workspace</strong>, optional, up to 80 characters; empty
+  uses the person's name. The workspace's slug is generated, never made from
+  the address.</li>
+</ul>
+<p>Nothing is created until the form is answered, and answering uses the parked
+sign-up once. A person who already has an account is not asked. Invites and the
+minimum age come first, so a person who will be refused is not asked for a
+name. The applications need no name prompt of their own for new accounts.</p>
 <h2 id="what-protects-the-code">What protects the code<a class="headerlink" href="#what-protects-the-code" title="Permanent link">&para;</a></h2>
 <p>A six-digit code can be guessed, so the controls carry the security:</p>
 <ul>
