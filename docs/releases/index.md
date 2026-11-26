@@ -4,7 +4,13 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.38.0](v0.38.0.md), stops making a person's name from
+The latest release, [v0.39.0](v0.39.0.md), refuses to start SystemAuth when the
+database schema is behind, lets an application build its sign-in buttons from
+the deployment (`GET /bff/auth/methods`), and keeps an email address from being
+shown as a name. It adds no breaking change to the API and no migration, but
+the `name` claim is now left out when the stored name is an address.
+
+Before it, [v0.38.0](v0.38.0.md) stopped making a person's name from
 their email address: SystemAuth asks a new account for its name, and
 optionally a workspace name, before creating it, so applications receive a
 real `name` claim. It adds `SignInMethods` for hosts and fixes the sign-in

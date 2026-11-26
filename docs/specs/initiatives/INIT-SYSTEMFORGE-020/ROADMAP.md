@@ -17,5 +17,5 @@ the fix, not on a later request. Commits implementing an item carry
   - Depends on: `RMI-SYSTEMFORGE-284`
 - [x] `RMI-SYSTEMFORGE-286` `systemauth migrate --check`, so a deploy can verify the schema before starting the new version
   - Depends on: `RMI-SYSTEMFORGE-284`
-- [ ] `RMI-SYSTEMFORGE-287` Release v0.39.0: notes, changelog, guides
+- [x] `RMI-SYSTEMFORGE-287` Release v0.39.0: notes, changelog, guides
   - Depends on: `RMI-SYSTEMFORGE-285`, `RMI-SYSTEMFORGE-286`
