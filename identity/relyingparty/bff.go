@@ -91,6 +91,13 @@ type BFFConfig struct {
 	// given. Default: "/".
 	DefaultReturnTo string
 
+	// SignInMethods, when set, are the sign-in methods <BasePath>/auth/methods
+	// offers, in order, instead of those SystemAuth publishes in its discovery
+	// document. A host that serves SystemAuth in the same process can pass
+	// Server.SignInMethods(). Methods the BFF cannot start (anything but
+	// github, google and email) are left out.
+	SignInMethods []string
+
 	// AllowedOrigins are absolute origins (scheme://host[:port]) that may be
 	// post-login return_to targets and may call the BFF's state-changing
 	// endpoints. The origin of the Client's RedirectURL is always allowed.
@@ -222,6 +229,7 @@ func NewBFF(cfg BFFConfig) (*BFF, error) {
 	// <BasePath>/auth/backchannel-logout as the client's
 	// backchannel_logout_uri. Only tokens signed by the issuer are acted on.
 	mux.Handle("POST "+base+"/auth/backchannel-logout", b.BackchannelLogoutHandler())
+	mux.HandleFunc("GET "+base+"/auth/methods", b.handleMethods)
 	mux.HandleFunc("GET "+base+"/auth/{provider}", b.handleProviderLogin)
 	mux.HandleFunc(base+"/", func(w http.ResponseWriter, _ *http.Request) {
 		writeAuthError(w, http.StatusNotFound, "NOT_FOUND", "not found")
@@ -570,6 +578,50 @@ func (b *BFF) handleLogin(w http.ResponseWriter, r *http.Request) {
 // providers, and email for a mailed one-time code. A method the deployment
 // has not configured falls back to SystemAuth's chooser.
 var knownProviders = map[string]bool{"github": true, "google": true, "email": true}
+
+// methodNames are the names a sign-in page shows for each method.
+var methodNames = map[string]string{"github": "GitHub", "google": "Google", "email": "Email"}
+
+// SignInMethod is one way to sign in, as <BasePath>/auth/methods lists it.
+type SignInMethod struct {
+	// ID names the method (github, google, email).
+	ID string `json:"id"`
+	// Name is what a sign-in page shows ("GitHub", "Email").
+	Name string `json:"name"`
+	// Path starts signing in with it: GET <BasePath>/auth/<id>.
+	Path string `json:"path"`
+}
+
+// SignInMethods returns the methods the BFF offers: BFFConfig.SignInMethods,
+// else those SystemAuth publishes in its discovery document, in that order and
+// without duplicates, limited to the methods the BFF can start. It is empty
+// when neither names any, as with a SystemAuth older than v0.39.0.
+func (b *BFF) SignInMethods() []SignInMethod {
+	ids := b.cfg.SignInMethods
+	if len(ids) == 0 {
+		ids = b.cfg.Client.SignInMethods()
+	}
+	methods := make([]SignInMethod, 0, len(ids))
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if !knownProviders[id] || seen[id] {
+			continue
+		}
+		seen[id] = true
+		methods = append(methods, SignInMethod{ID: id, Name: methodNames[id], Path: b.cfg.BasePath + "/auth/" + id})
+	}
+	return methods
+}
+
+// handleMethods serves GET <BasePath>/auth/methods: the sign-in methods to
+// offer, so an application builds its buttons from the deployment and a method
+// turned on in SystemAuth's configuration shows up without a change to the
+// application. It is public and holds nothing about any person.
+func (b *BFF) handleMethods(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, struct {
+		Methods []SignInMethod `json:"methods"`
+	}{b.SignInMethods()})
+}
 
 func (b *BFF) handleProviderLogin(w http.ResponseWriter, r *http.Request) {
 	provider := r.PathValue("provider")

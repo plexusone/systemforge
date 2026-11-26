@@ -75,9 +75,11 @@ type Config struct {
 type Client struct {
 	cfg      Config
 	metadata Metadata
-	keys     *KeySet
-	oauth    *oauth2.Config
-	dpop     *dpopSigner
+	// signInMethods are the methods SystemAuth published in discovery.
+	signInMethods []string
+	keys          *KeySet
+	oauth         *oauth2.Config
+	dpop          *dpopSigner
 	// tokenHTTP is cfg.HTTPClient adding DPoP proofs to token requests.
 	tokenHTTP *http.Client
 	now       func() time.Time
@@ -88,11 +90,16 @@ func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
-	md, err := Discover(ctx, cfg.Issuer, cfg.HTTPClient)
+	md, methods, err := discover(ctx, cfg.Issuer, cfg.HTTPClient)
 	if err != nil {
 		return nil, err
 	}
-	return NewClientWithMetadata(cfg, *md)
+	c, err := NewClientWithMetadata(cfg, *md)
+	if err != nil {
+		return nil, err
+	}
+	c.signInMethods = methods
+	return c, nil
 }
 
 // NewClientWithMetadata returns a Client for already-known provider
@@ -158,6 +165,12 @@ func (c Config) validate() error {
 
 // Metadata returns the provider metadata.
 func (c *Client) Metadata() Metadata { return c.metadata }
+
+// SignInMethods returns the sign-in methods SystemAuth published in its
+// discovery document (github, google, email), in its order. It is empty for a
+// client built with NewClientWithMetadata, which makes no discovery request,
+// and for a SystemAuth that does not publish them (before v0.39.0).
+func (c *Client) SignInMethods() []string { return slices.Clone(c.signInMethods) }
 
 // Config returns the effective configuration.
 func (c *Client) Config() Config { return c.cfg }
