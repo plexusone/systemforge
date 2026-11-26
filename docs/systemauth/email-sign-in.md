@@ -92,6 +92,11 @@ sign-up once. A person who already has an account is not asked. Invites and the
 minimum age come first, so a person who will be refused is not asked for a
 name. The applications need no name prompt of their own for new accounts.
 
+An account from before names were asked for may still have its address as its
+name. SystemAuth leaves the `name` claim out for it (the address is still the
+`email` claim), so an application that receives no name keeps the one it has or
+shows a neutral one.
+
 ## What protects the code
 
 A six-digit code can be guessed, so the controls carry the security:
