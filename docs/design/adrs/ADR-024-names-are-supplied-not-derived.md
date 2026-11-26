@@ -68,6 +68,12 @@ The same fallbacks applied to any social login whose provider gave no name.
   release of this ADR left the relying-party stores and `oauthclient` falling
   back to the address; v0.39.0 replaces that.) A profile whose name field holds
   an address is treated as having no name, and the person is asked.
+- The same rule applies to later writes: a sign-in, a SCIM update or a
+  federation update that carries no name, or an address, keeps the stored name.
+- SystemAuth leaves the `name` claim out when the stored name is an address,
+  as an older account's may be, so no application receives one as a name. The
+  address is still the `email` claim. A relying party handles a missing `name`:
+  the stores in this library keep the name they have, or use "Member".
 - The sign-in methods page's linked-provider list, which the sign-up wrappers
   had hidden from deployments with a gate or an age check, is read from the
   directory itself again.
