@@ -4913,6 +4913,8 @@
       
         
       
+        
+      
     
     
     
@@ -4984,6 +4986,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.38.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.38.0
   
 
     
@@ -6480,10 +6510,13 @@ organizations. The design is in
 <code>{"slug", "available"}</code>, and <code>available</code> is <code>false</code> for a taken, reserved or
 cooling-off slug. <code>GenerateSlug(name)</code> slugifies a name and appends <code>-1</code> to
 <code>-100</code>, then a UUID fragment, until one is free.</p>
-<p>Social login derives the personal slug from the provider: the GitHub
-username, the Google email local part, otherwise the username or local
-part; collisions take <code>-1</code> to <code>-100</code> and then a random suffix. A managed
-principal's slug is never taken from an email (<code>signup.SlugForManaged</code>).</p>
+<p>Social login takes the personal slug from the provider's handle (the GitHub
+username) when it has one, and otherwise generates one
+(<code>signup.SlugForManaged</code>), such as <code>brave-cedar-96</code>; collisions take <code>-1</code> to
+<code>-100</code> and then a random suffix. No slug is ever taken from an email address,
+for any kind of account, since a handle made from the address would publish
+it. The organization's display name is the workspace name the person gave at
+sign-up, else their name, else their handle.</p>
 <h2 id="reserved-slugs">Reserved slugs<a class="headerlink" href="#reserved-slugs" title="Permanent link">&para;</a></h2>
 <p>Names that would collide with a route or protocol path cannot be taken:
 <code>about</code>, <code>admin</code>, <code>api</code>, <code>help</code>, <code>invites</code>, <code>login</code>, <code>logout</code>, <code>new</code>, <code>o</code>,

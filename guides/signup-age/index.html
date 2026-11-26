@@ -4935,6 +4935,8 @@
       
         
       
+        
+      
     
     
     
@@ -5006,6 +5008,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.38.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.38.0
   
 
     
@@ -6530,7 +6560,9 @@ and refuses anyone younger, keeping nothing about them.</p>
    about them has been kept. The same browser is not asked again for a day.</li>
 </ol>
 <p>Signing in with an <a href="../email-sign-in/">emailed code</a> asks the same question
-before it creates an account. After the answer, the person asks for a new
+before it creates an account; the request for the person's name, which a new
+account gets next, comes after it, so someone who will be refused is not asked
+for a name. After the answer, the person asks for a new
 code, since nothing about them was kept.</p>
 <p>People who already have an account never see the question. Neither do
 children signing in with login tokens: they are managed principals, created
