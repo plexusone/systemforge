@@ -160,7 +160,19 @@ func TestEmailSignInThroughRelyingParty(t *testing.T) {
 		t.Fatal("the code leaked into the page, or the message carries a link")
 	}
 
+	// A new address is asked for its name before the account is created; the
+	// name is never taken from the address.
 	resp = post(saSrv.URL+systemauth.EmailCodePath, url.Values{"code": {m[1]}, "csrf_token": {hidden(page, "csrf_token")}})
+	page = body(resp)
+	if resp.Request.URL.Path != systemauth.SignupNamePath {
+		t.Fatalf("a new address was not asked for a name: at %s: %s", resp.Request.URL, page)
+	}
+	if strings.Contains(page, "dev@example.com") {
+		t.Fatal("the name form shows the address")
+	}
+	resp = post(saSrv.URL+systemauth.SignupNamePath, url.Values{
+		"name": {"Dev Person"}, "organization_name": {"Dev Studio"}, "csrf_token": {hidden(page, "csrf_token")},
+	})
 	final := resp.Request.URL
 	finalBody := body(resp)
 
@@ -174,6 +186,7 @@ func TestEmailSignInThroughRelyingParty(t *testing.T) {
 	resp = get(appSrv.URL + "/bff/api/v1/users/me")
 	var me struct {
 		Email string `json:"email"`
+		Name  string `json:"name"`
 		ID    string `json:"id"`
 	}
 	if err := json.Unmarshal([]byte(body(resp)), &me); err != nil || resp.StatusCode != http.StatusOK {
@@ -181,6 +194,10 @@ func TestEmailSignInThroughRelyingParty(t *testing.T) {
 	}
 	if me.Email != "dev@example.com" || me.ID == "" {
 		t.Fatalf("the app signed in %+v, want dev@example.com", me)
+	}
+	// The application receives the name the person gave, never the address.
+	if me.Name != "Dev Person" {
+		t.Fatalf("the app's name for the person = %q, want the one they gave", me.Name)
 	}
 	p, err := store.FindByEmail(t.Context(), "dev@example.com")
 	if err != nil || p.Email != "dev@example.com" {

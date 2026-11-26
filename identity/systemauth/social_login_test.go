@@ -343,10 +343,12 @@ func TestResolveExternalLoginEnt(t *testing.T) {
 // --- HTTP flow with a fake GitHub ---
 
 type fakeGitHub struct {
-	srv       *httptest.Server
-	userID    int64
-	email     string
-	verified  bool
+	srv      *httptest.Server
+	userID   int64
+	email    string
+	verified bool
+	// noName makes GitHub report neither a name nor a handle for the person.
+	noName    bool
 	exchanges atomic.Int32
 }
 
@@ -367,7 +369,11 @@ func newFakeGitHub(t *testing.T) *fakeGitHub {
 		writeTestJSON(t, w, map[string]any{"access_token": "gh-token", "token_type": "bearer"})
 	})
 	mux.HandleFunc("/user", func(w http.ResponseWriter, _ *http.Request) {
-		writeTestJSON(t, w, map[string]any{"id": f.userID, "login": "octo", "name": "Octo Cat"})
+		name, login := "Octo Cat", "octo"
+		if f.noName {
+			name, login = "", ""
+		}
+		writeTestJSON(t, w, map[string]any{"id": f.userID, "login": login, "name": name})
 	})
 	mux.HandleFunc("/user/emails", func(w http.ResponseWriter, _ *http.Request) {
 		writeTestJSON(t, w, []map[string]any{{"email": f.email, "primary": true, "verified": f.verified}})
