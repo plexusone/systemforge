@@ -85,6 +85,35 @@ database:
 With several instances on one role, their pools together must stay within
 the limit. SQLite ignores the setting.
 
+### The schema must match the version
+
+When the service starts without running migrations (`--migrate=false`, or a
+host that leaves `Options.Migrate` off and migrates in a separate deploy
+step), it first compares the database with the schema it needs and **refuses to
+start** if a table or column is missing:
+
+```text
+systemauthsvc: the database schema is behind this version (missing columns:
+sf_verification_tokens.attempts); run the migration first: `systemauth migrate`,
+`systemauth --migrate serve`, or systemauthsvc.Migrate
+```
+
+Without this check a missing column fails on the first request that uses it,
+such as a sign-up, after the new version is already serving. Run the same check
+as a deploy step, before starting the new version, with
+
+```bash
+systemauth migrate --check   # exits non-zero and names what is missing; changes nothing
+```
+
+or from Go with `systemauthsvc.CheckMigrations(ctx, cfg)`, or
+`systemauthsvc.CheckSchema(ctx, client, dialect)` for a host that holds its own
+Ent client. The check compares table and column names on PostgreSQL and SQLite;
+it does not look at types, indexes or the PostgreSQL objects Ent cannot
+express, so passing it does not prove the migration ran, but failing it proves
+the migration is needed. A host that manages the schema by other means sets
+`Options.SkipSchemaCheck`.
+
 ## Flags and environment
 
 Running `systemauth` without a subcommand serves. Go-style single-dash flags
@@ -608,6 +637,10 @@ column on startup migration (or with `migrations/0010_oauth_app_allow_bearer_tok
 every existing application then requires DPoP until the column is set for it.
 
 ## Upgrading
+
+Run `systemauth migrate --check` before starting a new version without startup
+migrations, or let the service refuse to start
+([the schema must match the version](#the-schema-must-match-the-version)).
 
 Startup migrations (`--migrate`, default on) add new columns automatically —
 for example the `subject` columns on `sf_oauth_auth_codes` / `sf_oauth_tokens`

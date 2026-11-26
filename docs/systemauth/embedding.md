@@ -108,12 +108,14 @@ itself (normally through the same reverse proxy).
 | `Options.SigningKey` | An `*rsa.PrivateKey` from a secret manager, instead of a file or PEM. |
 | `Options.DB` + `DBDialect`, `Options.EntClient` | Use an existing pool or Ent client (the caller keeps ownership; `Close` leaves it open). |
 | `Options.Migrate` | Create or update the schema before the system user and static clients are written. |
+| `Options.SkipSchemaCheck` | When `Migrate` is off, `New` refuses to start with `ErrSchemaBehind` if the database lacks a table or column this version needs; set this to skip that check when the schema is managed by other means. |
 | `Options.ServerOptions` | Extra `systemauth.Option`s, e.g. `WithObservability`. |
 | `Options.AuditEmitter` | Records managed-principal actions served by the `/managed-principals` API, and SCIM token issue, rotation, revocation and failed authentication. |
 | `Options.ManagedPrincipalRates`, `Options.ManagedPrincipalOptions` | Shared rate-limit storage for the API's code routes (the default is in memory, for one instance) and extra `managedprincipal` options. |
 | `Options.SCIM` | Serve SCIM 2.0 at `SCIMPath` (`/scim/v2`), authenticated with tenant tokens from the built-in store, and the token management API under `/api/v1/organizations/{slug}/scim-tokens` (scope `SCIMTokensScope`). See [SCIM Provisioning](../identity/scim.md). |
 | `CheckProduction(cfg, opts)` | The checks `New` enforces, for a `validate` command. |
 | `Migrate(ctx, cfg)` | Open, migrate and close (for a separate migration step). |
+| `CheckMigrations(ctx, cfg)`, `CheckSchema(ctx, client, dialect)` | Verify the schema has every table and column this version needs, without changing it; the error wraps `ErrSchemaBehind` and names what is missing. |
 | `Service.Handler`, `Ready`, `Migrate`, `Close`, `Issuer`, `KeyID`, `Metadata`, `Discovery`, `Server`, `ManagedPrincipals`, `SCIMTokens` | The running service. `ManagedPrincipals` is the managed-principal service, nil unless managed principals are enabled; the API is then mounted at `ManagedPrincipalsPath`. `SCIMTokens` is the tenant SCIM token store, nil unless `Options.SCIM` is set. |
 
 `New` enforces the [production requirements](deployment.md#production-requirements)

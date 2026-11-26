@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -141,14 +142,7 @@ Run without a subcommand it serves (same as "systemauth serve").
 				return runServe(cmd.Context(), opts)
 			},
 		},
-		&cobra.Command{
-			Use:   "migrate",
-			Short: "Run database migrations",
-			Args:  cobra.NoArgs,
-			RunE: func(cmd *cobra.Command, _ []string) error {
-				return runMigrate(cmd.Context(), opts)
-			},
-		},
+		newMigrateCmd(opts),
 		&cobra.Command{
 			Use:   "validate",
 			Short: "Validate the configuration (including production requirements)",
@@ -302,6 +296,43 @@ func runServe(ctx context.Context, opts *options) error {
 	}
 	logger.Info("server stopped")
 	return nil
+}
+
+// newMigrateCmd builds "migrate", which runs the migrations or, with --check,
+// only verifies that the database has everything this version needs, so a
+// deploy can fail before it starts a version the schema is behind.
+func newMigrateCmd(opts *options) *cobra.Command {
+	var check bool
+	cmd := &cobra.Command{
+		Use:   "migrate",
+		Short: "Run database migrations (or, with --check, verify the schema without changing it)",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if check {
+				return runMigrateCheck(cmd.Context(), opts, cmd.OutOrStdout())
+			}
+			return runMigrate(cmd.Context(), opts)
+		},
+	}
+	cmd.Flags().BoolVar(&check, "check", false,
+		"Verify the database has every table and column this version needs, without changing it; exits non-zero and names what is missing if it does not")
+	return cmd
+}
+
+// runMigrateCheck verifies the schema without changing it.
+func runMigrateCheck(ctx context.Context, opts *options, out io.Writer) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	cfg, err := loadConfig(opts)
+	if err != nil {
+		return err
+	}
+	if err := systemauthsvc.CheckMigrations(ctx, cfg); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(out, "the database schema is up to date")
+	return err
 }
 
 func runMigrate(ctx context.Context, opts *options) error {

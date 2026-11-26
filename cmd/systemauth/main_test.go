@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -208,5 +209,37 @@ func TestSigningKeyFileAndRotationKeyID(t *testing.T) {
 	}
 	if _, err := systemauth.NewEmbedded(*cfg, systemauth.WithLogger(discardLogger())); err == nil {
 		t.Error("invalid key file accepted")
+	}
+}
+
+func TestServeRefusesAnUnmigratedDatabase(t *testing.T) {
+	// With migrations off, as in a deploy that runs `migrate` separately, a
+	// database that was not migrated stops the server from starting.
+	dsn := "file:" + filepath.Join(t.TempDir(), "sa.db") + "?_fk=1"
+	opts := &options{dev: true, addr: ":8081", dbDriver: "sqlite", dbDSN: dsn, migrate: false}
+	a, err := newApp(t.Context(), opts, discardLogger())
+	if err == nil {
+		_ = a.Close() //nolint:errcheck // the test already failed
+		t.Fatal("the server started on a database that was never migrated")
+	}
+	if !errors.Is(err, systemauthsvc.ErrSchemaBehind) {
+		t.Fatalf("err = %v, want ErrSchemaBehind", err)
+	}
+
+	opts.migrate = true
+	a, err = newApp(t.Context(), opts, discardLogger())
+	if err != nil {
+		t.Fatalf("with migrations on: %v", err)
+	}
+	if err := a.Close(); err != nil {
+		t.Fatal(err)
+	}
+	opts.migrate = false
+	a, err = newApp(t.Context(), opts, discardLogger())
+	if err != nil {
+		t.Fatalf("migrations off on a migrated database: %v", err)
+	}
+	if err := a.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
