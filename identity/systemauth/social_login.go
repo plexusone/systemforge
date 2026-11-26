@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -809,6 +810,21 @@ func (sl *socialLogin) currentSession(r *http.Request) (*LoginSession, error) {
 		return nil, ErrLoginSessionNotFound
 	}
 	return &sess, nil
+}
+
+// SignInMethods lists the methods the server offers people, in the order its
+// sign-in page lists them: the social providers by name, then email. It
+// includes connectors passed in code as well as those in the configuration,
+// and is nil without browser sign-in.
+func (s *Server) SignInMethods() []string {
+	if s.social == nil {
+		return nil
+	}
+	methods := slices.Clone(s.social.providers)
+	if s.social.email != nil {
+		methods = append(methods, emailLoginProvider)
+	}
+	return methods
 }
 
 // CurrentLoginSession returns the SystemAuth login session carried by r's
