@@ -63,6 +63,14 @@ With the relying-party BFF, link to `/bff/auth/email?return_to=/path`. With
 <LoginPage oauthProviders={['github', 'google', 'email']} />
 ```
 
+Better, build the buttons from the deployment so a method turned on in
+SystemAuth's configuration shows up without a change to the application: read
+`GET /bff/auth/methods` (from `@plexusone/auth`, `useSignInMethods`), or in Go
+`SocialLoginConfig.SignInMethods()` and `Server.SignInMethods()`. SystemAuth
+publishes its methods in its discovery document and the BFF lists them
+([relying parties](../systemauth/relying-party.md)); no provider list is written
+in the application.
+
 Deploy SystemAuth and the BFF before the page: an older BFF answers
 `UNKNOWN_PROVIDER` when the button is clicked. The application never receives
 the code; it receives the verified address afterward, as for any provider.
