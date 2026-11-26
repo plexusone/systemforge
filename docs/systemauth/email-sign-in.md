@@ -13,11 +13,16 @@ neither. Applications federate to SystemAuth as they do for
    application sends them there with `idp_hint=email`) and enters an address.
 2. SystemAuth mails a numeric code, through the configured
    [mail sender](verified-email.md#configuration), and shows a page to enter it.
-3. The person enters the code in the same browser. A correct code signs them
-   in: SystemAuth finds or creates the account for that address and resumes
-   the application's authorization request.
+3. The person enters the code in the same browser. A correct code proves the
+   address. For an address with an account, that signs them in. For a new
+   address, SystemAuth first asks for their name and, if they like, a name for
+   their personal workspace, then creates the account and resumes the
+   application's authorization request.
 
-The address becomes an `email` identity of the account. An existing account
+The name is never made from the address: SystemAuth asks for it, so the `name`
+claim applications receive, and the name on public profiles and printed
+certificates, is one the person chose (see
+[names](#names)). The address becomes an `email` identity of the account. An existing account
 with the same verified address (for example one created with GitHub) is
 reached, not duplicated, and everything that applies to social sign-in applies
 here too: the sign-up age question, invite codes and the waitlist, consent,
@@ -64,9 +69,28 @@ would write codes to the log.
 | `GET /login/email/code` | The code form. |
 | `POST /login/email/code` | Checks the code and signs in. |
 | `POST /login/email/code/resend` | Sends a new code. |
+| `GET /signup/name`, `POST /signup/name` | Asks a new account for its name; also used by social login when a provider gives none. |
 
 `/oauth/authorize?...&idp_hint=email` goes straight to the address form when
 email sign-in is configured, and to the chooser otherwise.
+
+## Names
+
+An email address says nothing about what to call someone, and an address is not
+theirs to publish. So SystemAuth makes no name from it. When an account is about
+to be created for a login with no name (every email sign-in, and a social login
+whose provider gave neither a name nor a handle), it parks the proven sign-in
+for 15 minutes, bound to the browser, and shows `/signup/name`:
+
+- **Your name**, required, up to 100 characters, no `@`.
+- **A name for your personal workspace**, optional, up to 80 characters; empty
+  uses the person's name. The workspace's slug is generated, never made from
+  the address.
+
+Nothing is created until the form is answered, and answering uses the parked
+sign-up once. A person who already has an account is not asked. Invites and the
+minimum age come first, so a person who will be refused is not asked for a
+name. The applications need no name prompt of their own for new accounts.
 
 ## What protects the code
 
