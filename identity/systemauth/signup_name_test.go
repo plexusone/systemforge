@@ -354,3 +354,32 @@ func TestHumanDisplayNameIsNeverTheEmail(t *testing.T) {
 		t.Errorf("humanDisplayName kept a real name as %q", got)
 	}
 }
+
+func TestNameClaimIsNeverAnAddress(t *testing.T) {
+	// An account from before names were asked for may hold its address as its
+	// name. Applications show the name claim to other people, so it is left
+	// out; the address is still released as the email claim.
+	dir := NewMemoryPrincipalDirectory()
+	srv := newSocialTestServer(t, newFakeGitHub(t), dir)
+	ctx := context.Background()
+	for _, tc := range []struct{ email, name, want string }{
+		{"old@example.com", "old@example.com", ""},
+		{"new@example.com", "New Person", "New Person"},
+	} {
+		p, err := dir.CreateFromExternal(ctx, ExternalLogin{Provider: "github", Subject: tc.email, Email: tc.email, EmailVerified: true, Name: "Seed"})
+		if err != nil {
+			t.Fatalf("CreateFromExternal: %v", err)
+		}
+		dir.mu.Lock()
+		dir.principals[p.ID].DisplayName = tc.name
+		dir.mu.Unlock()
+		claims := srv.sessionProvider.GetUserClaims(ctx, p.ID.String(), []string{"openid", "profile", "email"})
+		got, released := claims["name"].(string)
+		if got != tc.want || released != (tc.want != "") {
+			t.Errorf("name claim for a stored name %q = %q (released %v), want %q", tc.name, got, released, tc.want)
+		}
+		if claims["email"] != tc.email {
+			t.Errorf("email claim = %v, want %s", claims["email"], tc.email)
+		}
+	}
+}
