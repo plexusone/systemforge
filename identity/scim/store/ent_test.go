@@ -96,6 +96,25 @@ func TestUserLifecycle(t *testing.T) {
 		t.Errorf("updated user = %+v", updated)
 	}
 
+	// An update that names the user by an address keeps the name; a real
+	// formatted name beside it is used.
+	for _, update := range []struct {
+		user *scim.User
+		want string
+	}{
+		{&scim.User{DisplayName: "ada.l@example.com"}, "Ada Lovelace"},
+		{&scim.User{Name: &scim.Name{Formatted: "ada.l@example.com"}}, "Ada Lovelace"},
+		{&scim.User{DisplayName: "ada.l@example.com", Name: &scim.Name{Formatted: "Ada King"}}, "Ada King"},
+	} {
+		kept, err := s.UpdateUser(ctx, u.ID, update.user)
+		if err != nil {
+			t.Fatalf("UpdateUser: %v", err)
+		}
+		if kept.DisplayName != update.want {
+			t.Errorf("displayName after %+v = %q, want %q", update.user, kept.DisplayName, update.want)
+		}
+	}
+
 	if err := s.DeleteUser(ctx, u.ID); err != nil {
 		t.Fatalf("DeleteUser: %v", err)
 	}

@@ -155,7 +155,7 @@ func (s *PrincipalStore) RecordLogin(ctx context.Context, principalID string, id
 			avatar_url   = CASE WHEN $3::text = '' THEN avatar_url ELSE $3::text END,
 			last_login_at = $4,
 			updated_at = now()
-		WHERE id = $1`, uid, id.Name, id.Picture, at)
+		WHERE id = $1`, uid, displayname.Safe(id.Name), id.Picture, at)
 	if err != nil {
 		return fmt.Errorf("pgstore: recording a sign-in: %w", err)
 	}

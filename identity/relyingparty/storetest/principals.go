@@ -173,6 +173,14 @@ func principalRecordLogin(t *testing.T, s relyingparty.PrincipalStore) {
 	if err != nil || got.Name != "Renamed" || got.AvatarURL != id.Picture {
 		t.Errorf("after login: %+v %v", got, err)
 	}
+	// A later sign-in named by an address keeps the stored name.
+	if err := s.RecordLogin(ctx, p.ID, relyingparty.VerifiedIdentity{Subject: id.Subject, Name: id.Email}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	got, err = s.GetPrincipal(ctx, p.ID)
+	if err != nil || got.Name != "Renamed" {
+		t.Errorf("sign-in named by an address: %+v %v, want the name kept", got, err)
+	}
 	// Empty profile fields keep the stored ones.
 	if err := s.RecordLogin(ctx, p.ID, relyingparty.VerifiedIdentity{Subject: id.Subject}, time.Now()); err != nil {
 		t.Fatal(err)
