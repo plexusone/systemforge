@@ -185,8 +185,9 @@ func (s *Service) RedeemClaim(ctx context.Context, code string, claimantID uuid.
 // which guardians hold.
 //
 // The address becomes a sign-in key: whoever controls the mailbox can sign in
-// as the principal by an emailed code or by a social login, while management
-// continues. Attach only an address the person controls and has proved, never
+// as the principal by an emailed code, or by a social login whose provider is
+// authoritative for the address (Google for its own domains; GitHub is not),
+// while management continues. Attach only an address the person controls and has proved, never
 // one a guardian typed.
 //
 // Proving control of the address is the caller's job until SystemAuth's

@@ -87,7 +87,10 @@ by an email code or by a social login: sign-in by address matches only a
 
 A host that gives a managed principal an address
 (`managedprincipal.Service.AttachVerifiedEmail`) turns that address into a sign-in
-key, by email code and by social login, on purpose: management does not depend
+key by email code, and by social login only when the provider is authoritative
+for the address (Google for its consumer domains and for a Workspace account's
+own domain; GitHub is not, so a GitHub sign-in with an address already attached
+is refused as a conflict and links nothing), on purpose: management does not depend
 on the email ([ADR-009](../design/adrs/ADR-009-management-is-a-relationship.md)),
 and a child may have their own address, such as a school one. Management
 continues, and the managers keep their authority. So attach only an address the
