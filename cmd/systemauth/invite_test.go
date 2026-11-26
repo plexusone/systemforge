@@ -118,3 +118,24 @@ func TestWaitlistCommands(t *testing.T) {
 		t.Errorf("list after remove:\n%s", out)
 	}
 }
+
+func TestMigrateCheck(t *testing.T) {
+	db := []string{"--db-driver", "sqlite", "--db-dsn", "file:" + filepath.Join(t.TempDir(), "sa.db") + "?_fk=1", "--issuer", "https://auth.example.com"}
+	cli := func(args ...string) (string, error) { return runCLI(t, append(args, db...)...) }
+
+	// An unmigrated database fails the check and names the fix, and the check
+	// changes nothing: checking again still fails.
+	for range 2 {
+		out, err := cli("migrate", "--check")
+		if err == nil || !strings.Contains(err.Error(), "missing tables") || !strings.Contains(err.Error(), "systemauth migrate") {
+			t.Fatalf("check on an empty database: err=%v\n%s", err, out)
+		}
+	}
+	if out, err := cli("migrate"); err != nil {
+		t.Fatalf("migrate: %v\n%s", err, out)
+	}
+	out, err := cli("migrate", "--check")
+	if err != nil || !strings.Contains(out, "up to date") {
+		t.Fatalf("check after migrating: err=%v\n%s", err, out)
+	}
+}
