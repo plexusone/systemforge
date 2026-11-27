@@ -61,6 +61,9 @@ m, err = orgs.UpdateMember(ctx, membershipID, organization.UpdateMemberInput{Act
 err := orgs.RemoveMember(ctx, orgID, principalID)
 ```
 
+Removal also releases the seats the member held on the organization's
+[marketplace licenses](../marketplace/overview.md#seat-management).
+
 ## Querying Memberships
 
 ```go
