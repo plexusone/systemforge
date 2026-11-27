@@ -4811,6 +4811,8 @@
       
         
       
+        
+      
     
     
     
@@ -4880,6 +4882,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="v0.39.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.39.1
   
 
     
@@ -6355,7 +6385,11 @@
 <p>Release notes, one file per version, newest first. The
 <a href="changelog/">changelog</a> is generated from <code>CHANGELOG.json</code> and lists every
 change with its commit.</p>
-<p>The latest release, <a href="v0.39.0/">v0.39.0</a>, refuses to start SystemAuth when the
+<p>The latest release, <a href="v0.39.1/">v0.39.1</a>, fixes marketplace authorization: a
+license grants access only to the organization that holds it, and removing a
+member releases their seats. It needs no migration, and <code>AssignSeat</code> now
+refuses principals outside the licensed organization.</p>
+<p>Before it, <a href="v0.39.0/">v0.39.0</a> made SystemAuth refuse to start when the
 database schema is behind, lets an application build its sign-in buttons from
 the deployment (<code>GET /bff/auth/methods</code>), and keeps an email address from being
 shown as a name. It adds no breaking change to the API and no migration, but
