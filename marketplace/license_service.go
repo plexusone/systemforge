@@ -12,6 +12,8 @@ import (
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/license"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
+	"github.com/plexusone/systemforge/identity/ent/principal"
+	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
 )
 
@@ -203,7 +205,8 @@ func (s *EntLicenseService) Check(ctx context.Context, listingID, orgID uuid.UUI
 	return l.IsValid(), nil
 }
 
-// CheckPrincipal checks if a principal has access via license.
+// CheckPrincipal checks if a principal has access via license: an unlimited
+// license of an organization it belongs to, or a seat assigned to it.
 func (s *EntLicenseService) CheckPrincipal(ctx context.Context, listingID, principalID uuid.UUID) (bool, error) {
 	// Find all licenses for this listing
 	licenses, err := s.client.License.Query().
@@ -223,10 +226,15 @@ func (s *EntLicenseService) CheckPrincipal(ctx context.Context, listingID, princ
 			continue
 		}
 
-		// For unlimited licenses, check if principal belongs to the org
+		// An unlimited license covers everyone in its organization.
 		if l.LicenseType == license.LicenseTypeUnlimited {
-			// TODO: Check org membership
-			return true, nil
+			belongs, err := s.belongsTo(ctx, principalID, l.OrganizationID)
+			if err != nil {
+				return false, err
+			}
+			if belongs {
+				return true, nil
+			}
 		}
 
 		// For seat-based licenses, check seat assignment
@@ -245,6 +253,37 @@ func (s *EntLicenseService) CheckPrincipal(ctx context.Context, listingID, princ
 	}
 
 	return false, nil
+}
+
+// belongsTo reports whether the principal belongs to the organization: through
+// an active membership or, for a principal that is not a person, as the
+// organization that owns it. A person's home organization alone does not count,
+// because removing a member leaves it set.
+func (s *EntLicenseService) belongsTo(ctx context.Context, principalID, orgID uuid.UUID) (bool, error) {
+	member, err := s.client.PrincipalMembership.Query().
+		Where(
+			principalmembership.PrincipalIDEQ(principalID),
+			principalmembership.OrganizationIDEQ(orgID),
+			principalmembership.ActiveEQ(true),
+		).
+		Exist(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to check membership: %w", err)
+	}
+	if member {
+		return true, nil
+	}
+	owned, err := s.client.Principal.Query().
+		Where(
+			principal.IDEQ(principalID),
+			principal.OrganizationIDEQ(orgID),
+			principal.TypeNEQ(principal.TypeHuman),
+		).
+		Exist(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to check owning organization: %w", err)
+	}
+	return owned, nil
 }
 
 // List retrieves licenses for an organization.

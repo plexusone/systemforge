@@ -131,13 +131,11 @@ Assigns users to licensed seats.
 
 ## License Types
 
-| Type | Description |
-|------|-------------|
-| `LicenseUnlimited` | Unlimited users, no seat restrictions |
-| `LicensePerSeat` | Limited seats, requires seat assignment |
-| `LicenseTrial` | Time-limited trial access |
-| `LicenseTeam` | Team license with seat limit |
-| `LicenseEnterprise` | Enterprise with custom terms |
+| Type | `CheckPrincipal` grants access to | Seat limit on application roles |
+|---|---|---|
+| `LicenseUnlimited` | Everyone in the licensed organization | None |
+| `LicenseSeatBased` | Principals assigned a seat | The license's seats |
+| `LicenseTeam` | Principals assigned a seat | None |
 
 ## Checking Access
 
@@ -154,7 +152,9 @@ if !hasLicense {
 ### Check User Access
 
 ```go
-// Check if user has access (via unlimited license or seat assignment)
+// Check if user has access: an unlimited license of an organization they
+// belong to (an active membership, or for a non-human principal the
+// organization that owns it), or a seat assignment
 hasAccess, err := licenseSvc.CheckPrincipal(ctx, listingID, userID)
 if !hasAccess {
     http.Error(w, "No access to this feature", http.StatusForbidden)
@@ -168,30 +168,33 @@ if !hasAccess {
 the license's used seats in the same transaction as the assignment, so
 concurrent assignments cannot exceed the purchased seats, and `UnassignSeat`
 releases it the same way. `Update` does not write `UsedSeats`; only seat
-assignment changes it.
+assignment and member removal change it.
+
+`AssignSeat` does not check that the principal belongs to the licensed
+organization. The marketplace API's assign endpoint does; code that calls the
+service directly must check it.
 
 ### Assign a Seat
 
 ```go
-assignment, err := seatSvc.Assign(ctx, &marketplace.SeatAssignment{
+err := licenseSvc.AssignSeat(ctx, &marketplace.SeatAssignment{
     ID:          uuid.New(),
     LicenseID:   license.ID,
     PrincipalID: userID,
     AssignedBy:  adminID,
-    AssignedAt:  time.Now(),
 })
 ```
 
-### Revoke a Seat
+### Unassign a Seat
 
 ```go
-err := seatSvc.Revoke(ctx, assignmentID)
+err := licenseSvc.UnassignSeat(ctx, license.ID, userID)
 ```
 
 ### List Assignments
 
 ```go
-assignments, err := seatSvc.ListByLicense(ctx, licenseID)
+assignments, err := licenseSvc.ListSeatAssignments(ctx, license.ID)
 for _, a := range assignments {
     fmt.Printf("User %s assigned at %s\n", a.PrincipalID, a.AssignedAt)
 }
@@ -200,11 +203,49 @@ for _, a := range assignments {
 ### Check Available Seats
 
 ```go
-available, err := seatSvc.AvailableSeats(ctx, licenseID)
-if available <= 0 {
+license, err := licenseSvc.Get(ctx, licenseID)
+if err == nil && !license.HasAvailableSeats() {
     // No seats available, show upgrade prompt
 }
 ```
+
+### When a Member Leaves
+
+`organization.Service.RemoveMember` releases the member's seats on that
+organization's licenses in the same transaction. Seats they hold on other
+organizations' licenses stay.
+
+These do not release seats, so unassign them yourself:
+
+- revoking a collaborator's last resource grant, which removes the membership
+- deleting a service account
+- removals made before this behavior existed
+
+## Using SpiceDB
+
+The database and the authorization graph are updated separately. If a
+deployment writes marketplace relationships to SpiceDB, give the same syncer to
+every service that changes them:
+
+```go
+syncer := marketplace.NewSpiceDBSyncer(spice)
+
+// Writes listings, licenses and seats.
+market := marketplace.NewEntService(client, syncer)
+
+// Removes a removed member's seats.
+orgs := organization.NewService(client,
+    organization.WithSeatSyncer(syncer),
+)
+```
+
+Paid licenses granted by billing are written by the billing sink; see
+`billing.WithAuthzSyncer`.
+
+Without `WithSeatSyncer`, removal releases seats in the database only, and the
+`seat_holder` relationships keep granting `use` on the license in the graph.
+Check every place that builds an organization service, including SCIM
+provisioning: the SCIM setup in `systemauthsvc` does not set a seat syncer.
 
 ## Payments
 

@@ -114,6 +114,8 @@ type DefaultService struct {
 	accessSink accesschange.Sink // announces access changes after commit
 
 	audit audit.Emitter // records membership changes; nil records none
+
+	seatSyncer SeatSyncer // removes released license seats from the graph
 }
 
 // ServiceOption configures a DefaultService.
@@ -697,10 +699,11 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 }
 
 // RemoveMember removes a principal from an organization, with its
-// application roles, resource grants and the invitations it sent. The
-// member's relationships are removed from the authorization graph before
-// the removal commits; if the graph refuses, nothing is removed and the
-// error is returned, so the call can be retried.
+// application roles, resource grants, license seats and the invitations it
+// sent. The member's relationships are removed from the authorization graph
+// before the removal commits (license seats when WithSeatSyncer is set); if the
+// graph refuses, nothing is removed and the error is returned, so the call can
+// be retried.
 func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, principalID uuid.UUID) error {
 	return s.removeMember(ctx, organizationID, principalID, "")
 }
@@ -770,6 +773,11 @@ func (s *DefaultService) removeMember(ctx context.Context, organizationID, princ
 	if err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
+	// And the seats the member held on the organization's licenses.
+	releasedSeats, err := releaseSeats(ctx, tx.Client(), principalID, organizationID)
+	if err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
 	// So do the invitations the member sent and has not seen accepted.
 	if err = revokeInvitesBeyond(ctx, tx, organizationID, principalID, "", false); err != nil {
 		return errors.Join(err, tx.Rollback())
@@ -781,6 +789,13 @@ func (s *DefaultService) removeMember(ctx context.Context, organizationID, princ
 	}
 	if err = s.revokeAccess(ctx, principalID, organizationID, membership.Role, heldRoles, heldGrants); err != nil {
 		return errors.Join(err, tx.Rollback())
+	}
+	if s.seatSyncer != nil {
+		for _, licenseID := range releasedSeats {
+			if err = s.seatSyncer.SyncSeatUnassignment(ctx, licenseID, principalID); err != nil {
+				return errors.Join(revokeErr("license seat", err), tx.Rollback())
+			}
+		}
 	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to remove membership: %w", err)
