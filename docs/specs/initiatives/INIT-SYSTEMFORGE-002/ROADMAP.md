@@ -38,6 +38,8 @@ on the final import path.
   - Depends on: `RMI-SYSTEMFORGE-008`
 - [ ] `RMI-PROOFMINDSWEB-001` proofminds-web: update systemforge imports to plexusone path (external vertical-app consumer — validates the standalone-use story)
   - Depends on: `RMI-SYSTEMFORGE-008`
+- [ ] `RMI-SYSTEMFORGE-293` Application tracked in its own repository: update systemforge imports, including the multiapp adapter references, to the plexusone path
+  - Depends on: `RMI-SYSTEMFORGE-008`
 - [ ] `RMI-SYSTEMFORGE-010` Migration close-out: all seven consumers build against v0.10.0 with no replaces; INIT-SYSTEMFORGE-001 records updated; README positioning note
   - Depends on: `RMI-DASHFORGE-017`
   - Depends on: `RMI-ACTIONFORGE-039`
@@ -45,3 +47,4 @@ on the final import path.
   - Depends on: `RMI-UIFORGE-057`
   - Depends on: `RMI-OMNIROADMAP-029`
   - Depends on: `RMI-PROOFMINDSWEB-001`
+  - Depends on: `RMI-SYSTEMFORGE-293`
