@@ -153,8 +153,8 @@ func TestLinkSignInMethodRefusals(t *testing.T) {
 }
 
 // newTwoProviderServer is a social server with the fake GitHub and Google,
-// whose authorization endpoint is never reached, and AcademyOS-like
-// redirect settings.
+// whose authorization endpoint is never reached, and a typical
+// application's redirect settings.
 func newTwoProviderServer(t *testing.T, f *fakeGitHub, dir PrincipalDirectory, signedOutName string) *Server {
 	t.Helper()
 	google := oauthclient.NewGoogleConnector(oauthclient.ProviderConfig{

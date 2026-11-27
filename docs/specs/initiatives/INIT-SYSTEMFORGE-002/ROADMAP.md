@@ -5,7 +5,8 @@
 
 This initiative completes the migration: GitHub transfer, module-path change,
 history hygiene, and updating every consumer. Known consumers: dashforge,
-actionforge, agentforge, uiforge, omniroadmap, proofminds-web, academyos.
+actionforge, agentforge, uiforge, omniroadmap, proofminds-web, and one
+application tracked in its own repository.
 Do this before `INIT-CROSSFORGE-001` Phase 3 so crossforge integrations land
 on the final import path.
 
@@ -37,8 +38,6 @@ on the final import path.
   - Depends on: `RMI-SYSTEMFORGE-008`
 - [ ] `RMI-PROOFMINDSWEB-001` proofminds-web: update systemforge imports to plexusone path (external vertical-app consumer — validates the standalone-use story)
   - Depends on: `RMI-SYSTEMFORGE-008`
-- [ ] `RMI-ACADEMYOS-001` academyos: update systemforge imports including the multiapp adapter references to plexusone path
-  - Depends on: `RMI-SYSTEMFORGE-008`
 - [ ] `RMI-SYSTEMFORGE-010` Migration close-out: all seven consumers build against v0.10.0 with no replaces; INIT-SYSTEMFORGE-001 records updated; README positioning note
   - Depends on: `RMI-DASHFORGE-017`
   - Depends on: `RMI-ACTIONFORGE-039`
@@ -46,4 +45,3 @@ on the final import path.
   - Depends on: `RMI-UIFORGE-057`
   - Depends on: `RMI-OMNIROADMAP-029`
   - Depends on: `RMI-PROOFMINDSWEB-001`
-  - Depends on: `RMI-ACADEMYOS-001`

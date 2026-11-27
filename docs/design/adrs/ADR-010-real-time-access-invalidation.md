@@ -35,9 +35,8 @@ The alternatives:
   token could still exist. Per-request cost is a map lookup, and the memory
   is bounded by the number of changes within one token lifetime.
 
-The modular monolith (pbhq-cloud ADR-001) makes the signal almost free for
-the suite: SystemAuth and the products share a process, so the announcement
-is a function call.
+A modular monolith makes the signal almost free for the suite: SystemAuth and
+the products share a process, so the announcement is a function call.
 
 ## Decision
 
@@ -71,7 +70,7 @@ is a function call.
    therefore bounded by the number of changes within one lifetime.
 4. **The cache is shared memory in the monolith; delivery exists only at
    process boundaries.**
-   - **Same process:** in a modular monolith (pbhq-cloud) SystemAuth and
+   - **Same process:** in a modular monolith SystemAuth and
      the relying parties share one cache instance. SystemAuth writes to it
      in the transaction that records the change, and every product reads
      it on each request. There is no delivery and no delay; the check is a

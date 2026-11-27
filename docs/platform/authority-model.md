@@ -80,7 +80,7 @@ All authority delegations and actions are auditable. The complete chain of autho
     },
     "resource": {
         "type": "application",
-        "app_id": "academy-os"
+        "app_id": "example-app"
     },
     "context": {
         "federation_id": "uuid"
@@ -447,7 +447,7 @@ All authority-related actions must emit audit events:
     },
     "context": {
         "tenant_id": "uuid",
-        "app_id": "academy-os"
+        "app_id": "example-app"
     }
 }
 ```
