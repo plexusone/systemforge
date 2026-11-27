@@ -6631,7 +6631,8 @@ those from the organization API's <code>entitlements</code>.</p>
   non-members and deactivated members may not.</li>
 <li>Owners hold the top role of every entitled application implicitly. Nobody
   else holds any by default, admins included.</li>
-<li>Removing a member removes their roles and grants in the same transaction.</li>
+<li>Removing a member removes their roles, grants and license seats in the same
+  transaction.</li>
 <li>Demoting a member to collaborator deletes their application roles in the
   organization with the demotion. Promoting them again does not restore
   them; assign the roles again.</li>

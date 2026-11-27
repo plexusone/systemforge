@@ -3428,6 +3428,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#who-belongs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who Belongs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#checking-access" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3490,10 +3501,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#revoke-a-seat" class="md-nav__link">
+  <a href="#unassign-a-seat" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Revoke a Seat
+        Unassign a Seat
       
     </span>
   </a>
@@ -3522,8 +3533,30 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#when-a-member-leaves" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a Member Leaves
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-spicedb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using SpiceDB
+      
+    </span>
+  </a>
   
 </li>
       
@@ -6830,6 +6863,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#who-belongs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who Belongs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#checking-access" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -6892,10 +6936,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#revoke-a-seat" class="md-nav__link">
+  <a href="#unassign-a-seat" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Revoke a Seat
+        Unassign a Seat
       
     </span>
   </a>
@@ -6924,8 +6968,30 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#when-a-member-leaves" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a Member Leaves
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-spicedb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using SpiceDB
+      
+    </span>
+  </a>
   
 </li>
       
@@ -7268,32 +7334,39 @@ organization a license, and a full refund or a dispute suspends it.</p>
 <thead>
 <tr>
 <th>Type</th>
-<th>Description</th>
+<th><code>CheckPrincipal</code> grants access to</th>
+<th>Seat limit on application roles</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>LicenseUnlimited</code></td>
-<td>Unlimited users, no seat restrictions</td>
+<td>Everyone in the licensed organization</td>
+<td>None</td>
 </tr>
 <tr>
-<td><code>LicensePerSeat</code></td>
-<td>Limited seats, requires seat assignment</td>
-</tr>
-<tr>
-<td><code>LicenseTrial</code></td>
-<td>Time-limited trial access</td>
+<td><code>LicenseSeatBased</code></td>
+<td>Members assigned a seat</td>
+<td>The license's seats</td>
 </tr>
 <tr>
 <td><code>LicenseTeam</code></td>
-<td>Team license with seat limit</td>
-</tr>
-<tr>
-<td><code>LicenseEnterprise</code></td>
-<td>Enterprise with custom terms</td>
+<td>Members assigned a seat</td>
+<td>None</td>
 </tr>
 </tbody>
 </table>
+<h2 id="who-belongs">Who Belongs<a class="headerlink" href="#who-belongs" title="Permanent link">&para;</a></h2>
+<p>For licenses, a principal belongs to an organization when both are active and
+the principal either:</p>
+<ul>
+<li>holds an active owner, admin or member membership, or</li>
+<li>is a service, agent or application the organization owns, without a
+  collaborator membership.</li>
+</ul>
+<p>Collaborators do not belong. The marketplace reads the identity tables, so a
+custom authorizer that allows a principal also needs its
+<code>PrincipalMembership</code> row.</p>
 <h2 id="checking-access">Checking Access<a class="headerlink" href="#checking-access" title="Permanent link">&para;</a></h2>
 <h3 id="check-organization-license">Check Organization License<a class="headerlink" href="#check-organization-license" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// Check if organization has valid license for a listing</span>
@@ -7303,55 +7376,93 @@ organization a license, and a full refund or a dispute suspends it.</p>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="check-user-access">Check User Access<a class="headerlink" href="#check-user-access" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Check if user has access (via unlimited license or seat assignment)</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">hasAccess</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">licenseSvc</span><span class="p">.</span><span class="nx">CheckPrincipal</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">listingID</span><span class="p">,</span><span class="w"> </span><span class="nx">userID</span><span class="p">)</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">hasAccess</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;No access to this feature&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusForbidden</span><span class="p">)</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="k">return</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Check if user has access: a valid license of an organization they belong to</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1">// (see &quot;Who Belongs&quot;) that is unlimited or has a seat assigned to them</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nx">hasAccess</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">licenseSvc</span><span class="p">.</span><span class="nx">CheckPrincipal</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">listingID</span><span class="p">,</span><span class="w"> </span><span class="nx">userID</span><span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">hasAccess</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nx">http</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;No access to this feature&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusForbidden</span><span class="p">)</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="k">return</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="seat-management">Seat Management<a class="headerlink" href="#seat-management" title="Permanent link">&para;</a></h2>
 <p><code>EntLicenseService.AssignSeat</code> reserves a seat with a conditional increment of
 the license's used seats in the same transaction as the assignment, so
 concurrent assignments cannot exceed the purchased seats, and <code>UnassignSeat</code>
 releases it the same way. <code>Update</code> does not write <code>UsedSeats</code>; only seat
-assignment changes it.</p>
+assignment and member removal change it.</p>
+<p><code>AssignSeat</code> refuses a principal that does not belong to the licensed
+organization (<code>ErrNotOrganizationMember</code>; see <a href="#who-belongs">Who Belongs</a>). It
+checks under the same lock member removal and <code>UnassignSeat</code> hold, so on
+PostgreSQL a concurrent removal does not leave a member's new seat behind.</p>
 <h3 id="assign-a-seat">Assign a Seat<a class="headerlink" href="#assign-a-seat" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">assignment</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">seatSvc</span><span class="p">.</span><span class="nx">Assign</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">marketplace</span><span class="p">.</span><span class="nx">SeatAssignment</span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">licenseSvc</span><span class="p">.</span><span class="nx">AssignSeat</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">marketplace</span><span class="p">.</span><span class="nx">SeatAssignment</span><span class="p">{</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">ID</span><span class="p">:</span><span class="w">          </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">New</span><span class="p">(),</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nx">LicenseID</span><span class="p">:</span><span class="w">   </span><span class="nx">license</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">PrincipalID</span><span class="p">:</span><span class="w"> </span><span class="nx">userID</span><span class="p">,</span>
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nx">AssignedBy</span><span class="p">:</span><span class="w">  </span><span class="nx">adminID</span><span class="p">,</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="nx">AssignedAt</span><span class="p">:</span><span class="w">  </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">(),</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">})</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">})</span>
 </code></pre></div>
-<h3 id="revoke-a-seat">Revoke a Seat<a class="headerlink" href="#revoke-a-seat" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">seatSvc</span><span class="p">.</span><span class="nx">Revoke</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">assignmentID</span><span class="p">)</span>
+<h3 id="unassign-a-seat">Unassign a Seat<a class="headerlink" href="#unassign-a-seat" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">licenseSvc</span><span class="p">.</span><span class="nx">UnassignSeat</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">license</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span><span class="w"> </span><span class="nx">userID</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="list-assignments">List Assignments<a class="headerlink" href="#list-assignments" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">assignments</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">seatSvc</span><span class="p">.</span><span class="nx">ListByLicense</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">licenseID</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">assignments</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">licenseSvc</span><span class="p">.</span><span class="nx">ListSeatAssignments</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">license</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">assignments</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;User %s assigned at %s\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="p">.</span><span class="nx">PrincipalID</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="p">.</span><span class="nx">AssignedAt</span><span class="p">)</span>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="check-available-seats">Check Available Seats<a class="headerlink" href="#check-available-seats" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">available</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">seatSvc</span><span class="p">.</span><span class="nx">AvailableSeats</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">licenseID</span><span class="p">)</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">available</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">license</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">licenseSvc</span><span class="p">.</span><span class="nx">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">licenseID</span><span class="p">)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">!</span><span class="nx">license</span><span class="p">.</span><span class="nx">HasAvailableSeats</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="c1">// No seats available, show upgrade prompt</span>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="p">}</span>
 </code></pre></div>
+<h3 id="when-a-member-leaves">When a Member Leaves<a class="headerlink" href="#when-a-member-leaves" title="Permanent link">&para;</a></h3>
+<p><code>organization.Service.RemoveMember</code> releases the member's seats on that
+organization's licenses in the same transaction. Seats they hold on other
+organizations' licenses stay.</p>
+<p>Seats can remain after a deactivated membership, a demotion to collaborator, or
+a removal made before this behavior existed. Unassign them yourself: for a principal that belonged only
+through the membership, such a seat grants no access through <code>CheckPrincipal</code>,
+but it still counts as used and any SpiceDB relationship remains. A service,
+agent or application the organization owns still belongs after its membership
+ends.</p>
+<p>A service account that holds a seat cannot be deleted. Unassign its seats
+first.</p>
+<h2 id="using-spicedb">Using SpiceDB<a class="headerlink" href="#using-spicedb" title="Permanent link">&para;</a></h2>
+<p>The database and the authorization graph are updated separately. If a
+deployment writes marketplace relationships to SpiceDB, give the same syncer to
+every service that changes them:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">syncer</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">marketplace</span><span class="p">.</span><span class="nx">NewSpiceDBSyncer</span><span class="p">(</span><span class="nx">spice</span><span class="p">)</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1">// Writes listings, licenses and seats.</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nx">market</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">marketplace</span><span class="p">.</span><span class="nx">NewEntService</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span><span class="w"> </span><span class="nx">syncer</span><span class="p">)</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1">// Removes a removed member&#39;s seats.</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="nx">orgs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">organization</span><span class="p">.</span><span class="nx">NewService</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="nx">organization</span><span class="p">.</span><span class="nx">WithSeatSyncer</span><span class="p">(</span><span class="nx">syncer</span><span class="p">),</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="p">)</span>
+</code></pre></div>
+<p>Paid licenses granted by billing are written by the billing sink; see
+<code>billing.WithAuthzSyncer</code>.</p>
+<p>Without <code>WithSeatSyncer</code>, removal releases seats in the database only, and the
+<code>seat_holder</code> relationships keep granting <code>use</code> on the license in the graph.
+Check every place that builds an organization service, including SCIM
+provisioning: the SCIM setup in <code>systemauthsvc</code> does not set a seat syncer.</p>
+<p>Revoking a license does not remove its <code>seat_holder</code> relationships. Unassign the
+seats before revoking.</p>
 <h2 id="payments">Payments<a class="headerlink" href="#payments" title="Permanent link">&para;</a></h2>
 <p>Payments, webhooks and the customer portal are in package <code>billing</code>. See
 <a href="../billing/">Billing</a>, including
 <a href="../billing/#upgrading-from-marketplacestripe">upgrading from <code>marketplace/stripe</code></a>.</p>
 <h2 id="listing-tiers">Listing Tiers<a class="headerlink" href="#listing-tiers" title="Permanent link">&para;</a></h2>
 <p>Pre-defined tier constants:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">const</span><span class="w"> </span><span class="p">(</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="nx">TierFree</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;free&quot;</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nx">TierStarter</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;starter&quot;</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nx">TierPro</span><span class="w">        </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;pro&quot;</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nx">TierEnterprise</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;enterprise&quot;</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">const</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="nx">TierFree</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;free&quot;</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nx">TierStarter</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;starter&quot;</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nx">TierPro</span><span class="w">        </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;pro&quot;</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nx">TierEnterprise</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;enterprise&quot;</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">)</span>
 </code></pre></div>
 <h2 id="database-tables">Database Tables<a class="headerlink" href="#database-tables" title="Permanent link">&para;</a></h2>
 <p>The marketplace creates these Ent entities (prefixed with <code>sf_</code>):</p>
@@ -7389,7 +7500,7 @@ assignment changes it.</p>
    organization is granted a license.</li>
 <li>Your application checks access:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nx">hasAccess</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">licenseSvc</span><span class="p">.</span><span class="nx">CheckPrincipal</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">listingID</span><span class="p">,</span><span class="w"> </span><span class="nx">userID</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">hasAccess</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">licenseSvc</span><span class="p">.</span><span class="nx">CheckPrincipal</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">listingID</span><span class="p">,</span><span class="w"> </span><span class="nx">userID</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>

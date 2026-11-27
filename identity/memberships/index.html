@@ -6841,6 +6841,8 @@
 <h3 id="remove">Remove<a class="headerlink" href="#remove" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orgs</span><span class="p">.</span><span class="nx">RemoveMember</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">orgID</span><span class="p">,</span><span class="w"> </span><span class="nx">principalID</span><span class="p">)</span>
 </code></pre></div>
+<p>Removal also releases the seats the member held on the organization's
+<a href="../../marketplace/overview/#seat-management">marketplace licenses</a>.</p>
 <h2 id="querying-memberships">Querying Memberships<a class="headerlink" href="#querying-memberships" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// One principal&#39;s membership in one organization.</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orgs</span><span class="p">.</span><span class="nx">GetMembership</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">orgID</span><span class="p">,</span><span class="w"> </span><span class="nx">principalID</span><span class="p">)</span>
