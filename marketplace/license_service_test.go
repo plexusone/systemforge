@@ -9,6 +9,7 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/enttest"
+	"github.com/plexusone/systemforge/identity/ent/principal"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -535,12 +536,96 @@ func TestEntLicenseService_CheckPrincipal(t *testing.T) {
 		t.Fatalf("Grant() error = %v", err)
 	}
 
-	// Check with unlimited license (should have access)
+	// A member of the licensed organization has access.
+	addMember(t, ctx, client, principalID, orgID, true)
 	hasAccess, err = svc.CheckPrincipal(ctx, listingID, principalID)
 	if err != nil {
 		t.Fatalf("CheckPrincipal() error = %v", err)
 	}
 	if !hasAccess {
 		t.Error("CheckPrincipal() = false, want true for unlimited license")
+	}
+}
+
+func addMember(t *testing.T, ctx context.Context, client *ent.Client, principalID, orgID uuid.UUID, active bool) {
+	t.Helper()
+	if _, err := client.PrincipalMembership.Create().
+		SetPrincipalID(principalID).
+		SetOrganizationID(orgID).
+		SetRole("member").
+		SetActive(active).
+		Save(ctx); err != nil {
+		t.Fatalf("failed to create membership: %v", err)
+	}
+}
+
+// An unlimited license covers the people and workloads of its own
+// organization, not everyone who asks about its listing.
+func TestEntLicenseService_CheckPrincipalUnlimitedNeedsMembership(t *testing.T) {
+	client := newLicenseTestClient(t)
+	svc := NewEntLicenseService(client, nil)
+	ctx := context.Background()
+	orgID, ownerID, listingID := createTestLicenseFixtures(t, ctx, client, NewEntListingService(client, nil))
+	if err := svc.Grant(ctx, &License{
+		ID:             uuid.New(),
+		ListingID:      listingID,
+		OrganizationID: orgID,
+		LicenseType:    LicenseUnlimited,
+		ValidFrom:      time.Now().Add(-time.Hour),
+		PurchasedBy:    ownerID,
+	}); err != nil {
+		t.Fatalf("Grant() error = %v", err)
+	}
+	other, err := client.Organization.Create().
+		SetName("Other Org").
+		SetSlug("other-org-" + uuid.New().String()[:8]).
+		Save(ctx)
+	if err != nil {
+		t.Fatalf("failed to create org: %v", err)
+	}
+
+	newPrincipal := func(kind principal.Type, home *uuid.UUID) uuid.UUID {
+		t.Helper()
+		p, err := client.Principal.Create().
+			SetType(kind).
+			SetIdentifier(uuid.NewString()).
+			SetDisplayName("Test Principal").
+			SetNillableOrganizationID(home).
+			Save(ctx)
+		if err != nil {
+			t.Fatalf("failed to create principal: %v", err)
+		}
+		return p.ID
+	}
+	member := func(orgID uuid.UUID, active bool) uuid.UUID {
+		id := newPrincipal(principal.TypeHuman, nil)
+		addMember(t, ctx, client, id, orgID, active)
+		return id
+	}
+
+	cases := []struct {
+		name      string
+		principal uuid.UUID
+		want      bool
+	}{
+		{"active member", member(orgID, true), true},
+		{"inactive member", member(orgID, false), false},
+		{"member of another organization", member(other.ID, true), false},
+		{"person with no membership", newPrincipal(principal.TypeHuman, nil), false},
+		// Removing a member leaves the home organization set.
+		{"person with only a home organization", newPrincipal(principal.TypeHuman, &orgID), false},
+		{"service owned by the organization", newPrincipal(principal.TypeService, &orgID), true},
+		{"agent owned by the organization", newPrincipal(principal.TypeAgent, &orgID), true},
+		{"service owned by another organization", newPrincipal(principal.TypeService, &other.ID), false},
+		{"unknown principal", uuid.New(), false},
+	}
+	for _, c := range cases {
+		got, err := svc.CheckPrincipal(ctx, listingID, c.principal)
+		if err != nil {
+			t.Fatalf("%s: CheckPrincipal() error = %v", c.name, err)
+		}
+		if got != c.want {
+			t.Errorf("%s: CheckPrincipal() = %v, want %v", c.name, got, c.want)
+		}
 	}
 }

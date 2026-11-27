@@ -84,7 +84,9 @@ type LicenseService interface {
 	// Check checks if an organization has a valid license for a listing.
 	Check(ctx context.Context, listingID, orgID uuid.UUID) (bool, error)
 
-	// CheckPrincipal checks if a principal has access via license.
+	// CheckPrincipal checks if a principal has access via license: an
+	// unlimited license of an organization it belongs to, or a seat
+	// assigned to it.
 	CheckPrincipal(ctx context.Context, listingID, principalID uuid.UUID) (bool, error)
 
 	// List retrieves licenses for an organization.
