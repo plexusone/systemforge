@@ -993,6 +993,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#managed-people" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managed people
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-to-watch" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4920,6 +4931,8 @@
       
         
       
+        
+      
     
     
     
@@ -4991,6 +5004,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.39.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.39.0
   
 
     
@@ -6478,6 +6519,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#managed-people" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managed people
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-to-watch" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -6544,7 +6596,10 @@ so the provider is a setting:</p>
 it codes stop working on a restart and on a second instance. Production
 refuses <code>mail.provider: log</code>. If several instances serve SystemAuth, give them
 shared <a href="../rate-limiting/">rate limit storage</a>, or the send limits that bound
-guessing apply per instance. Run <code>systemauth migrate</code> once for the new column.</p>
+guessing apply per instance. Run <code>systemauth migrate</code> once for the new column.
+From v0.39.0, a service started without migrations refuses to start until it has
+run; <code>systemauth migrate --check</code> verifies that before a deploy
+(<a href="../../systemauth/deployment/#the-schema-must-match-the-version">the schema must match the version</a>).</p>
 <p>You can keep <code>github</code> and <code>google</code> beside it; the sign-in page lists each.</p>
 <h2 id="3-check-delivery">3. Check delivery<a class="headerlink" href="#3-check-delivery" title="Permanent link">&para;</a></h2>
 <p>Request a code for addresses at two mailbox providers, from the production
@@ -6558,6 +6613,14 @@ emitter), so you can see <code>systemauth.email_code.sent</code> with <code>sent
 <code>@plexusone/pages</code>, add <code>email</code> to the login page:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">&lt;</span><span class="nt">LoginPage</span><span class="w"> </span><span class="na">oauthProviders</span><span class="o">=</span><span class="p">{[</span><span class="s1">&#39;github&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;google&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;email&#39;</span><span class="p">]}</span><span class="w"> </span><span class="p">/&gt;</span>
 </code></pre></div>
+<p>Better, build the buttons from the deployment so a method turned on in
+SystemAuth's configuration shows up without a change to the application: read
+<code>GET /bff/auth/methods</code> (in React, <code>useSignInMethods</code> from the
+<code>@plexusone/auth</code> release that accompanies v0.39.0), or in Go
+<code>SocialLoginConfig.SignInMethods()</code> and <code>Server.SignInMethods()</code>. SystemAuth
+publishes its methods in its discovery document and the BFF lists them
+(<a href="../../systemauth/relying-party/">relying parties</a>); no provider list is written
+in the application.</p>
 <p>Deploy SystemAuth and the BFF before the page: an older BFF answers
 <code>UNKNOWN_PROVIDER</code> when the button is clicked. The application never receives
 the code; it receives the verified address afterward, as for any provider.</p>
@@ -6569,6 +6632,26 @@ prompt. Nothing is taken from the address.</p>
 controls matter: a <a href="../signup-age/">minimum age</a>, and
 <a href="../invite-gated-signup/">invite-gated sign-up</a>, which applies to email exactly
 as to a provider.</p>
+<h2 id="managed-people">Managed people<a class="headerlink" href="#managed-people" title="Permanent link">&para;</a></h2>
+<p>Email sign-in creates ordinary accounts with no managers. A managed principal,
+such as a child a parent or teacher manages, has no email and cannot be reached
+by an email code or by a social login: sign-in by address matches only a
+<strong>verified</strong> email.</p>
+<p>A host that gives a managed principal an address
+(<code>managedprincipal.Service.AttachVerifiedEmail</code>) turns that address into a sign-in
+key by email code, and by social login only when the provider is authoritative
+for the address (Google for its consumer domains and for a Workspace account's
+own domain; GitHub is not, so a GitHub sign-in with an address already attached
+is refused as a conflict and links nothing), on purpose: management does not depend
+on the email (<a href="../../design/adrs/ADR-009-management-is-a-relationship/">ADR-009</a>),
+and a child may have their own address, such as a school one. Management
+continues, and the managers keep their authority. So attach only an address the
+person controls and has proved, not one a guardian typed; SystemAuth's mailed
+code is that proof.</p>
+<p>An address on a managed principal that is <strong>not</strong> verified is not a sign-in key,
+but it still holds the address: a person who later signs up with it is refused as
+a conflict. A host that proxies <code>POST /managed-principals/</code> should not forward an
+arbitrary <code>email</code>.</p>
 <h2 id="what-to-watch">What to watch<a class="headerlink" href="#what-to-watch" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>systemauth.email_code.exhausted</code> events: codes that used up their tries.

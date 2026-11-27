@@ -4898,6 +4898,8 @@
       
         
       
+        
+      
     
     
     
@@ -4969,6 +4971,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.39.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.39.0
   
 
     
@@ -6595,6 +6625,10 @@ itself (normally through the same reverse proxy).</p>
 <td>Create or update the schema before the system user and static clients are written.</td>
 </tr>
 <tr>
+<td><code>Options.SkipSchemaCheck</code></td>
+<td>When <code>Migrate</code> is off, <code>New</code> refuses to start with <code>ErrSchemaBehind</code> if the database lacks a table or column this version needs; set this to skip that check when the schema is managed by other means.</td>
+</tr>
+<tr>
 <td><code>Options.ServerOptions</code></td>
 <td>Extra <code>systemauth.Option</code>s, e.g. <code>WithObservability</code>.</td>
 </tr>
@@ -6617,6 +6651,10 @@ itself (normally through the same reverse proxy).</p>
 <tr>
 <td><code>Migrate(ctx, cfg)</code></td>
 <td>Open, migrate and close (for a separate migration step).</td>
+</tr>
+<tr>
+<td><code>CheckMigrations(ctx, cfg)</code>, <code>CheckSchema(ctx, client, dialect)</code></td>
+<td>Verify the schema has every table and column this version needs, without changing it; the error wraps <code>ErrSchemaBehind</code> and names what is missing.</td>
 </tr>
 <tr>
 <td><code>Service.Handler</code>, <code>Ready</code>, <code>Migrate</code>, <code>Close</code>, <code>Issuer</code>, <code>KeyID</code>, <code>Metadata</code>, <code>Discovery</code>, <code>Server</code>, <code>ManagedPrincipals</code>, <code>SCIMTokens</code></td>

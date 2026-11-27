@@ -4809,6 +4809,8 @@
       
         
       
+        
+      
     
     
     
@@ -4878,6 +4880,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="v0.39.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.39.0
   
 
     
@@ -6325,7 +6355,12 @@
 <p>Release notes, one file per version, newest first. The
 <a href="changelog/">changelog</a> is generated from <code>CHANGELOG.json</code> and lists every
 change with its commit.</p>
-<p>The latest release, <a href="v0.38.0/">v0.38.0</a>, stops making a person's name from
+<p>The latest release, <a href="v0.39.0/">v0.39.0</a>, refuses to start SystemAuth when the
+database schema is behind, lets an application build its sign-in buttons from
+the deployment (<code>GET /bff/auth/methods</code>), and keeps an email address from being
+shown as a name. It adds no breaking change to the API and no migration, but
+the <code>name</code> claim is now left out when the stored name is an address.</p>
+<p>Before it, <a href="v0.38.0/">v0.38.0</a> stopped making a person's name from
 their email address: SystemAuth asks a new account for its name, and
 optionally a workspace name, before creating it, so applications receive a
 real <code>name</code> claim. It adds <code>SignInMethods</code> for hosts and fixes the sign-in

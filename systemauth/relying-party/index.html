@@ -5031,6 +5031,8 @@
       
         
       
+        
+      
     
     
     
@@ -5102,6 +5104,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.39.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.39.0
   
 
     
@@ -6860,8 +6890,12 @@ application shares. This section shows the parts it is built from.</p>
 <td><code>302</code> to SystemAuth <code>/oauth/authorize</code></td>
 </tr>
 <tr>
-<td><code>GET /bff/auth/{github,google}?return_to=</code></td>
-<td>Same, with <code>idp_hint</code> so SystemAuth skips its provider chooser</td>
+<td><code>GET /bff/auth/{github,google,email}?return_to=</code></td>
+<td>Same, with <code>idp_hint</code> so SystemAuth skips its provider chooser (<code>email</code> goes to the mailed-code form)</td>
+</tr>
+<tr>
+<td><code>GET /bff/auth/methods</code></td>
+<td><code>{"methods":[{"id","name","path"}]}</code>: the sign-in methods to offer, so an application builds its buttons from the deployment. They come from <code>BFFConfig.SignInMethods</code> when set, else from SystemAuth's discovery document (<code>sf_sign_in_methods_supported</code>, from v0.39.0), in SystemAuth's order and limited to what the BFF can start. Empty from an older SystemAuth</td>
 </tr>
 <tr>
 <td><code>GET /bff/auth/callback</code></td>

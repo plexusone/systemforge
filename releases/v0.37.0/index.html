@@ -4809,6 +4809,8 @@
       
         
       
+        
+      
     
     
     
@@ -4878,6 +4880,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v0.39.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.39.0
   
 
     
@@ -6624,10 +6654,13 @@ component in <code>@plexusone/pages</code> offers it as a <strong>Continue with 
 </ul>
 <p>Nothing else changes for a deployment that does not set <code>social_login.email</code>.</p>
 <h2 id="upgrading">Upgrading<a class="headerlink" href="#upgrading" title="Permanent link">&para;</a></h2>
-<p>Add the new column. Run <code>systemauth migrate</code> (or start with <code>--migrate</code>), or
-apply <code>migrations/0013_verification_token_attempts.sql</code> to an existing
-PostgreSQL database; a fresh database needs nothing. Without the column,
-reading or writing a verification token fails.</p>
+<p>Add the new column. Run <code>systemauth migrate</code> (or start with <code>--migrate</code>); it
+works on PostgreSQL and SQLite and is the route for any database from before
+<code>sf_verification_tokens</code> existed. Alternatively, apply
+<code>migrations/0013_verification_token_attempts.sql</code> to a PostgreSQL database that
+already has <code>sf_verification_tokens</code> and every earlier migration (it is
+PostgreSQL syntax and adds one column). A fresh database needs nothing. Without
+the column, reading or writing a verification token fails.</p>
 <p>To turn email sign-in on:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">social_login</span><span class="p">:</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">email</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>

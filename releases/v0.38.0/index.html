@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://plexusone.github.io/systemforge/releases/v0.38.0/">
       
       
-        <link rel="prev" href="../changelog/">
+        <link rel="prev" href="../v0.39.0/">
       
       
         <link rel="next" href="../v0.37.0/">
@@ -4809,6 +4809,8 @@
       
         
       
+        
+      
     
     
     
@@ -4878,6 +4880,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v0.39.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.39.0
   
 
     
@@ -6557,8 +6587,21 @@ connectors passed in code.</p>
 </ul>
 <p>The release adds no breaking change to the API.</p>
 <h2 id="upgrading">Upgrading<a class="headerlink" href="#upgrading" title="Permanent link">&para;</a></h2>
-<p>There is no migration: the new <code>sign_up_name</code> token purpose is a plain value of
-an existing column. Set <code>social_login</code> as before; nothing needs enabling.</p>
+<p>From v0.37.0 there is no migration: the new <code>sign_up_name</code> token purpose is a
+plain value of an existing column. Set <code>social_login</code> as before; nothing needs
+enabling.</p>
+<p>From an earlier version, run the schema migration first: <code>systemauth migrate</code>
+(or start with <code>--migrate</code>, or <code>systemauthsvc.Migrate</code>, which a normal deploy
+runs). It creates or updates every table, including <code>sf_verification_tokens</code> and
+its <code>attempts</code> column, on PostgreSQL and on SQLite. v0.38.0 parks every sign-up
+that needs a name in the verification token store, with or without a <code>mail</code>
+section, so without the <code>attempts</code> column new sign-ups fail, not only email
+sign-in.</p>
+<p><code>migrations/0013_verification_token_attempts.sql</code> is only for a PostgreSQL
+database that already has <code>sf_verification_tokens</code> and every earlier migration:
+it adds one column to a table the schema migration creates, and it is
+PostgreSQL syntax. On SQLite use the schema migration (or recreate a development
+database).</p>
 <p>A host that built its own name prompt for email accounts can drop it for new
 accounts and keep a guard for old ones: never show or print a name that is an
 email address. Build sign-in buttons from <code>SignInMethods()</code> instead of listing

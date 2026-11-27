@@ -4942,6 +4942,8 @@
       
         
       
+        
+      
     
     
     
@@ -5013,6 +5015,34 @@
     
   
     Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v0.39.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.39.0
   
 
     
@@ -6687,6 +6717,10 @@ for 15 minutes, bound to the browser, and shows <code>/signup/name</code>:</p>
 sign-up once. A person who already has an account is not asked. Invites and the
 minimum age come first, so a person who will be refused is not asked for a
 name. The applications need no name prompt of their own for new accounts.</p>
+<p>An account from before names were asked for may still have its address as its
+name. SystemAuth leaves the <code>name</code> claim out for it (the address is still the
+<code>email</code> claim), so an application that receives no name keeps the one it has or
+shows a neutral one.</p>
 <h2 id="what-protects-the-code">What protects the code<a class="headerlink" href="#what-protects-the-code" title="Permanent link">&para;</a></h2>
 <p>A six-digit code can be guessed, so the controls carry the security:</p>
 <ul>
