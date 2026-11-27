@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/plexusone/systemforge/authz/rebac/spicedb"
+	"github.com/plexusone/systemforge/identity/organization"
 )
 
 // SpiceDB resource types for marketplace entities.
@@ -194,3 +195,6 @@ func (s *SpiceDBSyncer) SyncSubscription(ctx context.Context, sub *Subscription)
 
 // Ensure SpiceDBSyncer implements AuthzSyncer.
 var _ AuthzSyncer = (*SpiceDBSyncer)(nil)
+
+// SpiceDBSyncer also removes a removed member's seats from the graph.
+var _ organization.SeatSyncer = (*SpiceDBSyncer)(nil)
