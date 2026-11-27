@@ -414,8 +414,8 @@ type SocialLoginConfig struct {
 	SignedOutURL string `json:"signed_out_url,omitempty" yaml:"signed_out_url,omitempty" jsonschema:"description=Where a sign-out lands whatever return_to the app sent; it must be an allowed redirect origin"`
 
 	// SignedOutName is the display name of the site at SignedOutURL, such
-	// as "ProductBuildersHQ", shown in links back to it ("Back to
-	// ProductBuildersHQ") on pages such as the waitlist. It is display text
+	// as "Example Co", shown in links back to it ("Back to Example Co") on
+	// pages such as the waitlist. It is display text
 	// only; the link always goes to SignedOutURL. Default: SignedOutURL's
 	// host.
 	SignedOutName string `json:"signed_out_name,omitempty" yaml:"signed_out_name,omitempty" jsonschema:"description=Display name of the site at signed_out_url for links back to it (default: its host)"`

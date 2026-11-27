@@ -9,6 +9,101 @@
   ],
   "releases": [
     {
+      "version": "v0.39.0",
+      "date": "2026-11-26",
+      "highlights": [
+        {
+          "description": "SystemAuth started without migrations refuses to start when the database schema is behind, naming what is missing, instead of failing on the first request that needs it",
+          "commit": "c6663f1"
+        },
+        {
+          "description": "An application builds its sign-in buttons from the deployment: SystemAuth publishes its methods in discovery and the relying-party BFF serves `GET /bff/auth/methods`",
+          "commit": "bbad19d"
+        },
+        {
+          "description": "`identity/displayname` decides what to show for a person with no name, so an email address is not shown as one",
+          "commit": "01d8ee2"
+        }
+      ],
+      "added": [
+        {
+          "description": "`systemauthsvc.CheckSchema`, `CheckMigrations` and `ErrSchemaBehind` compare the database's tables and columns with the identity schema on PostgreSQL and SQLite; `Options.SkipSchemaCheck` opts out",
+          "commit": "c6663f1"
+        },
+        {
+          "description": "`systemauth migrate --check` verifies the schema without changing it and exits non-zero naming what is missing",
+          "commit": "16557ae"
+        },
+        {
+          "description": "The discovery extension `sf_sign_in_methods_supported`, `relyingparty.Client.SignInMethods`, `BFFConfig.SignInMethods`, `BFF.SignInMethods`, the `SignInMethod` type and the route `GET <BasePath>/auth/methods`",
+          "commit": "bbad19d"
+        },
+        {
+          "description": "The package `identity/displayname`: `Safe`, `Or`, `Show`, `LooksLikeAddress` and the neutral `Default`, \"Member\"",
+          "commit": "01d8ee2"
+        }
+      ],
+      "changed": [
+        {
+          "description": "`systemauthsvc.New` refuses to start with `ErrSchemaBehind` when it does not migrate and the schema lacks a table or column",
+          "commit": "c6663f1"
+        },
+        {
+          "description": "The relying-party stores, `oauthclient`, the SCIM store and SystemAuth's directories never name a person by the email address, and a new account whose profile name is an address is asked for a name",
+          "commit": "01d8ee2"
+        },
+        {
+          "description": "The OIDC `name` claim is left out when the stored name is an address, so a relying party must accept a missing `name`",
+          "commit": "02c7c4c"
+        }
+      ],
+      "fixed": [
+        {
+          "description": "A sign-in recorded by either relying-party store, and a SCIM update, could replace a good name with an address; each keeps the stored name unless the new one is a name",
+          "commit": "e879906"
+        },
+        {
+          "description": "A federation update with no name, or an address, overwrote the stored name",
+          "commit": "02c7c4c"
+        }
+      ],
+      "tests": [
+        {
+          "description": "The schema check on SQLite and PostgreSQL: unmigrated, migrated, a single missing column, the opt-out and repair",
+          "commit": "b1dc3f9"
+        },
+        {
+          "description": "The sign-in methods from SystemAuth's discovery document to the BFF: order, paths, override, unknown methods and an older SystemAuth",
+          "commit": "e09c872"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "The schema check in the deployment and embedding pages, with the INIT-SYSTEMFORGE-020 roadmap",
+          "commit": "aeffbb6"
+        },
+        {
+          "description": "The methods endpoint, the shared display name in ADR-024 and the INIT-SYSTEMFORGE-021 roadmap",
+          "commit": "ca48b6c"
+        },
+        {
+          "description": "The migration route for hosts coming from before v0.37.0, and that an email attached to a managed principal is a sign-in key",
+          "commit": "87f73cd"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "There is no new migration since v0.38.0; a deployment that starts without migrations must have run them, or the service refuses to start: verify with `systemauth migrate --check`"
+        },
+        {
+          "description": "Accept a missing `name` claim, and show stored names through `displayname.Show`, since names that are already addresses are not rewritten"
+        },
+        {
+          "description": "Upgrade SystemAuth before the applications that read `/bff/auth/methods`; a client built with `NewClientWithMetadata` sets `BFFConfig.SignInMethods`"
+        }
+      ]
+    },
+    {
       "version": "v0.38.0",
       "date": "2026-11-25",
       "highlights": [

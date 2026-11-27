@@ -42,6 +42,9 @@ it codes stop working on a restart and on a second instance. Production
 refuses `mail.provider: log`. If several instances serve SystemAuth, give them
 shared [rate limit storage](rate-limiting.md), or the send limits that bound
 guessing apply per instance. Run `systemauth migrate` once for the new column.
+From v0.39.0, a service started without migrations refuses to start until it has
+run; `systemauth migrate --check` verifies that before a deploy
+([the schema must match the version](../systemauth/deployment.md#the-schema-must-match-the-version)).
 
 You can keep `github` and `google` beside it; the sign-in page lists each.
 
