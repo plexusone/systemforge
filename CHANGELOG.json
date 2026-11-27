@@ -9,6 +9,67 @@
   ],
   "releases": [
     {
+      "version": "v0.39.1",
+      "date": "2026-11-27",
+      "highlights": [
+        {
+          "description": "Marketplace license access is limited to the organization that holds the license, and removing a member releases their seats",
+          "commit": "3326e96"
+        }
+      ],
+      "upgradeGuide": [
+        {
+          "description": "No new migration. A deployment that writes seats to SpiceDB must pass `organization.WithSeatSyncer`; direct callers of `AssignSeat` must handle `ErrNotOrganizationMember`; seats of previously removed members need unassigning"
+        }
+      ],
+      "security": [
+        {
+          "description": "`CheckPrincipal` returned true for any principal when any organization held a valid unlimited license for the listing; it now requires belonging to the licensed organization",
+          "commit": "3326e96"
+        },
+        {
+          "description": "Removing a member left their license seats, and the access they granted, in place",
+          "commit": "7b8c448"
+        },
+        {
+          "description": "A seat assigned while its holder was being removed could survive the removal, and `UnassignSeat` could leave the seat's SpiceDB relationship",
+          "commit": "f26ddaf"
+        }
+      ],
+      "added": [
+        {
+          "description": "`organization.WithSeatSyncer` and `organization.SeatSyncer` remove a removed member's seats from the authorization graph",
+          "commit": "7b8c448"
+        }
+      ],
+      "changed": [
+        {
+          "description": "`CheckPrincipal` and `AssignSeat` require an active principal and organization with an owner, admin or member membership, or ownership of a non-human principal; collaborators are excluded",
+          "commit": "f26ddaf"
+        },
+        {
+          "description": "`AssignSeat` returns `ErrNotOrganizationMember`, and `UnassignSeat` keeps the seat when the graph refuses the removal",
+          "commit": "f26ddaf"
+        }
+      ],
+      "documentation": [
+        {
+          "description": "Who a license covers, what releases a seat and which services need the SpiceDB syncer; the marketplace guide's license types and seat methods now match the code",
+          "commit": "8a9db7a"
+        },
+        {
+          "description": "Who belongs to a licensed organization",
+          "commit": "5e2d1e7"
+        }
+      ],
+      "tests": [
+        {
+          "description": "Membership, standing, seat release and graph refusal, and PostgreSQL interleavings of assignment, removal and unassignment",
+          "commit": "f26ddaf"
+        }
+      ]
+    },
+    {
       "version": "v0.39.0",
       "date": "2026-11-26",
       "highlights": [

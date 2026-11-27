@@ -4,7 +4,12 @@ Release notes, one file per version, newest first. The
 [changelog](changelog.md) is generated from `CHANGELOG.json` and lists every
 change with its commit.
 
-The latest release, [v0.39.0](v0.39.0.md), refuses to start SystemAuth when the
+The latest release, [v0.39.1](v0.39.1.md), fixes marketplace authorization: a
+license grants access only to the organization that holds it, and removing a
+member releases their seats. It needs no migration, and `AssignSeat` now
+refuses principals outside the licensed organization.
+
+Before it, [v0.39.0](v0.39.0.md) made SystemAuth refuse to start when the
 database schema is behind, lets an application build its sign-in buttons from
 the deployment (`GET /bff/auth/methods`), and keeps an email address from being
 shown as a name. It adds no breaking change to the API and no migration, but

@@ -107,8 +107,8 @@ Within the plexusone org, SystemForge is the shared identity/session/authorizati
 
 - 🛒 **Listings** - Product catalog with tiers and pricing
 - 💳 **Billing** - Plans from a pricing spec, sold through Stripe in the organization console, with a free mode and plans set by the operator
-- 📜 **Licensing** - Per-seat, unlimited, and time-limited licenses
-- 👥 **Seat Management** - Assign and revoke user access
+- 📜 **Licensing** - Seat-based, team and unlimited licenses, optionally time-limited, covering only the organization that holds them
+- 👥 **Seat Management** - Assign seats to members; removing a member releases them
 
 ### Feature Flags
 
