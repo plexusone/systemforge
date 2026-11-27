@@ -84,9 +84,9 @@ type LicenseService interface {
 	// Check checks if an organization has a valid license for a listing.
 	Check(ctx context.Context, listingID, orgID uuid.UUID) (bool, error)
 
-	// CheckPrincipal checks if a principal has access via license: an
-	// unlimited license of an organization it belongs to, or a seat
-	// assigned to it.
+	// CheckPrincipal checks if a principal has access via license: a valid
+	// license of an organization it belongs to that is unlimited or has a
+	// seat assigned to the principal.
 	CheckPrincipal(ctx context.Context, listingID, principalID uuid.UUID) (bool, error)
 
 	// List retrieves licenses for an organization.
@@ -95,7 +95,8 @@ type LicenseService interface {
 	// ListByListing retrieves all licenses for a listing.
 	ListByListing(ctx context.Context, listingID uuid.UUID) ([]*License, error)
 
-	// AssignSeat assigns a user to a license seat.
+	// AssignSeat assigns a user to a license seat. The principal must
+	// belong to the licensed organization (ErrNotOrganizationMember).
 	AssignSeat(ctx context.Context, assignment *SeatAssignment) error
 
 	// UnassignSeat removes a user from a license seat.

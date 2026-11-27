@@ -134,8 +134,21 @@ Assigns users to licensed seats.
 | Type | `CheckPrincipal` grants access to | Seat limit on application roles |
 |---|---|---|
 | `LicenseUnlimited` | Everyone in the licensed organization | None |
-| `LicenseSeatBased` | Principals assigned a seat | The license's seats |
-| `LicenseTeam` | Principals assigned a seat | None |
+| `LicenseSeatBased` | Members assigned a seat | The license's seats |
+| `LicenseTeam` | Members assigned a seat | None |
+
+## Who Belongs
+
+For licenses, a principal belongs to an organization when both are active and
+the principal either:
+
+- holds an active owner, admin or member membership, or
+- is a service, agent or application the organization owns, without a
+  collaborator membership.
+
+Collaborators do not belong. The marketplace reads the identity tables, so a
+custom authorizer that allows a principal also needs its
+`PrincipalMembership` row.
 
 ## Checking Access
 
@@ -152,9 +165,8 @@ if !hasLicense {
 ### Check User Access
 
 ```go
-// Check if user has access: an unlimited license of an organization they
-// belong to (an active membership, or for a non-human principal the
-// organization that owns it), or a seat assignment
+// Check if user has access: a valid license of an organization they belong to
+// (see "Who Belongs") that is unlimited or has a seat assigned to them
 hasAccess, err := licenseSvc.CheckPrincipal(ctx, listingID, userID)
 if !hasAccess {
     http.Error(w, "No access to this feature", http.StatusForbidden)
@@ -170,9 +182,10 @@ concurrent assignments cannot exceed the purchased seats, and `UnassignSeat`
 releases it the same way. `Update` does not write `UsedSeats`; only seat
 assignment and member removal change it.
 
-`AssignSeat` does not check that the principal belongs to the licensed
-organization. The marketplace API's assign endpoint does; code that calls the
-service directly must check it.
+`AssignSeat` refuses a principal that does not belong to the licensed
+organization (`ErrNotOrganizationMember`; see [Who Belongs](#who-belongs)). It
+checks under the same lock member removal and `UnassignSeat` hold, so on
+PostgreSQL a concurrent removal does not leave a member's new seat behind.
 
 ### Assign a Seat
 
@@ -215,11 +228,15 @@ if err == nil && !license.HasAvailableSeats() {
 organization's licenses in the same transaction. Seats they hold on other
 organizations' licenses stay.
 
-These do not release seats, so unassign them yourself:
+Seats can remain after a deactivated membership, a demotion to collaborator, or
+a removal made before this behavior existed. Unassign them yourself: for a principal that belonged only
+through the membership, such a seat grants no access through `CheckPrincipal`,
+but it still counts as used and any SpiceDB relationship remains. A service,
+agent or application the organization owns still belongs after its membership
+ends.
 
-- revoking a collaborator's last resource grant, which removes the membership
-- deleting a service account
-- removals made before this behavior existed
+A service account that holds a seat cannot be deleted. Unassign its seats
+first.
 
 ## Using SpiceDB
 
@@ -246,6 +263,9 @@ Without `WithSeatSyncer`, removal releases seats in the database only, and the
 `seat_holder` relationships keep granting `use` on the license in the graph.
 Check every place that builds an organization service, including SCIM
 provisioning: the SCIM setup in `systemauthsvc` does not set a seat syncer.
+
+Revoking a license does not remove its `seat_holder` relationships. Unassign the
+seats before revoking.
 
 ## Payments
 

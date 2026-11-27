@@ -701,9 +701,11 @@ func (s *DefaultService) UpdateMember(ctx context.Context, membershipID uuid.UUI
 // RemoveMember removes a principal from an organization, with its
 // application roles, resource grants, license seats and the invitations it
 // sent. The member's relationships are removed from the authorization graph
-// before the removal commits (license seats when WithSeatSyncer is set); if the
-// graph refuses, nothing is removed and the error is returned, so the call can
-// be retried.
+// before the removal commits (license seats when WithSeatSyncer is set). If the
+// graph refuses, the database change is rolled back and the error is returned.
+// Graph deletions that completed before the failure are not restored, so the
+// graph can lack relationships the database still holds until the call is
+// retried.
 func (s *DefaultService) RemoveMember(ctx context.Context, organizationID, principalID uuid.UUID) error {
 	return s.removeMember(ctx, organizationID, principalID, "")
 }
@@ -773,6 +775,11 @@ func (s *DefaultService) removeMember(ctx context.Context, organizationID, princ
 	if err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
+	// Seat assignment and graph writes take this lock too. It is held before
+	// the seats are read, so a seat assigned meanwhile is seen or refused.
+	if err = graphlock.Lock(ctx, tx, graphlock.Principal(principalID)); err != nil {
+		return errors.Join(err, tx.Rollback())
+	}
 	// And the seats the member held on the organization's licenses.
 	releasedSeats, err := releaseSeats(ctx, tx.Client(), principalID, organizationID)
 	if err != nil {
@@ -784,9 +791,6 @@ func (s *DefaultService) removeMember(ctx context.Context, organizationID, princ
 	}
 	// An inactive membership has nothing in the graph, but removing what
 	// is absent succeeds, so the removal is attempted either way.
-	if err = graphlock.Lock(ctx, tx, graphlock.Principal(principalID)); err != nil {
-		return errors.Join(err, tx.Rollback())
-	}
 	if err = s.revokeAccess(ctx, principalID, organizationID, membership.Role, heldRoles, heldGrants); err != nil {
 		return errors.Join(err, tx.Rollback())
 	}

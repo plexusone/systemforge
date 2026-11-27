@@ -734,6 +734,11 @@ func (a *API) assignSeat(ctx context.Context, input *AssignSeatInput) (*AssignSe
 		if err == ErrLicenseNotFound {
 			return nil, huma.Error404NotFound("license not found")
 		}
+		// The authorizer allowed the principal above, but the identity tables
+		// do not: no active membership row, or it ended since.
+		if errors.Is(err, ErrNotOrganizationMember) {
+			return nil, huma.Error400BadRequest("principal is not a member of the licensed organization")
+		}
 		if err == ErrNoSeatsAvailable {
 			return nil, huma.Error400BadRequest("no seats available")
 		}

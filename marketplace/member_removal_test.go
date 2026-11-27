@@ -21,6 +21,7 @@ type removalFixture struct {
 	licenseID        uuid.UUID
 	otherLicenseID   uuid.UUID
 	leaving, staying uuid.UUID
+	otherOnly        uuid.UUID
 }
 
 // newRemovalFixture is an organization with a three-seat license, held by a
@@ -28,7 +29,11 @@ type removalFixture struct {
 // on another organization's license of the same listing.
 func newRemovalFixture(t *testing.T, ctx context.Context) removalFixture {
 	t.Helper()
-	client := newLicenseTestClient(t)
+	return newRemovalFixtureOn(t, ctx, newLicenseTestClient(t))
+}
+
+func newRemovalFixtureOn(t *testing.T, ctx context.Context, client *ent.Client) removalFixture {
+	t.Helper()
 	f := removalFixture{client: client, licenses: NewEntLicenseService(client, nil)}
 	var ownerID uuid.UUID
 	f.orgID, ownerID, f.listingID = createTestLicenseFixtures(t, ctx, client, NewEntListingService(client, nil))
@@ -56,7 +61,7 @@ func newRemovalFixture(t *testing.T, ctx context.Context) removalFixture {
 		return l.ID
 	}
 	f.licenseID, f.otherLicenseID = grant(f.orgID), grant(other.ID)
-	person := func() uuid.UUID {
+	person := func(orgID uuid.UUID) uuid.UUID {
 		p, err := client.Principal.Create().
 			SetType(principal.TypeHuman).
 			SetIdentifier(uuid.NewString()).
@@ -65,10 +70,11 @@ func newRemovalFixture(t *testing.T, ctx context.Context) removalFixture {
 		if err != nil {
 			t.Fatalf("failed to create principal: %v", err)
 		}
-		addMember(t, ctx, client, p.ID, f.orgID, true)
+		addMember(t, ctx, client, p.ID, orgID, true)
 		return p.ID
 	}
-	f.leaving, f.staying = person(), person()
+	f.leaving, f.staying, f.otherOnly = person(f.orgID), person(f.orgID), person(other.ID)
+	addMember(t, ctx, client, f.leaving, other.ID, true)
 	for _, a := range []struct{ license, principal uuid.UUID }{
 		{f.licenseID, f.leaving},
 		{f.licenseID, f.staying},

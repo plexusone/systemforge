@@ -36,6 +36,10 @@ var (
 	// ErrSeatNotAssigned is returned when trying to unassign a non-existent seat.
 	ErrSeatNotAssigned = errors.New("seat not assigned to this user")
 
+	// ErrNotOrganizationMember is returned when a seat is assigned to a
+	// principal that does not belong to the licensed organization.
+	ErrNotOrganizationMember = errors.New("principal does not belong to the licensed organization")
+
 	// ErrSubscriptionNotFound is returned when a subscription cannot be found.
 	ErrSubscriptionNotFound = errors.New("subscription not found")
 
