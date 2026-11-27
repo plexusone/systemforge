@@ -371,6 +371,10 @@ func TestEntLicenseService_SeatAssignment(t *testing.T) {
 		t.Fatalf("failed to create principal3: %v", err)
 	}
 
+	for _, id := range []uuid.UUID{principalID, principal2.ID, principal3.ID} {
+		addMember(t, ctx, client, id, orgID, true)
+	}
+
 	// Assign first seat
 	assignment1 := &SeatAssignment{
 		ID:          uuid.New(),

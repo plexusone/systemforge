@@ -11,10 +11,13 @@ import (
 
 	"github.com/plexusone/systemforge/identity/ent"
 	"github.com/plexusone/systemforge/identity/ent/license"
+	"github.com/plexusone/systemforge/identity/ent/organization"
 	"github.com/plexusone/systemforge/identity/ent/predicate"
 	"github.com/plexusone/systemforge/identity/ent/principal"
 	"github.com/plexusone/systemforge/identity/ent/principalmembership"
 	"github.com/plexusone/systemforge/identity/ent/seatassignment"
+	"github.com/plexusone/systemforge/identity/graphlock"
+	"github.com/plexusone/systemforge/identity/graphstate"
 )
 
 // EntLicenseService is an Ent-backed implementation of LicenseService.
@@ -205,8 +208,9 @@ func (s *EntLicenseService) Check(ctx context.Context, listingID, orgID uuid.UUI
 	return l.IsValid(), nil
 }
 
-// CheckPrincipal checks if a principal has access via license: an unlimited
-// license of an organization it belongs to, or a seat assigned to it.
+// CheckPrincipal checks if a principal has access via license: a valid license
+// of an organization it belongs to that is unlimited or has a seat assigned to
+// the principal.
 func (s *EntLicenseService) CheckPrincipal(ctx context.Context, listingID, principalID uuid.UUID) (bool, error) {
 	// Find all licenses for this listing
 	licenses, err := s.client.License.Query().
@@ -226,28 +230,30 @@ func (s *EntLicenseService) CheckPrincipal(ctx context.Context, listingID, princ
 			continue
 		}
 
-		// An unlimited license covers everyone in its organization.
-		if l.LicenseType == license.LicenseTypeUnlimited {
-			belongs, err := s.belongsTo(ctx, principalID, l.OrganizationID)
+		// An unlimited license covers everyone in its organization; any
+		// other covers those assigned a seat.
+		covered := l.LicenseType == license.LicenseTypeUnlimited
+		if !covered {
+			covered, err = s.client.SeatAssignment.Query().
+				Where(
+					seatassignment.LicenseIDEQ(l.ID),
+					seatassignment.PrincipalIDEQ(principalID),
+				).
+				Exist(ctx)
 			if err != nil {
-				return false, err
-			}
-			if belongs {
-				return true, nil
+				return false, fmt.Errorf("failed to check seat assignment: %w", err)
 			}
 		}
-
-		// For seat-based licenses, check seat assignment
-		exists, err := s.client.SeatAssignment.Query().
-			Where(
-				seatassignment.LicenseIDEQ(l.ID),
-				seatassignment.PrincipalIDEQ(principalID),
-			).
-			Exist(ctx)
+		if !covered {
+			continue
+		}
+		// Either way only while it belongs to the organization: a seat can
+		// outlast a membership.
+		belongs, err := belongsTo(ctx, s.client, principalID, l.OrganizationID)
 		if err != nil {
-			return false, fmt.Errorf("failed to check seat assignment: %w", err)
+			return false, err
 		}
-		if exists {
+		if belongs {
 			return true, nil
 		}
 	}
@@ -255,29 +261,39 @@ func (s *EntLicenseService) CheckPrincipal(ctx context.Context, listingID, princ
 	return false, nil
 }
 
-// belongsTo reports whether the principal belongs to the organization: through
-// an active membership or, for a principal that is not a person, as the
-// organization that owns it. A person's home organization alone does not count,
-// because removing a member leaves it set.
-func (s *EntLicenseService) belongsTo(ctx context.Context, principalID, orgID uuid.UUID) (bool, error) {
-	member, err := s.client.PrincipalMembership.Query().
-		Where(
-			principalmembership.PrincipalIDEQ(principalID),
-			principalmembership.OrganizationIDEQ(orgID),
-			principalmembership.ActiveEQ(true),
-		).
-		Exist(ctx)
+// belongsTo reports whether the principal belongs to the organization for
+// licensing: an active principal of an active organization that holds an active
+// owner, admin or member membership or, if it is not a person, is owned by the
+// organization. Collaborators hold no marketplace permissions. A person's home
+// organization alone does not count, because removing a member leaves it set.
+func belongsTo(ctx context.Context, client *ent.Client, principalID, orgID uuid.UUID) (bool, error) {
+	member, err := graphstate.Membership(ctx, client, orgID, principalID, graphstate.AppRoleHolders()...)
 	if err != nil {
 		return false, fmt.Errorf("failed to check membership: %w", err)
 	}
 	if member {
 		return true, nil
 	}
-	owned, err := s.client.Principal.Query().
+	active, err := client.Organization.Query().
+		Where(organization.IDEQ(orgID), organization.Active(true)).
+		Exist(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to check organization: %w", err)
+	}
+	if !active {
+		return false, nil
+	}
+	owned, err := client.Principal.Query().
 		Where(
 			principal.IDEQ(principalID),
+			principal.Active(true),
 			principal.OrganizationIDEQ(orgID),
 			principal.TypeNEQ(principal.TypeHuman),
+			// A collaborator is confined to the resources granted to it.
+			principal.Not(principal.HasPrincipalMembershipsWith(
+				principalmembership.OrganizationID(orgID),
+				principalmembership.Role(graphstate.RoleCollaborator),
+			)),
 		).
 		Exist(ctx)
 	if err != nil {
@@ -326,8 +342,33 @@ func (s *EntLicenseService) ListByListing(ctx context.Context, listingID uuid.UU
 // transaction as the assignment, so concurrent assignments cannot exceed
 // the license's seats.
 func (s *EntLicenseService) AssignSeat(ctx context.Context, assignment *SeatAssignment) error {
-	var created *ent.SeatAssignment
+	var (
+		created *ent.SeatAssignment
+		orgID   uuid.UUID
+	)
 	err := withTx(ctx, s.client, func(tx *ent.Tx) error {
+		lic, err := tx.License.Query().Where(license.IDEQ(assignment.LicenseID)).Only(ctx)
+		if ent.IsNotFound(err) {
+			return ErrLicenseNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get license: %w", err)
+		}
+		orgID = lic.OrganizationID
+
+		// Member removal holds the same lock while it releases seats, so
+		// either it sees this seat or this sees the membership gone.
+		if err := graphlock.Lock(ctx, tx, graphlock.Principal(assignment.PrincipalID)); err != nil {
+			return err
+		}
+		belongs, err := belongsTo(ctx, tx.Client(), assignment.PrincipalID, orgID)
+		if err != nil {
+			return err
+		}
+		if !belongs {
+			return ErrNotOrganizationMember
+		}
+
 		// Check if already assigned
 		exists, err := tx.SeatAssignment.Query().
 			Where(
@@ -357,6 +398,7 @@ func (s *EntLicenseService) AssignSeat(ctx context.Context, assignment *SeatAssi
 			return fmt.Errorf("failed to reserve seat: %w", err)
 		}
 		if n == 0 {
+			// Revoked since it was read, or full.
 			found, err := tx.License.Query().Where(license.IDEQ(assignment.LicenseID)).Exist(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to get license: %w", err)
@@ -390,7 +432,7 @@ func (s *EntLicenseService) AssignSeat(ctx context.Context, assignment *SeatAssi
 
 	// Sync to authorization system
 	if s.authzSync != nil {
-		if err := s.authzSync.SyncSeatAssignment(ctx, assignment); err != nil {
+		if err := s.writeSeatToGraph(ctx, orgID, assignment); err != nil {
 			return fmt.Errorf("failed to sync seat assignment to authz: %w", err)
 		}
 	}
@@ -398,9 +440,40 @@ func (s *EntLicenseService) AssignSeat(ctx context.Context, assignment *SeatAssi
 	return nil
 }
 
+// writeSeatToGraph writes a committed assignment to the authorization graph
+// under the principal's lock, if the seat is still held by someone who belongs
+// to the organization. A removal that committed since is therefore not undone.
+func (s *EntLicenseService) writeSeatToGraph(ctx context.Context, orgID uuid.UUID, assignment *SeatAssignment) error {
+	keys := []string{graphlock.Principal(assignment.PrincipalID)}
+	return graphlock.Grant(ctx, s.client, keys, func(ctx context.Context, c *ent.Client) error {
+		held, err := c.SeatAssignment.Query().
+			Where(
+				seatassignment.LicenseIDEQ(assignment.LicenseID),
+				seatassignment.PrincipalIDEQ(assignment.PrincipalID),
+			).
+			Exist(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to read seat assignment: %w", err)
+		}
+		if !held {
+			return nil
+		}
+		belongs, err := belongsTo(ctx, c, assignment.PrincipalID, orgID)
+		if err != nil || !belongs {
+			return err
+		}
+		return s.authzSync.SyncSeatAssignment(ctx, assignment)
+	})
+}
+
 // UnassignSeat removes a user from a license seat.
 func (s *EntLicenseService) UnassignSeat(ctx context.Context, licenseID, principalID uuid.UUID) error {
-	err := withTx(ctx, s.client, func(tx *ent.Tx) error {
+	return withTx(ctx, s.client, func(tx *ent.Tx) error {
+		// A graph write of this seat holds the same lock, so it cannot
+		// land after the removal below.
+		if err := graphlock.Lock(ctx, tx, graphlock.Principal(principalID)); err != nil {
+			return err
+		}
 		found, err := tx.License.Query().Where(license.IDEQ(licenseID)).Exist(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get license: %w", err)
@@ -430,20 +503,16 @@ func (s *EntLicenseService) UnassignSeat(ctx context.Context, licenseID, princip
 			Save(ctx); err != nil {
 			return fmt.Errorf("failed to update used seats: %w", err)
 		}
+
+		// Remove it from the graph before committing: if the graph refuses,
+		// the seat stays and the call can be retried.
+		if s.authzSync != nil {
+			if err := s.authzSync.SyncSeatUnassignment(ctx, licenseID, principalID); err != nil {
+				return fmt.Errorf("failed to sync seat unassignment to authz: %w", err)
+			}
+		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	// Sync to authorization system
-	if s.authzSync != nil {
-		if err := s.authzSync.SyncSeatUnassignment(ctx, licenseID, principalID); err != nil {
-			return fmt.Errorf("failed to sync seat unassignment to authz: %w", err)
-		}
-	}
-
-	return nil
 }
 
 // withTx runs fn in a transaction, committing when fn returns nil and

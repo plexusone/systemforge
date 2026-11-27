@@ -76,6 +76,7 @@ func newAccessFixture(t *testing.T) *accessFixture {
 		f.who[name] = p.ID
 		if membership.role != "" {
 			roles[[2]uuid.UUID{p.ID, membership.org}] = membership.role
+			addMember(t, ctx, db, p.ID, membership.org, true)
 		}
 	}
 	authorizer := rbac.New(rbac.WithRoleGetter(func(_ context.Context, pid, oid uuid.UUID) (string, error) {

@@ -42,6 +42,9 @@ func TestAssignSeatInterleavedNeverExceedsSeats(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	addMember(t, ctx, client, buyer, orgID, true)
+	addMember(t, ctx, client, other.ID, orgID, true)
+
 	var (
 		interleaved bool
 		otherErr    error
@@ -104,6 +107,7 @@ func TestUpdateKeepsUsedSeats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	addMember(t, ctx, client, buyer, orgID, true)
 	if err := svc.AssignSeat(ctx, &SeatAssignment{ID: uuid.New(), LicenseID: lic.ID, PrincipalID: buyer, AssignedBy: buyer}); err != nil {
 		t.Fatal(err)
 	}
